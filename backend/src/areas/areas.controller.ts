@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, ParseUUIDPipe } from '@nestjs/common';
 import { AreasService } from './areas.service';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
@@ -20,17 +20,17 @@ export class AreasController {
   }
 
 @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.areasService.findOne(id);
-  }
+findOne(@Param('id', ParseUUIDPipe) id: string) {
+  return this.areasService.findOne(id);
+}
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAreaDto: UpdateAreaDto) {
-    return this.areasService.update(id, updateAreaDto);
-  }
+@Patch(':id')
+update(@Param('id', ParseUUIDPipe) id: string, @Body() updateAreaDto: UpdateAreaDto) {
+  return this.areasService.update(id, updateAreaDto);
+}
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.areasService.remove(id);
-  }
+@Delete(':id')
+remove(@Param('id', ParseUUIDPipe) id: string) {
+  return this.areasService.remove(id);
+}
 }
