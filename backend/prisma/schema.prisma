@@ -1,0 +1,133 @@
+// CONFIGURAÇÃO DO CLIENTE E BASE DE DADOS
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS (TIPOS ESTRUTURADOS)
+
+// Provedores de Autenticação OAuth suportados.
+enum Provider {
+  GOOGLE
+  DISCORD
+  GITHUB
+}
+
+// Estado de progresso aplicável a qualquer tarefa ou projeto.
+enum ProgressStatus {
+  ADIANTADO
+  TEMPO_ESPERADO
+  ATRASADO
+  MUITO_ATRASADO
+}
+
+// Escala de dificuldade percebida para a tarefa.
+enum Difficulty {
+  FACIL
+  MEDIO
+  DIFICIL
+  MUITO_DIFICIL
+}
+
+// Categoria principal da Tarefa (Abstração de alto nível).
+enum TaskType {
+  ACADEMICO
+  HABITO
+  PROJETO
+  EVENTO
+  TRABALHO
+  TAREFA_SIMPLES
+}
+
+/// Subcategoria estritamente focada na vida académica.
+/// Utilizada apenas quando o TaskType é 'ACADEMICO'.
+enum AcademicTaskType {
+  FREQUENCIA
+  TRABALHO_PRATICO
+  TAREFA_SECUNDARIA
+}
+
+// MODELOS (TABELAS DA BASE DE DADOS)
+
+/// Representa um utilizador da plataforma.
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  name         String?
+  avatarUrl    String?
+  passwordHash String?
+  createdAt    DateTime   @default(now())
+
+  // Relações
+  identities   Identity[]
+  areas        Area[]
+  tasks        Task[]
+}
+
+/// Gere os tokens e IDs externos para autenticação OAuth (SSO).
+model Identity {
+  id                String   @id @default(uuid())
+  userId            String
+  provider          Provider
+  providerAccountId String
+  accessToken       String?
+  refreshToken      String?
+  scope             String?
+  createdAt         DateTime @default(now())
+
+  // Relações
+  user              User     @relation(fields: [userId], references: [id])
+
+  // Garante que o mesmo providerAccount não é associado duas vezes
+  @@unique([provider, providerAccountId])
+}
+
+/// Abstração que representa um "Balde" ou "Área de Vida".
+/// Pode ser uma Disciplina da faculdade, um Desporto, ou uma Área Financeira.
+model Area {
+  id       String @id @default(uuid())
+  userId   String
+  name     String 
+  colorHex String
+
+  // Relações
+  user     User   @relation(fields: [userId], references: [id])
+  tasks    Task[]
+}
+
+/// Representa uma ação executável dentro de uma Área (Area).
+model Task {
+  id                    String            @id @default(uuid())
+  userId                String
+  areaId                String            
+  title                 String
+  date                  DateTime
+  
+  // Tipologia e Categorização
+  type                  TaskType
+  academicType          AcademicTaskType? 
+  topics                String?
+
+  // Metadados de Execução
+  weightPercentage      Float?
+  difficulty            Difficulty
+  progressStatus        ProgressStatus    @default(TEMPO_ESPERADO)
+  referenceLink         String?
+  
+  // Avaliação (Relevante para contexto Académico/Trabalho)
+  targetGrade           Float?            
+  realGrade             Float?            
+  
+  // Integrações
+  googleCalendarEventId String?
+  createdAt             DateTime          @default(now())
+
+  // Relações
+  user                  User              @relation(fields: [userId], references: [id])
+  area                  Area              @relation(fields: [areaId], references: [id])
+}
