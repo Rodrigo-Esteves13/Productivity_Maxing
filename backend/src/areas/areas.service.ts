@@ -4,7 +4,7 @@ import { UpdateAreaDto } from './dto/update-area.dto';
 
 @Injectable()
 export class AreasService {
-  create(createAreaDto: CreateAreaDto) {
+  create(_createAreaDto: CreateAreaDto) {
     return 'This action adds a new area';
   }
 
@@ -16,7 +16,7 @@ export class AreasService {
     return `This action returns a #${id} area`;
   }
 
-  update(id: string, updateAreaDto: UpdateAreaDto) {
+  update(id: string, _updateAreaDto: UpdateAreaDto) {
     return `This action updates a #${id} area`;
   }
 

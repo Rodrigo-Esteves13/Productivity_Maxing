@@ -26,4 +26,4 @@ const config = new DocumentBuilder()
   // O NestJS arranca na porta 3000
   await app.listen(3000);
 }
-bootstrap();
+void bootstrap();
