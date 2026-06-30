@@ -1,26 +1,43 @@
 import { Injectable } from '@nestjs/common';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AreasService {
-  create(createAreaDto: CreateAreaDto) {
-    return 'This action adds a new area';
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(userId: string, createAreaDto: CreateAreaDto) {
+    return this.prisma.area.create({
+      data: {
+        ...createAreaDto,
+        user: {
+          connect: { id: userId }
+        }
+      },
+    });
   }
 
-  findAll() {
-    return `This action returns all areas`;
+  async findAll() {
+    return this.prisma.area.findMany();
   }
 
-  findOne(id: string) {
-    return `This action returns a #${id} area`;
+  async findOne(id: string) {
+    return this.prisma.area.findUnique({
+      where: { id },
+    });
   }
 
-  update(id: string, updateAreaDto: UpdateAreaDto) {
-    return `This action updates a #${id} area`;
+  async update(id: string, updateAreaDto: UpdateAreaDto) {
+    return this.prisma.area.update({
+      where: { id },
+      data: updateAreaDto,
+    });
   }
 
-  remove(id: string) {
-    return `This action removes a #${id} area`;
+  async remove(id: string) {
+    return this.prisma.area.delete({
+      where: { id },
+    });
   }
 }

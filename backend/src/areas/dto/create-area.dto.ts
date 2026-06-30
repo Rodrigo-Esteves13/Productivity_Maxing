@@ -1,4 +1,4 @@
-import { IsHexColor, IsString, IsNotEmpty } from 'class-validator';
+import { IsHexColor, IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateAreaDto {
@@ -8,6 +8,7 @@ export class CreateAreaDto {
   name: string;
 
   @ApiProperty({ example: '#FF5733', description: 'Cor em formato Hexadecimal' })
+  @IsOptional()
   @IsHexColor()
   colorHex: string;
 }
