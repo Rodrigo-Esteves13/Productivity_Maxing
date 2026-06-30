@@ -16,9 +16,10 @@ export class RolesGuard implements CanActivate {
       return true;
     }
     
-    const { user } = context.switchToHttp().getRequest();
-    //No futuro, o AuthGuard vai colocar o 'user' extraído do JWT do Supabase aqui
-    if (!user) return false;
+    const request = context.switchToHttp().getRequest<{ user?: { role: Role } }>();
+    const user = request.user;
+    
+    if (!user || !user.role) return false;
 
     return requiredRoles.includes(user.role);
   }
