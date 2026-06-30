@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Area" ALTER COLUMN "colorHex" SET DEFAULT '#808080';
