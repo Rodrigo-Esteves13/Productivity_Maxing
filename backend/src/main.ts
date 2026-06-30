@@ -13,9 +13,9 @@ const config = new DocumentBuilder()
     .setTitle('Productivity Maxing API')
     .setDescription('A API profissional para gerir Areas e Tasks')
     .setVersion('1.0')
-    .addTag('users')
-    .addTag('areas')
-    .addTag('tasks')
+    .addTag('User')
+    .addTag('Area')
+    .addTag('Task')
     .build();
     
   const document = SwaggerModule.createDocument(app, config);
