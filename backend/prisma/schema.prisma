@@ -67,7 +67,6 @@ model User {
   role         Role       @default(USER)
   name         String?
   avatarUrl    String?
-  passwordHash String?
   createdAt    DateTime   @default(now())
 
   // Relações
@@ -100,7 +99,7 @@ model Area {
   id       String @id @default(uuid())
   userId   String
   name     String 
-  colorHex String
+  colorHex String @default("#808080")
 
   // Relações
   user     User   @relation(fields: [userId], references: [id])
