@@ -1,0 +1,54 @@
+name: "Paranoid CI: Backend NestJS"
+
+# Corre a cada push para a main e em cada Pull Request.
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  backend-checks:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend # Aponta para a tua pasta do NestJS
+    
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependências (Clean Install)
+        run: npm ci
+
+      - name: Segurança: NPM Audit
+        # Usa audit-level=high para evitar que falhe com aqueles falsos positivos 
+        # "moderate" do eslint/nestjs-cli que vimos ontem.
+        run: npm audit --audit-level=high
+
+      - name: Prisma: Gerar Cliente
+        run: npx prisma generate
+
+      - name: Prisma: Validar Esquema
+        # Garante que o teu schema.prisma não tem erros de sintaxe
+        run: npx prisma validate
+
+      - name: Qualidade: Linter
+        # Apanha variáveis não usadas, erros de formatação e más práticas
+        run: npm run lint
+
+      - name: Testes Unitários
+        # Garante que os testes do Jest (que vimos passarem a verde) continuam a passar
+        run: npm run test
+
+      - name: Build do NestJS
+        # Garante que o TypeScript compila perfeitamente para JavaScript
+        run: npm run build
