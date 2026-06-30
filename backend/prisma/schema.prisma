@@ -18,6 +18,12 @@ enum Provider {
   GITHUB
 }
 
+// Roles
+enum Role {
+  USER
+  ADMIN
+}
+
 // Estado de progresso aplicável a qualquer tarefa ou projeto.
 enum ProgressStatus {
   ADIANTADO
@@ -58,6 +64,7 @@ enum AcademicTaskType {
 model User {
   id           String     @id @default(uuid())
   email        String     @unique
+  role         Role       @default(USER)
   name         String?
   avatarUrl    String?
   passwordHash String?

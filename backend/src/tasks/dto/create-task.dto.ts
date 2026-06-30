@@ -15,6 +15,7 @@ export class CreateTaskDto {
 
   @ApiProperty({ example: '2026-06-30T14:00:00Z', description: 'Data da tarefa (Formato ISO)' })
   @IsDateString()
+  @IsOptional()
   date: string;
 
   @ApiProperty({ enum: TaskType, example: TaskType.ACADEMICO, description: 'A categoria principal' })

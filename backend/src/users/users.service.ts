@@ -1,26 +1,23 @@
 import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+
+export type AuthProvider = 'google' | 'github' | 'discord';
 
 @Injectable()
 export class UsersService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
-  }
-
+  
   findAll() {
-    return `This action returns all users`;
+    return `Esta ação devolve todos os utilizadores (Apenas Admin)`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  findOne(id: string) {
+    return `Esta ação devolve o utilizador com o id #${id} via Prisma`;
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  getProviders(id: string) {
+    return `Esta ação devolve todos os providers do utilizador #${id}`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  getProviderAccount(id: string, provider: AuthProvider) {
+    return `Esta ação vai devolver os dados do provider: ${provider} para o utilizador #${id} (Tabela dos Providers)`;
   }
 }
