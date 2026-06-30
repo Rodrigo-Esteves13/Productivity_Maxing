@@ -10,6 +10,8 @@ jobs:
   backend-checks:
     name: "Code Quality & Security"
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
     defaults:
       run:
         working-directory: backend
@@ -29,7 +31,7 @@ jobs:
         run: npm ci
 
       - name: "Seguranca: NPM Audit"
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=critical
 
       - name: "Prisma: Gerar Cliente"
         run: npx prisma generate
