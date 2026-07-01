@@ -4,7 +4,7 @@ import { Strategy, Profile } from 'passport-discord';
 import { Request } from 'express';
 import { Provider } from '@prisma/client';
 import { AuthService } from '../auth.service';
- 
+
 @Injectable()
 export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
   constructor(private authService: AuthService) {
@@ -16,7 +16,7 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
       passReqToCallback: true,
     });
   }
- 
+
   async validate(
     req: Request,
     accessToken: string,

@@ -3,7 +3,7 @@ import type { Request } from 'express';
 
 // Criamos um tipo seguro para evitar o uso de 'any'.
 export interface RequestWithUser extends Request {
-  user: Record<string, unknown>; 
+  user: Record<string, unknown>;
 }
 
 export const CurrentUser = createParamDecorator(

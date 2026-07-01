@@ -12,8 +12,8 @@ export class AreasService {
       data: {
         ...createAreaDto,
         user: {
-          connect: { id: userId }
-        }
+          connect: { id: userId },
+        },
       },
     });
   }

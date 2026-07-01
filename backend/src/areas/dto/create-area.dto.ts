@@ -7,7 +7,10 @@ export class CreateAreaDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ example: '#FF5733', description: 'Cor em formato Hexadecimal' })
+  @ApiProperty({
+    example: '#FF5733',
+    description: 'Cor em formato Hexadecimal',
+  })
   @IsOptional()
   @IsHexColor()
   colorHex: string;

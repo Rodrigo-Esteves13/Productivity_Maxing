@@ -2,13 +2,17 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes, createHash } from 'crypto';
 import { Provider, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { JwtPayload, LinkStatePayload } from './interfaces/jwt-payload.interface';
- 
+import {
+  JwtPayload,
+  LinkStatePayload,
+} from './interfaces/jwt-payload.interface';
+
 interface OAuthProfileData {
   provider: Provider;
   providerAccountId: string;
@@ -17,14 +21,16 @@ interface OAuthProfileData {
   accessToken?: string;
   refreshToken?: string;
 }
- 
+
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
   ) {}
- 
+
   /**
    * Fluxo normal de login/registo via OAuth.
    * Ordem de resolução: Identity existente -> User por email -> criar User novo.
@@ -40,7 +46,7 @@ export class AuthService {
       },
       include: { user: true },
     });
- 
+
     if (existingIdentity) {
       await this.prisma.identity.update({
         where: { id: existingIdentity.id },
@@ -52,9 +58,11 @@ export class AuthService {
       });
       return existingIdentity.user;
     }
- 
-    let user = await this.prisma.user.findUnique({ where: { email: data.email } });
- 
+
+    let user = await this.prisma.user.findUnique({
+      where: { email: data.email },
+    });
+
     if (!user) {
       user = await this.prisma.user.create({
         data: {
@@ -64,7 +72,7 @@ export class AuthService {
         },
       });
     }
- 
+
     await this.prisma.identity.create({
       data: {
         userId: user.id,
@@ -74,10 +82,10 @@ export class AuthService {
         refreshToken: data.refreshToken,
       },
     });
- 
+
     return user;
   }
- 
+
   /**
    * Fluxo de "ligar conta": utilizador já autenticado (identificado pelo state
    * assinado, ver createLinkState/consumeLinkState) associa um novo provider
@@ -92,17 +100,20 @@ export class AuthService {
         },
       },
     });
- 
+
     if (existingIdentity && existingIdentity.userId !== userId) {
       throw new ConflictException(
         'Esta conta do provider já está associada a outro utilizador.',
       );
     }
- 
+
     if (existingIdentity) {
       await this.prisma.identity.update({
         where: { id: existingIdentity.id },
-        data: { accessToken: data.accessToken, refreshToken: data.refreshToken },
+        data: {
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+        },
       });
     } else {
       await this.prisma.identity.create({
@@ -115,10 +126,10 @@ export class AuthService {
         },
       });
     }
- 
+
     return this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
   }
- 
+
   issueJwt(user: User): string {
     const payload: JwtPayload = {
       sub: user.id,
@@ -127,7 +138,7 @@ export class AuthService {
     };
     return this.jwtService.sign(payload, { expiresIn: '7d' });
   }
- 
+
   /**
    * State assinado e de curta duração, enviado ao provider OAuth no fluxo de
    * "ligar conta". Faz o papel de proteção CSRF: só quem possui um JWT válido
@@ -135,19 +146,76 @@ export class AuthService {
    * expira em 10 minutos.
    */
   createLinkState(userId: string, provider: Provider): string {
-    const payload: LinkStatePayload = { sub: userId, purpose: 'link', provider };
+    const payload: LinkStatePayload = {
+      sub: userId,
+      purpose: 'link',
+      provider,
+    };
     return this.jwtService.sign(payload, { expiresIn: '10m' });
   }
- 
+
   consumeLinkState(state: string, provider: Provider): string {
     try {
       const payload = this.jwtService.verify<LinkStatePayload>(state);
       if (payload.purpose !== 'link' || payload.provider !== provider) {
-        throw new UnauthorizedException('State OAuth inválido para este provider.');
+        throw new UnauthorizedException(
+          'State OAuth inválido para este provider.',
+        );
       }
       return payload.sub;
     } catch {
       throw new UnauthorizedException('State OAuth inválido ou expirado.');
     }
+  }
+
+  // GESTÃO DE API KEYS (Para Postman/Scripts externos)
+
+  async generateApiKey(userId: string, name: string) {
+    // 32 bytes de entropia pura
+    const rawKey = randomBytes(32).toString('base64url');
+    // Guardamos apenas o Hash SHA-256
+    const keyHash = createHash('sha256').update(rawKey).digest('hex');
+
+    await this.prisma.apiKey.create({
+      data: { userId, keyHash, name },
+    });
+
+    this.logger.log(`API Key gerada para o utilizador: ${userId}`);
+
+    // Retorna a chave em plain text UMA ÚNICA VEZ
+    return { apiKey: rawKey };
+  }
+
+  async validateApiKey(incomingKey: string): Promise<User | null> {
+    const keyHash = createHash('sha256').update(incomingKey).digest('hex');
+
+    const apiKeyRecord = await this.prisma.apiKey.findUnique({
+      where: { keyHash },
+      include: { user: true },
+    });
+
+    if (apiKeyRecord) {
+      // Atualiza lastUsed de forma não-bloqueante
+      this.prisma.apiKey
+        .update({
+          where: { id: apiKeyRecord.id },
+          data: { lastUsed: new Date() },
+        })
+        .catch((e) =>
+          this.logger.error('Erro ao atualizar lastUsed da API Key', e),
+        );
+
+      return apiKeyRecord.user;
+    }
+
+    this.logger.warn('Tentativa falhada de uso de API Key.');
+    return null;
+  }
+
+  async revokeApiKey(userId: string, keyId: string) {
+    await this.prisma.apiKey.delete({
+      where: { id: keyId, userId },
+    });
+    this.logger.log(`API Key revogada. KeyID: ${keyId}`);
   }
 }
