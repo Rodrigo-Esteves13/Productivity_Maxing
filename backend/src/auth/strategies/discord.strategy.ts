@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy } from 'passport-discord';
+import { Strategy, Profile } from 'passport-discord';
 import { Request } from 'express';
-import { Provider } from '@prisma/client';
+import { Provider, User } from '@prisma/client';
 import { AuthService } from '../auth.service';
  
 @Injectable()
@@ -21,17 +21,18 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
     req: Request,
     accessToken: string,
     refreshToken: string,
-    profile: any,
+    profile: Profile,
     done: (err: Error | null, user?: any) => void,
   ) {
     try {
       const email = profile.email ?? `${profile.id}@discord.com`;
       const state = req.query.state as string | undefined;
+      const discordProfile = profile as Profile & { global_name?: string };
       const data = {
         provider: Provider.DISCORD,
         providerAccountId: profile.id,
         email,
-        name: profile.global_name || profile.username,
+        name: discordProfile.global_name || profile.username,
         accessToken,
         refreshToken,
       };

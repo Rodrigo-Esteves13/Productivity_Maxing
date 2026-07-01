@@ -2,6 +2,7 @@ import { ExecutionContext, Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Provider } from '@prisma/client';
 import { AuthService } from '../auth.service';
+import { Request } from 'express';
  
 @Injectable()
 export class DiscordLinkGuard extends AuthGuard('discord') {
@@ -10,8 +11,8 @@ export class DiscordLinkGuard extends AuthGuard('discord') {
   }
  
   getAuthenticateOptions(context: ExecutionContext) {
-    const req = context.switchToHttp().getRequest();
-    const state = this.authService.createLinkState(req.user.id, Provider.DISCORD);
+    const request = context.switchToHttp().getRequest<Request & { user: { id: string } }>();
+    const state = this.authService.createLinkState(request.user.id, Provider.DISCORD);
     return {
       state,
       scope: ['identify', 'email'],
