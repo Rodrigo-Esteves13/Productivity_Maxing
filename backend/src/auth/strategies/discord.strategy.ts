@@ -9,9 +9,9 @@ import { AuthService } from '../auth.service';
 export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
   constructor(private authService: AuthService) {
     super({
-      clientID: process.env.DISCORD_CLIENT_ID,
-      clientSecret: process.env.DISCORD_CLIENT_SECRET,
-      callbackURL: process.env.DISCORD_CALLBACK_URL,
+      clientID: process.env.DISCORD_CLIENT_ID || '',
+      clientSecret: process.env.DISCORD_CLIENT_SECRET || '',
+      callbackURL: process.env.DISCORD_CALLBACK_URL || '',
       scope: ['identify', 'email'],
       passReqToCallback: true,
     });
