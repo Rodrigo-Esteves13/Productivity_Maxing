@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, ParseUUIDPipe, InternalServerErrorException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  Delete,
+  ParseUUIDPipe,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { AreasService } from './areas.service';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
@@ -14,9 +24,11 @@ export class AreasController {
   create(@Body() createAreaDto: CreateAreaDto) {
     // Neste momento fixo, com uuid fixo com uuid real no .env, será removido no futuro
     const userId = process.env.TEST_USER_ID;
-    
+
     if (!userId) {
-      throw new InternalServerErrorException('Configuração em falta: TEST_USER_ID não encontrado no .env');
+      throw new InternalServerErrorException(
+        'Configuração em falta: TEST_USER_ID não encontrado no .env',
+      );
     }
 
     return this.areasService.create(userId, createAreaDto);
@@ -27,18 +39,21 @@ export class AreasController {
     return this.areasService.findAll();
   }
 
-@Get(':id')
-findOne(@Param('id', ParseUUIDPipe) id: string) {
-  return this.areasService.findOne(id);
-}
+  @Get(':id')
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.areasService.findOne(id);
+  }
 
-@Patch(':id')
-update(@Param('id', ParseUUIDPipe) id: string, @Body() updateAreaDto: UpdateAreaDto) {
-  return this.areasService.update(id, updateAreaDto);
-}
+  @Patch(':id')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateAreaDto: UpdateAreaDto,
+  ) {
+    return this.areasService.update(id, updateAreaDto);
+  }
 
-@Delete(':id')
-remove(@Param('id', ParseUUIDPipe) id: string) {
-  return this.areasService.remove(id);
-}
+  @Delete(':id')
+  remove(@Param('id', ParseUUIDPipe) id: string) {
+    return this.areasService.remove(id);
+  }
 }

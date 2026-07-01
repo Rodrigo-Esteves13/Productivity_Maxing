@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
- 
+
 // Usado tanto para /auth/google (início do login) como para
 // /auth/google/callback — a GoogleStrategy trata da distinção internamente.
 @Injectable()

@@ -8,18 +8,26 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { GithubStrategy } from './strategies/github.strategy';
 import { DiscordStrategy } from './strategies/discord.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
- 
+import { ApiKeyStrategy } from './strategies/api-key.strategy';
+
 @Module({
   imports: [
     PrismaModule,
-    PassportModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '7d' },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, GoogleStrategy, GithubStrategy, DiscordStrategy, JwtStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    GoogleStrategy,
+    GithubStrategy,
+    DiscordStrategy,
+    ApiKeyStrategy,
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}

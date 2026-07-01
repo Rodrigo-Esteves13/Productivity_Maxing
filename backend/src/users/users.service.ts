@@ -4,7 +4,6 @@ export type AuthProvider = 'google' | 'github' | 'discord';
 
 @Injectable()
 export class UsersService {
-  
   findAll() {
     return `Esta ação devolve todos os utilizadores (Apenas Admin)`;
   }
