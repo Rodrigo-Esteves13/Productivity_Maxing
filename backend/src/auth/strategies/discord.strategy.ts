@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, Profile } from 'passport-discord';
 import { Request } from 'express';
-import { Provider, User } from '@prisma/client';
+import { Provider } from '@prisma/client';
 import { AuthService } from '../auth.service';
  
 @Injectable()
