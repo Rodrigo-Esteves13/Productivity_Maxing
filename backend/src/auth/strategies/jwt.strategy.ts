@@ -13,7 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
  
-  async validate(payload: JwtPayload) {
+  validate(payload: JwtPayload) {
     // fica disponível como req.user em qualquer rota protegida por JwtAuthGuard
     return { id: payload.sub, email: payload.email, role: payload.role };
   }
