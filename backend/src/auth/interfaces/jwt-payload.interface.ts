@@ -5,7 +5,7 @@ export interface JwtPayload {
   iat?: number;
   exp?: number;
 }
- 
+
 export interface LinkStatePayload {
   sub: string;
   purpose: 'link';

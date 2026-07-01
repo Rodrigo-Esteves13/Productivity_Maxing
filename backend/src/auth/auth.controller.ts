@@ -1,4 +1,14 @@
-import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Delete,
+  Param,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { User } from '@prisma/client';
 import { AuthService } from './auth.service';
@@ -10,24 +20,24 @@ import { GithubLinkGuard } from './guards/github-link.guard';
 import { DiscordAuthGuard } from './guards/discord-auth.guard';
 import { DiscordLinkGuard } from './guards/discord-link.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
- 
+
 // URL do frontend para onde se redireciona depois do callback, com o JWT
 // como query param. Ajustar em produção (Fase 6) para o domínio real.
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
- 
+
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
- 
+
   // ---------------- GOOGLE ----------------
- 
+
   // Login normal: redireciona para o consent screen do Google.
   @Get('google')
   @UseGuards(GoogleAuthGuard)
   googleLogin() {
     // nunca corre - o Guard intercepta e redireciona antes de chegar aqui
   }
- 
+
   // Callback do Google. A GoogleStrategy já decide sozinha, com base na
   // presença (ou não) de ?state=, se isto é um login normal ou um link
   // de conta, e devolve o User certo em req.user.
@@ -36,7 +46,7 @@ export class AuthController {
   googleCallback(@Req() req: Request, @Res() res: Response) {
     return this.issueJwtAndRedirect(req, res);
   }
- 
+
   // Ligar conta Google a um utilizador já autenticado (precisa de JWT válido
   // no header Authorization). O GoogleLinkGuard gera o state assinado e
   // injeta-o no pedido de autorização ao Google.
@@ -45,41 +55,41 @@ export class AuthController {
   googleLink() {
     // idem, nunca corre
   }
- 
+
   // ---------------- GITHUB ----------------
- 
+
   @Get('github')
   @UseGuards(GithubAuthGuard)
   githubLogin() {}
- 
+
   @Get('github/callback')
   @UseGuards(GithubAuthGuard)
   githubCallback(@Req() req: Request, @Res() res: Response) {
     return this.issueJwtAndRedirect(req, res);
   }
- 
+
   @Get('github/link')
   @UseGuards(JwtAuthGuard, GithubLinkGuard)
   githubLink() {}
- 
+
   // ---------------- DISCORD ----------------
- 
+
   @Get('discord')
   @UseGuards(DiscordAuthGuard)
   discordLogin() {}
- 
+
   @Get('discord/callback')
   @UseGuards(DiscordAuthGuard)
   discordCallback(@Req() req: Request, @Res() res: Response) {
     return this.issueJwtAndRedirect(req, res);
   }
- 
+
   @Get('discord/link')
   @UseGuards(JwtAuthGuard, DiscordLinkGuard)
   discordLink() {}
- 
+
   // ---------------- SESSÃO ATUAL ----------------
- 
+
   // Rota de teste/utilidade: devolve o payload do JWT atual.
   // Útil para o frontend confirmar que o token é válido.
   @Get('me')
@@ -87,10 +97,31 @@ export class AuthController {
   me(@CurrentUser() user: { id: string; email: string; role: string }) {
     return user;
   }
- 
+
   private issueJwtAndRedirect(req: Request, res: Response) {
     const user = req.user as User;
     const token = this.authService.issueJwt(user);
     return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}`);
+  }
+
+  // ---------------- API KEYS ----------------
+
+  @Post('api-keys')
+  @UseGuards(JwtAuthGuard)
+  async createApiKey(
+    @CurrentUser() user: { id: string },
+    @Body('name') name: string,
+  ) {
+    return this.authService.generateApiKey(user.id, name || 'API Key Genérica');
+  }
+
+  @Delete('api-keys/:id')
+  @UseGuards(JwtAuthGuard)
+  async revokeApiKey(
+    @CurrentUser() user: { id: string },
+    @Param('id') keyId: string,
+  ) {
+    await this.authService.revokeApiKey(user.id, keyId);
+    return { message: 'API Key revogada com sucesso.' };
   }
 }

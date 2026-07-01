@@ -73,6 +73,18 @@ model User {
   identities   Identity[]
   areas        Area[]
   tasks        Task[]
+  apiKeys      ApiKey[]
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  userId    String
+  keyHash   String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  lastUsed  DateTime?
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 /// Gere os tokens e IDs externos para autenticação OAuth (SSO).

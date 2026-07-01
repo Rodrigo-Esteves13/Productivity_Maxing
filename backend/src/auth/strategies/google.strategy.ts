@@ -4,7 +4,7 @@ import { Strategy, VerifyCallback, Profile } from 'passport-google-oauth20';
 import { Request } from 'express';
 import { Provider } from '@prisma/client';
 import { AuthService } from '../auth.service';
- 
+
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(private authService: AuthService) {
@@ -16,7 +16,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       passReqToCallback: true,
     });
   }
- 
+
   async validate(
     req: Request,
     accessToken: string,

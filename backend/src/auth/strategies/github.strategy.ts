@@ -4,7 +4,7 @@ import { Strategy, Profile } from 'passport-github2';
 import { Request } from 'express';
 import { Provider } from '@prisma/client';
 import { AuthService } from '../auth.service';
- 
+
 @Injectable()
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
   constructor(private authService: AuthService) {
@@ -16,7 +16,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
       passReqToCallback: true,
     });
   }
- 
+
   async validate(
     req: Request,
     accessToken: string,
@@ -25,7 +25,8 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     done: (err: Error | null, user?: any) => void,
   ) {
     try {
-      const email = profile.emails?.[0]?.value ?? `${profile.username}@github.com`;
+      const email =
+        profile.emails?.[0]?.value ?? `${profile.username}@github.com`;
       const state = req.query.state as string | undefined;
       const data = {
         provider: Provider.GITHUB,
