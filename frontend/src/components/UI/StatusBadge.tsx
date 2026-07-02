@@ -1,4 +1,4 @@
-import type { ProgressStatus } from '../types/task';
+import type { ProgressStatus } from '../../types/task';
 
 const statusColors: Record<ProgressStatus, string> = {
   ADIANTADO: 'bg-green-100 text-green-800',
