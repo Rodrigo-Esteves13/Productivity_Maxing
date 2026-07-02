@@ -6,9 +6,9 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 @Injectable()
 export class TasksService {
   constructor(private prisma: PrismaService) {}
-  
+
   // Substitui pelo teu ID de user real do Prisma Studio
-  private readonly testUserId = 'TEU_UUID_AQUI'; 
+  private readonly testUserId = 'TEU_UUID_AQUI';
 
   create(dto: CreateTaskDto) {
     return this.prisma.task.create({
@@ -17,16 +17,16 @@ export class TasksService {
   }
 
   findAll() {
-    return this.prisma.task.findMany({ 
-      where: { userId: this.testUserId }, 
-      include: { area: true } // Corrigido de 'subject' para 'area'
+    return this.prisma.task.findMany({
+      where: { userId: this.testUserId },
+      include: { area: true }, // Corrigido de 'subject' para 'area'
     });
   }
 
   async findOne(id: string) {
-    const task = await this.prisma.task.findUnique({ 
-      where: { id }, 
-      include: { area: true } // Corrigido de 'subject' para 'area'
+    const task = await this.prisma.task.findUnique({
+      where: { id },
+      include: { area: true }, // Corrigido de 'subject' para 'area'
     });
     if (!task) throw new NotFoundException(`Task ${id} não encontrada`);
     return task;

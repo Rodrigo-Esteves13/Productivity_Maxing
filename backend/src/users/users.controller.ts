@@ -1,5 +1,16 @@
-import { Controller, Get, Param, ParseUUIDPipe, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { UsersService } from './users.service';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -12,12 +23,14 @@ export class UsersController {
 
   // Listar todos os utilizadores -> APENAS ADMIN!
   @Get()
-  @UseGuards(RolesGuard)         // Liga o Guardião da rota
-  @Roles(Role.ADMIN)             // Exige o papel de ADMIN
-  @ApiBearerAuth()               // Mostra o cadeado no Swagger
-  @ApiOperation({ summary: 'Obtém a lista de todos os utilizadores (Apenas Admin)' })
+  @UseGuards(RolesGuard) // Liga o Guardião da rota
+  @Roles(Role.ADMIN) // Exige o papel de ADMIN
+  @ApiBearerAuth() // Mostra o cadeado no Swagger
+  @ApiOperation({
+    summary: 'Obtém a lista de todos os utilizadores (Apenas Admin)',
+  })
   findAll() {
-    return this.usersService.findAll(); 
+    return this.usersService.findAll();
   }
 
   // Perfil do utilizador
@@ -30,7 +43,9 @@ export class UsersController {
 
   // Todas as contas externas (providers) de um utilizador
   @Get(':id/providers')
-  @ApiOperation({ summary: 'Obtém todas as contas externas ligadas ao utilizador' })
+  @ApiOperation({
+    summary: 'Obtém todas as contas externas ligadas ao utilizador',
+  })
   @ApiParam({ name: 'id', description: 'UUID do utilizador' })
   getProviders(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.getProviders(id);
@@ -38,9 +53,15 @@ export class UsersController {
 
   // Uma conta externa específica de um utilizador
   @Get(':id/providers/:provider')
-  @ApiOperation({ summary: 'Obtém os dados de um provider específico (ex: google, github)' })
+  @ApiOperation({
+    summary: 'Obtém os dados de um provider específico (ex: google, github)',
+  })
   @ApiParam({ name: 'id', description: 'UUID do utilizador' })
-  @ApiParam({ name: 'provider', description: 'Nome do provider', example: 'github' })
+  @ApiParam({
+    name: 'provider',
+    description: 'Nome do provider',
+    example: 'github',
+  })
   getProviderAccount(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('provider') provider: 'google' | 'github' | 'discord',
