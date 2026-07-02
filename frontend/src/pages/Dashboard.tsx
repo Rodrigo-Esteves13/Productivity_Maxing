@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
-import Navbar from '../components/Navbar';
-import StatusBadge from '../components/StatusBadge';
+import { Navbar } from '../components/Navbar';
+import StatusBadge from '../components/UI/StatusBadge';
 import type { Task } from '../types/task';
 
 export default function Dashboard() {
@@ -13,7 +13,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-neutral-950">
-      <Navbar isAuthenticated={true} />
+      <Navbar />
 
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-4 text-white">Dashboard</h1>

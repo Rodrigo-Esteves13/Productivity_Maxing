@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
-import Navbar from '../components/Navbar';
-import Input from '../components/Input';
-import Button from '../components/Button';
-import OAuthButton from '../components/OAuthButton';
+import { Navbar } from '../components/Navbar';
+import Input from '../components/UI/Input';
+import Button from '../components/UI/Button';
+import OAuthButton from '../components/Auth/OAuthButton';
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -33,7 +33,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-neutral-950">
-      <Navbar isAuthenticated={false} />
+      <Navbar />
 
       <div className="flex items-center justify-center py-24">
         <div className="w-full max-w-sm p-8 bg-neutral-900 rounded-xl shadow">
