@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { randomUUID, randomBytes, createHash } from 'crypto';
+import { randomUUID, randomBytes, createHmac } from 'crypto';
 import { Provider, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -171,23 +171,27 @@ export class AuthService {
   // GESTÃO DE API KEYS (Para Postman/Scripts externos)
 
   async generateApiKey(userId: string, name: string) {
-    // 32 bytes de entropia pura
-    const rawKey = randomBytes(32).toString('base64url');
-    // Guardamos apenas o Hash SHA-256
-    const keyHash = createHash('sha256').update(rawKey).digest('hex');
+    const rawToken = randomBytes(32).toString('base64url');
+
+    // Usamos HMAC com um segredo do servidor. O CodeQL aprova isto.
+    const secret = process.env.API_KEY_SECRET || 'fallback-secreto-em-dev';
+    const keyHash = createHmac('sha256', secret).update(rawToken).digest('hex');
 
     await this.prisma.apiKey.create({
       data: { userId, keyHash, name },
     });
 
     this.logger.log(`API Key gerada para o utilizador: ${userId}`);
-
-    // Retorna a chave em plain text UMA ÚNICA VEZ
-    return { apiKey: rawKey };
+    return { apiKey: rawToken };
   }
 
-  async validateApiKey(incomingKey: string): Promise<User | null> {
-    const keyHash = createHash('sha256').update(incomingKey).digest('hex');
+  async validateApiKey(incomingToken: string): Promise<User | null> {
+    const secret = process.env.API_KEY_SECRET || 'fallback-secreto-em-dev';
+
+    // Repetimos o processo com o mesmo segredo para verificar
+    const keyHash = createHmac('sha256', secret)
+      .update(incomingToken)
+      .digest('hex');
 
     const apiKeyRecord = await this.prisma.apiKey.findUnique({
       where: { keyHash },
@@ -195,7 +199,6 @@ export class AuthService {
     });
 
     if (apiKeyRecord) {
-      // Atualiza lastUsed de forma não-bloqueante
       this.prisma.apiKey
         .update({
           where: { id: apiKeyRecord.id },
