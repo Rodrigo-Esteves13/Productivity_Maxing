@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { randomUUID, randomBytes, createHmac } from 'crypto';
+import { randomUUID, randomBytes, scryptSync } from 'crypto';
 import { Provider, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -171,11 +171,14 @@ export class AuthService {
   // GESTÃO DE API KEYS (Para Postman/Scripts externos)
 
   async generateApiKey(userId: string, name: string) {
+    // 32 bytes de entropia pura
     const rawToken = randomBytes(32).toString('base64url');
 
-    // Usamos HMAC com um segredo do servidor. O CodeQL aprova isto.
+    // Usamos o secret do servidor como "salt" para manter a segurança do ambiente.
     const secret = process.env.API_KEY_SECRET || 'fallback-secreto-em-dev';
-    const keyHash = createHmac('sha256', secret).update(rawToken).digest('hex');
+
+    // 64 é o tamanho do hash em bytes.
+    const keyHash = scryptSync(rawToken, secret, 64).toString('hex');
 
     await this.prisma.apiKey.create({
       data: { userId, keyHash, name },
@@ -188,10 +191,8 @@ export class AuthService {
   async validateApiKey(incomingToken: string): Promise<User | null> {
     const secret = process.env.API_KEY_SECRET || 'fallback-secreto-em-dev';
 
-    // Repetimos o processo com o mesmo segredo para verificar
-    const keyHash = createHmac('sha256', secret)
-      .update(incomingToken)
-      .digest('hex');
+    // Repetimos o scryptSync com os mesmos parâmetros para verificar
+    const keyHash = scryptSync(incomingToken, secret, 64).toString('hex');
 
     const apiKeyRecord = await this.prisma.apiKey.findUnique({
       where: { keyHash },
