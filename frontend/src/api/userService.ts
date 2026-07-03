@@ -29,3 +29,17 @@ export async function getTaskMetadata() {
   const response = await api.get('/tasks/meta');
   return response.data; 
 }
+
+export async function getTaskById(id: string): Promise<Task> {
+  const response = await api.get<Task>(`/tasks/${id}`);
+  return response.data;
+}
+
+export async function updateTask(id: string, taskData: any): Promise<Task> {
+  const response = await api.patch<Task>(`/tasks/${id}`, taskData);
+  return response.data;
+}
+
+export async function deleteTask(id: string): Promise<void> {
+  await api.delete(`/tasks/${id}`);
+}

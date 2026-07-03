@@ -6,6 +6,8 @@ import {
   IsOptional,
   IsNumber,
   IsUrl,
+  Min,
+  Max,
 } from 'class-validator';
 import {
   TaskType,
@@ -68,6 +70,8 @@ export class CreateTaskDto {
   @ApiPropertyOptional({ example: 25.5, description: 'Peso na nota final (%)' })
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(100)
   weightPercentage?: number;
 
   @ApiProperty({
@@ -98,6 +102,8 @@ export class CreateTaskDto {
   @ApiPropertyOptional({ example: 16.0, description: 'Nota objetivo (0-20)' })
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(20)
   targetGrade?: number;
 
   @ApiPropertyOptional({
@@ -106,5 +112,7 @@ export class CreateTaskDto {
   })
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(20)
   realGrade?: number;
 }
