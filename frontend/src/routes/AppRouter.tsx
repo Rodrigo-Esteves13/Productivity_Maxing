@@ -3,6 +3,7 @@ import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
 import RootRedirect from './RootRedirect';
 import Login from '../pages/Login';
+import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
 import AuthCallback from '../components/Auth/AuthCallback';
 import Tasks from '../pages/Tasks';
@@ -15,6 +16,7 @@ export default function AppRouter() {
       <Routes>
         <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
 
         {/* --- ROTAS PRIVADAS --- */}

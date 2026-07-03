@@ -21,8 +21,8 @@ export class TasksService {
         include: { area: true }
       });
     } catch (error) {
-      // 🚨 Se der erro, isto vai imprimir O MOTIVO EXATO no teu terminal do NestJS
-      console.error('🔴 ERRO PRISMA (CREATE TASK):', error);
+      // Se der erro, isto vai imprimir O MOTIVO EXATO no  terminal do NestJS
+      console.error('ERRO PRISMA (CREATE TASK):', error);
       throw new InternalServerErrorException('Erro ao criar tarefa. Verifica o terminal do backend.');
     }
   }

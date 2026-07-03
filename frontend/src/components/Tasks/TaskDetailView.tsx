@@ -1,26 +1,10 @@
-import type { ReactNode } from 'react';
 import type { Task } from '../../types/models';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
+import DetailRow from '../UI/DetailRow';
 
 interface TaskDetailViewProps {
   task: Task;
-}
-
-interface DetailRowProps {
-  label: string;
-  children: ReactNode;
-}
-
-function DetailRow({ label, children }: DetailRowProps) {
-  return (
-    <div className="flex flex-col gap-0.5 py-2.5 border-b border-neutral-800 last:border-b-0">
-      <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
-        {label}
-      </span>
-      <div className="text-sm text-neutral-200">{children}</div>
-    </div>
-  );
 }
 
 function formatEnumLabel(value: string | null): string {

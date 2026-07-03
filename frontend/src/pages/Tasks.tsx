@@ -1,20 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
-import TaskCard from '../components/Tasks/TaskCard';
+import TaskGrid from '../components/Tasks/TaskGrid';
 import TaskDetailView from '../components/Tasks/TaskDetailView';
 import TaskEditForm from '../components/Tasks/TaskEditForm';
 import Modal from '../components/UI/Modal';
 import TaskForm from '../components/Tasks/TaskForm';
-// 1. Adicionado o TrashIcon aos imports
-import { PencilIcon, XIcon, TrashIcon } from '../components/UI/icons'; 
+import ActionButton from '../components/UI/ActionButton';
+import LoadingState from '../components/UI/LoadingState';
+import ErrorState from '../components/UI/ErrorState';
+import EmptyState from '../components/UI/EmptyState';
+import ModalHeaderActions from '../components/UI/ModalHeaderActions';
 import {
   getUserTasks,
   getUserAreas,
   createTask,
   updateTask,
   getTaskMetadata,
-  deleteTask, // 2. Importada a chamada da API
+  deleteTask,
 } from '../api/userService';
 import type { Task, Area } from '../types/models';
 
@@ -84,20 +87,17 @@ export default function Tasks() {
     [selectedTask]
   );
 
-  // 3. Função para apagar a Tarefa
   const handleDeleteTask = useCallback(async () => {
     if (!selectedTask) return;
 
-    // Confirmação simples do browser para não apagar por acidente
     const confirmDelete = window.confirm(
       'Tens a certeza que queres apagar esta tarefa? Esta ação é irreversível.'
     );
-    
+
     if (!confirmDelete) return;
 
     try {
       await deleteTask(selectedTask.id);
-      // Remove da lista atual sem precisar de fazer loading à página toda outra vez
       setTasks((prev) => prev.filter((t) => t.id !== selectedTask.id));
       closeDetailModal();
     } catch (err) {
@@ -110,35 +110,21 @@ export default function Tasks() {
       <PageHeader
         title="As Minhas Tarefas"
         description="Gere, filtra e acompanha o progresso de todas as tuas tarefas."
+        action={
+          <ActionButton color="violet" onClick={() => setIsCreateModalOpen(true)}>
+            + Nova Tarefa
+          </ActionButton>
+        }
       />
 
-      <div className="mb-6 flex gap-4">
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-md transition-colors"
-        >
-          + Nova Tarefa
-        </button>
-      </div>
-
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <p className="text-neutral-400 animate-pulse">A carregar dados...</p>
-        </div>
+        <LoadingState message="A carregar dados..." className="h-64" />
       ) : error ? (
-        <div className="p-4 bg-red-900/50 border border-red-500 rounded-lg text-red-200">
-          {error}
-        </div>
+        <ErrorState message={error} />
       ) : tasks.length === 0 ? (
-        <div className="p-8 text-center bg-neutral-900/50 border border-neutral-800 rounded-xl">
-          <p className="text-neutral-400">Não tens tarefas registadas.</p>
-        </div>
+        <EmptyState message="Não tens tarefas registadas." />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onSelect={handleSelectTask} />
-          ))}
-        </div>
+        <TaskGrid tasks={tasks} onSelect={handleSelectTask} />
       )}
 
       {/* Modal de criação */}
@@ -163,24 +149,13 @@ export default function Tasks() {
         title={isEditing ? 'Editar Tarefa' : 'Detalhes da Tarefa'}
         action={
           selectedTask && (
-            <div className="flex items-center gap-1">
-              {/* 4. Botão de Apagar adicionado ao Modal (só no modo detalhe ou edição) */}
-              <button
-                onClick={handleDeleteTask}
-                title="Apagar tarefa"
-                className="text-neutral-400 hover:text-red-500 transition-colors p-1"
-              >
-                <TrashIcon />
-              </button>
-              <button
-                onClick={() => setIsEditing((prev) => !prev)}
-                aria-label={isEditing ? 'Cancelar edição' : 'Editar tarefa'}
-                title={isEditing ? 'Cancelar edição' : 'Editar tarefa'}
-                className="text-neutral-400 hover:text-white transition-colors p-1"
-              >
-                {isEditing ? <XIcon /> : <PencilIcon />}
-              </button>
-            </div>
+            <ModalHeaderActions
+              isEditing={isEditing}
+              onToggleEdit={() => setIsEditing((prev) => !prev)}
+              onDelete={handleDeleteTask}
+              deleteTitle="Apagar tarefa"
+              editTitle="Editar tarefa"
+            />
           )
         }
       >
