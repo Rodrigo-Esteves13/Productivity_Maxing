@@ -1,3 +1,5 @@
+import { LogoutIcon } from '../UI/icons';
+
 interface AuthStatusProps {
   isAuthenticated: boolean;
   onLogout: () => void;
@@ -9,8 +11,9 @@ export default function AuthStatus({ isAuthenticated, onLogout }: AuthStatusProp
       {isAuthenticated ? (
         <button
           onClick={onLogout}
-          className="px-4 py-2 border border-red-900/50 rounded-md text-sm font-medium text-red-400 bg-red-950/30 hover:bg-red-900/50 hover:text-red-300 focus:outline-none transition-colors"
+          className="flex items-center gap-2 px-4 py-2 border border-red-900/50 rounded-md text-sm font-medium text-red-400 bg-red-950/30 hover:bg-red-900/50 hover:text-red-300 focus:outline-none transition-colors"
         >
+          <LogoutIcon />
           Logout
         </button>
       ) : (

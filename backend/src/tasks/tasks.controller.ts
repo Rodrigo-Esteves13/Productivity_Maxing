@@ -25,7 +25,7 @@ export class TasksController {
 
   @Post()
   create(@CurrentUser() user: any, @Body() dto: CreateTaskDto) {
-    // 🛡️ Segurança máxima: Procura pelo id ou pelo sub!
+    // Segurança máxima: Procura pelo id ou pelo sub!
     const userId = user.id || user.sub;
     if (!userId) throw new UnauthorizedException('ID do utilizador não encontrado no token.');
     

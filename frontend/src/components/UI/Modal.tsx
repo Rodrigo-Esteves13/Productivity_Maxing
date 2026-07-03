@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect } from 'react';
+import { XIcon } from './icons';
 
 interface ModalProps {
   isOpen: boolean;
@@ -43,8 +44,9 @@ export default function Modal({ isOpen, onClose, title, children, action }: Moda
             <button 
               onClick={onClose}
               className="text-neutral-400 hover:text-white transition-colors p-1"
+              title="Fechar"
             >
-              X
+              <XIcon />
             </button>
           </div>
         </div>
