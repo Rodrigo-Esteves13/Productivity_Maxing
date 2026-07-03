@@ -1,30 +1,28 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  // Extraímos a função login do nosso novo Contexto
+  const { login } = useAuth();
 
   useEffect(() => {
-    // 1. Vai buscar o token ao URL (?token=eyJ...)
     const token = searchParams.get('token');
-
+    
     if (token) {
-      // 2. Guarda o token no navegador
-      localStorage.setItem('token', token);
-      
-      // 3. Redireciona para o dashboard e limpa o histórico
+      // Usamos o hook! Ele atualiza o contexto, avisa o Navbar e guarda no localStorage sozinho
+      login(token); 
       navigate('/dashboard', { replace: true });
     } else {
-      // Se por algum motivo não houver token, manda de volta para o login
-      navigate('/', { replace: true });
+      navigate('/login', { replace: true });
     }
-  }, [navigate, searchParams]);
+  }, [searchParams, navigate, login]);
 
-  // Um ecrã de loading muito simples para a fração de segundo que isto demora
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-950 text-neutral-400">
-      <p>A finalizar autenticação...</p>
+    <div className="flex items-center justify-center min-h-screen bg-neutral-950">
+      <p className="text-neutral-400 animate-pulse">Authenticating...</p>
     </div>
   );
 }

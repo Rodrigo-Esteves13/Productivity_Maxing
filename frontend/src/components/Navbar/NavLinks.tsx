@@ -8,8 +8,8 @@ export default function NavLinks({ currentPath }: NavLinksProps) {
   const getLinkClass = (path: string) => {
     const baseClass = "px-3 py-2 rounded-md text-sm font-medium transition-colors";
     return currentPath === path 
-      ? `${baseClass} bg-gray-800 text-white` 
-      : `${baseClass} text-gray-300 hover:bg-gray-700 hover:text-white`;
+      ? `${baseClass} bg-neutral-800 text-white` 
+      : `${baseClass} text-neutral-400 hover:bg-neutral-800 hover:text-white`;
   };
 
   return (

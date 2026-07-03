@@ -15,6 +15,7 @@ import { Role } from '@prisma/client';
 import { UsersService } from './users.service';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('User')
 @Controller('users')
@@ -23,7 +24,7 @@ export class UsersController {
 
   // Listar todos os utilizadores -> APENAS ADMIN!
   @Get()
-  @UseGuards(RolesGuard) // Liga o Guardião da rota
+  @UseGuards(JwtAuthGuard, RolesGuard) // Liga o Guardião da rota
   @Roles(Role.ADMIN) // Exige o papel de ADMIN
   @ApiBearerAuth() // Mostra o cadeado no Swagger
   @ApiOperation({

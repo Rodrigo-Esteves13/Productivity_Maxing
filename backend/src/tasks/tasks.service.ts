@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -7,42 +7,55 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 export class TasksService {
   constructor(private prisma: PrismaService) {}
 
-  // Substitui pelo teu ID de user real do Prisma Studio
-  private readonly testUserId = 'TEU_UUID_AQUI';
-
-  create(dto: CreateTaskDto) {
-    return this.prisma.task.create({
-      data: { ...dto, date: new Date(dto.date), userId: this.testUserId },
-    });
+  async create(userId: string, dto: CreateTaskDto) {
+    try {
+      // Separamos a data do resto para garantir que a conversão não esmaga nada
+      const { date, ...rest } = dto;
+      
+      return await this.prisma.task.create({
+        data: { 
+          ...rest, 
+          date: new Date(date), 
+          userId: userId // Agora temos a certeza absoluta que o ID não está vazio!
+        },
+        include: { area: true }
+      });
+    } catch (error) {
+      // 🚨 Se der erro, isto vai imprimir O MOTIVO EXATO no teu terminal do NestJS
+      console.error('🔴 ERRO PRISMA (CREATE TASK):', error);
+      throw new InternalServerErrorException('Erro ao criar tarefa. Verifica o terminal do backend.');
+    }
   }
 
-  findAll() {
+  findAll(userId: string) {
     return this.prisma.task.findMany({
-      where: { userId: this.testUserId },
-      include: { area: true }, // Corrigido de 'subject' para 'area'
+      where: { userId: userId },
+      include: { area: true },
+      orderBy: { date: 'asc' }
     });
   }
 
-  async findOne(id: string) {
-    const task = await this.prisma.task.findUnique({
-      where: { id },
-      include: { area: true }, // Corrigido de 'subject' para 'area'
+  async findOne(userId: string, id: string) {
+    const task = await this.prisma.task.findFirst({
+      where: { id: id, userId: userId },
+      include: { area: true },
     });
-    if (!task) throw new NotFoundException(`Task ${id} não encontrada`);
+    if (!task) throw new NotFoundException(`Task não encontrada ou não tens acesso.`);
     return task;
   }
 
-  async update(id: string, dto: UpdateTaskDto) {
-    await this.findOne(id);
+  async update(userId: string, id: string, dto: UpdateTaskDto) {
+    await this.findOne(userId, id);
     const { date, ...rest } = dto;
     return this.prisma.task.update({
       where: { id },
       data: { ...rest, ...(date ? { date: new Date(date) } : {}) },
+      include: { area: true }
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(userId: string, id: string) {
+    await this.findOne(userId, id);
     return this.prisma.task.delete({ where: { id } });
   }
 }
