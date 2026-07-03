@@ -1,51 +1,55 @@
 import { useEffect, useState } from 'react';
-import api from '../api/client';
-import { Navbar } from '../components/Navbar';
-import StatusBadge from '../components/UI/StatusBadge';
-import type { Task } from '../types/task';
+import PageLayout from '../components/Layout/PageLayout';
+import PageHeader from '../components/Layout/PageHeader';
+import TaskCard from '../components/Tasks/TaskCard';
+import { getUserTasks } from '../api/userService';
+import type { Task } from '../types/models';
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<Task[]>('/tasks').then((res) => setTasks(res.data));
+    async function fetchTasks() {
+      try {
+        const data = await getUserTasks();
+        setTasks(data);
+      } catch (err) {
+        setError('Não foi possível carregar as tarefas.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchTasks();
   }, []);
 
   return (
-    <div className="min-h-screen bg-neutral-950">
-      <Navbar />
+    <PageLayout>
+      <PageHeader 
+        title="Dashboard" 
+        description="Visão geral das tuas tarefas, projetos e áreas de vida." 
+      />
 
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4 text-white">Dashboard</h1>
-        <table className="w-full text-sm text-neutral-200">
-          <thead>
-            <tr className="text-left border-b border-neutral-800">
-              <th className="p-2">Cadeira</th>
-              <th className="p-2">Título</th>
-              <th className="p-2">Data</th>
-              <th className="p-2">Peso</th>
-              <th className="p-2">Dificuldade</th>
-              <th className="p-2">Status</th>
-              <th className="p-2">Nota Alvo</th>
-              <th className="p-2">Nota Real</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.map((t) => (
-              <tr key={t.id} className="border-b border-neutral-900">
-                <td className="p-2">{t.area}</td>
-                <td className="p-2">{t.title}</td>
-                <td className="p-2">{t.date}</td>
-                <td className="p-2">{t.weightPercentage}%</td>
-                <td className="p-2">{t.difficulty}</td>
-                <td className="p-2"><StatusBadge status={t.progressStatus} /></td>
-                <td className="p-2">{t.targetGrade}</td>
-                <td className="p-2">{t.realGrade ?? '-'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <p className="text-neutral-400 animate-pulse">A carregar tarefas...</p>
+        </div>
+      ) : error ? (
+        <div className="p-4 bg-red-900/50 border border-red-500 rounded-lg text-red-200">
+          {error}
+        </div>
+      ) : tasks.length === 0 ? (
+        <div className="p-8 text-center bg-neutral-900/50 border border-neutral-800 rounded-xl">
+          <p className="text-neutral-400">Não tens tarefas pendentes.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {tasks.map(task => (
+            <TaskCard key={task.id} task={task} />
+          ))}
+        </div>
+      )}
+    </PageLayout>
   );
 }

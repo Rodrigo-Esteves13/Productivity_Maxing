@@ -19,3 +19,13 @@ export const getUserTasks = async (): Promise<Task[]> => {
   const response = await api.get<Task[]>('/tasks');
   return response.data;
 };
+
+export async function createTask(taskData: any) {
+  const response = await api.post('/tasks', taskData);
+  return response.data;
+}
+
+export async function getTaskMetadata() {
+  const response = await api.get('/tasks/meta');
+  return response.data; 
+}
