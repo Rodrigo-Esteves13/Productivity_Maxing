@@ -5,9 +5,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  action?: ReactNode;
 }
 
-export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, action }: ModalProps) {
   
   // Só ativa o listener se o Modal estiver aberto
   useEffect(() => {
@@ -37,12 +38,15 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
         {/* Header do Modal */}
         <div className="flex items-center justify-between p-4 border-b border-neutral-800">
           <h2 className="text-lg font-bold text-white">{title}</h2>
-          <button 
-            onClick={onClose}
-            className="text-neutral-400 hover:text-white transition-colors p-1"
-          >
-            X
-          </button>
+          <div className="flex items-center gap-2">
+            {action}
+            <button 
+              onClick={onClose}
+              className="text-neutral-400 hover:text-white transition-colors p-1"
+            >
+              X
+            </button>
+          </div>
         </div>
 
         {/* Corpo do Modal (Scrollable) */}
