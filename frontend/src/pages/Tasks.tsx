@@ -50,7 +50,7 @@ export default function Tasks() {
       setTaskTypes(metaData.taskTypes);
       setDifficulties(metaData.difficulties);
     } catch (err) {
-      setError('Não foi possível carregar os dados.');
+      setError('Could not load the data.');
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +91,7 @@ export default function Tasks() {
     if (!selectedTask) return;
 
     const confirmDelete = window.confirm(
-      'Tens a certeza que queres apagar esta tarefa? Esta ação é irreversível.'
+      'Are you sure you want to delete this task? This action is irreversible.'
     );
 
     if (!confirmDelete) return;
@@ -101,28 +101,28 @@ export default function Tasks() {
       setTasks((prev) => prev.filter((t) => t.id !== selectedTask.id));
       closeDetailModal();
     } catch (err) {
-      alert('Não foi possível apagar a tarefa. Tenta novamente.');
+      alert('Could not delete the task. Please try again.');
     }
   }, [selectedTask, closeDetailModal]);
 
   return (
     <PageLayout>
       <PageHeader
-        title="As Minhas Tarefas"
-        description="Gere, filtra e acompanha o progresso de todas as tuas tarefas."
+        title="My Tasks"
+        description="Manage, filter, and track the progress of all your tasks."
         action={
           <ActionButton color="violet" onClick={() => setIsCreateModalOpen(true)}>
-            + Nova Tarefa
+            + New Task
           </ActionButton>
         }
       />
 
       {isLoading ? (
-        <LoadingState message="A carregar dados..." className="h-64" />
+        <LoadingState message="Loading data..." className="h-64" />
       ) : error ? (
         <ErrorState message={error} />
       ) : tasks.length === 0 ? (
-        <EmptyState message="Não tens tarefas registadas." />
+        <EmptyState message="You have no tasks registered." />
       ) : (
         <TaskGrid tasks={tasks} onSelect={handleSelectTask} />
       )}
@@ -131,7 +131,7 @@ export default function Tasks() {
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Criar Nova Tarefa"
+        title="Create New Task"
       >
         <TaskForm
           onSubmit={handleCreateTask}
@@ -146,15 +146,15 @@ export default function Tasks() {
       <Modal
         isOpen={selectedTask !== null}
         onClose={closeDetailModal}
-        title={isEditing ? 'Editar Tarefa' : 'Detalhes da Tarefa'}
+        title={isEditing ? 'Edit Task' : 'Task Details'}
         action={
           selectedTask && (
             <ModalHeaderActions
               isEditing={isEditing}
               onToggleEdit={() => setIsEditing((prev) => !prev)}
               onDelete={handleDeleteTask}
-              deleteTitle="Apagar tarefa"
-              editTitle="Editar tarefa"
+              deleteTitle="Delete task"
+              editTitle="Edit task"
             />
           )
         }

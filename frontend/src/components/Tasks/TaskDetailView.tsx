@@ -16,25 +16,25 @@ function formatEnumLabel(value: string | null): string {
 export default function TaskDetailView({ task }: TaskDetailViewProps) {
   return (
     <div>
-      <DetailRow label="Título">{task.title}</DetailRow>
-      <DetailRow label="Data">{new Date(task.date).toLocaleDateString()}</DetailRow>
-      <DetailRow label="Área">{task.area?.name ?? 'Sem Área'}</DetailRow>
+      <DetailRow label="Title">{task.title}</DetailRow>
+      <DetailRow label="Date">{new Date(task.date).toLocaleDateString()}</DetailRow>
+      <DetailRow label="Area">{task.area?.name ?? 'No Area'}</DetailRow>
 
-      <DetailRow label="Estado">
+      <DetailRow label="Status">
         <StatusBadge status={task.progressStatus} />
       </DetailRow>
-      <DetailRow label="Dificuldade">
+      <DetailRow label="Difficulty">
         <DifficultyBadge difficulty={task.difficulty} />
       </DetailRow>
 
-      <DetailRow label="Tipo">{formatEnumLabel(task.type)}</DetailRow>
+      <DetailRow label="Type">{formatEnumLabel(task.type)}</DetailRow>
       {task.academicType && (
-        <DetailRow label="Tipo Académico">{formatEnumLabel(task.academicType)}</DetailRow>
+        <DetailRow label="Academic Type">{formatEnumLabel(task.academicType)}</DetailRow>
       )}
-      {task.topics && <DetailRow label="Tópicos">{task.topics}</DetailRow>}
+      {task.topics && <DetailRow label="Topics">{task.topics}</DetailRow>}
 
       {task.referenceLink && (
-        <DetailRow label="Link de Referência">
+        <DetailRow label="Reference Link">
           <a
             href={task.referenceLink}
             target="_blank"
@@ -47,16 +47,16 @@ export default function TaskDetailView({ task }: TaskDetailViewProps) {
       )}
 
       {task.weightPercentage != null && (
-        <DetailRow label="Peso">{task.weightPercentage}%</DetailRow>
+        <DetailRow label="Weight">{task.weightPercentage}%</DetailRow>
       )}
       {task.targetGrade != null && (
-        <DetailRow label="Nota Objetivo">{task.targetGrade}</DetailRow>
+        <DetailRow label="Target Grade">{task.targetGrade}</DetailRow>
       )}
-      <DetailRow label="Nota Real">
+      <DetailRow label="Real Grade">
         {task.realGrade != null ? (
           task.realGrade
         ) : (
-          <span className="text-neutral-500">Ainda não lançada</span>
+          <span className="text-neutral-500">Not entered yet</span>
         )}
       </DetailRow>
 
@@ -64,12 +64,12 @@ export default function TaskDetailView({ task }: TaskDetailViewProps) {
         {task.googleCalendarEventId ? (
           <span className="inline-flex items-center gap-1.5 text-green-400">
             <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-            Sincronizado
+            Synced
           </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 text-neutral-500">
             <span className="h-1.5 w-1.5 rounded-full bg-neutral-600" />
-            Não sincronizado
+            Not synced
           </span>
         )}
       </DetailRow>

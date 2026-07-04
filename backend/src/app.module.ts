@@ -8,6 +8,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AreasModule } from './areas/areas.module';
 import { AuthModule } from './auth/auth.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AuthModule } from './auth/auth.module';
     PrismaModule,
     AreasModule,
     AuthModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [

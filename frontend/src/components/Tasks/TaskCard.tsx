@@ -9,7 +9,7 @@ interface TaskCardProps {
 }
 
 export default function TaskCard({ task, onSelect }: TaskCardProps) {
-  const areaName = task.area?.name || 'Sem Área';
+  const areaName = task.area?.name || 'No Area';
   const isInteractive = Boolean(onSelect);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {

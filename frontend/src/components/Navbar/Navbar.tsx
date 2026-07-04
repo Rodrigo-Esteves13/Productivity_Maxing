@@ -54,7 +54,7 @@ export default function Navbar() {
                     : 'text-amber-500/70 hover:text-amber-400 px-3 py-1.5'
                 }`}
               >
-                Áreas (Admin)
+                Areas (Admin)
               </Link>
             )}
           </div>

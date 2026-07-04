@@ -41,7 +41,7 @@ export default function TaskFormFields({
 }: TaskFormFieldsProps) {
   return (
     <>
-      <FormField label="Título" htmlFor={`${idPrefix}-title`}>
+      <FormField label="Title" htmlFor={`${idPrefix}-title`}>
         <Input
           id={`${idPrefix}-title`}
           required
@@ -53,7 +53,7 @@ export default function TaskFormFields({
       </FormField>
 
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Data" htmlFor={`${idPrefix}-date`}>
+        <FormField label="Date" htmlFor={`${idPrefix}-date`}>
           <Input
             id={`${idPrefix}-date`}
             required
@@ -63,7 +63,7 @@ export default function TaskFormFields({
             className="w-full"
           />
         </FormField>
-        <FormField label="Área" htmlFor={`${idPrefix}-area`}>
+        <FormField label="Area" htmlFor={`${idPrefix}-area`}>
           <Select
             id={`${idPrefix}-area`}
             required
@@ -72,7 +72,7 @@ export default function TaskFormFields({
             className="w-full"
           >
             <option value="" disabled>
-              Selecionar Área...
+              Select Area...
             </option>
             {areas.map((area) => (
               <option key={area.id} value={area.id}>
@@ -84,7 +84,7 @@ export default function TaskFormFields({
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Dificuldade" htmlFor={`${idPrefix}-difficulty`}>
+        <FormField label="Difficulty" htmlFor={`${idPrefix}-difficulty`}>
           <Select
             id={`${idPrefix}-difficulty`}
             value={values.difficulty}
@@ -98,7 +98,7 @@ export default function TaskFormFields({
             ))}
           </Select>
         </FormField>
-        <FormField label="Tipo" htmlFor={`${idPrefix}-type`}>
+        <FormField label="Type" htmlFor={`${idPrefix}-type`}>
           <Select
             id={`${idPrefix}-type`}
             value={values.type}
@@ -115,17 +115,17 @@ export default function TaskFormFields({
       </div>
 
       <div className="space-y-4 pt-4 border-t border-neutral-800">
-        <p className="text-xs font-semibold text-neutral-500 uppercase">Informação Opcional</p>
+        <p className="text-xs font-semibold text-neutral-500 uppercase">Optional Information</p>
         <div className="grid grid-cols-2 gap-4">
           <Input
-            placeholder="Tópicos"
+            placeholder="Topics"
             value={values.topics}
             onChange={(e) => onChange('topics', e.target.value)}
             className="w-full"
           />
           <Input
             type="url"
-            placeholder="Link de referência"
+            placeholder="Reference link"
             value={values.referenceLink}
             onChange={(e) => onChange('referenceLink', e.target.value)}
             className="w-full"
@@ -137,7 +137,7 @@ export default function TaskFormFields({
             min="0"
             max="20"
             step="0.1"
-            placeholder="Nota Objetivo"
+            placeholder="Target Grade"
             value={values.targetGrade}
             onChange={(e) => onChange('targetGrade', e.target.value)}
             className="w-full"
@@ -147,7 +147,7 @@ export default function TaskFormFields({
             min="0"
             max="100"
             step="0.1"
-            placeholder="Peso (%)"
+            placeholder="Weight (%)"
             value={values.weightPercentage}
             onChange={(e) => onChange('weightPercentage', e.target.value)}
             className="w-full"
@@ -157,14 +157,14 @@ export default function TaskFormFields({
 
       {showRealGrade && (
         <div className="pt-4 border-t border-neutral-800">
-          <FormField label="Nota Real" htmlFor={`${idPrefix}-real-grade`} className="max-w-[50%]">
+          <FormField label="Real Grade" htmlFor={`${idPrefix}-real-grade`} className="max-w-[50%]">
             <Input
               id={`${idPrefix}-real-grade`}
               type="number"
               min="0"
               max="20"
               step="0.1"
-              placeholder="Ainda não lançada"
+              placeholder="Not entered yet"
               value={values.realGrade ?? ''}
               onChange={(e) => onChange('realGrade', e.target.value)}
               className="w-full"
