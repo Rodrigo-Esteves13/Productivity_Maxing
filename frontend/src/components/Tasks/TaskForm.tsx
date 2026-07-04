@@ -41,7 +41,7 @@ export default function TaskForm({ onSubmit, onCancel, areas, taskTypes, difficu
     setError('');
 
     if (!formData.areaId) {
-      setError('Por favor, seleciona uma Área.');
+      setError('Please select an Area.');
       return;
     }
 
@@ -60,7 +60,7 @@ export default function TaskForm({ onSubmit, onCancel, areas, taskTypes, difficu
 
       await onSubmit(payload);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao criar tarefa.');
+      setError(err.response?.data?.message || 'Error creating task.');
     } finally {
       setIsSubmitting(false);
     }
@@ -81,10 +81,10 @@ export default function TaskForm({ onSubmit, onCancel, areas, taskTypes, difficu
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800">
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancelar
+          Cancel
         </Button>
         <Button type="submit" variant="primary" disabled={isSubmitting}>
-          {isSubmitting ? 'A guardar...' : 'Criar Tarefa'}
+          {isSubmitting ? 'Saving...' : 'Create Task'}
         </Button>
       </div>
     </form>

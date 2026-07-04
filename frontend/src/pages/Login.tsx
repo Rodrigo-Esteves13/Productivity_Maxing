@@ -32,20 +32,20 @@ export default function Login() {
       login(token);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      setError('Credenciais inválidas ou erro no servidor.');
+      setError('Invalid credentials or server error.');
     }
   };
 
   return (
     <PageLayout>
-      <AuthCard title="Entrar na Conta">
+      <AuthCard title="Login to Your Account">
         <form onSubmit={handleLogin} className="space-y-4">
           {error && <FormError message={error} />}
 
           <Input
             label="Email"
             type="email"
-            placeholder="tu@exemplo.com"
+            placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -62,9 +62,9 @@ export default function Login() {
           </Button>
         </form>
 
-        <AuthSwitchLink question="Ainda não tens conta?" linkText="Criar conta" to="/register" />
+        <AuthSwitchLink question="Don't have an account yet?" linkText="Sign up" to="/register" />
 
-        <OAuthProviderList message="Ou entra com as tuas contas" />
+        <OAuthProviderList message="Or sign in with your accounts" />
       </AuthCard>
     </PageLayout>
   );

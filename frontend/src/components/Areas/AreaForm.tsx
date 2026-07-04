@@ -40,12 +40,12 @@ export default function AreaForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-      <FormField label="Nome da Área / Disciplina" htmlFor={`${idPrefix}-name`}>
+      <FormField label="Area / Subject Name" htmlFor={`${idPrefix}-name`}>
         <Input
           id={`${idPrefix}-name`}
           required
           type="text"
-          placeholder="Ex: Matemática, Desenvolvimento Web"
+          placeholder="E.g: Math, Web Development"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           className="w-full"
@@ -60,7 +60,7 @@ export default function AreaForm({
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800 mt-6">
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancelar
+          Cancel
         </Button>
         <button
           type="submit"

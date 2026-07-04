@@ -17,7 +17,7 @@ export default function AreaCard({ area, onSelect, onEdit, onDelete }: AreaCardP
       <div
         className="flex items-center gap-3 truncate cursor-pointer flex-1"
         onClick={() => onSelect(area)}
-        title="Ver detalhes"
+        title="View details"
       >
         <ColorDot color={area.colorHex} variant="circle" size="sm" />
         <span className="font-medium text-white truncate">
@@ -30,14 +30,14 @@ export default function AreaCard({ area, onSelect, onEdit, onDelete }: AreaCardP
         <button
           onClick={() => onEdit(area)}
           className="text-neutral-500 hover:text-white transition-colors p-1.5"
-          title="Editar Área"
+          title="Edit Area"
         >
           <PencilIcon />
         </button>
         <button
           onClick={() => onDelete(area.id)}
           className="text-neutral-500 hover:text-red-500 transition-colors p-1.5"
-          title="Apagar Área"
+          title="Delete Area"
         >
           <TrashIcon />
         </button>

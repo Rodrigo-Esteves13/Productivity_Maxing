@@ -13,12 +13,12 @@ export default function DifficultyBadge({ difficulty }: DifficultyBadgeProps) {
     MUITO_DIFICIL: 'bg-red-900/30 text-red-400 border-red-800/50',
   };
 
-  // Mapeamos para um texto bonito (com acentos e espaços)
+  // Mapeamos para um texto bonito
   const labels: Record<string, string> = {
-    FACIL: 'Fácil',
-    MEDIO: 'Médio',
-    DIFICIL: 'Difícil',
-    MUITO_DIFICIL: 'Muito Difícil',
+    FACIL: 'Easy',
+    MEDIO: 'Medium',
+    DIFICIL: 'Hard',
+    MUITO_DIFICIL: 'Very Hard',
   };
 
   // Se por acaso vier uma dificuldade nova que não mapeámos, usamos um estilo neutro

@@ -57,7 +57,7 @@ export default function TaskEditForm({
       setError('');
 
       if (!formData.areaId) {
-        setError('Por favor, seleciona uma Área.');
+        setError('Please select an Area.');
         return;
       }
 
@@ -77,7 +77,7 @@ export default function TaskEditForm({
 
         await onSubmit(payload);
       } catch (err: any) {
-        setError(err.response?.data?.message || 'Erro ao atualizar tarefa.');
+        setError(err.response?.data?.message || 'Error updating task.');
       } finally {
         setIsSubmitting(false);
       }
@@ -101,10 +101,10 @@ export default function TaskEditForm({
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800">
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancelar
+          Cancel
         </Button>
         <Button type="submit" variant="primary" disabled={isSubmitting}>
-          {isSubmitting ? 'A guardar...' : 'Guardar Alterações'}
+          {isSubmitting ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
     </form>
