@@ -2,6 +2,7 @@ import { useState, type SyntheticEvent } from 'react';
 import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
+import type { TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
 
 interface AreaOption {
   id: string;
@@ -12,18 +13,27 @@ interface TaskFormProps {
   onSubmit: (data: any) => Promise<void>;
   onCancel: () => void;
   areas: AreaOption[];
-  taskTypes: string[];
+  taskTypes: TaskTypeOption[];
+  academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
 }
 
-export default function TaskForm({ onSubmit, onCancel, areas, taskTypes, difficulties }: TaskFormProps) {
+export default function TaskForm({
+  onSubmit,
+  onCancel,
+  areas,
+  taskTypes,
+  academicTaskTypes,
+  difficulties,
+}: TaskFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const [formData, setFormData] = useState<TaskFormFieldValues>({
     title: '',
     date: new Date().toISOString().split('T')[0],
-    type: taskTypes[0] || '',
+    type: taskTypes[0]?.key || '',
+    academicType: '',
     difficulty: difficulties[0] || '',
     areaId: '',
     topics: '',
@@ -41,7 +51,7 @@ export default function TaskForm({ onSubmit, onCancel, areas, taskTypes, difficu
     setError('');
 
     if (!formData.areaId) {
-      setError('Por favor, seleciona uma Área.');
+      setError('Please select an Area.');
       return;
     }
 
@@ -56,11 +66,12 @@ export default function TaskForm({ onSubmit, onCancel, areas, taskTypes, difficu
         weightPercentage: formData.weightPercentage ? parseFloat(formData.weightPercentage) : undefined,
         topics: formData.topics || undefined,
         referenceLink: formData.referenceLink || undefined,
+        academicType: formData.academicType || undefined,
       };
 
       await onSubmit(payload);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao criar tarefa.');
+      setError(err.response?.data?.message || 'Error creating task.');
     } finally {
       setIsSubmitting(false);
     }
@@ -76,15 +87,16 @@ export default function TaskForm({ onSubmit, onCancel, areas, taskTypes, difficu
         onChange={updateField}
         areas={areas}
         taskTypes={taskTypes}
+        academicTaskTypes={academicTaskTypes}
         difficulties={difficulties}
       />
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800">
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancelar
+          Cancel
         </Button>
         <Button type="submit" variant="primary" disabled={isSubmitting}>
-          {isSubmitting ? 'A guardar...' : 'Criar Tarefa'}
+          {isSubmitting ? 'Saving...' : 'Create Task'}
         </Button>
       </div>
     </form>

@@ -1,31 +1,46 @@
 import {
   Injectable,
   NotFoundException,
+  BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { Difficulty, ProgressStatus, Prisma } from '@prisma/client'; // <-- Added Prisma import
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+
+const TASK_INCLUDE = {
+  area: true,
+  taskType: true,
+  academicType: true,
+} as const;
+
+// Automatically infer the type of a Task when it includes the relations above
+type TaskWithIncludes = Prisma.TaskGetPayload<{
+  include: typeof TASK_INCLUDE;
+}>;
 
 @Injectable()
 export class TasksService {
   constructor(private prisma: PrismaService) {}
 
   async create(userId: string, dto: CreateTaskDto) {
-    try {
-      // Separamos a data do resto para garantir que a conversão não esmaga nada
-      const { date, ...rest } = dto;
+    const { date, type, academicType, ...rest } = dto;
+    const typeIds = await this.resolveTypes(type, academicType);
 
-      return await this.prisma.task.create({
+    try {
+      const task = await this.prisma.task.create({
         data: {
           ...rest,
           date: new Date(date),
-          userId: userId, // Agora temos a certeza absoluta que o ID não está vazio!
+          userId, // Agora temos a certeza absoluta que o ID não está vazio!
+          ...typeIds,
         },
-        include: { area: true },
+        include: TASK_INCLUDE,
       });
+      return this.toResponse(task);
     } catch (error) {
-      // Se der erro, isto vai imprimir O MOTIVO EXATO no  terminal do NestJS
+      // Se der erro, isto vai imprimir O MOTIVO EXATO no terminal do NestJS
       console.error('ERRO PRISMA (CREATE TASK):', error);
       throw new InternalServerErrorException(
         'Erro ao criar tarefa. Verifica o terminal do backend.',
@@ -33,36 +48,139 @@ export class TasksService {
     }
   }
 
-  findAll(userId: string) {
-    return this.prisma.task.findMany({
-      where: { userId: userId },
-      include: { area: true },
+  async findAll(userId: string) {
+    const tasks = await this.prisma.task.findMany({
+      where: { userId },
+      include: TASK_INCLUDE,
       orderBy: { date: 'asc' },
     });
+    return tasks.map((t) => this.toResponse(t));
   }
 
   async findOne(userId: string, id: string) {
     const task = await this.prisma.task.findFirst({
-      where: { id: id, userId: userId },
-      include: { area: true },
+      where: { id, userId },
+      include: TASK_INCLUDE,
     });
     if (!task)
-      throw new NotFoundException(`Task não encontrada ou não tens acesso.`);
-    return task;
+      throw new NotFoundException(`Task not found or you don't have access.`);
+    return this.toResponse(task);
   }
 
   async update(userId: string, id: string, dto: UpdateTaskDto) {
-    await this.findOne(userId, id);
-    const { date, ...rest } = dto;
-    return this.prisma.task.update({
-      where: { id },
-      data: { ...rest, ...(date ? { date: new Date(date) } : {}) },
-      include: { area: true },
+    const existing = await this.prisma.task.findFirst({
+      where: { id, userId },
+      include: TASK_INCLUDE,
     });
+    if (!existing)
+      throw new NotFoundException(`Task not found or you don't have access.`);
+
+    const { date, type, academicType, ...rest } = dto;
+
+    // Só mexemos em taskType/academicType se um dos dois vier no PATCH.
+    // Se só vier um dos dois, usamos o valor atual da task para o outro,
+    // para não apagar sem querer uma subcategoria já definida.
+    let typeIds = {};
+    if (type !== undefined || academicType !== undefined) {
+      const effectiveType = type ?? existing.taskType.key;
+      const effectiveAcademic =
+        academicType !== undefined
+          ? academicType
+          : (existing.academicType?.key ?? undefined);
+      typeIds = await this.resolveTypes(effectiveType, effectiveAcademic);
+    }
+
+    const task = await this.prisma.task.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...(date ? { date: new Date(date) } : {}),
+        ...typeIds,
+      },
+      include: TASK_INCLUDE,
+    });
+    return this.toResponse(task);
   }
 
   async remove(userId: string, id: string) {
     await this.findOne(userId, id);
     return this.prisma.task.delete({ where: { id } });
+  }
+
+  async getMeta() {
+    const [taskTypes, academicTaskTypes] = await Promise.all([
+      this.prisma.taskType.findMany({
+        where: { isActive: true },
+        orderBy: { order: 'asc' },
+        select: { key: true, label: true, colorHex: true },
+      }),
+      this.prisma.academicTaskType.findMany({
+        where: { isActive: true },
+        orderBy: { order: 'asc' },
+        include: { taskType: { select: { key: true } } },
+      }),
+    ]);
+
+    return {
+      taskTypes,
+      academicTaskTypes: academicTaskTypes.map((a) => ({
+        key: a.key,
+        label: a.label,
+        taskTypeKey: a.taskType.key,
+      })),
+      difficulties: Object.values(Difficulty),
+      progressStatuses: Object.values(ProgressStatus),
+    };
+  }
+
+  // Resolve as keys ("ACADEMICO", "TRABALHO_PRATICO", ...) vindas do frontend
+  // para os IDs reais na BD, e valida que existem, estão ativas, e que a
+  // subcategoria académica pertence mesmo ao tipo indicado.
+  private async resolveTypes(typeKey: string, academicTypeKey?: string) {
+    const taskType = await this.prisma.taskType.findUnique({
+      where: { key: typeKey },
+    });
+    if (!taskType || !taskType.isActive) {
+      throw new BadRequestException(
+        `Task type "${typeKey}" invalid or inactive.`,
+      );
+    }
+
+    if (!academicTypeKey) {
+      return { taskTypeId: taskType.id, academicTypeId: null };
+    }
+
+    const academicType = await this.prisma.academicTaskType.findUnique({
+      where: { key: academicTypeKey },
+    });
+    if (
+      !academicType ||
+      !academicType.isActive ||
+      academicType.taskTypeId !== taskType.id
+    ) {
+      throw new BadRequestException(
+        `Academic subcategory "${academicTypeKey}" invalid for type "${typeKey}".`,
+      );
+    }
+
+    return { taskTypeId: taskType.id, academicTypeId: academicType.id };
+  }
+
+  // Substituímos o "any" pelo tipo gerado pelo Prisma
+  private toResponse(task: TaskWithIncludes) {
+    const { taskType, taskTypeId, academicType, academicTypeId, ...rest } =
+      task;
+
+    // A declaração `void` marca as variáveis como lidas pelo interpretador,
+    // o que previne o erro @typescript-eslint/no-unused-vars sem teres
+    // de apagar os IDs da desestruturação.
+    void taskTypeId;
+    void academicTypeId;
+
+    return {
+      ...rest,
+      type: taskType.key,
+      academicType: academicType?.key ?? null,
+    };
   }
 }

@@ -1,5 +1,4 @@
 // CONFIGURAÇÃO DO CLIENTE E BASE DE DADOS
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,6 +9,9 @@ datasource db {
 }
 
 // ENUMS (TIPOS ESTRUTURADOS)
+// Ficam enum porque estão presos a código (strategies OAuth, guards de role) —
+// adicionar um valor novo implica sempre escrever código novo, por isso não
+// faz sentido serem "editáveis" pelo admin.
 
 // Provedores de Autenticação OAuth suportados.
 enum Provider {
@@ -26,123 +28,143 @@ enum Role {
 
 // Estado de progresso aplicável a qualquer tarefa ou projeto.
 enum ProgressStatus {
-  ADIANTADO
-  TEMPO_ESPERADO
-  ATRASADO
-  MUITO_ATRASADO
+  AHEAD
+  ON_TRACK
+  BEHIND
+  VERY_BEHIND
 }
 
 // Escala de dificuldade percebida para a tarefa.
 enum Difficulty {
-  FACIL
-  MEDIO
-  DIFICIL
-  MUITO_DIFICIL
+  VERY_EASY
+  EASY
+  MEDIUM
+  HARD
+  VERY_HARD
 }
 
-// Categoria principal da Tarefa (Abstração de alto nível).
-enum TaskType {
-  ACADEMICO
-  HABITO
-  PROJETO
-  EVENTO
-  TRABALHO
-  TAREFA_SIMPLES
+// TABELAS DE CONFIGURAÇÃO (SUBSTITUEM OS ANTIGOS ENUMS TaskType/AcademicTaskType)
+// Estas deixaram de ser enum porque queremos que o ADMIN as edite (label, cor,
+// ordem, ativo/inativo) sem precisar de deploy nem migration.
+//
+// `key` = identificador estável usado pelo código (ex: comparações "=== 'ACADEMICO'").
+//         Nunca deve ser editado depois de criado.
+// `label` = texto mostrado na UI. Este sim é o que o admin edita livremente.
+
+/// Categoria principal da Tarefa (Abstração de alto nível).
+model TaskType {
+  id       String  @id @default(uuid())
+  key      String  @unique
+  label    String
+  colorHex String? @default("#808080")
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+
+  academicTaskTypes AcademicTaskType[]
+  tasks             Task[]
 }
 
 /// Subcategoria estritamente focada na vida académica.
-/// Utilizada apenas quando o TaskType é 'ACADEMICO'.
-enum AcademicTaskType {
-  FREQUENCIA
-  TRABALHO_PRATICO
-  TAREFA_SECUNDARIA
+/// Só é relevante quando o TaskType pai tiver key = "ACADEMICO".
+model AcademicTaskType {
+  id       String  @id @default(uuid())
+  key      String  @unique
+  label    String
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+
+  taskTypeId String
+  taskType   TaskType @relation(fields: [taskTypeId], references: [id])
+
+  tasks Task[]
 }
 
 // MODELOS (TABELAS DA BASE DE DADOS)
 
 /// Representa um utilizador da plataforma.
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  role         Role       @default(USER)
-  name         String?
-  avatarUrl    String?
-  createdAt    DateTime   @default(now())
+  id        String   @id @default(uuid())
+  email     String   @unique
+  role      Role     @default(USER)
+  name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
 
   // Relações
-  identities   Identity[]
-  tasks        Task[]
-  apiKeys      ApiKey[]
+  identities Identity[]
+  tasks      Task[]
+  apiKeys    ApiKey[]
 }
 
 model ApiKey {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
-  keyHash   String   @unique
+  keyHash   String    @unique
   name      String
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   lastUsed  DateTime?
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 /// Gere os tokens e IDs externos para autenticação OAuth (SSO).
 model Identity {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   userId            String
   provider          Provider
   providerAccountId String
   accessToken       String?
   refreshToken      String?
   scope             String?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime  @default(now())
 
   // Relações
-  user              User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   // Garante que o mesmo providerAccount não é associado duas vezes
   @@unique([provider, providerAccountId])
 }
 
 /// Abstração que representa um "Balde" ou "Área de Vida".
-/// Pode ser uma Disciplina da faculdade, um Desporto, ou uma Área Financeira.
 model Area {
   id       String @id @default(uuid())
-  name     String 
+  name     String
   colorHex String @default("#808080")
 
   // Relações
-  tasks    Task[]
+  tasks Task[]
 }
 
 /// Representa uma ação executável dentro de uma Área (Area).
 model Task {
-  id                    String            @id @default(uuid())
-  userId                String
-  areaId                String            
-  title                 String
-  date                  DateTime
-  
+  id     String   @id @default(uuid())
+  userId String
+  areaId String
+  title  String
+  date   DateTime
+
   // Tipologia e Categorização
-  type                  TaskType
-  academicType          AcademicTaskType? 
-  topics                String?
+  taskTypeId     String
+  taskType       TaskType          @relation(fields: [taskTypeId], references: [id])
+  academicTypeId String?
+  academicType   AcademicTaskType? @relation(fields: [academicTypeId], references: [id])
+  topics         String?
 
   // Metadados de Execução
-  weightPercentage      Float?
-  difficulty            Difficulty
-  progressStatus        ProgressStatus    @default(TEMPO_ESPERADO)
-  referenceLink         String?
-  
+  weightPercentage Float?
+  difficulty       Difficulty
+  progressStatus   ProgressStatus @default(ON_TRACK)
+  referenceLink    String?
+
   // Avaliação (Relevante para contexto Académico/Trabalho)
-  targetGrade           Float?            
-  realGrade             Float?            
-  
+  targetGrade Float?
+  realGrade   Float?
+
   // Integrações
   googleCalendarEventId String?
-  createdAt             DateTime          @default(now())
+  createdAt             DateTime @default(now())
 
   // Relações
-  user                  User              @relation(fields: [userId], references: [id])
-  area                  Area              @relation(fields: [areaId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+  area Area @relation(fields: [areaId], references: [id])
 }

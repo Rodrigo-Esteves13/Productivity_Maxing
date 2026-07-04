@@ -12,7 +12,6 @@ import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { TaskType, Difficulty } from '@prisma/client';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -25,12 +24,11 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
+  // taskTypes e academicTaskTypes já não são enum fixo — vêm da BD e são
+  // editáveis pelos admins em /admin/task-types e /admin/academic-task-types.
   @Get('meta')
   getMetadata() {
-    return {
-      taskTypes: Object.values(TaskType),
-      difficulties: Object.values(Difficulty),
-    };
+    return this.tasksService.getMeta();
   }
 
   @Post()

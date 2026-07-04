@@ -13,9 +13,9 @@ export default function ModalHeaderActions({
   isEditing,
   onToggleEdit,
   onDelete,
-  deleteTitle = 'Apagar',
-  editTitle = 'Editar',
-  cancelEditTitle = 'Cancelar edição',
+  deleteTitle = 'Delete',
+  editTitle = 'Edit',
+  cancelEditTitle = 'Cancel edit',
 }: ModalHeaderActionsProps) {
   return (
     <div className="flex items-center gap-1">

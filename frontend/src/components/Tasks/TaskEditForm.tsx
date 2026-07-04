@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { Task } from '../../types/models';
+import type { Task, TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
 import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
@@ -15,8 +15,10 @@ interface TaskEditFormProps {
   onSubmit: (data: any) => Promise<void>;
   onCancel: () => void;
   areas: AreaOption[];
-  taskTypes: string[];
+  taskTypes: TaskTypeOption[];
+  academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
+  progressStatuses: string[];
 }
 
 function buildInitialValues(task: Task): TaskFormFieldValues {
@@ -24,7 +26,9 @@ function buildInitialValues(task: Task): TaskFormFieldValues {
     title: task.title,
     date: task.date.split('T')[0],
     type: task.type,
+    academicType: task.academicType ?? '',
     difficulty: task.difficulty,
+    progressStatus: task.progressStatus,
     areaId: task.areaId,
     topics: task.topics ?? '',
     referenceLink: task.referenceLink ?? '',
@@ -40,7 +44,9 @@ export default function TaskEditForm({
   onCancel,
   areas,
   taskTypes,
+  academicTaskTypes,
   difficulties,
+  progressStatuses,
 }: TaskEditFormProps) {
   const initialValues = useMemo(() => buildInitialValues(task), [task]);
   const [formData, setFormData] = useState<TaskFormFieldValues>(initialValues);
@@ -57,7 +63,7 @@ export default function TaskEditForm({
       setError('');
 
       if (!formData.areaId) {
-        setError('Por favor, seleciona uma Área.');
+        setError('Please select an Area.');
         return;
       }
 
@@ -73,11 +79,12 @@ export default function TaskEditForm({
           realGrade: formData.realGrade ? parseFloat(formData.realGrade) : undefined,
           topics: formData.topics || undefined,
           referenceLink: formData.referenceLink || undefined,
+          academicType: formData.academicType || undefined,
         };
 
         await onSubmit(payload);
       } catch (err: any) {
-        setError(err.response?.data?.message || 'Erro ao atualizar tarefa.');
+        setError(err.response?.data?.message || 'Error updating task.');
       } finally {
         setIsSubmitting(false);
       }
@@ -95,16 +102,19 @@ export default function TaskEditForm({
         onChange={updateField}
         areas={areas}
         taskTypes={taskTypes}
+        academicTaskTypes={academicTaskTypes}
         difficulties={difficulties}
+        progressStatuses={progressStatuses}
         showRealGrade
+        showProgressStatus
       />
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800">
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancelar
+          Cancel
         </Button>
         <Button type="submit" variant="primary" disabled={isSubmitting}>
-          {isSubmitting ? 'A guardar...' : 'Guardar Alterações'}
+          {isSubmitting ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
     </form>

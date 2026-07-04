@@ -48,13 +48,13 @@ export default function Navbar() {
             {role === 'ADMIN' && (
               <Link
                 to="/areas"
-                className={`text-sm font-bold transition-colors ${
-                  location.pathname.includes('/admin')
-                    ? 'text-amber-400 bg-amber-400/10 px-3 py-1.5 rounded-md'
-                    : 'text-amber-500/70 hover:text-amber-400 px-3 py-1.5'
+                className={`text-sm font-bold transition-colors px-3 py-1.5 rounded-md ${
+                  location.pathname.startsWith('/areas')
+                    ? 'text-amber-400 bg-amber-400/10'
+                    : 'text-amber-500/70 hover:text-amber-400 hover:bg-neutral-800'
                 }`}
               >
-                Áreas (Admin)
+                Areas
               </Link>
             )}
           </div>

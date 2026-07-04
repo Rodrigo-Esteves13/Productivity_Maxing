@@ -1,6 +1,8 @@
 import FormField from '../UI/FormField';
 import Input from '../UI/Input';
 import Select from '../UI/Select';
+import type { TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
+import { formatEnumLabel } from '../../utils/formatEnumLabel';
 
 interface AreaOption {
   id: string;
@@ -11,6 +13,7 @@ export interface TaskFormFieldValues {
   title: string;
   date: string;
   type: string;
+  academicType: string;
   difficulty: string;
   areaId: string;
   topics: string;
@@ -18,6 +21,7 @@ export interface TaskFormFieldValues {
   targetGrade: string;
   weightPercentage: string;
   realGrade?: string;
+  progressStatus?: string;
 }
 
 interface TaskFormFieldsProps {
@@ -25,9 +29,12 @@ interface TaskFormFieldsProps {
   values: TaskFormFieldValues;
   onChange: (field: keyof TaskFormFieldValues, value: string) => void;
   areas: AreaOption[];
-  taskTypes: string[];
+  taskTypes: TaskTypeOption[];
+  academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
+  progressStatuses?: string[];
   showRealGrade?: boolean;
+  showProgressStatus?: boolean;
 }
 
 export default function TaskFormFields({
@@ -36,12 +43,22 @@ export default function TaskFormFields({
   onChange,
   areas,
   taskTypes,
+  academicTaskTypes,
   difficulties,
+  progressStatuses = [],
   showRealGrade = false,
+  showProgressStatus = false,
 }: TaskFormFieldsProps) {
+  // O tipo "académico" é identificado pela key estável, não pela label
+  // (a label pode ser editada pelo admin, a key não).
+  const selectedTaskType = taskTypes.find((t) => t.key === values.type);
+  const isAcademic = selectedTaskType?.key === 'ACADEMICO';
+  const availableAcademicTypes = academicTaskTypes.filter(
+    (a) => a.taskTypeKey === values.type
+  );
   return (
     <>
-      <FormField label="Título" htmlFor={`${idPrefix}-title`}>
+      <FormField label="Title" htmlFor={`${idPrefix}-title`}>
         <Input
           id={`${idPrefix}-title`}
           required
@@ -53,7 +70,7 @@ export default function TaskFormFields({
       </FormField>
 
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Data" htmlFor={`${idPrefix}-date`}>
+        <FormField label="Date" htmlFor={`${idPrefix}-date`}>
           <Input
             id={`${idPrefix}-date`}
             required
@@ -63,7 +80,7 @@ export default function TaskFormFields({
             className="w-full"
           />
         </FormField>
-        <FormField label="Área" htmlFor={`${idPrefix}-area`}>
+        <FormField label="Area" htmlFor={`${idPrefix}-area`}>
           <Select
             id={`${idPrefix}-area`}
             required
@@ -72,7 +89,7 @@ export default function TaskFormFields({
             className="w-full"
           >
             <option value="" disabled>
-              Selecionar Área...
+              Select Area...
             </option>
             {areas.map((area) => (
               <option key={area.id} value={area.id}>
@@ -84,7 +101,7 @@ export default function TaskFormFields({
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Dificuldade" htmlFor={`${idPrefix}-difficulty`}>
+        <FormField label="Difficulty" htmlFor={`${idPrefix}-difficulty`}>
           <Select
             id={`${idPrefix}-difficulty`}
             value={values.difficulty}
@@ -93,39 +110,62 @@ export default function TaskFormFields({
           >
             {difficulties.map((d) => (
               <option key={d} value={d}>
-                {d.replace(/_/g, ' ')}
+                {formatEnumLabel(d)}
               </option>
             ))}
           </Select>
         </FormField>
-        <FormField label="Tipo" htmlFor={`${idPrefix}-type`}>
+        <FormField label="Type" htmlFor={`${idPrefix}-type`}>
           <Select
             id={`${idPrefix}-type`}
             value={values.type}
-            onChange={(e) => onChange('type', e.target.value)}
+            onChange={(e) => {
+              onChange('type', e.target.value);
+              // Muda-se o tipo, limpa-se o academicType para não ficar
+              // um valor "orfão" que já não pertence ao novo tipo.
+              onChange('academicType', '');
+            }}
             className="w-full"
           >
             {taskTypes.map((t) => (
-              <option key={t} value={t}>
-                {t.replace(/_/g, ' ')}
+              <option key={t.key} value={t.key}>
+                {t.label}
               </option>
             ))}
           </Select>
         </FormField>
       </div>
 
+      {isAcademic && (
+        <FormField label="Academic Type" htmlFor={`${idPrefix}-academic-type`}>
+          <Select
+            id={`${idPrefix}-academic-type`}
+            value={values.academicType}
+            onChange={(e) => onChange('academicType', e.target.value)}
+            className="w-full"
+          >
+            <option value="">Select Academic Type...</option>
+            {availableAcademicTypes.map((a) => (
+              <option key={a.key} value={a.key}>
+                {a.label}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+      )}
+
       <div className="space-y-4 pt-4 border-t border-neutral-800">
-        <p className="text-xs font-semibold text-neutral-500 uppercase">Informação Opcional</p>
+        <p className="text-xs font-semibold text-neutral-500 uppercase">Optional Information</p>
         <div className="grid grid-cols-2 gap-4">
           <Input
-            placeholder="Tópicos"
+            placeholder="Topics"
             value={values.topics}
             onChange={(e) => onChange('topics', e.target.value)}
             className="w-full"
           />
           <Input
             type="url"
-            placeholder="Link de referência"
+            placeholder="Reference link"
             value={values.referenceLink}
             onChange={(e) => onChange('referenceLink', e.target.value)}
             className="w-full"
@@ -137,7 +177,7 @@ export default function TaskFormFields({
             min="0"
             max="20"
             step="0.1"
-            placeholder="Nota Objetivo"
+            placeholder="Target Grade"
             value={values.targetGrade}
             onChange={(e) => onChange('targetGrade', e.target.value)}
             className="w-full"
@@ -147,7 +187,7 @@ export default function TaskFormFields({
             min="0"
             max="100"
             step="0.1"
-            placeholder="Peso (%)"
+            placeholder="Weight (%)"
             value={values.weightPercentage}
             onChange={(e) => onChange('weightPercentage', e.target.value)}
             className="w-full"
@@ -155,21 +195,39 @@ export default function TaskFormFields({
         </div>
       </div>
 
-      {showRealGrade && (
-        <div className="pt-4 border-t border-neutral-800">
-          <FormField label="Nota Real" htmlFor={`${idPrefix}-real-grade`} className="max-w-[50%]">
-            <Input
-              id={`${idPrefix}-real-grade`}
-              type="number"
-              min="0"
-              max="20"
-              step="0.1"
-              placeholder="Ainda não lançada"
-              value={values.realGrade ?? ''}
-              onChange={(e) => onChange('realGrade', e.target.value)}
-              className="w-full"
-            />
-          </FormField>
+      {(showProgressStatus || showRealGrade) && (
+        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-neutral-800">
+          {showProgressStatus && (
+            <FormField label="Progress" htmlFor={`${idPrefix}-progress-status`}>
+              <Select
+                id={`${idPrefix}-progress-status`}
+                value={values.progressStatus ?? ''}
+                onChange={(e) => onChange('progressStatus', e.target.value)}
+                className="w-full"
+              >
+                {progressStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {formatEnumLabel(status)}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          )}
+          {showRealGrade && (
+            <FormField label="Real Grade" htmlFor={`${idPrefix}-real-grade`}>
+              <Input
+                id={`${idPrefix}-real-grade`}
+                type="number"
+                min="0"
+                max="20"
+                step="0.1"
+                placeholder="Not entered yet"
+                value={values.realGrade ?? ''}
+                onChange={(e) => onChange('realGrade', e.target.value)}
+                className="w-full"
+              />
+            </FormField>
+          )}
         </div>
       )}
     </>

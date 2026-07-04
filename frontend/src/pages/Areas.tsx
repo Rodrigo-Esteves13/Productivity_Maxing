@@ -32,7 +32,7 @@ export default function Areas() {
       const data = await getUserAreas();
       setAreas(data);
     } catch (err) {
-      setError('Erro ao carregar as áreas.');
+      setError('Error loading areas.');
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +65,7 @@ export default function Areas() {
       setIsCreateModalOpen(false);
       fetchAreas();
     } catch (err) {
-      alert('Erro ao criar a área. Verifica o backend.');
+      alert('Error creating area. Check the backend.');
     } finally {
       setIsSubmitting(false);
     }
@@ -83,7 +83,7 @@ export default function Areas() {
       setSelectedArea(updated);
       setIsEditing(false); // Volta ao modo "Ver"
     } catch (err) {
-      alert('Erro ao guardar alterações. Verifica o backend.');
+      alert('Error saving changes. Check the backend.');
     } finally {
       setIsSubmitting(false);
     }
@@ -91,7 +91,7 @@ export default function Areas() {
 
   // Apagar Área
   const handleDeleteArea = async (id: string) => {
-    const confirm = window.confirm('Tens a certeza? Apagar esta área vai apagar (ou afetar) as tarefas associadas a ela!');
+    const confirm = window.confirm('Are you sure? Deleting this area will delete (or affect) the tasks associated with it!');
     if (!confirm) return;
 
     try {
@@ -103,28 +103,28 @@ export default function Areas() {
         setIsEditing(false);
       }
     } catch (err) {
-      alert('Erro ao apagar área. Pode estar a ser usada por tarefas existentes.');
+      alert('Error deleting area. It may be in use by existing tasks.');
     }
   };
 
   return (
     <PageLayout>
       <PageHeader
-        title="Gestão de Áreas"
-        description="Área exclusiva a Administradores para gerir as disciplinas e categorias do sistema."
+        title="Area Management"
+        description="Area exclusive to Administrators to manage the system's subjects and categories."
         action={
           <ActionButton color="amber" onClick={openCreateModal}>
-            + Nova Área
+            + New Area
           </ActionButton>
         }
       />
 
       {isLoading ? (
-        <LoadingState message="A carregar áreas..." />
+        <LoadingState message="Loading areas..." />
       ) : error ? (
         <ErrorState message={error} />
       ) : areas.length === 0 ? (
-        <EmptyState message="Nenhuma área registada no sistema." />
+        <EmptyState message="No areas registered in the system." />
       ) : (
         <AreaGrid
           areas={areas}
@@ -138,15 +138,15 @@ export default function Areas() {
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Criar Nova Área"
+        title="Create New Area"
       >
         <AreaForm
           idPrefix="create-area"
           onSubmit={handleCreateArea}
           onCancel={() => setIsCreateModalOpen(false)}
           isSubmitting={isSubmitting}
-          submitLabel="Criar Área"
-          submittingLabel="A criar..."
+          submitLabel="Create Area"
+          submittingLabel="Creating..."
         />
       </Modal>
 
@@ -154,7 +154,7 @@ export default function Areas() {
       <Modal
         isOpen={selectedArea !== null}
         onClose={() => { setSelectedArea(null); setIsEditing(false); }}
-        title={isEditing ? 'Editar Área' : 'Detalhes da Área'}
+        title={isEditing ? 'Edit Area' : 'Area Details'}
         action={
           selectedArea && (
             <ModalHeaderActions
@@ -167,8 +167,8 @@ export default function Areas() {
                 }
               }}
               onDelete={() => handleDeleteArea(selectedArea.id)}
-              deleteTitle="Apagar Área"
-              editTitle="Editar área"
+              deleteTitle="Delete Area"
+              editTitle="Edit area"
             />
           )
         }
@@ -181,8 +181,8 @@ export default function Areas() {
               onSubmit={handleEditArea}
               onCancel={() => setIsEditing(false)}
               isSubmitting={isSubmitting}
-              submitLabel="Guardar Alterações"
-              submittingLabel="A guardar..."
+              submitLabel="Save Changes"
+              submittingLabel="Saving..."
             />
           ) : (
             <AreaDetailView area={selectedArea} />

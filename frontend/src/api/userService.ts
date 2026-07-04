@@ -1,6 +1,6 @@
 // src/api/userService.ts
 import api from './client';
-import type { User, Area, Task } from '../types/models';
+import type { User, Area, Task, TaskMeta } from '../types/models';
 
 // USER ENDPOINTS
 export const getUserProfile = async (): Promise<User> => {
@@ -37,9 +37,9 @@ export async function createTask(taskData: any) {
   return response.data;
 }
 
-export async function getTaskMetadata() {
-  const response = await api.get('/tasks/meta');
-  return response.data; 
+export async function getTaskMetadata(): Promise<TaskMeta> {
+  const response = await api.get<TaskMeta>('/tasks/meta');
+  return response.data;
 }
 
 export async function getTaskById(id: string): Promise<Task> {

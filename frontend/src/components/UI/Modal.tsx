@@ -44,7 +44,7 @@ export default function Modal({ isOpen, onClose, title, children, action }: Moda
             <button 
               onClick={onClose}
               className="text-neutral-400 hover:text-white transition-colors p-1"
-              title="Fechar"
+              title="Close"
             >
               <XIcon />
             </button>
