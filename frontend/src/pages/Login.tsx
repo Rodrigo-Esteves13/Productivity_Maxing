@@ -1,70 +1,71 @@
-import { useState } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
-import Navbar from '../components/Navbar';
-import Input from '../components/Input';
-import Button from '../components/Button';
-import OAuthButton from '../components/OAuthButton';
-
-const apiUrl = import.meta.env.VITE_API_URL;
+import PageLayout from '../components/Layout/PageLayout';
+import Button from '../components/UI/Button';
+import Input from '../components/UI/Input';
+import FormError from '../components/UI/FormError';
+import AuthCard from '../components/Auth/AuthCard';
+import OAuthProviderList from '../components/Auth/OAuthProviderList';
+import AuthSwitchLink from '../components/Auth/AuthSwitchLink';
 
 export default function Login() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [error, setError] = useState('');
 
-  async function handleLogin() {
-    setError(null);
+  const handleLogin = async (e: SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault(); // Impede o browser de recarregar a página ao dar Enter!
+    setError('');
+
     try {
-      const { data } = await api.post('/auth/login', { email, password });
-      if (!data?.access_token) {
-        console.error('Resposta sem access_token:', data);
-        setError('Login falhou: resposta inesperada do servidor.');
-        return;
-      }
-      localStorage.setItem('token', data.access_token);
-      navigate('/dashboard');
+      // Se ainda não tens login manual no backend, isto é um placeholder.
+      // O teu foco atual são os botões OAuth (Google/Discord) cá em baixo.
+      const response = await api.post('/auth/login', { email, password });
+      const { token } = response.data;
+
+      // Usa o hook para guardar o token e notificar a app
+      login(token);
+      navigate('/dashboard', { replace: true });
     } catch (err) {
-      console.error('Erro no login:', err);
-      setError('Email ou password inválidos, ou o servidor não respondeu.');
+      setError('Credenciais inválidas ou erro no servidor.');
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-neutral-950">
-      <Navbar isAuthenticated={false} />
+    <PageLayout>
+      <AuthCard title="Entrar na Conta">
+        <form onSubmit={handleLogin} className="space-y-4">
+          {error && <FormError message={error} />}
 
-      <div className="flex items-center justify-center py-24">
-        <div className="w-full max-w-sm p-8 bg-neutral-900 rounded-xl shadow">
-          <h1 className="text-xl font-bold mb-6 text-white">Entrar</h1>
+          <Input
+            label="Email"
+            type="email"
+            placeholder="tu@exemplo.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Input
+            label="Password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-          <div className="flex flex-col gap-3">
-            <Input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            {error && <p className="text-red-400 text-sm">{error}</p>}
-            <Button onClick={handleLogin}>Entrar</Button>
-          </div>
+          <Button type="submit" className="w-full">
+            Login
+          </Button>
+        </form>
 
-          <div className="my-4 text-center text-sm text-neutral-500">ou</div>
+        <AuthSwitchLink question="Ainda não tens conta?" linkText="Criar conta" to="/register" />
 
-          <div className="flex flex-col gap-2">
-            <OAuthButton provider="Google" href={`${apiUrl}/auth/google`} />
-            <OAuthButton provider="GitHub" href={`${apiUrl}/auth/github`} />
-            <OAuthButton provider="Discord" href={`${apiUrl}/auth/discord`} />
-          </div>
-        </div>
-      </div>
-    </div>
+        <OAuthProviderList message="Ou entra com as tuas contas" />
+      </AuthCard>
+    </PageLayout>
   );
 }
