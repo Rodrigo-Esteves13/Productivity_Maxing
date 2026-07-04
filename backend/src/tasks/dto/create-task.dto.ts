@@ -9,12 +9,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import {
-  TaskType,
-  AcademicTaskType,
-  Difficulty,
-  ProgressStatus,
-} from '@prisma/client';
+import { Difficulty, ProgressStatus } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTaskDto {
@@ -43,21 +38,22 @@ export class CreateTaskDto {
   date: string;
 
   @ApiProperty({
-    enum: TaskType,
-    example: TaskType.ACADEMICO,
-    description: 'A categoria principal',
+    example: 'ACADEMICO',
+    description:
+      'Key do tipo de tarefa (ver GET /tasks/meta). Gerido pelos admins em /admin/task-types.',
   })
-  @IsEnum(TaskType)
-  type: TaskType;
+  @IsString()
+  @IsNotEmpty()
+  type: string;
 
   @ApiPropertyOptional({
-    enum: AcademicTaskType,
-    example: AcademicTaskType.FREQUENCIA,
-    description: 'Subcategoria (Apenas se type for ACADEMICO)',
+    example: 'FREQUENCIA',
+    description:
+      'Key da subcategoria académica (apenas quando type = "ACADEMICO"). Ver GET /tasks/meta.',
   })
   @IsOptional()
-  @IsEnum(AcademicTaskType)
-  academicType?: AcademicTaskType;
+  @IsString()
+  academicType?: string;
 
   @ApiPropertyOptional({
     example: 'Limites, Derivadas',
