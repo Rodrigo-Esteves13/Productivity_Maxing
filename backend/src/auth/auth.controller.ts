@@ -9,10 +9,13 @@ import {
   Res,
   UseGuards,
   UnauthorizedException,
+  HttpCode,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { User } from '@prisma/client';
 import { AuthService } from './auth.service';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { GoogleLinkGuard } from './guards/google-link.guard';
@@ -35,6 +38,29 @@ export class AuthController {
     private readonly prisma: PrismaService
   ) {}
   
+
+  // ---------------- EMAIL + PASSWORD ----------------
+  // Coexiste com o OAuth: cria/autentica um User com password local e
+  // devolve o mesmo formato de resposta { token } que o frontend já espera.
+
+  @Post('register')
+  @HttpCode(201)
+  async register(@Body() dto: RegisterDto) {
+    const user = await this.authService.registerWithPassword(dto);
+    const token = this.authService.issueJwt(user);
+    return { token };
+  }
+
+  @Post('login')
+  @HttpCode(200)
+  async login(@Body() dto: LoginDto) {
+    const user = await this.authService.loginWithPassword(
+      dto.email,
+      dto.password,
+    );
+    const token = this.authService.issueJwt(user);
+    return { token };
+  }
 
   // ---------------- GOOGLE ----------------
 

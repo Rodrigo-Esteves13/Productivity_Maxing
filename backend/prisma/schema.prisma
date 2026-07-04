@@ -71,7 +71,6 @@ model User {
 
   // Relações
   identities   Identity[]
-  areas        Area[]
   tasks        Task[]
   apiKeys      ApiKey[]
 }
@@ -109,12 +108,10 @@ model Identity {
 /// Pode ser uma Disciplina da faculdade, um Desporto, ou uma Área Financeira.
 model Area {
   id       String @id @default(uuid())
-  userId   String
   name     String 
   colorHex String @default("#808080")
 
   // Relações
-  user     User   @relation(fields: [userId], references: [id])
   tasks    Task[]
 }
 

@@ -7,14 +7,10 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AreasService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(userId: string, createAreaDto: CreateAreaDto) {
+  // Agora não precisamos do userId, pois a área é global!
+  async create(createAreaDto: CreateAreaDto) {
     return this.prisma.area.create({
-      data: {
-        ...createAreaDto,
-        user: {
-          connect: { id: userId },
-        },
-      },
+      data: createAreaDto,
     });
   }
 
