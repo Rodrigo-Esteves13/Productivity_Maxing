@@ -3,31 +3,70 @@ import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import Avatar from '../components/Profile/Avatar';
 import ProfileStat from '../components/Profile/ProfileStat';
-import { getUserProfile } from '../api/userService';
-import type { User } from '../types/models';
+import EditProfileModal from '../components/Profile/EditProfileModal';
+import ActionButton from '../components/UI/ActionButton';
+import { PencilIcon } from '../components/UI/Icons';
+import { getUserTasks, getTaskMetadata } from '../api/userService';
+import { useAuth } from '../context/AuthContext';
+import type { Task, TaskTypeOption } from '../types/models';
+
+// "Project" não é uma Area — é um TaskType como outro qualquer (ex: "PROJETO"),
+// configurável pelo admin em /admin/task-types. Como a key exata é dinâmica,
+// identificamos aqui por key/label que contenha "proj". Se o teu TaskType de
+// projeto tiver uma key diferente (ex: "TRABALHO_FINAL"), troca este regex.
+const PROJECT_TYPE_PATTERN = /proj/i;
+
+function computeStats(tasks: Task[], projectTypeKeys: Set<string>) {
+  const completedTasks = tasks.filter((t) => t.progressStatus === 'COMPLETED');
+  const completed = completedTasks.length;
+  const active = tasks.length - completed;
+  const projects = tasks.filter((t) => projectTypeKeys.has(t.type)).length;
+
+  // NOTA: o schema não guarda "quando" uma task foi concluída (só a `date`,
+  // que é a data alvo/prazo), por isso o streak usa essa data como proxy do
+  // dia em que a task foi dada como feita. Para um streak 100% fiel, seria
+  // preciso um campo `completedAt` na Task.
+  const doneDayKeys = new Set(
+    completedTasks.map((t) => new Date(t.date).toISOString().split('T')[0])
+  );
+  let streak = 0;
+  const cursor = new Date();
+  while (true) {
+    const key = cursor.toISOString().split('T')[0];
+    if (doneDayKeys.has(key)) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+
+  return { completed, active, projects, streak };
+}
 
 export default function Profile() {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user, isLoadingUser, updateUser } = useAuth();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   useEffect(() => {
-    async function fetchProfile() {
+    async function fetchStats() {
       try {
-        const userData = await getUserProfile();
-        setUser(userData);
+        const [tasksData, metaData] = await Promise.all([getUserTasks(), getTaskMetadata()]);
+        setTasks(tasksData);
+        setTaskTypes(metaData.taskTypes);
       } catch (err) {
-        console.error('Failed to fetch user profile:', err);
-        setError('Could not load profile data.');
+        console.error('Failed to fetch profile stats:', err);
       } finally {
-        setIsLoading(false);
+        setIsLoadingStats(false);
       }
     }
-
-    fetchProfile();
+    fetchStats();
   }, []);
 
-  if (isLoading) {
+  if (isLoadingUser || !user) {
     return (
       <PageLayout>
         <div className="flex items-center justify-center h-64">
@@ -37,36 +76,38 @@ export default function Profile() {
     );
   }
 
-  if (error || !user) {
-    return (
-      <PageLayout>
-        <div className="p-4 bg-red-900/50 border border-red-500 rounded-lg text-red-200">
-          {error || 'User not found.'}
-        </div>
-      </PageLayout>
-    );
-  }
+  const initials = user.name ? user.name.substring(0, 2).toUpperCase() : user.email.substring(0, 2).toUpperCase();
 
-  // Fallback for avatar initials if name is null
-  const initials = user.name ? user.name.substring(0, 2).toUpperCase() : 'US';
+  const projectTypeKeys = new Set(
+    taskTypes.filter((t) => PROJECT_TYPE_PATTERN.test(t.key) || PROJECT_TYPE_PATTERN.test(t.label)).map((t) => t.key)
+  );
+  const { completed, active, projects, streak } = computeStats(tasks, projectTypeKeys);
 
   return (
     <PageLayout>
-      <PageHeader 
-        title="User Profile" 
-        description="Manage your personal information and settings." 
+      <PageHeader
+        title="User Profile"
+        description="Manage your personal information and settings."
+        action={
+          <ActionButton onClick={() => setIsEditOpen(true)} className="flex items-center gap-2">
+            <PencilIcon />
+            Edit Profile
+          </ActionButton>
+        }
       />
-      
+
       <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-8 max-w-3xl">
         <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
-          
-          {/* If the user has an avatarUrl from Google/Discord, show image, else show Initials */}
           {user.avatarUrl ? (
-            <img src={user.avatarUrl} alt="Avatar" className="h-24 w-24 rounded-full border-2 border-neutral-700 shadow-lg" />
+            <img
+              src={user.avatarUrl}
+              alt="Avatar"
+              className="h-24 w-24 rounded-full object-cover border-2 border-neutral-700 shadow-lg"
+            />
           ) : (
             <Avatar initials={initials} size="lg" />
           )}
-          
+
           <div className="text-center sm:text-left">
             <h2 className="text-2xl font-bold text-white">{user.name || 'Anonymous User'}</h2>
             <p className="text-neutral-400">{user.email}</p>
@@ -76,14 +117,23 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Stats Placeholder (We will connect this to your Tasks/Areas later) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-8 border-t border-neutral-800">
-          <ProfileStat label="Completed Tasks" value="-" />
-          <ProfileStat label="Active Tasks" value="-" />
-          <ProfileStat label="Projects" value="-" />
-          <ProfileStat label="Streak" value="-" />
+          <ProfileStat label="Completed Tasks" value={isLoadingStats ? '-' : completed} />
+          <ProfileStat label="Active Tasks" value={isLoadingStats ? '-' : active} />
+          <ProfileStat label="Projects" value={isLoadingStats ? '-' : projects} />
+          <ProfileStat label="Streak" value={isLoadingStats ? '-' : `${streak}d`} />
         </div>
       </div>
+
+      <EditProfileModal
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        user={user}
+        onSaved={(updatedUser) => {
+          updateUser(updatedUser);
+          setIsEditOpen(false);
+        }}
+      />
     </PageLayout>
   );
 }

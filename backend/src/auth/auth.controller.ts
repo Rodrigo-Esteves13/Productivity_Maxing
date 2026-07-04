@@ -2,20 +2,27 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Delete,
   Param,
   Req,
   Res,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   UnauthorizedException,
+  BadRequestException,
   HttpCode,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import 'multer';
 import type { Request, Response } from 'express';
 import { User } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { GoogleLinkGuard } from './guards/google-link.guard';
@@ -145,6 +152,52 @@ export class AuthController {
     }
 
     return profile;
+  }
+
+  // Atualiza campos de texto do perfil (por agora só o nome).
+  // O avatar tem endpoints próprios logo a seguir, porque é um upload
+  // de ficheiro e não faz sentido aceitar uma avatarUrl arbitrária vinda
+  // do cliente.
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  async updateMe(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.authService.updateProfile(user.id, { name: dto.name });
+  }
+
+  // Upload da foto de perfil: recebe multipart/form-data com um campo
+  // "avatar", guarda no bucket do Supabase Storage, e grava o URL público
+  // resultante no User. Limite de 5MB para não abusarmos do storage.
+  @Post('me/avatar')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(200)
+  @UseInterceptors(
+    FileInterceptor('avatar', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async uploadAvatar(
+    @CurrentUser() user: AuthenticatedUser,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException(
+        'No file was sent (field name must be "avatar").',
+      );
+    }
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('File must be an image.');
+    }
+    return this.authService.uploadAvatar(user.id, file);
+  }
+
+  // Remove a foto de perfil atual (volta a mostrar as iniciais no frontend).
+  @Delete('me/avatar')
+  @UseGuards(JwtAuthGuard)
+  async deleteAvatar(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.removeAvatar(user.id);
   }
 
   private issueJwtAndRedirect(req: Request, res: Response) {

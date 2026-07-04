@@ -32,6 +32,7 @@ enum ProgressStatus {
   ON_TRACK
   BEHIND
   VERY_BEHIND
+  COMPLETED
 }
 
 // Escala de dificuldade percebida para a tarefa.

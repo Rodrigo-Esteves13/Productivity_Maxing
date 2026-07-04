@@ -15,7 +15,7 @@ export default function TasksTable({ tasks }: TasksTableProps) {
           <tbody>
             {tasks.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-neutral-500">
+                <td colSpan={10} className="px-4 py-8 text-center text-neutral-500">
                   Nenhuma tarefa encontrada.
                 </td>
               </tr>
