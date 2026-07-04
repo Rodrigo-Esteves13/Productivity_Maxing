@@ -11,7 +11,7 @@ export class CreateAcademicTaskTypeDto {
   @ApiProperty({
     example: 'TRABALHO_PRATICO',
     description:
-      'Identificador estável usado pelo código. Não editar depois de criado.',
+      'Stable identifier used by the code. Do not edit after creation.',
   })
   @IsString()
   @IsNotEmpty()
@@ -22,7 +22,7 @@ export class CreateAcademicTaskTypeDto {
   key: string;
 
   @ApiProperty({
-    example: 'Trabalho Prático',
+    example: 'Practical Assignment',
     description: 'Nome mostrado na interface',
   })
   @IsString()
@@ -31,7 +31,7 @@ export class CreateAcademicTaskTypeDto {
 
   @ApiProperty({
     example: 'ACADEMICO',
-    description: 'Key do TaskType pai a que esta subcategoria pertence',
+    description: 'Key do Parent TaskType a que esta subcategoria pertence',
   })
   @IsString()
   @IsNotEmpty()
@@ -39,7 +39,7 @@ export class CreateAcademicTaskTypeDto {
 
   @ApiPropertyOptional({
     example: 1,
-    description: 'Ordem de apresentação no select',
+    description: 'Display order in the select',
   })
   @IsOptional()
   @IsInt()

@@ -18,6 +18,7 @@ interface TaskEditFormProps {
   taskTypes: TaskTypeOption[];
   academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
+  progressStatuses: string[];
 }
 
 function buildInitialValues(task: Task): TaskFormFieldValues {
@@ -27,6 +28,7 @@ function buildInitialValues(task: Task): TaskFormFieldValues {
     type: task.type,
     academicType: task.academicType ?? '',
     difficulty: task.difficulty,
+    progressStatus: task.progressStatus,
     areaId: task.areaId,
     topics: task.topics ?? '',
     referenceLink: task.referenceLink ?? '',
@@ -44,6 +46,7 @@ export default function TaskEditForm({
   taskTypes,
   academicTaskTypes,
   difficulties,
+  progressStatuses,
 }: TaskEditFormProps) {
   const initialValues = useMemo(() => buildInitialValues(task), [task]);
   const [formData, setFormData] = useState<TaskFormFieldValues>(initialValues);
@@ -101,7 +104,9 @@ export default function TaskEditForm({
         taskTypes={taskTypes}
         academicTaskTypes={academicTaskTypes}
         difficulties={difficulties}
+        progressStatuses={progressStatuses}
         showRealGrade
+        showProgressStatus
       />
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800">

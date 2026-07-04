@@ -4,7 +4,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { Difficulty, Prisma } from '@prisma/client'; // <-- Added Prisma import
+import { Difficulty, ProgressStatus, Prisma } from '@prisma/client'; // <-- Added Prisma import
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -63,7 +63,7 @@ export class TasksService {
       include: TASK_INCLUDE,
     });
     if (!task)
-      throw new NotFoundException(`Task não encontrada ou não tens acesso.`);
+      throw new NotFoundException(`Task not found or you don't have access.`);
     return this.toResponse(task);
   }
 
@@ -73,7 +73,7 @@ export class TasksService {
       include: TASK_INCLUDE,
     });
     if (!existing)
-      throw new NotFoundException(`Task não encontrada ou não tens acesso.`);
+      throw new NotFoundException(`Task not found or you don't have access.`);
 
     const { date, type, academicType, ...rest } = dto;
 
@@ -129,6 +129,7 @@ export class TasksService {
         taskTypeKey: a.taskType.key,
       })),
       difficulties: Object.values(Difficulty),
+      progressStatuses: Object.values(ProgressStatus),
     };
   }
 
@@ -141,7 +142,7 @@ export class TasksService {
     });
     if (!taskType || !taskType.isActive) {
       throw new BadRequestException(
-        `Tipo de tarefa "${typeKey}" inválido ou inativo.`,
+        `Task type "${typeKey}" invalid or inactive.`,
       );
     }
 
@@ -158,7 +159,7 @@ export class TasksService {
       academicType.taskTypeId !== taskType.id
     ) {
       throw new BadRequestException(
-        `Subcategoria académica "${academicTypeKey}" inválida para o tipo "${typeKey}".`,
+        `Academic subcategory "${academicTypeKey}" invalid for type "${typeKey}".`,
       );
     }
 

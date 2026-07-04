@@ -12,7 +12,7 @@ export class CreateTaskTypeDto {
   @ApiProperty({
     example: 'ACADEMICO',
     description:
-      'Identificador estável usado pelo código (ex: mostrar o select de subcategoria académica). MAIUSCULAS_COM_UNDERSCORE. Não editar depois de criado.',
+      'Stable identifier used by the code (e.g. to show the academic subcategory select). UPPERCASE_WITH_UNDERSCORE. Do not edit after creation.',
   })
   @IsString()
   @IsNotEmpty()
@@ -22,7 +22,7 @@ export class CreateTaskTypeDto {
   key: string;
 
   @ApiProperty({
-    example: 'Académico',
+    example: 'Academic',
     description: 'Nome mostrado na interface',
   })
   @IsString()
@@ -39,7 +39,7 @@ export class CreateTaskTypeDto {
 
   @ApiPropertyOptional({
     example: 1,
-    description: 'Ordem de apresentação nos selects',
+    description: 'Display order in the selects',
   })
   @IsOptional()
   @IsInt()

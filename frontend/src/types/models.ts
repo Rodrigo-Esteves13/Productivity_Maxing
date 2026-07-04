@@ -5,8 +5,8 @@
 // ------------------------------------------------------------------
 export type Provider = 'GOOGLE' | 'DISCORD' | 'GITHUB';
 export type Role = 'USER' | 'ADMIN';
-export type ProgressStatus = 'ADIANTADO' | 'TEMPO_ESPERADO' | 'ATRASADO' | 'MUITO_ATRASADO';
-export type Difficulty = 'MUITO_FACIL' | 'FACIL' | 'MEDIO' | 'DIFICIL' | 'MUITO_DIFICIL';
+export type ProgressStatus = 'AHEAD' | 'ON_TRACK' | 'BEHIND' | 'VERY_BEHIND';
+export type Difficulty = 'VERY_EASY' | 'EASY' | 'MEDIUM' | 'HARD' | 'VERY_HARD';
 // Deixaram de ser union types fixas: agora vêm da BD (tabela editável pelo admin),
 // por isso passam a ser `string` (a "key" devolvida por /tasks/meta).
 export type TaskType = string;
@@ -29,6 +29,7 @@ export interface TaskMeta {
   taskTypes: TaskTypeOption[];
   academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
+  progressStatuses: string[];
 }
 
 // ------------------------------------------------------------------

@@ -15,15 +15,15 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class CreateTaskDto {
   @ApiProperty({
     example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-    description: 'ID da Área (UUID)',
+    description: 'Area ID (UUID)',
   })
   @IsString()
   @IsNotEmpty()
   areaId: string;
 
   @ApiProperty({
-    example: 'Estudar Derivadas',
-    description: 'Título da tarefa',
+    example: 'Study Derivatives',
+    description: 'Task title',
   })
   @IsString()
   @IsNotEmpty()
@@ -31,7 +31,7 @@ export class CreateTaskDto {
 
   @ApiProperty({
     example: '2026-06-30T14:00:00Z',
-    description: 'Data da tarefa (Formato ISO)',
+    description: 'Task date (ISO format)',
   })
   @IsDateString()
   @IsOptional()
@@ -40,7 +40,7 @@ export class CreateTaskDto {
   @ApiProperty({
     example: 'ACADEMICO',
     description:
-      'Key do tipo de tarefa (ver GET /tasks/meta). Gerido pelos admins em /admin/task-types.',
+      'Task type key (see GET /tasks/meta). Managed by admins in /admin/task-types.',
   })
   @IsString()
   @IsNotEmpty()
@@ -49,7 +49,7 @@ export class CreateTaskDto {
   @ApiPropertyOptional({
     example: 'FREQUENCIA',
     description:
-      'Key da subcategoria académica (apenas quando type = "ACADEMICO"). Ver GET /tasks/meta.',
+      'Academic subcategory key (only when type = "ACADEMICO"). See GET /tasks/meta.',
   })
   @IsOptional()
   @IsString()
@@ -57,13 +57,13 @@ export class CreateTaskDto {
 
   @ApiPropertyOptional({
     example: 'Limites, Derivadas',
-    description: 'Tópicos a estudar',
+    description: 'Topics to study',
   })
   @IsOptional()
   @IsString()
   topics?: string;
 
-  @ApiPropertyOptional({ example: 25.5, description: 'Peso na nota final (%)' })
+  @ApiPropertyOptional({ example: 25.5, description: 'Weight toward final grade (%)' })
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -72,16 +72,16 @@ export class CreateTaskDto {
 
   @ApiProperty({
     enum: Difficulty,
-    example: Difficulty.MEDIO,
-    description: 'Nível de dificuldade percebido',
+    example: Difficulty.MEDIUM,
+    description: 'Perceived difficulty level',
   })
   @IsEnum(Difficulty)
   difficulty: Difficulty;
 
   @ApiPropertyOptional({
     enum: ProgressStatus,
-    example: ProgressStatus.TEMPO_ESPERADO,
-    description: 'Estado do progresso atual',
+    example: ProgressStatus.ON_TRACK,
+    description: 'Current progress status',
   })
   @IsOptional()
   @IsEnum(ProgressStatus)
@@ -89,13 +89,13 @@ export class CreateTaskDto {
 
   @ApiPropertyOptional({
     example: 'https://moodle.up.pt/curso123',
-    description: 'Link de referência',
+    description: 'Reference link',
   })
   @IsOptional()
   @IsUrl()
   referenceLink?: string;
 
-  @ApiPropertyOptional({ example: 16.0, description: 'Nota objetivo (0-20)' })
+  @ApiPropertyOptional({ example: 16.0, description: 'Target grade (0-20)' })
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -104,7 +104,7 @@ export class CreateTaskDto {
 
   @ApiPropertyOptional({
     example: 14.5,
-    description: 'Nota real obtida (0-20)',
+    description: 'Actual grade obtained (0-20)',
   })
   @IsOptional()
   @IsNumber()

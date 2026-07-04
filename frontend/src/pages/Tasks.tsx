@@ -29,6 +29,7 @@ export default function Tasks() {
   const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
   const [academicTaskTypes, setAcademicTaskTypes] = useState<AcademicTaskTypeOption[]>([]);
   const [difficulties, setDifficulties] = useState<string[]>([]);
+  const [progressStatuses, setProgressStatuses] = useState<string[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +52,7 @@ export default function Tasks() {
       setTaskTypes(metaData.taskTypes);
       setAcademicTaskTypes(metaData.academicTaskTypes);
       setDifficulties(metaData.difficulties);
+      setProgressStatuses(metaData.progressStatuses);
     } catch (err) {
       setError('Could not load the data.');
     } finally {
@@ -172,6 +174,7 @@ export default function Tasks() {
               taskTypes={taskTypes}
               academicTaskTypes={academicTaskTypes}
               difficulties={difficulties}
+              progressStatuses={progressStatuses}
             />
           ) : (
             <TaskDetailView

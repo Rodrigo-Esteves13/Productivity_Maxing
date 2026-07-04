@@ -28,18 +28,19 @@ enum Role {
 
 // Estado de progresso aplicável a qualquer tarefa ou projeto.
 enum ProgressStatus {
-  ADIANTADO
-  TEMPO_ESPERADO
-  ATRASADO
-  MUITO_ATRASADO
+  AHEAD
+  ON_TRACK
+  BEHIND
+  VERY_BEHIND
 }
 
 // Escala de dificuldade percebida para a tarefa.
 enum Difficulty {
-  FACIL
-  MEDIO
-  DIFICIL
-  MUITO_DIFICIL
+  VERY_EASY
+  EASY
+  MEDIUM
+  HARD
+  VERY_HARD
 }
 
 // TABELAS DE CONFIGURAÇÃO (SUBSTITUEM OS ANTIGOS ENUMS TaskType/AcademicTaskType)
@@ -152,7 +153,7 @@ model Task {
   // Metadados de Execução
   weightPercentage Float?
   difficulty       Difficulty
-  progressStatus   ProgressStatus @default(TEMPO_ESPERADO)
+  progressStatus   ProgressStatus @default(ON_TRACK)
   referenceLink    String?
 
   // Avaliação (Relevante para contexto Académico/Trabalho)

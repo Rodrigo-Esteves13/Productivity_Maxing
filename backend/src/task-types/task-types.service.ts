@@ -30,7 +30,7 @@ export class TaskTypesService {
     });
     if (existing) {
       throw new ConflictException(
-        `Já existe um TaskType com a key "${dto.key}".`,
+        `A TaskType with this key already exists: "${dto.key}".`,
       );
     }
     return this.prisma.taskType.create({ data: dto });
@@ -53,7 +53,7 @@ export class TaskTypesService {
 
   private async getTaskTypeOrThrow(id: string) {
     const taskType = await this.prisma.taskType.findUnique({ where: { id } });
-    if (!taskType) throw new NotFoundException('TaskType não encontrado.');
+    if (!taskType) throw new NotFoundException('TaskType not found.');
     return taskType;
   }
 
@@ -73,7 +73,7 @@ export class TaskTypesService {
     });
     if (!parent) {
       throw new BadRequestException(
-        `TaskType pai "${dto.taskTypeKey}" não existe.`,
+        `Parent TaskType "${dto.taskTypeKey}" does not exist.`,
       );
     }
 
@@ -82,7 +82,7 @@ export class TaskTypesService {
     });
     if (existing) {
       throw new ConflictException(
-        `Já existe um AcademicTaskType com a key "${dto.key}".`,
+        `An AcademicTaskType with this key already exists: "${dto.key}".`,
       );
     }
 
@@ -104,7 +104,7 @@ export class TaskTypesService {
       });
       if (!parent) {
         throw new BadRequestException(
-          `TaskType pai "${dto.taskTypeKey}" não existe.`,
+          `Parent TaskType "${dto.taskTypeKey}" does not exist.`,
         );
       }
       taskTypeId = parent.id;
@@ -131,7 +131,7 @@ export class TaskTypesService {
     const item = await this.prisma.academicTaskType.findUnique({
       where: { id },
     });
-    if (!item) throw new NotFoundException('AcademicTaskType não encontrado.');
+    if (!item) throw new NotFoundException('AcademicTaskType not found.');
     return item;
   }
 }

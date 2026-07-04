@@ -6,7 +6,7 @@ interface StatusDotProps {
 }
 
 const colorClasses: Record<StatusDotColor, string> = {
-  green: 'bg-green-400',
+  green: 'bg-volt-400',
   amber: 'bg-amber-400',
   red: 'bg-red-400',
   neutral: 'bg-neutral-500',

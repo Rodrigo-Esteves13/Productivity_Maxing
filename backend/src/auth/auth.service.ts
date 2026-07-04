@@ -111,7 +111,7 @@ export class AuthService {
 
     if (existingIdentity && existingIdentity.userId !== userId) {
       throw new ConflictException(
-        'Esta conta do provider já está associada a outro utilizador.',
+        'This provider account is already linked to another user.',
       );
     }
 
@@ -160,7 +160,7 @@ export class AuthService {
 
     if (error) {
       if (/already registered|already exists/i.test(error.message)) {
-        throw new ConflictException('Já existe uma conta com este email.');
+        throw new ConflictException('An account with this email already exists.');
       }
       throw new UnauthorizedException(error.message);
     }
@@ -186,7 +186,7 @@ export class AuthService {
     });
 
     if (error || !data.user) {
-      throw new UnauthorizedException('Credenciais inválidas.');
+      throw new UnauthorizedException('Invalid credentials.');
     }
 
     const name =
@@ -238,12 +238,12 @@ export class AuthService {
       const payload = this.jwtService.verify<LinkStatePayload>(state);
       if (payload.purpose !== 'link' || payload.provider !== provider) {
         throw new UnauthorizedException(
-          'State OAuth inválido para este provider.',
+          'Invalid OAuth state for this provider.',
         );
       }
       return payload.sub;
     } catch {
-      throw new UnauthorizedException('State OAuth inválido ou expirado.');
+      throw new UnauthorizedException('Invalid or expired OAuth state.');
     }
   }
 
