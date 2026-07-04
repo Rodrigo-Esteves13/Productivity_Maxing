@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID, randomBytes, scryptSync } from 'crypto';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { Provider, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -26,14 +26,13 @@ interface OAuthProfileData {
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly supabase: SupabaseClient;
-
+  private readonly supabase: ReturnType<typeof createClient>;
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
   ) {
     // Anon key chega para signUp/signInWithPassword — são os mesmos endpoints
-    // públicos que o supabase-js usaria no browser, não operações de admin.
+    // públicos que o supabase-js usaria no browser, não operações de admin
     this.supabase = createClient(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_ANON_KEY!,
@@ -174,7 +173,9 @@ export class AuthService {
       );
     }
 
-    this.logger.log(`Novo utilizador registado via Supabase: ${signUpData.user.id}`);
+    this.logger.log(
+      `Novo utilizador registado via Supabase: ${signUpData.user.id}`,
+    );
     return this.syncLocalUser(data.email, data.name);
   }
 
@@ -188,7 +189,8 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas.');
     }
 
-    const name = (data.user.user_metadata?.name as string | undefined) ?? undefined;
+    const name =
+      (data.user.user_metadata?.name as string | undefined) ?? undefined;
     return this.syncLocalUser(email, name);
   }
 
