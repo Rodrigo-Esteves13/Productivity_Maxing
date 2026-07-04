@@ -1,27 +1,23 @@
 import type { ProgressStatus } from '../../types/models';
+import { formatEnumLabel } from '../../utils/formatEnumLabel';
 
 interface StatusBadgeProps {
   status: ProgressStatus;
 }
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
-  const styles = {
-    ADIANTADO: 'bg-green-900/50 text-green-400 border-green-800',
-    TEMPO_ESPERADO: 'bg-blue-900/50 text-blue-400 border-blue-800',
-    ATRASADO: 'bg-orange-900/50 text-orange-400 border-orange-800',
-    MUITO_ATRASADO: 'bg-red-900/50 text-red-400 border-red-800',
+  const styles: Record<string, string> = {
+    AHEAD: 'bg-green-900/50 text-green-400 border-green-800',
+    ON_TRACK: 'bg-violet-900/50 text-violet-300 border-violet-800',
+    BEHIND: 'bg-orange-900/50 text-orange-400 border-orange-800',
+    VERY_BEHIND: 'bg-red-900/50 text-red-400 border-red-800',
   };
 
-  const labels = {
-    ADIANTADO: 'Adiantado',
-    TEMPO_ESPERADO: 'No Tempo',
-    ATRASADO: 'Atrasado',
-    MUITO_ATRASADO: 'Muito Atrasado'
-  };
+  const currentStyle = styles[status as string] || 'bg-neutral-800 text-neutral-300 border-neutral-700';
 
   return (
-    <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${styles[status]}`}>
-      {labels[status]}
+    <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${currentStyle}`}>
+      {formatEnumLabel(status)}
     </span>
   );
 }

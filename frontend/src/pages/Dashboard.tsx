@@ -27,12 +27,12 @@ export default function Dashboard() {
   return (
     <PageLayout>
       <PageHeader
-        title="Dashboard Analítica"
-        description="Visão global de todas as tuas atividades, notas e progressos."
+        title="Analytics Dashboard"
+        description="Global view of all your activities, grades, and progress."
       />
 
       {isLoading ? (
-        <LoadingState message="A compilar dados..." />
+        <LoadingState message="Compiling data..." />
       ) : (
         <TasksTable tasks={tasks} />
       )}

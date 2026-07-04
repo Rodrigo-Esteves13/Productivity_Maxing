@@ -8,7 +8,7 @@ export default function Input({ label, id, className = '', ...rest }: InputProps
   const field = (
     <input
       id={id}
-      className={`border border-neutral-700 bg-neutral-900 text-white rounded p-2 placeholder:text-neutral-500 ${className}`}
+      className={`w-full block border border-neutral-700 bg-neutral-900 text-white rounded-lg px-3 py-2.5 text-base placeholder:text-neutral-500 ${className}`}
       {...rest}
     />
   );

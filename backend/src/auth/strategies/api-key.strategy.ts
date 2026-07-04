@@ -17,7 +17,7 @@ export class ApiKeyStrategy extends PassportStrategy(
     const user = await this.authService.validateApiKey(apiKey);
 
     if (!user) {
-      throw new UnauthorizedException('API Key inválida ou revogada.');
+      throw new UnauthorizedException('Invalid or revoked API key.');
     }
     return user;
   }

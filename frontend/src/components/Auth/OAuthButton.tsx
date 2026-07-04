@@ -21,7 +21,7 @@ export default function OAuthButton({ provider, href }: OAuthButtonProps) {
       className="border border-neutral-700 rounded p-2 text-center text-neutral-200 hover:border-neutral-500 flex items-center justify-center gap-2"
     >
       <Icon />
-      Continuar com {label}
+      Continue with {label}
     </a>
   );
 }

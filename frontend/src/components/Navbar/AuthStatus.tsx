@@ -1,4 +1,4 @@
-import { LogoutIcon } from '../UI/icons';
+import { LogoutIcon } from '../UI/Icons';
 
 interface AuthStatusProps {
   isAuthenticated: boolean;

@@ -9,8 +9,8 @@ interface AreaDetailViewProps {
 export default function AreaDetailView({ area }: AreaDetailViewProps) {
   return (
     <div className="-mt-2">
-      <DetailRow label="Nome da Área">{area.name}</DetailRow>
-      <DetailRow label="Cor Associada">
+      <DetailRow label="Area Name">{area.name}</DetailRow>
+      <DetailRow label="Associated Color">
         <div className="flex items-center gap-3">
           <ColorDot color={area.colorHex} variant="square" size="md" />
           <span className="text-neutral-200 font-mono text-sm uppercase tracking-widest">

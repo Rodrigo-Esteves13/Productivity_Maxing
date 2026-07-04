@@ -5,10 +5,32 @@
 // ------------------------------------------------------------------
 export type Provider = 'GOOGLE' | 'DISCORD' | 'GITHUB';
 export type Role = 'USER' | 'ADMIN';
-export type ProgressStatus = 'ADIANTADO' | 'TEMPO_ESPERADO' | 'ATRASADO' | 'MUITO_ATRASADO';
-export type Difficulty = 'FACIL' | 'MEDIO' | 'DIFICIL' | 'MUITO_DIFICIL';
-export type TaskType = 'ACADEMICO' | 'HABITO' | 'PROJETO' | 'EVENTO' | 'TRABALHO' | 'TAREFA_SIMPLES';
-export type AcademicTaskType = 'FREQUENCIA' | 'TRABALHO_PRATICO' | 'TAREFA_SECUNDARIA';
+export type ProgressStatus = 'AHEAD' | 'ON_TRACK' | 'BEHIND' | 'VERY_BEHIND';
+export type Difficulty = 'VERY_EASY' | 'EASY' | 'MEDIUM' | 'HARD' | 'VERY_HARD';
+// Deixaram de ser union types fixas: agora vêm da BD (tabela editável pelo admin),
+// por isso passam a ser `string` (a "key" devolvida por /tasks/meta).
+export type TaskType = string;
+export type AcademicTaskType = string;
+
+// Formato devolvido por /tasks/meta para popular os selects
+export interface TaskTypeOption {
+  key: string;
+  label: string;
+  colorHex?: string | null;
+}
+
+export interface AcademicTaskTypeOption {
+  key: string;
+  label: string;
+  taskTypeKey: string; // a que TaskType pertence, ex: "ACADEMICO"
+}
+
+export interface TaskMeta {
+  taskTypes: TaskTypeOption[];
+  academicTaskTypes: AcademicTaskTypeOption[];
+  difficulties: string[];
+  progressStatuses: string[];
+}
 
 // ------------------------------------------------------------------
 // MODELS

@@ -115,3 +115,36 @@ export function LogoutIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function HeartIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      width={16}
+      height={16}
+      {...props}
+    >
+      <path d="M8 14.25c-.2 0-.39-.07-.54-.2C4.9 11.87 1 8.36 1 5.44 1 3.1 2.79 1.5 4.9 1.5c1.2 0 2.32.55 3.1 1.5.78-.95 1.9-1.5 3.1-1.5 2.11 0 3.9 1.6 3.9 3.94 0 2.92-3.9 6.43-6.46 8.61-.15.13-.34.2-.54.2z" />
+    </svg>
+  );
+}
+
+export function ArrowUpRightIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={14}
+      height={14}
+      {...props}
+    >
+      <path d="M7 17 17 7" />
+      <path d="M7 7h10v10" />
+    </svg>
+  );
+}

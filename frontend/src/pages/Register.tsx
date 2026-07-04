@@ -26,7 +26,7 @@ export default function Register() {
     setError('');
 
     if (password !== confirmPassword) {
-      setError('As passwords não coincidem.');
+      setError('Passwords do not match.');
       return;
     }
 
@@ -39,7 +39,7 @@ export default function Register() {
       login(token);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      setError('Não foi possível criar a conta. Verifica os dados ou tenta outro email.');
+      setError('Could not create the account. Check your details or try another email.');
     } finally {
       setIsSubmitting(false);
     }
@@ -47,21 +47,21 @@ export default function Register() {
 
   return (
     <PageLayout>
-      <AuthCard title="Criar Conta">
+      <AuthCard title="Create Account">
         <form onSubmit={handleRegister} className="space-y-4">
           {error && <FormError message={error} />}
 
           <Input
-            label="Nome"
+            label="Name"
             type="text"
-            placeholder="O teu nome"
+            placeholder="Your name"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <Input
             label="Email"
             type="email"
-            placeholder="tu@exemplo.com"
+            placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -73,7 +73,7 @@ export default function Register() {
             onChange={(e) => setPassword(e.target.value)}
           />
           <Input
-            label="Confirmar Password"
+            label="Confirm Password"
             type="password"
             placeholder="••••••••"
             value={confirmPassword}
@@ -81,13 +81,13 @@ export default function Register() {
           />
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'A criar conta...' : 'Criar Conta'}
+            {isSubmitting ? 'Creating account...' : 'Create Account'}
           </Button>
         </form>
 
-        <AuthSwitchLink question="Já tens conta?" linkText="Entrar" to="/login" />
+        <AuthSwitchLink question="Already have an account?" linkText="Login" to="/login" />
 
-        <OAuthProviderList message="Ou cria conta com" />
+        <OAuthProviderList message="Or create an account with" />
       </AuthCard>
     </PageLayout>
   );

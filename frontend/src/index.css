@@ -1,1 +1,77 @@
 @import "tailwindcss";
+
+/*
+ * "Nightshade" theme — a deep aubergine-black base with a vivid
+ * orchid/magenta-violet accent, replacing the stock Tailwind
+ * neutral/violet scales. Because these are the same token names
+ * Tailwind already uses (bg-neutral-900, text-violet-400, ...),
+ * every existing component picks up the new look automatically —
+ * no className changes needed anywhere else in the app.
+ */
+@theme {
+  /* Base surfaces & text — deep eggplant/void, not plain gray */
+  --color-neutral-50: #f6f2fb;
+  --color-neutral-100: #ece3f8;
+  --color-neutral-200: #d7c5ef;
+  --color-neutral-300: #b99cdf;
+  --color-neutral-400: #9c7cc9;
+  --color-neutral-500: #8064ab;
+  --color-neutral-600: #644d87;
+  --color-neutral-700: #4a3966;
+  --color-neutral-800: #2e2249;
+  --color-neutral-900: #1b1433;
+  --color-neutral-950: #0d0920;
+
+  /* Primary accent — vivid orchid/magenta violet */
+  --color-violet-50: #fbf1ff;
+  --color-violet-100: #f4dcff;
+  --color-violet-200: #e8b8ff;
+  --color-violet-300: #d68bff;
+  --color-violet-400: #c05dff;
+  --color-violet-500: #a52ff0;
+  --color-violet-600: #8b16d1;
+  --color-violet-700: #700daf;
+  --color-violet-800: #560c86;
+  --color-violet-900: #3d0d61;
+  --color-violet-950: #250540;
+
+  /* Secondary "surprise" accent — electric volt green, used sparingly
+     for highlights, glows, and the odd unexpected pop of contrast */
+  --color-volt-300: #e3ff8c;
+  --color-volt-400: #cbfa4d;
+  --color-volt-500: #aee023;
+  --color-volt-600: #8dbb16;
+
+  /* Used once, in the wordmark gradient — pulled into the same family */
+  --color-fuchsia-400: #ef6bf5;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-neutral-950);
+}
+
+::selection {
+  background-color: var(--color-violet-700);
+  color: var(--color-neutral-50);
+}
+
+/* Slim, on-theme scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-neutral-950);
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-neutral-700);
+  border-radius: 9999px;
+  border: 2px solid var(--color-neutral-950);
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-violet-700);
+}
