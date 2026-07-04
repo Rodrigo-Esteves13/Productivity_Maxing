@@ -25,9 +25,13 @@ export class TaskTypesService {
   }
 
   async createTaskType(dto: CreateTaskTypeDto) {
-    const existing = await this.prisma.taskType.findUnique({ where: { key: dto.key } });
+    const existing = await this.prisma.taskType.findUnique({
+      where: { key: dto.key },
+    });
     if (existing) {
-      throw new ConflictException(`Já existe um TaskType com a key "${dto.key}".`);
+      throw new ConflictException(
+        `Já existe um TaskType com a key "${dto.key}".`,
+      );
     }
     return this.prisma.taskType.create({ data: dto });
   }
@@ -41,7 +45,10 @@ export class TaskTypesService {
   // Tasks que já usam este tipo (FK), por isso só desativamos.
   async removeTaskType(id: string) {
     await this.getTaskTypeOrThrow(id);
-    return this.prisma.taskType.update({ where: { id }, data: { isActive: false } });
+    return this.prisma.taskType.update({
+      where: { id },
+      data: { isActive: false },
+    });
   }
 
   private async getTaskTypeOrThrow(id: string) {
@@ -61,16 +68,25 @@ export class TaskTypesService {
   }
 
   async createAcademicTaskType(dto: CreateAcademicTaskTypeDto) {
-    const parent = await this.prisma.taskType.findUnique({ where: { key: dto.taskTypeKey } });
+    const parent = await this.prisma.taskType.findUnique({
+      where: { key: dto.taskTypeKey },
+    });
     if (!parent) {
-      throw new BadRequestException(`TaskType pai "${dto.taskTypeKey}" não existe.`);
+      throw new BadRequestException(
+        `TaskType pai "${dto.taskTypeKey}" não existe.`,
+      );
     }
 
-    const existing = await this.prisma.academicTaskType.findUnique({ where: { key: dto.key } });
+    const existing = await this.prisma.academicTaskType.findUnique({
+      where: { key: dto.key },
+    });
     if (existing) {
-      throw new ConflictException(`Já existe um AcademicTaskType com a key "${dto.key}".`);
+      throw new ConflictException(
+        `Já existe um AcademicTaskType com a key "${dto.key}".`,
+      );
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { taskTypeKey, ...rest } = dto;
     return this.prisma.academicTaskType.create({
       data: { ...rest, taskTypeId: parent.id },
@@ -83,13 +99,18 @@ export class TaskTypesService {
 
     let taskTypeId: string | undefined;
     if (dto.taskTypeKey) {
-      const parent = await this.prisma.taskType.findUnique({ where: { key: dto.taskTypeKey } });
+      const parent = await this.prisma.taskType.findUnique({
+        where: { key: dto.taskTypeKey },
+      });
       if (!parent) {
-        throw new BadRequestException(`TaskType pai "${dto.taskTypeKey}" não existe.`);
+        throw new BadRequestException(
+          `TaskType pai "${dto.taskTypeKey}" não existe.`,
+        );
       }
       taskTypeId = parent.id;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { taskTypeKey, ...rest } = dto;
     return this.prisma.academicTaskType.update({
       where: { id },
@@ -100,11 +121,16 @@ export class TaskTypesService {
 
   async removeAcademicTaskType(id: string) {
     await this.getAcademicTaskTypeOrThrow(id);
-    return this.prisma.academicTaskType.update({ where: { id }, data: { isActive: false } });
+    return this.prisma.academicTaskType.update({
+      where: { id },
+      data: { isActive: false },
+    });
   }
 
   private async getAcademicTaskTypeOrThrow(id: string) {
-    const item = await this.prisma.academicTaskType.findUnique({ where: { id } });
+    const item = await this.prisma.academicTaskType.findUnique({
+      where: { id },
+    });
     if (!item) throw new NotFoundException('AcademicTaskType não encontrado.');
     return item;
   }

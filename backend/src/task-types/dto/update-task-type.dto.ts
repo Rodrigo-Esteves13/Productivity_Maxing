@@ -8,7 +8,10 @@ import { CreateTaskTypeDto } from './create-task-type.dto';
 export class UpdateTaskTypeDto extends PartialType(
   OmitType(CreateTaskTypeDto, ['key'] as const),
 ) {
-  @ApiPropertyOptional({ example: false, description: 'Desativa sem apagar (soft delete)' })
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Desativa sem apagar (soft delete)',
+  })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;

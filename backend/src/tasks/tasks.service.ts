@@ -4,12 +4,21 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { Difficulty } from '@prisma/client';
+import { Difficulty, Prisma } from '@prisma/client'; // <-- Added Prisma import
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
-const TASK_INCLUDE = { area: true, taskType: true, academicType: true } as const;
+const TASK_INCLUDE = {
+  area: true,
+  taskType: true,
+  academicType: true,
+} as const;
+
+// Automatically infer the type of a Task when it includes the relations above
+type TaskWithIncludes = Prisma.TaskGetPayload<{
+  include: typeof TASK_INCLUDE;
+}>;
 
 @Injectable()
 export class TasksService {
@@ -53,7 +62,8 @@ export class TasksService {
       where: { id, userId },
       include: TASK_INCLUDE,
     });
-    if (!task) throw new NotFoundException(`Task não encontrada ou não tens acesso.`);
+    if (!task)
+      throw new NotFoundException(`Task não encontrada ou não tens acesso.`);
     return this.toResponse(task);
   }
 
@@ -62,7 +72,8 @@ export class TasksService {
       where: { id, userId },
       include: TASK_INCLUDE,
     });
-    if (!existing) throw new NotFoundException(`Task não encontrada ou não tens acesso.`);
+    if (!existing)
+      throw new NotFoundException(`Task não encontrada ou não tens acesso.`);
 
     const { date, type, academicType, ...rest } = dto;
 
@@ -73,7 +84,9 @@ export class TasksService {
     if (type !== undefined || academicType !== undefined) {
       const effectiveType = type ?? existing.taskType.key;
       const effectiveAcademic =
-        academicType !== undefined ? academicType : (existing.academicType?.key ?? undefined);
+        academicType !== undefined
+          ? academicType
+          : (existing.academicType?.key ?? undefined);
       typeIds = await this.resolveTypes(effectiveType, effectiveAcademic);
     }
 
@@ -123,9 +136,13 @@ export class TasksService {
   // para os IDs reais na BD, e valida que existem, estão ativas, e que a
   // subcategoria académica pertence mesmo ao tipo indicado.
   private async resolveTypes(typeKey: string, academicTypeKey?: string) {
-    const taskType = await this.prisma.taskType.findUnique({ where: { key: typeKey } });
+    const taskType = await this.prisma.taskType.findUnique({
+      where: { key: typeKey },
+    });
     if (!taskType || !taskType.isActive) {
-      throw new BadRequestException(`Tipo de tarefa "${typeKey}" inválido ou inativo.`);
+      throw new BadRequestException(
+        `Tipo de tarefa "${typeKey}" inválido ou inativo.`,
+      );
     }
 
     if (!academicTypeKey) {
@@ -135,7 +152,11 @@ export class TasksService {
     const academicType = await this.prisma.academicTaskType.findUnique({
       where: { key: academicTypeKey },
     });
-    if (!academicType || !academicType.isActive || academicType.taskTypeId !== taskType.id) {
+    if (
+      !academicType ||
+      !academicType.isActive ||
+      academicType.taskTypeId !== taskType.id
+    ) {
       throw new BadRequestException(
         `Subcategoria académica "${academicTypeKey}" inválida para o tipo "${typeKey}".`,
       );
@@ -144,10 +165,17 @@ export class TasksService {
     return { taskTypeId: taskType.id, academicTypeId: academicType.id };
   }
 
-  // Devolve a Task no formato que o frontend já conhece: `type`/`academicType`
-  // como strings simples (a key), em vez da relação/IDs internos.
-  private toResponse(task: any) {
-    const { taskType, taskTypeId, academicType, academicTypeId, ...rest } = task;
+  // Substituímos o "any" pelo tipo gerado pelo Prisma
+  private toResponse(task: TaskWithIncludes) {
+    const { taskType, taskTypeId, academicType, academicTypeId, ...rest } =
+      task;
+
+    // A declaração `void` marca as variáveis como lidas pelo interpretador,
+    // o que previne o erro @typescript-eslint/no-unused-vars sem teres
+    // de apagar os IDs da desestruturação.
+    void taskTypeId;
+    void academicTypeId;
+
     return {
       ...rest,
       type: taskType.key,
@@ -155,4 +183,3 @@ export class TasksService {
     };
   }
 }
-

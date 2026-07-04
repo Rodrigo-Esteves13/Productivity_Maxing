@@ -33,7 +33,10 @@ export class TaskTypesController {
   // ---------- TaskType ----------
 
   @Get('admin/task-types')
-  @ApiOperation({ summary: 'Lista todos os tipos de tarefa, incluindo inativos (Apenas ADMIN)' })
+  @ApiOperation({
+    summary:
+      'Lista todos os tipos de tarefa, incluindo inativos (Apenas ADMIN)',
+  })
   findAllTaskTypes() {
     return this.taskTypesService.findAllTaskTypes(false);
   }
@@ -45,13 +48,20 @@ export class TaskTypesController {
   }
 
   @Patch('admin/task-types/:id')
-  @ApiOperation({ summary: 'Edita label/cor/ordem/ativo de um tipo de tarefa (Apenas ADMIN)' })
-  updateTaskType(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateTaskTypeDto) {
+  @ApiOperation({
+    summary: 'Edita label/cor/ordem/ativo de um tipo de tarefa (Apenas ADMIN)',
+  })
+  updateTaskType(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateTaskTypeDto,
+  ) {
     return this.taskTypesService.updateTaskType(id, dto);
   }
 
   @Delete('admin/task-types/:id')
-  @ApiOperation({ summary: 'Desativa um tipo de tarefa, sem apagar (Apenas ADMIN)' })
+  @ApiOperation({
+    summary: 'Desativa um tipo de tarefa, sem apagar (Apenas ADMIN)',
+  })
   removeTaskType(@Param('id', ParseUUIDPipe) id: string) {
     return this.taskTypesService.removeTaskType(id);
   }
@@ -60,14 +70,17 @@ export class TaskTypesController {
 
   @Get('admin/academic-task-types')
   @ApiOperation({
-    summary: 'Lista todas as subcategorias académicas, incluindo inativas (Apenas ADMIN)',
+    summary:
+      'Lista todas as subcategorias académicas, incluindo inativas (Apenas ADMIN)',
   })
   findAllAcademicTaskTypes() {
     return this.taskTypesService.findAllAcademicTaskTypes(false);
   }
 
   @Post('admin/academic-task-types')
-  @ApiOperation({ summary: 'Cria uma nova subcategoria académica (Apenas ADMIN)' })
+  @ApiOperation({
+    summary: 'Cria uma nova subcategoria académica (Apenas ADMIN)',
+  })
   createAcademicTaskType(@Body() dto: CreateAcademicTaskTypeDto) {
     return this.taskTypesService.createAcademicTaskType(dto);
   }
@@ -82,7 +95,9 @@ export class TaskTypesController {
   }
 
   @Delete('admin/academic-task-types/:id')
-  @ApiOperation({ summary: 'Desativa uma subcategoria académica, sem apagar (Apenas ADMIN)' })
+  @ApiOperation({
+    summary: 'Desativa uma subcategoria académica, sem apagar (Apenas ADMIN)',
+  })
   removeAcademicTaskType(@Param('id', ParseUUIDPipe) id: string) {
     return this.taskTypesService.removeAcademicTaskType(id);
   }
