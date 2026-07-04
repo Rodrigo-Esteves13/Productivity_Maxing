@@ -7,6 +7,7 @@ interface DifficultyBadgeProps {
 export default function DifficultyBadge({ difficulty }: DifficultyBadgeProps) {
   // Mapeamos cada dificuldade para as cores do Tailwind
   const styles: Record<string, string> = {
+    MUITO_FACIL: 'bg-emerald-900/30 text-emerald-400 border-emerald-800/50',
     FACIL: 'bg-green-900/30 text-green-400 border-green-800/50',
     MEDIO: 'bg-yellow-900/30 text-yellow-400 border-yellow-800/50',
     DIFICIL: 'bg-orange-900/30 text-orange-400 border-orange-800/50',
@@ -15,6 +16,7 @@ export default function DifficultyBadge({ difficulty }: DifficultyBadgeProps) {
 
   // Mapeamos para um texto bonito
   const labels: Record<string, string> = {
+    MUITO_FACIL: 'Very Easy',
     FACIL: 'Easy',
     MEDIO: 'Medium',
     DIFICIL: 'Hard',

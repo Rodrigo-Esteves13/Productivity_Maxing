@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { Task } from '../../types/models';
+import type { Task, TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
 import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
@@ -15,7 +15,8 @@ interface TaskEditFormProps {
   onSubmit: (data: any) => Promise<void>;
   onCancel: () => void;
   areas: AreaOption[];
-  taskTypes: string[];
+  taskTypes: TaskTypeOption[];
+  academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
 }
 
@@ -24,6 +25,7 @@ function buildInitialValues(task: Task): TaskFormFieldValues {
     title: task.title,
     date: task.date.split('T')[0],
     type: task.type,
+    academicType: task.academicType ?? '',
     difficulty: task.difficulty,
     areaId: task.areaId,
     topics: task.topics ?? '',
@@ -40,6 +42,7 @@ export default function TaskEditForm({
   onCancel,
   areas,
   taskTypes,
+  academicTaskTypes,
   difficulties,
 }: TaskEditFormProps) {
   const initialValues = useMemo(() => buildInitialValues(task), [task]);
@@ -73,6 +76,7 @@ export default function TaskEditForm({
           realGrade: formData.realGrade ? parseFloat(formData.realGrade) : undefined,
           topics: formData.topics || undefined,
           referenceLink: formData.referenceLink || undefined,
+          academicType: formData.academicType || undefined,
         };
 
         await onSubmit(payload);
@@ -95,6 +99,7 @@ export default function TaskEditForm({
         onChange={updateField}
         areas={areas}
         taskTypes={taskTypes}
+        academicTaskTypes={academicTaskTypes}
         difficulties={difficulties}
         showRealGrade
       />

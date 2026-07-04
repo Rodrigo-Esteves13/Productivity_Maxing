@@ -19,14 +19,15 @@ import {
   getTaskMetadata,
   deleteTask,
 } from '../api/userService';
-import type { Task, Area } from '../types/models';
+import type { Task, Area, TaskTypeOption, AcademicTaskTypeOption } from '../types/models';
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
 
-  // Metadados dinâmicos
-  const [taskTypes, setTaskTypes] = useState<string[]>([]);
+  // Metadados dinâmicos (vêm da BD, editáveis pelo admin)
+  const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
+  const [academicTaskTypes, setAcademicTaskTypes] = useState<AcademicTaskTypeOption[]>([]);
   const [difficulties, setDifficulties] = useState<string[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +49,7 @@ export default function Tasks() {
       setTasks(tasksData);
       setAreas(areasData);
       setTaskTypes(metaData.taskTypes);
+      setAcademicTaskTypes(metaData.academicTaskTypes);
       setDifficulties(metaData.difficulties);
     } catch (err) {
       setError('Could not load the data.');
@@ -138,6 +140,7 @@ export default function Tasks() {
           onCancel={() => setIsCreateModalOpen(false)}
           areas={areas}
           taskTypes={taskTypes}
+          academicTaskTypes={academicTaskTypes}
           difficulties={difficulties}
         />
       </Modal>
@@ -167,10 +170,15 @@ export default function Tasks() {
               onCancel={() => setIsEditing(false)}
               areas={areas}
               taskTypes={taskTypes}
+              academicTaskTypes={academicTaskTypes}
               difficulties={difficulties}
             />
           ) : (
-            <TaskDetailView task={selectedTask} />
+            <TaskDetailView
+              task={selectedTask}
+              taskTypes={taskTypes}
+              academicTaskTypes={academicTaskTypes}
+            />
           ))}
       </Modal>
     </PageLayout>

@@ -1,19 +1,27 @@
-import type { Task } from '../../types/models';
+import type { Task, TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import DetailRow from '../UI/DetailRow';
 
 interface TaskDetailViewProps {
   task: Task;
+  taskTypes?: TaskTypeOption[];
+  academicTaskTypes?: AcademicTaskTypeOption[];
 }
 
+// Fallback só para o caso de a key não ser encontrada nos metadados
+// (ex: cache desatualizada) — nunca deve ser o caminho normal.
 function formatEnumLabel(value: string | null): string {
   if (!value) return '—';
   const lower = value.replace(/_/g, ' ').toLowerCase();
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
-export default function TaskDetailView({ task }: TaskDetailViewProps) {
+export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes = [] }: TaskDetailViewProps) {
+  const typeLabel = taskTypes.find((t) => t.key === task.type)?.label ?? formatEnumLabel(task.type);
+  const academicTypeLabel = task.academicType
+    ? academicTaskTypes.find((a) => a.key === task.academicType)?.label ?? formatEnumLabel(task.academicType)
+    : null;
   return (
     <div>
       <DetailRow label="Title">{task.title}</DetailRow>
@@ -27,10 +35,8 @@ export default function TaskDetailView({ task }: TaskDetailViewProps) {
         <DifficultyBadge difficulty={task.difficulty} />
       </DetailRow>
 
-      <DetailRow label="Type">{formatEnumLabel(task.type)}</DetailRow>
-      {task.academicType && (
-        <DetailRow label="Academic Type">{formatEnumLabel(task.academicType)}</DetailRow>
-      )}
+      <DetailRow label="Type">{typeLabel}</DetailRow>
+      {academicTypeLabel && <DetailRow label="Academic Type">{academicTypeLabel}</DetailRow>}
       {task.topics && <DetailRow label="Topics">{task.topics}</DetailRow>}
 
       {task.referenceLink && (

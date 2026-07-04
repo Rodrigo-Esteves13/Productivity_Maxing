@@ -1,6 +1,7 @@
 import FormField from '../UI/FormField';
 import Input from '../UI/Input';
 import Select from '../UI/Select';
+import type { TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
 
 interface AreaOption {
   id: string;
@@ -11,6 +12,7 @@ export interface TaskFormFieldValues {
   title: string;
   date: string;
   type: string;
+  academicType: string;
   difficulty: string;
   areaId: string;
   topics: string;
@@ -25,7 +27,8 @@ interface TaskFormFieldsProps {
   values: TaskFormFieldValues;
   onChange: (field: keyof TaskFormFieldValues, value: string) => void;
   areas: AreaOption[];
-  taskTypes: string[];
+  taskTypes: TaskTypeOption[];
+  academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
   showRealGrade?: boolean;
 }
@@ -36,9 +39,17 @@ export default function TaskFormFields({
   onChange,
   areas,
   taskTypes,
+  academicTaskTypes,
   difficulties,
   showRealGrade = false,
 }: TaskFormFieldsProps) {
+  // O tipo "académico" é identificado pela key estável, não pela label
+  // (a label pode ser editada pelo admin, a key não).
+  const selectedTaskType = taskTypes.find((t) => t.key === values.type);
+  const isAcademic = selectedTaskType?.key === 'ACADEMICO';
+  const availableAcademicTypes = academicTaskTypes.filter(
+    (a) => a.taskTypeKey === values.type
+  );
   return (
     <>
       <FormField label="Title" htmlFor={`${idPrefix}-title`}>
@@ -102,17 +113,40 @@ export default function TaskFormFields({
           <Select
             id={`${idPrefix}-type`}
             value={values.type}
-            onChange={(e) => onChange('type', e.target.value)}
+            onChange={(e) => {
+              onChange('type', e.target.value);
+              // Muda-se o tipo, limpa-se o academicType para não ficar
+              // um valor "orfão" que já não pertence ao novo tipo.
+              onChange('academicType', '');
+            }}
             className="w-full"
           >
             {taskTypes.map((t) => (
-              <option key={t} value={t}>
-                {t.replace(/_/g, ' ')}
+              <option key={t.key} value={t.key}>
+                {t.label}
               </option>
             ))}
           </Select>
         </FormField>
       </div>
+
+      {isAcademic && (
+        <FormField label="Academic Type" htmlFor={`${idPrefix}-academic-type`}>
+          <Select
+            id={`${idPrefix}-academic-type`}
+            value={values.academicType}
+            onChange={(e) => onChange('academicType', e.target.value)}
+            className="w-full"
+          >
+            <option value="">Select Academic Type...</option>
+            {availableAcademicTypes.map((a) => (
+              <option key={a.key} value={a.key}>
+                {a.label}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+      )}
 
       <div className="space-y-4 pt-4 border-t border-neutral-800">
         <p className="text-xs font-semibold text-neutral-500 uppercase">Optional Information</p>

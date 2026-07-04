@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { TasksModule } from './tasks/tasks.module';
+import { TaskTypesModule } from './task-types/task-types.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AreasModule } from './areas/areas.module';
 import { AuthModule } from './auth/auth.module';
@@ -21,6 +22,7 @@ import { HealthModule } from './health/health.module';
     ]),
     UsersModule,
     TasksModule,
+    TaskTypesModule,
     PrismaModule,
     AreasModule,
     AuthModule,
