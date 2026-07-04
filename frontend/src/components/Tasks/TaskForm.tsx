@@ -1,0 +1,92 @@
+import { useState, type SyntheticEvent } from 'react';
+import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
+import FormError from '../UI/FormError';
+import Button from '../UI/Button';
+
+interface AreaOption {
+  id: string;
+  name: string;
+}
+
+interface TaskFormProps {
+  onSubmit: (data: any) => Promise<void>;
+  onCancel: () => void;
+  areas: AreaOption[];
+  taskTypes: string[];
+  difficulties: string[];
+}
+
+export default function TaskForm({ onSubmit, onCancel, areas, taskTypes, difficulties }: TaskFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const [formData, setFormData] = useState<TaskFormFieldValues>({
+    title: '',
+    date: new Date().toISOString().split('T')[0],
+    type: taskTypes[0] || '',
+    difficulty: difficulties[0] || '',
+    areaId: '',
+    topics: '',
+    referenceLink: '',
+    targetGrade: '',
+    weightPercentage: '',
+  });
+
+  const updateField = (field: keyof TaskFormFieldValues, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e: SyntheticEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!formData.areaId) {
+      setError('Por favor, seleciona uma Área.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Processamento dos dados para o backend
+      const payload = {
+        ...formData,
+        date: new Date(formData.date).toISOString(),
+        targetGrade: formData.targetGrade ? parseFloat(formData.targetGrade) : undefined,
+        weightPercentage: formData.weightPercentage ? parseFloat(formData.weightPercentage) : undefined,
+        topics: formData.topics || undefined,
+        referenceLink: formData.referenceLink || undefined,
+      };
+
+      await onSubmit(payload);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao criar tarefa.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && <FormError message={error} />}
+
+      <TaskFormFields
+        idPrefix="create-task"
+        values={formData}
+        onChange={updateField}
+        areas={areas}
+        taskTypes={taskTypes}
+        difficulties={difficulties}
+      />
+
+      <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800">
+        <Button type="button" variant="secondary" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit" variant="primary" disabled={isSubmitting}>
+          {isSubmitting ? 'A guardar...' : 'Criar Tarefa'}
+        </Button>
+      </div>
+    </form>
+  );
+}
