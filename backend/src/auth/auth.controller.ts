@@ -35,9 +35,8 @@ const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
   ) {}
-  
 
   // ---------------- EMAIL + PASSWORD ----------------
   // Coexiste com o OAuth: cria/autentica um User com password local e
@@ -129,7 +128,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async me(@CurrentUser() user: AuthenticatedUser) {
     const profile = await this.prisma.user.findUnique({
-      where: { id: user.id }, 
+      where: { id: user.id },
       select: {
         id: true,
         email: true,

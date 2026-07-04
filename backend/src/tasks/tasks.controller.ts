@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -7,6 +16,7 @@ import { TaskType, Difficulty } from '@prisma/client';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 @ApiTags('Task')
 @ApiBearerAuth()
@@ -24,35 +34,31 @@ export class TasksController {
   }
 
   @Post()
-  create(@CurrentUser() user: any, @Body() dto: CreateTaskDto) {
-    // Segurança máxima: Procura pelo id ou pelo sub!
-    const userId = user.id || user.sub;
-    if (!userId) throw new UnauthorizedException('ID do utilizador não encontrado no token.');
-    
-    return this.tasksService.create(userId, dto);
+  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateTaskDto) {
+    return this.tasksService.create(user.id, dto);
   }
 
   @Get()
-  findAll(@CurrentUser() user: any) {
-    const userId = user.id || user.sub;
-    return this.tasksService.findAll(userId);
+  findAll(@CurrentUser() user: AuthenticatedUser) {
+    return this.tasksService.findAll(user.id);
   }
 
   @Get(':id')
-  findOne(@CurrentUser() user: any, @Param('id') id: string) {
-    const userId = user.id || user.sub;
-    return this.tasksService.findOne(userId, id);
+  findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.tasksService.findOne(user.id, id);
   }
 
   @Patch(':id')
-  update(@CurrentUser() user: any, @Param('id') id: string, @Body() dto: UpdateTaskDto) {
-    const userId = user.id || user.sub;
-    return this.tasksService.update(userId, id, dto);
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateTaskDto,
+  ) {
+    return this.tasksService.update(user.id, id, dto);
   }
 
   @Delete(':id')
-  remove(@CurrentUser() user: any, @Param('id') id: string) {
-    const userId = user.id || user.sub;
-    return this.tasksService.remove(userId, id);
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.tasksService.remove(user.id, id);
   }
 }

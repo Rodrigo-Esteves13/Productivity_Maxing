@@ -1,14 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Provider } from '@prisma/client';
 
 export type AuthProvider = 'google' | 'github' | 'discord';
 
+const PROVIDER_MAP: Record<AuthProvider, Provider> = {
+  google: Provider.GOOGLE,
+  github: Provider.GITHUB,
+  discord: Provider.DISCORD,
+};
+
 @Injectable()
 export class UsersService {
-  //Injetar o Prisma
   constructor(private prisma: PrismaService) {}
 
-  //Devolver os utilizadores reais
   findAll() {
     return this.prisma.user.findMany({
       select: {
@@ -18,7 +23,7 @@ export class UsersService {
         role: true,
         createdAt: true,
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -31,10 +36,8 @@ export class UsersService {
   }
 
   getProviderAccount(id: string, provider: AuthProvider) {
-    // Usamos findFirst porque tem um índice único [provider, providerAccountId], 
-    // mas a busca é só por provider e userId
     return this.prisma.identity.findFirst({
-      where: { userId: id, provider: provider.toUpperCase() as any }
+      where: { userId: id, provider: PROVIDER_MAP[provider] },
     });
   }
 }
