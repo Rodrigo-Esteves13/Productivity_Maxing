@@ -5,7 +5,7 @@
 // ------------------------------------------------------------------
 export type Provider = 'GOOGLE' | 'DISCORD' | 'GITHUB';
 export type Role = 'USER' | 'ADMIN';
-export type ProgressStatus = 'AHEAD' | 'ON_TRACK' | 'BEHIND' | 'VERY_BEHIND';
+export type ProgressStatus = 'AHEAD' | 'ON_TRACK' | 'BEHIND' | 'VERY_BEHIND' | 'COMPLETED';
 export type Difficulty = 'VERY_EASY' | 'EASY' | 'MEDIUM' | 'HARD' | 'VERY_HARD';
 // Deixaram de ser union types fixas: agora vêm da BD (tabela editável pelo admin),
 // por isso passam a ser `string` (a "key" devolvida por /tasks/meta).
