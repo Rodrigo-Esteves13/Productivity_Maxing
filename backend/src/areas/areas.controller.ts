@@ -27,13 +27,13 @@ export class AreasController {
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
   @Post()
-  @ApiOperation({ summary: 'Cria uma nova área de vida (Apenas ADMIN)' })
+  @ApiOperation({ summary: 'Creates a new life area (Admin only)' })
   create(@Body() createAreaDto: CreateAreaDto) {
     return this.areasService.create(createAreaDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lista o catálogo global de áreas (Todos)' })
+  @ApiOperation({ summary: 'Lists the global catalog of areas (All)' })
   findAll() {
     return this.areasService.findAll();
   }

@@ -2,7 +2,7 @@ import { IsHexColor, IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateAreaDto {
-  @ApiProperty({ example: 'Matemática', description: 'Nome da Área' })
+  @ApiProperty({ example: 'Mathematics', description: 'Area name' })
   @IsString()
   @IsNotEmpty()
   name: string;

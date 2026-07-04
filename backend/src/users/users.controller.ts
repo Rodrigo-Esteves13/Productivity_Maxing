@@ -22,45 +22,45 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // Listar todos os utilizadores -> APENAS ADMIN!
+  // List all users -> ADMIN ONLY!
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard) // Liga o Guardião da rota
-  @Roles(Role.ADMIN) // Exige o papel de ADMIN
-  @ApiBearerAuth() // Mostra o cadeado no Swagger
+  @UseGuards(JwtAuthGuard, RolesGuard) // Attach the route guard
+  @Roles(Role.ADMIN) // Requires the ADMIN role
+  @ApiBearerAuth() // Shows the lock icon in Swagger
   @ApiOperation({
-    summary: 'Obtém a lista de todos os utilizadores (Apenas Admin)',
+    summary: 'Gets the list of all users (Admin only)',
   })
   findAll() {
     return this.usersService.findAll();
   }
 
-  // Perfil do utilizador
+  // User profile
   @Get(':id')
-  @ApiOperation({ summary: 'Obtém os dados de um utilizador pelo ID' })
-  @ApiParam({ name: 'id', description: 'UUID do utilizador' })
+  @ApiOperation({ summary: "Gets a user's data by ID" })
+  @ApiParam({ name: 'id', description: 'User UUID' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.findOne(id);
   }
 
-  // Todas as contas externas (providers) de um utilizador
+  // All external accounts (providers) for a user
   @Get(':id/providers')
   @ApiOperation({
-    summary: 'Obtém todas as contas externas ligadas ao utilizador',
+    summary: 'Gets all external accounts linked to the user',
   })
-  @ApiParam({ name: 'id', description: 'UUID do utilizador' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
   getProviders(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.getProviders(id);
   }
 
-  // Uma conta externa específica de um utilizador
+  // A specific external account for a user
   @Get(':id/providers/:provider')
   @ApiOperation({
-    summary: 'Obtém os dados de um provider específico (ex: google, github)',
+    summary: 'Gets data for a specific provider (e.g. google, github)',
   })
-  @ApiParam({ name: 'id', description: 'UUID do utilizador' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
   @ApiParam({
     name: 'provider',
-    description: 'Nome do provider',
+    description: 'Provider name',
     example: 'github',
   })
   getProviderAccount(

@@ -2,19 +2,12 @@ import type { Task, TaskTypeOption, AcademicTaskTypeOption } from '../../types/m
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import DetailRow from '../UI/DetailRow';
+import { formatEnumLabel } from '../../utils/formatEnumLabel';
 
 interface TaskDetailViewProps {
   task: Task;
   taskTypes?: TaskTypeOption[];
   academicTaskTypes?: AcademicTaskTypeOption[];
-}
-
-// Fallback só para o caso de a key não ser encontrada nos metadados
-// (ex: cache desatualizada) — nunca deve ser o caminho normal.
-function formatEnumLabel(value: string | null): string {
-  if (!value) return '—';
-  const lower = value.replace(/_/g, ' ').toLowerCase();
-  return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
 export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes = [] }: TaskDetailViewProps) {

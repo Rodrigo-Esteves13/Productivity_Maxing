@@ -10,7 +10,7 @@ export class HealthController {
   // Rota pública de propósito (sem @UseGuards) - o frontend faz ping sem token
   @Get()
   @ApiOperation({
-    summary: 'Verifica se a API e a base de dados estão operacionais',
+    summary: 'Checks whether the API and database are operational',
   })
   async check() {
     const result = await this.healthService.check();

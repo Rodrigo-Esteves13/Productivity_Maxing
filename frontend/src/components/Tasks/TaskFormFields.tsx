@@ -2,6 +2,7 @@ import FormField from '../UI/FormField';
 import Input from '../UI/Input';
 import Select from '../UI/Select';
 import type { TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
+import { formatEnumLabel } from '../../utils/formatEnumLabel';
 
 interface AreaOption {
   id: string;
@@ -20,6 +21,7 @@ export interface TaskFormFieldValues {
   targetGrade: string;
   weightPercentage: string;
   realGrade?: string;
+  progressStatus?: string;
 }
 
 interface TaskFormFieldsProps {
@@ -30,7 +32,9 @@ interface TaskFormFieldsProps {
   taskTypes: TaskTypeOption[];
   academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
+  progressStatuses?: string[];
   showRealGrade?: boolean;
+  showProgressStatus?: boolean;
 }
 
 export default function TaskFormFields({
@@ -41,7 +45,9 @@ export default function TaskFormFields({
   taskTypes,
   academicTaskTypes,
   difficulties,
+  progressStatuses = [],
   showRealGrade = false,
+  showProgressStatus = false,
 }: TaskFormFieldsProps) {
   // O tipo "académico" é identificado pela key estável, não pela label
   // (a label pode ser editada pelo admin, a key não).
@@ -104,7 +110,7 @@ export default function TaskFormFields({
           >
             {difficulties.map((d) => (
               <option key={d} value={d}>
-                {d.replace(/_/g, ' ')}
+                {formatEnumLabel(d)}
               </option>
             ))}
           </Select>
@@ -189,21 +195,39 @@ export default function TaskFormFields({
         </div>
       </div>
 
-      {showRealGrade && (
-        <div className="pt-4 border-t border-neutral-800">
-          <FormField label="Real Grade" htmlFor={`${idPrefix}-real-grade`} className="max-w-[50%]">
-            <Input
-              id={`${idPrefix}-real-grade`}
-              type="number"
-              min="0"
-              max="20"
-              step="0.1"
-              placeholder="Not entered yet"
-              value={values.realGrade ?? ''}
-              onChange={(e) => onChange('realGrade', e.target.value)}
-              className="w-full"
-            />
-          </FormField>
+      {(showProgressStatus || showRealGrade) && (
+        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-neutral-800">
+          {showProgressStatus && (
+            <FormField label="Progress" htmlFor={`${idPrefix}-progress-status`}>
+              <Select
+                id={`${idPrefix}-progress-status`}
+                value={values.progressStatus ?? ''}
+                onChange={(e) => onChange('progressStatus', e.target.value)}
+                className="w-full"
+              >
+                {progressStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {formatEnumLabel(status)}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          )}
+          {showRealGrade && (
+            <FormField label="Real Grade" htmlFor={`${idPrefix}-real-grade`}>
+              <Input
+                id={`${idPrefix}-real-grade`}
+                type="number"
+                min="0"
+                max="20"
+                step="0.1"
+                placeholder="Not entered yet"
+                value={values.realGrade ?? ''}
+                onChange={(e) => onChange('realGrade', e.target.value)}
+                className="w-full"
+              />
+            </FormField>
+          )}
         </div>
       )}
     </>
