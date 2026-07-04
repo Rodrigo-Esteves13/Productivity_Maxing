@@ -6,7 +6,10 @@ import { CreateAcademicTaskTypeDto } from './create-academic-task-type.dto';
 export class UpdateAcademicTaskTypeDto extends PartialType(
   OmitType(CreateAcademicTaskTypeDto, ['key'] as const),
 ) {
-  @ApiPropertyOptional({ example: false, description: 'Desativa sem apagar (soft delete)' })
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Desativa sem apagar (soft delete)',
+  })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;

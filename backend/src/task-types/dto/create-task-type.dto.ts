@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsOptional, IsInt, IsHexColor, Matches } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsInt,
+  IsHexColor,
+  Matches,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTaskTypeDto {
@@ -14,17 +21,26 @@ export class CreateTaskTypeDto {
   })
   key: string;
 
-  @ApiProperty({ example: 'Académico', description: 'Nome mostrado na interface' })
+  @ApiProperty({
+    example: 'Académico',
+    description: 'Nome mostrado na interface',
+  })
   @IsString()
   @IsNotEmpty()
   label: string;
 
-  @ApiPropertyOptional({ example: '#8b5cf6', description: 'Cor em formato Hexadecimal' })
+  @ApiPropertyOptional({
+    example: '#8b5cf6',
+    description: 'Cor em formato Hexadecimal',
+  })
   @IsOptional()
   @IsHexColor()
   colorHex?: string;
 
-  @ApiPropertyOptional({ example: 1, description: 'Ordem de apresentação nos selects' })
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'Ordem de apresentação nos selects',
+  })
   @IsOptional()
   @IsInt()
   order?: number;
