@@ -1,0 +1,15 @@
+# Corre o NestJS em watch mode (hot reload) em vez de fazer o build de
+# produção completo - usado só pelo docker-compose.dev.yaml. Sem isto,
+# cada alteração ao código obrigava a reconstruir a imagem inteira.
+FROM node:22-alpine
+RUN apk add --no-cache openssl
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npx prisma generate
+
+EXPOSE 3000
+CMD ["npm", "run", "start:dev"]

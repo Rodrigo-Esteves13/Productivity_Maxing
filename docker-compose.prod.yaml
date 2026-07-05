@@ -1,0 +1,34 @@
+services:
+  backend:
+    image: <docker-hub-username>/<backend-image-name>:latest
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      # Tem de bater certo com a origin real do frontend em produção -
+      # usado no CORS (main.ts) e no redirect final dos callbacks OAuth
+      # (auth.controller.ts). Ajusta para o teu domínio (ex: Netlify) ou,
+      # se estiveres a correr tudo junto num único host, para esse endereço.
+      - FRONTEND_URL=http://localhost:5173
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    # ATENÇÃO: o VITE_API_URL fica gravado dentro desta imagem no momento em
+    # que a construíste e deste push (build arg no `docker build`, ver
+    # frontend/Dockerfile) - mudar a variável aqui em baixo não tem qualquer
+    # efeito, porque a imagem já vem com o bundle compilado. Se precisares de
+    # apontar para outro backend, tens de reconstruir e voltar a dar push à
+    # imagem com o VITE_API_URL certo.
+    image: <docker-hub-username>/<frontend-image-name>:latest
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

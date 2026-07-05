@@ -7,9 +7,34 @@ services:
       - "3000:3000"
     env_file:
       - ./backend/.env
+    environment:
+      # Sobrepõe o ENV NODE_ENV=production fixo no Dockerfile do backend.
+      # Sem isto, o cookie.config.ts marca os cookies como Secure/SameSite=None
+      # e o browser recusa-os em http://localhost (sem HTTPS) - o login
+      # parece simplesmente não funcionar em dev via Docker.
+      - NODE_ENV=development
+      - FRONTEND_URL=http://localhost:5173
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api"]
       interval: 30s
       timeout: 5s
       retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    volumes:
+      # Monta o código para hot reload funcionar ao editar no host...
+      - ./frontend:/app
+      # ...mas usa o node_modules DE DENTRO do container, para não sobrepor
+      # com um node_modules do host (que pode ter binários doutro SO/arch).
+      - /app/node_modules
+    depends_on:
+      - backend
+    restart: unless-stopped
