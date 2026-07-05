@@ -6,13 +6,14 @@
  * Discord, também sempre https), mas como é um valor guardado na BD e
  * devolvido pela API, o CodeQL trata-o como "untrusted", e com razão,
  * porque nada impede que passe a vir de outro sítio no futuro. Esta função
- * garante que só aceitamos esquemas inofensivos (http/https, ou blob: para
- * os previews locais gerados por URL.createObjectURL), bloqueando coisas
- * como `javascript:` ou `data:` que nunca deviam parar num src de imagem.
+ * garante que só aceitamos esquemas inofensivos: https, ou um data:
+ * URI de imagem gerado pelo próprio browser via canvas.toDataURL() (usado
+ * para o preview local antes do upload, ver EditProfileModal), bloqueando
+ * coisas como `javascript:` que nunca deviam parar num src de imagem.
  */
 export function isSafeImageUrl(url: string | null | undefined): url is string {
   if (!url) return false;
-  if (url.startsWith('blob:')) return true;
+  if (url.startsWith('data:image/')) return true;
 
   try {
     const { protocol } = new URL(url);
