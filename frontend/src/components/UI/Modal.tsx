@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect } from 'react';
-import { XIcon } from './icons';
+import { XIcon } from './Icons';
 
 interface ModalProps {
   isOpen: boolean;

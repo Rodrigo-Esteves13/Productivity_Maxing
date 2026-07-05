@@ -63,7 +63,10 @@ export class CreateTaskDto {
   @IsString()
   topics?: string;
 
-  @ApiPropertyOptional({ example: 25.5, description: 'Weight toward final grade (%)' })
+  @ApiPropertyOptional({
+    example: 25.5,
+    description: 'Weight toward final grade (%)',
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)

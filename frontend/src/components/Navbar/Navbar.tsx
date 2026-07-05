@@ -1,26 +1,16 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import NavLinks from './NavLinks';
-import AuthStatus from './AuthStatus';
-import { useAuth } from '../../context/AuthContext';
-
-
-function getUserRole() {
-  const token = localStorage.getItem('token');
-  if (!token) return null;
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.role;
-  } catch (e) {
-    return null;
-  }
-}
+import UserMenu from './UserMenu';
+import { useAuth } from '../../context/useAuth';
 
 export default function Navbar() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const role = getUserRole();
+  // O role vem agora diretamente dos dados reais do user (AuthContext),
+  // em vez de andar a descodificar o JWT à mão.
+  const role = user?.role;
 
   const handleLogout = () => {
     logout();
@@ -59,8 +49,14 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* 3. Botão de Logout */}
-          <AuthStatus isAuthenticated={isAuthenticated} onLogout={handleLogout} />
+          {/* 3. Menu do Utilizador (avatar + nome + Profile/Logout) */}
+          {isAuthenticated ? (
+            <UserMenu user={user} onLogout={handleLogout} />
+          ) : (
+            <span className="text-sm font-medium text-neutral-500 italic">
+              Not Authenticated
+            </span>
+          )}
           
         </div>
       </div>

@@ -8,6 +8,34 @@ export const getUserProfile = async (): Promise<User> => {
   return response.data;
 };
 
+// Atualiza o nome do utilizador autenticado.
+export const updateUserProfile = async (data: { name?: string }): Promise<User> => {
+  const response = await api.patch<User>('/auth/me', data);
+  return response.data;
+};
+
+// Faz upload de uma nova foto de perfil (multipart/form-data). O backend
+// trata do upload para o Supabase Storage e devolve o User já atualizado
+// com o avatarUrl novo.
+export const uploadAvatar = async (file: File): Promise<User> => {
+  const formData = new FormData();
+  formData.append('avatar', file);
+
+  const response = await api.post<User>('/auth/me/avatar', formData, {
+    // O cliente axios tem 'Content-Type: application/json' fixo por omissão;
+    // ao pôr undefined aqui, deixamos o browser definir o boundary correto
+    // do multipart automaticamente.
+    headers: { 'Content-Type': undefined },
+  });
+  return response.data;
+};
+
+// Remove a foto de perfil atual (volta a mostrar as iniciais).
+export const removeAvatar = async (): Promise<User> => {
+  const response = await api.delete<User>('/auth/me/avatar');
+  return response.data;
+};
+
 // AREA ENDPOINTS
 export const getUserAreas = async (): Promise<Area[]> => {
   const response = await api.get<Area[]>('/areas');

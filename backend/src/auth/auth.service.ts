@@ -2,13 +2,16 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID, randomBytes, scryptSync } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { fileTypeFromBuffer } from 'file-type';
 import { Provider, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import 'multer';
 import {
   JwtPayload,
   LinkStatePayload,
@@ -23,10 +26,31 @@ interface OAuthProfileData {
   refreshToken?: string;
 }
 
+// Bucket do Supabase Storage onde ficam as fotos de perfil.
+// Tem de existir no projeto Supabase e estar marcado como público
+// (Storage -> Buckets -> "avatars" -> Public bucket = ON), para que o
+// avatarUrl gerado seja diretamente acessível pelo <img src>.
+const AVATAR_BUCKET = process.env.SUPABASE_AVATAR_BUCKET ?? 'avatars';
+
+const ALLOWED_MIME_TO_EXT: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+};
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private readonly supabase: ReturnType<typeof createClient>;
+  // Cliente separado com a Service Role Key: só este tem permissão para
+  // escrever/apagar no bucket de avatars independentemente das RLS policies
+  // (necessário porque nem todos os users passam pelo Supabase Auth -
+  // OAuth Google/GitHub/Discord nunca cria sessão Supabase, só o
+  // email+password é que passa por lá).
+  private readonly storage: ReturnType<typeof createClient>;
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -36,6 +60,11 @@ export class AuthService {
     this.supabase = createClient(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_ANON_KEY!,
+    );
+
+    this.storage = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
   }
 
@@ -160,7 +189,9 @@ export class AuthService {
 
     if (error) {
       if (/already registered|already exists/i.test(error.message)) {
-        throw new ConflictException('An account with this email already exists.');
+        throw new ConflictException(
+          'An account with this email already exists.',
+        );
       }
       throw new UnauthorizedException(error.message);
     }
@@ -207,6 +238,110 @@ export class AuthService {
     return this.prisma.user.create({
       data: { id: randomUUID(), email, name },
     });
+  }
+
+  // ---------------- PERFIL (nome + avatar) ----------------
+
+  async updateProfile(userId: string, data: { name?: string }): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { ...(data.name !== undefined ? { name: data.name } : {}) },
+    });
+  }
+
+  /**
+   * Faz upload da imagem para o bucket do Supabase Storage e devolve o User
+   * já com o novo avatarUrl gravado. Se o user já tinha um avatar antigo
+   * (gerido por nós, i.e. dentro do nosso bucket), tenta apagá-lo a seguir
+   * para não acumular lixo no bucket.
+   */
+  async uploadAvatar(userId: string, file: Express.Multer.File): Promise<User> {
+    // Nunca confiar no `file.mimetype`, é o Content-Type que o próprio
+    // pedido multipart declara, controlado inteiramente por quem envia o
+    // pedido. Detetamos o tipo real a partir dos primeiros bytes do
+    // ficheiro (magic bytes), para não guardarmos/servirmos como "imagem"
+    // um ficheiro que na realidade é outra coisa qualquer.
+    const detected = await fileTypeFromBuffer(file.buffer);
+    const detectedMime = detected?.mime;
+    const ext = detectedMime ? ALLOWED_MIME_TO_EXT[detectedMime] : undefined;
+
+    if (!ext || !detectedMime) {
+      throw new BadRequestException(
+        'Unsupported image format. Use PNG, JPG, WEBP or GIF.',
+      );
+    }
+
+    const previousUser = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+
+    const path = `${userId}/${randomUUID()}.${ext}`;
+
+    const { error: uploadError } = await this.storage.storage
+      .from(AVATAR_BUCKET)
+      .upload(path, file.buffer, {
+        contentType: detectedMime,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      this.logger.error(
+        'Erro ao fazer upload do avatar para o Supabase',
+        uploadError,
+      );
+      throw new BadRequestException(
+        'Could not upload the image. Please try again.',
+      );
+    }
+
+    const {
+      data: { publicUrl },
+    } = this.storage.storage.from(AVATAR_BUCKET).getPublicUrl(path);
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl: publicUrl },
+    });
+
+    // Best-effort: limpar o avatar anterior guardado no nosso bucket.
+    // Não bloqueia a resposta nem falha o pedido se der erro.
+    this.deleteAvatarFileIfOwned(previousUser.avatarUrl).catch((err) =>
+      this.logger.warn(`Não foi possível apagar o avatar antigo: ${err}`),
+    );
+
+    return updatedUser;
+  }
+
+  /** Remove a foto de perfil atual (volta às iniciais no frontend). */
+  async removeAvatar(userId: string): Promise<User> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+
+    await this.deleteAvatarFileIfOwned(user.avatarUrl);
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl: null },
+    });
+  }
+
+  private async deleteAvatarFileIfOwned(avatarUrl: string | null) {
+    if (!avatarUrl) return;
+
+    // Só apagamos ficheiros que vivem no NOSSO bucket (evita tentar apagar
+    // avatars vindos do Google/Discord/GitHub, que são URLs externas).
+    const marker = `/storage/v1/object/public/${AVATAR_BUCKET}/`;
+    const markerIndex = avatarUrl.indexOf(marker);
+    if (markerIndex === -1) return;
+
+    const path = avatarUrl.slice(markerIndex + marker.length);
+    if (!path) return;
+
+    const { error } = await this.storage.storage
+      .from(AVATAR_BUCKET)
+      .remove([path]);
+    if (error) throw error;
   }
 
   issueJwt(user: User): string {
