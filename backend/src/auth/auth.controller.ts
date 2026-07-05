@@ -33,9 +33,16 @@ import { DiscordLinkGuard } from './guards/discord-link.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthenticatedUser } from './interfaces/authenticated-user.interface';
+import {
+  ACCESS_TOKEN_COOKIE,
+  CSRF_COOKIE,
+  accessTokenCookieOptions,
+  csrfCookieOptions,
+  clearCookieOptions,
+} from './cookie.config';
 
-// URL do frontend para onde se redireciona depois do callback, com o JWT
-// como query param. Ajustar em produção (Fase 6) para o domínio real.
+// URL do frontend para onde se redireciona depois do callback OAuth.
+// Ajustar em produção para o domínio real (Netlify).
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
 @Controller('auth')
@@ -47,25 +54,50 @@ export class AuthController {
 
   // ---------------- EMAIL + PASSWORD ----------------
   // Coexiste com o OAuth: cria/autentica um User com password local e
-  // devolve o mesmo formato de resposta { token } que o frontend já espera.
+  // estabelece a sessão via cookie HttpOnly (Design B) em vez de devolver o
+  // token no corpo da resposta.
 
   @Post('register')
   @HttpCode(201)
-  async register(@Body() dto: RegisterDto) {
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const user = await this.authService.registerWithPassword(dto);
-    const token = this.authService.issueJwt(user);
-    return { token };
+    return this.establishSession(user, res);
   }
 
   @Post('login')
   @HttpCode(200)
-  async login(@Body() dto: LoginDto) {
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const user = await this.authService.loginWithPassword(
       dto.email,
       dto.password,
     );
-    const token = this.authService.issueJwt(user);
-    return { token };
+    return this.establishSession(user, res);
+  }
+
+  @Post('logout')
+  @HttpCode(200)
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie(ACCESS_TOKEN_COOKIE, clearCookieOptions());
+    res.clearCookie(CSRF_COOKIE, clearCookieOptions());
+    return { message: 'Logged out.' };
+  }
+
+  // Chamado pelo frontend logo a seguir a um redirect de OAuth (o cookie já
+  // foi definido pelo backend nesse redirect, mas o corpo de um redirect não
+  // consegue transportar o csrfToken - por isso o frontend pede-o aqui,
+  // já autenticado pelo cookie que acabou de chegar).
+  @Get('csrf')
+  @UseGuards(JwtAuthGuard)
+  refreshCsrf(@Res({ passthrough: true }) res: Response) {
+    const csrfToken = this.authService.generateCsrfToken();
+    res.cookie(CSRF_COOKIE, csrfToken, csrfCookieOptions());
+    return { csrfToken };
   }
 
   // ---------------- GOOGLE ----------------
@@ -83,12 +115,12 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
   googleCallback(@Req() req: Request, @Res() res: Response) {
-    return this.issueJwtAndRedirect(req, res);
+    return this.issueSessionAndRedirect(req, res);
   }
 
-  // Ligar conta Google a um utilizador já autenticado (precisa de JWT válido
-  // no header Authorization). O GoogleLinkGuard gera o state assinado e
-  // injeta-o no pedido de autorização ao Google.
+  // Ligar conta Google a um utilizador já autenticado (precisa da sessão por
+  // cookie válida). O GoogleLinkGuard gera o state assinado e injeta-o no
+  // pedido de autorização ao Google.
   @Get('google/link')
   @UseGuards(JwtAuthGuard, GoogleLinkGuard)
   googleLink() {
@@ -104,7 +136,7 @@ export class AuthController {
   @Get('github/callback')
   @UseGuards(GithubAuthGuard)
   githubCallback(@Req() req: Request, @Res() res: Response) {
-    return this.issueJwtAndRedirect(req, res);
+    return this.issueSessionAndRedirect(req, res);
   }
 
   @Get('github/link')
@@ -120,7 +152,7 @@ export class AuthController {
   @Get('discord/callback')
   @UseGuards(DiscordAuthGuard)
   discordCallback(@Req() req: Request, @Res() res: Response) {
-    return this.issueJwtAndRedirect(req, res);
+    return this.issueSessionAndRedirect(req, res);
   }
 
   @Get('discord/link')
@@ -129,8 +161,9 @@ export class AuthController {
 
   // ---------------- SESSÃO ATUAL ----------------
 
-  // Rota de teste/utilidade: devolve o payload do JWT atual.
-  // Útil para o frontend confirmar que o token é válido.
+  // Devolve o perfil do utilizador atual. Também serve para o frontend
+  // confirmar, no arranque da app, se o cookie de sessão ainda é válido
+  // (o cookie é HttpOnly, por isso o JS não o consegue verificar sozinho).
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async me(@CurrentUser() user: AuthenticatedUser) {
@@ -147,7 +180,6 @@ export class AuthController {
     });
 
     if (!profile) {
-      // Já estava em Inglês
       throw new UnauthorizedException('User not found');
     }
 
@@ -200,10 +232,30 @@ export class AuthController {
     return this.authService.removeAvatar(user.id);
   }
 
-  private issueJwtAndRedirect(req: Request, res: Response) {
+  // Define os cookies de sessão (JWT + CSRF) e devolve o csrfToken no corpo,
+  // para os fluxos de login/register que respondem diretamente ao frontend
+  // (o frontend não precisa de ler cookies à mão, só guarda o valor devolvido
+  // aqui em memória).
+  private establishSession(user: User, res: Response) {
+    const token = this.authService.issueJwt(user);
+    const csrfToken = this.authService.generateCsrfToken();
+
+    res.cookie(ACCESS_TOKEN_COOKIE, token, accessTokenCookieOptions());
+    res.cookie(CSRF_COOKIE, csrfToken, csrfCookieOptions());
+
+    return { csrfToken };
+  }
+
+  // Mesma coisa, mas para os callbacks OAuth, que respondem com um redirect
+  // em vez de um JSON body - por isso o csrfToken não vai aqui, o frontend
+  // pede-o à parte em GET /auth/csrf assim que aterra em /auth/callback.
+  private issueSessionAndRedirect(req: Request, res: Response) {
     const user = req.user as User;
     const token = this.authService.issueJwt(user);
-    return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}`);
+
+    res.cookie(ACCESS_TOKEN_COOKIE, token, accessTokenCookieOptions());
+
+    return res.redirect(`${FRONTEND_URL}/auth/callback`);
   }
 
   // ---------------- API KEYS ----------------
@@ -214,7 +266,6 @@ export class AuthController {
     @CurrentUser() user: AuthenticatedUser,
     @Body('name') name: string,
   ) {
-    // Traduzido para Inglês
     return this.authService.generateApiKey(user.id, name || 'Generic API Key');
   }
 
@@ -225,7 +276,6 @@ export class AuthController {
     @Param('id') keyId: string,
   ) {
     await this.authService.revokeApiKey(user.id, keyId);
-    // Traduzido para Inglês
     return { message: 'API Key revoked successfully.' };
   }
 }

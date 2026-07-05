@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getCsrfToken, setCsrfToken } from './csrfStore';
 
 // Create the base Axios instance
 const api = axios.create({
@@ -6,20 +7,26 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Essencial: sem isto o browser não envia (nem guarda) o cookie
+  // HttpOnly de sessão em pedidos cross-origin (frontend e backend em
+  // domínios diferentes em produção).
+  withCredentials: true,
 });
 
+const SAFE_METHODS = new Set(['get', 'head', 'options']);
 
-// Before any request leaves for the backend, this code runs.
+// Antes de qualquer pedido que altera estado, anexa o csrf token guardado em
+// memória. O backend compara-o com o valor do cookie csrf_token
+// (double-submit cookie) - ver CsrfGuard no backend.
 api.interceptors.request.use(
   (config) => {
-    // Fetch the token from localStorage
-    const token = localStorage.getItem('token');
-    
-    // If the token exists, attach it to the Authorization header
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const method = config.method?.toLowerCase();
+    if (method && !SAFE_METHODS.has(method)) {
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        config.headers['X-CSRF-Token'] = csrfToken;
+      }
     }
-    
     return config;
   },
   (error) => {
@@ -28,7 +35,7 @@ api.interceptors.request.use(
 );
 
 // Listens to API responses. If the backend says the token expired (401),
-// we clear the session and force a logout automatically.
+// we clear the in-memory session state and force a logout automatically.
 api.interceptors.response.use(
   (response) => {
     return response;
@@ -36,9 +43,9 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       console.warn('Session expired or unauthorized. Logging out...');
-      localStorage.removeItem('token');
+      setCsrfToken(null);
       // Redirect to root/login (forces a page refresh to clear app state)
-      window.location.href = '/'; 
+      window.location.href = '/';
     }
     return Promise.reject(error);
   }

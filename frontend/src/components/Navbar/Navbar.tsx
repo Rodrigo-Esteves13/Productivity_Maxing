@@ -12,9 +12,9 @@ export default function Navbar() {
   // em vez de andar a descodificar o JWT à mão.
   const role = user?.role;
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login'); 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
   return (

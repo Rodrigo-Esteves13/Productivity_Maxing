@@ -1,24 +1,31 @@
-import { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
+import { fetchCsrfToken } from '../../api/userService';
 
 export default function AuthCallback() {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  // Extraímos a função login do nosso novo Contexto
   const { login } = useAuth();
+  // Evita disparar o pedido duas vezes no StrictMode (dev) / re-renders.
+  const hasRun = useRef(false);
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    
-    if (token) {
-      // Usamos o hook! Ele atualiza o contexto, avisa o Navbar e guarda no localStorage sozinho
-      login(token); 
-      navigate('/dashboard', { replace: true });
-    } else {
-      navigate('/login', { replace: true });
-    }
-  }, [searchParams, navigate, login]);
+    if (hasRun.current) return;
+    hasRun.current = true;
+
+    (async () => {
+      try {
+        // O backend já definiu o cookie de sessão HttpOnly antes deste
+        // redirect - só falta ir buscar um csrf token para o resto da app
+        // poder fazer pedidos que alteram estado.
+        const csrfToken = await fetchCsrfToken();
+        login(csrfToken);
+        navigate('/dashboard', { replace: true });
+      } catch {
+        navigate('/login', { replace: true });
+      }
+    })();
+  }, [navigate, login]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-neutral-950">
