@@ -12,8 +12,10 @@ import AreaForm, { type AreaFormValues } from '../components/Areas/AreaForm';
 import AreaDetailView from '../components/Areas/AreaDetailView';
 import { getUserAreas, createArea, deleteArea, updateArea } from '../api/userService';
 import type { Area } from '../types/models';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function Areas() {
+  useDocumentTitle('Areas');
   const [areas, setAreas] = useState<Area[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');

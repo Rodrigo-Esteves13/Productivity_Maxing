@@ -20,8 +20,10 @@ import {
   deleteTask,
 } from '../api/userService';
 import type { Task, Area, TaskTypeOption, AcademicTaskTypeOption } from '../types/models';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function Tasks() {
+  useDocumentTitle('Tasks');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
 

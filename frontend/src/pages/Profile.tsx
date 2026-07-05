@@ -9,7 +9,7 @@ import { PencilIcon } from '../components/UI/Icons';
 import { getUserTasks, getTaskMetadata } from '../api/userService';
 import { useAuth } from '../context/useAuth';
 import type { Task, TaskTypeOption } from '../types/models';
-
+import useDocumentTitle from '../hooks/useDocumentTitle';
 // "Project" não é uma Area — é um TaskType como outro qualquer (ex: "PROJETO"),
 // configurável pelo admin em /admin/task-types. Como a key exata é dinâmica,
 // identificamos aqui por key/label que contenha "proj". Se o teu TaskType de
@@ -71,6 +71,7 @@ function computeStats(tasks: Task[], projectTypeKeys: Set<string>) {
 }
 
 export default function Profile() {
+  useDocumentTitle('Profile');
   const { user, isLoadingUser, updateUser } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
