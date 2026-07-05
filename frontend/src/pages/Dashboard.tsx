@@ -10,8 +10,10 @@ import { EMPTY_DASHBOARD_FILTERS, type DashboardFiltersState } from '../componen
 import { getUserTasks, getUserAreas, getTaskMetadata } from '../api/userService';
 import { getDateStatus } from '../utils/taskDateStatus';
 import type { Task, Area, TaskTypeOption } from '../types/models';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function Dashboard() {
+  useDocumentTitle('Dashboard');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
