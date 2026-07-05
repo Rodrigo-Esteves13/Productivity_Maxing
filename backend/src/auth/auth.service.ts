@@ -354,6 +354,15 @@ export class AuthService {
   }
 
   /**
+   * Token aleatório para o padrão "double submit cookie" do CsrfGuard.
+   * Não tem de ser assinado nem verificável - só precisa de ser
+   * imprevisível e de bater certo entre o cookie e o header no mesmo pedido.
+   */
+  generateCsrfToken(): string {
+    return randomBytes(32).toString('hex');
+  }
+
+  /**
    * State assinado e de curta duração, enviado ao provider OAuth no fluxo de
    * "ligar conta". Faz o papel de proteção CSRF: só quem possui um JWT válido
    * do próprio backend consegue gerar um state aceite no callback, e o state
