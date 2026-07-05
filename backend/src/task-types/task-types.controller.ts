@@ -96,7 +96,8 @@ export class TaskTypesController {
 
   @Delete('admin/academic-task-types/:id')
   @ApiOperation({
-    summary: 'Deactivates an academic subcategory, without deleting it (Admin only)',
+    summary:
+      'Deactivates an academic subcategory, without deleting it (Admin only)',
   })
   removeAcademicTaskType(@Param('id', ParseUUIDPipe) id: string) {
     return this.taskTypesService.removeAcademicTaskType(id);

@@ -31,7 +31,7 @@ export default function Areas() {
       setIsLoading(true);
       const data = await getUserAreas();
       setAreas(data);
-    } catch (err) {
+    } catch {
       setError('Error loading areas.');
     } finally {
       setIsLoading(false);
@@ -64,7 +64,7 @@ export default function Areas() {
       await createArea(values);
       setIsCreateModalOpen(false);
       fetchAreas();
-    } catch (err) {
+    } catch {
       alert('Error creating area. Check the backend.');
     } finally {
       setIsSubmitting(false);
@@ -82,7 +82,7 @@ export default function Areas() {
       setAreas(prev => prev.map(a => a.id === updated.id ? updated : a));
       setSelectedArea(updated);
       setIsEditing(false); // Volta ao modo "Ver"
-    } catch (err) {
+    } catch {
       alert('Error saving changes. Check the backend.');
     } finally {
       setIsSubmitting(false);
@@ -102,7 +102,7 @@ export default function Areas() {
         setSelectedArea(null);
         setIsEditing(false);
       }
-    } catch (err) {
+    } catch {
       alert('Error deleting area. It may be in use by existing tasks.');
     }
   };

@@ -1,6 +1,6 @@
 import { useState, type SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import api from '../api/client';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
@@ -31,7 +31,7 @@ export default function Login() {
       // Usa o hook para guardar o token e notificar a app
       login(token);
       navigate('/dashboard', { replace: true });
-    } catch (err) {
+    } catch {
       setError('Invalid credentials or server error.');
     }
   };

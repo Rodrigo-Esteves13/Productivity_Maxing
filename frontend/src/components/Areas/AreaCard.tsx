@@ -1,4 +1,4 @@
-import { PencilIcon, TrashIcon } from '../UI/icons';
+import { PencilIcon, TrashIcon } from '../UI/Icons';
 import ColorDot from '../UI/ColorDot';
 import type { Area } from '../../types/models';
 

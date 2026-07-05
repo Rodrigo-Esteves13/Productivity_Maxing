@@ -3,6 +3,7 @@ export default function TasksTableHeader() {
     <thead className="text-xs text-neutral-400 uppercase bg-neutral-950/50 border-b border-neutral-800">
       <tr>
         <th className="px-4 py-3 font-medium">Date</th>
+        <th className="px-4 py-3 font-medium text-center">Due</th>
         <th className="px-4 py-3 font-medium">Area</th>
         <th className="px-4 py-3 font-medium">Title / Topics</th>
         <th className="px-4 py-3 font-medium">Type</th>

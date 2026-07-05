@@ -1,4 +1,4 @@
-import { PencilIcon, TrashIcon, XIcon } from './icons';
+import { PencilIcon, TrashIcon, XIcon } from './Icons';
 
 interface ModalHeaderActionsProps {
   isEditing: boolean;
