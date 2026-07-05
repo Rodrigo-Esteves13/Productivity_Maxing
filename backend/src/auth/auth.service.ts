@@ -8,6 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID, randomBytes, scryptSync } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { fileTypeFromBuffer } from 'file-type';
 import { Provider, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import 'multer';
@@ -255,8 +256,16 @@ export class AuthService {
    * para não acumular lixo no bucket.
    */
   async uploadAvatar(userId: string, file: Express.Multer.File): Promise<User> {
-    const ext = ALLOWED_MIME_TO_EXT[file.mimetype];
-    if (!ext) {
+    // Nunca confiar no `file.mimetype`, é o Content-Type que o próprio
+    // pedido multipart declara, controlado inteiramente por quem envia o
+    // pedido. Detetamos o tipo real a partir dos primeiros bytes do
+    // ficheiro (magic bytes), para não guardarmos/servirmos como "imagem"
+    // um ficheiro que na realidade é outra coisa qualquer.
+    const detected = await fileTypeFromBuffer(file.buffer);
+    const detectedMime = detected?.mime;
+    const ext = detectedMime ? ALLOWED_MIME_TO_EXT[detectedMime] : undefined;
+
+    if (!ext || !detectedMime) {
       throw new BadRequestException(
         'Unsupported image format. Use PNG, JPG, WEBP or GIF.',
       );
@@ -271,7 +280,7 @@ export class AuthService {
     const { error: uploadError } = await this.storage.storage
       .from(AVATAR_BUCKET)
       .upload(path, file.buffer, {
-        contentType: file.mimetype,
+        contentType: detectedMime,
         upsert: false,
       });
 

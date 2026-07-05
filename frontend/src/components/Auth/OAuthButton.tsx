@@ -1,5 +1,5 @@
 import type { Provider } from '../../types/models';
-import { GoogleIcon, DiscordIcon, GithubIcon } from '../UI/icons';
+import { GoogleIcon, DiscordIcon, GithubIcon } from '../UI/Icons';
 
 interface OAuthButtonProps {
   provider: Provider;

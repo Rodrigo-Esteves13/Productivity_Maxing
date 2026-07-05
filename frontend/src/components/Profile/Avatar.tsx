@@ -19,6 +19,7 @@ export default function Avatar({ initials, avatarUrl, alt = 'Avatar', size = 'md
       <img
         src={avatarUrl}
         alt={alt}
+        referrerPolicy="no-referrer"
         className={`${sizeClasses[size]} rounded-full object-cover border-2 border-neutral-700 shadow-lg flex-shrink-0`}
       />
     );

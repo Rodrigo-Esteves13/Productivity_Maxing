@@ -16,7 +16,7 @@ export function isSafeImageUrl(url: string | null | undefined): url is string {
 
   try {
     const { protocol } = new URL(url);
-    return protocol === 'https:' || protocol === 'http:';
+    return protocol === 'https:';
   } catch {
     return false;
   }
