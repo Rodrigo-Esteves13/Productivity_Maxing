@@ -39,12 +39,37 @@ export default function EditProfileModal({ isOpen, onClose, user, onSaved }: Edi
     }
   }, [isOpen, user]);
 
-  // Gera/limpa o object URL de preview sempre que o ficheiro selecionado muda
+  // Gera o preview sempre que o ficheiro selecionado muda. Em vez de um
+  // blob: URL diretamente sobre os bytes do ficheiro (URL.createObjectURL),
+  // descodificamos a imagem através de um <canvas> e voltamos a exportá-la
+  // com toDataURL(). Isto obriga o browser a interpretar o ficheiro como
+  // pixels de imagem reais antes de o mostrarmos: um ficheiro "polyglot"
+  // (bytes de imagem válidos + payload escondido a seguir) não sobrevive a
+  // este round-trip, e ficheiros que não sejam mesmo imagens (apesar da
+  // extensão/mimetype) são rejeitados aqui, antes de irem para o backend.
   useEffect(() => {
     if (!selectedFile) return;
-    const objectUrl = URL.createObjectURL(selectedFile);
-    setPreviewUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
+    let cancelled = false;
+
+    createImageBitmap(selectedFile)
+      .then((bitmap) => {
+        if (cancelled) return;
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        canvas.getContext('2d')?.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        setPreviewUrl(canvas.toDataURL('image/png'));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError('This file does not look like a valid image.');
+        setSelectedFile(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedFile]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
