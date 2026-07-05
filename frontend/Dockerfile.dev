@@ -1,0 +1,16 @@
+# Corre o servidor de dev do Vite (hot reload) em vez de servir um build
+# estático - usado só pelo docker-compose.dev.yaml.
+FROM node:20-alpine
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+EXPOSE 5173
+
+# --host é obrigatório: por default o Vite só escuta em localhost DENTRO do
+# container, o que o torna inacessível a partir do host mesmo com a porta
+# mapeada no compose.
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
