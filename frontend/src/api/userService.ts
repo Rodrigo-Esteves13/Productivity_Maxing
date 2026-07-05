@@ -2,6 +2,46 @@
 import api from './client';
 import type { User, Area, Task, TaskMeta } from '../types/models';
 
+// AUTH ENDPOINTS
+// Login/registo já não devolvem o JWT no corpo - o backend define-o num
+// cookie HttpOnly diretamente. O que volta aqui é só o csrfToken, que o
+// AuthContext guarda em memória (ver api/csrfStore.ts) para o reenviar no
+// header X-CSRF-Token dos pedidos seguintes.
+export const loginRequest = async (
+  email: string,
+  password: string,
+): Promise<{ csrfToken: string }> => {
+  const response = await api.post<{ csrfToken: string }>('/auth/login', {
+    email,
+    password,
+  });
+  return response.data;
+};
+
+export const registerRequest = async (data: {
+  name?: string;
+  email: string;
+  password: string;
+}): Promise<{ csrfToken: string }> => {
+  const response = await api.post<{ csrfToken: string }>(
+    '/auth/register',
+    data,
+  );
+  return response.data;
+};
+
+export const logoutRequest = async (): Promise<void> => {
+  await api.post('/auth/logout');
+};
+
+// Chamado depois de um redirect de OAuth (o cookie de sessão já lá está,
+// mas o csrfToken não veio no redirect) e também no arranque da app, para
+// verificar se ainda existe uma sessão válida e obter um csrf token novo.
+export const fetchCsrfToken = async (): Promise<string> => {
+  const response = await api.get<{ csrfToken: string }>('/auth/csrf');
+  return response.data.csrfToken;
+};
+
 // USER ENDPOINTS
 export const getUserProfile = async (): Promise<User> => {
     const response = await api.get<User>('/auth/me');

@@ -7,7 +7,13 @@ interface PrivateRouteProps {
 }
 
 export default function PrivateRoute({ children }: PrivateRouteProps) {
-  const { isAuthenticated } = useAuth();
-  
+  const { isAuthenticated, isAuthLoading } = useAuth();
+
+  // Enquanto ainda não sabemos se o cookie de sessão é válido, não
+  // expulsamos ninguém - só quando a verificação (GET /auth/csrf) terminar.
+  if (isAuthLoading) {
+    return null;
+  }
+
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 }

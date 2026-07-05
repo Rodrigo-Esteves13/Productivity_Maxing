@@ -1,15 +1,18 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
   app.use(helmet());
+  // Necessário para o JwtStrategy e o CsrfGuard conseguirem ler
+  // req.cookies - sem isto, req.cookies fica sempre undefined.
+  app.use(cookieParser());
 
   app.enableCors({
     origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
@@ -38,7 +41,6 @@ async function bootstrap() {
 
   // O Swagger vai ficar disponível na rota /api
   SwaggerModule.setup('api', app, document);
-
   // O NestJS arranca na porta 3000
   await app.listen(3000);
 }

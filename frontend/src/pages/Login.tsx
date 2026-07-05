@@ -1,7 +1,7 @@
 import { useState, type SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
-import api from '../api/client';
+import { loginRequest } from '../api/userService';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
@@ -23,13 +23,10 @@ export default function Login() {
     setError('');
 
     try {
-      // Se ainda não tens login manual no backend, isto é um placeholder.
-      // O teu foco atual são os botões OAuth (Google/Discord) cá em baixo.
-      const response = await api.post('/auth/login', { email, password });
-      const { token } = response.data;
+      const { csrfToken } = await loginRequest(email, password);
 
-      // Usa o hook para guardar o token e notificar a app
-      login(token);
+      // Usa o hook para guardar o csrf token em memória e notificar a app
+      login(csrfToken);
       navigate('/dashboard', { replace: true });
     } catch {
       setError('Invalid credentials or server error.');

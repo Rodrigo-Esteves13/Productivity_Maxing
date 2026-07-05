@@ -1,8 +1,4 @@
-// src/types/models.ts
-
-// ------------------------------------------------------------------
 // ENUMS
-// ------------------------------------------------------------------
 export type Provider = 'GOOGLE' | 'DISCORD' | 'GITHUB';
 export type Role = 'USER' | 'ADMIN';
 export type ProgressStatus = 'AHEAD' | 'ON_TRACK' | 'BEHIND' | 'VERY_BEHIND' | 'COMPLETED';
@@ -32,9 +28,9 @@ export interface TaskMeta {
   progressStatuses: string[];
 }
 
-// ------------------------------------------------------------------
+// 
 // MODELS
-// ------------------------------------------------------------------
+// 
 
 export interface User {
   id: string;
@@ -81,6 +77,7 @@ export interface Task {
   // Integrations & Timestamps
   googleCalendarEventId: string | null;
   createdAt: string;
+  completedAt: string | null; // Momento real em que passou a COMPLETED
 
   // Optional relations
   area?: Area;
