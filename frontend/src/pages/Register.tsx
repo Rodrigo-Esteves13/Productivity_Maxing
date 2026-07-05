@@ -9,8 +9,10 @@ import FormError from '../components/UI/FormError';
 import AuthCard from '../components/Auth/AuthCard';
 import OAuthProviderList from '../components/Auth/OAuthProviderList';
 import AuthSwitchLink from '../components/Auth/AuthSwitchLink';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function Register() {
+  useDocumentTitle('Register');
   const navigate = useNavigate();
   const { login } = useAuth();
 

@@ -34,18 +34,38 @@ api.interceptors.request.use(
   }
 );
 
-// Listens to API responses. If the backend says the token expired (401),
-// we clear the in-memory session state and force a logout automatically.
+// Endpoints usados só para PERGUNTAR "ainda estou autenticado?" (chamados no
+// arranque da app, sem sessão ainda estabelecida). Um 401 aqui é uma resposta
+// normal e esperada, não uma sessão que "expirou a meio" - por isso não deve
+// disparar um reload. Sem esta exceção, um utilizador sem cookies entra num
+// loop infinito: /auth/csrf -> 401 -> reload -> /auth/csrf -> 401 -> reload...
+const AUTH_CHECK_ENDPOINTS = ['/auth/csrf', '/auth/me'];
+
+function isAuthCheckRequest(url?: string): boolean {
+  if (!url) return false;
+  return AUTH_CHECK_ENDPOINTS.some((endpoint) => url.includes(endpoint));
+}
+
+// Listens to API responses. If the backend says the token expired (401)
+// DURANTE uma ação normal (não durante a verificação de arranque), limpamos
+// o estado e mandamos para o login.
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
-    if (error.response && error.response.status === 401) {
+    const status = error.response?.status;
+    const url = error.config?.url as string | undefined;
+
+    if (status === 401 && !isAuthCheckRequest(url)) {
       console.warn('Session expired or unauthorized. Logging out...');
       setCsrfToken(null);
-      // Redirect to root/login (forces a page refresh to clear app state)
-      window.location.href = '/';
+
+      // Evita reload se já lá estamos (ex: várias chamadas em paralelo a
+      // falharem ao mesmo tempo).
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
