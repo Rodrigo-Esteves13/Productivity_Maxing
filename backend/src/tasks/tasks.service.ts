@@ -4,7 +4,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { Difficulty, ProgressStatus, Prisma } from '@prisma/client'; // <-- Added Prisma import
+import { Difficulty, ProgressStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -28,12 +28,18 @@ export class TasksService {
     const { date, type, academicType, ...rest } = dto;
     const typeIds = await this.resolveTypes(type, academicType);
 
+    // Se a task já nasce como COMPLETED (ex: registo retroativo), o streak
+    // precisa de um completedAt real  não podemos depender só da "date"
+    // (que é o prazo/alvo, não o dia em que foi de facto concluída).
+    const completedAt = rest.progressStatus === 'COMPLETED' ? new Date() : null;
+
     try {
       const task = await this.prisma.task.create({
         data: {
           ...rest,
           date: new Date(date),
           userId, // Agora temos a certeza absoluta que o ID não está vazio!
+          completedAt,
           ...typeIds,
         },
         include: TASK_INCLUDE,
@@ -90,12 +96,30 @@ export class TasksService {
       typeIds = await this.resolveTypes(effectiveType, effectiveAcademic);
     }
 
+    // Gestão automática de completedAt: só é tocado quando o progressStatus
+    // realmente muda de/para COMPLETED. Isto é o que torna o streak fiel
+    // guardamos o momento exato da conclusão em vez de usar a "date" (prazo)
+    // como proxy.
+    let completedAtUpdate: { completedAt?: Date | null } = {};
+    if (rest.progressStatus !== undefined) {
+      const wasCompleted = existing.progressStatus === 'COMPLETED';
+      const willBeCompleted = rest.progressStatus === 'COMPLETED';
+      if (!wasCompleted && willBeCompleted) {
+        completedAtUpdate = { completedAt: new Date() };
+      } else if (wasCompleted && !willBeCompleted) {
+        completedAtUpdate = { completedAt: null };
+      }
+      // Se já estava COMPLETED e continua COMPLETED, não tocamos
+      // não queremos "reiniciar" a data de conclusão original.
+    }
+
     const task = await this.prisma.task.update({
       where: { id },
       data: {
         ...rest,
         ...(date ? { date: new Date(date) } : {}),
         ...typeIds,
+        ...completedAtUpdate,
       },
       include: TASK_INCLUDE,
     });
@@ -171,7 +195,7 @@ export class TasksService {
     const { taskType, taskTypeId, academicType, academicTypeId, ...rest } =
       task;
 
-    // A declaração `void` marca as variáveis como lidas pelo interpretador,
+    // A declaração "void" marca as variáveis como lidas pelo interpretador,
     // o que previne o erro @typescript-eslint/no-unused-vars sem teres
     // de apagar os IDs da desestruturação.
     void taskTypeId;
