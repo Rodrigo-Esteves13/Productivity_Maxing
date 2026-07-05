@@ -10,6 +10,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AreasModule } from './areas/areas.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
+import { CsrfGuard } from './auth/guards/csrf.guard';
 
 @Module({
   imports: [
@@ -35,6 +36,12 @@ import { HealthModule } from './health/health.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    // Segundo Guard global: valida CSRF (double-submit cookie) em todos os
+    // pedidos que alteram estado e que usam sessão por cookie.
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
     },
   ],
 })

@@ -1,21 +1,15 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 
-// Função para ler a role do token com segurança
-function getUserRole() {
-  const token = localStorage.getItem('token');
-  if (!token) return null;
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.role;
-  } catch {
+export default function AdminRoute() {
+  // O JWT já não é legível por JS (cookie HttpOnly), por isso a role vem do
+  // user carregado no AuthContext via /auth/me, e não de descodificar o
+  // token à mão.
+  const { isAuthenticated, isAuthLoading, user, isLoadingUser } = useAuth();
+
+  if (isAuthLoading || isLoadingUser) {
     return null;
   }
-}
-
-export default function AdminRoute() {
-  const { isAuthenticated } = useAuth();
-  const role = getUserRole();
 
   // Se não tiver login feito, expulsa para a página de Login
   if (!isAuthenticated) {
@@ -23,7 +17,7 @@ export default function AdminRoute() {
   }
 
   // Se tiver login mas NÃO for ADMIN, expulsa para a Dashboard
-  if (role !== 'ADMIN') {
+  if (user?.role !== 'ADMIN') {
     return <Navigate to="/dashboard" replace />;
   }
 

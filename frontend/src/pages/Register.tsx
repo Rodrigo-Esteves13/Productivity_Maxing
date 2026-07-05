@@ -1,7 +1,7 @@
 import { useState, type SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
-import api from '../api/client';
+import { registerRequest } from '../api/userService';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
@@ -32,11 +32,10 @@ export default function Register() {
 
     setIsSubmitting(true);
     try {
-      const response = await api.post('/auth/register', { name, email, password });
-      const { token } = response.data;
+      const { csrfToken } = await registerRequest({ name, email, password });
 
-      // Mesmo comportamento do Login: guarda o token e entra logo na conta
-      login(token);
+      // Mesmo comportamento do Login: guarda o csrf token e entra logo na conta
+      login(csrfToken);
       navigate('/dashboard', { replace: true });
     } catch {
       setError('Could not create the account. Check your details or try another email.');
