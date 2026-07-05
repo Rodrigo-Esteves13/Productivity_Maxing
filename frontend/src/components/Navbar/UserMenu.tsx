@@ -50,7 +50,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
       >
         <Avatar initials={initials} avatarUrl={user.avatarUrl} alt={firstName} size="sm" />
         <span className="hidden sm:inline text-sm font-medium text-neutral-200">
-          Olá, {firstName}
+          Hello, {firstName}
         </span>
       </button>
 
