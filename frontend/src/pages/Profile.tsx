@@ -7,7 +7,7 @@ import EditProfileModal from '../components/Profile/EditProfileModal';
 import ActionButton from '../components/UI/ActionButton';
 import { PencilIcon } from '../components/UI/Icons';
 import { getUserTasks, getTaskMetadata } from '../api/userService';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import type { Task, TaskTypeOption } from '../types/models';
 
 // "Project" não é uma Area — é um TaskType como outro qualquer (ex: "PROJETO"),
@@ -98,15 +98,7 @@ export default function Profile() {
 
       <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-8 max-w-3xl">
         <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
-          {user.avatarUrl ? (
-            <img
-              src={user.avatarUrl}
-              alt="Avatar"
-              className="h-24 w-24 rounded-full object-cover border-2 border-neutral-700 shadow-lg"
-            />
-          ) : (
-            <Avatar initials={initials} size="lg" />
-          )}
+          <Avatar initials={initials} avatarUrl={user.avatarUrl} alt="Avatar" size="lg" />
 
           <div className="text-center sm:text-left">
             <h2 className="text-2xl font-bold text-white">{user.name || 'Anonymous User'}</h2>

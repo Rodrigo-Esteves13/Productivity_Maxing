@@ -1,18 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { getUserProfile } from '../api/userService';
 import type { User } from '../types/models';
-
-interface AuthContextType {
-  isAuthenticated: boolean;
-  user: User | null;
-  isLoadingUser: boolean;
-  login: (token: string) => void;
-  logout: () => void;
-  updateUser: (user: User) => void;
-  refreshUser: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext } from './auth-context';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   // Inicializa o estado lendo o localStorage uma única vez
@@ -74,13 +63,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-// Custom hook para consumir o contexto facilmente
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }

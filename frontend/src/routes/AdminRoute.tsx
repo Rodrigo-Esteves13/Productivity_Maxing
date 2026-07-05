@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
 // Função para ler a role do token com segurança
 function getUserRole() {
@@ -8,7 +8,7 @@ function getUserRole() {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     return payload.role;
-  } catch (e) {
+  } catch {
     return null;
   }
 }

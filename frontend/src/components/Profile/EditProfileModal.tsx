@@ -5,6 +5,7 @@ import Input from '../UI/Input';
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
 import ActionButton from '../UI/ActionButton';
+import Avatar from './Avatar';
 import { updateUserProfile, uploadAvatar, removeAvatar } from '../../api/userService';
 import type { User } from '../../types/models';
 
@@ -113,17 +114,7 @@ export default function EditProfileModal({ isOpen, onClose, user, onSaved }: Edi
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Profile">
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="flex items-center gap-4">
-          {displayedImage ? (
-            <img
-              src={displayedImage}
-              alt="Avatar preview"
-              className="h-16 w-16 rounded-full object-cover border-2 border-neutral-700 flex-shrink-0"
-            />
-          ) : (
-            <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white flex-shrink-0">
-              {initials}
-            </div>
-          )}
+          <Avatar initials={initials} avatarUrl={displayedImage} alt="Avatar preview" size="md" />
 
           <div className="flex flex-col gap-2">
             <input
