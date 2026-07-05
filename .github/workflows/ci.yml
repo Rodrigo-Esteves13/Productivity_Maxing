@@ -1,4 +1,4 @@
-name: "Paranoid CI: Backend NestJS"
+name: "Paranoid CI: Full Stack + Security"
 
 on:
   push:
@@ -10,8 +10,25 @@ permissions:
   contents: read
 
 jobs:
+  # JOB 1: SEGURANÇA GLOBAL (Corre primeiro)
+  security-scans:
+    name: "Security: Secret Scanning"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout do codigo (Completo)"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Necessário para o Gitleaks conseguir ler o histórico de commits
+
+      - name: "Gitleaks: Procurar Chaves e Passwords Vazadas"
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # JOB 2: BACKEND (Qualidade, Segurança e Testes)
   backend-checks:
-    name: "Code Quality & Security"
+    name: "Backend: Quality & Checks"
+    needs: security-scans # Só corre se o Gitleaks aprovar
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
@@ -33,7 +50,7 @@ jobs:
       - name: "Instalar dependencias"
         run: npm ci
 
-      - name: "Seguranca: NPM Audit"
+      - name: "Seguranca: NPM Audit (Dependências)"
         run: npm audit --audit-level=critical
 
       - name: "Prisma: Gerar Cliente"
@@ -42,11 +59,57 @@ jobs:
       - name: "Prisma: Validar Esquema"
         run: npx prisma validate
 
-      - name: "Qualidade: Linter"
+      - name: "Qualidade: Formatação (Prettier)"
+        # Pressupõe que se tem o prettier instalado. Falha se o código não estiver formatado.
+        run: npx prettier --check "src/**/*.ts"
+        continue-on-error: true # Mudar para false quando tiver o código todo formatado
+
+      - name: "Qualidade: Linter (ESLint)"
         run: npm run lint
 
       - name: "Testes Unitarios"
         run: npm run test
 
       - name: "Build do NestJS"
+        run: npm run build
+
+  # JOB 3: FRONTEND (Qualidade, Segurança e Build)
+  frontend-checks:
+    name: "Frontend: Quality & Checks"
+    needs: security-scans
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    
+    steps:
+      - name: "Checkout do codigo"
+        uses: actions/checkout@v4
+
+      - name: "Setup Node.js 20"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: "Instalar dependencias"
+        run: npm ci
+
+      - name: "Seguranca: NPM Audit (Dependências)"
+        run: npm audit --audit-level=critical
+
+      - name: "Qualidade: Formatação (Prettier)"
+        run: npx prettier --check "src/**/*.{ts,tsx,css}"
+        continue-on-error: true # Mudar para false quando tiver o código todo formatado
+
+      - name: "Qualidade: Linter (ESLint)"
+        run: npm run lint
+
+      - name: "Testes Unitarios"
+        run: npm run test --if-present
+        continue-on-error: true
+
+      - name: "Build do React/Vite (Typecheck)"
+        # O build do Vite já corre o `tsc -b`, o que garante que não há erros de Typescript
         run: npm run build

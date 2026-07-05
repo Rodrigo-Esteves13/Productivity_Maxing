@@ -53,7 +53,7 @@ export default function Tasks() {
       setAcademicTaskTypes(metaData.academicTaskTypes);
       setDifficulties(metaData.difficulties);
       setProgressStatuses(metaData.progressStatuses);
-    } catch (err) {
+    } catch {
       setError('Could not load the data.');
     } finally {
       setIsLoading(false);
@@ -104,7 +104,7 @@ export default function Tasks() {
       await deleteTask(selectedTask.id);
       setTasks((prev) => prev.filter((t) => t.id !== selectedTask.id));
       closeDetailModal();
-    } catch (err) {
+    } catch {
       alert('Could not delete the task. Please try again.');
     }
   }, [selectedTask, closeDetailModal]);

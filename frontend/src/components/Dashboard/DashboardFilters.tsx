@@ -4,24 +4,7 @@ import Select from '../UI/Select';
 import Button from '../UI/Button';
 import { formatEnumLabel } from '../../utils/formatEnumLabel';
 import type { Area, TaskTypeOption } from '../../types/models';
-
-export interface DashboardFiltersState {
-  search: string;
-  areaId: string;
-  type: string;
-  difficulty: string;
-  progressStatus: string;
-  dateStatus: string;
-}
-
-export const EMPTY_DASHBOARD_FILTERS: DashboardFiltersState = {
-  search: '',
-  areaId: '',
-  type: '',
-  difficulty: '',
-  progressStatus: '',
-  dateStatus: '',
-};
+import type { DashboardFiltersState } from './dashboardFilters.types';
 
 interface DashboardFiltersProps {
   filters: DashboardFiltersState;
@@ -47,8 +30,8 @@ export default function DashboardFilters({
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 mb-6">
-      <div className="flex flex-wrap items-end gap-4">
-        <FormField label="Search" htmlFor="filter-search" className="w-full sm:w-56">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
+        <FormField label="Search" htmlFor="filter-search" className="col-span-2 sm:col-span-3 lg:col-span-2">
           <Input
             id="filter-search"
             placeholder="Search by title..."
@@ -57,7 +40,7 @@ export default function DashboardFilters({
           />
         </FormField>
 
-        <FormField label="Area" htmlFor="filter-area" className="w-full sm:w-40">
+        <FormField label="Area" htmlFor="filter-area">
           <Select id="filter-area" value={filters.areaId} onChange={(e) => update({ areaId: e.target.value })}>
             <option value="">All Areas</option>
             {areas.map((a) => (
@@ -68,7 +51,7 @@ export default function DashboardFilters({
           </Select>
         </FormField>
 
-        <FormField label="Type" htmlFor="filter-type" className="w-full sm:w-40">
+        <FormField label="Type" htmlFor="filter-type">
           <Select id="filter-type" value={filters.type} onChange={(e) => update({ type: e.target.value })}>
             <option value="">All Types</option>
             {taskTypes.map((t) => (
@@ -79,7 +62,7 @@ export default function DashboardFilters({
           </Select>
         </FormField>
 
-        <FormField label="Difficulty" htmlFor="filter-difficulty" className="w-full sm:w-36">
+        <FormField label="Difficulty" htmlFor="filter-difficulty">
           <Select
             id="filter-difficulty"
             value={filters.difficulty}
@@ -94,7 +77,7 @@ export default function DashboardFilters({
           </Select>
         </FormField>
 
-        <FormField label="Status" htmlFor="filter-status" className="w-full sm:w-40">
+        <FormField label="Status" htmlFor="filter-status">
           <Select
             id="filter-status"
             value={filters.progressStatus}
@@ -109,7 +92,7 @@ export default function DashboardFilters({
           </Select>
         </FormField>
 
-        <FormField label="Due" htmlFor="filter-due" className="w-full sm:w-36">
+        <FormField label="Due" htmlFor="filter-due">
           <Select id="filter-due" value={filters.dateStatus} onChange={(e) => update({ dateStatus: e.target.value })}>
             <option value="">All</option>
             <option value="overdue">Overdue</option>
@@ -118,13 +101,15 @@ export default function DashboardFilters({
             <option value="completed">Completed</option>
           </Select>
         </FormField>
+      </div>
 
-        {hasActiveFilters && (
-          <Button type="button" variant="secondary" onClick={onClear} className="h-fit">
+      {hasActiveFilters && (
+        <div className="flex justify-end mt-4">
+          <Button type="button" variant="secondary" onClick={onClear}>
             Clear Filters
           </Button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

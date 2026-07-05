@@ -4,12 +4,9 @@ import PageHeader from '../components/Layout/PageHeader';
 import LoadingState from '../components/UI/LoadingState';
 import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
-import ProfileStat from '../components/Profile/ProfileStat';
 import TasksTable from '../components/Dashboard/TasksTable';
-import DashboardFilters, {
-  EMPTY_DASHBOARD_FILTERS,
-  type DashboardFiltersState,
-} from '../components/Dashboard/DashboardFilters';
+import DashboardFilters from '../components/Dashboard/DashboardFilters';
+import { EMPTY_DASHBOARD_FILTERS, type DashboardFiltersState } from '../components/Dashboard/dashboardFilters.types';
 import { getUserTasks, getUserAreas, getTaskMetadata } from '../api/userService';
 import { getDateStatus } from '../utils/taskDateStatus';
 import type { Task, Area, TaskTypeOption } from '../types/models';
@@ -60,19 +57,6 @@ export default function Dashboard() {
       return true;
     });
   }, [tasks, filters]);
-
-  const summary = useMemo(() => {
-    let overdue = 0;
-    let dueToday = 0;
-    let completed = 0;
-    for (const task of tasks) {
-      const status = getDateStatus(task);
-      if (status === 'overdue') overdue += 1;
-      else if (status === 'today') dueToday += 1;
-      else if (status === 'completed') completed += 1;
-    }
-    return { total: tasks.length, overdue, dueToday, completed };
-  }, [tasks]);
 
   return (
     <PageLayout>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { User } from '../../types/models';
 import { LogoutIcon } from '../UI/Icons';
+import Avatar from '../Profile/Avatar';
 
 interface UserMenuProps {
   user: User | null;
@@ -47,17 +48,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
         onClick={() => setIsOpen((prev) => !prev)}
         className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-neutral-800 transition-colors focus:outline-none"
       >
-        {user.avatarUrl ? (
-          <img
-            src={user.avatarUrl}
-            alt={firstName}
-            className="h-8 w-8 rounded-full object-cover border border-neutral-700"
-          />
-        ) : (
-          <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
-            {initials}
-          </div>
-        )}
+        <Avatar initials={initials} avatarUrl={user.avatarUrl} alt={firstName} size="sm" />
         <span className="hidden sm:inline text-sm font-medium text-neutral-200">
           Olá, {firstName}
         </span>
