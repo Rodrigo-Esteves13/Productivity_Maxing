@@ -161,6 +161,8 @@ model Task {
   targetGrade Float?
   realGrade   Float?
 
+  completedAt DateTime?
+
   // Integrações
   googleCalendarEventId String?
   createdAt             DateTime @default(now())
