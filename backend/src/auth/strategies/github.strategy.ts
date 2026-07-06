@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, Profile } from 'passport-github2';
 import { Request } from 'express';
 import { Provider } from '@prisma/client';
 import { AuthService } from '../auth.service';
+import { OAUTH_LOGIN_STATE_COOKIE } from '../cookie.config';
 
 @Injectable()
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
@@ -25,8 +26,10 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     done: (err: Error | null, user?: any) => void,
   ) {
     try {
-      const email =
-        profile.emails?.[0]?.value ?? `${profile.username}@github.com`;
+      const emailObj = profile.emails?.[0] as
+        | { value: string; verified?: boolean; primary?: boolean }
+        | undefined;
+      const email = emailObj?.value ?? `${profile.username}@github.com`;
       const state = req.query.state as string | undefined;
       const data = {
         provider: Provider.GITHUB,
@@ -35,16 +38,36 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
         name: profile.displayName || profile.username,
         accessToken,
         refreshToken,
+        emailVerified: emailObj?.verified === true,
       };
-      const user = state
-        ? await this.authService.linkIdentity(
-            this.authService.consumeLinkState(state, Provider.GITHUB),
-            data,
-          )
-        : await this.authService.resolveIdentity(data);
+
+      let user;
+      if (state) {
+        try {
+          const userId = this.authService.consumeLinkState(
+            state,
+            Provider.GITHUB,
+          );
+          user = await this.authService.linkIdentity(userId, data);
+        } catch {
+          this.assertLoginState(req, state);
+          user = await this.authService.resolveIdentity(data);
+        }
+      } else {
+        this.assertLoginState(req, state);
+        user = await this.authService.resolveIdentity(data);
+      }
       done(null, user);
     } catch (err) {
       done(err as Error, undefined);
+    }
+  }
+
+  private assertLoginState(req: Request, state: string | undefined): void {
+    const cookies = req.cookies as Record<string, string | undefined>;
+    const expected = cookies?.[OAUTH_LOGIN_STATE_COOKIE];
+    if (!expected || !state || expected !== state) {
+      throw new UnauthorizedException('Invalid or missing OAuth state.');
     }
   }
 }

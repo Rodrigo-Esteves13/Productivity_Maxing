@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, Profile } from 'passport-discord';
 import { Request } from 'express';
 import { Provider } from '@prisma/client';
 import { AuthService } from '../auth.service';
+import { OAUTH_LOGIN_STATE_COOKIE } from '../cookie.config';
 
 @Injectable()
 export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
@@ -35,16 +36,39 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
         name: discordProfile.global_name || profile.username,
         accessToken,
         refreshToken,
+        // O perfil do Discord não expõe um campo "verified" para o email,
+        // por isso nunca podemos confiar nele para fazer auto-merge com
+        // um User existente - ver resolveIdentity() em auth.service.ts.
+        emailVerified: false,
       };
-      const user = state
-        ? await this.authService.linkIdentity(
-            this.authService.consumeLinkState(state, Provider.DISCORD),
-            data,
-          )
-        : await this.authService.resolveIdentity(data);
+
+      let user;
+      if (state) {
+        try {
+          const userId = this.authService.consumeLinkState(
+            state,
+            Provider.DISCORD,
+          );
+          user = await this.authService.linkIdentity(userId, data);
+        } catch {
+          this.assertLoginState(req, state);
+          user = await this.authService.resolveIdentity(data);
+        }
+      } else {
+        this.assertLoginState(req, state);
+        user = await this.authService.resolveIdentity(data);
+      }
       done(null, user);
     } catch (err) {
       done(err as Error, undefined);
+    }
+  }
+
+  private assertLoginState(req: Request, state: string | undefined): void {
+    const cookies = req.cookies as Record<string, string | undefined>;
+    const expected = cookies?.[OAUTH_LOGIN_STATE_COOKIE];
+    if (!expected || !state || expected !== state) {
+      throw new UnauthorizedException('Invalid or missing OAuth state.');
     }
   }
 }
