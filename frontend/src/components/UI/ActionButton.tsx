@@ -14,7 +14,7 @@ const colorClasses: Record<ActionButtonColor, string> = {
 export default function ActionButton({ color = 'violet', className = '', ...rest }: ActionButtonProps) {
   return (
     <button
-      className={`px-4 py-2 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 ${colorClasses[color]} ${className}`}
+      className={`px-4 py-2 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${colorClasses[color]} ${className}`}
       {...rest}
     />
   );

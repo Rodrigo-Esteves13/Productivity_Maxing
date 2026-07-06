@@ -14,7 +14,7 @@ const variantClasses: Record<ButtonVariant, string> = {
 export default function Button({ variant = 'primary', className = '', ...rest }: ButtonProps) {
   return (
     <button
-      className={`rounded p-2 transition-colors ${variantClasses[variant]} ${className}`}
+      className={`rounded p-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 ${variantClasses[variant]} ${className}`}
       {...rest}
     />
   );
