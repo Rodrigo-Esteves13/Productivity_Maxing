@@ -2,20 +2,13 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, Profile } from 'passport-github2';
 import { Request } from 'express';
-import { Provider } from '@prisma/client';
+import { Provider, User } from '@prisma/client';
 import { AuthService } from '../auth.service';
 import { OAUTH_LOGIN_STATE_COOKIE } from '../cookie.config';
 
-//Define an explicit type that extends the default passport email shape
-type GithubEmail = {
-  value: string;
-  type?: string;
-  verified?: boolean;
-  primary?: boolean;
-};
-
 @Injectable()
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
+  // <- A palavra 'export' está aqui!
   constructor(private authService: AuthService) {
     super({
       clientID: process.env.GITHUB_CLIENT_ID || '',
@@ -31,16 +24,16 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     accessToken: string,
     refreshToken: string,
     profile: Profile,
-    done: (err: Error | null, user?: any) => void,
+    done: (err: Error | null, user?: User) => void,
   ) {
     try {
-      //Safely cast the emails array to your custom type
-      const emails = profile.emails as GithubEmail[] | undefined;
-      const emailObj = emails?.[0];
-      
+      const emailObj = profile.emails?.[0];
       const email = emailObj?.value ?? `${profile.username}@github.com`;
       const state = req.query.state as string | undefined;
-      
+
+      // @ts-expect-error: A tipagem do passport-github2 não inclui 'verified', mas a API devolve.
+      const isVerified = emailObj?.verified === true;
+
       const data = {
         provider: Provider.GITHUB,
         providerAccountId: profile.id,
@@ -48,11 +41,11 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
         name: profile.displayName || profile.username,
         accessToken,
         refreshToken,
-        // The compiler now explicitly knows 'verified' is a valid optional boolean
-        emailVerified: emailObj?.verified === true,
+        emailVerified: isVerified,
       };
 
-      let user;
+      let user: User | undefined;
+
       if (state) {
         try {
           const userId = this.authService.consumeLinkState(
@@ -68,6 +61,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
         this.assertLoginState(req, state);
         user = await this.authService.resolveIdentity(data);
       }
+
       done(null, user);
     } catch (err) {
       done(err as Error, undefined);

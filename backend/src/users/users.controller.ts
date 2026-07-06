@@ -32,7 +32,6 @@ function assertSelfOrAdmin(me: AuthenticatedUser, targetId: string): void {
   }
 }
 
-
 @ApiTags('User')
 @Controller('users')
 export class UsersController {

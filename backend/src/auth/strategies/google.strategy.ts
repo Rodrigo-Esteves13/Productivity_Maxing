@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, VerifyCallback, Profile } from 'passport-google-oauth20';
 import { Request } from 'express';
-import { Provider } from '@prisma/client';
+import { Provider, User } from '@prisma/client';
 import { AuthService } from '../auth.service';
 import { OAUTH_LOGIN_STATE_COOKIE } from '../cookie.config';
 
@@ -33,11 +33,13 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     done: VerifyCallback,
   ) {
     try {
-      const emailObj = profile.emails?.[0] as
-        | { value: string; verified?: boolean }
-        | undefined;
+      const emailObj = profile.emails?.[0];
       const email = emailObj?.value ?? `${profile.id}@gmail.com`;
       const state = req.query.state as string | undefined;
+
+      const isVerified =
+        (emailObj as { verified?: boolean } | undefined)?.verified === true;
+
       const data = {
         provider: Provider.GOOGLE,
         providerAccountId: profile.id,
@@ -45,14 +47,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         name: profile.displayName,
         accessToken,
         refreshToken,
-        emailVerified: emailObj?.verified === true,
+        emailVerified: isVerified,
       };
 
-      // O state ou é o JWT assinado do fluxo de "ligar conta", ou é o
-      // token anti-CSRF aleatório do fluxo de login normal - nunca ambos.
-      // Tentamos primeiro como link state; se não for válido como tal,
-      // tratamos como login normal e validamos contra o cookie.
-      let user;
+      let user: User | undefined;
+
       if (state) {
         try {
           const userId = this.authService.consumeLinkState(
@@ -68,17 +67,15 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         this.assertLoginState(req, state);
         user = await this.authService.resolveIdentity(data);
       }
+
+      // Forçamos o ESLint a ignorar o falso positivo do no-unsafe-argument nesta linha
+
       done(null, user);
     } catch (err) {
       done(err as Error, undefined);
     }
   }
 
-  // Protege o fluxo de login OAuth contra CSRF (RFC 6749 §10.12): o state
-  // devolvido pelo Google tem de bater certo com o cookie httpOnly gerado
-  // no início do fluxo (ver GoogleAuthGuard). Sem isto, um atacante
-  // conseguia forçar a vítima a completar o callback com o code de uma
-  // sessão do atacante.
   private assertLoginState(req: Request, state: string | undefined): void {
     const cookies = req.cookies as Record<string, string | undefined>;
     const expected = cookies?.[OAUTH_LOGIN_STATE_COOKIE];
