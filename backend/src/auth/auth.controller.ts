@@ -93,13 +93,23 @@ export class AuthController {
   // consegue transportar o csrfToken - por isso o frontend pede-o aqui,
   // já autenticado pelo cookie que acabou de chegar).
   @Get('csrf')
-  @UseGuards(JwtAuthGuard)
-  refreshCsrf(@Res({ passthrough: true }) res: Response) {
+  refreshCsrf(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const cookies = req.cookies as Record<string, string | undefined>;
+    const payload = this.authService.verifyAccessTokenCookie(
+      cookies?.[ACCESS_TOKEN_COOKIE],
+    );
+
+    if (!payload) {
+      return { authenticated: false };
+    }
+
     const csrfToken = this.authService.generateCsrfToken();
     res.cookie(CSRF_COOKIE, csrfToken, csrfCookieOptions());
-    return { csrfToken };
+    return { authenticated: true, csrfToken };
   }
-
   // ---------------- GOOGLE ----------------
 
   // Login normal: redireciona para o consent screen do Google.

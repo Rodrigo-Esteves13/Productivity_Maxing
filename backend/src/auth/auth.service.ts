@@ -344,6 +344,22 @@ export class AuthService {
     if (error) throw error;
   }
 
+  /**
+   * Verifica um JWT vindo do cookie de sessão sem lançar excepção - usado
+   * pelo GET /auth/csrf, que precisa de responder 200 tanto para "estás
+   * autenticado" como para "não estás", em vez de dar 401 (isso faz o
+   * DevTools mostrar um erro vermelho toda vez que a app arranca sem
+   * sessão, o que é um estado normal, não um erro).
+   */
+  verifyAccessTokenCookie(token: string | undefined): JwtPayload | null {
+    if (!token) return null;
+    try {
+      return this.jwtService.verify<JwtPayload>(token);
+    } catch {
+      return null;
+    }
+  }
+
   issueJwt(user: User): string {
     const payload: JwtPayload = {
       sub: user.id,
