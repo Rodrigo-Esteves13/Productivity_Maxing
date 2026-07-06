@@ -16,6 +16,11 @@ import {
   JwtPayload,
   LinkStatePayload,
 } from './interfaces/jwt-payload.interface';
+import {
+  encryptToken,
+  encryptTokenNullable,
+  decryptTokenNullable,
+} from '../crypto/token-cipher';
 
 interface OAuthProfileData {
   provider: Provider;
@@ -24,6 +29,11 @@ interface OAuthProfileData {
   name?: string;
   accessToken?: string;
   refreshToken?: string;
+  // Se o provider confirma que o email pertence mesmo à pessoa (Google e
+  // GitHub expõem isto; Discord não tem este campo, por isso a strategy do
+  // Discord nunca deve passar `true` aqui). Só emails verified podem
+  // fazer auto-merge com uma conta local existente.
+  emailVerified: boolean;
 }
 
 // Bucket do Supabase Storage onde ficam as fotos de perfil.
@@ -70,8 +80,19 @@ export class AuthService {
 
   /**
    * Fluxo normal de login/registo via OAuth.
-   * Ordem de resolução: Identity existente -> User por email -> criar User novo.
-   * (decisão de arquitetura já fixada no projeto)
+   * Ordem de resolução: Identity existente -> User por email (SÓ se
+   * emailVerified) -> criar User novo.
+   *
+   * CORREÇÃO DE SEGURANÇA: antes, qualquer email vindo do provider fazia
+   * merge automático com um User existente, mesmo sem confirmação de que o
+   * provider validou a posse desse email. Um atacante com uma conta OAuth
+   * cujo email (não verificado) coincidisse com o de uma vítima conseguia
+   * assim tornar-se "dono" da conta dela. Agora só fazemos o merge se o
+   * provider confirmar explicitamente `emailVerified === true` (nunca
+   * acontece para Discord, que não expõe esse campo) - caso contrário
+   * criamos sempre um User novo, e a pessoa pode ligar as contas mais tarde
+   * através do fluxo explícito de "Ligar conta" (linkIdentity), que exige
+   * já estar autenticada.
    */
   async resolveIdentity(data: OAuthProfileData): Promise<User> {
     const existingIdentity = await this.prisma.identity.findUnique({
@@ -88,17 +109,28 @@ export class AuthService {
       await this.prisma.identity.update({
         where: { id: existingIdentity.id },
         data: {
-          accessToken: data.accessToken,
+          // CORREÇÃO DE SEGURANÇA: accessToken/refreshToken passam sempre
+          // por encryptToken() antes de tocar na BD - um dump direto do
+          // Postgres do Supabase (backup, RLS mal configurada, etc.) já não
+          // expõe os tokens OAuth em texto plano, só o valor cifrado.
+          // Mantém o mesmo comportamento de antes quando o provider não
+          // manda um accessToken novo (undefined -> não mexe no valor
+          // guardado, em vez de o apagar).
+          accessToken: data.accessToken
+            ? encryptToken(data.accessToken)
+            : existingIdentity.accessToken,
           // o Google só manda refresh_token no primeiro consent; não sobrescrever com undefined
-          refreshToken: data.refreshToken ?? existingIdentity.refreshToken,
+          refreshToken: data.refreshToken
+            ? encryptToken(data.refreshToken)
+            : existingIdentity.refreshToken,
         },
       });
       return existingIdentity.user;
     }
 
-    let user = await this.prisma.user.findUnique({
-      where: { email: data.email },
-    });
+    let user = data.emailVerified
+      ? await this.prisma.user.findUnique({ where: { email: data.email } })
+      : null;
 
     if (!user) {
       user = await this.prisma.user.create({
@@ -115,8 +147,8 @@ export class AuthService {
         userId: user.id,
         provider: data.provider,
         providerAccountId: data.providerAccountId,
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
+        accessToken: encryptTokenNullable(data.accessToken),
+        refreshToken: encryptTokenNullable(data.refreshToken),
       },
     });
 
@@ -148,8 +180,17 @@ export class AuthService {
       await this.prisma.identity.update({
         where: { id: existingIdentity.id },
         data: {
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
+          // Mesma cifragem aplicada em resolveIdentity() - ver comentário lá.
+          // E o mesmo cuidado: se o provider não reenviar um token novo
+          // (undefined), preserva o valor cifrado já existente em vez de o
+          // apagar - não usar encryptTokenNullable() diretamente aqui, pois
+          // devolveria `null` explícito e sobrescreveria o token guardado.
+          accessToken: data.accessToken
+            ? encryptToken(data.accessToken)
+            : existingIdentity.accessToken,
+          refreshToken: data.refreshToken
+            ? encryptToken(data.refreshToken)
+            : existingIdentity.refreshToken,
         },
       });
     } else {
@@ -158,13 +199,39 @@ export class AuthService {
           userId,
           provider: data.provider,
           providerAccountId: data.providerAccountId,
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
+          accessToken: encryptTokenNullable(data.accessToken),
+          refreshToken: encryptTokenNullable(data.refreshToken),
         },
       });
     }
 
     return this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  }
+
+  /**
+   * Decifra os tokens OAuth de uma Identity para uso interno do próprio
+   * backend (ex: chamar a Google Calendar API na sincronização da Fase 4).
+   * NUNCA deve ser chamado a partir de um controller que devolve o
+   * resultado diretamente ao cliente - accessToken/refreshToken em claro
+   * não podem sair do processo do servidor.
+   */
+  async getDecryptedProviderTokens(
+    userId: string,
+    provider: Provider,
+  ): Promise<{
+    accessToken: string | null;
+    refreshToken: string | null;
+  } | null> {
+    const record = await this.prisma.identity.findFirst({
+      where: { userId, provider },
+    });
+
+    if (!record) return null;
+
+    return {
+      accessToken: decryptTokenNullable(record.accessToken),
+      refreshToken: decryptTokenNullable(record.refreshToken),
+    };
   }
 
   // ---------------- LOGIN/REGISTO POR EMAIL+PASSWORD (via Supabase Auth) ----------------
@@ -470,7 +537,10 @@ export class AuthService {
     const rawToken = randomBytes(32).toString('base64url');
 
     // Usamos o secret do servidor como "salt" para manter a segurança do ambiente.
-    const secret = process.env.API_KEY_SECRET || 'fallback-secreto-em-dev';
+    // Sem fallback: se faltar em produção, é preferível a app não arrancar
+    // (ver validação em main.ts) do que assinar API Keys com um segredo
+    // público e previsível.
+    const secret = this.requireApiKeySecret();
 
     // 64 é o tamanho do hash em bytes.
     const keyHash = scryptSync(rawToken, secret, 64).toString('hex');
@@ -484,7 +554,7 @@ export class AuthService {
   }
 
   async validateApiKey(incomingToken: string): Promise<User | null> {
-    const secret = process.env.API_KEY_SECRET || 'fallback-secreto-em-dev';
+    const secret = this.requireApiKeySecret();
 
     // Repetimos o scryptSync com os mesmos parâmetros para verificar
     const keyHash = scryptSync(incomingToken, secret, 64).toString('hex');
@@ -509,6 +579,19 @@ export class AuthService {
 
     this.logger.warn('Tentativa falhada de uso de API Key.');
     return null;
+  }
+
+  private requireApiKeySecret(): string {
+    const secret = process.env.API_KEY_SECRET;
+    if (!secret) {
+      // Falha alto e a gritar em vez de assinar/verificar API Keys com um
+      // valor previsível - a validação de arranque em main.ts já devia ter
+      // impedido a app de chegar aqui, isto é uma segunda linha de defesa.
+      throw new Error(
+        'API_KEY_SECRET não está definida. Não é seguro gerar ou validar API Keys sem ela.',
+      );
+    }
+    return secret;
   }
 
   async revokeApiKey(userId: string, keyId: string) {

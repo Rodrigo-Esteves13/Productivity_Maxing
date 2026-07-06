@@ -16,6 +16,7 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import 'multer';
 import type { Request, Response } from 'express';
 import { User } from '@prisma/client';
@@ -36,6 +37,7 @@ import type { AuthenticatedUser } from './interfaces/authenticated-user.interfac
 import {
   ACCESS_TOKEN_COOKIE,
   CSRF_COOKIE,
+  OAUTH_LOGIN_STATE_COOKIE,
   accessTokenCookieOptions,
   csrfCookieOptions,
   clearCookieOptions,
@@ -57,8 +59,13 @@ export class AuthController {
   // estabelece a sessão via cookie HttpOnly (Design B) em vez de devolver o
   // token no corpo da resposta.
 
+  // O ThrottlerGuard global (100 pedidos/min por IP) não chega para
+  // proteger contra força bruta de credenciais - dá margem de sobra para
+  // testar wordlists pequenas. Estes limites mais apertados aplicam-se
+  // especificamente a estas rotas, por cima do guard global.
   @Post('register')
   @HttpCode(201)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async register(
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
@@ -69,6 +76,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -222,7 +230,12 @@ export class AuthController {
   @HttpCode(200)
   @UseInterceptors(
     FileInterceptor('avatar', {
-      limits: { fileSize: 5 * 1024 * 1024 },
+      // fileSize: já existia. fields/files: mitigação para a vulnerabilidade
+      // do multer (GHSA-72gw-mp4g-v24j, npm audit) de DoS via nomes de
+      // campo profundamente aninhados num multipart/form-data - limitamos
+      // explicitamente a 1 campo de ficheiro e nenhum campo de texto extra,
+      // já que esta rota só espera o campo "avatar".
+      limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 1 },
     }),
   )
   async uploadAvatar(
@@ -286,14 +299,21 @@ export class AuthController {
     const token = this.authService.issueJwt(user);
 
     res.cookie(ACCESS_TOKEN_COOKIE, token, accessTokenCookieOptions());
+    // Já não precisamos do state anti-CSRF do login OAuth depois de
+    // consumido - limpa-o para não ficar pendurado nem ser reutilizável.
+    res.clearCookie(OAUTH_LOGIN_STATE_COOKIE, { path: '/', sameSite: 'lax' });
 
     return res.redirect(`${FRONTEND_URL}/auth/callback`);
   }
 
   // ---------------- API KEYS ----------------
 
+  // Sem isto, um utilizador autenticado (ou uma conta comprometida) conseguia
+  // gerar API Keys em loop sem qualquer limite, o que não é um IDOR nem um
+  // leak, mas polui a tabela ApiKey e permite abuso do storage/BD.
   @Post('api-keys')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async createApiKey(
     @CurrentUser() user: AuthenticatedUser,
     @Body('name') name: string,

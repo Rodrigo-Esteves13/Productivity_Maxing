@@ -28,16 +28,36 @@ export class UsersService {
   }
 
   findOne(id: string) {
-    return this.prisma.user.findUnique({ where: { id } });
+    // Nunca devolver supabaseAuthId (id interno da credencial no Supabase
+    // Auth) nem qualquer outro campo sensível ao cliente, mesmo ao próprio
+    // dono - não há necessidade de o frontend o conhecer.
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        role: true,
+        createdAt: true,
+      },
+    });
   }
 
   getProviders(id: string) {
-    return this.prisma.identity.findMany({ where: { userId: id } });
+    // accessToken/refreshToken NUNCA saem da BD para uma resposta HTTP,
+    // nem para o próprio dono da conta - só expomos o suficiente para a UI
+    // mostrar "ligado a X desde Y".
+    return this.prisma.identity.findMany({
+      where: { userId: id },
+      select: { provider: true, createdAt: true },
+    });
   }
 
   getProviderAccount(id: string, provider: AuthProvider) {
     return this.prisma.identity.findFirst({
       where: { userId: id, provider: PROVIDER_MAP[provider] },
+      select: { provider: true, createdAt: true },
     });
   }
 }
