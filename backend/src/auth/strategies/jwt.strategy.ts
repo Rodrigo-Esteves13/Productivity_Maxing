@@ -14,10 +14,25 @@ function cookieExtractor(req: Request): string | null {
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor() {
+    // Sem fallback para '': assinar/verificar com uma secret vazia deixaria
+    // qualquer atacante forjar tokens válidos (jwt.sign(payload, '')) se
+    // JWT_SECRET não estivesse definida em produção por erro de config.
+    // A validação de arranque em main.ts garante que chegamos aqui sempre
+    // com a variável definida; isto é a segunda linha de defesa.
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET não está definida.');
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([cookieExtractor]),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || '',
+      secretOrKey: secret,
+      // Restringe explicitamente o algoritmo aceite - defesa em
+      // profundidade contra ataques de "algorithm confusion" (ex: aceitar
+      // "alg: none" ou trocar um esquema assimétrico por HMAC usando a
+      // chave pública como secret).
+      algorithms: ['HS256'],
     });
   }
 

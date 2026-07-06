@@ -7,8 +7,16 @@ import type { CookieOptions } from 'express';
 
 export const ACCESS_TOKEN_COOKIE = 'access_token';
 export const CSRF_COOKIE = 'csrf_token';
+// Cookie de curta duração usado só durante o fluxo OAuth de login (não o de
+// "ligar conta", que já tinha o seu próprio state assinado). Protege contra
+// login CSRF (RFC 6749 §10.12): sem isto, um atacante conseguia iniciar o
+// fluxo OAuth com a própria conta dele e forçar a vítima a completar o
+// callback com o código do atacante, autenticando a vítima na sessão do
+// atacante sem ela perceber.
+export const OAUTH_LOGIN_STATE_COOKIE = 'oauth_login_state';
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const FIVE_MINUTES_MS = 5 * 60 * 1000;
 
 // Em produção o frontend (Netlify) e o backend (Render/Railway) vivem em
 // domínios diferentes, por isso o cookie tem de ser SameSite=None (+Secure,
@@ -37,6 +45,21 @@ export function csrfCookieOptions(): CookieOptions {
     sameSite: isProd ? 'none' : 'lax',
     path: '/',
     maxAge: SEVEN_DAYS_MS,
+  };
+}
+
+// Curto (5 min, chega para o utilizador completar o consent no provider),
+// httpOnly (nunca precisa de ser lido por JS) e SameSite=Lax: tem de
+// sobreviver à navegação top-level de volta do provider para o nosso
+// callback, o que SameSite=Strict/None-sem-secure-em-dev não garantiria
+// em todos os browsers.
+export function oauthLoginStateCookieOptions(): CookieOptions {
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: FIVE_MINUTES_MS,
   };
 }
 
