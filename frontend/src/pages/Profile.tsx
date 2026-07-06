@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import Avatar from '../components/Profile/Avatar';
@@ -6,10 +8,10 @@ import ProfileStat from '../components/Profile/ProfileStat';
 import EditProfileModal from '../components/Profile/EditProfileModal';
 import ActionButton from '../components/UI/ActionButton';
 import { PencilIcon } from '../components/UI/Icons';
-import { getUserTasks, getTaskMetadata } from '../api/userService';
+import { getUserTasks, getTaskMetadata, deleteAccount } from '../api/userService';
 import { useAuth } from '../context/useAuth';
 import type { Task, TaskTypeOption } from '../types/models';
-import useDocumentTitle from '../hooks/useDocumentTitle';
+
 // "Project" não é uma Area — é um TaskType como outro qualquer (ex: "PROJETO"),
 // configurável pelo admin em /admin/task-types. Como a key exata é dinâmica,
 // identificamos aqui por key/label que contenha "proj". Se o teu TaskType de
@@ -72,11 +74,16 @@ function computeStats(tasks: Task[], projectTypeKeys: Set<string>) {
 
 export default function Profile() {
   useDocumentTitle('Profile');
-  const { user, isLoadingUser, updateUser } = useAuth();
+  const { user, isLoadingUser, updateUser, logout } = useAuth();
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchStats() {
@@ -109,6 +116,23 @@ export default function Profile() {
     taskTypes.filter((t) => PROJECT_TYPE_PATTERN.test(t.key) || PROJECT_TYPE_PATTERN.test(t.label)).map((t) => t.key)
   );
   const { completed, active, projects, streak } = computeStats(tasks, projectTypeKeys);
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteAccount();
+      // O backend já limpou o cookie de sessão; logout() trata do estado
+      // local (csrf token em memória, user, isAuthenticated) e não faz mal
+      // nenhum voltar a chamar /auth/logout com um cookie já inexistente.
+      await logout();
+      navigate('/login', { replace: true });
+    } catch {
+      setDeleteError('Could not delete your account. Please try again.');
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <PageLayout>
@@ -144,6 +168,20 @@ export default function Profile() {
         </div>
       </div>
 
+      <div className="bg-red-950/20 border border-red-900/40 rounded-xl p-6 max-w-3xl mt-8">
+        <h3 className="text-red-400 font-semibold mb-1">Danger Zone</h3>
+        <p className="text-neutral-400 text-sm mb-4">
+          Deleting your account is permanent and cannot be undone. All your tasks, areas
+          progress, and linked accounts will be removed.
+        </p>
+        <button
+          onClick={() => setIsDeleteOpen(true)}
+          className="px-4 py-2 rounded-lg border border-red-900/60 text-red-400 text-sm font-medium hover:bg-red-950/40 transition-colors"
+        >
+          Delete account
+        </button>
+      </div>
+
       <EditProfileModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
@@ -153,6 +191,46 @@ export default function Profile() {
           setIsEditOpen(false);
         }}
       />
+
+      {isDeleteOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+          <div className="bg-neutral-900 border border-red-900/40 rounded-xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-bold text-white mb-2">Delete your account?</h3>
+            <p className="text-neutral-400 text-sm mb-4">
+              This is permanent. Type <span className="font-mono text-red-400">DELETE</span> below
+              to confirm.
+            </p>
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="DELETE"
+              className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-white mb-3 focus:outline-none focus:border-red-700"
+            />
+            {deleteError && <p className="text-red-400 text-sm mb-3">{deleteError}</p>}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setIsDeleteOpen(false);
+                  setDeleteConfirmText('');
+                  setDeleteError(null);
+                }}
+                className="px-4 py-2 rounded-lg text-neutral-300 hover:bg-neutral-800 text-sm"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmText !== 'DELETE' || isDeleting}
+                className="px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-red-600 transition-colors"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   );
 }

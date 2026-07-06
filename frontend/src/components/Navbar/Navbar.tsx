@@ -38,7 +38,8 @@ export default function Navbar() {
             {role === 'ADMIN' && (
               <Link
                 to="/areas"
-                className={`text-sm font-bold transition-colors px-3 py-1.5 rounded-md ${
+                aria-current={location.pathname.startsWith('/areas') ? 'page' : undefined}
+                className={`text-sm font-bold transition-colors px-3 py-1.5 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 ${
                   location.pathname.startsWith('/areas')
                     ? 'text-amber-400 bg-amber-400/10'
                     : 'text-amber-500/70 hover:text-amber-400 hover:bg-neutral-800'

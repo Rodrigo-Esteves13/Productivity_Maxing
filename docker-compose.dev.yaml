@@ -2,7 +2,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "3000:3000"
     env_file:
@@ -14,6 +14,9 @@ services:
       # parece simplesmente não funcionar em dev via Docker.
       - NODE_ENV=development
       - FRONTEND_URL=http://localhost:5173
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api"]

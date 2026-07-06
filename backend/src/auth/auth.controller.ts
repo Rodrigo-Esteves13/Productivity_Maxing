@@ -92,6 +92,11 @@ export class AuthController {
   // foi definido pelo backend nesse redirect, mas o corpo de um redirect não
   // consegue transportar o csrfToken - por isso o frontend pede-o aqui,
   // já autenticado pelo cookie que acabou de chegar).
+  // Chamado pelo frontend logo a seguir a um redirect de OAuth, e também no
+  // arranque da app para verificar se a sessão ainda é válida. Devolve
+  // sempre 200 (nunca 401) - "não estás autenticado" é um estado normal
+  // aqui, não um erro, e um 401 fazia o DevTools mostrar uma linha vermelha
+  // sempre que a app arrancasse sem sessão.
   @Get('csrf')
   refreshCsrf(
     @Req() req: Request,
@@ -240,6 +245,23 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async deleteAvatar(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.removeAvatar(user.id);
+  }
+
+  // Apaga a conta em definitivo (irreversível): remove o avatar do Storage,
+  // o User e tudo o que dependia dele (tasks, identities, api keys, via
+  // cascade no schema.prisma), e limpa a sessão atual.
+  @Delete('me')
+  @UseGuards(JwtAuthGuard)
+  async deleteAccount(
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.authService.deleteAccount(user.id);
+
+    res.clearCookie(ACCESS_TOKEN_COOKIE, clearCookieOptions());
+    res.clearCookie(CSRF_COOKIE, clearCookieOptions());
+
+    return { message: 'Account deleted.' };
   }
 
   // Define os cookies de sessão (JWT + CSRF) e devolve o csrfToken no corpo,

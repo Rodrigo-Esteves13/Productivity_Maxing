@@ -207,7 +207,7 @@ export class AuthService {
     this.logger.log(
       `Novo utilizador registado via Supabase: ${signUpData.user.id}`,
     );
-    return this.syncLocalUser(data.email, data.name);
+    return this.syncLocalUser(data.email, data.name, signUpData.user.id);
   }
 
   async loginWithPassword(email: string, password: string): Promise<User> {
@@ -222,7 +222,7 @@ export class AuthService {
 
     const name =
       (data.user.user_metadata?.name as string | undefined) ?? undefined;
-    return this.syncLocalUser(email, name);
+    return this.syncLocalUser(email, name, data.user.id);
   }
 
   /**
@@ -230,13 +230,30 @@ export class AuthService {
    * pelo Supabase — mesma lógica de "find or create by email" já usada no
    * resolveIdentity() do fluxo OAuth, para os dois caminhos convergirem no
    * mesmo utilizador quando o email coincide.
+   *
+   * Também grava/atualiza o supabaseAuthId - é isto que o deleteAccount usa
+   * depois para conseguir apagar a credencial real, não só o espelho local.
+   * O backfill "if (!existing.supabaseAuthId)" cobre os users que já
+   * existiam antes deste campo existir.
    */
-  private async syncLocalUser(email: string, name?: string): Promise<User> {
+  private async syncLocalUser(
+    email: string,
+    name?: string,
+    supabaseAuthId?: string,
+  ): Promise<User> {
     const existing = await this.prisma.user.findUnique({ where: { email } });
-    if (existing) return existing;
+    if (existing) {
+      if (supabaseAuthId && existing.supabaseAuthId !== supabaseAuthId) {
+        return this.prisma.user.update({
+          where: { id: existing.id },
+          data: { supabaseAuthId },
+        });
+      }
+      return existing;
+    }
 
     return this.prisma.user.create({
-      data: { id: randomUUID(), email, name },
+      data: { id: randomUUID(), email, name, supabaseAuthId },
     });
   }
 
@@ -342,6 +359,45 @@ export class AuthService {
       .from(AVATAR_BUCKET)
       .remove([path]);
     if (error) throw error;
+  }
+
+  /**
+   * Apaga a conta em definitivo: remove o avatar do Storage, a credencial
+   * real no Supabase Auth (se for uma conta email+password - contas só-OAuth
+   * não têm nenhuma) e o User da BD. O `onDelete: Cascade` no schema.prisma
+   * trata de Identity, Task e ApiKey automaticamente - não precisamos de
+   * apagar cada tabela à mão aqui.
+   *
+   * A ordem importa: apagamos o Supabase Auth ANTES do User local. Se
+   * fizéssemos ao contrário e o passo do Supabase falhasse a meio, ficava
+   * uma conta "fantasma" sem espelho local mas ainda com login válido - o
+   * mesmo bug que estamos a corrigir, só que pior (sem nenhum registo local
+   * para se perceber que aquilo devia ter sido apagado).
+   *
+   * Isto é irreversível. O controller é responsável por limpar os cookies
+   * de sessão depois de chamar isto.
+   */
+  async deleteAccount(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+
+    if (user.supabaseAuthId) {
+      const { error } = await this.storage.auth.admin.deleteUser(
+        user.supabaseAuthId,
+      );
+      // "User not found" significa que já não existe do lado do Supabase
+      // (ex: apagado manualmente antes) - nesse caso está tudo bem, seguimos
+      // para apagar o resto. Qualquer outro erro é abortado, para nunca
+      // ficarmos com o User local apagado mas a credencial ainda viva.
+      if (error && !/not.*found/i.test(error.message)) {
+        throw error;
+      }
+    }
+
+    await this.deleteAvatarFileIfOwned(user.avatarUrl);
+
+    await this.prisma.user.delete({ where: { id: userId } });
   }
 
   /**
