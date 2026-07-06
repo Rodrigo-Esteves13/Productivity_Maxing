@@ -91,6 +91,12 @@ model User {
   avatarUrl String?
   createdAt DateTime @default(now())
 
+  // Id do utilizador no Supabase Auth (auth.users), só existe para contas
+  // email+password. Precisamos disto para apagar a credencial real no
+  // deleteAccount - sem isto, apagar o User "espelho" não apaga o login,
+  // e a conta "ressuscita" sozinha na próxima vez que a pessoa fizer login.
+  supabaseAuthId String? @unique
+
   // Relações
   identities Identity[]
   tasks      Task[]
@@ -120,7 +126,7 @@ model Identity {
   createdAt         DateTime  @default(now())
 
   // Relações
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Garante que o mesmo providerAccount não é associado duas vezes
   @@unique([provider, providerAccountId])
@@ -168,6 +174,6 @@ model Task {
   createdAt             DateTime @default(now())
 
   // Relações
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   area Area @relation(fields: [areaId], references: [id])
 }
