@@ -26,7 +26,12 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     done: (err: Error | null, user?: any) => void,
   ) {
     try {
-      const emailObj = profile.emails?.[0] as
+      // passport-github2 só declara `{ value: string; type?: string }` para
+      // cada email - não inclui `verified`/`primary`, mesmo esses campos
+      // vindo de facto na resposta da API do GitHub. Um "as" direto para um
+      // tipo com campos extra não sobrepõe o suficiente aos olhos do
+      // compilador, por isso passamos por "unknown" no meio do cast.
+      const emailObj = profile.emails?.[0] as unknown as
         | { value: string; verified?: boolean; primary?: boolean }
         | undefined;
       const email = emailObj?.value ?? `${profile.username}@github.com`;

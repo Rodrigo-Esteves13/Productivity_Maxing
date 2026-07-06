@@ -13,7 +13,14 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       clientID: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
       callbackURL: process.env.GOOGLE_CALLBACK_URL || '',
-      scope: ['email', 'profile', 'https://www.googleapis.com/auth/calendar'],
+      // v1.0: só scopes non-sensitive (email/profile), para o login com
+      // Google não disparar o ecrã "app não verificada" nem consumir o
+      // limite de 100 novos utilizadores enquanto não estivermos
+      // verificados. O scope do Calendar volta aqui quando a sincronização
+      // (Fase 4 / v1.1) estiver pronta - nessa altura também é preciso
+      // submeter o projeto para verificação na Google (scope "sensitive",
+      // sem CASA/security assessment, porque não é restricted).
+      scope: ['email', 'profile'],
       passReqToCallback: true,
     });
   }
