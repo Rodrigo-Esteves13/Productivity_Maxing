@@ -38,7 +38,12 @@ export const logoutRequest = async (): Promise<void> => {
 // mas o csrfToken não veio no redirect) e também no arranque da app, para
 // verificar se ainda existe uma sessão válida e obter um csrf token novo.
 export const fetchCsrfToken = async (): Promise<string> => {
-  const response = await api.get<{ csrfToken: string }>('/auth/csrf');
+  const response = await api.get<{ authenticated: boolean; csrfToken?: string }>(
+    '/auth/csrf',
+  );
+  if (!response.data.authenticated || !response.data.csrfToken) {
+    throw new Error('Not authenticated');
+  }
   return response.data.csrfToken;
 };
 
