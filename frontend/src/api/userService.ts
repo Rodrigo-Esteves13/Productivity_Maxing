@@ -81,6 +81,10 @@ export const removeAvatar = async (): Promise<User> => {
   return response.data;
 };
 
+export const deleteAccount = async (): Promise<void> => {
+  await api.delete('/auth/me');
+};
+
 // AREA ENDPOINTS
 export const getUserAreas = async (): Promise<Area[]> => {
   const response = await api.get<Area[]>('/areas');
