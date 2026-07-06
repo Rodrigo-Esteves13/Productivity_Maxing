@@ -6,6 +6,14 @@ import { Provider } from '@prisma/client';
 import { AuthService } from '../auth.service';
 import { OAUTH_LOGIN_STATE_COOKIE } from '../cookie.config';
 
+//Define an explicit type that extends the default passport email shape
+type GithubEmail = {
+  value: string;
+  type?: string;
+  verified?: boolean;
+  primary?: boolean;
+};
+
 @Injectable()
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
   constructor(private authService: AuthService) {
@@ -26,16 +34,13 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     done: (err: Error | null, user?: any) => void,
   ) {
     try {
-      // passport-github2 só declara `{ value: string; type?: string }` para
-      // cada email - não inclui `verified`/`primary`, mesmo esses campos
-      // vindo de facto na resposta da API do GitHub. Um "as" direto para um
-      // tipo com campos extra não sobrepõe o suficiente aos olhos do
-      // compilador, por isso passamos por "unknown" no meio do cast.
-      const emailObj = profile.emails?.[0] as unknown as
-        | { value: string; verified?: boolean; primary?: boolean }
-        | undefined;
+      //Safely cast the emails array to your custom type
+      const emails = profile.emails as GithubEmail[] | undefined;
+      const emailObj = emails?.[0];
+      
       const email = emailObj?.value ?? `${profile.username}@github.com`;
       const state = req.query.state as string | undefined;
+      
       const data = {
         provider: Provider.GITHUB,
         providerAccountId: profile.id,
@@ -43,6 +48,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
         name: profile.displayName || profile.username,
         accessToken,
         refreshToken,
+        // The compiler now explicitly knows 'verified' is a valid optional boolean
         emailVerified: emailObj?.verified === true,
       };
 
