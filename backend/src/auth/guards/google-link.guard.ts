@@ -22,7 +22,7 @@ export class GoogleLinkGuard extends AuthGuard('google') {
     );
     return {
       state,
-      scope: ['email', 'profile', 'https://www.googleapis.com/auth/calendar'],
+      scope: ['email', 'profile'],
       accessType: 'offline',
       prompt: 'consent',
     };
