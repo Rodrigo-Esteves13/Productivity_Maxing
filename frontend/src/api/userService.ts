@@ -1,6 +1,6 @@
 // src/api/userService.ts
 import api from './client';
-import type { User, Area, Task, TaskMeta } from '../types/models';
+import type { User, Area, Task, TaskMeta, Role } from '../types/models';
 
 // AUTH ENDPOINTS
 // Login/registo já não devolvem o JWT no corpo - o backend define-o num
@@ -83,6 +83,39 @@ export const removeAvatar = async (): Promise<User> => {
 
 export const deleteAccount = async (): Promise<void> => {
   await api.delete('/auth/me');
+};
+
+// ADMIN USER MANAGEMENT ENDPOINTS (todos exigem ADMIN no backend)
+
+// Lista todos os utilizadores da plataforma.
+export const getAllUsers = async (): Promise<User[]> => {
+  const response = await api.get<User[]>('/users');
+  return response.data;
+};
+
+// Muda o nome e/ou a role de outro utilizador. O backend recusa se estiveres
+// a tentar mudar a tua própria role (evita ficares sem nenhum admin ativo).
+export const updateUser = async (
+  id: string,
+  data: { name?: string; role?: Role },
+): Promise<User> => {
+  const response = await api.patch<User>(`/users/${id}`, data);
+  return response.data;
+};
+
+// Apaga em definitivo a conta de outro utilizador. O backend recusa se
+// tentares apagar a tua própria conta por aqui (usa "Delete account" no
+// Profile para isso).
+export const deleteUser = async (id: string): Promise<void> => {
+  await api.delete(`/users/${id}`);
+};
+
+// Exportação de dados (portabilidade GDPR) de um utilizador — usado tanto
+// para um admin exportar os dados de qualquer pessoa, como para o próprio
+// exportar os seus. Devolve o JSON completo pronto a descarregar.
+export const exportUserData = async (id: string): Promise<Record<string, unknown>> => {
+  const response = await api.get<Record<string, unknown>>(`/users/${id}/export`);
+  return response.data;
 };
 
 // AREA ENDPOINTS

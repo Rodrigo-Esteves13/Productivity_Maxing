@@ -9,6 +9,7 @@ import AuthCallback from '../components/Auth/AuthCallback';
 import Tasks from '../pages/Tasks';
 import Profile from '../pages/Profile';
 import Areas from '../pages/Areas';
+import Users from '../pages/Users';
 import PrivacyPolicy from '../pages/PrivacyPolicy';
 import TermsOfService from '../pages/TermsOfService';
 import CookieNotice from '../components/Legal/CookieNotice';
@@ -42,6 +43,7 @@ export default function AppRouter() {
         {/* O <AdminRoute /> envolve as páginas. Se tentarem entrar na página de áreas, o AdminRoute barra. */}
         <Route element={<AdminRoute />}>
           <Route path="/areas" element={<Areas />} />
+          <Route path="/users" element={<Users />} />
         </Route>
         
         {/* O lixo (apenas URLs que não existem nas rotas acima vêm parar aqui) */}

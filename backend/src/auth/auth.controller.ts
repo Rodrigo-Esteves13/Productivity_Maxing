@@ -108,10 +108,7 @@ export class AuthController {
   // aqui, não um erro, e um 401 fazia o DevTools mostrar uma linha vermelha
   // sempre que a app arrancasse sem sessão.
   @Get('csrf')
-  refreshCsrf(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  refreshCsrf(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const cookies = req.cookies as Record<string, string | undefined>;
     const payload = this.authService.verifyAccessTokenCookie(
       cookies?.[ACCESS_TOKEN_COOKIE],

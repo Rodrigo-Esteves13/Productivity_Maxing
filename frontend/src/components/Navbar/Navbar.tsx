@@ -36,17 +36,30 @@ export default function Navbar() {
             
             {/* O Link do Admin está agora dentro do Return, e usa a variável role! */}
             {role === 'ADMIN' && (
-              <Link
-                to="/areas"
-                aria-current={location.pathname.startsWith('/areas') ? 'page' : undefined}
-                className={`text-sm font-bold transition-colors px-3 py-1.5 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 ${
-                  location.pathname.startsWith('/areas')
-                    ? 'text-amber-400 bg-amber-400/10'
-                    : 'text-amber-500/70 hover:text-amber-400 hover:bg-neutral-800'
-                }`}
-              >
-                Areas
-              </Link>
+              <>
+                <Link
+                  to="/areas"
+                  aria-current={location.pathname.startsWith('/areas') ? 'page' : undefined}
+                  className={`text-sm font-bold transition-colors px-3 py-1.5 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 ${
+                    location.pathname.startsWith('/areas')
+                      ? 'text-amber-400 bg-amber-400/10'
+                      : 'text-amber-500/70 hover:text-amber-400 hover:bg-neutral-800'
+                  }`}
+                >
+                  Areas
+                </Link>
+                <Link
+                  to="/users"
+                  aria-current={location.pathname.startsWith('/users') ? 'page' : undefined}
+                  className={`text-sm font-bold transition-colors px-3 py-1.5 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 ${
+                    location.pathname.startsWith('/users')
+                      ? 'text-amber-400 bg-amber-400/10'
+                      : 'text-amber-500/70 hover:text-amber-400 hover:bg-neutral-800'
+                  }`}
+                >
+                  Users
+                </Link>
+              </>
             )}
           </div>
 
