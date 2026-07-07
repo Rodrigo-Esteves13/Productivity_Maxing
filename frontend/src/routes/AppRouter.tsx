@@ -4,6 +4,8 @@ import AdminRoute from './AdminRoute';
 import RootRedirect from './RootRedirect';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
+import ForgotPassword from '../pages/ForgotPassword';
+import ResetPassword from '../pages/ResetPassword';
 import Dashboard from '../pages/Dashboard';
 import AuthCallback from '../components/Auth/AuthCallback';
 import Tasks from '../pages/Tasks';
@@ -21,6 +23,8 @@ export default function AppRouter() {
         <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         {/* Públicas - o consent screen do Google OAuth aponta para estas */}
         <Route path="/privacy" element={<PrivacyPolicy />} />

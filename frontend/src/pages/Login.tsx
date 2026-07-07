@@ -1,5 +1,5 @@
 import { useState, type SyntheticEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { loginRequest } from '../api/userService';
 import PageLayout from '../components/Layout/PageLayout';
@@ -55,6 +55,12 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+
+          <div className="text-right">
+            <Link to="/forgot-password" className="text-sm text-violet-400 hover:text-violet-300 transition-colors">
+              Forgot your password?
+            </Link>
+          </div>
 
           <Button type="submit" className="w-full">
             Login
