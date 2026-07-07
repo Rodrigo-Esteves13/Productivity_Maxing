@@ -22,6 +22,7 @@ import {
   decryptTokenNullable,
 } from '../crypto/token-cipher';
 import { OAuthAccountConflictException } from './exceptions/oauth-account-conflict.exception';
+import { MailService } from '../mail/mail.service';
 
 interface OAuthProfileData {
   provider: Provider;
@@ -71,6 +72,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private mailService: MailService,
   ) {
     // Anon key chega para signUp/signInWithPassword — são os mesmos endpoints
     // públicos que o supabase-js usaria no browser, não operações de admin
@@ -368,25 +370,37 @@ export class AuthService {
   // ---------------- RECUPERAÇÃO / DEFINIÇÃO DE PASSWORD ----------------
 
   /**
-   * Dispara o email de recuperação de password do Supabase. Resposta
-   * sempre genérica no controller, independentemente do resultado aqui -
-   * isto evita confirmar a um atacante se um dado email tem conta (email
-   * enumeration). Uma conta só-OAuth (sem supabaseAuthId, nunca passou por
-   * signUp) simplesmente não tem credencial no Supabase Auth, por isso o
-   * Supabase não envia nada — mas do lado de fora isso é indistinguível de
-   * "enviámos, vai ver o teu email".
+   * Gera o link de recuperação através da Admin API do Supabase
+   * (`generateLink`, que só CRIA o link - nunca envia nada sozinho) e
+   * manda-o nós próprios, com o nosso HTML, via MailService/SMTP. Assim
+   * evitamos por completo o sistema de emails do Supabase (rate limit de
+   * 2/hora sem SMTP próprio, template só editável com SMTP lá configurado,
+   * remetente genérico) - o design fica sempre sob o nosso controlo.
+   *
+   * Resposta sempre genérica no controller, independentemente do
+   * resultado aqui - isto evita confirmar a um atacante se um dado email
+   * tem conta (email enumeration). generateLink falha para emails que não
+   * têm nenhuma credencial no Supabase Auth (contas só-OAuth, ou emails
+   * nunca registados) - esse caso é esperado e é ignorado silenciosamente.
    */
   async forgotPassword(email: string): Promise<void> {
-    const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${FRONTEND_URL}/reset-password`,
+    const { data, error } = await this.storage.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo: `${FRONTEND_URL}/reset-password` },
     });
 
-    // Só vale a pena logar erros que não sejam "utilizador não existe" -
-    // esse caso é o normal para contas só-OAuth ou emails nunca registados,
-    // não é uma falha do nosso lado.
-    if (error && !/user not found/i.test(error.message)) {
-      this.logger.error('Erro ao pedir reset de password ao Supabase', error);
+    if (error || !data.properties?.action_link) {
+      if (!/user not found/i.test(error?.message ?? '')) {
+        this.logger.error('Erro ao gerar link de reset de password', error);
+      }
+      return;
     }
+
+    await this.mailService.sendPasswordResetEmail(
+      email,
+      data.properties.action_link,
+    );
   }
 
   /**
