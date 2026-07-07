@@ -9,6 +9,9 @@ import AuthCallback from '../components/Auth/AuthCallback';
 import Tasks from '../pages/Tasks';
 import Profile from '../pages/Profile';
 import Areas from '../pages/Areas';
+import PrivacyPolicy from '../pages/PrivacyPolicy';
+import TermsOfService from '../pages/TermsOfService';
+import CookieNotice from '../components/Legal/CookieNotice';
 
 export default function AppRouter() {
   return (
@@ -18,6 +21,9 @@ export default function AppRouter() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        {/* Públicas - o consent screen do Google OAuth aponta para estas */}
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
 
         {/* --- ROTAS PRIVADAS --- */}
         <Route 
@@ -41,6 +47,10 @@ export default function AppRouter() {
         {/* O lixo (apenas URLs que não existem nas rotas acima vêm parar aqui) */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      {/* Tem de estar aqui dentro do BrowserRouter, não no App.tsx - usa
+          <Link> do react-router-dom, que precisa do contexto do Router. */}
+      <CookieNotice />
     </BrowserRouter>
   );
 }
