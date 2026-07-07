@@ -39,7 +39,10 @@ export interface User {
   name: string | null;
   avatarUrl: string | null;
   createdAt: string;
-  
+  // true só se já existir uma credencial email+password real no Supabase
+  // Auth associada a este User (contas só-OAuth começam com false).
+  hasPassword: boolean;
+
   // Optional relations (depends on what your backend returns)
   areas?: Area[];
   tasks?: Task[];
