@@ -25,6 +25,8 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { SetPasswordDto } from './dto/set-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { GoogleLinkGuard } from './guards/google-link.guard';
@@ -96,6 +98,21 @@ export class AuthController {
     res.clearCookie(ACCESS_TOKEN_COOKIE, clearCookieOptions());
     res.clearCookie(CSRF_COOKIE, clearCookieOptions());
     return { message: 'Logged out.' };
+  }
+
+  // Pública (não exige sessão) - pede ao Supabase para enviar o email de
+  // recuperação. A resposta é sempre a mesma mensagem genérica, quer o
+  // email exista ou não, para não dar pistas a quem esteja a tentar
+  // enumerar contas.
+  @Post('forgot-password')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    await this.authService.forgotPassword(dto.email);
+    return {
+      message:
+        'If an account with that email exists, a password reset link has been sent.',
+    };
   }
 
   // Chamado pelo frontend logo a seguir a um redirect de OAuth (o cookie já
@@ -201,6 +218,8 @@ export class AuthController {
         avatarUrl: true,
         role: true,
         createdAt: true,
+        // Só usado para derivar hasPassword abaixo - nunca sai do backend.
+        supabaseAuthId: true,
       },
     });
 
@@ -208,7 +227,11 @@ export class AuthController {
       throw new UnauthorizedException('User not found');
     }
 
-    return profile;
+    const { supabaseAuthId, ...rest } = profile;
+    // hasPassword informa o frontend se deve mostrar "Change password" ou
+    // "Add password" no EditProfileModal - true só quando já existe uma
+    // credencial real no Supabase Auth associada a este User.
+    return { ...rest, hasPassword: !!supabaseAuthId };
   }
 
   // Atualiza campos de texto do perfil (por agora só o nome).
@@ -222,6 +245,21 @@ export class AuthController {
     @Body() dto: UpdateProfileDto,
   ) {
     return this.authService.updateProfile(user.id, { name: dto.name });
+  }
+
+  // Define ou muda a password da conta autenticada. Não pede a password
+  // atual - a sessão válida (cookie + CSRF) já prova a posse da conta, e é
+  // exatamente o mesmo nível de confiança que o resto das rotas /auth/me/*.
+  @Patch('me/password')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async setPassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SetPasswordDto,
+  ) {
+    await this.authService.setPassword(user.id, dto.password);
+    return { message: 'Password updated successfully.' };
   }
 
   // Upload da foto de perfil: recebe multipart/form-data com um campo

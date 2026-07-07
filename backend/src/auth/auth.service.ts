@@ -43,6 +43,12 @@ interface OAuthProfileData {
 // avatarUrl gerado seja diretamente acessível pelo <img src>.
 const AVATAR_BUCKET = process.env.SUPABASE_AVATAR_BUCKET ?? 'avatars';
 
+// Mesmo URL usado no AuthController para os redirects de OAuth - usado aqui
+// só para o `redirectTo` do email de recuperação de password do Supabase,
+// que tem de apontar para uma página nossa (ResetPassword.tsx) capaz de
+// completar a sessão de recovery e chamar updateUser({ password }).
+const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+
 const ALLOWED_MIME_TO_EXT: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
@@ -356,6 +362,121 @@ export class AuthService {
 
     return this.prisma.user.create({
       data: { id: randomUUID(), email, name, supabaseAuthId },
+    });
+  }
+
+  // ---------------- RECUPERAÇÃO / DEFINIÇÃO DE PASSWORD ----------------
+
+  /**
+   * Dispara o email de recuperação de password do Supabase. Resposta
+   * sempre genérica no controller, independentemente do resultado aqui -
+   * isto evita confirmar a um atacante se um dado email tem conta (email
+   * enumeration). Uma conta só-OAuth (sem supabaseAuthId, nunca passou por
+   * signUp) simplesmente não tem credencial no Supabase Auth, por isso o
+   * Supabase não envia nada — mas do lado de fora isso é indistinguível de
+   * "enviámos, vai ver o teu email".
+   */
+  async forgotPassword(email: string): Promise<void> {
+    const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${FRONTEND_URL}/reset-password`,
+    });
+
+    // Só vale a pena logar erros que não sejam "utilizador não existe" -
+    // esse caso é o normal para contas só-OAuth ou emails nunca registados,
+    // não é uma falha do nosso lado.
+    if (error && !/user not found/i.test(error.message)) {
+      this.logger.error('Erro ao pedir reset de password ao Supabase', error);
+    }
+  }
+
+  /**
+   * Define (ou muda) a password de um utilizador já autenticado pela nossa
+   * sessão (JwtAuthGuard) - não pede a password atual, porque a sessão
+   * válida já prova a posse da conta.
+   *
+   * - Se o User já tem supabaseAuthId (já tinha password, ou já tinha
+   *   ligado uma antes): atualiza a credencial existente via admin API.
+   * - Se não tem (conta criada só por OAuth): cria a credencial no Supabase
+   *   Auth agora (admin.createUser, com Service Role Key), e grava o
+   *   supabaseAuthId resultante no User local - a partir daqui esta conta
+   *   passa a poder entrar por email+password e a usar "Esqueci-me da
+   *   password" normalmente.
+   */
+  async setPassword(userId: string, newPassword: string): Promise<void> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+
+    if (user.supabaseAuthId) {
+      const { error } = await this.storage.auth.admin.updateUserById(
+        user.supabaseAuthId,
+        { password: newPassword },
+      );
+      if (error) {
+        throw new BadRequestException(
+          `Could not update password: ${error.message}`,
+        );
+      }
+      return;
+    }
+
+    const { data, error } = await this.storage.auth.admin.createUser({
+      email: user.email,
+      password: newPassword,
+      email_confirm: true,
+    });
+
+    if (!error && data.user) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { supabaseAuthId: data.user.id },
+      });
+      return;
+    }
+
+    // Dessincronização: já existe uma credencial no Supabase Auth para
+    // este email (ex: um registo/teste antigo com password que nunca
+    // ficou associado a este User local), por isso o createUser acima
+    // rejeitou como duplicado. Em vez de falhar, resolvemos sozinhos:
+    // usamos generateLink() só para o Supabase nos devolver o `user.id`
+    // correspondente a este email (funciona mesmo sem enviar o link
+    // gerado a lado nenhum - só nos interessam os dados do user), gravamos
+    // esse supabaseAuthId no User local, e atualizamos a password nele.
+    const alreadyRegistered =
+      /already.*registered|already.*exists/i.test(error?.message ?? '');
+
+    if (!alreadyRegistered) {
+      throw new BadRequestException(
+        `Could not create a password for this account: ${error?.message ?? 'unknown error'}`,
+      );
+    }
+
+    const { data: linkData, error: linkError } =
+      await this.storage.auth.admin.generateLink({
+        type: 'recovery',
+        email: user.email,
+      });
+
+    if (linkError || !linkData.user) {
+      throw new ConflictException(
+        'Could not create a password for this account. If you already have a password set up, use "Forgot password" instead.',
+      );
+    }
+
+    const { error: updateError } = await this.storage.auth.admin.updateUserById(
+      linkData.user.id,
+      { password: newPassword },
+    );
+
+    if (updateError) {
+      throw new BadRequestException(
+        `Could not update password: ${updateError.message}`,
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { supabaseAuthId: linkData.user.id },
     });
   }
 

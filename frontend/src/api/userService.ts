@@ -34,6 +34,20 @@ export const logoutRequest = async (): Promise<void> => {
   await api.post('/auth/logout');
 };
 
+// Pede ao backend para disparar o email de recuperação de password
+// (Supabase). A resposta é sempre a mesma mensagem genérica, quer o email
+// exista ou não - não dá para saber se a conta existe a partir disto.
+export const forgotPasswordRequest = async (email: string): Promise<void> => {
+  await api.post('/auth/forgot-password', { email });
+};
+
+// Define ou muda a password da conta autenticada (funciona tanto para
+// contas só-OAuth a adicionar a primeira password, como para contas que já
+// tinham uma). Não pede a password atual - a sessão válida já basta.
+export const setPasswordRequest = async (password: string): Promise<void> => {
+  await api.patch('/auth/me/password', { password });
+};
+
 // Chamado depois de um redirect de OAuth (o cookie de sessão já lá está,
 // mas o csrfToken não veio no redirect) e também no arranque da app, para
 // verificar se ainda existe uma sessão válida e obter um csrf token novo.
