@@ -3,6 +3,9 @@ import {
   ForbiddenException,
   Get,
   Param,
+  Patch,
+  Delete,
+  Body,
   ParseUUIDPipe,
   UseGuards,
 } from '@nestjs/common';
@@ -14,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { UsersService } from './users.service';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -105,5 +109,68 @@ export class UsersController {
   ) {
     assertSelfOrAdmin(me, id);
     return this.usersService.getProviderAccount(id, provider);
+  }
+
+  // Export "portabilidade dos dados" (self ou admin) - mesma regra de
+  // acesso que o resto: só o próprio dono ou um ADMIN.
+  @Get(':id/export')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Exports a user's full data as JSON (self or admin only)",
+  })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  exportData(
+    @CurrentUser() me: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    assertSelfOrAdmin(me, id);
+    return this.usersService.exportUserData(id);
+  }
+
+  // Update de outro utilizador (nome e/ou role) -> ADMIN ONLY.
+  // Bloqueado explicitamente: um admin não pode usar esta rota para se
+  // despromover a si próprio - isso podia deixar a plataforma sem nenhum
+  // admin ativo se fosse o último. Para mudar o PRÓPRIO nome, o fluxo
+  // correto continua a ser PATCH /auth/me.
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Updates a user's name/role (Admin only)" })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  update(
+    @CurrentUser() me: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateUserDto,
+  ) {
+    if (me.id === id && dto.role !== undefined && dto.role !== Role.ADMIN) {
+      throw new ForbiddenException(
+        'You cannot change your own role. Ask another admin to do it.',
+      );
+    }
+    return this.usersService.update(id, dto);
+  }
+
+  // Apaga outro utilizador -> ADMIN ONLY. Bloqueado explicitamente para a
+  // própria conta - para isso já existe DELETE /auth/me, que trata da
+  // sessão (limpa os cookies) de forma que esta rota não tem como fazer.
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Deletes a user account (Admin only)' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  async remove(
+    @CurrentUser() me: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    if (me.id === id) {
+      throw new ForbiddenException(
+        'You cannot delete your own account from here. Use "Delete account" in your Profile instead.',
+      );
+    }
+    await this.usersService.remove(id);
+    return { message: 'User deleted.' };
   }
 }
