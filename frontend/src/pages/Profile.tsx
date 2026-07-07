@@ -190,6 +190,7 @@ export default function Profile() {
           updateUser(updatedUser);
           setIsEditOpen(false);
         }}
+        onUserUpdate={updateUser}
       />
 
       {isDeleteOpen && (
