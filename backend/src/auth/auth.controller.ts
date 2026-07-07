@@ -9,6 +9,7 @@ import {
   Req,
   Res,
   UseGuards,
+  UseFilters,
   UseInterceptors,
   UploadedFile,
   UnauthorizedException,
@@ -31,6 +32,7 @@ import { GithubAuthGuard } from './guards/github-auth.guard';
 import { GithubLinkGuard } from './guards/github-link.guard';
 import { DiscordAuthGuard } from './guards/discord-auth.guard';
 import { DiscordLinkGuard } from './guards/discord-link.guard';
+import { OAuthConflictRedirectFilter } from './filters/oauth-conflict-redirect.filter';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthenticatedUser } from './interfaces/authenticated-user.interface';
@@ -106,7 +108,10 @@ export class AuthController {
   // aqui, não um erro, e um 401 fazia o DevTools mostrar uma linha vermelha
   // sempre que a app arrancasse sem sessão.
   @Get('csrf')
-  refreshCsrf(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  refreshCsrf(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const cookies = req.cookies as Record<string, string | undefined>;
     const payload = this.authService.verifyAccessTokenCookie(
       cookies?.[ACCESS_TOKEN_COOKIE],
@@ -134,6 +139,7 @@ export class AuthController {
   // de conta, e devolve o User certo em req.user.
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
+  @UseFilters(OAuthConflictRedirectFilter)
   googleCallback(@Req() req: Request, @Res() res: Response) {
     return this.issueSessionAndRedirect(req, res);
   }
@@ -155,6 +161,7 @@ export class AuthController {
 
   @Get('github/callback')
   @UseGuards(GithubAuthGuard)
+  @UseFilters(OAuthConflictRedirectFilter)
   githubCallback(@Req() req: Request, @Res() res: Response) {
     return this.issueSessionAndRedirect(req, res);
   }
@@ -171,6 +178,7 @@ export class AuthController {
 
   @Get('discord/callback')
   @UseGuards(DiscordAuthGuard)
+  @UseFilters(OAuthConflictRedirectFilter)
   discordCallback(@Req() req: Request, @Res() res: Response) {
     return this.issueSessionAndRedirect(req, res);
   }

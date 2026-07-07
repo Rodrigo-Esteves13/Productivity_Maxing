@@ -14,6 +14,11 @@ const RESOURCE_LINKS = [
   { label: 'Report an Issue', href: 'https://github.com/Rodrigo-Esteves13/Productivity_Maxing/issues' },
 ];
 
+const LEGAL_LINKS = [
+  { label: 'Privacy Policy', to: '/privacy' },
+  { label: 'Terms of Service', to: '/terms' },
+];
+
 const STACK = ['React', 'TypeScript', 'Tailwind v4', 'NestJS', 'Prisma', 'Supabase'];
 const STACK_PLANNED = ['Go Agent'];
 
@@ -24,10 +29,11 @@ export default function Footer() {
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr] gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-10">
           <FooterBrand />
           <FooterLinkGroup title="Product" items={PRODUCT_LINKS} />
           <FooterLinkGroup title="Resources" items={RESOURCE_LINKS} />
+          <FooterLinkGroup title="Legal" items={LEGAL_LINKS} />
         </div>
 
         <div className="mt-10 pt-6 border-t border-neutral-800/80">

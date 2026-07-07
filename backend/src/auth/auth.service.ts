@@ -9,7 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { randomUUID, randomBytes, scryptSync } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { fileTypeFromBuffer } from 'file-type';
-import { Provider, User } from '@prisma/client';
+import { Provider, User, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import 'multer';
 import {
@@ -21,6 +21,7 @@ import {
   encryptTokenNullable,
   decryptTokenNullable,
 } from '../crypto/token-cipher';
+import { OAuthAccountConflictException } from './exceptions/oauth-account-conflict.exception';
 
 interface OAuthProfileData {
   provider: Provider;
@@ -133,13 +134,47 @@ export class AuthService {
       : null;
 
     if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          id: randomUUID(),
-          email: data.email,
-          name: data.name,
-        },
+      // BUG CORRIGIDO: quando o email não é verificado (Discord nunca é;
+      // GitHub às vezes), o código anterior tentava sempre criar um User
+      // novo, sem verificar se já existia um com esse email - se existisse
+      // (ex: conta feita com Google, ou por password), o Prisma rebentava
+      // com P2002 (unique constraint) e o pedido falhava com um 500 feio.
+      //
+      // A correção NÃO é voltar a fazer auto-merge (era a vulnerabilidade
+      // de account takeover que já corrigimos) - é só detetar a colisão e
+      // devolver um erro claro, a dizer ao utilizador para entrar pelo
+      // método original e ligar esta conta manualmente depois, a partir
+      // das definições do perfil (fluxo linkIdentity(), que exige sessão
+      // válida antes de associar o provider).
+      const emailTaken = await this.prisma.user.findUnique({
+        where: { email: data.email },
+        select: { id: true },
       });
+
+      if (emailTaken) {
+        throw new OAuthAccountConflictException(data.email);
+      }
+
+      try {
+        user = await this.prisma.user.create({
+          data: {
+            id: randomUUID(),
+            email: data.email,
+            name: data.name,
+          },
+        });
+      } catch (err) {
+        // Corrida rara: dois logins simultâneos passam ambos o check acima
+        // antes de qualquer um dos dois criar o User. Apanhamos o P2002
+        // aqui também, em vez de deixar subir como erro genérico não tratado.
+        if (
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === 'P2002'
+        ) {
+          throw new OAuthAccountConflictException(data.email);
+        }
+        throw err;
+      }
     }
 
     await this.prisma.identity.create({
