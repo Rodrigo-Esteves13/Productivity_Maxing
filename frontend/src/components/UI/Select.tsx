@@ -14,7 +14,7 @@ export default function Select({ label, id, className = '', ...rest }: SelectPro
     <div className="relative">
       <select
         id={id}
-        className={`w-full appearance-none border border-neutral-700 bg-neutral-900 text-white rounded-lg pl-3 pr-9 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-violet-600 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+        className={`w-full appearance-none border border-neutral-700 bg-neutral-900 text-white rounded-lg pl-3 pr-9 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-violet-600/50 focus:border-violet-500 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
         {...rest}
       />
       <svg

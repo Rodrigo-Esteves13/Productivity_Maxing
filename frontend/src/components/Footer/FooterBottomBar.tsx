@@ -4,7 +4,7 @@ import useHealthCheck from '../../hooks/useHealthCheck';
 
 const STATUS_CONFIG = {
   checking: { color: 'amber' as const, pulse: false, label: 'Checking status...' },
-  ok: { color: 'green' as const, pulse: true, label: 'All systems operational' },
+  ok: { color: 'cyan' as const, pulse: true, label: 'All systems operational' },
   down: { color: 'red' as const, pulse: false, label: 'Backend unreachable' },
 };
 
