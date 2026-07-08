@@ -7,7 +7,7 @@ interface StatusBadgeProps {
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
   const styles: Record<string, string> = {
-    AHEAD: 'bg-green-900/50 text-green-400 border-green-800',
+    AHEAD: 'bg-cyan-900/50 text-cyan-400 border-cyan-800',
     ON_TRACK: 'bg-violet-900/50 text-violet-300 border-violet-800',
     BEHIND: 'bg-orange-900/50 text-orange-400 border-orange-800',
     VERY_BEHIND: 'bg-red-900/50 text-red-400 border-red-800',

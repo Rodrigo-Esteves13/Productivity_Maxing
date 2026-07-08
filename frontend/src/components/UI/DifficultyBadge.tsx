@@ -8,8 +8,8 @@ interface DifficultyBadgeProps {
 export default function DifficultyBadge({ difficulty }: DifficultyBadgeProps) {
   // Color per difficulty level (labels are derived automatically from the enum value)
   const styles: Record<string, string> = {
-    VERY_EASY: 'bg-emerald-900/30 text-emerald-400 border-emerald-800/50',
-    EASY: 'bg-green-900/30 text-green-400 border-green-800/50',
+    VERY_EASY: 'bg-cyan-900/30 text-cyan-300 border-cyan-800/40',
+    EASY: 'bg-cyan-900/30 text-cyan-400 border-cyan-800/50',
     MEDIUM: 'bg-yellow-900/30 text-yellow-400 border-yellow-800/50',
     HARD: 'bg-orange-900/30 text-orange-400 border-orange-800/50',
     VERY_HARD: 'bg-red-900/30 text-red-400 border-red-800/50',

@@ -39,8 +39,9 @@ export interface User {
   name: string | null;
   avatarUrl: string | null;
   createdAt: string;
-  // true só se já existir uma credencial email+password real no Supabase
-  // Auth associada a este User (contas só-OAuth começam com false).
+  // true se a conta já tem uma credencial de password (via Supabase Auth) -
+  // false para contas que só entraram por OAuth. Nunca expõe supabaseAuthId
+  // em si, só este booleano.
   hasPassword: boolean;
 
   // Optional relations (depends on what your backend returns)
@@ -53,6 +54,8 @@ export interface Area {
   userId: string;
   name: string;
   colorHex: string;
+  // Key do TaskType usado por omissão nesta Area (null = sem tipo associado).
+  defaultTaskType: string | null;
 }
 
 export interface Task {

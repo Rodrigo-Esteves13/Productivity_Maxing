@@ -35,13 +35,6 @@
   --color-violet-900: #3d0d61;
   --color-violet-950: #250540;
 
-  /* Secondary "surprise" accent — electric volt green, used sparingly
-     for highlights, glows, and the odd unexpected pop of contrast */
-  --color-volt-300: #e3ff8c;
-  --color-volt-400: #cbfa4d;
-  --color-volt-500: #aee023;
-  --color-volt-600: #8dbb16;
-
   /* Used once, in the wordmark gradient — pulled into the same family */
   --color-fuchsia-400: #ef6bf5;
 }

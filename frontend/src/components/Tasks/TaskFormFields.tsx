@@ -7,6 +7,7 @@ import { formatEnumLabel } from '../../utils/formatEnumLabel';
 interface AreaOption {
   id: string;
   name: string;
+  defaultTaskType: string | null;
 }
 
 export interface TaskFormFieldValues {
@@ -56,6 +57,12 @@ export default function TaskFormFields({
   const availableAcademicTypes = academicTaskTypes.filter(
     (a) => a.taskTypeKey === values.type
   );
+
+  // Se a Area escolhida tiver um Type associado (ex: "CDR" -> Académico),
+  // o Type deixa de ser uma escolha manual - fica preenchido e trancado.
+  // Areas sem Type associado (ex: um hobby) continuam a pedir o Type à mão.
+  const selectedArea = areas.find((a) => a.id === values.areaId);
+  const isTypeLockedByArea = Boolean(selectedArea?.defaultTaskType);
   return (
     <>
       <FormField label="Title" htmlFor={`${idPrefix}-title`}>
@@ -85,7 +92,18 @@ export default function TaskFormFields({
             id={`${idPrefix}-area`}
             required
             value={values.areaId}
-            onChange={(e) => onChange('areaId', e.target.value)}
+            onChange={(e) => {
+              const newAreaId = e.target.value;
+              onChange('areaId', newAreaId);
+
+              const newArea = areas.find((a) => a.id === newAreaId);
+              if (newArea?.defaultTaskType) {
+                // Area com tipo associado (ex: "CDR" -> Académico): o Type
+                // passa a ser automático, não uma escolha manual.
+                onChange('type', newArea.defaultTaskType);
+                onChange('academicType', '');
+              }
+            }}
             className="w-full"
           >
             <option value="" disabled>
@@ -119,6 +137,7 @@ export default function TaskFormFields({
           <Select
             id={`${idPrefix}-type`}
             value={values.type}
+            disabled={isTypeLockedByArea}
             onChange={(e) => {
               onChange('type', e.target.value);
               // Muda-se o tipo, limpa-se o academicType para não ficar
@@ -133,6 +152,11 @@ export default function TaskFormFields({
               </option>
             ))}
           </Select>
+          {isTypeLockedByArea && (
+            <p className="mt-1 text-xs text-neutral-500">
+              Set automatically by the "{selectedArea?.name}" Area.
+            </p>
+          )}
         </FormField>
       </div>
 
@@ -154,6 +178,34 @@ export default function TaskFormFields({
         </FormField>
       )}
 
+      {isAcademic && (
+        <div className="space-y-4 pt-4 border-t border-neutral-800">
+          <p className="text-xs font-semibold text-neutral-500 uppercase">Academic Details</p>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              type="number"
+              min="0"
+              max="20"
+              step="0.1"
+              placeholder="Target Grade"
+              value={values.targetGrade}
+              onChange={(e) => onChange('targetGrade', e.target.value)}
+              className="w-full"
+            />
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              placeholder="Weight (%)"
+              value={values.weightPercentage}
+              onChange={(e) => onChange('weightPercentage', e.target.value)}
+              className="w-full"
+            />
+          </div>
+        </div>
+      )}
+
       <div className="space-y-4 pt-4 border-t border-neutral-800">
         <p className="text-xs font-semibold text-neutral-500 uppercase">Optional Information</p>
         <div className="grid grid-cols-2 gap-4">
@@ -171,27 +223,16 @@ export default function TaskFormFields({
             className="w-full"
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            type="number"
-            min="0"
-            max="20"
-            step="0.1"
-            placeholder="Target Grade"
-            value={values.targetGrade}
-            onChange={(e) => onChange('targetGrade', e.target.value)}
-            className="w-full"
+        <div className="flex items-start gap-2 pt-1">
+          <input
+            type="checkbox"
+            disabled
+            className="mt-0.5 h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-violet-600 opacity-60 cursor-not-allowed"
           />
-          <Input
-            type="number"
-            min="0"
-            max="100"
-            step="0.1"
-            placeholder="Weight (%)"
-            value={values.weightPercentage}
-            onChange={(e) => onChange('weightPercentage', e.target.value)}
-            className="w-full"
-          />
+          <div>
+            <span className="text-sm text-neutral-400">Add to Google Calendar</span>
+            <p className="text-xs text-neutral-600">Will work in a future release.</p>
+          </div>
         </div>
       </div>
 
@@ -213,7 +254,7 @@ export default function TaskFormFields({
               </Select>
             </FormField>
           )}
-          {showRealGrade && (
+          {showRealGrade && isAcademic && (
             <FormField label="Real Grade" htmlFor={`${idPrefix}-real-grade`}>
               <Input
                 id={`${idPrefix}-real-grade`}

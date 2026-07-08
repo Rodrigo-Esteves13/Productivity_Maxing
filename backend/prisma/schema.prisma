@@ -63,6 +63,8 @@ model TaskType {
 
   academicTaskTypes AcademicTaskType[]
   tasks             Task[]
+  // Areas que usam este TaskType como valor por omissão (ex: "CDR" -> Académico).
+  areasWithDefault  Area[]             @relation("AreaDefaultTaskType")
 }
 
 /// Subcategoria estritamente focada na vida académica.
@@ -137,6 +139,13 @@ model Area {
   id       String @id @default(uuid())
   name     String
   colorHex String @default("#808080")
+
+  // Opcional: liga esta Area a um TaskType por omissão (ex: "CDR" -> Académico,
+  // "Natação" fica null). Quando definido, o frontend pré-seleciona e tranca o
+  // Type ao criar uma task nesta Area, e esconde os campos só-académicos
+  // (nota, peso) para Areas sem tipo associado.
+  defaultTaskTypeId String?
+  defaultTaskType   TaskType? @relation("AreaDefaultTaskType", fields: [defaultTaskTypeId], references: [id])
 
   // Relações
   tasks Task[]

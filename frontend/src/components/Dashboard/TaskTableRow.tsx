@@ -31,7 +31,7 @@ export default function TaskTableRow({ task }: TaskTableRowProps) {
       <td className="px-4 py-3"><DifficultyBadge difficulty={task.difficulty} /></td>
       <td className="px-4 py-3 text-center"><StatusBadge status={task.progressStatus} /></td>
       <td className="px-4 py-3 text-center font-medium text-blue-400">{task.targetGrade ?? '—'}</td>
-      <td className="px-4 py-3 text-center font-bold text-green-400">{task.realGrade ?? '—'}</td>
+      <td className="px-4 py-3 text-center font-bold text-cyan-400">{task.realGrade ?? '—'}</td>
     </tr>
   );
 }

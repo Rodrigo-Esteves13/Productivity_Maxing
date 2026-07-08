@@ -8,6 +8,7 @@ import Button from '../UI/Button';
 interface AreaOption {
   id: string;
   name: string;
+  defaultTaskType: string | null;
 }
 
 interface TaskEditFormProps {
