@@ -24,7 +24,7 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
-  // taskTypes e academicTaskTypes já não são enum fixo — vêm da BD e são
+  // taskTypes e academicTaskTypes já não são enum fixo, vêm da BD e são
   // editáveis pelos admins em /admin/task-types e /admin/academic-task-types.
   @Get('meta')
   getMetadata() {

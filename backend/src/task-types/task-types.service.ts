@@ -14,7 +14,7 @@ import { UpdateAcademicTaskTypeDto } from './dto/update-academic-task-type.dto';
 export class TaskTypesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // ---------- TaskType ----------
+  // TaskType
 
   findAllTaskTypes(onlyActive: boolean) {
     return this.prisma.taskType.findMany({
@@ -57,7 +57,7 @@ export class TaskTypesService {
     return taskType;
   }
 
-  // ---------- AcademicTaskType ----------
+  // AcademicTaskType
 
   findAllAcademicTaskTypes(onlyActive: boolean) {
     return this.prisma.academicTaskType.findMany({

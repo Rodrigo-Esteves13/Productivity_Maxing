@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 /*
- * "Nightshade" theme — a deep aubergine-black base with a vivid
+ * "Nightshade" theme: a deep aubergine-black base with a vivid
  * orchid/magenta-violet accent, replacing the stock Tailwind
  * neutral/violet scales. Because these are the same token names
  * Tailwind already uses (bg-neutral-900, text-violet-400, ...),
- * every existing component picks up the new look automatically —
+ * every existing component picks up the new look automatically,
  * no className changes needed anywhere else in the app.
  */
 @theme {
-  /* Base surfaces & text — deep eggplant/void, not plain gray */
+  /* Base surfaces & text: deep eggplant/void, not plain gray */
   --color-neutral-50: #f6f2fb;
   --color-neutral-100: #ece3f8;
   --color-neutral-200: #d7c5ef;
@@ -22,7 +22,7 @@
   --color-neutral-900: #1b1433;
   --color-neutral-950: #0d0920;
 
-  /* Primary accent — vivid orchid/magenta violet */
+  /* Primary accent: vivid orchid/magenta violet */
   --color-violet-50: #fbf1ff;
   --color-violet-100: #f4dcff;
   --color-violet-200: #e8b8ff;
@@ -35,7 +35,7 @@
   --color-violet-900: #3d0d61;
   --color-violet-950: #250540;
 
-  /* Used once, in the wordmark gradient — pulled into the same family */
+  /* Used once, in the wordmark gradient, pulled into the same family */
   --color-fuchsia-400: #ef6bf5;
 }
 

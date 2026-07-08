@@ -8,7 +8,7 @@ import {
 } from '../cookie.config';
 
 // Usado tanto para /auth/google (início do login) como para
-// /auth/google/callback — a GoogleStrategy trata da distinção internamente.
+// /auth/google/callback, a GoogleStrategy trata da distinção internamente.
 //
 // Proteção de login CSRF: no início do fluxo (GET /auth/google) geramos um
 // state aleatório, guardamo-lo num cookie httpOnly de curta duração e

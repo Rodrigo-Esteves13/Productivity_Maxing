@@ -8,7 +8,7 @@ import {
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 
-// Usado por PATCH /users/:id — só um ADMIN chega aqui (ver users.controller).
+// Usado por PATCH /users/:id, só um ADMIN chega aqui (ver users.controller).
 // De propósito não inclui email nem avatarUrl: mudar o email de outra pessoa
 // sem passar pelo fluxo de verificação seria um vetor de account takeover, e
 // o avatar continua a ser só o próprio dono a poder trocar (upload real,

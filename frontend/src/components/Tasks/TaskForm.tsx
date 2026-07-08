@@ -33,7 +33,12 @@ export default function TaskForm({
   const [formData, setFormData] = useState<TaskFormFieldValues>({
     title: '',
     date: new Date().toISOString().split('T')[0],
-    type: taskTypes[0]?.key || '',
+    // Sem tipo pré-selecionado: escolher o taskTypes[0] por omissão fazia
+    // com que "Academic" (order 1 no seed) ficasse ativo em Areas sem tipo
+    // associado (ex: hobbies), mostrando os campos académicos por engano.
+    // Só fica preenchido quando a Area o define, ou quando o utilizador
+    // escolhe manualmente.
+    type: '',
     academicType: '',
     difficulty: difficulties[0] || '',
     areaId: '',
@@ -53,6 +58,11 @@ export default function TaskForm({
 
     if (!formData.areaId) {
       setError('Please select an Area.');
+      return;
+    }
+
+    if (!formData.type) {
+      setError('Please select a Type.');
       return;
     }
 

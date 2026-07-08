@@ -58,7 +58,7 @@ export class AuthController {
     private readonly prisma: PrismaService,
   ) {}
 
-  // ---------------- EMAIL + PASSWORD ----------------
+  // EMAIL + PASSWORD
   // Coexiste com o OAuth: cria/autentica um User com password local e
   // estabelece a sessão via cookie HttpOnly (Design B) em vez de devolver o
   // token no corpo da resposta.
@@ -139,7 +139,7 @@ export class AuthController {
     res.cookie(CSRF_COOKIE, csrfToken, csrfCookieOptions());
     return { authenticated: true, csrfToken };
   }
-  // ---------------- GOOGLE ----------------
+  // GOOGLE
 
   // Login normal: redireciona para o consent screen do Google.
   @Get('google')
@@ -167,7 +167,7 @@ export class AuthController {
     // idem, nunca corre
   }
 
-  // ---------------- GITHUB ----------------
+  // GITHUB
 
   @Get('github')
   @UseGuards(GithubAuthGuard)
@@ -184,7 +184,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, GithubLinkGuard)
   githubLink() {}
 
-  // ---------------- DISCORD ----------------
+  // DISCORD
 
   @Get('discord')
   @UseGuards(DiscordAuthGuard)
@@ -201,7 +201,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, DiscordLinkGuard)
   discordLink() {}
 
-  // ---------------- SESSÃO ATUAL ----------------
+  // SESSÃO ATUAL
 
   // Devolve o perfil do utilizador atual. Também serve para o frontend
   // confirmar, no arranque da app, se o cookie de sessão ainda é válido
@@ -346,7 +346,7 @@ export class AuthController {
     return res.redirect(`${FRONTEND_URL}/auth/callback`);
   }
 
-  // ---------------- API KEYS ----------------
+  // API KEYS
 
   // Sem isto, um utilizador autenticado (ou uma conta comprometida) conseguia
   // gerar API Keys em loop sem qualquer limite, o que não é um IDOR nem um

@@ -30,7 +30,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 export class TaskTypesController {
   constructor(private readonly taskTypesService: TaskTypesService) {}
 
-  // ---------- TaskType ----------
+  // TaskType
 
   @Get('admin/task-types')
   @ApiOperation({
@@ -66,7 +66,7 @@ export class TaskTypesController {
     return this.taskTypesService.removeTaskType(id);
   }
 
-  // ---------- AcademicTaskType ----------
+  // AcademicTaskType
 
   @Get('admin/academic-task-types')
   @ApiOperation({
