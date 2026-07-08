@@ -2,7 +2,7 @@ import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import DateStatusBadge from '../UI/DateStatusBadge';
 import ColorDot from '../UI/ColorDot';
-import { getDateStatus } from '../../utils/taskDateStatus';
+import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import type { Task } from '../../types/models';
 
 interface TaskTableRowProps {
@@ -15,6 +15,9 @@ export default function TaskTableRow({ task }: TaskTableRowProps) {
       <td className="px-4 py-3">{new Date(task.date).toLocaleDateString()}</td>
       <td className="px-4 py-3 text-center">
         <DateStatusBadge status={getDateStatus(task)} />
+        <div className="text-[11px] text-neutral-500 mt-1 whitespace-nowrap">
+          {getRemainingTimeLabel(task)}
+        </div>
       </td>
       <td className="px-4 py-3 font-medium text-white">
         <div className="flex items-center gap-2">

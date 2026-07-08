@@ -28,6 +28,24 @@ export default function DashboardFilters({
   const update = (patch: Partial<DashboardFiltersState>) => onChange({ ...filters, ...patch });
   const hasActiveFilters = Object.values(filters).some((v) => v !== '');
 
+  // Mesma regra do TaskForm: com um Type escolhido, só mostra Areas
+  // associadas a esse Type, mais as Areas sem tipo fixo (hobbies) - senão
+  // aparecem Areas académicas ao filtrar por "Evento", por exemplo.
+  const filteredAreas = filters.type
+    ? areas.filter((a) => !a.defaultTaskType || a.defaultTaskType === filters.type)
+    : areas;
+
+  const handleTypeChange = (type: string) => {
+    const selectedArea = areas.find((a) => a.id === filters.areaId);
+    // Se a Area já escolhida no filtro deixou de pertencer ao novo Type
+    // (e tem um tipo fixo diferente), limpa-se para não ficar um filtro
+    // de Area "invisível" que já não aparece na lista.
+    const areaStillValid =
+      !selectedArea?.defaultTaskType || !type || selectedArea.defaultTaskType === type;
+
+    update({ type, areaId: areaStillValid ? filters.areaId : '' });
+  };
+
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 mb-6">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
@@ -43,7 +61,7 @@ export default function DashboardFilters({
         <FormField label="Area" htmlFor="filter-area">
           <Select id="filter-area" value={filters.areaId} onChange={(e) => update({ areaId: e.target.value })}>
             <option value="">All Areas</option>
-            {areas.map((a) => (
+            {filteredAreas.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
               </option>
@@ -52,7 +70,7 @@ export default function DashboardFilters({
         </FormField>
 
         <FormField label="Type" htmlFor="filter-type">
-          <Select id="filter-type" value={filters.type} onChange={(e) => update({ type: e.target.value })}>
+          <Select id="filter-type" value={filters.type} onChange={(e) => handleTypeChange(e.target.value)}>
             <option value="">All Types</option>
             {taskTypes.map((t) => (
               <option key={t.key} value={t.key}>
