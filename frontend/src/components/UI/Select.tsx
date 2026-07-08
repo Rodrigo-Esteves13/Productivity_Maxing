@@ -5,7 +5,7 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 export default function Select({ label, id, className = '', ...rest }: SelectProps) {
-  // `appearance-none` remove a seta nativa do browser — com `color-scheme: dark`
+  // `appearance-none` remove a seta nativa do browser. Com `color-scheme: dark`
   // definido globalmente, alguns browsers (Chrome/Edge) desenham o <select> com
   // um "theme" escuro próprio que inclui a sua própria seta, o que resultava em
   // duas setas sobrepostas/coladas ao texto. Desenhamos a nossa própria seta em
