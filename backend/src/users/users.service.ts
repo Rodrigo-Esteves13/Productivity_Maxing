@@ -92,7 +92,7 @@ export class UsersService {
 
   /**
    * DELETE /users/:id (ADMIN only). Reaproveita o AuthService.deleteAccount
-   * já usado por DELETE /auth/me — mesma lógica de limpeza (Supabase Auth,
+   * já usado por DELETE /auth/me, mesma lógica de limpeza (Supabase Auth,
    * avatar no Storage, cascade de Task/Identity/ApiKey), só que a apagar a
    * conta de outra pessoa em vez da própria.
    */
@@ -104,7 +104,7 @@ export class UsersService {
    * Export "portabilidade dos dados" (GDPR / Privacy Policy): tudo o que a
    * plataforma guarda sobre este utilizador, num único JSON. Usado tanto
    * pelo próprio (self, a partir do Profile) como por um ADMIN a pedido do
-   * utilizador — nunca inclui tokens OAuth em claro nem o hash da API Key,
+   * utilizador, nunca inclui tokens OAuth em claro nem o hash da API Key,
    * só metadados suficientes para a pessoa perceber o que existe.
    */
   async exportUserData(id: string) {

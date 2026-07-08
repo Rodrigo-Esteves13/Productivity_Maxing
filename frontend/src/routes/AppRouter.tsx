@@ -30,7 +30,7 @@ export default function AppRouter() {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
 
-        {/* --- ROTAS PRIVADAS --- */}
+        {/* ROTAS PRIVADAS */}
         <Route 
           path="/dashboard" 
           element={<PrivateRoute><Dashboard /></PrivateRoute>} 

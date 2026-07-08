@@ -1,6 +1,6 @@
 // Turns a SCREAMING_SNAKE_CASE enum value (as stored in the DB) into a
 // human-friendly label, e.g. "VERY_EASY" -> "Very Easy".
-// Since the enums are now stored in English, this is all that's needed —
+// Since the enums are now stored in English, this is all that's needed,
 // no per-value translation dictionary required.
 export function formatEnumLabel(value: string | null | undefined): string {
   if (!value) return '—';
