@@ -10,13 +10,14 @@ import ModalHeaderActions from '../components/UI/ModalHeaderActions';
 import AreaGrid from '../components/Areas/AreaGrid';
 import AreaForm, { type AreaFormValues } from '../components/Areas/AreaForm';
 import AreaDetailView from '../components/Areas/AreaDetailView';
-import { getUserAreas, createArea, deleteArea, updateArea } from '../api/userService';
-import type { Area } from '../types/models';
+import { getUserAreas, createArea, deleteArea, updateArea, getTaskMetadata } from '../api/userService';
+import type { Area, TaskTypeOption } from '../types/models';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function Areas() {
   useDocumentTitle('Areas');
   const [areas, setAreas] = useState<Area[]>([]);
+  const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -27,12 +28,13 @@ export default function Areas() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Carregar Áreas
+  // Carregar Áreas + Tipos (para o seletor de "Tipo associado")
   const fetchAreas = async () => {
     try {
       setIsLoading(true);
-      const data = await getUserAreas();
-      setAreas(data);
+      const [areasData, meta] = await Promise.all([getUserAreas(), getTaskMetadata()]);
+      setAreas(areasData);
+      setTaskTypes(meta.taskTypes);
     } catch {
       setError('Error loading areas.');
     } finally {
@@ -144,6 +146,7 @@ export default function Areas() {
       >
         <AreaForm
           idPrefix="create-area"
+          taskTypes={taskTypes}
           onSubmit={handleCreateArea}
           onCancel={() => setIsCreateModalOpen(false)}
           isSubmitting={isSubmitting}
@@ -179,7 +182,8 @@ export default function Areas() {
           isEditing ? (
             <AreaForm
               idPrefix="edit-area"
-              initialValues={{ name: selectedArea.name, colorHex: selectedArea.colorHex }}
+              initialValues={{ name: selectedArea.name, colorHex: selectedArea.colorHex, defaultTaskType: selectedArea.defaultTaskType }}
+              taskTypes={taskTypes}
               onSubmit={handleEditArea}
               onCancel={() => setIsEditing(false)}
               isSubmitting={isSubmitting}
@@ -187,7 +191,7 @@ export default function Areas() {
               submittingLabel="Saving..."
             />
           ) : (
-            <AreaDetailView area={selectedArea} />
+            <AreaDetailView area={selectedArea} taskTypes={taskTypes} />
           )
         )}
       </Modal>

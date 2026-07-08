@@ -1,4 +1,4 @@
-type StatusDotColor = 'green' | 'amber' | 'red' | 'neutral';
+type StatusDotColor = 'cyan' | 'amber' | 'red' | 'neutral';
 
 interface StatusDotProps {
   color?: StatusDotColor;
@@ -6,14 +6,14 @@ interface StatusDotProps {
 }
 
 const colorClasses: Record<StatusDotColor, string> = {
-  green: 'bg-volt-400',
+  cyan: 'bg-cyan-400',
   amber: 'bg-amber-400',
   red: 'bg-red-400',
   neutral: 'bg-neutral-500',
 };
 
 // Um ponto com "halo" a pulsar - usado para indicadores de estado tipo "tudo a funcionar"
-export default function StatusDot({ color = 'green', pulse = true }: StatusDotProps) {
+export default function StatusDot({ color = 'cyan', pulse = true }: StatusDotProps) {
   return (
     <span className="relative inline-flex h-2 w-2">
       {pulse && (

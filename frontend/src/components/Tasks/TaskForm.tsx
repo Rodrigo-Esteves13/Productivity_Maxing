@@ -7,6 +7,7 @@ import type { TaskTypeOption, AcademicTaskTypeOption } from '../../types/models'
 interface AreaOption {
   id: string;
   name: string;
+  defaultTaskType: string | null;
 }
 
 interface TaskFormProps {
