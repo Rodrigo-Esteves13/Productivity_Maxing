@@ -124,7 +124,7 @@ export const deleteUser = async (id: string): Promise<void> => {
   await api.delete(`/users/${id}`);
 };
 
-// Exportação de dados (portabilidade GDPR) de um utilizador — usado tanto
+// Exportação de dados (portabilidade GDPR) de um utilizador, usado tanto
 // para um admin exportar os dados de qualquer pessoa, como para o próprio
 // exportar os seus. Devolve o JSON completo pronto a descarregar.
 export const exportUserData = async (id: string): Promise<Record<string, unknown>> => {

@@ -17,7 +17,7 @@ export default function Home() {
           Productivity <span className="text-violet-400">Maxing</span>
         </h1>
         <p className="mt-5 max-w-xl text-neutral-400 text-lg">
-          Task and grade tracker for academic life — organize subjects into Areas, track
+          Task and grade tracker for academic life. Organize subjects into Areas, track
           deadlines, difficulty and progress, and keep an eye on your target vs real grades,
           all in one place.
         </p>

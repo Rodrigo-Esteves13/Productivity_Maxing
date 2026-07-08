@@ -74,7 +74,7 @@ export class AuthService {
     private jwtService: JwtService,
     private mailService: MailService,
   ) {
-    // Anon key chega para signUp/signInWithPassword — são os mesmos endpoints
+    // Anon key chega para signUp/signInWithPassword, são os mesmos endpoints
     // públicos que o supabase-js usaria no browser, não operações de admin
     this.supabase = createClient(
       process.env.SUPABASE_URL!,
@@ -277,8 +277,8 @@ export class AuthService {
     };
   }
 
-  // ---------------- LOGIN/REGISTO POR EMAIL+PASSWORD (via Supabase Auth) ----------------
-  // Não guardamos nem validamos passwords aqui — isso é responsabilidade do
+  // LOGIN/REGISTO POR EMAIL+PASSWORD (via Supabase Auth)
+  // Não guardamos nem validamos passwords aqui, isso é responsabilidade do
   // Supabase Auth (auth.users, hashing, etc.). O backend só faz de proxy:
   // 1. Pede ao Supabase para criar/autenticar o utilizador.
   // 2. Sincroniza um User espelho na nossa própria tabela `public.User`
@@ -308,7 +308,7 @@ export class AuthService {
 
     if (!signUpData.user) {
       // Acontece se o projeto Supabase tiver confirmação de email obrigatória
-      // e ainda não houver sessão — o utilizador tem de confirmar antes de entrar.
+      // e ainda não houver sessão, o utilizador tem de confirmar antes de entrar.
       throw new UnauthorizedException(
         'Verifica o teu email para confirmares a conta antes de entrares.',
       );
@@ -337,7 +337,7 @@ export class AuthService {
 
   /**
    * Garante que existe um User espelho na nossa BD para o email autenticado
-   * pelo Supabase — mesma lógica de "find or create by email" já usada no
+   * pelo Supabase, mesma lógica de "find or create by email" já usada no
    * resolveIdentity() do fluxo OAuth, para os dois caminhos convergirem no
    * mesmo utilizador quando o email coincide.
    *
@@ -367,7 +367,7 @@ export class AuthService {
     });
   }
 
-  // ---------------- RECUPERAÇÃO / DEFINIÇÃO DE PASSWORD ----------------
+  // RECUPERAÇÃO / DEFINIÇÃO DE PASSWORD
 
   /**
    * Gera o link de recuperação através da Admin API do Supabase
@@ -494,7 +494,7 @@ export class AuthService {
     });
   }
 
-  // ---------------- PERFIL (nome + avatar) ----------------
+  // PERFIL (nome + avatar)
 
   async updateProfile(userId: string, data: { name?: string }): Promise<User> {
     return this.prisma.user.update({

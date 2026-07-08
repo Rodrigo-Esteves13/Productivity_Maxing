@@ -22,7 +22,7 @@ export class GoogleLinkGuard extends AuthGuard('google') {
     );
     return {
       state,
-      // v1.0: mesmo scope do login (email/profile) — o scope do Calendar
+      // v1.0: mesmo scope do login (email/profile), o scope do Calendar
       // volta aqui quando a sincronização (Fase 4 / v1.1) estiver pronta.
       // Manter o Calendar só aqui e não no login já tinha sido corrigido
       // parcialmente; o Google avalia o projeto OAuth como um todo, por

@@ -9,7 +9,7 @@ datasource db {
 }
 
 // ENUMS (TIPOS ESTRUTURADOS)
-// Ficam enum porque estão presos a código (strategies OAuth, guards de role) —
+// Ficam enum porque estão presos a código (strategies OAuth, guards de role),
 // adicionar um valor novo implica sempre escrever código novo, por isso não
 // faz sentido serem "editáveis" pelo admin.
 

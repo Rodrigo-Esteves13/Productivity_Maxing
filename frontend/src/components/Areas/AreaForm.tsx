@@ -71,7 +71,7 @@ export default function AreaForm({
             setFormData({ ...formData, defaultTaskType: e.target.value || null })
           }
         >
-          <option value="">No fixed type — ask every time</option>
+          <option value="">No fixed type, ask every time</option>
           {taskTypes.map((t) => (
             <option key={t.key} value={t.key}>
               {t.label}

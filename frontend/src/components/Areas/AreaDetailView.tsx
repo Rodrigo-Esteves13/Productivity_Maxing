@@ -22,7 +22,7 @@ export default function AreaDetailView({ area, taskTypes }: AreaDetailViewProps)
         </div>
       </DetailRow>
       <DetailRow label="Associated Type">
-        {associatedType ? associatedType.label : <span className="text-neutral-500 italic">None — asked every time</span>}
+        {associatedType ? associatedType.label : <span className="text-neutral-500 italic">None, asked every time</span>}
       </DetailRow>
     </div>
   );
