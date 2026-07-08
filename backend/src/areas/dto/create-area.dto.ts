@@ -1,5 +1,5 @@
 import { IsHexColor, IsString, IsNotEmpty, IsOptional } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAreaDto {
   @ApiProperty({ example: 'Mathematics', description: 'Area name' })
@@ -14,4 +14,14 @@ export class CreateAreaDto {
   @IsOptional()
   @IsHexColor()
   colorHex: string;
+
+  @ApiPropertyOptional({
+    example: 'ACADEMICO',
+    description:
+      'Key do TaskType usado por omissão nesta Area (ex: "CDR" -> "ACADEMICO"). null/omitido = sem tipo associado (ex: hobbies).',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  defaultTaskType?: string | null;
 }

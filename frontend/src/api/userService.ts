@@ -137,7 +137,7 @@ export const getUserAreas = async (): Promise<Area[]> => {
   const response = await api.get<Area[]>('/areas');
   return response.data;
 };
-export async function createArea(areaData: { name: string; colorHex: string }): Promise<Area> {
+export async function createArea(areaData: { name: string; colorHex: string; defaultTaskType?: string | null }): Promise<Area> {
   const response = await api.post<Area>('/areas', areaData);
   return response.data;
 }
@@ -145,7 +145,7 @@ export async function createArea(areaData: { name: string; colorHex: string }): 
 export async function deleteArea(id: string): Promise<void> {
   await api.delete(`/areas/${id}`);
 }
-export async function updateArea(id: string, areaData: { name?: string; colorHex?: string }): Promise<Area> {
+export async function updateArea(id: string, areaData: { name?: string; colorHex?: string; defaultTaskType?: string | null }): Promise<Area> {
   const response = await api.patch<Area>(`/areas/${id}`, areaData);
   return response.data;
 }
