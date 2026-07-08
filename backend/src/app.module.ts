@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -11,6 +11,7 @@ import { AreasModule } from './areas/areas.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
 import { CsrfGuard } from './auth/guards/csrf.guard';
+import { RequestUserLoggerInterceptor } from './common/interceptors/request-user-logger.interceptor';
 
 @Module({
   imports: [
@@ -42,6 +43,14 @@ import { CsrfGuard } from './auth/guards/csrf.guard';
     {
       provide: APP_GUARD,
       useClass: CsrfGuard,
+    },
+    // Interceptor global: escreve no terminal, para cada pedido, qual
+    // utilizador autenticado o fez (ou "anónimo"). Corre depois dos Guards,
+    // por isso já vê req.user preenchido pelo JwtStrategy nas rotas
+    // protegidas.
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RequestUserLoggerInterceptor,
     },
   ],
 })

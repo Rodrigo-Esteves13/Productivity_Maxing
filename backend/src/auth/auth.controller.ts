@@ -15,6 +15,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   HttpCode,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
@@ -53,6 +54,8 @@ const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger('RequestLog');
+
   constructor(
     private readonly authService: AuthService,
     private readonly prisma: PrismaService,
@@ -328,6 +331,10 @@ export class AuthController {
     res.cookie(ACCESS_TOKEN_COOKIE, token, accessTokenCookieOptions());
     res.cookie(CSRF_COOKIE, csrfToken, csrfCookieOptions());
 
+    this.logger.log(
+      `Login (email/password) - user: ${user.email} (id=${user.id}, role=${user.role})`,
+    );
+
     return { csrfToken };
   }
 
@@ -342,6 +349,10 @@ export class AuthController {
     // Já não precisamos do state anti-CSRF do login OAuth depois de
     // consumido - limpa-o para não ficar pendurado nem ser reutilizável.
     res.clearCookie(OAUTH_LOGIN_STATE_COOKIE, { path: '/', sameSite: 'lax' });
+
+    this.logger.log(
+      `Login (OAuth) - user: ${user.email} (id=${user.id}, role=${user.role})`,
+    );
 
     return res.redirect(`${FRONTEND_URL}/auth/callback`);
   }
