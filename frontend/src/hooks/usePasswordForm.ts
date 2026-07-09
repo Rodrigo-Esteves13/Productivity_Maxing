@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SyntheticEvent  } from 'react';
 import { setPasswordRequest } from '../api/userService';
 import type { User } from '../types/models';
 
@@ -19,7 +19,7 @@ export interface UsePasswordFormResult {
   setNewPassword: (value: string) => void;
   setConfirmNewPassword: (value: string) => void;
   handleCancel: () => void;
-  handleSetPassword: (e: FormEvent) => Promise<void>;
+  handleSetPassword: (e: SyntheticEvent<HTMLFormElement>) => Promise<void>;
   reset: (hasPassword: boolean) => void;
 }
 
@@ -48,7 +48,7 @@ export function usePasswordForm({ user, onUserUpdate }: UsePasswordFormOptions):
     setConfirmNewPassword('');
   };
 
-  const handleSetPassword = async (e: FormEvent) => {
+  const handleSetPassword = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setPasswordError('');
 
@@ -73,8 +73,14 @@ export function usePasswordForm({ user, onUserUpdate }: UsePasswordFormOptions):
       // contrário de onSaved que a Profile.tsx usa para fechar o modal
       // depois de guardar Nome/Foto.
       onUserUpdate?.({ ...user, hasPassword: true });
-    } catch (err) {
-      console.error('Failed to set password:', err);
+    } catch {
+      // CORREÇÃO DE SEGURANÇA: não passar o objeto de erro ao console.error.
+      // Um AxiosError inclui `error.config.data`, que é o corpo do pedido
+      // que falhou - ou seja, a própria password em texto plano que o
+      // utilizador acabou de escrever. Ficaria visível na consola do
+      // browser e, pior, seria capturado automaticamente por qualquer
+      // ferramenta de monitorização de erros do frontend (Sentry e
+      // semelhantes costumam serializar objetos passados a console.error).
       setPasswordError('Could not update your password. Please try again.');
     } finally {
       setIsSavingPassword(false);

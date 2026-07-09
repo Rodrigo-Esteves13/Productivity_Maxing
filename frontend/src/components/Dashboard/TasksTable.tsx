@@ -1,12 +1,13 @@
 import TasksTableHeader from './TasksTableHeader';
 import TaskTableRow from './TaskTableRow';
-import type { Task } from '../../types/models';
+import type { Task, AcademicTaskTypeOption } from '../../types/models';
 
 interface TasksTableProps {
   tasks: Task[];
+  academicTaskTypes: AcademicTaskTypeOption[];
 }
 
-export default function TasksTable({ tasks }: TasksTableProps) {
+export default function TasksTable({ tasks, academicTaskTypes }: TasksTableProps) {
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
       <div className="overflow-x-auto">
@@ -20,7 +21,9 @@ export default function TasksTable({ tasks }: TasksTableProps) {
                 </td>
               </tr>
             ) : (
-              tasks.map((task) => <TaskTableRow key={task.id} task={task} />)
+              tasks.map((task) => (
+                <TaskTableRow key={task.id} task={task} academicTaskTypes={academicTaskTypes} />
+              ))
             )}
           </tbody>
         </table>

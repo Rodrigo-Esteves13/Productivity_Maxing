@@ -3,14 +3,14 @@ import Input from '../UI/Input';
 import Select from '../UI/Select';
 import Button from '../UI/Button';
 import { formatEnumLabel } from '../../utils/formatEnumLabel';
-import type { Area, TaskTypeOption } from '../../types/models';
+import type { Area, AcademicTaskTypeOption } from '../../types/models';
 import type { DashboardFiltersState } from './dashboardFilters.types';
 
 interface DashboardFiltersProps {
   filters: DashboardFiltersState;
   onChange: (filters: DashboardFiltersState) => void;
   areas: Area[];
-  taskTypes: TaskTypeOption[];
+  academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
   progressStatuses: string[];
   onClear: () => void;
@@ -20,7 +20,7 @@ export default function DashboardFilters({
   filters,
   onChange,
   areas,
-  taskTypes,
+  academicTaskTypes,
   difficulties,
   progressStatuses,
   onClear,
@@ -41,6 +41,9 @@ export default function DashboardFilters({
         </FormField>
 
         <FormField label="Area" htmlFor="filter-area">
+          {/* O Dashboard já só passa aqui as Areas que têm tasks Académicas
+              a sério - não precisa de mais filtragem por Type aqui dentro,
+              o Dashboard inteiro já é implicitamente "só Académico". */}
           <Select id="filter-area" value={filters.areaId} onChange={(e) => update({ areaId: e.target.value })}>
             <option value="">All Areas</option>
             {areas.map((a) => (
@@ -51,14 +54,20 @@ export default function DashboardFilters({
           </Select>
         </FormField>
 
-        <FormField label="Type" htmlFor="filter-type">
-          <Select id="filter-type" value={filters.type} onChange={(e) => update({ type: e.target.value })}>
-            <option value="">All Types</option>
-            {taskTypes.map((t) => (
-              <option key={t.key} value={t.key}>
-                {t.label}
-              </option>
-            ))}
+        <FormField label="Academic Type" htmlFor="filter-academic-type">
+          <Select
+            id="filter-academic-type"
+            value={filters.academicType}
+            onChange={(e) => update({ academicType: e.target.value })}
+          >
+            <option value="">All Academic Types</option>
+            {academicTaskTypes
+              .filter((t) => t.taskTypeKey === 'ACADEMICO')
+              .map((t) => (
+                <option key={t.key} value={t.key}>
+                  {t.label}
+                </option>
+              ))}
           </Select>
         </FormField>
 

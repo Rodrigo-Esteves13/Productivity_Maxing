@@ -25,6 +25,17 @@ const FIVE_MINUTES_MS = 5 * 60 * 1000;
 // SameSite=None sem HTTPS.
 const isProd = process.env.NODE_ENV === 'production';
 
+// Exportado para os sítios que definem cookies "à mão" fora deste ficheiro
+// (ex: oauth-guard.helpers.ts) poderem repetir explicitamente a flag
+// `secure` na própria chamada a response.cookie(), em vez de a herdarem só
+// via spread de *CookieOptions() - alguns scanners estáticos (CodeQL) não
+// atravessam a fronteira de uma função importada para confirmar o valor,
+// e sinalizam falso-positivo se não virem `secure`/`httpOnly` explícitos
+// na mesma expressão da chamada.
+export function isSecureCookieEnv(): boolean {
+  return isProd;
+}
+
 export function accessTokenCookieOptions(): CookieOptions {
   return {
     httpOnly: true,

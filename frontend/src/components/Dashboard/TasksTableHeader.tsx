@@ -6,7 +6,7 @@ export default function TasksTableHeader() {
         <th className="px-4 py-3 font-medium text-center">Due</th>
         <th className="px-4 py-3 font-medium">Area</th>
         <th className="px-4 py-3 font-medium">Title / Topics</th>
-        <th className="px-4 py-3 font-medium">Type</th>
+        <th className="px-4 py-3 font-medium">Academic Type</th>
         <th className="px-4 py-3 font-medium">Weight</th>
         <th className="px-4 py-3 font-medium">Difficulty</th>
         <th className="px-4 py-3 font-medium text-center">Status</th>

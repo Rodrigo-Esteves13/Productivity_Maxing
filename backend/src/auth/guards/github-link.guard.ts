@@ -1,9 +1,11 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Provider } from '@prisma/client';
-import { AuthService } from '../auth.service';
 import { Request } from 'express';
+import { AuthService } from '../auth.service';
+import { buildLinkAuthenticateOptions } from './oauth-guard.helpers';
 
+// Ver oauth-guard.helpers.ts para a lógica partilhada com os outros *LinkGuard.
 @Injectable()
 export class GithubLinkGuard extends AuthGuard('github') {
   constructor(private authService: AuthService) {
@@ -14,13 +16,12 @@ export class GithubLinkGuard extends AuthGuard('github') {
     const request = context
       .switchToHttp()
       .getRequest<Request & { user: { id: string } }>();
-    const state = this.authService.createLinkState(
-      request.user.id,
+
+    return buildLinkAuthenticateOptions(
+      this.authService,
+      request,
       Provider.GITHUB,
+      ['user:email'],
     );
-    return {
-      state,
-      scope: ['user:email'],
-    };
   }
 }
