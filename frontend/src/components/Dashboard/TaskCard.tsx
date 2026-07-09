@@ -1,0 +1,66 @@
+import StatusBadge from '../UI/StatusBadge';
+import DifficultyBadge from '../UI/DifficultyBadge';
+import DateStatusBadge from '../UI/DateStatusBadge';
+import ColorDot from '../UI/ColorDot';
+import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus';
+import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
+import type { Task, AcademicTaskTypeOption } from '../../types/models';
+
+interface TaskCardProps {
+  task: Task;
+  academicTaskTypes: AcademicTaskTypeOption[];
+}
+
+// Versão em cartão da TaskTableRow, para ecrãs pequenos (a tabela com
+// scroll horizontal era ilegível em mobile - ver TasksTable.tsx).
+export default function TaskCard({ task, academicTaskTypes }: TaskCardProps) {
+  const academicTypeLabel = resolveOptionLabel(task.academicType, academicTaskTypes);
+
+  return (
+    <div className="border-b border-neutral-800 p-4 last:border-b-0">
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-xs font-medium text-white">
+            {task.area?.colorHex && <ColorDot color={task.area.colorHex} />}
+            <span className="truncate">{task.area?.name || '—'}</span>
+          </div>
+          <div className="font-medium text-neutral-100 mt-1 break-words">{task.title}</div>
+          {task.topics && <div className="text-xs text-neutral-500 mt-0.5 break-words">{task.topics}</div>}
+        </div>
+        <div className="flex-shrink-0 text-right">
+          <DateStatusBadge status={getDateStatus(task)} />
+          <div className="text-[11px] text-neutral-500 mt-1 whitespace-nowrap">
+            {getRemainingTimeLabel(task)}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 mt-3">
+        <DifficultyBadge difficulty={task.difficulty} />
+        <StatusBadge status={task.progressStatus} />
+        <span className="text-[11px] text-neutral-400">{academicTypeLabel}</span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-neutral-800/70 text-center">
+        <div>
+          <div className="text-[10px] uppercase text-neutral-500">Date</div>
+          <div className="text-xs text-neutral-300 mt-0.5">{new Date(task.date).toLocaleDateString()}</div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase text-neutral-500">Weight</div>
+          <div className="text-xs text-neutral-300 mt-0.5">
+            {task.weightPercentage ? `${task.weightPercentage}%` : '—'}
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase text-neutral-500">Target / Real</div>
+          <div className="text-xs mt-0.5">
+            <span className="font-medium text-blue-400">{task.targetGrade ?? '—'}</span>
+            <span className="text-neutral-600"> / </span>
+            <span className="font-bold text-cyan-400">{task.realGrade ?? '—'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
