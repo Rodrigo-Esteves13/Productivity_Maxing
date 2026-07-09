@@ -2,6 +2,7 @@ import { useState, type SyntheticEvent } from 'react';
 import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
+import { buildTaskPayload } from '../../utils/taskPayload';
 import type { TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
 
 interface AreaOption {
@@ -70,15 +71,7 @@ export default function TaskForm({
 
     try {
       // Processamento dos dados para o backend
-      const payload = {
-        ...formData,
-        date: new Date(formData.date).toISOString(),
-        targetGrade: formData.targetGrade ? parseFloat(formData.targetGrade) : undefined,
-        weightPercentage: formData.weightPercentage ? parseFloat(formData.weightPercentage) : undefined,
-        topics: formData.topics || undefined,
-        referenceLink: formData.referenceLink || undefined,
-        academicType: formData.academicType || undefined,
-      };
+      const payload = buildTaskPayload(formData);
 
       await onSubmit(payload);
     } catch (err: any) {

@@ -9,14 +9,21 @@ import DashboardFilters from '../components/Dashboard/DashboardFilters';
 import { EMPTY_DASHBOARD_FILTERS, type DashboardFiltersState } from '../components/Dashboard/dashboardFilters.types';
 import { getUserTasks, getUserAreas, getTaskMetadata } from '../api/userService';
 import { getDateStatus } from '../utils/taskDateStatus';
-import type { Task, Area, TaskTypeOption } from '../types/models';
+import type { Task, Area, AcademicTaskTypeOption } from '../types/models';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+
+// Esta página é o "Analytics Dashboard" - notas, pesos, target vs real
+// grade. Isso só faz sentido para tasks Académicas (um hábito como
+// "Natação" nunca vai ter nota nem peso), por isso o âmbito é fixo aqui,
+// não é mais um filtro que o utilizador escolhe. Para ver tudo (hábitos,
+// eventos, projetos, etc.), a página "Tasks" continua a mostrar tudo.
+const DASHBOARD_TASK_TYPE_KEY = 'ACADEMICO';
 
 export default function Dashboard() {
   useDocumentTitle('Dashboard');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
-  const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
+  const [academicTaskTypes, setAcademicTaskTypes] = useState<AcademicTaskTypeOption[]>([]);
   const [difficulties, setDifficulties] = useState<string[]>([]);
   const [progressStatuses, setProgressStatuses] = useState<string[]>([]);
 
@@ -34,7 +41,7 @@ export default function Dashboard() {
         ]);
         setTasks(tasksData);
         setAreas(areasData);
-        setTaskTypes(metaData.taskTypes);
+        setAcademicTaskTypes(metaData.academicTaskTypes);
         setDifficulties(metaData.difficulties);
         setProgressStatuses(metaData.progressStatuses);
       } catch (err) {
@@ -47,24 +54,39 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
+  // Âmbito base: só tasks Académicas entram sequer em consideração antes
+  // de qualquer filtro do utilizador.
+  const academicTasks = useMemo(
+    () => tasks.filter((task) => task.type === DASHBOARD_TASK_TYPE_KEY),
+    [tasks],
+  );
+
+  // Só Areas que efetivamente têm tasks Académicas aparecem no filtro de
+  // Area - listar "Natação" aqui (uma Area de Hábito) não fazia sentido
+  // nenhum numa vista de notas.
+  const academicAreas = useMemo(() => {
+    const areaIdsWithAcademicTasks = new Set(academicTasks.map((task) => task.areaId));
+    return areas.filter((area) => areaIdsWithAcademicTasks.has(area.id));
+  }, [areas, academicTasks]);
+
   const filteredTasks = useMemo(() => {
     const search = filters.search.trim().toLowerCase();
-    return tasks.filter((task) => {
+    return academicTasks.filter((task) => {
       if (search && !task.title.toLowerCase().includes(search)) return false;
       if (filters.areaId && task.areaId !== filters.areaId) return false;
-      if (filters.type && task.type !== filters.type) return false;
+      if (filters.academicType && task.academicType !== filters.academicType) return false;
       if (filters.difficulty && task.difficulty !== filters.difficulty) return false;
       if (filters.progressStatus && task.progressStatus !== filters.progressStatus) return false;
       if (filters.dateStatus && getDateStatus(task) !== filters.dateStatus) return false;
       return true;
     });
-  }, [tasks, filters]);
+  }, [academicTasks, filters]);
 
   return (
     <PageLayout>
       <PageHeader
         title="Analytics Dashboard"
-        description="Global view of all your activities, grades, and progress."
+        description="Global view of all your academic activities, grades, and progress."
       />
 
       {isLoading ? (
@@ -76,8 +98,8 @@ export default function Dashboard() {
           <DashboardFilters
             filters={filters}
             onChange={setFilters}
-            areas={areas}
-            taskTypes={taskTypes}
+            areas={academicAreas}
+            academicTaskTypes={academicTaskTypes}
             difficulties={difficulties}
             progressStatuses={progressStatuses}
             onClear={() => setFilters(EMPTY_DASHBOARD_FILTERS)}
@@ -85,10 +107,14 @@ export default function Dashboard() {
 
           {filteredTasks.length === 0 ? (
             <EmptyState
-              message={tasks.length === 0 ? 'You have no tasks registered.' : 'No tasks match the current filters.'}
+              message={
+                academicTasks.length === 0
+                  ? 'You have no academic tasks registered.'
+                  : 'No tasks match the current filters.'
+              }
             />
           ) : (
-            <TasksTable tasks={filteredTasks} />
+            <TasksTable tasks={filteredTasks} academicTaskTypes={academicTaskTypes} />
           )}
         </>
       )}

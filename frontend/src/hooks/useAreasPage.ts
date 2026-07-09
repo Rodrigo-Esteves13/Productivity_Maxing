@@ -52,9 +52,15 @@ export function useAreasPage() {
   const handleCreateArea = async (values: AreaFormValues) => {
     setIsSubmitting(true);
     try {
-      await createArea(values);
+      // Antes fazia fetchAreas() completo depois de criar (2 pedidos: areas
+      // + meta), só para acabar com a mesma lista de areas + a nova. O POST
+      // já devolve a Area completa (com defaultTaskType resolvido, ver
+      // AREA_INCLUDE no backend), por isso basta adicioná-la ao estado local
+      // - mesmo padrão que handleEditArea já usa abaixo. taskTypes não muda
+      // ao criar uma Area, não há razão para o voltar a pedir.
+      const created = await createArea(values);
+      setAreas((prev) => [...prev, created]);
       setIsCreateModalOpen(false);
-      fetchAreas();
     } catch {
       alert('Error creating area. Check the backend.');
     } finally {
