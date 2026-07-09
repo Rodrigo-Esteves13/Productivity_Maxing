@@ -17,8 +17,11 @@ export class GithubLinkGuard extends AuthGuard('github') {
       .switchToHttp()
       .getRequest<Request & { user: { id: string } }>();
 
-    return buildLinkAuthenticateOptions(this.authService, request, Provider.GITHUB, [
-      'user:email',
-    ]);
+    return buildLinkAuthenticateOptions(
+      this.authService,
+      request,
+      Provider.GITHUB,
+      ['user:email'],
+    );
   }
 }

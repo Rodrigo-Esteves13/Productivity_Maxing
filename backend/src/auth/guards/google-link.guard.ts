@@ -20,10 +20,12 @@ export class GoogleLinkGuard extends AuthGuard('google') {
       .getRequest<Request & { user: { id: string } }>();
 
     return {
-      ...buildLinkAuthenticateOptions(this.authService, request, Provider.GOOGLE, [
-        'email',
-        'profile',
-      ]),
+      ...buildLinkAuthenticateOptions(
+        this.authService,
+        request,
+        Provider.GOOGLE,
+        ['email', 'profile'],
+      ),
       // v1.0: mesmo scope do login (email/profile), o scope do Calendar
       // volta aqui quando a sincronização (Fase 4 / v1.1) estiver pronta.
       // Manter o Calendar só aqui e não no login já tinha sido corrigido

@@ -17,9 +17,11 @@ export class DiscordLinkGuard extends AuthGuard('discord') {
       .switchToHttp()
       .getRequest<Request & { user: { id: string } }>();
 
-    return buildLinkAuthenticateOptions(this.authService, request, Provider.DISCORD, [
-      'identify',
-      'email',
-    ]);
+    return buildLinkAuthenticateOptions(
+      this.authService,
+      request,
+      Provider.DISCORD,
+      ['identify', 'email'],
+    );
   }
 }

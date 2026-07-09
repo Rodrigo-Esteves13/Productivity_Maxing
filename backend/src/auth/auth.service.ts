@@ -456,8 +456,9 @@ export class AuthService {
     // correspondente a este email (funciona mesmo sem enviar o link
     // gerado a lado nenhum - só nos interessam os dados do user), gravamos
     // esse supabaseAuthId no User local, e atualizamos a password nele.
-    const alreadyRegistered =
-      /already.*registered|already.*exists/i.test(error?.message ?? '');
+    const alreadyRegistered = /already.*registered|already.*exists/i.test(
+      error?.message ?? '',
+    );
 
     if (!alreadyRegistered) {
       throw new BadRequestException(

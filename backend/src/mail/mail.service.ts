@@ -65,7 +65,10 @@ export class MailService {
       });
       this.logger.log(`Email de reset de password enviado para ${to}`);
     } catch (err) {
-      this.logger.error(`Erro ao enviar email de reset de password para ${to}`, err);
+      this.logger.error(
+        `Erro ao enviar email de reset de password para ${to}`,
+        err,
+      );
     }
   }
 }
@@ -73,7 +76,10 @@ export class MailService {
 // inline, para renderizar de forma consistente em Gmail/Outlook/Apple
 // Mail), só que agora vive no código e recebe o link diretamente, sem
 // depender de nenhuma variável {{ .ConfirmationURL }} do lado do Supabase.
-function renderPasswordResetEmail(actionLink: string, frontendUrl: string): string {
+function renderPasswordResetEmail(
+  actionLink: string,
+  frontendUrl: string,
+): string {
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
