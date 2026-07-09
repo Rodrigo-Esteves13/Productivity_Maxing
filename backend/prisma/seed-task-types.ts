@@ -14,6 +14,10 @@ async function main() {
     { key: 'EVENTO', label: 'Event', order: 4, colorHex: '#f59e0b' },
     { key: 'TRABALHO', label: 'Job', order: 5, colorHex: '#ef4444' },
     { key: 'TAREFA_SIMPLES', label: 'Simple Task', order: 6, colorHex: '#6b7280' },
+    // Catch-all para quando nenhum dos tipos acima (nem nenhuma Area com
+    // tipo fixo) se aplica. Não tem AcademicTaskType filhos, por isso nunca
+    // pede sub-tipo nem mostra os campos só-académicos (peso, nota).
+    { key: 'OTHER', label: 'Other', order: 7, colorHex: '#a3a3a3' },
   ];
   for (const t of otherTypes) {
     await prisma.taskType.upsert({ where: { key: t.key }, update: {}, create: t });

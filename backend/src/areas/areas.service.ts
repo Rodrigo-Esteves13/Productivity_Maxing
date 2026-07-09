@@ -36,7 +36,8 @@ export class AreasService {
   // Agora não precisamos do userId, pois a área é global!
   async create(createAreaDto: CreateAreaDto) {
     const { defaultTaskType, ...rest } = createAreaDto;
-    const defaultTaskTypeId = await this.resolveDefaultTaskTypeId(defaultTaskType);
+    const defaultTaskTypeId =
+      await this.resolveDefaultTaskTypeId(defaultTaskType);
 
     const area = await this.prisma.area.create({
       data: { ...rest, defaultTaskTypeId: defaultTaskTypeId ?? null },
@@ -60,7 +61,8 @@ export class AreasService {
 
   async update(id: string, updateAreaDto: UpdateAreaDto) {
     const { defaultTaskType, ...rest } = updateAreaDto;
-    const defaultTaskTypeId = await this.resolveDefaultTaskTypeId(defaultTaskType);
+    const defaultTaskTypeId =
+      await this.resolveDefaultTaskTypeId(defaultTaskType);
 
     const area = await this.prisma.area.update({
       where: { id },

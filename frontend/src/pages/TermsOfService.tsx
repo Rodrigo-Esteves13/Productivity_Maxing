@@ -3,7 +3,7 @@ import LegalSection from '../components/Legal/LegalSection';
 import LegalLink from '../components/Legal/LegalLink';
 
 const CONTACT_EMAIL = 'rodrigo.m.esteves06@gmail.com';
-const APP_DOMAIN = '???????';
+const APP_DOMAIN = 'pmaxing.pt';
 const LAST_UPDATED = '07/07/2026';
 
 export default function TermsOfService() {

@@ -114,6 +114,11 @@ model ApiKey {
   lastUsed  DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // userId nunca é indexado automaticamente só por ser FK - exportUserData()
+  // (users.service.ts) faz findMany({ where: { userId } }) para listar as
+  // keys de uma pessoa, sem isto seria sempre um scan à tabela toda.
+  @@index([userId])
 }
 
 /// Gere os tokens e IDs externos para autenticação OAuth (SSO).
@@ -132,6 +137,11 @@ model Identity {
 
   // Garante que o mesmo providerAccount não é associado duas vezes
   @@unique([provider, providerAccountId])
+  // userId sozinho (sem o provider) é usado em getProviders(),
+  // getDecryptedProviderTokens() e no cascade delete de User - o
+  // @@unique acima não serve para essas queries porque começa por
+  // "provider", não por "userId".
+  @@index([userId])
 }
 
 /// Abstração que representa um "Balde" ou "Área de Vida".
@@ -185,4 +195,17 @@ model Task {
   // Relações
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   area Area @relation(fields: [areaId], references: [id])
+
+  // Nenhuma destas é indexada automaticamente só por ser FK no Postgres:
+  // - userId: TasksService.findAll/findOne/update/remove filtram sempre
+  //   por ele (where: { userId, ... }) - é a query mais frequente de
+  //   toda a app, sem índice degrada para scan completo à tabela Task
+  //   à medida que ela cresce.
+  // - areaId / taskTypeId / academicTypeId: sem índice, apagar uma Area
+  //   ou um TaskType obriga o Postgres a percorrer a tabela Task inteira
+  //   só para verificar se a FK constraint permite o apagar.
+  @@index([userId])
+  @@index([areaId])
+  @@index([taskTypeId])
+  @@index([academicTypeId])
 }

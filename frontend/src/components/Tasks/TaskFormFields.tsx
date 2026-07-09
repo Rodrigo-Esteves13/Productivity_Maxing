@@ -52,13 +52,14 @@ export default function TaskFormFields({
   showRealGrade = false,
   showProgressStatus = false,
 }: TaskFormFieldsProps) {
-  const { isAcademic, availableAcademicTypes, selectedArea, isTypeLockedByArea } = useTaskTypeLogic({
-    type: values.type,
-    areaId: values.areaId,
-    areas,
-    taskTypes,
-    academicTaskTypes,
-  });
+  const { isAcademic, availableAcademicTypes, selectedArea, isTypeLockedByArea, filteredAreas } =
+    useTaskTypeLogic({
+      type: values.type,
+      areaId: values.areaId,
+      areas,
+      taskTypes,
+      academicTaskTypes,
+    });
 
   return (
     <>
@@ -67,7 +68,7 @@ export default function TaskFormFields({
         title={values.title}
         date={values.date}
         areaId={values.areaId}
-        areas={areas}
+        areas={filteredAreas}
         onTitleChange={(v) => onChange('title', v)}
         onDateChange={(v) => onChange('date', v)}
         onAreaChange={(areaId, defaultTaskType) => {

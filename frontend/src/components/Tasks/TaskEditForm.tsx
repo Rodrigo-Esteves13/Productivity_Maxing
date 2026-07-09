@@ -4,6 +4,7 @@ import type { Task, TaskTypeOption, AcademicTaskTypeOption } from '../../types/m
 import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
+import { buildTaskPayload } from '../../utils/taskPayload';
 
 interface AreaOption {
   id: string;
@@ -70,18 +71,7 @@ export default function TaskEditForm({
 
       setIsSubmitting(true);
       try {
-        const payload = {
-          ...formData,
-          date: new Date(formData.date).toISOString(),
-          targetGrade: formData.targetGrade ? parseFloat(formData.targetGrade) : undefined,
-          weightPercentage: formData.weightPercentage
-            ? parseFloat(formData.weightPercentage)
-            : undefined,
-          realGrade: formData.realGrade ? parseFloat(formData.realGrade) : undefined,
-          topics: formData.topics || undefined,
-          referenceLink: formData.referenceLink || undefined,
-          academicType: formData.academicType || undefined,
-        };
+        const payload = buildTaskPayload(formData, { includeRealGrade: true });
 
         await onSubmit(payload);
       } catch (err: any) {

@@ -2,7 +2,7 @@ import type { Task, TaskTypeOption, AcademicTaskTypeOption } from '../../types/m
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import DetailRow from '../UI/DetailRow';
-import { formatEnumLabel } from '../../utils/formatEnumLabel';
+import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
 
 interface TaskDetailViewProps {
   task: Task;
@@ -11,10 +11,8 @@ interface TaskDetailViewProps {
 }
 
 export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes = [] }: TaskDetailViewProps) {
-  const typeLabel = taskTypes.find((t) => t.key === task.type)?.label ?? formatEnumLabel(task.type);
-  const academicTypeLabel = task.academicType
-    ? academicTaskTypes.find((a) => a.key === task.academicType)?.label ?? formatEnumLabel(task.academicType)
-    : null;
+  const typeLabel = resolveOptionLabel(task.type, taskTypes);
+  const academicTypeLabel = resolveOptionLabel(task.academicType, academicTaskTypes);
   return (
     <div>
       <DetailRow label="Title">{task.title}</DetailRow>

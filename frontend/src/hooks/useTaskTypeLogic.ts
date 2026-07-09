@@ -19,6 +19,7 @@ export interface UseTaskTypeLogicResult {
   availableAcademicTypes: AcademicTaskTypeOption[];
   selectedArea: AreaOption | undefined;
   isTypeLockedByArea: boolean;
+  filteredAreas: AreaOption[];
 }
 
 /**
@@ -28,6 +29,10 @@ export interface UseTaskTypeLogicResult {
  * - Se a Area escolhida tiver um Type associado (ex: "CDR" -> Académico),
  *   o Type deixa de ser uma escolha manual, fica preenchido e trancado.
  *   Areas sem Type associado (ex: um hobby) continuam a pedir o Type à mão.
+ * - filteredAreas: quando já há um Type escolhido, a lista de Areas
+ *   mostrada só inclui Areas associadas a esse Type, mais as Areas sem
+ *   Type fixo (hobbies), para não aparecerem Areas académicas quando o
+ *   Type escolhido é, por exemplo, "Evento".
  */
 export function useTaskTypeLogic({
   type,
@@ -43,5 +48,9 @@ export function useTaskTypeLogic({
   const selectedArea = areas.find((a) => a.id === areaId);
   const isTypeLockedByArea = Boolean(selectedArea?.defaultTaskType);
 
-  return { isAcademic, availableAcademicTypes, selectedArea, isTypeLockedByArea };
+  const filteredAreas = type
+    ? areas.filter((a) => !a.defaultTaskType || a.defaultTaskType === type)
+    : areas;
+
+  return { isAcademic, availableAcademicTypes, selectedArea, isTypeLockedByArea, filteredAreas };
 }
