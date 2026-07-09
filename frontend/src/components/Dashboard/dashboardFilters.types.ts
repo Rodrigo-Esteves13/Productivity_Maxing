@@ -1,7 +1,7 @@
 export interface DashboardFiltersState {
   search: string;
   areaId: string;
-  type: string;
+  academicType: string;
   difficulty: string;
   progressStatus: string;
   dateStatus: string;
@@ -10,7 +10,7 @@ export interface DashboardFiltersState {
 export const EMPTY_DASHBOARD_FILTERS: DashboardFiltersState = {
   search: '',
   areaId: '',
-  type: '',
+  academicType: '',
   difficulty: '',
   progressStatus: '',
   dateStatus: '',

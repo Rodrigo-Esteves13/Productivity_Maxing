@@ -1,29 +1,15 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { randomBytes } from 'crypto';
 import type { Request, Response } from 'express';
-import {
-  OAUTH_LOGIN_STATE_COOKIE,
-  oauthLoginStateCookieOptions,
-} from '../cookie.config';
+import { buildLoginAuthenticateOptions } from './oauth-guard.helpers';
 
-// Ver GoogleAuthGuard para explicação da proteção de login CSRF.
+// Ver oauth-guard.helpers.ts para a explicação da proteção de login CSRF.
 @Injectable()
 export class GithubAuthGuard extends AuthGuard('github') {
   getAuthenticateOptions(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest<Request>();
     const response = context.switchToHttp().getResponse<Response>();
 
-    if (request.query.code) {
-      return {};
-    }
-
-    const state = randomBytes(16).toString('hex');
-    response.cookie(
-      OAUTH_LOGIN_STATE_COOKIE,
-      state,
-      oauthLoginStateCookieOptions(),
-    );
-    return { state };
+    return buildLoginAuthenticateOptions(request, response);
   }
 }

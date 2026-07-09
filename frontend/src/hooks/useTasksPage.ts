@@ -56,9 +56,20 @@ export function useTasksPage() {
   const closeCreateModal = () => setIsCreateModalOpen(false);
 
   const handleCreateTask = async (taskData: any) => {
-    await createTask(taskData);
+    // Antes fazia fetchData() completo depois de criar (3 pedidos: tasks +
+    // areas + meta), só para acabar com a mesma lista de tasks + a nova.
+    // O POST já devolve a task completa (com area/taskType/academicType
+    // incluídos, ver TASK_INCLUDE no backend), por isso basta adicioná-la
+    // ao estado local - mesmo padrão que handleUpdateTask já usa abaixo.
+    // Reordena por date para manter a mesma ordem (asc) que o GET /tasks
+    // já garante no backend.
+    const created = await createTask(taskData);
+    setTasks((prev) =>
+      [...prev, created].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+      ),
+    );
     setIsCreateModalOpen(false);
-    fetchData();
   };
 
   const handleSelectTask = useCallback((task: Task) => {
