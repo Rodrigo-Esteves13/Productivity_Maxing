@@ -5,6 +5,7 @@ import { Request } from 'express';
 import { Provider } from '@prisma/client';
 import { AuthService } from '../auth.service';
 import { OAUTH_LOGIN_STATE_COOKIE } from '../cookie.config';
+import { isValidLoginState } from '../guards/oauth-guard.helpers';
 
 @Injectable()
 export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
@@ -67,7 +68,9 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
   private assertLoginState(req: Request, state: string | undefined): void {
     const cookies = req.cookies as Record<string, string | undefined>;
     const expected = cookies?.[OAUTH_LOGIN_STATE_COOKIE];
-    if (!expected || !state || expected !== state) {
+    // Comparação em tempo constante - ver isValidLoginState() em
+    // oauth-guard.helpers.ts.
+    if (!isValidLoginState(expected, state)) {
       throw new UnauthorizedException('Invalid or missing OAuth state.');
     }
   }

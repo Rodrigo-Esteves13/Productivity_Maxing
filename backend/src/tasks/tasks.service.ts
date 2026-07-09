@@ -113,8 +113,14 @@ export class TasksService {
       // não queremos "reiniciar" a data de conclusão original.
     }
 
+    // where: { id, userId } em vez de só { id } - o findFirst() acima já
+    // garante que a task é do utilizador antes de chegarmos aqui, mas
+    // repetir a condição de posse também no update final é defesa em
+    // profundidade sem custo: mesmo que um refactor futuro remova ou
+    // contorne o findFirst() de cima, isto continua sozinho a impedir um
+    // IDOR (um user a editar uma task de outro só por adivinhar o UUID).
     const task = await this.prisma.task.update({
-      where: { id },
+      where: { id, userId },
       data: {
         ...rest,
         ...(date ? { date: new Date(date) } : {}),
@@ -128,7 +134,9 @@ export class TasksService {
 
   async remove(userId: string, id: string) {
     await this.findOne(userId, id);
-    return this.prisma.task.delete({ where: { id } });
+    // Mesma razão do update() acima: where: { id, userId } em vez de só
+    // { id }, para a condição de posse não depender só do findOne() prévio.
+    return this.prisma.task.delete({ where: { id, userId } });
   }
 
   async getMeta() {

@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react';
+import type { SyntheticEvent } from 'react';
 import FormField from '../UI/FormField';
 import Input from '../UI/Input';
 import FormError from '../UI/FormError';
@@ -17,7 +17,7 @@ interface PasswordSectionProps {
   onCancel: () => void;
   onNewPasswordChange: (value: string) => void;
   onConfirmPasswordChange: (value: string) => void;
-  onSubmit: (e: FormEvent) => void;
+  onSubmit: (e: SyntheticEvent<HTMLFormElement>) => void;
 }
 
 export default function PasswordSection({

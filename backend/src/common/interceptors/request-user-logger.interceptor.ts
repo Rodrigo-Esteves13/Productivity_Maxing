@@ -42,7 +42,9 @@ export class RequestUserLoggerInterceptor implements NestInterceptor {
 
     const user = req.user as AuthenticatedUser | undefined;
 
-    const who = user ? `${user.email} (id=${user.id}, role=${user.role})` : 'anónimo';
+    const who = user
+      ? `${user.email} (id=${user.id}, role=${user.role})`
+      : 'anónimo';
 
     this.logger.log(`${req.method} ${req.originalUrl} - user: ${who}`);
 

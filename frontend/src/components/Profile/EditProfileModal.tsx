@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type SyntheticEvent } from 'react';
 import Modal from '../UI/Modal';
 import FormField from '../UI/FormField';
 import Input from '../UI/Input';
@@ -47,7 +47,7 @@ export default function EditProfileModal({ isOpen, onClose, user, onSaved, onUse
     if (avatar.error) setError(avatar.error);
   }, [avatar.error]);
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 
