@@ -20,6 +20,16 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import 'multer';
+import type { Options as MulterOptions } from 'multer';
+
+// @types/multer ainda não inclui `fieldNestingDepth` no tipo
+// `Options.limits` (opção real do multer >=2.2.0, ver comentário junto do
+// uso mais abaixo em uploadAvatar). Este tipo local só acrescenta essa
+// propriedade em cima do tipo oficial, para o cast ficar restrito ao
+// mínimo em vez de recorrer a `any`.
+type MulterLimitsWithFieldNestingDepth = NonNullable<MulterOptions['limits']> & {
+  fieldNestingDepth?: number;
+};
 import type { Request, Response } from 'express';
 import { User } from '@prisma/client';
 import { AuthService } from './auth.service';
@@ -273,12 +283,26 @@ export class AuthController {
   @HttpCode(200)
   @UseInterceptors(
     FileInterceptor('avatar', {
-      // fileSize: já existia. fields/files: mitigação para a vulnerabilidade
-      // do multer (GHSA-72gw-mp4g-v24j, npm audit) de DoS via nomes de
-      // campo profundamente aninhados num multipart/form-data - limitamos
-      // explicitamente a 1 campo de ficheiro e nenhum campo de texto extra,
-      // já que esta rota só espera o campo "avatar".
-      limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 1 },
+      // fileSize: já existia. fields/files/fieldNestingDepth: mitigação para
+      // a vulnerabilidade do multer (GHSA-72gw-mp4g-v24j, npm audit) de DoS
+      // via nomes de campo profundamente aninhados num multipart/form-data -
+      // limitamos explicitamente a 1 campo de ficheiro, nenhum campo de
+      // texto extra e profundidade de aninhamento zero, já que esta rota só
+      // espera o campo "avatar" (sem bracket notation nenhuma).
+      //
+      // `fieldNestingDepth` é uma opção real do multer >=2.2.0 (documentada
+      // no README oficial), mas o @types/multer instalado ainda não foi
+      // atualizado com esta propriedade no tipo `Options.limits` - daí o
+      // TS2353. O cast abaixo é *só* para esta propriedade extra; o resto
+      // do objeto continua totalmente tipado. Remover o cast quando o
+      // @types/multer apanhar o tipo (confirmar com `npm ls @types/multer`
+      // e o changelog do pacote).
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+        files: 1,
+        fields: 1,
+        fieldNestingDepth: 1,
+      } as MulterLimitsWithFieldNestingDepth,
     }),
   )
   async uploadAvatar(

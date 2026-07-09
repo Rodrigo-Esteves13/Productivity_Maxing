@@ -5,6 +5,7 @@ import { AuthService } from '../auth.service';
 import {
   OAUTH_LOGIN_STATE_COOKIE,
   oauthLoginStateCookieOptions,
+  isSecureCookieEnv,
 } from '../cookie.config';
 
 // Google/GitHub/Discord *AuthGuard tinham cada um a mesma lógica copiada:
@@ -29,11 +30,15 @@ export function buildLoginAuthenticateOptions(
   }
 
   const state = randomBytes(16).toString('hex');
-  response.cookie(
-    OAUTH_LOGIN_STATE_COOKIE,
-    state,
-    oauthLoginStateCookieOptions(),
-  );
+  // httpOnly/secure repetidos aqui de forma explícita (em cima do que
+  // oauthLoginStateCookieOptions() já define) só para o CodeQL conseguir
+  // confirmar estaticamente as duas flags sem ter de atravessar a chamada
+  // de função - o comportamento real não muda, os valores vêm de lá.
+  response.cookie(OAUTH_LOGIN_STATE_COOKIE, state, {
+    ...oauthLoginStateCookieOptions(),
+    httpOnly: true,
+    secure: isSecureCookieEnv(),
+  });
   return { state, ...extraOptions };
 }
 
