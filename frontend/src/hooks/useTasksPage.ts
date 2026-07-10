@@ -8,12 +8,12 @@ import {
   deleteTask,
 } from '../api/userService';
 import type { Task, Area, TaskTypeOption, AcademicTaskTypeOption } from '../types/models';
+import { useQuickReschedule } from './useQuickReschedule';
 
 export function useTasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
 
-  // Metadados dinâmicos (vêm da BD, editáveis pelo admin)
   const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
   const [academicTaskTypes, setAcademicTaskTypes] = useState<AcademicTaskTypeOption[]>([]);
   const [difficulties, setDifficulties] = useState<string[]>([]);
@@ -23,9 +23,13 @@ export function useTasksPage() {
   const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Estado do modal de detalhe/edição
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Hook do reagendamento (Feature anterior)
+  const { rescheduleToTomorrow, reschedulingId } = useQuickReschedule((updatedTask) => {
+    setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+  });
 
   const fetchData = async () => {
     try {
@@ -56,13 +60,6 @@ export function useTasksPage() {
   const closeCreateModal = () => setIsCreateModalOpen(false);
 
   const handleCreateTask = async (taskData: any) => {
-    // Antes fazia fetchData() completo depois de criar (3 pedidos: tasks +
-    // areas + meta), só para acabar com a mesma lista de tasks + a nova.
-    // O POST já devolve a task completa (com area/taskType/academicType
-    // incluídos, ver TASK_INCLUDE no backend), por isso basta adicioná-la
-    // ao estado local - mesmo padrão que handleUpdateTask já usa abaixo.
-    // Reordena por date para manter a mesma ordem (asc) que o GET /tasks
-    // já garante no backend.
     const created = await createTask(taskData);
     setTasks((prev) =>
       [...prev, created].sort(
@@ -113,6 +110,38 @@ export function useTasksPage() {
     }
   }, [selectedTask, closeDetailModal]);
 
+  // Função de Duplicar corrigida!
+  const handleDuplicateTask = useCallback(async () => {
+    if (!selectedTask) return;
+
+    const confirmDuplicate = window.confirm(
+      'Queres duplicar esta tarefa? Será criada uma cópia limpa.'
+    );
+    if (!confirmDuplicate) return;
+
+    try {
+      // Usamos .type e .academicType para respeitar o model Task do frontend
+      const newTaskData = {
+        title: `${selectedTask.title} (Cópia)`,
+        areaId: selectedTask.areaId,
+        date: selectedTask.date,
+        type: selectedTask.type,
+        academicType: selectedTask.academicType,
+        topics: selectedTask.topics,
+        weightPercentage: selectedTask.weightPercentage,
+        difficulty: selectedTask.difficulty,
+        referenceLink: selectedTask.referenceLink,
+        targetGrade: selectedTask.targetGrade,
+      };
+
+      await handleCreateTask(newTaskData);
+      closeDetailModal();
+    } catch (err) {
+      alert('Não foi possível duplicar a tarefa. Verifica a tua ligação.');
+    }
+  }, [selectedTask, closeDetailModal]); 
+  // Não coloquei 'handleCreateTask' nas dependências para evitar loop de re-renders
+
   return {
     tasks,
     areas,
@@ -134,5 +163,8 @@ export function useTasksPage() {
     stopEditing,
     handleUpdateTask,
     handleDeleteTask,
+    rescheduleToTomorrow,
+    reschedulingId,
+    handleDuplicateTask,
   };
 }

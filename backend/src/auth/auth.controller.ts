@@ -27,7 +27,9 @@ import type { Options as MulterOptions } from 'multer';
 // uso mais abaixo em uploadAvatar). Este tipo local só acrescenta essa
 // propriedade em cima do tipo oficial, para o cast ficar restrito ao
 // mínimo em vez de recorrer a `any`.
-type MulterLimitsWithFieldNestingDepth = NonNullable<MulterOptions['limits']> & {
+type MulterLimitsWithFieldNestingDepth = NonNullable<
+  MulterOptions['limits']
+> & {
   fieldNestingDepth?: number;
 };
 import type { Request, Response } from 'express';
