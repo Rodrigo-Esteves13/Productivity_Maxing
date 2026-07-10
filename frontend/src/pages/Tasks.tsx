@@ -36,6 +36,9 @@ export default function Tasks() {
     stopEditing,
     handleUpdateTask,
     handleDeleteTask,
+    handleDuplicateTask,
+    rescheduleToTomorrow,
+    reschedulingId
   } = useTasksPage();
 
   return (
@@ -57,7 +60,12 @@ export default function Tasks() {
       ) : tasks.length === 0 ? (
         <EmptyState message="You have no tasks registered." />
       ) : (
-        <TaskGrid tasks={tasks} onSelect={handleSelectTask} />
+        <TaskGrid 
+          tasks={tasks} 
+          onSelect={handleSelectTask} 
+          onReschedule={rescheduleToTomorrow}
+          reschedulingId={reschedulingId}
+        />
       )}
 
       {/* Modal de criação */}
@@ -83,6 +91,7 @@ export default function Tasks() {
               isEditing={isEditing}
               onToggleEdit={toggleEditing}
               onDelete={handleDeleteTask}
+              onDuplicate={handleDuplicateTask}
               deleteTitle="Delete task"
               editTitle="Edit task"
             />
