@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -9,6 +8,7 @@ import { CreateTaskTypeDto } from './dto/create-task-type.dto';
 import { UpdateTaskTypeDto } from './dto/update-task-type.dto';
 import { CreateAcademicTaskTypeDto } from './dto/create-academic-task-type.dto';
 import { UpdateAcademicTaskTypeDto } from './dto/update-academic-task-type.dto';
+import { slugifyToKey } from './utils/generate-key';
 
 @Injectable()
 export class TaskTypesService {
@@ -25,19 +25,18 @@ export class TaskTypesService {
   }
 
   async createTaskType(dto: CreateTaskTypeDto) {
-    const existing = await this.prisma.taskType.findUnique({
-      where: { key: dto.key },
-    });
-    if (existing) {
-      throw new ConflictException(
-        `A TaskType with this key already exists: "${dto.key}".`,
-      );
-    }
-    return this.prisma.taskType.create({ data: dto });
+    const key = await this.generateUniqueKey(dto.label, (candidate) =>
+      this.prisma.taskType
+        .findUnique({ where: { key: candidate } })
+        .then((found) => found !== null),
+    );
+    return this.prisma.taskType.create({ data: { ...dto, key } });
   }
 
   async updateTaskType(id: string, dto: UpdateTaskTypeDto) {
     await this.getTaskTypeOrThrow(id);
+    // "key" nunca está no dto (nem existe no DTO) - não há risco de a
+    // update tentar tocar-lhe, mesmo por engano.
     return this.prisma.taskType.update({ where: { id }, data: dto });
   }
 
@@ -69,27 +68,23 @@ export class TaskTypesService {
 
   async createAcademicTaskType(dto: CreateAcademicTaskTypeDto) {
     const parent = await this.prisma.taskType.findUnique({
-      where: { key: dto.taskTypeKey },
+      where: { id: dto.taskTypeId },
     });
     if (!parent) {
       throw new BadRequestException(
-        `Parent TaskType "${dto.taskTypeKey}" does not exist.`,
+        `Parent TaskType "${dto.taskTypeId}" does not exist.`,
       );
     }
 
-    const existing = await this.prisma.academicTaskType.findUnique({
-      where: { key: dto.key },
-    });
-    if (existing) {
-      throw new ConflictException(
-        `An AcademicTaskType with this key already exists: "${dto.key}".`,
-      );
-    }
+    const key = await this.generateUniqueKey(dto.label, (candidate) =>
+      this.prisma.academicTaskType
+        .findUnique({ where: { key: candidate } })
+        .then((found) => found !== null),
+    );
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { taskTypeKey, ...rest } = dto;
+    const { taskTypeId, ...rest } = dto;
     return this.prisma.academicTaskType.create({
-      data: { ...rest, taskTypeId: parent.id },
+      data: { ...rest, key, taskTypeId },
       include: { taskType: true },
     });
   }
@@ -97,24 +92,20 @@ export class TaskTypesService {
   async updateAcademicTaskType(id: string, dto: UpdateAcademicTaskTypeDto) {
     await this.getAcademicTaskTypeOrThrow(id);
 
-    let taskTypeId: string | undefined;
-    if (dto.taskTypeKey) {
+    if (dto.taskTypeId) {
       const parent = await this.prisma.taskType.findUnique({
-        where: { key: dto.taskTypeKey },
+        where: { id: dto.taskTypeId },
       });
       if (!parent) {
         throw new BadRequestException(
-          `Parent TaskType "${dto.taskTypeKey}" does not exist.`,
+          `Parent TaskType "${dto.taskTypeId}" does not exist.`,
         );
       }
-      taskTypeId = parent.id;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { taskTypeKey, ...rest } = dto;
     return this.prisma.academicTaskType.update({
       where: { id },
-      data: { ...rest, ...(taskTypeId ? { taskTypeId } : {}) },
+      data: dto,
       include: { taskType: true },
     });
   }
@@ -133,5 +124,23 @@ export class TaskTypesService {
     });
     if (!item) throw new NotFoundException('AcademicTaskType not found.');
     return item;
+  }
+
+  // Gera a key a partir do label (ver utils/generate-key.ts) e, se já
+  // existir (dois tipos com nomes que dão origem à mesma key, ex: "Física"
+  // e "FISICA"), acrescenta um sufixo numérico até encontrar uma livre.
+  // O admin nunca vê isto acontecer - só escreve o nome.
+  private async generateUniqueKey(
+    label: string,
+    exists: (candidate: string) => Promise<boolean>,
+  ): Promise<string> {
+    const base = slugifyToKey(label);
+    let candidate = base;
+    let suffix = 2;
+    while (await exists(candidate)) {
+      candidate = `${base}_${suffix}`;
+      suffix += 1;
+    }
+    return candidate;
   }
 }
