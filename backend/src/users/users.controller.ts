@@ -41,6 +41,18 @@ function assertSelfOrAdmin(me: AuthenticatedUser, targetId: string): void {
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Get('me/export')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Exporta todos os dados do utilizador autenticado em formato JSON (GDPR)',
+  })
+  async exportMyData(@CurrentUser() user: AuthenticatedUser) {
+    // Agora o "user" tem garantia absoluta de existir graças ao JwtAuthGuard
+    return this.usersService.exportUserData(user.id);
+  }
+
   // List all users -> ADMIN ONLY!
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard) // Attach the route guard

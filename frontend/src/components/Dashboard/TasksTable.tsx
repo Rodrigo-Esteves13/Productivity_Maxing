@@ -6,9 +6,16 @@ import type { Task, AcademicTaskTypeOption } from '../../types/models';
 interface TasksTableProps {
   tasks: Task[];
   academicTaskTypes: AcademicTaskTypeOption[];
+  onReschedule?: (e: React.MouseEvent, task: Task) => void;
+  reschedulingId?: string | null;
 }
 
-export default function TasksTable({ tasks, academicTaskTypes }: TasksTableProps) {
+export default function TasksTable({ 
+  tasks, 
+  academicTaskTypes,
+  onReschedule,
+  reschedulingId 
+}: TasksTableProps) {
   if (tasks.length === 0) {
     return (
       <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
@@ -19,21 +26,30 @@ export default function TasksTable({ tasks, academicTaskTypes }: TasksTableProps
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
-      {/* Mobile (<sm): cartões empilhados - uma tabela com scroll horizontal
-          era ilegível em ecrãs pequenos (muitas colunas, texto minúsculo). */}
       <div className="sm:hidden">
         {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} academicTaskTypes={academicTaskTypes} />
+          <TaskCard 
+            key={task.id} 
+            task={task} 
+            academicTaskTypes={academicTaskTypes} 
+            onReschedule={onReschedule}
+            isRescheduling={reschedulingId === task.id}
+          />
         ))}
       </div>
 
-      {/* Desktop/tablet (sm+): tabela completa, como antes. */}
       <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-sm text-left text-neutral-300 whitespace-nowrap">
           <TasksTableHeader />
           <tbody>
             {tasks.map((task) => (
-              <TaskTableRow key={task.id} task={task} academicTaskTypes={academicTaskTypes} />
+              <TaskTableRow 
+                key={task.id} 
+                task={task} 
+                academicTaskTypes={academicTaskTypes} 
+                onReschedule={onReschedule}
+                isRescheduling={reschedulingId === task.id}
+              />
             ))}
           </tbody>
         </table>
