@@ -3,6 +3,7 @@ export type Provider = 'GOOGLE' | 'DISCORD' | 'GITHUB';
 export type Role = 'USER' | 'ADMIN';
 export type ProgressStatus = 'AHEAD' | 'ON_TRACK' | 'BEHIND' | 'VERY_BEHIND' | 'COMPLETED';
 export type Difficulty = 'VERY_EASY' | 'EASY' | 'MEDIUM' | 'HARD' | 'VERY_HARD';
+export type SecurityEventType = 'RATE_LIMIT_EXCEEDED';
 // Deixaram de ser union types fixas: agora vêm da BD (tabela editável pelo admin),
 // por isso passam a ser `string` (a "key" devolvida por /tasks/meta).
 export type TaskType = string;
@@ -26,6 +27,32 @@ export interface TaskMeta {
   academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
   progressStatuses: string[];
+}
+
+// Registos completos usados só pela área de admin (/admin/task-types,
+// /admin/academic-task-types) - distintos das *Option acima (essas são a
+// versão "resumida" para popular selects, vinda de /tasks/meta). Nota:
+// não há "key" editável aqui de propósito - é gerada automaticamente pelo
+// backend a partir do label e nunca é exposta para edição (só o label, a
+// cor, a ordem e o estado ativo/inativo são).
+export interface AdminTaskType {
+  id: string;
+  key: string;
+  label: string;
+  colorHex: string | null;
+  order: number;
+  isActive: boolean;
+  academicTaskTypes: { id: string; key: string; label: string; isActive: boolean }[];
+}
+
+export interface AdminAcademicTaskType {
+  id: string;
+  key: string;
+  label: string;
+  order: number;
+  isActive: boolean;
+  taskTypeId: string;
+  taskType: { id: string; key: string; label: string; colorHex: string | null } | null;
 }
 
 // 
@@ -107,4 +134,29 @@ export interface Identity {
   refreshToken: string | null;
   scope: string | null;
   createdAt: string;
+}
+
+export interface SecurityLog {
+  id: string;
+  type: SecurityEventType;
+  ip: string;
+  method: string;
+  path: string;
+  userAgent: string | null;
+  createdAt: string;
+  userId: string | null;
+  user: { id: string; email: string; name: string | null } | null;
+}
+
+export interface PaginatedSecurityLogs {
+  total: number;
+  skip: number;
+  take: number;
+  logs: SecurityLog[];
+}
+
+export interface SecurityLogsStats {
+  totalLastHour: number;
+  totalLast24h: number;
+  topOffenders: { ip: string; count: number }[];
 }

@@ -1,29 +1,13 @@
-import {
-  IsString,
-  IsNotEmpty,
-  IsOptional,
-  IsInt,
-  IsHexColor,
-  Matches,
-} from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt, IsHexColor } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+// Sem "key" aqui de propósito: o admin só escreve o nome, a key técnica é
+// gerada automaticamente a partir dele (ver utils/generate-key.ts) e nunca
+// é exposta para edição - ver o comentário em UpdateTaskTypeDto.
 export class CreateTaskTypeDto {
   @ApiProperty({
-    example: 'ACADEMICO',
-    description:
-      'Stable identifier used by the code (e.g. to show the academic subcategory select). UPPERCASE_WITH_UNDERSCORE. Do not edit after creation.',
-  })
-  @IsString()
-  @IsNotEmpty()
-  @Matches(/^[A-Z][A-Z0-9_]*$/, {
-    message: 'key deve estar em MAIUSCULAS_COM_UNDERSCORE (ex: TAREFA_SIMPLES)',
-  })
-  key: string;
-
-  @ApiProperty({
     example: 'Academic',
-    description: 'Nome mostrado na interface',
+    description: 'Nome mostrado na interface. Podes editar isto quando quiseres.',
   })
   @IsString()
   @IsNotEmpty()
