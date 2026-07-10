@@ -179,3 +179,8 @@ export async function updateTask(id: string, taskData: any): Promise<Task> {
 export async function deleteTask(id: string): Promise<void> {
   await api.delete(`/tasks/${id}`);
 }
+
+export const exportMyData = async (): Promise<unknown> => {
+  const response = await api.get('/users/me/export');
+  return response.data;
+};

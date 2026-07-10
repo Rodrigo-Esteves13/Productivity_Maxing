@@ -2,6 +2,7 @@ import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import DateStatusBadge from '../UI/DateStatusBadge';
 import ColorDot from '../UI/ColorDot';
+import RescheduleButton from '../UI/RescheduleButton';
 import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
@@ -9,12 +10,19 @@ import type { Task, AcademicTaskTypeOption } from '../../types/models';
 interface TaskCardProps {
   task: Task;
   academicTaskTypes: AcademicTaskTypeOption[];
+  // Novas props adicionadas aqui!
+  onReschedule?: (e: React.MouseEvent, task: Task) => void;
+  isRescheduling?: boolean;
 }
 
-// Versão em cartão da TaskTableRow, para ecrãs pequenos (a tabela com
-// scroll horizontal era ilegível em mobile - ver TasksTable.tsx).
-export default function TaskCard({ task, academicTaskTypes }: TaskCardProps) {
+export default function TaskCard({ 
+  task, 
+  academicTaskTypes,
+  onReschedule,
+  isRescheduling = false
+}: TaskCardProps) {
   const academicTypeLabel = resolveOptionLabel(task.academicType, academicTaskTypes);
+  const status = getDateStatus(task);
 
   return (
     <div className="border-b border-neutral-800 p-4 last:border-b-0">
@@ -27,11 +35,18 @@ export default function TaskCard({ task, academicTaskTypes }: TaskCardProps) {
           <div className="font-medium text-neutral-100 mt-1 break-words">{task.title}</div>
           {task.topics && <div className="text-xs text-neutral-500 mt-0.5 break-words">{task.topics}</div>}
         </div>
-        <div className="flex-shrink-0 text-right">
-          <DateStatusBadge status={getDateStatus(task)} />
+        <div className="flex-shrink-0 text-right flex flex-col items-end">
+          <DateStatusBadge status={status} />
           <div className="text-[11px] text-neutral-500 mt-1 whitespace-nowrap">
             {getRemainingTimeLabel(task)}
           </div>
+          {/* Botão de reagendar injetado aqui para o Dashboard Mobile */}
+          {status === 'overdue' && onReschedule && (
+            <RescheduleButton 
+              isLoading={isRescheduling} 
+              onClick={(e) => onReschedule(e, task)} 
+            />
+          )}
         </div>
       </div>
 

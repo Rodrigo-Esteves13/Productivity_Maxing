@@ -11,12 +11,8 @@ import { getUserTasks, getUserAreas, getTaskMetadata } from '../api/userService'
 import { getDateStatus } from '../utils/taskDateStatus';
 import type { Task, Area, AcademicTaskTypeOption } from '../types/models';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { useQuickReschedule } from '../hooks/useQuickReschedule';
 
-// Esta página é o "Analytics Dashboard" - notas, pesos, target vs real
-// grade. Isso só faz sentido para tasks Académicas (um hábito como
-// "Natação" nunca vai ter nota nem peso), por isso o âmbito é fixo aqui,
-// não é mais um filtro que o utilizador escolhe. Para ver tudo (hábitos,
-// eventos, projetos, etc.), a página "Tasks" continua a mostrar tudo.
 const DASHBOARD_TASK_TYPE_KEY = 'ACADEMICO';
 
 export default function Dashboard() {
@@ -30,6 +26,11 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<DashboardFiltersState>(EMPTY_DASHBOARD_FILTERS);
+
+  // NOVO: Instanciar o hook
+  const { rescheduleToTomorrow, reschedulingId } = useQuickReschedule((updatedTask) => {
+    setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+  });
 
   useEffect(() => {
     async function fetchData() {
@@ -54,16 +55,11 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-  // Âmbito base: só tasks Académicas entram sequer em consideração antes
-  // de qualquer filtro do utilizador.
   const academicTasks = useMemo(
     () => tasks.filter((task) => task.type === DASHBOARD_TASK_TYPE_KEY),
     [tasks],
   );
 
-  // Só Areas que efetivamente têm tasks Académicas aparecem no filtro de
-  // Area - listar "Natação" aqui (uma Area de Hábito) não fazia sentido
-  // nenhum numa vista de notas.
   const academicAreas = useMemo(() => {
     const areaIdsWithAcademicTasks = new Set(academicTasks.map((task) => task.areaId));
     return areas.filter((area) => areaIdsWithAcademicTasks.has(area.id));
@@ -114,7 +110,12 @@ export default function Dashboard() {
               }
             />
           ) : (
-            <TasksTable tasks={filteredTasks} academicTaskTypes={academicTaskTypes} />
+            <TasksTable 
+              tasks={filteredTasks} 
+              academicTaskTypes={academicTaskTypes} 
+              onReschedule={rescheduleToTomorrow}
+              reschedulingId={reschedulingId}
+            />
           )}
         </>
       )}
