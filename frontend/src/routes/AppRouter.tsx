@@ -11,6 +11,7 @@ import AuthCallback from '../components/Auth/AuthCallback';
 import Tasks from '../pages/Tasks';
 import Focus from '../pages/Focus';
 import Profile from '../pages/Profile';
+import Developer from '../pages/Developer';
 import Areas from '../pages/Areas';
 import Users from '../pages/Users';
 import Security from '../pages/Security';
@@ -49,6 +50,10 @@ export default function AppRouter() {
         <Route 
           path="/profile" 
           element={<PrivateRoute><Profile /></PrivateRoute>} 
+        />
+        <Route 
+          path="/developer" 
+          element={<PrivateRoute><Developer /></PrivateRoute>} 
         />
 
         {/* O <AdminRoute /> envolve as páginas. Se tentarem entrar na página de áreas, o AdminRoute barra. */}
