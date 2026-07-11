@@ -11,6 +11,7 @@ import {
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { ConfirmOverdueDto } from './dto/confirm-overdue.dto';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -46,6 +47,14 @@ export class TasksController {
     return this.tasksService.findToday(user.id);
   }
 
+  // Tasks fora de prazo, ainda por confirmar hoje - ver "why" no service.
+  // Tem de vir antes de @Get(':id') para a rota literal não ser engolida
+  // pelo parâmetro dinâmico.
+  @Get('overdue-checkins')
+  findPendingOverdueCheckins(@CurrentUser() user: AuthenticatedUser) {
+    return this.tasksService.findPendingOverdueCheckins(user.id);
+  }
+
   @Get(':id')
   findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.tasksService.findOne(user.id, id);
@@ -58,6 +67,15 @@ export class TasksController {
     @Body() dto: UpdateTaskDto,
   ) {
     return this.tasksService.update(user.id, id, dto);
+  }
+
+  @Patch(':id/overdue-checkin')
+  confirmOverdue(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: ConfirmOverdueDto,
+  ) {
+    return this.tasksService.confirmOverdue(user.id, id, dto.isCompleted);
   }
 
   @Delete(':id')
