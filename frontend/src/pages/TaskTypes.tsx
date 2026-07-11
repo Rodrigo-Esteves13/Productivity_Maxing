@@ -66,7 +66,7 @@ export default function TaskTypes() {
 
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-white">Academic Subcategories</h2>
+              <h2 className="text-lg font-semibold text-white">Subcategories</h2>
               <ActionButton color="amber" onClick={() => setIsCreateAcademicOpen(true)}>
                 + New Subcategory
               </ActionButton>
