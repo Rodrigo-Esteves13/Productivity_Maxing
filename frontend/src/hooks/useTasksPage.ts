@@ -136,10 +136,13 @@ export function useTasksPage() {
 
       await handleCreateTask(newTaskData);
       closeDetailModal();
-    } catch (err) {
+    } catch {
+      // Falha ao duplicar é sempre um erro de rede/API neste fluxo (a
+      // criação em si já trata os seus próprios erros de validação) - não
+      // precisamos do objeto de erro para dar uma mensagem útil aqui.
       alert('Não foi possível duplicar a tarefa. Verifica a tua ligação.');
     }
-  }, [selectedTask, closeDetailModal]); 
+  }, [selectedTask, closeDetailModal]);
   // Não coloquei 'handleCreateTask' nas dependências para evitar loop de re-renders
 
   return {

@@ -4,8 +4,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Usado só pelo `prisma migrate` (precisa de ligação "de sessão longa").
+  // O runtime (app a correr) usa sempre DATABASE_URL (pooler em modo
+  // transaction, porta 6543) - ver DIRECT_URL no .env.
+  directUrl = env("DIRECT_URL")
 }
 
 // ENUMS (TIPOS ESTRUTURADOS)
@@ -24,6 +28,14 @@ enum Provider {
 enum Role {
   USER
   ADMIN
+}
+
+// Tipos de evento de segurança registados. Por agora só há um gatilho (o
+// ThrottlerGuard a bloquear um IP), mas fica como enum já para permitir
+// adicionar outros tipos de deteção no futuro (ex: falhas de login
+// repetidas) sem migrar a coluna de String para enum mais tarde.
+enum SecurityEventType {
+  RATE_LIMIT_EXCEEDED
 }
 
 // Estado de progresso aplicável a qualquer tarefa ou projeto.
@@ -100,9 +112,11 @@ model User {
   supabaseAuthId String? @unique
 
   // Relações
-  identities Identity[]
-  tasks      Task[]
-  apiKeys    ApiKey[]
+  identities    Identity[]
+  tasks         Task[]
+  apiKeys       ApiKey[]
+  securityLogs  SecurityLog[]
+  studySessions StudySession[]
 }
 
 model ApiKey {
@@ -158,7 +172,8 @@ model Area {
   defaultTaskType   TaskType? @relation("AreaDefaultTaskType", fields: [defaultTaskTypeId], references: [id])
 
   // Relações
-  tasks Task[]
+  tasks         Task[]
+  studySessions StudySession[]
 }
 
 /// Representa uma ação executável dentro de uma Área (Area).
@@ -195,6 +210,7 @@ model Task {
   // Relações
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   area Area @relation(fields: [areaId], references: [id])
+  studySessions StudySession[]
 
   // Nenhuma destas é indexada automaticamente só por ser FK no Postgres:
   // - userId: TasksService.findAll/findOne/update/remove filtram sempre
@@ -208,4 +224,72 @@ model Task {
   @@index([areaId])
   @@index([taskTypeId])
   @@index([academicTypeId])
+}
+
+/// Registo persistente de eventos de segurança - hoje só bloqueios do
+/// ThrottlerGuard (candidatos a tentativa de DoS/força bruta), escrito por
+/// LoggingThrottlerGuard sempre que um IP excede o limite de pedidos.
+/// Distinto do RequestUserLoggerInterceptor (esse só imprime no terminal,
+/// não fica gravado - some com o restart do dyno do Render).
+model SecurityLog {
+  id        String            @id @default(uuid())
+  type      SecurityEventType @default(RATE_LIMIT_EXCEEDED)
+  ip        String
+  method    String
+  path      String
+  userAgent String?
+  count     Int               @default(1) // quantos bloqueios agregados nesta linha (ver LoggingThrottlerGuard)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @default(now()) @updatedAt
+
+  // A maioria dos bloqueios acontece SEM sessão (é precisamente o padrão
+  // de um ataque), por isso opcional. Se o attacker tiver sessão válida
+  // (ex: script autenticado a martelar um endpoint), guardamos quem é -
+  // mas nunca apagamos o log só porque a conta foi apagada depois.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // ip: a query mais comum do admin é "o que fez este IP" / agrupar por IP
+  // para o ranking de piores ofensores.
+  // createdAt: listagem é sempre ordenada e filtrada por período recente -
+  // sem índice degrada para scan completo à medida que a tabela cresce.
+  @@index([ip])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+/// Uma sessão de estudo/foco: início, fim (null enquanto está a decorrer),
+/// opcionalmente ligada a uma Task ou Area, com nota livre. Usada pela
+/// página Focus para: (1) o widget de sessão ativa, (2) o heatmap de
+/// melhores horas para estudar, (3) histórico.
+model StudySession {
+  id        String    @id @default(uuid())
+  userId    String
+  startedAt DateTime  @default(now())
+  // null enquanto a sessão está a decorrer - é o que StudySessionsService
+  // usa para saber se há uma sessão "ativa" (no máximo 1 por utilizador).
+  endedAt   DateTime?
+  note      String?
+  createdAt DateTime  @default(now())
+
+  // Opcionais e independentes um do outro: dá para começar uma sessão sem
+  // apontar a task/area nenhuma ("estudo genérico"), só a uma Area (ex:
+  // "Networking" em geral), só a uma Task, ou às duas.
+  taskId String?
+  areaId String?
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // onDelete: SetNull - apagar uma Task/Area não deve apagar o histórico
+  // de sessões de estudo já registadas, só desassociar.
+  task Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  area Area? @relation(fields: [areaId], references: [id], onDelete: SetNull)
+
+  // userId: toda a gente das queries (ativa, heatmap, histórico) filtra
+  // sempre por dono - é a query mais frequente deste modelo.
+  // [userId, startedAt]: o heatmap e o histórico ordenam/filtram sempre
+  // por período dentro do próprio utilizador.
+  @@index([userId])
+  @@index([userId, startedAt])
+  @@index([taskId])
+  @@index([areaId])
 }

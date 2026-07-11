@@ -3,39 +3,29 @@ import {
   IsNotEmpty,
   IsOptional,
   IsInt,
-  Matches,
+  IsUUID,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+// Sem "key" aqui pela mesma razão do CreateTaskTypeDto - é gerada
+// automaticamente a partir do label. taskTypeId (não taskTypeKey) porque o
+// admin escolhe o TaskType pai a partir de uma lista já carregada na UI,
+// que já tem o id à mão - não faz sentido obrigar a passar pela key.
 export class CreateAcademicTaskTypeDto {
   @ApiProperty({
-    example: 'TRABALHO_PRATICO',
-    description:
-      'Stable identifier used by the code. Do not edit after creation.',
-  })
-  @IsString()
-  @IsNotEmpty()
-  @Matches(/^[A-Z][A-Z0-9_]*$/, {
-    message:
-      'key deve estar em MAIUSCULAS_COM_UNDERSCORE (ex: TRABALHO_PRATICO)',
-  })
-  key: string;
-
-  @ApiProperty({
     example: 'Practical Assignment',
-    description: 'Nome mostrado na interface',
+    description:
+      'Nome mostrado na interface. Podes editar isto quando quiseres.',
   })
   @IsString()
   @IsNotEmpty()
   label: string;
 
   @ApiProperty({
-    example: 'ACADEMICO',
-    description: 'Key do Parent TaskType a que esta subcategoria pertence',
+    description: 'ID do TaskType pai a que esta subcategoria pertence',
   })
-  @IsString()
-  @IsNotEmpty()
-  taskTypeKey: string;
+  @IsUUID()
+  taskTypeId: string;
 
   @ApiPropertyOptional({
     example: 1,

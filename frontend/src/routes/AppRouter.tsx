@@ -9,9 +9,12 @@ import ResetPassword from '../pages/ResetPassword';
 import Dashboard from '../pages/Dashboard';
 import AuthCallback from '../components/Auth/AuthCallback';
 import Tasks from '../pages/Tasks';
+import Focus from '../pages/Focus';
 import Profile from '../pages/Profile';
 import Areas from '../pages/Areas';
 import Users from '../pages/Users';
+import Security from '../pages/Security';
+import TaskTypes from '../pages/TaskTypes';
 import PrivacyPolicy from '../pages/PrivacyPolicy';
 import TermsOfService from '../pages/TermsOfService';
 import CookieNotice from '../components/Legal/CookieNotice';
@@ -40,6 +43,10 @@ export default function AppRouter() {
           element={<PrivateRoute><Tasks /></PrivateRoute>} 
         />
         <Route 
+          path="/focus" 
+          element={<PrivateRoute><Focus /></PrivateRoute>} 
+        />
+        <Route 
           path="/profile" 
           element={<PrivateRoute><Profile /></PrivateRoute>} 
         />
@@ -48,6 +55,8 @@ export default function AppRouter() {
         <Route element={<AdminRoute />}>
           <Route path="/areas" element={<Areas />} />
           <Route path="/users" element={<Users />} />
+          <Route path="/security" element={<Security />} />
+          <Route path="/task-types" element={<TaskTypes />} />
         </Route>
         
         {/* O lixo (apenas URLs que não existem nas rotas acima vêm parar aqui) */}

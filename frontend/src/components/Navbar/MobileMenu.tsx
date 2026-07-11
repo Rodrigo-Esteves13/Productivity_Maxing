@@ -34,6 +34,9 @@ export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileM
       <Link to="/tasks" onClick={onNavigate} className={getLinkClass('/tasks')}>
         Tasks
       </Link>
+      <Link to="/focus" onClick={onNavigate} className={getLinkClass('/focus')}>
+        Focus
+      </Link>
       <Link to="/profile" onClick={onNavigate} className={getLinkClass('/profile')}>
         Profile
       </Link>
@@ -46,6 +49,12 @@ export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileM
           </Link>
           <Link to="/users" onClick={onNavigate} className={getAdminLinkClass('/users')}>
             Users
+          </Link>
+          <Link to="/task-types" onClick={onNavigate} className={getAdminLinkClass('/task-types')}>
+            Task Types
+          </Link>
+          <Link to="/security" onClick={onNavigate} className={getAdminLinkClass('/security')}>
+            Security
           </Link>
         </>
       )}
