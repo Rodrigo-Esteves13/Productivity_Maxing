@@ -703,6 +703,18 @@ export class AuthService {
 
   // GESTÃO DE API KEYS (Para Postman/Scripts externos)
 
+  // Nunca devolve keyHash - a raw key só existe uma vez, no momento da
+  // criação (ver generateApiKey), exatamente como o GitHub faz com os
+  // personal access tokens. Isto é só para o user ver o que já criou e
+  // decidir o que revogar.
+  async listApiKeys(userId: string) {
+    return this.prisma.apiKey.findMany({
+      where: { userId },
+      select: { id: true, name: true, createdAt: true, lastUsed: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async generateApiKey(userId: string, name: string) {
     // 32 bytes de entropia pura
     const rawToken = randomBytes(32).toString('base64url');
