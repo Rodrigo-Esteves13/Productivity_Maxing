@@ -32,9 +32,9 @@ export function useQuickReschedule(
         // Atualiza a UI otimizada através da callback do pai (Dashboard/TasksPage)
         onSuccess(updated);
       } catch (error: unknown) {
-        console.error('Erro ao reagendar tarefa:', error);
+        console.error('Error rescheduling task:', error);
         // Num cenário ideal, ligarias isto ao teu sistema de Toast notifications
-        alert('Não foi possível reagendar a tarefa.');
+        alert('Could not reschedule the task.');
       } finally {
         setReschedulingId(null);
       }

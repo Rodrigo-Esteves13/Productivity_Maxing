@@ -1,3 +1,4 @@
+import PageLayout from '../components/Layout/PageLayout';
 import LegalPageLayout from '../components/Legal/LegalPageLayout';
 import LegalSection from '../components/Legal/LegalSection';
 import LegalLink from '../components/Legal/LegalLink';
@@ -9,6 +10,7 @@ const LAST_UPDATED = '07/07/2026';
 
 export default function PrivacyPolicy() {
   return (
+    <PageLayout>
     <LegalPageLayout title="Privacy Policy for Productivity Maxing" lastUpdated={LAST_UPDATED}>
       <LegalSection number={1} title="Who I am">
         <p className="mb-3">
@@ -218,5 +220,6 @@ export default function PrivacyPolicy() {
         </p>
       </LegalSection>
     </LegalPageLayout>
+    </PageLayout>
   );
 }
