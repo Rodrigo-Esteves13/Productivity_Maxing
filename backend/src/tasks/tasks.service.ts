@@ -175,6 +175,62 @@ export class TasksService {
     return this.toResponse(task);
   }
 
+  /**
+   * Tasks que já passaram o prazo, ainda não marcadas como COMPLETED, e que
+   * ainda não foram "perguntadas" hoje (lastOverdueCheckAt é null ou é de
+   * um dia anterior a hoje). É a lista que alimenta o modal de "overdue
+   * check-in" no frontend, uma vez por dia por task, até responderes.
+   */
+  async findPendingOverdueCheckins(userId: string) {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const tasks = await this.prisma.task.findMany({
+      where: {
+        userId,
+        date: { lt: new Date() },
+        progressStatus: { not: 'COMPLETED' },
+        OR: [
+          { lastOverdueCheckAt: null },
+          { lastOverdueCheckAt: { lt: startOfToday } },
+        ],
+      },
+      include: TASK_INCLUDE,
+      orderBy: { date: 'asc' },
+    });
+
+    return tasks.map((t) => this.toResponse(t));
+  }
+
+  /**
+   * Regista a resposta ao prompt de overdue check-in.
+   * - isCompleted true: a task passa mesmo a COMPLETED (mesma lógica de
+   *   completedAt do update() normal, para o streak continuar fiável).
+   * - isCompleted false: só marcamos que já perguntámos hoje - o
+   *   progressStatus fica como está, e a pergunta volta a aparecer amanhã
+   *   se continuar por concluir.
+   */
+  async confirmOverdue(userId: string, id: string, isCompleted: boolean) {
+    const existing = await this.prisma.task.findFirst({
+      where: { id, userId },
+    });
+    if (!existing)
+      throw new NotFoundException(`Task not found or you don't have access.`);
+
+    const now = new Date();
+    const task = await this.prisma.task.update({
+      where: { id, userId },
+      data: {
+        lastOverdueCheckAt: now,
+        ...(isCompleted
+          ? { progressStatus: 'COMPLETED', completedAt: now }
+          : {}),
+      },
+      include: TASK_INCLUDE,
+    });
+    return this.toResponse(task);
+  }
+
   async remove(userId: string, id: string) {
     await this.findOne(userId, id);
     // Mesma razão do update() acima: where: { id, userId } em vez de só

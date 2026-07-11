@@ -1,3 +1,4 @@
+import PageLayout from '../components/Layout/PageLayout';
 import LegalPageLayout from '../components/Legal/LegalPageLayout';
 import LegalSection from '../components/Legal/LegalSection';
 import LegalLink from '../components/Legal/LegalLink';
@@ -8,6 +9,7 @@ const LAST_UPDATED = '07/07/2026';
 
 export default function TermsOfService() {
   return (
+    <PageLayout>
     <LegalPageLayout title="Terms of Service for Productivity Maxing" lastUpdated={LAST_UPDATED}>
       <LegalSection number={1} title="Acceptance of these terms">
         <p>
@@ -133,5 +135,6 @@ export default function TermsOfService() {
         </p>
       </LegalSection>
     </LegalPageLayout>
+    </PageLayout>
   );
 }
