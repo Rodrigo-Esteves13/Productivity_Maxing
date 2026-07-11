@@ -1,114 +1,80 @@
-import { useEffect, useState } from 'react';
+import { useBestTimesHeatmap } from '../../hooks/useBestTimesHeatmap';
 import LoadingState from '../UI/LoadingState';
-import { getBestTimes } from '../../api/studyService';
-import type { BestTimesResponse } from '../../types/models';
+import ErrorState from '../UI/ErrorState';
+import EmptyState from '../UI/EmptyState';
+import type { HeatmapCell } from '../../types/models';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const HOUR_BUCKET_LABELS = ['00-04', '04-08', '08-12', '12-16', '16-20', '20-24'];
 
-// Escala simples de intensidade em violeta (opacidade 15%-90% aplicada
-// inline no call site) - sem depender de nenhuma lib de gráficos só para
-// isto.
-function scoreToColor(score: number | null): string {
-  return score === null ? 'bg-neutral-800/60' : 'bg-violet-500';
+// Intensidade da cor proporcional ao máximo de minutos numa única célula -
+// não a um valor absoluto, para o heatmap continuar legível quer tenhas 2
+// horas registadas no total, quer tenhas 200.
+function intensityClass(minutes: number, maxMinutes: number): string {
+  if (minutes === 0 || maxMinutes === 0) return 'bg-neutral-900 border-neutral-800';
+  const ratio = minutes / maxMinutes;
+  if (ratio > 0.75) return 'bg-violet-500 border-violet-400';
+  if (ratio > 0.5) return 'bg-violet-600/70 border-violet-600/60';
+  if (ratio > 0.25) return 'bg-violet-700/50 border-violet-700/40';
+  return 'bg-violet-800/30 border-violet-800/30';
 }
 
 export default function BestTimesHeatmap() {
-  const [data, setData] = useState<BestTimesResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { cells, isLoading, error, hasAnyData } = useBestTimesHeatmap();
 
-  useEffect(() => {
-    getBestTimes()
-      .then(setData)
-      .catch(() => setError('Could not load your study pattern yet.'))
-      .finally(() => setIsLoading(false));
-  }, []);
+  const maxMinutes = Math.max(0, ...cells.map((c) => c.totalMinutes));
 
-  if (isLoading) {
-    return <LoadingState message="Reading your study pattern..." className="h-40" />;
-  }
-
-  if (error) {
-    return <p className="text-sm text-neutral-500">{error}</p>;
-  }
-
-  if (!data || !data.hasEnoughData) {
-    return (
-      <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 text-center">
-        <p className="text-sm font-medium text-neutral-200">Still learning your pattern</p>
-        <p className="text-xs text-neutral-500 mt-2">
-          {data
-            ? `You've rated ${data.sampleSize} session${data.sampleSize === 1 ? '' : 's'} so far - need at least ${
-                data.minSamplesNeeded
-              } before showing anything. Keep using the timer above and rating how sessions go.`
-            : 'Start a study session and rate it when it ends - that\'s what teaches this.'}
-        </p>
-      </div>
-    );
-  }
-
-  const hourBuckets = Array.from(new Set(data.cells.map((c) => `${c.hourStart}-${c.hourEnd}-${c.label}`))).map(
-    (key) => {
-      const [start, end, label] = key.split('-');
-      return { start: Number(start), end, label };
-    },
-  );
+  const cellAt = (dayOfWeek: number, hourBucket: number): HeatmapCell | undefined =>
+    cells.find((c) => c.dayOfWeek === dayOfWeek && c.hourBucket === hourBucket);
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm font-medium text-neutral-200">Best times to study</p>
-        <span className="text-xs text-neutral-500">
-          {data.isHeuristic ? `Simple average - ${data.sampleSize} sessions` : `Predicted model - ${data.sampleSize} sessions`}
-        </span>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs text-center border-separate border-spacing-1">
-          <thead>
-            <tr>
-              <th className="w-20"></th>
-              {DAY_LABELS.map((d) => (
-                <th key={d} className="font-medium text-neutral-400 pb-1">
-                  {d}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {hourBuckets.map((bucket) => (
-              <tr key={bucket.start}>
-                <td className="text-neutral-500 text-right pr-2 whitespace-nowrap">{bucket.label}</td>
-                {DAY_LABELS.map((_, dayOfWeek) => {
-                  const cell = data.cells.find(
-                    (c) => c.dayOfWeek === dayOfWeek && c.hourStart === bucket.start,
-                  );
-                  const score = cell?.score ?? null;
-                  return (
-                    <td key={dayOfWeek} className="p-0">
-                      <div
-                        className={`h-8 rounded ${scoreToColor(score)}`}
-                        style={score !== null ? { opacity: 0.15 + score * 0.75 } : undefined}
-                        title={
-                          score !== null
-                            ? `${Math.round(score * 100)}% (${cell?.sessionCount ?? 0} sessions)`
-                            : 'No data'
-                        }
-                      />
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <p className="text-xs text-neutral-600 mt-3">
-        {data.isHeuristic
-          ? 'Based on a simple average of your ratings per time slot. Once you have more data, this switches to a trained prediction that can also fill in slots you haven\'t tried yet.'
-          : 'Predicted with a logistic regression trained on your session history - it can suggest slots even if you\'ve never studied then.'}
+      <h2 className="text-lg font-semibold text-white mb-1">Best times to study</h2>
+      <p className="text-sm text-neutral-400 mb-4">
+        Total study time logged, by day of week and 4-hour block.
       </p>
+
+      {isLoading && <LoadingState message="Loading heatmap..." />}
+      {!isLoading && error && <ErrorState message={error} />}
+      {!isLoading && !error && !hasAnyData && (
+        <EmptyState message="No completed study sessions yet. Start one in the widget on the side." />
+      )}
+
+      {!isLoading && !error && hasAnyData && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border-separate border-spacing-1">
+            <thead>
+              <tr>
+                <th className="w-10" />
+                {HOUR_BUCKET_LABELS.map((label) => (
+                  <th key={label} className="text-neutral-500 font-normal pb-1">
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {DAY_LABELS.map((dayLabel, dayOfWeek) => (
+                <tr key={dayLabel}>
+                  <td className="text-neutral-500 pr-2 text-right">{dayLabel}</td>
+                  {HOUR_BUCKET_LABELS.map((_, hourBucket) => {
+                    const cell = cellAt(dayOfWeek, hourBucket);
+                    const minutes = cell?.totalMinutes ?? 0;
+                    return (
+                      <td key={hourBucket} className="p-0">
+                        <div
+                          title={minutes > 0 ? `${minutes} min (${cell?.sessionCount} sessions)` : 'No data'}
+                          className={`w-full aspect-square rounded-md border ${intensityClass(minutes, maxMinutes)}`}
+                        />
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

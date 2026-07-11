@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsOptional, IsInt, IsHexColor } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsInt,
+  IsHexColor,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // Sem "key" aqui de propósito: o admin só escreve o nome, a key técnica é
@@ -7,7 +13,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class CreateTaskTypeDto {
   @ApiProperty({
     example: 'Academic',
-    description: 'Nome mostrado na interface. Podes editar isto quando quiseres.',
+    description:
+      'Nome mostrado na interface. Podes editar isto quando quiseres.',
   })
   @IsString()
   @IsNotEmpty()

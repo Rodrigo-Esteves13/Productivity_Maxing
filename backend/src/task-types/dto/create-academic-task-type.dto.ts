@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsOptional, IsInt, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsInt,
+  IsUUID,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // Sem "key" aqui pela mesma razão do CreateTaskTypeDto - é gerada
@@ -8,7 +14,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class CreateAcademicTaskTypeDto {
   @ApiProperty({
     example: 'Practical Assignment',
-    description: 'Nome mostrado na interface. Podes editar isto quando quiseres.',
+    description:
+      'Nome mostrado na interface. Podes editar isto quando quiseres.',
   })
   @IsString()
   @IsNotEmpty()

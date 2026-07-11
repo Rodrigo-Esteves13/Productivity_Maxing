@@ -11,6 +11,7 @@ import { AreasModule } from './areas/areas.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
 import { SecurityLogsModule } from './security-logs/security-logs.module';
+import { StudySessionsModule } from './study-sessions/study-sessions.module';
 import { CsrfGuard } from './auth/guards/csrf.guard';
 import { LoggingThrottlerGuard } from './common/guards/logging-throttler.guard';
 import { RequestUserLoggerInterceptor } from './common/interceptors/request-user-logger.interceptor';
@@ -32,6 +33,7 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     AuthModule,
     HealthModule,
     SecurityLogsModule,
+    StudySessionsModule,
   ],
   controllers: [AppController],
   providers: [
