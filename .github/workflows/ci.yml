@@ -32,6 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+      DIRECT_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
     defaults:
       run:
         working-directory: backend

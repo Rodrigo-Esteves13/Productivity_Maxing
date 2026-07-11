@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -10,7 +10,10 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AreasModule } from './areas/areas.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
+import { SecurityLogsModule } from './security-logs/security-logs.module';
+import { StudySessionsModule } from './study-sessions/study-sessions.module';
 import { CsrfGuard } from './auth/guards/csrf.guard';
+import { LoggingThrottlerGuard } from './common/guards/logging-throttler.guard';
 import { RequestUserLoggerInterceptor } from './common/interceptors/request-user-logger.interceptor';
 
 @Module({
@@ -29,14 +32,20 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     AreasModule,
     AuthModule,
     HealthModule,
+    SecurityLogsModule,
+    StudySessionsModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    //O Guard global entra aqui para proteger todas as rotas automaticamente
+    // O Guard global entra aqui para proteger todas as rotas automaticamente.
+    // LoggingThrottlerGuard é um ThrottlerGuard normal (mesmos limites,
+    // mesmo comportamento) que só acrescenta: grava um SecurityLog sempre
+    // que bloqueia um pedido - ver common/guards/logging-throttler.guard.ts
+    // e a página /admin/security-logs no frontend.
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: LoggingThrottlerGuard,
     },
     // Segundo Guard global: valida CSRF (double-submit cookie) em todos os
     // pedidos que alteram estado e que usam sessão por cookie.

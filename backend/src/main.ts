@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import type { Express } from 'express';
 
 // Variáveis obrigatórias para o backend funcionar com segurança. Se
 // qualquer uma faltar, a app não deve arrancar silenciosamente com um
@@ -35,6 +36,26 @@ async function bootstrap() {
   assertRequiredEnvVars();
 
   const app = await NestFactory.create(AppModule);
+
+  // Em produção corremos atrás do proxy do Render (e a firewall dele já
+  // filtra a maior parte do lixo antes de chegar cá). Sem isto, req.ip
+  // seria sempre o IP interno do proxy, não o do cliente real - o que
+  // partia tanto o ThrottlerGuard (contava tudo como se fosse um único
+  // IP, ou bloqueava toda a gente ao mesmo tempo) como os SecurityLog
+  // gravados a cada bloqueio (ver LoggingThrottlerGuard), que ficavam
+  // todos com o mesmo IP inútil. "1" = confia só no primeiro hop do
+  // X-Forwarded-For (o proxy do Render), não numa cadeia arbitrária.
+  const httpAdapter = app.getHttpAdapter().getInstance() as Express;
+  httpAdapter.set('trust proxy', 1);
+
+  // Sem isto, o Nest NUNCA chama onModuleDestroy() nos providers (ex:
+  // PrismaService.$disconnect() - ver prisma.service.ts) quando o
+  // processo recebe SIGTERM (docker compose a reiniciar por causa do
+  // watch mode, ou o Render a fazer deploy). As ligações à BD ficavam
+  // penduradas no pooler até expirarem sozinhas por timeout - com poucos
+  // restarts seguidos, isso já chegava para esgotar o limite de 15
+  // ligações do pooler em modo "session" (EMAXCONNSESSION).
+  app.enableShutdownHooks();
 
   app.use(helmet());
   // Necessário para o JwtStrategy e o CsrfGuard conseguirem ler
