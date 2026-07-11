@@ -126,6 +126,15 @@ export interface ApiKey {
   lastUsed: string | null;
 }
 
+// O que GET /auth/api-keys devolve de facto - nunca inclui keyHash nem
+// userId, só o suficiente para o user reconhecer e gerir as suas keys.
+export interface ApiKeySummary {
+  id: string;
+  name: string;
+  createdAt: string;
+  lastUsed: string | null;
+}
+
 export interface Identity {
   id: string;
   userId: string;

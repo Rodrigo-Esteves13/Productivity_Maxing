@@ -1,6 +1,6 @@
 // src/api/userService.ts
 import api from './client';
-import type { User, Area, Task, TaskMeta, Role } from '../types/models';
+import type { User, Area, Task, TaskMeta, Role, ApiKeySummary } from '../types/models';
 
 // AUTH ENDPOINTS
 // Login/registo já não devolvem o JWT no corpo - o backend define-o num
@@ -204,4 +204,22 @@ export const confirmOverdueTask = async (
     isCompleted,
   });
   return response.data;
+};
+
+// API KEYS (Developer page)
+export const getApiKeys = async (): Promise<ApiKeySummary[]> => {
+  const response = await api.get<ApiKeySummary[]>('/auth/api-keys');
+  return response.data;
+};
+
+// A resposta traz a raw key em texto - é a ÚNICA vez que ela existe em
+// texto simples, o backend só guarda o hash. Mostra-a uma vez ao user e
+// depois esquece.
+export const createApiKey = async (name: string): Promise<{ apiKey: string }> => {
+  const response = await api.post<{ apiKey: string }>('/auth/api-keys', { name });
+  return response.data;
+};
+
+export const revokeApiKey = async (id: string): Promise<void> => {
+  await api.delete(`/auth/api-keys/${id}`);
 };

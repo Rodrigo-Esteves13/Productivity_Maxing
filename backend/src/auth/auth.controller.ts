@@ -385,6 +385,12 @@ export class AuthController {
 
   // API KEYS
 
+  @Get('api-keys')
+  @UseGuards(JwtAuthGuard)
+  async listApiKeys(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.listApiKeys(user.id);
+  }
+
   // Sem isto, um utilizador autenticado (ou uma conta comprometida) conseguia
   // gerar API Keys em loop sem qualquer limite, o que não é um IDOR nem um
   // leak, mas polui a tabela ApiKey e permite abuso do storage/BD.
