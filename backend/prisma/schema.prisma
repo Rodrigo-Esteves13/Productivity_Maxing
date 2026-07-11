@@ -203,6 +203,14 @@ model Task {
 
   completedAt DateTime?
 
+  // Última vez que perguntámos ao user se esta task (já fora de prazo) está
+  // feita ou não (feature de "overdue check-in", ver tasks.service.ts).
+  // Serve só para não repetir a pergunta várias vezes no mesmo dia - a
+  // pergunta volta a aparecer no dia seguinte enquanto a task não passar a
+  // COMPLETED. Não precisa de índice: é sempre lido junto com o filtro por
+  // userId + date, que já cobre a query.
+  lastOverdueCheckAt DateTime?
+
   // Integrações
   googleCalendarEventId String?
   createdAt             DateTime @default(now())

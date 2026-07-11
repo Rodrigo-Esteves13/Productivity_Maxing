@@ -184,3 +184,24 @@ export const exportMyData = async (): Promise<unknown> => {
   const response = await api.get('/users/me/export');
   return response.data;
 };
+
+// OVERDUE CHECK-IN
+// Tasks fora de prazo, ainda não marcadas como COMPLETED, que ainda não
+// foram perguntadas hoje - alimenta o OverdueCheckinModal.
+export const getOverdueCheckins = async (): Promise<Task[]> => {
+  const response = await api.get<Task[]>('/tasks/overdue-checkins');
+  return response.data;
+};
+
+// Regista a resposta do user a "esta task já está feita?" para uma task
+// fora de prazo. isCompleted=true marca-a como COMPLETED de verdade;
+// isCompleted=false só evita repetir a pergunta hoje.
+export const confirmOverdueTask = async (
+  id: string,
+  isCompleted: boolean,
+): Promise<Task> => {
+  const response = await api.patch<Task>(`/tasks/${id}/overdue-checkin`, {
+    isCompleted,
+  });
+  return response.data;
+};
