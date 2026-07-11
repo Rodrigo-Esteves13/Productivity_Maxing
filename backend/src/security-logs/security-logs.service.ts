@@ -17,7 +17,10 @@ export interface RecordSecurityEventInput {
   count?: number;
 }
 
-const WINDOW_TO_MS: Record<NonNullable<QuerySecurityLogsDto['window']>, number> = {
+const WINDOW_TO_MS: Record<
+  NonNullable<QuerySecurityLogsDto['window']>,
+  number
+> = {
   '1h': 60 * 60 * 1000,
   '24h': 24 * 60 * 60 * 1000,
   '7d': 7 * 24 * 60 * 60 * 1000,
@@ -60,7 +63,11 @@ export class SecurityLogsService {
         ? { path: { contains: query.path, mode: 'insensitive' } }
         : {}),
       ...(query.window
-        ? { createdAt: { gte: new Date(Date.now() - WINDOW_TO_MS[query.window]) } }
+        ? {
+            createdAt: {
+              gte: new Date(Date.now() - WINDOW_TO_MS[query.window]),
+            },
+          }
         : {}),
     };
 
@@ -118,7 +125,11 @@ export class SecurityLogsService {
    */
   async purge(olderThanDays?: number): Promise<{ deleted: number }> {
     const where: Prisma.SecurityLogWhereInput = olderThanDays
-      ? { createdAt: { lt: new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000) } }
+      ? {
+          createdAt: {
+            lt: new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000),
+          },
+        }
       : {};
 
     const { count } = await this.prisma.securityLog.deleteMany({ where });

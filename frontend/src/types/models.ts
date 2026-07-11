@@ -160,3 +160,25 @@ export interface SecurityLogsStats {
   totalLast24h: number;
   topOffenders: { ip: string; count: number }[];
 }
+
+// FOCUS / STUDY SESSIONS
+
+export interface StudySession {
+  id: string;
+  startedAt: string;
+  endedAt: string | null;
+  note: string | null;
+  taskId: string | null;
+  areaId: string | null;
+  task: { id: string; title: string } | null;
+  area: { id: string; name: string; colorHex: string } | null;
+  // null enquanto a sessão está ativa (endedAt ainda não existe)
+  durationSeconds: number | null;
+}
+
+export interface HeatmapCell {
+  dayOfWeek: number; // 0 (Domingo) - 6 (Sábado)
+  hourBucket: number; // 0 (00h-04h) - 5 (20h-24h)
+  totalMinutes: number;
+  sessionCount: number;
+}

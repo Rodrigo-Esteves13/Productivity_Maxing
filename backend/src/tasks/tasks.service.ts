@@ -63,6 +63,49 @@ export class TasksService {
     return tasks.map((t) => this.toResponse(t));
   }
 
+  /**
+   * Tasks com prazo hoje, ainda não concluídas, ordenadas por prioridade -
+   * usado pelo widget "TodayPlan" na página Focus.
+   *
+   * Prioridade = weightPercentage (peso na nota final) quando existe,
+   * senão a dificuldade percebida como proxy - assume-se que uma task mais
+   * pesada/difícil merece ser atacada primeiro no dia. Isto é uma escolha
+   * de produto razoável, não uma verdade absoluta - fica fácil de trocar
+   * aqui se preferires outro critério mais tarde.
+   */
+  async findToday(userId: string) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const tasks = await this.prisma.task.findMany({
+      where: {
+        userId,
+        date: { gte: startOfDay, lte: endOfDay },
+        progressStatus: { not: 'COMPLETED' },
+      },
+      include: TASK_INCLUDE,
+    });
+
+    const difficultyWeight: Record<Difficulty, number> = {
+      VERY_EASY: 1,
+      EASY: 2,
+      MEDIUM: 3,
+      HARD: 4,
+      VERY_HARD: 5,
+    };
+
+    const priorityScore = (t: TaskWithIncludes) =>
+      t.weightPercentage ?? difficultyWeight[t.difficulty] * 10;
+
+    const sorted = [...tasks].sort(
+      (a, b) => priorityScore(b) - priorityScore(a),
+    );
+
+    return sorted.map((t) => this.toResponse(t));
+  }
+
   async findOne(userId: string, id: string) {
     const task = await this.prisma.task.findFirst({
       where: { id, userId },

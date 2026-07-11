@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import type { Express } from 'express';
 
 // Variáveis obrigatórias para o backend funcionar com segurança. Se
 // qualquer uma faltar, a app não deve arrancar silenciosamente com um
@@ -44,7 +45,8 @@ async function bootstrap() {
   // gravados a cada bloqueio (ver LoggingThrottlerGuard), que ficavam
   // todos com o mesmo IP inútil. "1" = confia só no primeiro hop do
   // X-Forwarded-For (o proxy do Render), não numa cadeia arbitrária.
-  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  const httpAdapter = app.getHttpAdapter().getInstance() as Express;
+  httpAdapter.set('trust proxy', 1);
 
   // Sem isto, o Nest NUNCA chama onModuleDestroy() nos providers (ex:
   // PrismaService.$disconnect() - ver prisma.service.ts) quando o

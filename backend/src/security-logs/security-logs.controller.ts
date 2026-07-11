@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Delete,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Delete, Query, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SecurityLogsService } from './security-logs.service';

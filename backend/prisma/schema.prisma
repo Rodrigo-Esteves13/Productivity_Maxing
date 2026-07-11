@@ -112,10 +112,11 @@ model User {
   supabaseAuthId String? @unique
 
   // Relações
-  identities   Identity[]
-  tasks        Task[]
-  apiKeys      ApiKey[]
-  securityLogs SecurityLog[]
+  identities    Identity[]
+  tasks         Task[]
+  apiKeys       ApiKey[]
+  securityLogs  SecurityLog[]
+  studySessions StudySession[]
 }
 
 model ApiKey {
@@ -171,7 +172,8 @@ model Area {
   defaultTaskType   TaskType? @relation("AreaDefaultTaskType", fields: [defaultTaskTypeId], references: [id])
 
   // Relações
-  tasks Task[]
+  tasks         Task[]
+  studySessions StudySession[]
 }
 
 /// Representa uma ação executável dentro de uma Área (Area).
@@ -208,6 +210,7 @@ model Task {
   // Relações
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   area Area @relation(fields: [areaId], references: [id])
+  studySessions StudySession[]
 
   // Nenhuma destas é indexada automaticamente só por ser FK no Postgres:
   // - userId: TasksService.findAll/findOne/update/remove filtram sempre
@@ -253,4 +256,40 @@ model SecurityLog {
   @@index([ip])
   @@index([createdAt])
   @@index([userId])
+}
+
+/// Uma sessão de estudo/foco: início, fim (null enquanto está a decorrer),
+/// opcionalmente ligada a uma Task ou Area, com nota livre. Usada pela
+/// página Focus para: (1) o widget de sessão ativa, (2) o heatmap de
+/// melhores horas para estudar, (3) histórico.
+model StudySession {
+  id        String    @id @default(uuid())
+  userId    String
+  startedAt DateTime  @default(now())
+  // null enquanto a sessão está a decorrer - é o que StudySessionsService
+  // usa para saber se há uma sessão "ativa" (no máximo 1 por utilizador).
+  endedAt   DateTime?
+  note      String?
+  createdAt DateTime  @default(now())
+
+  // Opcionais e independentes um do outro: dá para começar uma sessão sem
+  // apontar a task/area nenhuma ("estudo genérico"), só a uma Area (ex:
+  // "Networking" em geral), só a uma Task, ou às duas.
+  taskId String?
+  areaId String?
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // onDelete: SetNull - apagar uma Task/Area não deve apagar o histórico
+  // de sessões de estudo já registadas, só desassociar.
+  task Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  area Area? @relation(fields: [areaId], references: [id], onDelete: SetNull)
+
+  // userId: toda a gente das queries (ativa, heatmap, histórico) filtra
+  // sempre por dono - é a query mais frequente deste modelo.
+  // [userId, startedAt]: o heatmap e o histórico ordenam/filtram sempre
+  // por período dentro do próprio utilizador.
+  @@index([userId])
+  @@index([userId, startedAt])
+  @@index([taskId])
+  @@index([areaId])
 }

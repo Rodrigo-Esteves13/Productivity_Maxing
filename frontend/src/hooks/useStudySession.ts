@@ -1,84 +1,109 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { startStudySession, endStudySession, getActiveStudySession } from '../api/studyService';
-import type { StudySession, StudySessionMode } from '../types/models';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  getActiveStudySession,
+  startStudySession,
+  stopStudySession,
+  type StartStudySessionInput,
+} from '../api/studySessionsService';
+import { getUserAreas } from '../api/userService';
+import type { StudySession, Area } from '../types/models';
 
 export function useStudySession() {
   const [activeSession, setActiveSession] = useState<StudySession | null>(null);
+  const [areas, setAreas] = useState<Area[]>([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isStarting, setIsStarting] = useState(false);
-  // Terminar é em 2 passos: primeiro só mostra o prompt de rating
-  // (isEnding), só chama a API quando o rating é confirmado ou saltado -
-  // o backend não deixa terminar a mesma sessão duas vezes, por isso não
-  // dá para "terminar" e depois "atualizar com o rating" em 2 pedidos.
-  const [isEnding, setIsEnding] = useState(false);
-  const tickRef = useRef<number | null>(null);
 
-  // Restaura a sessão em curso ao montar (ex: recarregaste a página a meio
-  // de uma sessão) - sem isto, o timer "esquecia-se" sempre que navegavas.
-  useEffect(() => {
-    (async () => {
-      try {
-        const session = await getActiveStudySession();
-        setActiveSession(session ?? null);
-      } catch {
-        setActiveSession(null);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchInitialData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const [session, areasData] = await Promise.all([
+        getActiveStudySession(),
+        getUserAreas(),
+      ]);
+      setActiveSession(session);
+      setAreas(areasData);
+    } catch {
+      setError('Could not load the study session.');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
+    void fetchInitialData();
+  }, [fetchInitialData]);
+
+  // Timer local (não depende do backend a cada segundo) - recalcula sempre
+  // a partir de startedAt, para não desviar se o separador ficar em
+  // background e o setInterval atrasar.
+  useEffect(() => {
+    if (tickRef.current) {
+      clearInterval(tickRef.current);
+      tickRef.current = null;
+    }
+
     if (!activeSession) {
-      if (tickRef.current) window.clearInterval(tickRef.current);
       setElapsedSeconds(0);
       return;
     }
+
     const startedAtMs = new Date(activeSession.startedAt).getTime();
-    const update = () => setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000)));
-    update();
-    tickRef.current = window.setInterval(update, 1000);
+    const updateElapsed = () => {
+      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000)));
+    };
+    updateElapsed();
+    tickRef.current = setInterval(updateElapsed, 1000);
+
     return () => {
-      if (tickRef.current) window.clearInterval(tickRef.current);
+      if (tickRef.current) clearInterval(tickRef.current);
     };
   }, [activeSession]);
 
-  const start = useCallback(async (mode: StudySessionMode, taskId?: string) => {
-    setIsStarting(true);
+  const start = useCallback(async (input: StartStudySessionInput) => {
     try {
-      const session = await startStudySession({ mode, taskId });
+      setIsSubmitting(true);
+      setError('');
+      const session = await startStudySession(input);
       setActiveSession(session);
+    } catch {
+      setError('Could not start the session. Please try again.');
     } finally {
-      setIsStarting(false);
+      setIsSubmitting(false);
     }
   }, []);
 
-  // Abre o prompt de rating - ainda não termina nada no backend.
-  const requestEnd = useCallback(() => setIsEnding(true), []);
-
-  const cancelEnd = useCallback(() => setIsEnding(false), []);
-
-  // Termina de facto, com ou sem rating (undefined = "saltar avaliação").
-  const confirmEnd = useCallback(
-    async (focusRating?: number) => {
+  const stop = useCallback(
+    async (note?: string) => {
       if (!activeSession) return;
-      await endStudySession(activeSession.id, focusRating);
-      setActiveSession(null);
-      setIsEnding(false);
+      try {
+        setIsSubmitting(true);
+        setError('');
+        await stopStudySession(activeSession.id, { note });
+        setActiveSession(null);
+      } catch {
+        setError('Could not stop the session. Please try again.');
+      } finally {
+        setIsSubmitting(false);
+      }
     },
     [activeSession],
   );
 
   return {
     activeSession,
+    areas,
     elapsedSeconds,
     isLoading,
-    isStarting,
-    isEnding,
+    isSubmitting,
+    error,
     start,
-    requestEnd,
-    cancelEnd,
-    confirmEnd,
+    stop,
   };
 }

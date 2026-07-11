@@ -9,6 +9,7 @@ import ResetPassword from '../pages/ResetPassword';
 import Dashboard from '../pages/Dashboard';
 import AuthCallback from '../components/Auth/AuthCallback';
 import Tasks from '../pages/Tasks';
+import Focus from '../pages/Focus';
 import Profile from '../pages/Profile';
 import Areas from '../pages/Areas';
 import Users from '../pages/Users';
@@ -40,6 +41,10 @@ export default function AppRouter() {
         <Route 
           path="/tasks" 
           element={<PrivateRoute><Tasks /></PrivateRoute>} 
+        />
+        <Route 
+          path="/focus" 
+          element={<PrivateRoute><Focus /></PrivateRoute>} 
         />
         <Route 
           path="/profile" 
