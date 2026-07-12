@@ -1,6 +1,6 @@
 services:
   backend:
-    image: rodrigoesteves13/pmaxing-backend:1.0.0
+    image: rodrigoesteves13/pmaxing-backend:1.1.0
     ports:
       - "3000:3000"
     env_file:
@@ -24,7 +24,7 @@ services:
     # efeito - a imagem já vem com o bundle compilado. Para apontar a outro
     # backend tens de reconstruir e voltar a dar push com o VITE_API_URL certo.
     # Ex de build: docker build --build-arg VITE_API_URL=https://<o-teu-backend>.onrender.com/api -t rodrigoesteves13/pmaxing-frontend:1.0.0 ./frontend
-    image: rodrigoesteves13/pmaxing-frontend:1.0.0
+    image: rodrigoesteves13/pmaxing-frontend:1.1.0
     ports:
       - "80:80"
     env_file:
