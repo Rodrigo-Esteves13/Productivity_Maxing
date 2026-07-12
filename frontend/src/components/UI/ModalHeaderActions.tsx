@@ -1,4 +1,4 @@
-import { PencilIcon, TrashIcon, XIcon } from './Icons';
+import { PencilIcon, TrashIcon, UndoIcon } from './Icons';
 
 const DuplicateIcon = () => (
   <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,7 +58,7 @@ export default function ModalHeaderActions({
         title={isEditing ? cancelEditTitle : editTitle}
         className="text-neutral-400 hover:text-white transition-colors p-1"
       >
-        {isEditing ? <XIcon /> : <PencilIcon />}
+        {isEditing ? <UndoIcon /> : <PencilIcon />}
       </button>
     </div>
   );

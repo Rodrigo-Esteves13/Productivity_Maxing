@@ -109,6 +109,9 @@ export interface Task {
   
   // Integrations & Timestamps
   googleCalendarEventId: string | null;
+  // Duração (minutos) do evento no Google Calendar, só relevante quando a
+  // task tem hora definida. Null = usa o default de 60min no backend.
+  calendarDurationMinutes: number | null;
   createdAt: string;
   completedAt: string | null; // Momento real em que passou a COMPLETED
   lastOverdueCheckAt: string | null; // Última vez que o overdue check-in perguntou por esta task

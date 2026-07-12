@@ -5,9 +5,11 @@ import {
   IsEnum,
   IsOptional,
   IsNumber,
+  IsInt,
   IsUrl,
   Min,
   Max,
+  MaxLength,
 } from 'class-validator';
 import { Difficulty, ProgressStatus } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -19,6 +21,7 @@ export class CreateTaskDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   areaId: string;
 
   @ApiProperty({
@@ -27,6 +30,7 @@ export class CreateTaskDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(200)
   title: string;
 
   @ApiProperty({
@@ -44,6 +48,7 @@ export class CreateTaskDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   type: string;
 
   @ApiPropertyOptional({
@@ -53,14 +58,16 @@ export class CreateTaskDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   academicType?: string;
 
   @ApiPropertyOptional({
-    example: 'Limites, Derivadas',
+    example: 'Limits, Derivatives',
     description: 'Topics to study',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(5000)
   topics?: string;
 
   @ApiPropertyOptional({
@@ -96,6 +103,7 @@ export class CreateTaskDto {
   })
   @IsOptional()
   @IsUrl()
+  @MaxLength(2048)
   referenceLink?: string;
 
   @ApiPropertyOptional({ example: 16.0, description: 'Target grade (0-20)' })
@@ -114,4 +122,15 @@ export class CreateTaskDto {
   @Min(0)
   @Max(20)
   realGrade?: number;
+
+  @ApiPropertyOptional({
+    example: 60,
+    description:
+      'Duration in minutes of the Google Calendar event, only used when the task has a time component (all-day events ignore this). Can span past midnight or across multiple days - the end is always start + duration, no special day-boundary handling. Defaults to 60 in CalendarService when not set.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(5)
+  @Max(30 * 24 * 60)
+  calendarDurationMinutes?: number;
 }

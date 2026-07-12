@@ -3,6 +3,7 @@ import DifficultyBadge from '../UI/DifficultyBadge';
 import DateStatusBadge from '../UI/DateStatusBadge';
 import ColorDot from '../UI/ColorDot';
 import RescheduleButton from '../UI/RescheduleButton';
+import CalendarSyncButton from './CalendarSyncButton';
 import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
@@ -30,7 +31,7 @@ export default function TaskCard({
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-xs font-medium text-white">
             {task.area?.colorHex && <ColorDot color={task.area.colorHex} />}
-            <span className="truncate">{task.area?.name || '—'}</span>
+            <span className="truncate">{task.area?.name || 'N/A'}</span>
           </div>
           <div className="font-medium text-neutral-100 mt-1 break-words">{task.title}</div>
           {task.topics && <div className="text-xs text-neutral-500 mt-0.5 break-words">{task.topics}</div>}
@@ -54,6 +55,7 @@ export default function TaskCard({
         <DifficultyBadge difficulty={task.difficulty} />
         <StatusBadge status={task.progressStatus} />
         <span className="text-[11px] text-neutral-400">{academicTypeLabel}</span>
+        <CalendarSyncButton task={task} />
       </div>
 
       <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-neutral-800/70 text-center">
@@ -64,15 +66,15 @@ export default function TaskCard({
         <div>
           <div className="text-[10px] uppercase text-neutral-500">Weight</div>
           <div className="text-xs text-neutral-300 mt-0.5">
-            {task.weightPercentage ? `${task.weightPercentage}%` : '—'}
+            {task.weightPercentage ? `${task.weightPercentage}%` : 'N/A'}
           </div>
         </div>
         <div>
           <div className="text-[10px] uppercase text-neutral-500">Target / Real</div>
           <div className="text-xs mt-0.5">
-            <span className="font-medium text-blue-400">{task.targetGrade ?? '—'}</span>
+            <span className="font-medium text-blue-400">{task.targetGrade ?? 'N/A'}</span>
             <span className="text-neutral-600"> / </span>
-            <span className="font-bold text-cyan-400">{task.realGrade ?? '—'}</span>
+            <span className="font-bold text-cyan-400">{task.realGrade ?? 'N/A'}</span>
           </div>
         </div>
       </div>
