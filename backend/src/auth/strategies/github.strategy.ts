@@ -42,6 +42,12 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
       const isVerified = primaryEmail?.verified === true;
 
       const state = req.query.state as string | undefined;
+      const githubProfile = profile as Profile & {
+        _json?: { avatar_url?: string };
+      };
+      const photo =
+        profile.photos?.[0]?.value ?? githubProfile._json?.avatar_url;
+
       const data = {
         provider: Provider.GITHUB,
         providerAccountId: profile.id,
@@ -50,6 +56,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
         accessToken,
         refreshToken,
         emailVerified: isVerified,
+        photo,
       };
 
       let user: User | undefined;
