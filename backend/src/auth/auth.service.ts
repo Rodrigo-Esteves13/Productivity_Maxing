@@ -50,6 +50,11 @@ interface OAuthProfileData {
   // usado pelo CalendarService para saber se esta Identity já tem acesso
   // ao Google Calendar, sem precisar de chamar a Google.
   scope?: string;
+  // URL da foto de perfil devolvida pelo provider (Google/GitHub/Discord).
+  // Só usada para preencher o avatarUrl automaticamente - nunca sobrescreve
+  // um avatar que o próprio utilizador já tenha carregado manualmente
+  // (ver resolveIdentity()).
+  photo?: string;
 }
 
 // Bucket do Supabase Storage onde ficam as fotos de perfil.
@@ -152,6 +157,17 @@ export class AuthService {
           scope: data.scope ?? existingIdentity.scope,
         },
       });
+
+      // Só preenche o avatarUrl se o utilizador ainda não tiver nenhum -
+      // nunca sobrescreve um avatar carregado manualmente (uploadAvatar em
+      // auth.service.ts) nem um já preenchido por um provider anterior.
+      if (!existingIdentity.user.avatarUrl && data.photo) {
+        return this.prisma.user.update({
+          where: { id: existingIdentity.user.id },
+          data: { avatarUrl: data.photo },
+        });
+      }
+
       return existingIdentity.user;
     }
 
@@ -187,6 +203,7 @@ export class AuthService {
             id: randomUUID(),
             email: data.email,
             name: data.name,
+            avatarUrl: data.photo,
           },
         });
       } catch (err) {
