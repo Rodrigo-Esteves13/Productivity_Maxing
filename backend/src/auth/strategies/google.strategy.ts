@@ -58,6 +58,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       // Por isso o scope tem de ser pedido à parte, ao endpoint tokeninfo,
       // usando o accessToken que já recebemos de forma fiável.
       const scope = await this.fetchGrantedScope(accessToken);
+      const photo = profile.photos?.[0]?.value;
 
       const data = {
         provider: Provider.GOOGLE,
@@ -68,6 +69,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         refreshToken,
         emailVerified: isVerified,
         scope,
+        photo,
       };
 
       let user: User | undefined;
