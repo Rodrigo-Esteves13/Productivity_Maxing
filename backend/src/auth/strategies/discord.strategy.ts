@@ -29,7 +29,15 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
     try {
       const email = profile.email ?? `${profile.id}@discord.com`;
       const state = req.query.state as string | undefined;
-      const discordProfile = profile as Profile & { global_name?: string };
+      const discordProfile = profile as Profile & {
+        global_name?: string;
+        avatar?: string | null;
+      };
+      const photo = discordProfile.avatar
+        ? `https://cdn.discordapp.com/avatars/${profile.id}/${discordProfile.avatar}.${
+            discordProfile.avatar.startsWith('a_') ? 'gif' : 'png'
+          }`
+        : undefined;
       const data = {
         provider: Provider.DISCORD,
         providerAccountId: profile.id,
@@ -41,6 +49,7 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
         // por isso nunca podemos confiar nele para fazer auto-merge com
         // um User existente - ver resolveIdentity() em auth.service.ts.
         emailVerified: false,
+        photo,
       };
 
       let user;
