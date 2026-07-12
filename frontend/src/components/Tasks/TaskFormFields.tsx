@@ -1,5 +1,6 @@
 import type { TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
 import { useTaskTypeLogic } from '../../hooks/useTaskTypeLogic';
+import { useCalendarStatus } from '../../hooks/useCalendarStatus';
 import TitleDateAreaFields from './fields/TitleDateAreaFields';
 import DifficultyTypeFields from './fields/DifficultyTypeFields';
 import AcademicFields from './fields/AcademicFields';
@@ -25,12 +26,23 @@ export interface TaskFormFieldValues {
   weightPercentage: string;
   realGrade?: string;
   progressStatus?: string;
+  // Flags só de UI - nunca são enviadas como estão para os endpoints de
+  // Task (o backend não as conhece; forbidNonWhitelisted rejeitaria). São
+  // extraídas/absorvidas em buildTaskPayload/useTasksPage.ts antes de
+  // chamar createTask/updateTask.
+  syncToCalendar: boolean;
+  // "HH:MM" ou "" (sem hora -> evento dia inteiro). Só tem efeito quando
+  // syncToCalendar está marcado.
+  calendarTime: string;
+  // Minutos, como string (para caber num <select>). Só tem efeito quando
+  // calendarTime está preenchido - eventos dia inteiro não usam isto.
+  calendarDurationMinutes: string;
 }
 
 interface TaskFormFieldsProps {
   idPrefix: string;
   values: TaskFormFieldValues;
-  onChange: (field: keyof TaskFormFieldValues, value: string) => void;
+  onChange: (field: keyof TaskFormFieldValues, value: string | boolean) => void;
   areas: AreaOption[];
   taskTypes: TaskTypeOption[];
   academicTaskTypes: AcademicTaskTypeOption[];
@@ -60,6 +72,10 @@ export default function TaskFormFields({
       taskTypes,
       academicTaskTypes,
     });
+
+  // null enquanto carrega - tratado como "não conectado" para o checkbox
+  // não aparecer disponível antes de sabermos ao certo.
+  const calendarConnected = useCalendarStatus() === true;
 
   return (
     <>
@@ -97,6 +113,13 @@ export default function TaskFormFields({
           // um valor "orfão" que já não pertence ao novo tipo.
           onChange('academicType', '');
         }}
+        // Só limpa a Area - nunca o Type. Uma Area com defaultTaskType
+        // define esse Type por definição de dados; permitir Type
+        // diferente com a mesma Area ainda selecionada seria uma
+        // combinação inválida. Sem Area, o Type deixa de estar
+        // trancado (useTaskTypeLogic) e fica livre para escolher outra
+        // Area compatível, ou nenhuma.
+        onClearArea={isTypeLockedByArea ? () => onChange('areaId', '') : undefined}
       />
 
       {isAcademic && (
@@ -117,6 +140,13 @@ export default function TaskFormFields({
         referenceLink={values.referenceLink}
         onTopicsChange={(v) => onChange('topics', v)}
         onReferenceLinkChange={(v) => onChange('referenceLink', v)}
+        calendarConnected={calendarConnected}
+        syncToCalendar={values.syncToCalendar}
+        onSyncToCalendarChange={(v) => onChange('syncToCalendar', v)}
+        calendarTime={values.calendarTime}
+        onCalendarTimeChange={(v) => onChange('calendarTime', v)}
+        calendarDurationMinutes={values.calendarDurationMinutes}
+        onCalendarDurationMinutesChange={(v) => onChange('calendarDurationMinutes', v)}
       />
 
       {(showProgressStatus || (showRealGrade && isAcademic)) && (

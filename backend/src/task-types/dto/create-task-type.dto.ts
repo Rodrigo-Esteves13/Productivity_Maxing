@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsInt,
   IsHexColor,
+  MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -14,15 +15,16 @@ export class CreateTaskTypeDto {
   @ApiProperty({
     example: 'Academic',
     description:
-      'Nome mostrado na interface. Podes editar isto quando quiseres.',
+      'Name shown in the interface. You can edit this whenever you want.',
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(80)
   label: string;
 
   @ApiPropertyOptional({
     example: '#8b5cf6',
-    description: 'Cor em formato Hexadecimal',
+    description: 'Color in hexadecimal format',
   })
   @IsOptional()
   @IsHexColor()

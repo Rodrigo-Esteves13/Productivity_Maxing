@@ -14,7 +14,7 @@ interface AreaOption {
 
 interface TaskEditFormProps {
   task: Task;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: any) => Promise<any>;
   onCancel: () => void;
   areas: AreaOption[];
   taskTypes: TaskTypeOption[];
@@ -24,9 +24,23 @@ interface TaskEditFormProps {
 }
 
 function buildInitialValues(task: Task): TaskFormFieldValues {
+  const taskDate = new Date(task.date);
+  // Mesmo sinal que o backend usa (CalendarService.toGoogleEvent): task
+  // sem hora fica gravada à meia-noite UTC exata.
+  const hasTime =
+    taskDate.getUTCHours() !== 0 ||
+    taskDate.getUTCMinutes() !== 0 ||
+    taskDate.getUTCSeconds() !== 0;
+  const pad = (n: number) => String(n).padStart(2, '0');
+
   return {
     title: task.title,
-    date: task.date.split('T')[0],
+    // Com hora: deriva o dia a partir dos componentes locais (para não
+    // desalinhar com a hora local mostrada a seguir). Sem hora: mantém o
+    // comportamento antigo, lendo a data diretamente do ISO em UTC.
+    date: hasTime
+      ? `${taskDate.getFullYear()}-${pad(taskDate.getMonth() + 1)}-${pad(taskDate.getDate())}`
+      : task.date.split('T')[0],
     type: task.type,
     academicType: task.academicType ?? '',
     difficulty: task.difficulty,
@@ -37,6 +51,11 @@ function buildInitialValues(task: Task): TaskFormFieldValues {
     targetGrade: task.targetGrade != null ? String(task.targetGrade) : '',
     weightPercentage: task.weightPercentage != null ? String(task.weightPercentage) : '',
     realGrade: task.realGrade != null ? String(task.realGrade) : '',
+    // Pré-marcada se a task já tem um evento - desmarcar e gravar remove-o
+    // (ver handleUpdateTask em useTasksPage.ts).
+    syncToCalendar: !!task.googleCalendarEventId,
+    calendarTime: hasTime ? `${pad(taskDate.getHours())}:${pad(taskDate.getMinutes())}` : '',
+    calendarDurationMinutes: String(task.calendarDurationMinutes ?? 60),
   };
 }
 
@@ -55,7 +74,7 @@ export default function TaskEditForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const updateField = useCallback((field: keyof TaskFormFieldValues, value: string) => {
+  const updateField = useCallback((field: keyof TaskFormFieldValues, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }, []);
 

@@ -12,6 +12,7 @@ export default function TasksTableHeader() {
         <th className="px-4 py-3 font-medium text-center">Status</th>
         <th className="px-4 py-3 font-medium text-center">Target Grade</th>
         <th className="px-4 py-3 font-medium text-center">Real Grade</th>
+        <th className="px-4 py-3 font-medium text-center">Calendar</th>
       </tr>
     </thead>
   );

@@ -26,8 +26,8 @@ export function useDataExport(): UseDataExportReturn {
       
       downloadJson(data, filename);
     } catch (err) {
-      console.error('Erro ao exportar dados:', err);
-      setError('Ocorreu um erro ao preparar a tua exportação. Tenta novamente mais tarde.');
+      console.error('Error exporting data:', err);
+      setError('An error occurred while preparing your export. Please try again later.');
     } finally {
       setIsExporting(false);
     }

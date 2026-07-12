@@ -8,6 +8,21 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StartStudySessionDto } from './dto/start-study-session.dto';
 import { StopStudySessionDto } from './dto/stop-study-session.dto';
 
+// Meio-termo entre "recalcular tudo em memória a cada pedido" (o que
+// tínhamos antes - um findMany() à tabela toda do utilizador em CADA
+// abertura da página Focus) e "manter uma tabela pré-agregada sincronizada
+// à parte" (mais rápido, mas mais uma fonte de verdade para manter
+// consistente, e complexidade a mais para o volume atual da app).
+//
+// Em vez disso: cache em memória por utilizador, com expiração ao fim de
+// HEATMAP_CACHE_TTL_MS. Enquanto a cache for válida, devolvemos o
+// resultado guardado sem tocar na BD; passado esse tempo, a próxima
+// chamada recalcula e renova a entrada. Mesmo padrão já usado em
+// LoggingThrottlerGuard (cache em memória, perde-se com o restart do
+// processo - aceitável aqui pela mesma razão: é só para poupar trabalho
+// repetido, não é a fonte de verdade).
+const HEATMAP_CACHE_TTL_MS = 5 * 60 * 1000;
+
 const SESSION_SELECT = {
   id: true,
   startedAt: true,
@@ -49,6 +64,13 @@ export interface TaskPriorityRow {
 
 @Injectable()
 export class StudySessionsService {
+  // chave = userId. Guarda o grid já calculado + o instante em que foi
+  // calculado, para decidir se ainda é válido ou se é preciso recalcular.
+  private readonly heatmapCache = new Map<
+    string,
+    { computedAt: number; data: HeatmapCell[] }
+  >();
+
   constructor(private readonly prisma: PrismaService) {}
 
   async start(userId: string, dto: StartStudySessionDto) {
@@ -111,6 +133,11 @@ export class StudySessionsService {
       select: SESSION_SELECT,
     });
 
+    // Esta sessão passa a contar para o heatmap - invalida a cache deste
+    // utilizador em vez de esperar pelo TTL, para a próxima visita à
+    // página Focus já refletir a sessão que acabou de terminar.
+    this.heatmapCache.delete(userId);
+
     return this.toResponse(session);
   }
 
@@ -127,10 +154,26 @@ export class StudySessionsService {
    * semana) x 6 (bloco de 4h). Feito em memória (não em SQL bruto) de
    * propósito: para o volume esperado (uma pessoa, meses de uso) isto é
    * perfeitamente rápido, e evita escrever SQL manual só para um dashboard.
-   * Se um dia isto crescer muito, é o primeiro sítio a otimizar com uma
-   * query agregada (groupBy por extract(dow)/extract(hour)).
+   *
+   * O resultado fica em cache por HEATMAP_CACHE_TTL_MS (ver constante no
+   * topo do ficheiro) - a página Focus pode voltar a pedir isto várias
+   * vezes seguidas (troca de separador, refresh, polling), e não faz
+   * sentido re-somar todas as sessões da pessoa em cada uma dessas
+   * chamadas. A cache é invalidada explicitamente em stop() assim que uma
+   * sessão nova termina, por isso o TTL aqui é só uma rede de segurança
+   * (ex: dois separadores abertos, um deles sem ver o stop do outro).
+   *
+   * Se um dia isto crescer muito (muitos utilizadores ativos em
+   * simultâneo, ou histórico de anos por pessoa), o próximo passo deixa
+   * de ser esta cache e passa a ser mover a agregação para SQL (groupBy
+   * por extract(dow)/extract(hour) direto no Postgres).
    */
   async getHeatmap(userId: string): Promise<HeatmapCell[]> {
+    const cached = this.heatmapCache.get(userId);
+    if (cached && Date.now() - cached.computedAt < HEATMAP_CACHE_TTL_MS) {
+      return cached.data;
+    }
+
     const sessions = await this.prisma.studySession.findMany({
       where: { userId, endedAt: { not: null } },
       select: { startedAt: true, endedAt: true },
@@ -169,6 +212,8 @@ export class StudySessionsService {
         });
       }
     }
+
+    this.heatmapCache.set(userId, { computedAt: Date.now(), data: result });
     return result;
   }
 

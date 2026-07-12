@@ -31,15 +31,15 @@ function getEncryptionKey(): Buffer {
     // API_KEY_SECRET (ver assertRequiredEnvVars em main.ts) - nunca
     // gravar/ler tokens OAuth com uma chave vazia ou previsível.
     throw new Error(
-      'TOKEN_ENCRYPTION_KEY não está definida. Não é seguro cifrar/decifrar tokens OAuth sem ela.',
+      'TOKEN_ENCRYPTION_KEY is not defined. It is not safe to encrypt/decrypt OAuth tokens without it.',
     );
   }
 
   const key = Buffer.from(raw, 'base64');
   if (key.length !== KEY_LENGTH_BYTES) {
     throw new Error(
-      `TOKEN_ENCRYPTION_KEY inválida: tem de ser uma string em base64 que descodifica para exatamente ${KEY_LENGTH_BYTES} bytes (AES-256). ` +
-        `Gera uma nova com: openssl rand -base64 32`,
+      `Invalid TOKEN_ENCRYPTION_KEY: it must be a base64 string that decodes to exactly ${KEY_LENGTH_BYTES} bytes (AES-256). ` +
+        `Generate a new one with: openssl rand -base64 32`,
     );
   }
 
@@ -67,7 +67,7 @@ export function decryptToken(encoded: string): string {
   const raw = Buffer.from(encoded, 'base64');
 
   if (raw.length < IV_LENGTH_BYTES + AUTH_TAG_LENGTH_BYTES) {
-    throw new Error('Valor cifrado inválido ou corrompido.');
+    throw new Error('Invalid or corrupted encrypted value.');
   }
 
   const iv = raw.subarray(0, IV_LENGTH_BYTES);
