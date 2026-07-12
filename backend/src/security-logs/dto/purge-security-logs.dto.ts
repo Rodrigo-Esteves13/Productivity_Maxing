@@ -6,7 +6,7 @@ export class PurgeSecurityLogsDto {
   @ApiPropertyOptional({
     example: 30,
     description:
-      'Apaga só logs mais antigos que N dias. Omitido = apaga TODOS os logs (usa com cuidado).',
+      'Deletes only logs older than N days. Omitted = deletes ALL logs (use with care).',
   })
   @IsOptional()
   @Type(() => Number)

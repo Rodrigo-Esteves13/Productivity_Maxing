@@ -213,6 +213,11 @@ model Task {
 
   // Integrações
   googleCalendarEventId String?
+  // Duração em minutos do evento no Google Calendar, só relevante quando a
+  // Task tem hora definida (evento "dia inteiro" ignora isto). Null =
+  // continua a usar o default de 60min no CalendarService, para tasks
+  // antigas criadas antes deste campo existir.
+  calendarDurationMinutes Int?
   createdAt             DateTime @default(now())
 
   // Relações

@@ -8,7 +8,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 export class QuerySecurityLogsDto {
   @ApiPropertyOptional({
     example: 0,
-    description: 'Quantos registos saltar (para paginação)',
+    description: 'How many records to skip (for pagination)',
   })
   @IsOptional()
   @Type(() => Number)
@@ -18,7 +18,7 @@ export class QuerySecurityLogsDto {
 
   @ApiPropertyOptional({
     example: 25,
-    description: 'Quantos registos devolver (máx. 100)',
+    description: 'How many records to return (max 100)',
   })
   @IsOptional()
   @Type(() => Number)
@@ -28,7 +28,7 @@ export class QuerySecurityLogsDto {
   take?: number = 25;
 
   @ApiPropertyOptional({
-    description: 'Filtra por IP exato',
+    description: 'Filter by exact IP',
     example: '203.0.113.7',
   })
   @IsOptional()
@@ -36,7 +36,7 @@ export class QuerySecurityLogsDto {
   ip?: string;
 
   @ApiPropertyOptional({
-    description: 'Filtra por path (substring, case-insensitive)',
+    description: 'Filter by path (substring, case-insensitive)',
     example: '/auth/login',
   })
   @IsOptional()
@@ -44,7 +44,7 @@ export class QuerySecurityLogsDto {
   path?: string;
 
   @ApiPropertyOptional({
-    description: 'Janela relativa a considerar (por omissão, tudo)',
+    description: 'Relative time window to consider (default: all)',
     enum: ['1h', '24h', '7d'],
   })
   @IsOptional()

@@ -12,7 +12,7 @@ interface AreaOption {
 }
 
 interface TaskFormProps {
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: any) => Promise<any>;
   onCancel: () => void;
   areas: AreaOption[];
   taskTypes: TaskTypeOption[];
@@ -47,9 +47,14 @@ export default function TaskForm({
     referenceLink: '',
     targetGrade: '',
     weightPercentage: '',
+    // Task nova nunca tem evento ainda - fica ao critério do utilizador
+    // marcar a checkbox, não vem pré-marcada.
+    syncToCalendar: false,
+    calendarTime: '',
+    calendarDurationMinutes: '60',
   });
 
-  const updateField = (field: keyof TaskFormFieldValues, value: string) => {
+  const updateField = (field: keyof TaskFormFieldValues, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 

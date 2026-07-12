@@ -10,7 +10,7 @@ export class UpdateAcademicTaskTypeDto extends PartialType(
 ) {
   @ApiPropertyOptional({
     example: false,
-    description: 'Desativa sem apagar (soft delete)',
+    description: 'Deactivates without deleting (soft delete)',
   })
   @IsOptional()
   @IsBoolean()

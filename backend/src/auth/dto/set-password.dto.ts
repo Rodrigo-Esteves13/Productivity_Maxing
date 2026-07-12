@@ -6,7 +6,7 @@ import { IsString, MinLength, MaxLength } from 'class-validator';
 // password atual: a sessão válida já prova que é o dono da conta.
 export class SetPasswordDto {
   @IsString()
-  @MinLength(8, { message: 'A password tem de ter pelo menos 8 caracteres.' })
+  @MinLength(8, { message: 'Password must be at least 8 characters long.' })
   @MaxLength(72)
   password: string;
 }

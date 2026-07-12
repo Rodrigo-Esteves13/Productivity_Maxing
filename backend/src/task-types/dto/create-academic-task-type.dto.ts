@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsInt,
   IsUUID,
+  MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -15,14 +16,15 @@ export class CreateAcademicTaskTypeDto {
   @ApiProperty({
     example: 'Practical Assignment',
     description:
-      'Nome mostrado na interface. Podes editar isto quando quiseres.',
+      'Name shown in the interface. You can edit this whenever you want.',
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(80)
   label: string;
 
   @ApiProperty({
-    description: 'ID do TaskType pai a que esta subcategoria pertence',
+    description: 'ID of the parent TaskType this subcategory belongs to',
   })
   @IsUUID()
   taskTypeId: string;

@@ -3,6 +3,7 @@ import DifficultyBadge from '../UI/DifficultyBadge';
 import DateStatusBadge from '../UI/DateStatusBadge';
 import ColorDot from '../UI/ColorDot';
 import RescheduleButton from '../UI/RescheduleButton';
+import CalendarSyncButton from './CalendarSyncButton';
 import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
@@ -41,7 +42,7 @@ export default function TaskTableRow({
       <td className="px-4 py-3 font-medium text-white">
         <div className="flex items-center gap-2">
           {task.area?.colorHex && <ColorDot color={task.area.colorHex} />}
-          {task.area?.name || '—'}
+          {task.area?.name || 'N/A'}
         </div>
       </td>
       <td className="px-4 py-3">
@@ -49,11 +50,14 @@ export default function TaskTableRow({
         {task.topics && <div className="text-xs text-neutral-500 mt-0.5">{task.topics}</div>}
       </td>
       <td className="px-4 py-3 text-xs text-neutral-400">{academicTypeLabel}</td>
-      <td className="px-4 py-3">{task.weightPercentage ? `${task.weightPercentage}%` : '—'}</td>
+      <td className="px-4 py-3">{task.weightPercentage ? `${task.weightPercentage}%` : 'N/A'}</td>
       <td className="px-4 py-3"><DifficultyBadge difficulty={task.difficulty} /></td>
       <td className="px-4 py-3 text-center"><StatusBadge status={task.progressStatus} /></td>
-      <td className="px-4 py-3 text-center font-medium text-blue-400">{task.targetGrade ?? '—'}</td>
-      <td className="px-4 py-3 text-center font-bold text-cyan-400">{task.realGrade ?? '—'}</td>
+      <td className="px-4 py-3 text-center font-medium text-blue-400">{task.targetGrade ?? 'N/A'}</td>
+      <td className="px-4 py-3 text-center font-bold text-cyan-400">{task.realGrade ?? 'N/A'}</td>
+      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+        <CalendarSyncButton task={task} />
+      </td>
     </tr>
   );
 }

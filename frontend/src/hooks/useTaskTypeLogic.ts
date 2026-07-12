@@ -48,8 +48,15 @@ export function useTaskTypeLogic({
   const selectedArea = areas.find((a) => a.id === areaId);
   const isTypeLockedByArea = Boolean(selectedArea?.defaultTaskType);
 
+  // A Area já selecionada fica sempre na lista, mesmo que já não bata
+  // certo com o Type atual - sem isto, destrancar o Type manualmente
+  // (ver DifficultyTypeFields "Change") fazia a Area escolhida desaparecer
+  // do <select> a meio da edição, o que parece um bug mesmo sendo só o
+  // filtro a fazer o trabalho dele.
   const filteredAreas = type
-    ? areas.filter((a) => !a.defaultTaskType || a.defaultTaskType === type)
+    ? areas.filter(
+        (a) => !a.defaultTaskType || a.defaultTaskType === type || a.id === areaId,
+      )
     : areas;
 
   return { isAcademic, availableAcademicTypes, selectedArea, isTypeLockedByArea, filteredAreas };

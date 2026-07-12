@@ -13,7 +13,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   // Não rebenta a app inteira (só a página de reset é que precisa disto),
   // mas avisa alto no console em vez de falhar silenciosamente mais tarde.
   console.error(
-    'VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY em falta - a página de reset de password não vai funcionar.',
+    'VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY missing: the password reset page will not work.',
   );
 }
 

@@ -29,7 +29,7 @@ const DAY_MS = 24 * HOUR_MS;
 // quantificar quanto). Tasks já concluídas não mostram contagem - já não
 // interessa saber "quanto falta" para algo que está feito.
 export function getRemainingTimeLabel(task: Task, now: Date = new Date()): string {
-  if (task.progressStatus === 'COMPLETED') return '—';
+  if (task.progressStatus === 'COMPLETED') return 'N/A';
 
   const diffMs = new Date(task.date).getTime() - now.getTime();
   const absMs = Math.abs(diffMs);

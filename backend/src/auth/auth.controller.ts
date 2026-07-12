@@ -43,6 +43,7 @@ import { SetPasswordDto } from './dto/set-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { GoogleLinkGuard } from './guards/google-link.guard';
+import { GoogleCalendarLinkGuard } from './guards/google-calendar-link.guard';
 import { GithubAuthGuard } from './guards/github-auth.guard';
 import { GithubLinkGuard } from './guards/github-link.guard';
 import { DiscordAuthGuard } from './guards/discord-auth.guard';
@@ -180,6 +181,25 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, GoogleLinkGuard)
   googleLink() {
     // idem, nunca corre
+  }
+
+  // Ligar (ou re-autorizar com scope extra) o acesso ao Google Calendar.
+  // Distinto de /auth/google/link: este pede também o scope
+  // calendar.events. Ver GoogleCalendarLinkGuard. (Issue #34)
+  @Get('google/link-calendar')
+  @UseGuards(JwtAuthGuard, GoogleCalendarLinkGuard)
+  googleLinkCalendar() {
+    // nunca corre - o Guard intercepta e redireciona antes de chegar aqui
+  }
+
+  // Issue #38: revoga o acesso ao Calendar (mantém o login com Google
+  // intacto, só remove o refreshToken/scope da Identity).
+  @Delete('google/calendar')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(200)
+  async disconnectGoogleCalendar(@CurrentUser() user: AuthenticatedUser) {
+    await this.authService.disconnectGoogleCalendar(user.id);
+    return { message: 'Google Calendar disconnected.' };
   }
 
   // GITHUB

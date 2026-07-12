@@ -46,7 +46,7 @@ export class UsersController {
   @ApiBearerAuth()
   @ApiOperation({
     summary:
-      'Exporta todos os dados do utilizador autenticado em formato JSON (GDPR)',
+      'Exports all data for the authenticated user in JSON format (GDPR)',
   })
   async exportMyData(@CurrentUser() user: AuthenticatedUser) {
     // Agora o "user" tem garantia absoluta de existir graças ao JwtAuthGuard

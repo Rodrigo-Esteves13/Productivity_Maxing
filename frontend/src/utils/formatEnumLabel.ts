@@ -3,7 +3,7 @@
 // Since the enums are now stored in English, this is all that's needed,
 // no per-value translation dictionary required.
 export function formatEnumLabel(value: string | null | undefined): string {
-  if (!value) return '—';
+  if (!value) return 'N/A';
   return value
     .split('_')
     .filter(Boolean)
