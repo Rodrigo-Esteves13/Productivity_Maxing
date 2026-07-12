@@ -21,7 +21,7 @@ export class SecurityLogsController {
   @Get()
   @ApiOperation({
     summary:
-      'Lista os bloqueios de rate limit (candidatos a DoS), paginados e filtráveis (Apenas ADMIN)',
+      'Lists rate limit blocks (DoS candidates), paginated and filterable (ADMIN only)',
   })
   findAll(@Query() query: QuerySecurityLogsDto) {
     return this.securityLogsService.findAll(query);
@@ -30,7 +30,7 @@ export class SecurityLogsController {
   @Get('stats')
   @ApiOperation({
     summary:
-      'Resumo agregado: volume na última hora/24h e ranking dos IPs mais ofensivos (Apenas ADMIN)',
+      'Aggregated summary: volume in the last hour/24h and ranking of the most offending IPs (ADMIN only)',
   })
   getStats() {
     return this.securityLogsService.getStats();
@@ -39,7 +39,7 @@ export class SecurityLogsController {
   @Delete()
   @ApiOperation({
     summary:
-      'Apaga logs antigos (ou todos, se olderThanDays não for indicado) (Apenas ADMIN)',
+      'Deletes old logs (or all, if olderThanDays is not provided) (ADMIN only)',
   })
   purge(@Query() query: PurgeSecurityLogsDto) {
     return this.securityLogsService.purge(query.olderThanDays);

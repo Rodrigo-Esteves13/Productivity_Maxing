@@ -21,7 +21,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     // com a variável definida; isto é a segunda linha de defesa.
     const secret = process.env.JWT_SECRET;
     if (!secret) {
-      throw new Error('JWT_SECRET não está definida.');
+      throw new Error('JWT_SECRET is not defined.');
     }
 
     super({

@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
   InternalServerErrorException,
@@ -22,6 +23,8 @@ type TaskWithIncludes = Prisma.TaskGetPayload<{
 
 @Injectable()
 export class TasksService {
+  private readonly logger = new Logger(TasksService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async create(userId: string, dto: CreateTaskDto) {
@@ -46,10 +49,12 @@ export class TasksService {
       });
       return this.toResponse(task);
     } catch (error) {
-      // Se der erro, isto vai imprimir O MOTIVO EXATO no terminal do NestJS
-      console.error('ERRO PRISMA (CREATE TASK):', error);
+      // Fica só no terminal/log do backend, nunca no corpo da resposta -
+      // um erro do Prisma pode conter detalhes internos (nomes de coluna,
+      // constraints) que não devem ir para o cliente.
+      this.logger.error('Erro ao criar task', error as Error);
       throw new InternalServerErrorException(
-        'Erro ao criar tarefa. Verifica o terminal do backend.',
+        'Erro ao criar tarefa. Tenta novamente.',
       );
     }
   }

@@ -27,7 +27,7 @@ function assertRequiredEnvVars(): void {
   const missing = REQUIRED_ENV_VARS.filter((key) => !process.env[key]);
   if (missing.length > 0) {
     throw new Error(
-      `Variáveis de ambiente obrigatórias em falta: ${missing.join(', ')}`,
+      `Missing required environment variables: ${missing.join(', ')}`,
     );
   }
 }

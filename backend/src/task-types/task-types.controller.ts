@@ -35,21 +35,21 @@ export class TaskTypesController {
   @Get('admin/task-types')
   @ApiOperation({
     summary:
-      'Lista todos os tipos de tarefa, incluindo inativos (Apenas ADMIN)',
+      'Lists all task types, including inactive ones (Admin only)',
   })
   findAllTaskTypes() {
     return this.taskTypesService.findAllTaskTypes(false);
   }
 
   @Post('admin/task-types')
-  @ApiOperation({ summary: 'Cria um novo tipo de tarefa (Apenas ADMIN)' })
+  @ApiOperation({ summary: 'Creates a new task type (Admin only)' })
   createTaskType(@Body() dto: CreateTaskTypeDto) {
     return this.taskTypesService.createTaskType(dto);
   }
 
   @Patch('admin/task-types/:id')
   @ApiOperation({
-    summary: 'Edita label/cor/ordem/ativo de um tipo de tarefa (Apenas ADMIN)',
+    summary: 'Edits label/color/order/active status of a task type (Admin only)',
   })
   updateTaskType(
     @Param('id', ParseUUIDPipe) id: string,
@@ -60,7 +60,7 @@ export class TaskTypesController {
 
   @Delete('admin/task-types/:id')
   @ApiOperation({
-    summary: 'Desativa um tipo de tarefa, sem apagar (Apenas ADMIN)',
+    summary: 'Deactivates a task type, without deleting it (Admin only)',
   })
   removeTaskType(@Param('id', ParseUUIDPipe) id: string) {
     return this.taskTypesService.removeTaskType(id);

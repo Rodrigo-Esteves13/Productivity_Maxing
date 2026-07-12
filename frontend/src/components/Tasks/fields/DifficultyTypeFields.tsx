@@ -13,6 +13,14 @@ interface DifficultyTypeFieldsProps {
   lockedByAreaName?: string;
   onDifficultyChange: (value: string) => void;
   onTypeChange: (value: string) => void;
+  // Antes isto "destrancava" o Type mantendo a Area escolhida, o que
+  // permitia uma combinação Type != Area.defaultTaskType - inválida
+  // (a Area tem literalmente um TaskType associado, uma Task nessa Area
+  // com Type diferente não faz sentido de dados). O botão passa a limpar
+  // só a Area, nada mais: sem Area escolhida, o Type deixa de estar
+  // trancado por natureza (useTaskTypeLogic), sem abrir a porta a
+  // inconsistências.
+  onClearArea?: () => void;
 }
 
 export default function DifficultyTypeFields({
@@ -25,6 +33,7 @@ export default function DifficultyTypeFields({
   lockedByAreaName,
   onDifficultyChange,
   onTypeChange,
+  onClearArea,
 }: DifficultyTypeFieldsProps) {
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -61,7 +70,16 @@ export default function DifficultyTypeFields({
         </Select>
         {isTypeLockedByArea && (
           <p className="mt-1 text-xs text-neutral-500">
-            Set automatically by the "{lockedByAreaName}" Area.
+            Set automatically by the "{lockedByAreaName}" Area.{' '}
+            {onClearArea && (
+              <button
+                type="button"
+                onClick={onClearArea}
+                className="text-violet-400 hover:text-violet-300 underline underline-offset-2"
+              >
+                Change Area
+              </button>
+            )}
           </p>
         )}
       </FormField>

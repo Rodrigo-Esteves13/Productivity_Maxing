@@ -11,10 +11,10 @@ export const DataExportSection: React.FC = () => {
     <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Portabilidade de Dados (GDPR)
+          Data Portability (GDPR)
         </h3>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          Descarrega uma cópia de toda a informação que a plataforma guarda sobre ti, incluindo o teu perfil, tarefas e configurações. O ficheiro será guardado no formato JSON.
+          Download a copy of all the information the platform stores about you, including your profile, tasks, and settings. The file will be saved in JSON format.
         </p>
       </div>
 
@@ -30,7 +30,7 @@ export const DataExportSection: React.FC = () => {
         variant="secondary"
         className="w-full sm:w-auto"
       >
-        {isExporting ? 'A preparar exportação...' : 'Exportar os meus dados'}
+        {isExporting ? 'Preparing export...' : 'Export my data'}
       </Button>
     </div>
   );

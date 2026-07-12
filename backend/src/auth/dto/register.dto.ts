@@ -16,7 +16,7 @@ export class RegisterDto {
   email: string;
 
   @IsString()
-  @MinLength(8, { message: 'A password tem de ter pelo menos 8 caracteres.' })
+  @MinLength(8, { message: 'Password must be at least 8 characters long.' })
   @MaxLength(72) // limite prático para o scrypt/bcrypt não crescer sem necessidade
   password: string;
 }

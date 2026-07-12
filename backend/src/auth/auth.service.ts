@@ -6,7 +6,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { randomUUID, randomBytes, scryptSync } from 'crypto';
+import { randomUUID, randomBytes, scrypt as scryptCallback } from 'crypto';
+import { promisify } from 'util';
 import { createClient } from '@supabase/supabase-js';
 import { fileTypeFromBuffer } from 'file-type';
 import { Provider, User, Prisma } from '@prisma/client';
@@ -24,6 +25,14 @@ import {
 import { OAuthAccountConflictException } from './exceptions/oauth-account-conflict.exception';
 import { MailService } from '../mail/mail.service';
 
+// scryptSync bloqueia a thread principal do event loop enquanto corre -
+// numa rota chamada em CADA pedido autenticado por API Key
+// (ApiKeyStrategy.validate -> validateApiKey), isso significa que pedidos
+// concorrentes de outros utilizadores ficam todos à espera atrás de um
+// único cálculo de hash. A versão assíncrona corre no thread pool do
+// libuv, sem bloquear o resto da app.
+const scrypt = promisify(scryptCallback);
+
 interface OAuthProfileData {
   provider: Provider;
   providerAccountId: string;
@@ -36,6 +45,11 @@ interface OAuthProfileData {
   // Discord nunca deve passar `true` aqui). Só emails verified podem
   // fazer auto-merge com uma conta local existente.
   emailVerified: boolean;
+  // Scope space-separated devolvido pela Google no token exchange. Undefined
+  // nos providers que não expõem isto (GitHub/Discord nunca passam isto) -
+  // usado pelo CalendarService para saber se esta Identity já tem acesso
+  // ao Google Calendar, sem precisar de chamar a Google.
+  scope?: string;
 }
 
 // Bucket do Supabase Storage onde ficam as fotos de perfil.
@@ -132,6 +146,10 @@ export class AuthService {
           refreshToken: data.refreshToken
             ? encryptToken(data.refreshToken)
             : existingIdentity.refreshToken,
+          // Nunca sobrescrever com undefined - se este consent não trouxe
+          // scope novo (ou o provider não expõe scope), mantém o que já
+          // estava guardado.
+          scope: data.scope ?? existingIdentity.scope,
         },
       });
       return existingIdentity.user;
@@ -192,6 +210,7 @@ export class AuthService {
         providerAccountId: data.providerAccountId,
         accessToken: encryptTokenNullable(data.accessToken),
         refreshToken: encryptTokenNullable(data.refreshToken),
+        scope: data.scope ?? null,
       },
     });
 
@@ -234,6 +253,7 @@ export class AuthService {
           refreshToken: data.refreshToken
             ? encryptToken(data.refreshToken)
             : existingIdentity.refreshToken,
+          scope: data.scope ?? existingIdentity.scope,
         },
       });
     } else {
@@ -244,6 +264,7 @@ export class AuthService {
           providerAccountId: data.providerAccountId,
           accessToken: encryptTokenNullable(data.accessToken),
           refreshToken: encryptTokenNullable(data.refreshToken),
+          scope: data.scope ?? null,
         },
       });
     }
@@ -275,6 +296,54 @@ export class AuthService {
       accessToken: decryptTokenNullable(record.accessToken),
       refreshToken: decryptTokenNullable(record.refreshToken),
     };
+  }
+
+  /**
+   * Issue #38: "Disconnect Google Calendar". Revoga o refresh token junto da
+   * Google (para ele deixar de ser válido do lado deles também, não só
+   * deixarmos de o usar) e limpa refreshToken/scope na nossa Identity - a
+   * Identity em si fica (login com Google continua a funcionar, só o
+   * acesso ao Calendar é que é removido).
+   *
+   * Não apaga accessToken: continua válido por ~1h e não dá acesso a nada
+   * que o login normal já não desse; só o refreshToken é sensível a longo
+   * prazo.
+   */
+  async disconnectGoogleCalendar(userId: string): Promise<void> {
+    const identity = await this.prisma.identity.findFirst({
+      where: { userId, provider: Provider.GOOGLE },
+    });
+
+    if (!identity) return;
+
+    const refreshToken = decryptTokenNullable(identity.refreshToken);
+
+    if (refreshToken) {
+      try {
+        const res = await fetch('https://oauth2.googleapis.com/revoke', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ token: refreshToken }),
+        });
+        // Best-effort: se a Google já não reconhece o token (ex: pessoa
+        // revogou manualmente em myaccount.google.com/permissions antes),
+        // não bloqueamos a limpeza local por causa disso.
+        if (!res.ok) {
+          this.logger.warn(
+            `Revoke do refresh token Google devolveu ${res.status} - a continuar com a limpeza local.`,
+          );
+        }
+      } catch (err) {
+        this.logger.warn(
+          `Falha ao contactar o endpoint revoke da Google: ${err}`,
+        );
+      }
+    }
+
+    await this.prisma.identity.update({
+      where: { id: identity.id },
+      data: { refreshToken: null, scope: null },
+    });
   }
 
   // LOGIN/REGISTO POR EMAIL+PASSWORD (via Supabase Auth)
@@ -561,7 +630,7 @@ export class AuthService {
     // Best-effort: limpar o avatar anterior guardado no nosso bucket.
     // Não bloqueia a resposta nem falha o pedido se der erro.
     this.deleteAvatarFileIfOwned(previousUser.avatarUrl).catch((err) =>
-      this.logger.warn(`Não foi possível apagar o avatar antigo: ${err}`),
+      this.logger.warn(`Could not delete the old avatar: ${err}`),
     );
 
     return updatedUser;
@@ -726,7 +795,9 @@ export class AuthService {
     const secret = this.requireApiKeySecret();
 
     // 64 é o tamanho do hash em bytes.
-    const keyHash = scryptSync(rawToken, secret, 64).toString('hex');
+    const keyHash = ((await scrypt(rawToken, secret, 64)) as Buffer).toString(
+      'hex',
+    );
 
     await this.prisma.apiKey.create({
       data: { userId, keyHash, name },
@@ -739,8 +810,10 @@ export class AuthService {
   async validateApiKey(incomingToken: string): Promise<User | null> {
     const secret = this.requireApiKeySecret();
 
-    // Repetimos o scryptSync com os mesmos parâmetros para verificar
-    const keyHash = scryptSync(incomingToken, secret, 64).toString('hex');
+    // Repetimos o mesmo cálculo (agora assíncrono) para verificar
+    const keyHash = (
+      (await scrypt(incomingToken, secret, 64)) as Buffer
+    ).toString('hex');
 
     const apiKeyRecord = await this.prisma.apiKey.findUnique({
       where: { keyHash },
@@ -771,7 +844,7 @@ export class AuthService {
       // valor previsível - a validação de arranque em main.ts já devia ter
       // impedido a app de chegar aqui, isto é uma segunda linha de defesa.
       throw new Error(
-        'API_KEY_SECRET não está definida. Não é seguro gerar ou validar API Keys sem ela.',
+        'API_KEY_SECRET is not defined. It is not safe to generate or validate API Keys without it.',
       );
     }
     return secret;

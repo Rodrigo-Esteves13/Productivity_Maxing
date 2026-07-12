@@ -10,6 +10,7 @@ import { GithubStrategy } from './strategies/github.strategy';
 import { DiscordStrategy } from './strategies/discord.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ApiKeyStrategy } from './strategies/api-key.strategy';
+import { GoogleCalendarLinkGuard } from './guards/google-calendar-link.guard';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ApiKeyStrategy } from './strategies/api-key.strategy';
     GithubStrategy,
     DiscordStrategy,
     ApiKeyStrategy,
+    GoogleCalendarLinkGuard,
   ],
   exports: [AuthService],
 })
