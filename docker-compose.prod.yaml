@@ -1,15 +1,14 @@
 services:
   backend:
-    image: rodrigoesteves13/pmaxing-backend:1.1.1
+    image: rodrigoesteves13/pmaxing-backend:1.1.2
     ports:
       - "3000:3000"
     env_file:
       - backend/.env
     environment:
       - NODE_ENV=production
-      # Origin real do frontend em produção - usado no CORS (main.ts) e no
-      # redirect final dos callbacks OAuth (auth.controller.ts).
-      - FRONTEND_URL=https://app.pmaxing.pt
+      - FRONTEND_URL=http://localhost
+      - COOKIE_SECURE=false
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api"]
@@ -18,13 +17,7 @@ services:
       retries: 3
 
   frontend:
-    # ATENÇÃO: o VITE_API_URL fica gravado dentro desta imagem no momento em
-    # que a construíste e deste push (build arg no `docker build`, ver
-    # frontend/Dockerfile). Mudar a variável aqui em baixo não tem qualquer
-    # efeito - a imagem já vem com o bundle compilado. Para apontar a outro
-    # backend tens de reconstruir e voltar a dar push com o VITE_API_URL certo.
-    # Ex de build: docker build --build-arg VITE_API_URL=https://<o-teu-backend>.onrender.com/api -t rodrigoesteves13/pmaxing-frontend:1.1.1 ./frontend
-    image: rodrigoesteves13/pmaxing-frontend:1.1.1
+    image: rodrigoesteves13/pmaxing-frontend:1.1.2-localtest
     ports:
       - "80:80"
     env_file:
