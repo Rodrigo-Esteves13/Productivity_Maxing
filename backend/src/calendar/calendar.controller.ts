@@ -37,6 +37,7 @@ export class CalendarController {
   ) {
     const task = await this.prisma.task.findFirst({
       where: { id: taskId, userId: user.id },
+      include: { area: true, taskType: true, academicType: true },
     });
     if (!task) {
       throw new NotFoundException(`Task not found or you don't have access.`);

@@ -4,6 +4,7 @@ import { useCalendarStatus } from '../../hooks/useCalendarStatus';
 import TitleDateAreaFields from './fields/TitleDateAreaFields';
 import DifficultyTypeFields from './fields/DifficultyTypeFields';
 import AcademicFields from './fields/AcademicFields';
+import GradingFields from './fields/GradingFields';
 import OptionalInfoFields from './fields/OptionalInfoFields';
 import ProgressAndGradeFields from './fields/ProgressAndGradeFields';
 
@@ -126,14 +127,18 @@ export default function TaskFormFields({
         <AcademicFields
           idPrefix={idPrefix}
           academicType={values.academicType}
-          targetGrade={values.targetGrade}
-          weightPercentage={values.weightPercentage}
           availableAcademicTypes={availableAcademicTypes}
           onAcademicTypeChange={(v) => onChange('academicType', v)}
-          onTargetGradeChange={(v) => onChange('targetGrade', v)}
-          onWeightPercentageChange={(v) => onChange('weightPercentage', v)}
         />
       )}
+
+      <GradingFields
+        idPrefix={idPrefix}
+        targetGrade={values.targetGrade}
+        weightPercentage={values.weightPercentage}
+        onTargetGradeChange={(v) => onChange('targetGrade', v)}
+        onWeightPercentageChange={(v) => onChange('weightPercentage', v)}
+      />
 
       <OptionalInfoFields
         topics={values.topics}
@@ -149,14 +154,14 @@ export default function TaskFormFields({
         onCalendarDurationMinutesChange={(v) => onChange('calendarDurationMinutes', v)}
       />
 
-      {(showProgressStatus || (showRealGrade && isAcademic)) && (
+      {(showProgressStatus || showRealGrade) && (
         <ProgressAndGradeFields
           idPrefix={idPrefix}
           progressStatus={values.progressStatus ?? ''}
           realGrade={values.realGrade ?? ''}
           progressStatuses={progressStatuses}
           showProgressStatus={showProgressStatus}
-          showRealGrade={showRealGrade && isAcademic}
+          showRealGrade={showRealGrade}
           onProgressStatusChange={(v) => onChange('progressStatus', v)}
           onRealGradeChange={(v) => onChange('realGrade', v)}
         />

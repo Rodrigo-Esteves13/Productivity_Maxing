@@ -19,7 +19,7 @@ export default function TasksTable({
   if (tasks.length === 0) {
     return (
       <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
-        <div className="px-4 py-8 text-center text-neutral-500">Nenhuma tarefa encontrada.</div>
+        <div className="px-4 py-8 text-center text-neutral-500">No tasks found.</div>
       </div>
     );
   }
@@ -39,7 +39,7 @@ export default function TasksTable({
       </div>
 
       <div className="hidden sm:block overflow-x-auto">
-        <table className="w-full text-sm text-left text-neutral-300 whitespace-nowrap">
+        <table className="w-full text-sm text-left text-neutral-300">
           <TasksTableHeader />
           <tbody>
             {tasks.map((task) => (
