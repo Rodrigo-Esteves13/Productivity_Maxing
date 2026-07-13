@@ -36,12 +36,18 @@ export default function TaskCard({
       onKeyDown={handleKeyDown}
       role={isInteractive ? 'button' : undefined}
       tabIndex={isInteractive ? 0 : undefined}
-      // Adicionado flex flex-col para garantir alinhamento perfeito na grelha
-      className={`relative flex flex-col p-4 bg-neutral-900/50 border border-neutral-800 rounded-xl hover:border-violet-500/50 transition-colors ${
-        isInteractive ? 'cursor-pointer' : 'h-full'
+      // h-full garante que todos os cards de uma linha da grelha ficam com a
+      // mesma altura (a grelha já estica a linha para o mais alto - isto só
+      // faz o cartão em si preencher esse espaço), para o rodapé (mt-auto)
+      // ficar sempre à mesma altura entre cards, seja qual for o conteúdo.
+      className={`relative flex flex-col h-full p-4 bg-neutral-900/50 border border-neutral-800 rounded-xl hover:border-violet-500/50 transition-colors ${
+        isInteractive ? 'cursor-pointer' : ''
       }`}
     >
-      {/* Cabeçalho limpo, com gap-3 e min-w-0 para o título truncar bem sem esmagar o badge */}
+      {/* Cabeçalho só com o status - a dificuldade voltou para o rodapé.
+          Com 2 badges aqui, títulos longos ficavam a lutar por espaço e
+          quebravam de forma inconsistente entre cards. Com só 1 badge,
+          o título tem sempre a largura que precisa. */}
       <div className="flex justify-between items-start mb-3 gap-3">
         <h3 className="text-lg font-medium text-white line-clamp-2 min-w-0">{task.title}</h3>
         <div className="flex-shrink-0">
@@ -49,34 +55,30 @@ export default function TaskCard({
         </div>
       </div>
 
-      {/* mt-auto empurra esta secção para o fundo. Assim, mesmo que um título tenha 1 linha e outro 2, os rodapés ficam sempre alinhados horizontalmente! */}
-      <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-400 mt-auto pt-2">
-        <span className="px-2 py-1 bg-neutral-800 rounded-md font-medium text-neutral-300">
-          {areaName}
-        </span>
-        <span>•</span>
-        
-        {/* A data fica vermelha se estiver atrasada */}
-        <span className={status === 'overdue' ? 'text-red-400 font-medium' : ''}>
-          {new Date(task.date).toLocaleDateString()}
-        </span>
-        
-        <span>•</span>
-        <DifficultyBadge difficulty={task.difficulty} />
+      {/* mt-auto empurra esta secção para o fundo, para os rodapés ficarem
+          sempre à mesma altura entre cards independentemente do título.
+          Duas linhas fixas em vez de uma só - assim cada uma tem sempre
+          espaço de sobra e nada disputa largura com o +1 Day. */}
+      <div className="mt-auto pt-2 text-xs text-neutral-400 space-y-1.5">
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-1 bg-neutral-800 rounded-md font-medium text-neutral-300 truncate max-w-[10rem]">
+            {areaName}
+          </span>
+          <span>•</span>
+          <span className={status === 'overdue' ? 'text-red-400 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>
+            {new Date(task.date).toLocaleDateString()}
+          </span>
+        </div>
 
-        {/* O botão aparece no fim, organicamente contextualizado. 
-            O -mt-1 anula a margem padrão do componente para alinhar verticalmente com o texto */}
-        {status === 'overdue' && onReschedule && (
-          <>
-            <span>•</span>
-            <div className="-mt-1">
-              <RescheduleButton 
-                isLoading={isRescheduling} 
-                onClick={(e) => onReschedule(e, task)} 
-              />
-            </div>
-          </>
-        )}
+        <div className="flex items-center justify-between gap-2">
+          <DifficultyBadge difficulty={task.difficulty} />
+          {status === 'overdue' && onReschedule && (
+            <RescheduleButton
+              isLoading={isRescheduling}
+              onClick={(e) => onReschedule(e, task)}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -38,24 +38,30 @@ export default function TaskCard({
         </div>
         <div className="flex-shrink-0 text-right flex flex-col items-end">
           <DateStatusBadge status={status} />
-          <div className="text-[11px] text-neutral-500 mt-1 whitespace-nowrap">
+          <span className="text-[11px] text-neutral-500 mt-1 whitespace-nowrap">
             {getRemainingTimeLabel(task)}
-          </div>
-          {/* Botão de reagendar injetado aqui para o Dashboard Mobile */}
-          {status === 'overdue' && onReschedule && (
-            <RescheduleButton 
-              isLoading={isRescheduling} 
-              onClick={(e) => onReschedule(e, task)} 
-            />
-          )}
+          </span>
         </div>
       </div>
 
+      {/* Linha 1: badges informativos, podem dar wrap livremente sem afetar mais nada */}
       <div className="flex flex-wrap items-center gap-2 mt-3">
         <DifficultyBadge difficulty={task.difficulty} />
         <StatusBadge status={task.progressStatus} />
         <span className="text-[11px] text-neutral-400">{academicTypeLabel}</span>
+      </div>
+
+      {/* Linha 2: ações (Sync à esquerda, Reschedule à direita) — linha própria e fixa,
+          nunca mistura com os badges acima, por isso nunca fica "+1 Day" órfão a meio de um wrap */}
+      <div className="flex items-center gap-2 mt-2">
         <CalendarSyncButton task={task} />
+        {status === 'overdue' && onReschedule && (
+          <RescheduleButton
+            isLoading={isRescheduling}
+            onClick={(e) => onReschedule(e, task)}
+            className="ml-auto"
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-neutral-800/70 text-center">

@@ -101,24 +101,24 @@ export default function DashboardFilters({
           </Select>
         </FormField>
 
-        <FormField label="Due" htmlFor="filter-due">
-          <Select id="filter-due" value={filters.dateStatus} onChange={(e) => update({ dateStatus: e.target.value })}>
-            <option value="">All</option>
-            <option value="overdue">Overdue</option>
-            <option value="today">Due Today</option>
-            <option value="upcoming">Upcoming</option>
-            <option value="completed">Completed</option>
-          </Select>
-        </FormField>
-      </div>
+        <div className="col-span-2 sm:col-span-3 lg:col-span-6 flex flex-wrap items-end justify-between gap-4">
+          <FormField label="Due" htmlFor="filter-due" className="w-40">
+            <Select id="filter-due" value={filters.dateStatus} onChange={(e) => update({ dateStatus: e.target.value })}>
+              <option value="">All</option>
+              <option value="overdue">Overdue</option>
+              <option value="today">Due Today</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="completed">Completed</option>
+            </Select>
+          </FormField>
 
-      {hasActiveFilters && (
-        <div className="flex justify-end mt-4">
-          <Button type="button" variant="secondary" onClick={onClear}>
-            Clear Filters
-          </Button>
+          {hasActiveFilters && (
+            <Button type="button" variant="secondary" onClick={onClear}>
+              Clear Filters
+            </Button>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

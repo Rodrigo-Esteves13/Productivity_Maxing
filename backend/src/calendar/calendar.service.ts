@@ -18,8 +18,28 @@ interface TaskForSync {
   title: string;
   date: Date;
   topics: string | null;
+  difficulty: string;
+  progressStatus: string;
+  referenceLink: string | null;
+  weightPercentage: number | null;
+  targetGrade: number | null;
+  realGrade: number | null;
   googleCalendarEventId: string | null;
   calendarDurationMinutes: number | null;
+  area: { name: string } | null;
+  taskType: { label: string } | null;
+  academicType: { label: string } | null;
+}
+
+// "ON_TRACK" -> "On Track". Mesma ideia do formatEnumLabel.ts do frontend,
+// só para os enums (Difficulty, ProgressStatus) que entram na descrição do
+// evento do Google Calendar.
+function formatEnumLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }
 
 @Injectable()
@@ -90,6 +110,31 @@ export class CalendarService {
     return data.access_token;
   }
 
+  // Junta toda a informação que também aparece no ecrã "Task Details" do
+  // frontend (TaskDetailView.tsx), para o evento no Google Calendar não
+  // ficar mais pobre do que a própria app - cada linha só entra se o campo
+  // tiver mesmo valor, tal como lá.
+  private buildDescription(task: TaskForSync): string | undefined {
+    const lines: string[] = [];
+
+    if (task.area?.name) lines.push(`Area: ${task.area.name}`);
+    if (task.taskType?.label) lines.push(`Type: ${task.taskType.label}`);
+    if (task.academicType?.label) {
+      lines.push(`Academic Type: ${task.academicType.label}`);
+    }
+    lines.push(`Difficulty: ${formatEnumLabel(task.difficulty)}`);
+    lines.push(`Status: ${formatEnumLabel(task.progressStatus)}`);
+    if (task.topics) lines.push(`Topics: ${task.topics}`);
+    if (task.weightPercentage != null) {
+      lines.push(`Weight: ${task.weightPercentage}%`);
+    }
+    if (task.targetGrade != null) lines.push(`Target Grade: ${task.targetGrade}`);
+    if (task.realGrade != null) lines.push(`Real Grade: ${task.realGrade}`);
+    if (task.referenceLink) lines.push(`Reference Link: ${task.referenceLink}`);
+
+    return lines.length ? lines.join('\n') : undefined;
+  }
+
   private toGoogleEvent(task: TaskForSync) {
     // O form só recolhe uma hora opcionalmente (ver TitleDateAreaFields.tsx
     // + campo "time" junto da checkbox do Calendar em OptionalInfoFields).
@@ -105,6 +150,7 @@ export class CalendarService {
       date.getUTCHours() !== 0 ||
       date.getUTCMinutes() !== 0 ||
       date.getUTCSeconds() !== 0;
+    const description = this.buildDescription(task);
 
     if (hasTime) {
       const durationMinutes =
@@ -112,7 +158,7 @@ export class CalendarService {
       const end = new Date(date.getTime() + durationMinutes * 60 * 1000);
       return {
         summary: task.title,
-        description: task.topics ?? undefined,
+        description,
         start: { dateTime: date.toISOString(), timeZone: 'Europe/Lisbon' },
         end: { dateTime: end.toISOString(), timeZone: 'Europe/Lisbon' },
       };
@@ -128,7 +174,7 @@ export class CalendarService {
 
     return {
       summary: task.title,
-      description: task.topics ?? undefined,
+      description,
       start: { date: startDate },
       end: { date: endDate },
     };
