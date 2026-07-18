@@ -70,6 +70,13 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
           >
             Developer
           </Link>
+          <Link
+            to="/agent"
+            onClick={() => setIsOpen(false)}
+            className="block px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
+          >
+            Agent
+          </Link>
           <button
             onClick={() => {
               setIsOpen(false);

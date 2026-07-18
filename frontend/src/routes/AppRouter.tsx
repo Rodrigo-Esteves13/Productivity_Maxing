@@ -12,6 +12,7 @@ import Tasks from '../pages/Tasks';
 import Focus from '../pages/Focus';
 import Profile from '../pages/Profile';
 import Developer from '../pages/Developer';
+import Agent from '../pages/Agent';
 import Areas from '../pages/Areas';
 import Users from '../pages/Users';
 import Security from '../pages/Security';
@@ -54,6 +55,10 @@ export default function AppRouter() {
         <Route 
           path="/developer" 
           element={<PrivateRoute><Developer /></PrivateRoute>} 
+        />
+        <Route
+          path="/agent"
+          element={<PrivateRoute><Agent /></PrivateRoute>}
         />
 
         {/* O <AdminRoute /> envolve as páginas. Se tentarem entrar na página de áreas, o AdminRoute barra. */}

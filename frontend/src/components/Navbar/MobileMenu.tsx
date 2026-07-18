@@ -40,6 +40,12 @@ export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileM
       <Link to="/profile" onClick={onNavigate} className={getLinkClass('/profile')}>
         Profile
       </Link>
+      <Link to="/developer" onClick={onNavigate} className={getLinkClass('/developer')}>
+        Developer
+      </Link>
+      <Link to="/agent" onClick={onNavigate} className={getLinkClass('/agent')}>
+        Agent
+      </Link>
 
       {isAdmin && (
         <>

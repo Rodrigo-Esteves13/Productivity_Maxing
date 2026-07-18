@@ -19,8 +19,7 @@ const LEGAL_LINKS = [
   { label: 'Terms of Service', to: '/terms' },
 ];
 
-const STACK = ['React', 'TypeScript', 'Tailwind v4', 'NestJS', 'Prisma', 'Supabase'];
-const STACK_PLANNED = ['Go Agent'];
+const STACK = ['React', 'TypeScript', 'Tailwind v4', 'NestJS', 'Prisma', 'Supabase', 'Go Agent'];
 
 export default function Footer() {
   return (
@@ -43,9 +42,6 @@ export default function Footer() {
           <div className="flex flex-wrap gap-2">
             {STACK.map((tech) => (
               <TechBadge key={tech} label={tech} />
-            ))}
-            {STACK_PLANNED.map((tech) => (
-              <TechBadge key={tech} label={`${tech} (soon)`} dimmed />
             ))}
           </div>
         </div>

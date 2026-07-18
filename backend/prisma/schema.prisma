@@ -56,6 +56,20 @@ enum Difficulty {
   VERY_HARD
 }
 
+// Como as regras dentro de AgentConfig se combinam: ANY (basta uma regra
+// ativa dar true) ou ALL (todas as regras ativas têm de dar true).
+enum AgentTriggerMode {
+  ANY
+  ALL
+}
+
+// O que o agente local faz quando não consegue contactar a API para
+// buscar a configuração/tasks atualizadas.
+enum AgentFailMode {
+  CLOSED
+  OPEN
+}
+
 // TABELAS DE CONFIGURAÇÃO (SUBSTITUEM OS ANTIGOS ENUMS TaskType/AcademicTaskType)
 // Estas deixaram de ser enum porque queremos que o ADMIN as edite (label, cor,
 // ordem, ativo/inativo) sem precisar de deploy nem migration.
@@ -117,6 +131,7 @@ model User {
   apiKeys       ApiKey[]
   securityLogs  SecurityLog[]
   studySessions StudySession[]
+  agentConfig   AgentConfig?
 }
 
 model ApiKey {
@@ -135,7 +150,55 @@ model ApiKey {
   @@index([userId])
 }
 
-/// Gere os tokens e IDs externos para autenticação OAuth (SSO).
+/// Configuração do pmaxing-agent (Fase 5) - uma por user. O agente local
+/// vai buscar isto a GET /agent/config a cada ciclo de polling, autenticado
+/// com a mesma API key de sempre, para poder ser editado dinamicamente na
+/// app sem precisar de tocar em nenhum ficheiro na máquina de quem o corre.
+model AgentConfig {
+  id     String @id @default(uuid())
+  userId String @unique
+
+  // Ver AgentTriggerMode acima.
+  triggerMode AgentTriggerMode @default(ANY)
+
+  // Ativa se existir qualquer task com data anterior a hoje e
+  // progressStatus != COMPLETED - ignora lastOverdueCheckAt de propósito,
+  // para não depender de teres respondido ao popup de check-in.
+  hasOverdueTasks Boolean @default(true)
+
+  // Ativa se GET /tasks/overdue-checkins devolver alguma task por
+  // confirmar hoje (semântica "uma vez por dia", ver o service).
+  hasOverdueCheckins Boolean @default(false)
+
+  // Se definido, ativa quando existir uma task hoje com esta dificuldade
+  // ou mais. Null desativa esta regra.
+  minDifficultyToday Difficulty?
+
+  // Ativa sempre que houver qualquer task pendente hoje.
+  anyTaskToday Boolean @default(false)
+
+  // Se definido, ativa quando existir qualquer task não-completada com
+  // progressStatus igual ou pior do que este (BEHIND < VERY_BEHIND).
+  // Null desativa esta regra.
+  minProgressStatus ProgressStatus?
+
+  // O que bloquear quando as regras acima decidirem que deve bloquear.
+  blockedProcesses String[] @default([])
+  blockedDomains   String[] @default([])
+
+  // O que o agente faz se não conseguir contactar a API.
+  failMode AgentFailMode @default(CLOSED)
+
+  // Cada quantos segundos o agente deve voltar a consultar a API.
+  pollIntervalSeconds Int @default(60)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+
 model Identity {
   id                String    @id @default(uuid())
   userId            String

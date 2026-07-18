@@ -1,0 +1,10 @@
+{
+  "_comment": "Só precisas disto se NÃO usares 'pmaxing-agent.exe -set-key A_TUA_KEY' (que é o caminho recomendado - ver README.md). Este ficheiro é a alternativa manual, para quem prefere não usar variáveis de ambiente.",
+
+  "api": {
+    "baseUrl": "https://api.pmaxing.pt",
+    "apiKey": "gera uma na página /agent do site",
+    "requestTimeoutSeconds": 10,
+    "bootstrapPollIntervalSeconds": 60
+  }
+}

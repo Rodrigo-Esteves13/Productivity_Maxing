@@ -1,2 +1,3 @@
-module agent 
-go 1.22 
+module pmaxing-agent
+
+go 1.22
