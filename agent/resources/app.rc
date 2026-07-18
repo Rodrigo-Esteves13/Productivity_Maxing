@@ -1,0 +1,3 @@
+// RT_MANIFEST = 24, resource ID 1 - é o par (tipo, id) que o Windows
+// procura automaticamente para associar um manifest a um executável.
+1 24 "app.manifest"

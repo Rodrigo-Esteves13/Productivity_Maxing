@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity
+    version="1.0.0.0"
+    processorArchitecture="amd64"
+    name="pt.pmaxing.agent"
+    type="win32"
+  />
+  <description>pmaxing-agent - bloqueia apps/sites com base nas tuas tasks</description>
+  <!-- requireAdministrator: o Windows pede logo o UAC ao correres o .exe,
+       sem precisares de "Executar como administrador" manualmente nem de
+       abrir um terminal. Necessário porque o agente edita o hosts file. -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security>
+      <requestedPrivileges>
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+  <!-- Diz ao Windows que o binário sabe lidar com versões recentes -
+       evita alguns comportamentos de compatibilidade legacy estranhos. -->
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" /> <!-- Windows 10/11 -->
+    </application>
+  </compatibility>
+</assembly>

@@ -195,3 +195,19 @@ export interface HeatmapCell {
   totalMinutes: number;
   sessionCount: number;
 }
+export type AgentTriggerMode = 'ANY' | 'ALL';
+export type AgentFailMode = 'CLOSED' | 'OPEN';
+
+export interface AgentConfig {
+  triggerMode: AgentTriggerMode;
+  hasOverdueTasks: boolean;
+  hasOverdueCheckins: boolean;
+  minDifficultyToday: Difficulty | null;
+  anyTaskToday: boolean;
+  minProgressStatus: ProgressStatus | null;
+  blockedProcesses: string[];
+  blockedDomains: string[];
+  failMode: AgentFailMode;
+  pollIntervalSeconds: number;
+  isConfigured: boolean;
+}
