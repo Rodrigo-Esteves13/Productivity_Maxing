@@ -30,7 +30,10 @@ const ALLOWED_MIN_PROGRESS_STATUS = [
 ];
 
 export class UpsertAgentConfigDto {
-  @ApiPropertyOptional({ enum: AgentTriggerMode, example: AgentTriggerMode.ANY })
+  @ApiPropertyOptional({
+    enum: AgentTriggerMode,
+    example: AgentTriggerMode.ANY,
+  })
   @IsOptional()
   @IsEnum(AgentTriggerMode)
   triggerMode?: AgentTriggerMode;
@@ -65,7 +68,8 @@ export class UpsertAgentConfigDto {
     enum: ALLOWED_MIN_PROGRESS_STATUS,
     nullable: true,
     example: ProgressStatus.BEHIND,
-    description: 'null desativa esta regra. COMPLETED não é um valor aceite aqui.',
+    description:
+      'null desativa esta regra. COMPLETED não é um valor aceite aqui.',
   })
   @IsOptional()
   @ValidateIf((o: UpsertAgentConfigDto) => o.minProgressStatus !== null)

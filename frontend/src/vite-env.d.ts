@@ -1,3 +1,5 @@
+/// <reference types="vite-plugin-pwa/client" />
+
 interface ImportMetaEnv {
   readonly VITE_API_URL: string;
   // Necessárias só para completar o link de reset/definição de password

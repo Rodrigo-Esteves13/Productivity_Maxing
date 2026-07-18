@@ -128,7 +128,8 @@ export class CalendarService {
     if (task.weightPercentage != null) {
       lines.push(`Weight: ${task.weightPercentage}%`);
     }
-    if (task.targetGrade != null) lines.push(`Target Grade: ${task.targetGrade}`);
+    if (task.targetGrade != null)
+      lines.push(`Target Grade: ${task.targetGrade}`);
     if (task.realGrade != null) lines.push(`Real Grade: ${task.realGrade}`);
     if (task.referenceLink) lines.push(`Reference Link: ${task.referenceLink}`);
 

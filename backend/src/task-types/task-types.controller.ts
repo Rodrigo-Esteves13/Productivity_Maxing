@@ -34,8 +34,7 @@ export class TaskTypesController {
 
   @Get('admin/task-types')
   @ApiOperation({
-    summary:
-      'Lists all task types, including inactive ones (Admin only)',
+    summary: 'Lists all task types, including inactive ones (Admin only)',
   })
   findAllTaskTypes() {
     return this.taskTypesService.findAllTaskTypes(false);
@@ -49,7 +48,8 @@ export class TaskTypesController {
 
   @Patch('admin/task-types/:id')
   @ApiOperation({
-    summary: 'Edits label/color/order/active status of a task type (Admin only)',
+    summary:
+      'Edits label/color/order/active status of a task type (Admin only)',
   })
   updateTaskType(
     @Param('id', ParseUUIDPipe) id: string,

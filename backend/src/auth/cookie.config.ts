@@ -16,9 +16,7 @@ const isProd = process.env.NODE_ENV === 'production';
 // omissão - só um COOKIE_SECURE=false explícito no compose local destranca isto.
 const cookieSecureOverride = process.env.COOKIE_SECURE;
 const isSecureCookies =
-  cookieSecureOverride !== undefined
-    ? cookieSecureOverride === 'true'
-    : isProd;
+  cookieSecureOverride !== undefined ? cookieSecureOverride === 'true' : isProd;
 
 export function isSecureCookieEnv(): boolean {
   return isSecureCookies;
