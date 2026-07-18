@@ -1,0 +1,9 @@
+# Nunca commitar - contém a API key real do utilizador (ver incidente:
+# gitleaks apanhou uma key real commitada em agent/config.json a
+# 2026-07-18). O ficheiro de exemplo/documentação fica noutro nome
+# (config.example.json) para não haver confusão sobre qual é seguro
+# commitar.
+config.json
+
+# binários compilados localmente durante testes
+*.exe
