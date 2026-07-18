@@ -52,7 +52,7 @@ export class UpsertAgentConfigDto {
     description: 'null desativa esta regra',
   })
   @IsOptional()
-  @ValidateIf((o) => o.minDifficultyToday !== null)
+  @ValidateIf((o: UpsertAgentConfigDto) => o.minDifficultyToday !== null)
   @IsEnum(Difficulty)
   minDifficultyToday?: Difficulty | null;
 
@@ -68,7 +68,7 @@ export class UpsertAgentConfigDto {
     description: 'null desativa esta regra. COMPLETED não é um valor aceite aqui.',
   })
   @IsOptional()
-  @ValidateIf((o) => o.minProgressStatus !== null)
+  @ValidateIf((o: UpsertAgentConfigDto) => o.minProgressStatus !== null)
   @IsEnum(ALLOWED_MIN_PROGRESS_STATUS)
   minProgressStatus?: ProgressStatus | null;
 
