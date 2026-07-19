@@ -30,6 +30,8 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -37,6 +39,8 @@ import (
 	"pmaxing-agent/internal/blocker"
 	"pmaxing-agent/internal/config"
 	"pmaxing-agent/internal/rules"
+	"pmaxing-agent/internal/singleinstance"
+	"pmaxing-agent/internal/tray"
 	"pmaxing-agent/internal/winconsole"
 )
 
@@ -62,6 +66,18 @@ func main() {
 	if err != nil {
 		fatalVisible("error loading configuration: %v", err)
 	}
+	warnIfInsecureBaseURL(cfg.API.BaseURL)
+
+	// Tem de ser adquirido antes de qualquer hosts.New()/hosts.Apply() -
+	// ver internal/singleinstance para a race concreta que isto evita.
+	releaseInstance, alreadyRunning, err := singleinstance.Acquire()
+	if err != nil {
+		log.Printf("warning: could not check for another running instance: %v (continuing anyway)", err)
+	}
+	if alreadyRunning {
+		fatalVisible("another instance of pmaxing-agent is already running - check the tray icon or Task Manager")
+	}
+	defer releaseInstance()
 
 	client := apiclient.New(cfg.API)
 	hosts := blocker.New()
@@ -82,13 +98,56 @@ func main() {
 		procs:        procs,
 		pollInterval: cfg.API.BootstrapPollInterval(),
 	}
-	agent.run(ctx)
 
-	log.Println("shutting down - removing domain block from hosts file...")
-	if err := hosts.Remove(); err != nil {
-		log.Printf("warning: could not clean up hosts file on exit: %v", err)
+	// tray.Run blocks (on Windows, it owns the OS message loop; see
+	// internal/tray/tray_windows.go) until Exit is chosen from the tray
+	// menu or agent.run(ctx) returns on its own (Ctrl+C, SIGTERM, a
+	// Windows logoff) and calls tray.Quit() itself. Either way, OnExit
+	// below always runs exactly once before the process exits - this is
+	// the same hosts.Remove() cleanup that used to run unconditionally
+	// at the end of main() before the tray existed.
+	tray.Run(tray.Config{
+		LogPath:   agentLogPath(),
+		GetStatus: agent.trayStatus,
+		OnReady:   func() { agent.run(ctx) },
+		OnExit: func() {
+			log.Println("shutting down - removing domain block from hosts file...")
+			if err := hosts.Remove(); err != nil {
+				log.Printf("warning: could not clean up hosts file on exit: %v", err)
+			}
+			log.Println("agent stopped.")
+		},
+	})
+}
+
+// agentLogDir devolve %AppData%\PMaxingAgent (ou o equivalente do SO),
+// criando o diretório se necessário. Partilhado por setupLogging (que
+// escreve agent.log lá dentro) e por agentLogPath (que dá o mesmo
+// caminho ao tray para o "Open logs"), para as duas partes nunca poderem
+// divergir sobre onde o ficheiro vive.
+func agentLogDir() (string, error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
 	}
-	log.Println("agent stopped.")
+	logDir := filepath.Join(dir, "PMaxingAgent")
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
+		return "", err
+	}
+	return logDir, nil
+}
+
+// agentLogPath devolve o caminho completo para agent.log, usado pelo
+// "Open logs" do tray. Nota: em -debug este ficheiro não recebe logs
+// (vão para a consola, ver setupLogging) - pode não existir ainda ou
+// estar desatualizado; o tray trata esse caso (ver openLogs em
+// internal/tray/tray_windows.go).
+func agentLogPath() string {
+	dir, err := agentLogDir()
+	if err != nil {
+		return "agent.log"
+	}
+	return filepath.Join(dir, "agent.log")
 }
 
 // setupLogging decide para onde os logs vão. Em -debug, aloca uma
@@ -103,12 +162,8 @@ func setupLogging(debug bool) (closeLog func()) {
 		return func() {}
 	}
 
-	dir, err := os.UserConfigDir()
+	logDir, err := agentLogDir()
 	if err != nil {
-		dir = "."
-	}
-	logDir := filepath.Join(dir, "PMaxingAgent")
-	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		// Sem consola e sem conseguir escrever o log - não há onde
 		// avisar o utilizador. Segue em frente na mesma (os logs vão
 		// simplesmente perder-se), o agente continua funcional.
@@ -122,6 +177,23 @@ func setupLogging(debug bool) (closeLog func()) {
 	}
 	log.SetOutput(f)
 	return func() { f.Close() }
+}
+
+// warnIfInsecureBaseURL avisa (sem bloquear o arranque - localhost em
+// desenvolvimento é um caso legítimo) se api.baseUrl não for https://.
+// Sem TLS, a x-api-key vai em claro em cada pedido, e a resposta de
+// GET /agent/config (domínios e nomes de processo que o agente aplica
+// sem mais validação além da adicionada em internal/blocker) pode ser
+// alterada por qualquer atacante na rede - deixa de ser só "fricção
+// contra ti próprio" (ver README) e passa a ser um vetor de ataque real.
+func warnIfInsecureBaseURL(baseURL string) {
+	if strings.HasPrefix(baseURL, "https://") {
+		return
+	}
+	if strings.HasPrefix(baseURL, "http://localhost") || strings.HasPrefix(baseURL, "http://127.0.0.1") {
+		return
+	}
+	log.Printf("warning: api.baseUrl (%s) is not https:// - the API key and every /agent/config response travel unencrypted, and are not protected from tampering by a network attacker", baseURL)
 }
 
 // fatalVisible mostra um erro fatal de arranque de forma garantidamente
@@ -152,9 +224,29 @@ type agentState struct {
 
 	pollInterval time.Duration
 
+	// mu guards every field below it. Before the tray existed, these
+	// were only ever touched by run()/tick() on a single goroutine; now
+	// trayStatus() also reads them, from the tray's own goroutine (see
+	// internal/tray/tray_windows.go), so they need a lock.
+	mu                sync.RWMutex
 	lastRemoteConfig  *apiclient.AgentConfig
 	lastDecision      rules.Decision
+	lastPollAt        time.Time
 	warnedNoElevation bool
+}
+
+// trayStatus builds the read-only snapshot the tray icon shows (tooltip
+// text and the "View status" dialog). Safe to call concurrently with
+// run()/tick() from another goroutine.
+func (a *agentState) trayStatus() tray.Status {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return tray.Status{
+		Configured: a.lastRemoteConfig != nil && a.lastRemoteConfig.IsConfigured,
+		Blocking:   a.lastDecision.ShouldBlock,
+		LastReason: a.lastDecision.Reason,
+		LastPollAt: a.lastPollAt,
+	}
 }
 
 func (a *agentState) run(ctx context.Context) {
@@ -172,8 +264,11 @@ func (a *agentState) run(ctx context.Context) {
 			// A configuração pode ter mudado o pollIntervalSeconds na
 			// página /agent - ajustamos o ticker para o próximo ciclo
 			// já respeitar isso, sem precisares de reiniciar o agente.
-			if a.lastRemoteConfig != nil {
-				want := time.Duration(a.lastRemoteConfig.PollIntervalSeconds) * time.Second
+			a.mu.RLock()
+			remote := a.lastRemoteConfig
+			a.mu.RUnlock()
+			if remote != nil {
+				want := time.Duration(remote.PollIntervalSeconds) * time.Second
 				if want > 0 && want != a.pollInterval {
 					log.Printf("polling interval updated: %s -> %s", a.pollInterval, want)
 					a.pollInterval = want
@@ -188,17 +283,24 @@ func (a *agentState) tick(parentCtx context.Context) {
 	ctx, cancel := context.WithTimeout(parentCtx, a.cfg.API.RequestTimeout()+5*time.Second)
 	defer cancel()
 
+	a.mu.Lock()
+	a.lastPollAt = time.Now()
+	previousRemote := a.lastRemoteConfig
+	a.mu.Unlock()
+
 	remote, err := a.client.FetchAgentConfig(ctx)
 	if err != nil {
 		log.Printf("error fetching remote configuration: %v", err)
-		if a.lastRemoteConfig == nil {
+		if previousRemote == nil {
 			log.Println("no known configuration yet - waiting for next cycle")
 			return
 		}
-		remote = a.lastRemoteConfig
+		remote = previousRemote
 		log.Printf("using last known remote configuration (failMode=%s)", remote.Blocking.FailMode)
 	} else {
+		a.mu.Lock()
 		a.lastRemoteConfig = remote
+		a.mu.Unlock()
 	}
 
 	if !remote.IsConfigured {
@@ -206,27 +308,36 @@ func (a *agentState) tick(parentCtx context.Context) {
 		return
 	}
 
+	a.mu.RLock()
+	previousDecision := a.lastDecision
+	a.mu.RUnlock()
+
 	decision, err := a.decide(ctx, remote.TriggerRules)
 	if err != nil {
 		log.Printf("error fetching tasks: %v", err)
 		switch remote.Blocking.FailMode {
 		case apiclient.FailOpen:
 			decision = rules.Decision{ShouldBlock: false, Reason: "tasks API unreachable, failMode=OPEN"}
+			a.mu.Lock()
 			a.lastDecision = decision
+			a.mu.Unlock()
 		default: // FailClosed
 			// Bug real que já aconteceu aqui: gravar a versão já anotada
 			// de volta em a.lastDecision fazia o sufixo "(kept: ...)"
 			// acumular-se sem limite a cada ciclo em que a API
 			// continuasse em baixo (um Reason com centenas de cópias do
 			// mesmo sufixo repetido, ver histórico). buildKeptDecision
-			// parte sempre de a.lastDecision, que esta branch nunca
-			// reatribui - por isso o sufixo é sempre acrescentado à
-			// última razão "limpa" conhecida, nunca à versão já anotada
-			// do ciclo anterior.
-			decision = buildKeptDecision(a.lastDecision)
+			// parte sempre de previousDecision (lida sob lock acima,
+			// antes desta chamada) - a.lastDecision NUNCA é reatribuído
+			// nesta branch de propósito, por isso o sufixo é sempre
+			// acrescentado à última razão "limpa" conhecida, nunca à
+			// versão já anotada do ciclo anterior.
+			decision = buildKeptDecision(previousDecision)
 		}
 	} else {
+		a.mu.Lock()
 		a.lastDecision = decision
+		a.mu.Unlock()
 	}
 
 	log.Printf("decision: block=%v (%s)", decision.ShouldBlock, decision.Reason)

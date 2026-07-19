@@ -133,7 +133,52 @@ func TestHostsBlocker_ApplyClearsReadOnlyBeforeReplacing(t *testing.T) {
 	}
 }
 
-// TestHostsBlocker_CleansUpLegacyPortugueseMarker cobre a migração:
+// TestHostsBlocker_RejectsInvalidDomains cobre o fix de segurança em
+// isValidHostname/buildManagedBlock: um domínio vindo de GET
+// /agent/config com um "\n" embutido não pode resultar numa linha extra
+// e arbitrária no hosts file - deve ser ignorado por completo, e o resto
+// da lista continua a ser aplicado normalmente.
+func TestHostsBlocker_RejectsInvalidDomains(t *testing.T) {
+	h, path := newTestHostsBlocker(t)
+
+	malicious := "evil.com\n0.0.0.0 example.com"
+	if err := h.Apply([]string{malicious, "safe.com"}); err != nil {
+		t.Fatalf("Apply falhou: %v", err)
+	}
+
+	content, _ := os.ReadFile(path)
+	s := string(content)
+
+	if strings.Contains(s, "example.com") {
+		t.Fatalf("domínio malicioso injetou uma linha extra no hosts file:\n%s", s)
+	}
+	if strings.Contains(s, "evil.com") {
+		t.Fatalf("domínio malicioso não devia ter sido escrito de todo:\n%s", s)
+	}
+	if !strings.Contains(s, "127.0.0.1 safe.com") {
+		t.Errorf("domínio válido na mesma lista devia continuar a ser aplicado:\n%s", s)
+	}
+}
+
+func TestIsValidHostname(t *testing.T) {
+	cases := map[string]bool{
+		"youtube.com":            true,
+		"sub.example.co.uk":      true,
+		"a.com":                  true,
+		"evil.com\nextra line":   false,
+		"evil.com\r\nextra line": false,
+		"":                       false,
+		" ":                      false,
+		"has space.com":          false,
+		strings.Repeat("a", 260): false,
+	}
+	for host, want := range cases {
+		if got := isValidHostname(host); got != want {
+			t.Errorf("isValidHostname(%q) = %v, want %v", host, got, want)
+		}
+	}
+}
+
 // uma máquina que ainda tenha o bloco de uma versão anterior do agente
 // (marcador de início em português) deve ser corretamente reconhecida
 // e substituída pelo bloco novo em inglês, sem duplicar entradas.

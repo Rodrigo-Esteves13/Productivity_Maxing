@@ -5,9 +5,31 @@ package blocker
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
+	"regexp"
 	"strings"
 )
+
+// validHostPattern restringe cada domínio ao charset normal de hostnames
+// (RFC 1123: letras, dígitos, hífen e ponto). Isto existe por uma razão
+// de segurança concreta, não só de estilo: buildManagedBlock escreve
+// cada domínio diretamente numa linha do hosts file, e writeAtomic
+// escreve cada linha seguida de "\n". Sem esta validação, um domínio
+// vindo de GET /agent/config que contivesse um "\n" embutido (de um
+// backend comprometido, ou de um man-in-the-middle numa ligação http://
+// não cifrada - ver applyDefaultsAndValidate em internal/config) deixava
+// de ser "um domínio a bloquear" e passava a ser uma linha arbitrária
+// nova no hosts file, escolhida por quem controla a resposta da API -
+// por exemplo redirecionando um domínio bancário ou de update de
+// antivírus para um IP à escolha, em vez de só bloquear o domínio
+// pretendido. Um comprimento máximo (253, o limite de um hostname
+// válido) evita também abusar disto para inflar o hosts file.
+var validHostPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$`)
+
+func isValidHostname(host string) bool {
+	return host != "" && len(host) <= 253 && validHostPattern.MatchString(host)
+}
 
 const (
 	// markerStart/markerEnd delimitam o bloco que o agente gere dentro do
@@ -171,6 +193,13 @@ func buildManagedBlock(domains []string) []string {
 	for _, d := range domains {
 		d = strings.ToLower(strings.TrimSpace(d))
 		if d == "" {
+			continue
+		}
+		if !isValidHostname(d) {
+			// Não é um hostname válido (inclui o caso de conter um "\n"
+			// ou "\r" embutido - ver comentário de validHostPattern) -
+			// ignorado em vez de escrito às cegas no hosts file.
+			log.Printf("blocker: ignoring invalid domain from remote config: %q", d)
 			continue
 		}
 		addHost(d)
