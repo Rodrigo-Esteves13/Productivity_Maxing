@@ -58,6 +58,35 @@ Se preferires não usar variável de ambiente, copia
 `-config config.json`. O agente tenta sempre `PMAXING_API_KEY` primeiro;
 só lê o ficheiro se essa variável não existir.
 
+## Tray icon (v2.1)
+
+O agente já não corre invisível: ao arrancar mostra um ícone na área de
+notificação, com um menu (botão direito) com **View status** (mostra o
+último estado de bloqueio e quando foi o último poll), **Open logs**
+(abre `%AppData%\PMaxingAgent\agent.log`) e **Exit** (termina o agente,
+chamando sempre `hosts.Remove()` antes de sair). A tooltip do ícone
+mostra o estado atual ("blocking active" / "idle" / "not configured
+yet"). O modo `-debug` continua a funcionar na mesma (consola visível
+com logs em tempo real), lado a lado com o ícone.
+
+Isto adiciona a primeira dependência externa ao módulo:
+[fyne.io/systray](https://pkg.go.dev/fyne.io/systray) (o fork
+ativamente mantido de getlantern/systray, mesma API). Depois de puxar
+estas alterações, corre uma vez:
+
+```bash
+go get fyne.io/systray@latest
+go mod tidy
+```
+
+Só depois disso `go build` volta a funcionar - não editei `go.mod`/`go.sum`
+à mão para não arriscar checksums errados.
+
+O agente também já só deixa correr uma instância de cada vez (via um
+mutex nomeado do Windows) - ver `internal/singleinstance`. Se abrires o
+`.exe` uma segunda vez enquanto já há uma instância a correr, a nova
+mostra um aviso e sai, sem tocar no hosts file.
+
 ## Build
 
 ```bash

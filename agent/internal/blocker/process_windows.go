@@ -4,10 +4,62 @@ package blocker
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 )
+
+// protectedProcesses nunca são terminados, seja qual for o conteúdo de
+// blockedProcesses em GET /agent/config. Isto é uma rede de segurança
+// contra uma resposta maliciosa ou corrompida da API (ou de um
+// man-in-the-middle numa baseUrl http:// não cifrada), não contra o
+// próprio utilizador - matar qualquer um destes processos do Windows
+// causa, no mínimo, perda da sessão gráfica (explorer.exe/dwm.exe) e, no
+// pior caso, um crash do sistema (lsass.exe/csrss.exe/wininit.exe/
+// winlogon.exe/services.exe/smss.exe), muito acima do que "bloquear uma
+// app distrativa" alguma vez precisa de fazer.
+var protectedProcesses = map[string]bool{
+	"system":       true,
+	"smss.exe":     true,
+	"csrss.exe":    true,
+	"wininit.exe":  true,
+	"winlogon.exe": true,
+	"services.exe": true,
+	"lsass.exe":    true,
+	"svchost.exe":  true,
+	"explorer.exe": true,
+	"dwm.exe":      true,
+	"userinit.exe": true,
+	"taskmgr.exe":  true,
+}
+
+// selfProcessName devolve o nome do próprio executável do agente (ex:
+// "pmaxing-agent.exe"), lido em runtime em vez de hardcoded - assim
+// continua a proteger-se a si próprio mesmo que o .exe seja distribuído
+// com outro nome de ficheiro. Se os.Executable() falhar (muito raro),
+// devolve "" e o filtro correspondente em Enforce simplesmente não
+// encontra nenhum match, sem quebrar o resto do bloqueio.
+func selfProcessName() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	return strings.ToLower(filepath.Base(exe))
+}
+
+// isWildcard diz se `target` usa a sintaxe de wildcard do taskkill
+// (`*`/`?` em /IM). Nunca queremos agir sobre um wildcard vindo da API
+// remota: "*" mataria literalmente todos os processos do sistema, e
+// mesmo um padrão mais restrito como "chrome*" tem um raio de ação que
+// ninguém validou explicitamente na página /agent (que só lista nomes
+// exatos, ver blockedProcesses no README) - só nomes de executável
+// exatos são um alvo válido.
+func isWildcard(target string) bool {
+	return strings.ContainsAny(target, "*?")
+}
 
 // ProcessBlocker mata repetidamente os processos cujo nome de executável
 // esteja na lista configurada. Usamos os binários nativos do Windows
@@ -35,10 +87,25 @@ func (p *ProcessBlocker) Enforce(processNames []string) ([]string, error) {
 		return nil, err
 	}
 
+	self := selfProcessName()
+
 	var killed []string
 	for _, target := range processNames {
 		target = strings.TrimSpace(target)
 		if target == "" {
+			continue
+		}
+		if isWildcard(target) {
+			log.Printf("blocker: refusing to act on wildcard process pattern from remote config: %q", target)
+			continue
+		}
+		lower := strings.ToLower(target)
+		if protectedProcesses[lower] {
+			log.Printf("blocker: refusing to terminate protected system process: %q", target)
+			continue
+		}
+		if self != "" && lower == self {
+			log.Printf("blocker: refusing to terminate the agent's own process: %q", target)
 			continue
 		}
 		if !containsFold(running, target) {
