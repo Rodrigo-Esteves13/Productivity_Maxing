@@ -241,8 +241,12 @@ export class StudySessionsService {
     for (const session of sessions) {
       if (!session.endedAt) continue; // already filtered by the where, just for TS
       const dayKey = session.startedAt.toISOString().slice(0, 10);
-      const minutes = (session.endedAt.getTime() - session.startedAt.getTime()) / 60_000;
-      totalsByDay.set(dayKey, (totalsByDay.get(dayKey) ?? 0) + Math.max(0, minutes));
+      const minutes =
+        (session.endedAt.getTime() - session.startedAt.getTime()) / 60_000;
+      totalsByDay.set(
+        dayKey,
+        (totalsByDay.get(dayKey) ?? 0) + Math.max(0, minutes),
+      );
     }
 
     const result: { date: string; totalMinutes: number }[] = [];
@@ -250,7 +254,10 @@ export class StudySessionsService {
       const day = new Date(since);
       day.setDate(day.getDate() + i);
       const dayKey = day.toISOString().slice(0, 10);
-      result.push({ date: dayKey, totalMinutes: Math.round(totalsByDay.get(dayKey) ?? 0) });
+      result.push({
+        date: dayKey,
+        totalMinutes: Math.round(totalsByDay.get(dayKey) ?? 0),
+      });
     }
 
     return result;

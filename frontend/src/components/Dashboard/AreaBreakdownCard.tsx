@@ -54,7 +54,7 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
       <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3">Breakdown by course</p>
       <ul className="space-y-3">
-        {rows.map(({ area, average, gradedCount }) => (
+        {rows.map(({ area, average }) => (
           <li key={area.id}>
             <div className="flex items-center justify-between text-sm mb-1">
               <div className="flex items-center gap-2 min-w-0">

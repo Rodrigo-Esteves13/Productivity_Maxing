@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -18,9 +19,17 @@ import (
 // marcadores antes de disparar o download - tudo no browser, em
 // memória, sem passar por nenhum servidor além do próprio Netlify a
 // servir o .exe original.
+//
+// V2: o payload entre os marcadores é base64, não JSON em claro (V1 tinha
+// JSON em claro - a key aparecia literalmente num "strings agente.exe" ou
+// num hex editor). Isto é ofuscação, não encriptação: qualquer pessoa que
+// leia este ficheiro sabe descodificar. A defesa forte a prazo é deixar de
+// depender de um bearer token estático embutido no binário (ver o
+// comentário equivalente em DownloadSetupButton.tsx, do lado do
+// frontend), mas isto já tira a key de estar legível a olho nu.
 const (
-	embeddedMarkerStart = "\n#--PMAXING-AGENT-EMBEDDED-CONFIG-V1-START--#\n"
-	embeddedMarkerEnd   = "\n#--PMAXING-AGENT-EMBEDDED-CONFIG-V1-END--#\n"
+	embeddedMarkerStart = "\n#--PMAXING-AGENT-EMBEDDED-CONFIG-V2-START--#\n"
+	embeddedMarkerEnd   = "\n#--PMAXING-AGENT-EMBEDDED-CONFIG-V2-END--#\n"
 )
 
 // loadEmbedded procura uma configuração anexada ao fim do próprio
@@ -76,11 +85,16 @@ func parseEmbedded(data []byte) (*Config, error) {
 		return nil, nil
 	}
 
-	rawJSON := data[payloadStart : payloadStart+endIdx]
+	rawPayload := data[payloadStart : payloadStart+endIdx]
+
+	rawJSON, err := base64.StdEncoding.DecodeString(string(rawPayload))
+	if err != nil {
+		return nil, fmt.Errorf("bytes between markers are not valid base64: %w", err)
+	}
 
 	var cfg Config
 	if err := json.Unmarshal(rawJSON, &cfg); err != nil {
-		return nil, fmt.Errorf("bytes between markers are not valid JSON: %w", err)
+		return nil, fmt.Errorf("decoded payload is not valid JSON: %w", err)
 	}
 	return &cfg, nil
 }

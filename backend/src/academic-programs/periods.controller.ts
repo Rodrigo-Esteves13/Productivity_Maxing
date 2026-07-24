@@ -47,7 +47,7 @@ export class PeriodsController {
   @Patch(':id/archive')
   @ApiOperation({
     summary:
-      'Archives a period (soft-delete). Returns 409 if it is the program\'s most recent period with no successor - retry with { confirm: true } to force it. Returns 400 if it is the user\'s only remaining active period anywhere.',
+      "Archives a period (soft-delete). Returns 409 if it is the program's most recent period with no successor - retry with { confirm: true } to force it. Returns 400 if it is the user's only remaining active period anywhere.",
   })
   archive(
     @CurrentUser() user: AuthenticatedUser,
@@ -77,7 +77,7 @@ export class PeriodsController {
   @Patch(':id/activate')
   @ApiOperation({
     summary:
-      'Sets this period (and its program) as the user\'s active dashboard',
+      "Sets this period (and its program) as the user's active dashboard",
   })
   activate(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.periodsService.setActive(user.id, id);

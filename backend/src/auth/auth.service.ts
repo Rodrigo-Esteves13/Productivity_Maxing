@@ -24,6 +24,8 @@ import {
 } from '../crypto/token-cipher';
 import { OAuthAccountConflictException } from './exceptions/oauth-account-conflict.exception';
 import { MailService } from '../mail/mail.service';
+import { GOOGLE_REVOKE_URL } from './google-oauth.constants';
+import { getFrontendUrl } from '../config/app.config';
 
 // scryptSync bloqueia a thread principal do event loop enquanto corre -
 // numa rota chamada em CADA pedido autenticado por API Key
@@ -67,7 +69,7 @@ const AVATAR_BUCKET = process.env.SUPABASE_AVATAR_BUCKET ?? 'avatars';
 // só para o `redirectTo` do email de recuperação de password do Supabase,
 // que tem de apontar para uma página nossa (ResetPassword.tsx) capaz de
 // completar a sessão de recovery e chamar updateUser({ password }).
-const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+const FRONTEND_URL = getFrontendUrl();
 
 const ALLOWED_MIME_TO_EXT: Record<string, string> = {
   'image/png': 'png',
@@ -337,7 +339,7 @@ export class AuthService {
 
     if (refreshToken) {
       try {
-        const res = await fetch('https://oauth2.googleapis.com/revoke', {
+        const res = await fetch(GOOGLE_REVOKE_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({ token: refreshToken }),

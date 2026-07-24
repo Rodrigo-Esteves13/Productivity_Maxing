@@ -56,7 +56,8 @@ export class StudySessionsController {
     @Query('days') days?: string,
   ) {
     const parsed = Number(days);
-    const safeDays = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 365) : 84;
+    const safeDays =
+      Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 365) : 84;
     return this.studySessionsService.getDailyTotals(user.id, safeDays);
   }
 }

@@ -52,6 +52,7 @@ import { OAuthConflictRedirectFilter } from './filters/oauth-conflict-redirect.f
 import { CurrentUser } from './decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthenticatedUser } from './interfaces/authenticated-user.interface';
+import { getFrontendUrl } from '../config/app.config';
 import {
   ACCESS_TOKEN_COOKIE,
   CSRF_COOKIE,
@@ -63,7 +64,7 @@ import {
 
 // URL do frontend para onde se redireciona depois do callback OAuth.
 // Ajustar em produção para o domínio real (Netlify).
-const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+const FRONTEND_URL = getFrontendUrl();
 
 @Controller('auth')
 export class AuthController {

@@ -6,6 +6,7 @@ import { Provider, User } from '@prisma/client';
 import { AuthService } from '../auth.service';
 import { OAUTH_LOGIN_STATE_COOKIE } from '../cookie.config';
 import { isValidLoginState } from '../guards/oauth-guard.helpers';
+import { GOOGLE_TOKENINFO_URL } from '../google-oauth.constants';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
@@ -126,7 +127,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   ): Promise<string | undefined> {
     try {
       const res = await fetch(
-        `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(
+        `${GOOGLE_TOKENINFO_URL}?access_token=${encodeURIComponent(
           accessToken,
         )}`,
       );

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { PeriodComparisonEntry } from '../../types/models';
 
 interface GpaTrendChartProps {
@@ -24,25 +25,39 @@ function scaleMax(scale: string): number {
 // backend); periods without a graded task yet (average === null) are
 // skipped, a line can't be drawn through a gap.
 export default function GpaTrendChart({ entries, scale }: GpaTrendChartProps) {
-  const graded = entries.filter(
-    (e): e is PeriodComparisonEntry & { average: number } => e.average !== null,
+  // All hooks run unconditionally, before the "not enough data" early
+  // return below - conditional returns can only happen after every hook
+  // call, per the rules of hooks.
+  const graded = useMemo(
+    () =>
+      entries.filter(
+        (e): e is PeriodComparisonEntry & { average: number } => e.average !== null,
+      ),
+    [entries],
   );
 
+  const { points, linePath, areaPath } = useMemo(() => {
+    const max = scaleMax(scale);
+    const usableWidth = WIDTH - PADDING_X * 2;
+    const usableHeight = HEIGHT - PADDING_Y * 2;
+
+    const pts = graded.map((entry, index) => {
+      const x = PADDING_X + (index / Math.max(graded.length - 1, 1)) * usableWidth;
+      const clamped = Math.min(Math.max(entry.average, 0), max);
+      const y = PADDING_Y + usableHeight - (clamped / max) * usableHeight;
+      return { x, y, entry };
+    });
+
+    const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+    const area =
+      pts.length > 0
+        ? `${line} L ${pts[pts.length - 1].x} ${HEIGHT - PADDING_Y} L ${pts[0].x} ${HEIGHT - PADDING_Y} Z`
+        : '';
+
+    return { points: pts, linePath: line, areaPath: area };
+  }, [graded, scale]);
+
   if (graded.length < 2) return null;
-
-  const max = scaleMax(scale);
-  const usableWidth = WIDTH - PADDING_X * 2;
-  const usableHeight = HEIGHT - PADDING_Y * 2;
-
-  const points = graded.map((entry, index) => {
-    const x = PADDING_X + (index / (graded.length - 1)) * usableWidth;
-    const clamped = Math.min(Math.max(entry.average, 0), max);
-    const y = PADDING_Y + usableHeight - (clamped / max) * usableHeight;
-    return { x, y, entry };
-  });
-
-  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-  const areaPath = `${linePath} L ${points[points.length - 1].x} ${HEIGHT - PADDING_Y} L ${points[0].x} ${HEIGHT - PADDING_Y} Z`;
 
   return (
     <svg

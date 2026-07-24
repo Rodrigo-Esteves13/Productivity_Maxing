@@ -29,7 +29,7 @@ export class ProgramsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Lists the authenticated user\'s programs/dashboards',
+    summary: "Lists the authenticated user's programs/dashboards",
   })
   findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.programsService.findAllForUser(user.id);

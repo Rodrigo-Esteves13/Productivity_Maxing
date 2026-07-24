@@ -1,0 +1,6 @@
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://gxbjassumohvindiaryp.supabase.co https://lh3.googleusercontent.com https://avatars.githubusercontent.com https://cdn.discordapp.com; font-src 'self'; connect-src 'self' https://api.pmaxing.pt; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()

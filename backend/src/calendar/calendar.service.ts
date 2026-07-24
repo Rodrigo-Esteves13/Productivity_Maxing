@@ -2,8 +2,8 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { Provider } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { GOOGLE_TOKEN_URL } from '../auth/google-oauth.constants';
 
-const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const CALENDAR_EVENTS_URL =
   'https://www.googleapis.com/calendar/v3/calendars/primary/events';
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events';

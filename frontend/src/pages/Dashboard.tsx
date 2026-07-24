@@ -21,10 +21,8 @@ import AtRiskTasksCard from '../components/Dashboard/AtRiskTasksCard';
 import AreaBreakdownCard from '../components/Dashboard/AreaBreakdownCard';
 import StudyActivityCard from '../components/Dashboard/StudyActivityCard';
 import ProgramsOverviewCard from '../components/Dashboard/ProgramsOverviewCard';
-import {
-  DashboardWidgetToggles,
-  useDashboardWidgetPrefs,
-} from '../components/Dashboard/DashboardWidgetToggles';
+import { DashboardWidgetToggles } from '../components/Dashboard/DashboardWidgetToggles';
+import { useDashboardWidgetPrefs } from '../hooks/useDashboardWidgetPrefs';
 
 const DASHBOARD_TASK_TYPE_KEY = 'ACADEMICO';
 

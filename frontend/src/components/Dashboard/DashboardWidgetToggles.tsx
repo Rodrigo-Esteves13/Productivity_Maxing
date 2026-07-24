@@ -1,9 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import {
-  useDashboardWidgetPrefs,
-  WIDGET_LABELS,
-  type DashboardWidgetKey,
-} from '../../hooks/useDashboardWidgetPrefs';
+import { WIDGET_LABELS, type DashboardWidgetKey } from '../../hooks/useDashboardWidgetPrefs';
 
 interface DashboardWidgetTogglesProps {
   visibility: Record<DashboardWidgetKey, boolean>;
@@ -63,5 +59,3 @@ export function DashboardWidgetToggles({ visibility, toggle }: DashboardWidgetTo
     </div>
   );
 }
-
-export { useDashboardWidgetPrefs };

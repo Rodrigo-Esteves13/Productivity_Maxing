@@ -38,8 +38,8 @@ export default function OfflineBanner() {
         <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
         <line x1="12" y1="20" x2="12.01" y2="20" />
       </svg>
-      Sem ligação à internet — algumas ações podem não funcionar até a
-      ligação voltar.
+      No internet connection. Some actions may not work until the
+      connection returns.
     </div>
   );
 }
