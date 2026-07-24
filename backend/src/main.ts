@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import type { Express } from 'express';
+import { getFrontendUrl } from './config/app.config';
 
 // Variáveis obrigatórias para o backend funcionar com segurança. Se
 // qualquer uma faltar, a app não deve arrancar silenciosamente com um
@@ -63,7 +64,7 @@ async function bootstrap() {
   app.use(cookieParser());
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+    origin: getFrontendUrl(),
     credentials: true,
   });
 

@@ -24,6 +24,16 @@ export class CreateTaskDto {
   @MaxLength(100)
   areaId: string;
 
+  @ApiPropertyOptional({
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    description:
+      'Período (semestre/ano) a que a task pertence. Opcional - se omitido, usa o período ativo do user (User.activePeriodId).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  periodId?: string;
+
   @ApiProperty({
     example: 'Study Derivatives',
     description: 'Task title',

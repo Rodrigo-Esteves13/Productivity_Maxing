@@ -52,6 +52,7 @@ import { OAuthConflictRedirectFilter } from './filters/oauth-conflict-redirect.f
 import { CurrentUser } from './decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthenticatedUser } from './interfaces/authenticated-user.interface';
+import { getFrontendUrl } from '../config/app.config';
 import {
   ACCESS_TOKEN_COOKIE,
   CSRF_COOKIE,
@@ -63,7 +64,7 @@ import {
 
 // URL do frontend para onde se redireciona depois do callback OAuth.
 // Ajustar em produção para o domínio real (Netlify).
-const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+const FRONTEND_URL = getFrontendUrl();
 
 @Controller('auth')
 export class AuthController {
@@ -253,6 +254,11 @@ export class AuthController {
         avatarUrl: true,
         role: true,
         createdAt: true,
+        // Dashboard ativo (Programa + Período) - o frontend usa isto para
+        // saber logo no arranque qual seletor mostrar pré-selecionado, sem
+        // precisar de um pedido extra.
+        activeProgramId: true,
+        activePeriodId: true,
         // Só usado para derivar hasPassword abaixo - nunca sai do backend.
         supabaseAuthId: true,
       },

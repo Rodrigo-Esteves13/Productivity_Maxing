@@ -125,6 +125,17 @@ model User {
   // e a conta "ressuscita" sozinha na próxima vez que a pessoa fizer login.
   supabaseAuthId String? @unique
 
+  // Dashboard ativo (Programa + Período selecionados) - guardado aqui em vez
+  // de só em localStorage para persistir entre sessões/dispositivos (ver
+  // PeriodsService.resolveActivePeriod). SetNull porque um Program/Period
+  // nunca é hard-deleted (só arquivado), mas fica cá por segurança - se
+  // algum dia passar a existir um delete real, o user não fica com uma FK
+  // pendurada.
+  activeProgramId String?
+  activeProgram   AcademicProgram? @relation("UserActiveProgram", fields: [activeProgramId], references: [id], onDelete: SetNull)
+  activePeriodId  String?
+  activePeriod    AcademicPeriod?  @relation("UserActivePeriod", fields: [activePeriodId], references: [id], onDelete: SetNull)
+
   // Relações
   identities    Identity[]
   tasks         Task[]
@@ -132,6 +143,66 @@ model User {
   securityLogs  SecurityLog[]
   studySessions StudySession[]
   agentConfig   AgentConfig?
+  programs      AcademicProgram[] @relation("UserPrograms")
+}
+
+/// Um "dashboard" académico do user (ex: "Secundário", "Licenciatura em
+/// Engenharia Informática"). Cada user pode ter vários, para não misturar
+/// níveis de ensino/percursos diferentes no mesmo ecrã.
+///
+/// NOTA: Area continua GLOBAL (catálogo partilhado gerido por admin, ver
+/// migrations `make_areas_global` / `remove_user_id_from_areas`) - por
+/// isso o scoping por período fica no Task (que já é per-user), e não na
+/// Area como uma primeira leitura do modelo "User -> Area -> Task" sugeria.
+model AcademicProgram {
+  id         String   @id @default(uuid())
+  userId     String
+  name       String
+  gradeScale String   @default("0-20")
+  isActive   Boolean  @default(true)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  user           User             @relation("UserPrograms", fields: [userId], references: [id], onDelete: Cascade)
+  periods        AcademicPeriod[]
+  // Users que têm este programa como dashboard ativo agora - na prática
+  // nunca mais do que 1 (o próprio dono), mas o Prisma exige o lado inverso
+  // da relação declarado.
+  activeForUsers User[]           @relation("UserActiveProgram")
+
+  // userId: ProgramsService.findAllForUser() filtra sempre por dono - é a
+  // query mais frequente deste modelo.
+  @@index([userId])
+}
+
+/// Um período (semestre/ano letivo) dentro de um AcademicProgram. As Tasks
+/// passam a apontar para aqui (Task.periodId), nunca para o Program
+/// diretamente - o Program é só o agrupador para o seletor no topo do
+/// dashboard.
+model AcademicPeriod {
+  id         String    @id @default(uuid())
+  programId  String
+  name       String
+  startDate  DateTime
+  endDate    DateTime?
+  isArchived Boolean   @default(false)
+  archivedAt DateTime?
+  // The period the program should auto-select when you switch to it or
+  // reload, instead of always defaulting to the chronologically most
+  // recent non-archived one - lets you "stick" to a specific
+  // semester/year even if a newer one already exists. At most one pinned
+  // period per program (enforced in PeriodsService.pin(), not at the DB
+  // level - a partial unique index would need raw SQL in the migration).
+  isPinned   Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  program        AcademicProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  tasks          Task[]
+  activeForUsers User[]          @relation("UserActivePeriod")
+
+  // programId: PeriodsService.findAllForProgram() always filters by
+  // program - same indexing logic as the rest of the app.
+  @@index([programId])
 }
 
 model ApiKey {
@@ -234,6 +305,17 @@ model Area {
   defaultTaskTypeId String?
   defaultTaskType   TaskType? @relation("AreaDefaultTaskType", fields: [defaultTaskTypeId], references: [id])
 
+  // ECTS credits (or equivalent) for the course, optional - only makes
+  // sense for university-level programs. Null = no credits set (e.g.
+  // secondary school, or a non-academic Area like "Swimming"). Used as
+  // the weight for level 2 of the average calculation (per-Area average
+  // -> period/program average), see grade-average.util.ts. Lives on Area
+  // (global catalog) and not on AcademicProgram/AcademicPeriod because
+  // it's a property of the course itself, not of a user's dashboard -
+  // same "Area stays global" logic as the rest of the model (see the
+  // note on AcademicProgram above).
+  credits Int?
+
   // Relações
   tasks         Task[]
   studySessions StudySession[]
@@ -253,6 +335,15 @@ model Task {
   academicTypeId String?
   academicType   AcademicTaskType? @relation(fields: [academicTypeId], references: [id])
   topics         String?
+
+  // A que período (semestre/ano letivo, dentro de um AcademicProgram) esta
+  // task pertence. Obrigatório - toda a task nova tem sempre um período
+  // (a app resolve o período ativo do user como default quando o
+  // frontend/cliente da API não o envia explicitamente, ver
+  // TasksService.create). Nunca aponta diretamente para Area porque essa
+  // continua global/partilhada entre users.
+  periodId String?
+  period   AcademicPeriod? @relation(fields: [periodId], references: [id])
 
   // Metadados de Execução
   weightPercentage Float?
@@ -296,10 +387,14 @@ model Task {
   // - areaId / taskTypeId / academicTypeId: sem índice, apagar uma Area
   //   ou um TaskType obriga o Postgres a percorrer a tabela Task inteira
   //   só para verificar se a FK constraint permite o apagar.
+  // - periodId: dashboard filtra tasks por período ativo constantemente
+  //   (?periodId= nos endpoints existentes, fase 2) - mesma lógica dos
+  //   índices acima, sem isto degrada para scan à medida que a tabela cresce.
   @@index([userId])
   @@index([areaId])
   @@index([taskTypeId])
   @@index([academicTypeId])
+  @@index([periodId])
 }
 
 /// Registo persistente de eventos de segurança - hoje só bloqueios do

@@ -40,6 +40,20 @@ export const getStudyHeatmap = async (): Promise<HeatmapCell[]> => {
   return response.data;
 };
 
+// Per-day totals for the last `days` days (today included) - powers the
+// activity heatmap/streak widget on the Dashboard.
+export interface DailyStudyTotal {
+  date: string; // yyyy-mm-dd
+  totalMinutes: number;
+}
+
+export const getDailyStudyTotals = async (days = 84): Promise<DailyStudyTotal[]> => {
+  const response = await api.get<DailyStudyTotal[]>('/study-sessions/daily-totals', {
+    params: { days },
+  });
+  return response.data;
+};
+
 export const getTodayTasks = async (): Promise<Task[]> => {
   const response = await api.get<Task[]>('/tasks/today');
   return response.data;

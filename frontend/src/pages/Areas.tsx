@@ -100,6 +100,7 @@ export default function Areas() {
                 name: selectedArea.name,
                 colorHex: selectedArea.colorHex,
                 defaultTaskType: selectedArea.defaultTaskType,
+                credits: selectedArea.credits,
               }}
               taskTypes={taskTypes}
               onSubmit={handleEditArea}

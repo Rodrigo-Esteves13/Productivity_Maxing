@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createApiKey } from '../../api/userService';
 import { DownloadIcon } from '../UI/Icons';
+import { AGENT_EXE_DOWNLOAD_PATH } from '../../lib/agentConstants';
 
 // Setup num único clique: gera uma API key nova (nomeada automaticamente,
 // ex: "agent-desktop-2026-07-16") e cola-a ao fim do .exe vanilla antes de
@@ -18,9 +19,16 @@ import { DownloadIcon } from '../UI/Icons';
 // key] + [marcador fim] num Blob e descarregar isso como o .exe final.
 // Os marcadores TÊM de ser byte-a-byte idênticos aos definidos em
 // embedded.go - se um dos lados mudar, o outro tem de mudar também.
-const VANILLA_EXE_URL = '/downloads/pmaxing-agent.exe';
-const MARKER_START = '\n#--PMAXING-AGENT-EMBEDDED-CONFIG-V1-START--#\n';
-const MARKER_END = '\n#--PMAXING-AGENT-EMBEDDED-CONFIG-V1-END--#\n';
+const VANILLA_EXE_URL = AGENT_EXE_DOWNLOAD_PATH;
+// V2: o payload entre os marcadores passou a ir em base64 em vez de JSON em
+// claro (ver embedded.go no agente) - a key deixa de aparecer literalmente
+// num "strings pmaxing-agent.exe" ou num hex editor. Isto é ofuscação, não
+// encriptação real: quem sabe o esquema continua a conseguir descodificar.
+// A defesa forte (ideal a prazo) é ligar a key a um device id validado no
+// servidor em vez de um bearer token estático embutido no binário - ver a
+// nota em agent-config.controller.ts sobre o mesmo tema.
+const MARKER_START = '\n#--PMAXING-AGENT-EMBEDDED-CONFIG-V2-START--#\n';
+const MARKER_END = '\n#--PMAXING-AGENT-EMBEDDED-CONFIG-V2-END--#\n';
 
 export default function DownloadSetupButton() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -32,6 +40,13 @@ export default function DownloadSetupButton() {
     try {
       // Buscamos o .exe vanilla e criamos a key em paralelo - são
       // pedidos independentes.
+      //
+      // fetch(VANILLA_EXE_URL) fica de propósito fora de `api` (axios) e
+      // de `rawFetch` (api/client.ts): VANILLA_EXE_URL é um caminho
+      // relativo para um ficheiro estático servido pelo próprio Netlify
+      // (public/downloads/), não um endpoint do backend - rawFetch
+      // prefixa sempre a base URL da API, o que apontaria isto para o
+      // sítio errado.
       const [exeResponse, keyResult] = await Promise.all([
         fetch(VANILLA_EXE_URL),
         createApiKey(`agent-desktop-${new Date().toISOString().slice(0, 10)}`),
@@ -42,7 +57,7 @@ export default function DownloadSetupButton() {
       }
       const exeBytes = await exeResponse.arrayBuffer();
 
-      const configPayload = JSON.stringify({
+      const configJson = JSON.stringify({
         api: {
           // Nunca hardcoded: a mesma variável de ambiente que o resto da
           // app usa para falar com o backend (ver src/api/client.ts) -
@@ -53,6 +68,13 @@ export default function DownloadSetupButton() {
           apiKey: keyResult.apiKey,
         },
       });
+
+      // base64, não JSON em claro - ver comentário junto de MARKER_START.
+      // btoa() só aceita Latin1, por isso passamos primeiro por
+      // encodeURIComponent/unescape para lidar em segurança com qualquer
+      // caracter fora de ASCII que algum dia apareça no payload (ex: nome
+      // do plano do backend numa mensagem de erro incluída aqui no futuro).
+      const configPayload = btoa(unescape(encodeURIComponent(configJson)));
 
       // Blob aceita uma lista de partes (ArrayBuffer/string/Blob) e
       // concatena-as pela ordem dada - o browser trata a codificação

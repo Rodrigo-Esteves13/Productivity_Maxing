@@ -14,6 +14,7 @@ import { SecurityLogsModule } from './security-logs/security-logs.module';
 import { StudySessionsModule } from './study-sessions/study-sessions.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { AgentModule } from './agent/agent.module';
+import { AcademicProgramsModule } from './academic-programs/academic-programs.module';
 import { CsrfGuard } from './auth/guards/csrf.guard';
 import { LoggingThrottlerGuard } from './common/guards/logging-throttler.guard';
 import { RequestUserLoggerInterceptor } from './common/interceptors/request-user-logger.interceptor';
@@ -38,6 +39,7 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     StudySessionsModule,
     CalendarModule,
     AgentModule,
+    AcademicProgramsModule,
   ],
   controllers: [AppController],
   providers: [

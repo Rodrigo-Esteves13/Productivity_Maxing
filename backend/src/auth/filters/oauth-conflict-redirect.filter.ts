@@ -1,8 +1,9 @@
 import { ExceptionFilter, Catch, ArgumentsHost, Logger } from '@nestjs/common';
 import type { Response } from 'express';
 import { OAuthAccountConflictException } from '../exceptions/oauth-account-conflict.exception';
+import { getFrontendUrl } from '../../config/app.config';
 
-const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+const FRONTEND_URL = getFrontendUrl();
 
 /**
  * Sem este filtro, qualquer exceção lançada dentro de uma Passport strategy

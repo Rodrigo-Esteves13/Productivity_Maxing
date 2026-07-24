@@ -1,11 +1,19 @@
 package config
 
 import (
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+// encodePayload espelha o que DownloadSetupButton.tsx faz do lado do
+// browser (btoa) antes de colar o payload entre os marcadores - os testes
+// têm de construir o mesmo formato V2 (base64), não JSON em claro.
+func encodePayload(jsonStr string) string {
+	return base64.StdEncoding.EncodeToString([]byte(jsonStr))
+}
 
 // buildFakeExe simula um "executável" com bytes anexados ao fim, sem
 // precisar de compilar nada de verdade - loadEmbedded só olha para
@@ -47,7 +55,7 @@ func TestLoadEmbedded_NoMarker(t *testing.T) {
 
 func TestLoadEmbedded_ValidConfig(t *testing.T) {
 	json := `{"api":{"baseUrl":"https://api.pmaxing.pt","apiKey":"pmx_test_123"}}`
-	content := "binario fake" + embeddedMarkerStart + json + embeddedMarkerEnd
+	content := "binario fake" + embeddedMarkerStart + encodePayload(json) + embeddedMarkerEnd
 	path := buildFakeExe(t, content)
 
 	cfg, err := loadEmbeddedFromPath(t, path)
@@ -70,7 +78,7 @@ func TestLoadEmbedded_BaseURLOmitted(t *testing.T) {
 	// que resolve isto via applyDefaultsAndValidate; aqui só
 	// confirmamos que o parsing não rebenta com o campo em falta.
 	json := `{"api":{"apiKey":"pmx_test_456"}}`
-	content := embeddedMarkerStart + json + embeddedMarkerEnd
+	content := embeddedMarkerStart + encodePayload(json) + embeddedMarkerEnd
 	path := buildFakeExe(t, content)
 
 	cfg, err := loadEmbeddedFromPath(t, path)
@@ -111,13 +119,29 @@ func TestApplyDefaultsAndValidate_NoBaseURLAnywhereFailsHard(t *testing.T) {
 	}
 }
 
-func TestLoadEmbedded_InvalidJSON(t *testing.T) {
-	content := embeddedMarkerStart + "{isto nao e json valido" + embeddedMarkerEnd
+func TestLoadEmbedded_InvalidBase64(t *testing.T) {
+	// Bytes entre os marcadores que nem sequer são base64 válido (ex:
+	// download do .exe cortado a meio).
+	content := embeddedMarkerStart + "isto nao e base64 valido!!!" + embeddedMarkerEnd
 	path := buildFakeExe(t, content)
 
 	_, err := loadEmbeddedFromPath(t, path)
 	if err == nil {
-		t.Fatal("esperava erro com JSON inválido entre marcadores, obtive nil")
+		t.Fatal("esperava erro com base64 inválido entre marcadores, obtive nil")
+	}
+	if !strings.Contains(err.Error(), "valid base64") {
+		t.Errorf("mensagem de erro inesperada: %v", err)
+	}
+}
+
+func TestLoadEmbedded_ValidBase64ButInvalidJSON(t *testing.T) {
+	// base64 válido, mas o que descodifica não é JSON válido.
+	content := embeddedMarkerStart + encodePayload("{isto nao e json valido") + embeddedMarkerEnd
+	path := buildFakeExe(t, content)
+
+	_, err := loadEmbeddedFromPath(t, path)
+	if err == nil {
+		t.Fatal("esperava erro com JSON inválido depois de descodificar, obtive nil")
 	}
 	if !strings.Contains(err.Error(), "valid JSON") {
 		t.Errorf("mensagem de erro inesperada: %v", err)
@@ -146,8 +170,8 @@ func TestLoadEmbedded_LastOccurrenceWins(t *testing.T) {
 	// último (mais perto do fim do ficheiro) é a que vale.
 	oldJSON := `{"api":{"apiKey":"pmx_old_key"}}`
 	newJSON := `{"api":{"apiKey":"pmx_new_key"}}`
-	content := embeddedMarkerStart + oldJSON + embeddedMarkerEnd +
-		embeddedMarkerStart + newJSON + embeddedMarkerEnd
+	content := embeddedMarkerStart + encodePayload(oldJSON) + embeddedMarkerEnd +
+		embeddedMarkerStart + encodePayload(newJSON) + embeddedMarkerEnd
 	path := buildFakeExe(t, content)
 
 	cfg, err := loadEmbeddedFromPath(t, path)

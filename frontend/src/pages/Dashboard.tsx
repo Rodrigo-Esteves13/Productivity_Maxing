@@ -12,6 +12,17 @@ import { getDateStatus } from '../utils/taskDateStatus';
 import type { Task, Area, AcademicTaskTypeOption } from '../types/models';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useQuickReschedule } from '../hooks/useQuickReschedule';
+import { useAcademic } from '../context/useAcademic';
+import GpaSummary from '../components/Dashboard/GpaSummary';
+import PeriodProgressBar from '../components/Dashboard/PeriodProgressBar';
+import GradeNeededCalculator from '../components/Dashboard/GradeNeededCalculator';
+import UpcomingTasksCard from '../components/Dashboard/UpcomingTasksCard';
+import AtRiskTasksCard from '../components/Dashboard/AtRiskTasksCard';
+import AreaBreakdownCard from '../components/Dashboard/AreaBreakdownCard';
+import StudyActivityCard from '../components/Dashboard/StudyActivityCard';
+import ProgramsOverviewCard from '../components/Dashboard/ProgramsOverviewCard';
+import { DashboardWidgetToggles } from '../components/Dashboard/DashboardWidgetToggles';
+import { useDashboardWidgetPrefs } from '../hooks/useDashboardWidgetPrefs';
 
 const DASHBOARD_TASK_TYPE_KEY = 'ACADEMICO';
 
@@ -27,16 +38,23 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<DashboardFiltersState>(EMPTY_DASHBOARD_FILTERS);
 
-  // NOVO: Instanciar o hook
+  // Instantiates the reschedule hook
   const { rescheduleToTomorrow, reschedulingId } = useQuickReschedule((updatedTask) => {
     setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
   });
 
+  // The Dashboard always follows the period selected at the top of the
+  // page (PeriodSelector, in PageLayout) - switching period = refetch.
+  const { activeProgram, activePeriod, isViewingAllPeriods } = useAcademic();
+  const periodParam = isViewingAllPeriods ? 'all' : activePeriod?.id;
+  const { visibility, toggle } = useDashboardWidgetPrefs();
+
   useEffect(() => {
     async function fetchData() {
       try {
+        setIsLoading(true);
         const [tasksData, areasData, metaData] = await Promise.all([
-          getUserTasks(),
+          getUserTasks(periodParam),
           getUserAreas(),
           getTaskMetadata(),
         ]);
@@ -46,14 +64,14 @@ export default function Dashboard() {
         setDifficulties(metaData.difficulties);
         setProgressStatuses(metaData.progressStatuses);
       } catch (err) {
-        console.error('Erro ao carregar dashboard', err);
+        console.error('Failed to load dashboard', err);
         setError('Could not load the dashboard data.');
       } finally {
         setIsLoading(false);
       }
     }
     fetchData();
-  }, []);
+  }, [periodParam]);
 
   const academicTasks = useMemo(
     () => tasks.filter((task) => task.type === DASHBOARD_TASK_TYPE_KEY),
@@ -80,10 +98,51 @@ export default function Dashboard() {
 
   return (
     <PageLayout>
-      <PageHeader
-        title="Analytics Dashboard"
-        description="Global view of all your academic activities, grades, and progress."
-      />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageHeader
+          title="Analytics Dashboard"
+          description="Global view of all your academic activities, grades, and progress."
+        />
+        <DashboardWidgetToggles visibility={visibility} toggle={toggle} />
+      </div>
+
+      <GpaSummary showCreditSimulator={visibility.creditSimulator} />
+
+      {visibility.programsOverview && <ProgramsOverviewCard />}
+
+      {visibility.periodProgress && !isLoading && !error && !isViewingAllPeriods && activePeriod && (
+        <PeriodProgressBar period={activePeriod} tasks={academicTasks} />
+      )}
+
+      {!isLoading && !error && academicTasks.length > 0 && (visibility.upcoming || visibility.atRisk) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {visibility.upcoming && <UpcomingTasksCard tasks={academicTasks} areas={academicAreas} />}
+          {visibility.atRisk && <AtRiskTasksCard tasks={academicTasks} areas={academicAreas} />}
+        </div>
+      )}
+
+      {!isLoading && !error && academicAreas.length > 0 && activeProgram && (visibility.areaBreakdown || visibility.studyActivity) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {visibility.areaBreakdown && (
+            <AreaBreakdownCard
+              tasks={academicTasks}
+              areas={academicAreas}
+              scale={activeProgram.gradeScale}
+            />
+          )}
+          {visibility.studyActivity && <StudyActivityCard />}
+        </div>
+      )}
+
+      {visibility.gradeCalculator && !isLoading && !error && academicAreas.length > 0 && activeProgram && (
+        <div className="mb-6">
+          <GradeNeededCalculator
+            tasks={academicTasks}
+            areas={academicAreas}
+            scale={activeProgram.gradeScale}
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <LoadingState message="Compiling data..." className="h-64" />

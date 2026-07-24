@@ -72,3 +72,38 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+// Alguns pedidos deliberadamente NÃO passam pelo axios `api` acima:
+// - useHealthCheck: não deve enviar cookies de auth nem disparar o
+//   interceptor de logout num 401/erro, é só um ping de "o backend está
+//   de pé?".
+// - DownloadSetupButton: busca o .exe vanilla como ArrayBuffer, não JSON,
+//   e também não deve levar credenciais.
+// rawFetch existe para esses casos partilharem pelo menos o mesmo baseURL
+// e um timeout, em vez de cada um inventar o seu próprio `fetch(...)` solto
+// - ver a documentação de cada chamador para a razão de não usar `api`.
+const RAW_FETCH_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+export async function rawFetch(
+  path: string,
+  options: { signal?: AbortSignal; timeoutMs?: number } = {},
+): Promise<Response> {
+  const { signal, timeoutMs } = options;
+
+  if (!timeoutMs) {
+    return fetch(`${RAW_FETCH_BASE_URL}${path}`, { signal });
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  // Se quem chamou também passou um signal próprio, propagamos o abort dele
+  // para o nosso controller - assim um cancelamento externo continua a
+  // funcionar mesmo com o timeout local a fazer de dono do AbortController.
+  signal?.addEventListener('abort', () => controller.abort());
+
+  try {
+    return await fetch(`${RAW_FETCH_BASE_URL}${path}`, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}

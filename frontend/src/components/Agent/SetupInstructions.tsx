@@ -1,16 +1,15 @@
 import { DownloadIcon } from '../UI/Icons';
 import DownloadSetupButton from './DownloadSetupButton';
+import { AGENT_EXE_DOWNLOAD_PATH } from '../../lib/agentConstants';
 
-// href aponta para /public/downloads/pmaxing-agent.exe - lembra-te de pôr
-// lá o binário VANILLA (sem key nenhuma) sempre que fizeres uma release
-// nova do agente. É este mesmo ficheiro que o DownloadSetupButton busca
-// por fetch() e usa como base para colar a key ao fim antes do download -
-// se este .exe mudar de sítio ou de nome, atualiza também a constante
-// VANILLA_EXE_URL em DownloadSetupButton.tsx.
+// href aponta para o binário VANILLA (sem key nenhuma) servido a partir de
+// public/downloads/ - ver AGENT_EXE_DOWNLOAD_PATH em lib/agentConstants.ts,
+// a mesma constante usada pelo DownloadSetupButton para buscar este ficheiro
+// por fetch() e colar a key ao fim antes do download.
 // Build: GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui"
 // -H=windowsgui é importante: sem isso volta a abrir uma janela de
 // consola preta ao correr.
-const DOWNLOAD_URL = '/downloads/pmaxing-agent.exe';
+const DOWNLOAD_URL = AGENT_EXE_DOWNLOAD_PATH;
 
 export default function SetupInstructions() {
   return (

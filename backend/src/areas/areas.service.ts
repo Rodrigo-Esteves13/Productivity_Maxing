@@ -33,7 +33,9 @@ export class AreasService {
     return { ...rest, defaultTaskType: defaultTaskType?.key ?? null };
   }
 
-  // Agora não precisamos do userId, pois a área é global!
+  // credits (tal como name/colorHex) é um campo simples de Area, passa
+  // direto em `rest` para o Prisma - não precisa de resolução como o
+  // defaultTaskType (key -> id).
   async create(createAreaDto: CreateAreaDto) {
     const { defaultTaskType, ...rest } = createAreaDto;
     const defaultTaskTypeId =
