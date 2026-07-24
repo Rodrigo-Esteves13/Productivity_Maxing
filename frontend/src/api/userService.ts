@@ -137,7 +137,7 @@ export const getUserAreas = async (): Promise<Area[]> => {
   const response = await api.get<Area[]>('/areas');
   return response.data;
 };
-export async function createArea(areaData: { name: string; colorHex: string; defaultTaskType?: string | null }): Promise<Area> {
+export async function createArea(areaData: { name: string; colorHex: string; defaultTaskType?: string | null; credits?: number | null }): Promise<Area> {
   const response = await api.post<Area>('/areas', areaData);
   return response.data;
 }
@@ -145,14 +145,19 @@ export async function createArea(areaData: { name: string; colorHex: string; def
 export async function deleteArea(id: string): Promise<void> {
   await api.delete(`/areas/${id}`);
 }
-export async function updateArea(id: string, areaData: { name?: string; colorHex?: string; defaultTaskType?: string | null }): Promise<Area> {
+export async function updateArea(id: string, areaData: { name?: string; colorHex?: string; defaultTaskType?: string | null; credits?: number | null }): Promise<Area> {
   const response = await api.patch<Area>(`/areas/${id}`, areaData);
   return response.data;
 }
 
 // TASK ENDPOINTS
-export const getUserTasks = async (): Promise<Task[]> => {
-  const response = await api.get<Task[]>('/tasks');
+// periodId: omitido = período ativo do user (default no backend); 'all' =
+// todos os períodos agregados ("Ver todos os períodos" no seletor); um
+// UUID = esse período específico.
+export const getUserTasks = async (periodId?: string): Promise<Task[]> => {
+  const response = await api.get<Task[]>('/tasks', {
+    params: periodId ? { periodId } : undefined,
+  });
   return response.data;
 };
 

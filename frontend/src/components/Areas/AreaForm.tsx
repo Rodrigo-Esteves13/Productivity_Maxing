@@ -10,6 +10,7 @@ export interface AreaFormValues {
   name: string;
   colorHex: string;
   defaultTaskType: string | null;
+  credits: number | null;
 }
 
 interface AreaFormProps {
@@ -23,7 +24,7 @@ interface AreaFormProps {
   submittingLabel: string;
 }
 
-const DEFAULT_VALUES: AreaFormValues = { name: '', colorHex: '#8b5cf6', defaultTaskType: null };
+const DEFAULT_VALUES: AreaFormValues = { name: '', colorHex: '#8b5cf6', defaultTaskType: null, credits: null };
 
 export default function AreaForm({
   idPrefix,
@@ -82,6 +83,28 @@ export default function AreaForm({
           If set, tasks created in this Area default to this Type automatically (e.g. an
           academic subject always defaults to "Academic"). Leave unset for Areas like hobbies,
           where forcing a Type doesn't make sense.
+        </p>
+      </FormField>
+
+      <FormField label="Credits (optional)" htmlFor={`${idPrefix}-credits`}>
+        <Input
+          id={`${idPrefix}-credits`}
+          type="number"
+          min={0}
+          step={1}
+          placeholder="E.g: 6"
+          value={formData.credits ?? ''}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              credits: e.target.value === '' ? null : Number(e.target.value),
+            })
+          }
+          className="w-full"
+        />
+        <p className="mt-1 text-xs text-neutral-500">
+          ECTS or equivalent. Leave empty when credits don't apply (e.g. secondary school) - it
+          simply won't weigh into the average.
         </p>
       </FormField>
 

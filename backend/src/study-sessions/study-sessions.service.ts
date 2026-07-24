@@ -217,6 +217,45 @@ export class StudySessionsService {
     return result;
   }
 
+  /**
+   * Per-day totals for the last `days` days (today included) - powers the
+   * frontend's activity heatmap/streak widget. Unlike getHeatmap() above
+   * (day-of-week x hour-of-day, all-time), this is calendar-day x total
+   * minutes, for a fixed recent window - a different shape for a
+   * different question ("was I consistent lately" vs "when do I usually
+   * study"). Not cached: the window is small (default ~12 weeks) and this
+   * is only called once per Dashboard load, no need for the same
+   * cache/invalidate complexity as the heatmap.
+   */
+  async getDailyTotals(userId: string, days: number) {
+    const since = new Date();
+    since.setDate(since.getDate() - (days - 1));
+    since.setHours(0, 0, 0, 0);
+
+    const sessions = await this.prisma.studySession.findMany({
+      where: { userId, endedAt: { not: null }, startedAt: { gte: since } },
+      select: { startedAt: true, endedAt: true },
+    });
+
+    const totalsByDay = new Map<string, number>();
+    for (const session of sessions) {
+      if (!session.endedAt) continue; // already filtered by the where, just for TS
+      const dayKey = session.startedAt.toISOString().slice(0, 10);
+      const minutes = (session.endedAt.getTime() - session.startedAt.getTime()) / 60_000;
+      totalsByDay.set(dayKey, (totalsByDay.get(dayKey) ?? 0) + Math.max(0, minutes));
+    }
+
+    const result: { date: string; totalMinutes: number }[] = [];
+    for (let i = 0; i < days; i++) {
+      const day = new Date(since);
+      day.setDate(day.getDate() + i);
+      const dayKey = day.toISOString().slice(0, 10);
+      result.push({ date: dayKey, totalMinutes: Math.round(totalsByDay.get(dayKey) ?? 0) });
+    }
+
+    return result;
+  }
+
   private async assertTaskOwnership(userId: string, taskId: string) {
     const task = await this.prisma.task.findFirst({
       where: { id: taskId, userId },

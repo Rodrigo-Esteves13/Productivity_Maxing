@@ -10,6 +10,7 @@ import {
 import { syncTaskToCalendar, unsyncTaskFromCalendar } from '../api/calendarService';
 import type { Task, Area, TaskTypeOption, AcademicTaskTypeOption } from '../types/models';
 import { useQuickReschedule } from './useQuickReschedule';
+import { useAcademic } from '../context/useAcademic';
 
 export function useTasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -32,11 +33,15 @@ export function useTasksPage() {
     setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
   });
 
+  // Segue sempre o período selecionado no topo da página (PeriodSelector).
+  const { activePeriod, isViewingAllPeriods } = useAcademic();
+  const periodParam = isViewingAllPeriods ? 'all' : activePeriod?.id;
+
   const fetchData = async () => {
     try {
       setIsLoading(true);
       const [tasksData, areasData, metaData] = await Promise.all([
-        getUserTasks(),
+        getUserTasks(periodParam),
         getUserAreas(),
         getTaskMetadata(),
       ]);
@@ -55,7 +60,8 @@ export function useTasksPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodParam]);
 
   // Aplica o resultado da checkbox "Add to Google Calendar" depois de criar
   // ou atualizar uma task. Nunca lança - se a chamada ao Google falhar, a

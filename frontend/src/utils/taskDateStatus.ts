@@ -6,10 +6,10 @@ function toDayKey(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
-// Classifica a task pela data + progressStatus:
-// - já concluída (COMPLETED) ganha sempre a essa classificação, mesmo que
-//   a data de referência já tenha passado ou ainda esteja para vir;
-// - senão, compara a `date` da task com hoje.
+// Classifies the task by date + progressStatus:
+// - already completed (COMPLETED) always wins that classification, even if
+//   the reference date has already passed or is still upcoming;
+// - otherwise, compares the task's `date` to today.
 export function getDateStatus(task: Task, now: Date = new Date()): DateStatus {
   if (task.progressStatus === 'COMPLETED') return 'completed';
 
@@ -24,10 +24,10 @@ export function getDateStatus(task: Task, now: Date = new Date()): DateStatus {
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
-// Texto curto do tempo que falta (ou já passou) até à due date, para
-// complementar o DateStatusBadge (que só diz "Overdue"/"Upcoming", sem
-// quantificar quanto). Tasks já concluídas não mostram contagem - já não
-// interessa saber "quanto falta" para algo que está feito.
+// Short text for the time remaining (or already elapsed) until the due
+// date, to complement DateStatusBadge (which only says "Overdue"/"Upcoming",
+// without quantifying how much). Completed tasks don't show a count -
+// "how much is left" no longer matters for something that's done.
 export function getRemainingTimeLabel(task: Task, now: Date = new Date()): string {
   if (task.progressStatus === 'COMPLETED') return 'N/A';
 

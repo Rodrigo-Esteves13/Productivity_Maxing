@@ -5,6 +5,7 @@ import {
   Patch,
   Body,
   Param,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
@@ -47,5 +48,15 @@ export class StudySessionsController {
   @Get('heatmap')
   getHeatmap(@CurrentUser() user: AuthenticatedUser) {
     return this.studySessionsService.getHeatmap(user.id);
+  }
+
+  @Get('daily-totals')
+  getDailyTotals(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('days') days?: string,
+  ) {
+    const parsed = Number(days);
+    const safeDays = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 365) : 84;
+    return this.studySessionsService.getDailyTotals(user.id, safeDays);
   }
 }

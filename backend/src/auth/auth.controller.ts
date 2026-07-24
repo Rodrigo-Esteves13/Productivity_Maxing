@@ -253,6 +253,11 @@ export class AuthController {
         avatarUrl: true,
         role: true,
         createdAt: true,
+        // Dashboard ativo (Programa + Período) - o frontend usa isto para
+        // saber logo no arranque qual seletor mostrar pré-selecionado, sem
+        // precisar de um pedido extra.
+        activeProgramId: true,
+        activePeriodId: true,
         // Só usado para derivar hasPassword abaixo - nunca sai do backend.
         supabaseAuthId: true,
       },

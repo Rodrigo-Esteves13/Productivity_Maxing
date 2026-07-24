@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Delete,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
@@ -38,8 +39,14 @@ export class TasksController {
   }
 
   @Get()
-  findAll(@CurrentUser() user: AuthenticatedUser) {
-    return this.tasksService.findAll(user.id);
+  // periodId: omitido = período ativo do user; 'all' = todos os períodos
+  // (vista agregada, "Ver todos os períodos" no seletor); um UUID = esse
+  // período específico (posse validada no service).
+  findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('periodId') periodId?: string,
+  ) {
+    return this.tasksService.findAll(user.id, periodId);
   }
 
   @Get('today')

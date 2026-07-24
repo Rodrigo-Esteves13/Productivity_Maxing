@@ -4,12 +4,12 @@ interface DateStatusBadgeProps {
   status: DateStatus;
 }
 
-// Esquema de cores escolhido (em vez do amarelo/verde/vermelho sugerido
-// originalmente, que invertia a leitura habitual de urgência):
-// - Overdue (já passou e não está concluída) -> vermelho: precisa de atenção
-// - Due Today -> amber: é hoje, mas ainda não é uma emergência
-// - Upcoming (ainda para vir) -> azul neutro: sem urgência
-// - Completed -> verde: feito
+// Color scheme chosen (instead of the originally suggested
+// yellow/green/red, which inverted the usual urgency reading):
+// - Overdue (past due and not completed) -> red: needs attention
+// - Due Today -> amber: it's today, but not yet an emergency
+// - Upcoming (still to come) -> neutral blue: no urgency
+// - Completed -> green: done
 const CONFIG: Record<DateStatus, { label: string; className: string }> = {
   overdue: { label: 'Overdue', className: 'bg-red-900/50 text-red-400 border-red-800' },
   today: { label: 'Due Today', className: 'bg-amber-900/50 text-amber-400 border-amber-800' },

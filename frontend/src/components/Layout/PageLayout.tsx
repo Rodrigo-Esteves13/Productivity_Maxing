@@ -4,6 +4,7 @@ import { Footer } from '../Footer';
 import { useAuth } from '../../context/useAuth';
 import { useOverdueCheckins } from '../../hooks/useOverdueCheckins';
 import OverdueCheckinModal from '../Tasks/OverdueCheckinModal';
+import AcademicSelectors from './AcademicSelectors';
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -24,6 +25,7 @@ export default function PageLayout({ children }: PageLayoutProps) {
       <Navbar />
       {/* O container principal que alinha tudo ao centro e dá margens */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
+        {isAuthenticated && <AcademicSelectors />}
         {children}
       </main>
       <Footer />

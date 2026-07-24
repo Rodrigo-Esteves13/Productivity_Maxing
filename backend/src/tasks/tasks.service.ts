@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Difficulty, ProgressStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { PeriodsService } from '../academic-programs/periods.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
@@ -25,11 +26,23 @@ type TaskWithIncludes = Prisma.TaskGetPayload<{
 export class TasksService {
   private readonly logger = new Logger(TasksService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private periodsService: PeriodsService,
+  ) {}
 
   async create(userId: string, dto: CreateTaskDto) {
-    const { date, type, academicType, ...rest } = dto;
+    const { date, type, academicType, periodId, ...rest } = dto;
     const typeIds = await this.resolveTypes(type, academicType);
+
+    // Se o cliente (frontend atual, ainda sem seletor de período) não
+    // mandar periodId, usa-se o período ativo do user - é isto que garante
+    // zero breaking change enquanto a UI da Fase 2 não existe. Se mandar
+    // um periodId explícito, validamos posse primeiro (defesa contra IDOR,
+    // mesmo padrão do resto do service).
+    const resolvedPeriodId = periodId
+      ? (await this.periodsService.findOwnedOrThrow(userId, periodId)).id
+      : await this.periodsService.resolveActivePeriodId(userId);
 
     // Se a task já nasce como COMPLETED (ex: registo retroativo), o streak
     // precisa de um completedAt real  não podemos depender só da "date"
@@ -42,6 +55,7 @@ export class TasksService {
           ...rest,
           date: new Date(date),
           userId, // Agora temos a certeza absoluta que o ID não está vazio!
+          periodId: resolvedPeriodId,
           completedAt,
           ...typeIds,
         },
@@ -59,9 +73,25 @@ export class TasksService {
     }
   }
 
-  async findAll(userId: string) {
+  async findAll(userId: string, periodId?: string) {
+    // 'all' = vista agregada ("Ver todos os períodos") - sem filtro nenhum.
+    // Omitido = usa o período ativo do user (declutter automático, é o que
+    // resolve a Fase 2 sem qualquer breaking change para quem ainda chama
+    // este endpoint sem saber que períodos existem). Um UUID explícito
+    // passa sempre por findOwnedOrThrow - defesa contra IDOR.
+    const where: { userId: string; periodId?: string } = { userId };
+    if (periodId === 'all') {
+      // sem filtro de periodId
+    } else if (periodId) {
+      where.periodId = (
+        await this.periodsService.findOwnedOrThrow(userId, periodId)
+      ).id;
+    } else {
+      where.periodId = await this.periodsService.resolveActivePeriodId(userId);
+    }
+
     const tasks = await this.prisma.task.findMany({
-      where: { userId },
+      where,
       include: TASK_INCLUDE,
       orderBy: { date: 'asc' },
     });
@@ -89,6 +119,9 @@ export class TasksService {
         userId,
         date: { gte: startOfDay, lte: endOfDay },
         progressStatus: { not: 'COMPLETED' },
+        // Um período arquivado (semestre antigo já fechado) nunca deve
+        // gerar alertas/plano do dia - ver regra de negócio da Fase 4.
+        period: { isArchived: false },
       },
       include: TASK_INCLUDE,
     });
@@ -129,7 +162,20 @@ export class TasksService {
     if (!existing)
       throw new NotFoundException(`Task not found or you don't have access.`);
 
-    const { date, type, academicType, ...rest } = dto;
+    const { date, type, academicType, periodId, ...rest } = dto;
+
+    // Só mexemos em periodId se vier explicitamente no PATCH - e, tal como
+    // no create(), validamos sempre posse antes de aceitar (o user podia
+    // tentar mover a task para um período de outro user só adivinhando o
+    // UUID).
+    const periodIdUpdate =
+      periodId !== undefined
+        ? {
+            periodId: (
+              await this.periodsService.findOwnedOrThrow(userId, periodId)
+            ).id,
+          }
+        : {};
 
     // Só mexemos em taskType/academicType se um dos dois vier no PATCH.
     // Se só vier um dos dois, usamos o valor atual da task para o outro,
@@ -174,6 +220,7 @@ export class TasksService {
         ...(date ? { date: new Date(date) } : {}),
         ...typeIds,
         ...completedAtUpdate,
+        ...periodIdUpdate,
       },
       include: TASK_INCLUDE,
     });
@@ -199,6 +246,12 @@ export class TasksService {
           { lastOverdueCheckAt: null },
           { lastOverdueCheckAt: { lt: startOfToday } },
         ],
+        // Uma task esquecida de um semestre já arquivado nunca deve voltar
+        // a perguntar "isto já está feito?" - ver regra de negócio da
+        // Fase 4 (isto é também o que o agente Go consulta para decidir
+        // bloqueios, já que corre pelo mesmo endpoint autenticado por
+        // API key, ver JwtOrApiKeyAuthGuard no controller).
+        period: { isArchived: false },
       },
       include: TASK_INCLUDE,
       orderBy: { date: 'asc' },
