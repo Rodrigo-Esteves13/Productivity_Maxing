@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   getUserTasks,
   getUserAreas,
@@ -107,6 +108,28 @@ export function useTasksPage() {
     setSelectedTask(task);
     setIsEditing(false);
   }, []);
+
+  // Lets other parts of the app (the command palette's task search) link
+  // straight to a task's detail modal via /tasks?open=<id>, without needing
+  // to know anything about how this page renders its list. Waits for
+  // `tasks` to be loaded (fetchData is async) before it can find a match;
+  // clears the param once handled so a page refresh or Back doesn't
+  // re-open the same modal.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (!openId || tasks.length === 0) return;
+
+    const match = tasks.find((t) => t.id === openId);
+    if (match) {
+      handleSelectTask(match);
+    }
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('open');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks]);
 
   const closeDetailModal = useCallback(() => {
     setSelectedTask(null);
