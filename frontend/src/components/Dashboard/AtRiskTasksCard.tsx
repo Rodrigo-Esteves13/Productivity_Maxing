@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import type { Task, Area } from '../../types/models';
 import { getDateStatus } from '../../utils/taskDateStatus';
 import StatusBadge from '../UI/StatusBadge';
+import { AlertTriangleIcon } from '../UI/Icons';
 
 interface AtRiskTasksCardProps {
   tasks: Task[];
@@ -29,7 +30,8 @@ export default function AtRiskTasksCard({ tasks, areas }: AtRiskTasksCardProps) 
 
   return (
     <div className="bg-neutral-900/50 border border-red-900/50 rounded-xl p-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-red-400 mb-3">
+      <p className="text-xs uppercase tracking-wide text-red-400 mb-3 flex items-center gap-1.5">
+        <AlertTriangleIcon className="shrink-0" />
         At risk ({atRisk.length})
       </p>
       <ul className="space-y-2">

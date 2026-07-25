@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getProgramAverage } from '../../api/academicService';
 import { useAcademic } from '../../context/useAcademic';
 import type { ProgramAverage } from '../../types/models';
+import { BookOpenIcon } from '../UI/Icons';
 
 // Only makes sense with more than one program (e.g. "High School" +
 // "Bachelor's") - each program keeps its own grade scale, this never
@@ -42,7 +43,10 @@ export default function ProgramsOverviewCard() {
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 mb-6 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3">All your programs</p>
+      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3 flex items-center gap-1.5">
+        <BookOpenIcon className="shrink-0" />
+        All your programs
+      </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {visiblePrograms.map((program) => {
           const avg = averages[program.id];
@@ -62,7 +66,7 @@ export default function ProgramsOverviewCard() {
               <p className="text-xl font-bold text-white">
                 {avg?.average !== null && avg?.average !== undefined
                   ? avg.average.toFixed(2)
-                  : '—'}
+                  : '-'}
                 <span className="text-xs text-neutral-500 font-normal">
                   {' '}
                   / {program.gradeScale.split('-')[1] ?? program.gradeScale}

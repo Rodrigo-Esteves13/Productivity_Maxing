@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Task, Area } from '../../types/models';
+import { ChartPieIcon } from '../UI/Icons';
 
 interface AreaBreakdownCardProps {
   tasks: Task[];
@@ -52,7 +53,10 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3">Breakdown by course</p>
+      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3 flex items-center gap-1.5">
+        <ChartPieIcon className="shrink-0" />
+        Breakdown by course
+      </p>
       <ul className="space-y-3">
         {rows.map(({ area, average }) => (
           <li key={area.id}>
@@ -68,7 +72,7 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
                 </span>
               </div>
               <span className="font-semibold text-neutral-200 shrink-0">
-                {average !== null ? average.toFixed(2) : '—'}
+                {average !== null ? average.toFixed(2) : '-'}
               </span>
             </div>
             <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden">

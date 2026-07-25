@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Task, Area } from '../../types/models';
+import { TargetIcon } from '../UI/Icons';
 
 interface GradeNeededCalculatorProps {
   tasks: Task[];
@@ -57,7 +58,8 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
+      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3 flex items-center gap-1.5">
+        <TargetIcon className="shrink-0" />
         What do I need on what's left?
       </p>
 

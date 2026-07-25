@@ -58,3 +58,18 @@ export const getTodayTasks = async (): Promise<Task[]> => {
   const response = await api.get<Task[]>('/tasks/today');
   return response.data;
 };
+
+// Mirrors StudyStreak in the backend's study-sessions.service.ts.
+export interface StudyStreak {
+  currentStreak: number;
+  longestStreak: number;
+  freezesAvailable: number;
+  freezesUsedTotal: number;
+  activeToday: boolean;
+  atRisk: boolean;
+}
+
+export const getStudyStreak = async (): Promise<StudyStreak> => {
+  const response = await api.get<StudyStreak>('/study-sessions/streak');
+  return response.data;
+};

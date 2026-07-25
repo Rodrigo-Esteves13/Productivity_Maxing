@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { Task, Area } from '../../types/models';
 import { getRemainingTimeLabel } from '../../utils/taskDateStatus';
+import { CalendarIcon } from '../UI/Icons';
 
 interface UpcomingTasksCardProps {
   tasks: Task[];
@@ -31,7 +32,8 @@ export default function UpcomingTasksCard({ tasks, areas }: UpcomingTasksCardPro
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
+      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3 flex items-center gap-1.5">
+        <CalendarIcon className="shrink-0" />
         Next {WINDOW_DAYS} days
       </p>
       <ul className="space-y-2">
