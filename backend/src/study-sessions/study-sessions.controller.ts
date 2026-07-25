@@ -60,4 +60,9 @@ export class StudySessionsController {
       Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 365) : 84;
     return this.studySessionsService.getDailyTotals(user.id, safeDays);
   }
+
+  @Get('streak')
+  getStreak(@CurrentUser() user: AuthenticatedUser) {
+    return this.studySessionsService.getStreak(user.id);
+  }
 }

@@ -8,9 +8,10 @@ import type { PeriodAverage, ProgramAverage, PeriodComparisonEntry } from '../..
 import { useAcademic } from '../../context/useAcademic';
 import GpaTrendChart from './GpaTrendChart';
 import CreditSimulator from './CreditSimulator';
+import { ClockIcon, GraduationCapIcon, TrendingUpIcon } from '../UI/Icons';
 
 function formatAverage(average: number | null, scale: string): string {
-  if (average === null) return '—';
+  if (average === null) return '-';
   return `${average.toFixed(2)} / ${scale.split('-')[1] ?? scale}`;
 }
 
@@ -75,8 +76,9 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {!isViewingAllPeriods && periodAverage && (
           <div>
-            <p className="text-xs uppercase tracking-wide text-neutral-500">
-              Average — {periodAverage.periodName}
+            <p className="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1.5">
+              <ClockIcon className="shrink-0" />
+              Average: {periodAverage.periodName}
             </p>
             <p className="text-2xl font-bold text-violet-400">
               {formatAverage(periodAverage.average, scale)}
@@ -89,8 +91,9 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
 
         {programAverage && (
           <div>
-            <p className="text-xs uppercase tracking-wide text-neutral-500">
-              Cumulative average — {activeProgram.name}
+            <p className="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1.5">
+              <GraduationCapIcon className="shrink-0" />
+              Cumulative average: {activeProgram.name}
             </p>
             <p className="text-2xl font-bold text-white">
               {formatAverage(programAverage.average, scale)}
@@ -104,7 +107,8 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
 
       {comparison.length > 1 && (
         <div className="mt-4 pt-4 border-t border-neutral-800">
-          <p className="text-xs uppercase tracking-wide text-neutral-500 mb-2">
+          <p className="text-xs uppercase tracking-wide text-neutral-500 mb-2 flex items-center gap-1.5">
+            <TrendingUpIcon className="shrink-0" />
             Period comparison
           </p>
           <GpaTrendChart entries={comparison} scale={scale} />

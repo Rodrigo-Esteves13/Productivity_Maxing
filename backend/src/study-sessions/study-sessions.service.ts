@@ -53,6 +53,28 @@ export interface HeatmapCell {
   sessionCount: number;
 }
 
+// Streak freeze rules: earn 1 freeze every FREEZE_EARN_INTERVAL_DAYS of
+// consecutive study, banked up to FREEZE_MAX_BANKED at once. A banked
+// freeze auto-covers exactly one missed day in the past (streak doesn't
+// grow that day, but doesn't reset either) - the whole point is a single
+// off day doesn't wipe out weeks of consistency. Deliberately NOT
+// unlimited/easy to earn: if freezes were cheap the streak would stop
+// meaning anything.
+const FREEZE_EARN_INTERVAL_DAYS = 7;
+const FREEZE_MAX_BANKED = 2;
+
+export interface StudyStreak {
+  currentStreak: number;
+  longestStreak: number;
+  freezesAvailable: number;
+  freezesUsedTotal: number;
+  activeToday: boolean;
+  // true quando a streak existe (>0) mas ainda não há atividade hoje - dá
+  // ao frontend um sinal para mostrar "ainda podes salvar a streak de
+  // hoje" sem o backend decidir COMO mostrar isso.
+  atRisk: boolean;
+}
+
 export interface TaskPriorityRow {
   id: string;
   title: string;
@@ -261,6 +283,90 @@ export class StudySessionsService {
     }
 
     return result;
+  }
+
+  /**
+   * Streak = consecutive calendar days (up to and including today) with at
+   * least one finished study session, walked day by day from the first
+   * ever session. Deliberately computed fresh from raw session data every
+   * call, same philosophy as getHeatmap()/getDailyTotals() above: no
+   * separate "streak" table to keep in sync, the session history is
+   * already the single source of truth and freezes are fully determined
+   * by it (see FREEZE_EARN_INTERVAL_DAYS/FREEZE_MAX_BANKED). Only needs
+   * `startedAt` per session, so this stays light even over a full history.
+   *
+   * Today is never treated as a "miss" even with zero activity so far -
+   * the day isn't over yet. That's what `atRisk` communicates to the
+   * frontend instead: "no freeze needed yet, but nothing logged today".
+   */
+  async getStreak(userId: string): Promise<StudyStreak> {
+    const sessions = await this.prisma.studySession.findMany({
+      where: { userId, endedAt: { not: null } },
+      select: { startedAt: true },
+      orderBy: { startedAt: 'asc' },
+    });
+
+    const activeDays = new Set(
+      sessions.map((s) => s.startedAt.toISOString().slice(0, 10)),
+    );
+
+    if (activeDays.size === 0) {
+      return {
+        currentStreak: 0,
+        longestStreak: 0,
+        freezesAvailable: 0,
+        freezesUsedTotal: 0,
+        activeToday: false,
+        atRisk: false,
+      };
+    }
+
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const firstDayKey = sessions[0].startedAt.toISOString().slice(0, 10);
+    const firstDay = new Date(`${firstDayKey}T00:00:00.000Z`);
+    const today = new Date(`${todayKey}T00:00:00.000Z`);
+    const totalDays =
+      Math.round((today.getTime() - firstDay.getTime()) / 86_400_000) + 1;
+
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let freezesAvailable = 0;
+    let freezesUsedTotal = 0;
+
+    for (let i = 0; i < totalDays; i++) {
+      const day = new Date(firstDay);
+      day.setUTCDate(day.getUTCDate() + i);
+      const dayKey = day.toISOString().slice(0, 10);
+      const isToday = dayKey === todayKey;
+
+      if (activeDays.has(dayKey)) {
+        currentStreak += 1;
+        if (currentStreak % FREEZE_EARN_INTERVAL_DAYS === 0) {
+          freezesAvailable = Math.min(freezesAvailable + 1, FREEZE_MAX_BANKED);
+        }
+      } else if (isToday) {
+        // Not over yet - leave currentStreak as-is, don't spend a freeze,
+        // don't reset. `atRisk` below tells the frontend the rest.
+      } else if (freezesAvailable > 0) {
+        freezesAvailable -= 1;
+        freezesUsedTotal += 1;
+        // Streak survives the gap, but a frozen day doesn't itself extend
+        // the streak - only real study days do.
+      } else {
+        currentStreak = 0;
+      }
+
+      longestStreak = Math.max(longestStreak, currentStreak);
+    }
+
+    return {
+      currentStreak,
+      longestStreak,
+      freezesAvailable,
+      freezesUsedTotal,
+      activeToday: activeDays.has(todayKey),
+      atRisk: currentStreak > 0 && !activeDays.has(todayKey),
+    };
   }
 
   private async assertTaskOwnership(userId: string, taskId: string) {

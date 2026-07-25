@@ -1,4 +1,5 @@
 import type { AcademicPeriod, Task } from '../../types/models';
+import { GaugeIcon } from '../UI/Icons';
 
 interface PeriodProgressBarProps {
   period: AcademicPeriod;
@@ -27,8 +28,9 @@ export default function PeriodProgressBar({ period, tasks }: PeriodProgressBarPr
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 mb-6 shadow-xl">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs uppercase tracking-wide text-neutral-500">
-          Pace — {period.name}
+        <p className="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1.5">
+          <GaugeIcon className="shrink-0" />
+          Pace: {period.name}
         </p>
         {isBehindPace && (
           <span className="text-xs text-orange-400">Behind the period's pace</span>

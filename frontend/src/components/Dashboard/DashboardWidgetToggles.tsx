@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { WIDGET_LABELS, type DashboardWidgetKey } from '../../hooks/useDashboardWidgetPrefs';
+import { SlidersIcon } from '../UI/Icons';
 
 interface DashboardWidgetTogglesProps {
   visibility: Record<DashboardWidgetKey, boolean>;
@@ -36,7 +37,8 @@ export function DashboardWidgetToggles({ visibility, toggle }: DashboardWidgetTo
 
       {isOpen && (
         <div className="absolute right-0 z-10 mt-2 w-64 rounded-lg border border-neutral-800 bg-neutral-900 p-3 shadow-xl">
-          <p className="text-xs uppercase tracking-wide text-neutral-500 mb-2">
+          <p className="text-xs uppercase tracking-wide text-neutral-500 mb-2 flex items-center gap-1.5">
+            <SlidersIcon className="shrink-0" />
             Show on dashboard
           </p>
           <ul className="space-y-2">

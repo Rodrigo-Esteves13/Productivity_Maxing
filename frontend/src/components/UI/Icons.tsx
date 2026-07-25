@@ -250,3 +250,252 @@ export function UndoIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+// Ícones abaixo são usados nos títulos dos cards do Dashboard - um por
+// card, ao lado do <p className="uppercase tracking-wide ..."> - para dar
+// um ponto de reconhecimento visual rápido ao correr o olho pela grelha
+// de widgets, sem depender só de texto em maiúsculas pequeno.
+export function GraduationCapIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={16}
+      height={16}
+      {...props}
+    >
+      <path d="M22 10 12 5 2 10l10 5 10-5Z" />
+      <path d="M6 12v5c0 1.5 2.5 3 6 3s6-1.5 6-3v-5" />
+    </svg>
+  );
+}
+
+export function TrendingUpIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={16}
+      height={16}
+      {...props}
+    >
+      <path d="M3 17 9 11 13 15 21 7" />
+      <path d="M15 7h6v6" />
+    </svg>
+  );
+}
+
+export function GaugeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={16}
+      height={16}
+      {...props}
+    >
+      <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+      <path d="M12 13 16 9" />
+      <path d="M4.6 19a9 9 0 1 1 14.8 0" />
+    </svg>
+  );
+}
+
+export function ClockIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={16}
+      height={16}
+      {...props}
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 3" />
+    </svg>
+  );
+}
+
+export function BookOpenIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={16}
+      height={16}
+      {...props}
+    >
+      <path d="M12 6c-2-1.3-4.6-2-7-2v13c2.4 0 5 .7 7 2 2-1.3 4.6-2 7-2V4c-2.4 0-5 .7-7 2Z" />
+      <path d="M12 6v13" />
+    </svg>
+  );
+}
+
+export function ChartPieIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={16}
+      height={16}
+      {...props}
+    >
+      <path d="M21.2 15.3a10 10 0 1 1-6.5-13.2" />
+      <path d="M12 12 21.2 8.6" />
+      <path d="M12 12V2a10 10 0 0 1 9.2 6" />
+    </svg>
+  );
+}
+
+export function CalculatorIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={16}
+      height={16}
+      {...props}
+    >
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <path d="M8 6h8" />
+      <path d="M8 11h.01" />
+      <path d="M12 11h.01" />
+      <path d="M16 11h.01" />
+      <path d="M8 15h.01" />
+      <path d="M12 15h.01" />
+      <path d="M16 15v3" />
+      <path d="M8 19h.01" />
+      <path d="M12 19h.01" />
+    </svg>
+  );
+}
+
+export function TargetIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={16}
+      height={16}
+      {...props}
+    >
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1" />
+    </svg>
+  );
+}
+
+export function AlertTriangleIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={16}
+      height={16}
+      {...props}
+    >
+      <path d="M12 3 2 20h20L12 3Z" />
+      <path d="M12 10v4" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}
+
+export function FlameIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={16}
+      height={16}
+      {...props}
+    >
+      <path d="M12 2c1 3-2 4-2 7a4 4 0 0 0 8 0c0-1-1-2-1-2 1 4-1 6-3 6a4 4 0 0 1-4-4c0-2 2-3 1-6a6 6 0 0 0-3 5c0 4 3 7 6 7s6-3 6-7c0-4-3-7-3-7 1 2-1 3-1 3" />
+    </svg>
+  );
+}
+
+export function ActivityIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={16}
+      height={16}
+      {...props}
+    >
+      <path d="M3 12h4l3 8 4-16 3 8h4" />
+    </svg>
+  );
+}
+
+export function SlidersIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={16}
+      height={16}
+      {...props}
+    >
+      <path d="M4 6h6" />
+      <path d="M14 6h6" />
+      <path d="M4 12h10" />
+      <path d="M18 12h2" />
+      <path d="M4 18h2" />
+      <path d="M10 18h10" />
+      <circle cx="12" cy="6" r="2" />
+      <circle cx="16" cy="12" r="2" />
+      <circle cx="8" cy="18" r="2" />
+    </svg>
+  );
+}

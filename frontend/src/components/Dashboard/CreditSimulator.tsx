@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ProgramAverage } from '../../types/models';
+import { CalculatorIcon } from '../UI/Icons';
 
 interface CreditSimulatorProps {
   programAverage: ProgramAverage;
@@ -35,7 +36,8 @@ export default function CreditSimulator({ programAverage, scale }: CreditSimulat
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-1">
+      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-1 flex items-center gap-1.5">
+        <CalculatorIcon className="shrink-0" />
         "What if" GPA simulator
       </p>
       <p className="text-sm text-neutral-400 mb-3">

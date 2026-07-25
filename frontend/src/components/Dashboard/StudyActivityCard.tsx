@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
-import { getDailyStudyTotals, type DailyStudyTotal } from '../../api/studySessionsService';
+import {
+  getDailyStudyTotals,
+  getStudyStreak,
+  type DailyStudyTotal,
+  type StudyStreak,
+} from '../../api/studySessionsService';
+import { ActivityIcon, FlameIcon } from '../UI/Icons';
 
 const WINDOW_DAYS = 84; // ~12 weeks, GitHub-contributions-style grid
 const DEFAULT_GOAL_MINUTES = 60;
@@ -13,31 +19,17 @@ function intensityClass(minutes: number, maxMinutes: number): string {
   return 'bg-violet-800/30 border-violet-800/30';
 }
 
-// Counts the current streak of consecutive days with study time, walking
-// backwards from today. If today has no time logged yet, that's not a
-// broken streak (the day isn't over) - it just starts counting from
-// yesterday instead.
-function computeStreak(days: DailyStudyTotal[]): number {
-  const byDate = new Map(days.map((d) => [d.date, d.totalMinutes]));
-  let streak = 0;
-  const cursor = new Date();
-  if ((byDate.get(cursor.toISOString().slice(0, 10)) ?? 0) === 0) {
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  while (true) {
-    const key = cursor.toISOString().slice(0, 10);
-    const minutes = byDate.get(key);
-    if (!minutes || minutes <= 0) break;
-    streak++;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return streak;
-}
-
 // Combines two of the brainstormed dashboard ideas into one card since
 // they share the same underlying data (daily study minutes): a
 // GitHub-contributions-style activity heatmap with a streak counter, and
 // today's study time against a goal.
+//
+// The streak itself (with freeze support) is computed backend-side from
+// full session history, not from this card's WINDOW_DAYS window - see
+// StudySessionsService.getStreak(). A local, window-only recount here
+// would silently diverge from the backend's the moment someone's streak
+// outlives WINDOW_DAYS, and would have no way to know about freezes at
+// all (those depend on the full history too).
 //
 // The goal is local-only for now (a plain input, not persisted to the
 // backend) - there's no "daily study goal" concept anywhere in the data
@@ -45,6 +37,7 @@ function computeStreak(days: DailyStudyTotal[]): number {
 // up to a real setting later if it's worth persisting.
 export default function StudyActivityCard() {
   const [days, setDays] = useState<DailyStudyTotal[]>([]);
+  const [streak, setStreak] = useState<StudyStreak | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [goalMinutes, setGoalMinutes] = useState(DEFAULT_GOAL_MINUTES);
 
@@ -52,8 +45,14 @@ export default function StudyActivityCard() {
     let cancelled = false;
     (async () => {
       try {
-        const data = await getDailyStudyTotals(WINDOW_DAYS);
-        if (!cancelled) setDays(data);
+        const [totals, streakData] = await Promise.all([
+          getDailyStudyTotals(WINDOW_DAYS),
+          getStudyStreak(),
+        ]);
+        if (!cancelled) {
+          setDays(totals);
+          setStreak(streakData);
+        }
       } catch (err) {
         console.error('Failed to load study activity:', err);
       } finally {
@@ -71,7 +70,6 @@ export default function StudyActivityCard() {
   if (!hasAnyData) return null;
 
   const maxMinutes = Math.max(0, ...days.map((d) => d.totalMinutes));
-  const streak = computeStreak(days);
   const todayKey = new Date().toISOString().slice(0, 10);
   const todayMinutes = days.find((d) => d.date === todayKey)?.totalMinutes ?? 0;
   const goalPct = Math.min((todayMinutes / goalMinutes) * 100, 100);
@@ -96,10 +94,31 @@ export default function StudyActivityCard() {
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <p className="text-xs uppercase tracking-wide text-neutral-500">Study activity</p>
-        {streak > 0 && (
-          <span className="text-sm text-violet-400 font-semibold">
-            {streak} day{streak === 1 ? '' : 's'} streak
+        <p className="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1.5">
+          <ActivityIcon className="shrink-0" />
+          Study activity
+        </p>
+        {streak && streak.currentStreak > 0 && (
+          <span
+            className={`flex items-center gap-2 text-sm font-semibold ${
+              streak.atRisk ? 'text-amber-400' : 'text-violet-400'
+            }`}
+          >
+            <span className="flex items-center gap-1">
+              <FlameIcon className="shrink-0" />
+              {streak.currentStreak} day{streak.currentStreak === 1 ? '' : 's'}
+            </span>
+            {streak.freezesAvailable > 0 && (
+              <span
+                className="text-xs text-sky-400 font-normal"
+                title={`${streak.freezesAvailable} freeze${streak.freezesAvailable === 1 ? '' : 's'} banked - auto-covers a missed day`}
+              >
+                {streak.freezesAvailable} freeze{streak.freezesAvailable === 1 ? '' : 's'}
+              </span>
+            )}
+            {streak.atRisk && (
+              <span className="text-xs font-normal">study today to keep it</span>
+            )}
           </span>
         )}
       </div>
