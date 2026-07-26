@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { COPY_FEEDBACK_MS } from '../../lib/constants';
 
 interface NewApiKeyModalProps {
   apiKey: string;
@@ -15,7 +16,7 @@ export default function NewApiKeyModal({ apiKey, onClose }: NewApiKeyModalProps)
   const handleCopy = async () => {
     await navigator.clipboard.writeText(apiKey);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), COPY_FEEDBACK_MS);
   };
 
   return (

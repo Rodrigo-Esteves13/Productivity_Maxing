@@ -2,6 +2,7 @@ import PageLayout from '../components/Layout/PageLayout';
 import LegalPageLayout from '../components/Legal/LegalPageLayout';
 import LegalSection from '../components/Legal/LegalSection';
 import LegalLink from '../components/Legal/LegalLink';
+import { REPO_URL, REPO_LICENSE_URL } from '../lib/constants';
 
 const CONTACT_EMAIL = 'support@pmaxing.pt';
 const APP_DOMAIN = 'app.pmaxing.pt';
@@ -24,7 +25,7 @@ export default function TermsOfService() {
           tasks, deadlines, and grades, with optional synchronization to Google Calendar and an optional
           Windows companion agent. It's developed and maintained by a single independent developer, me,
           Rodrigo Esteves, as a personal and academic project. The source code is public on{' '}
-          <LegalLink href="https://github.com/Rodrigo-Esteves13/Productivity_Maxing">GitHub</LegalLink>{' '}
+          <LegalLink href={REPO_URL}>GitHub</LegalLink>{' '}
           under the MIT License.
         </p>
       </LegalSection>
@@ -83,7 +84,7 @@ export default function TermsOfService() {
           The App's source code is distributed under the MIT License. These Terms of Service govern your
           use of the hosted, running application at {APP_DOMAIN}; they don't limit the rights already
           granted to you over the source code itself under the MIT License, which you can review in the{' '}
-          <LegalLink href="https://github.com/Rodrigo-Esteves13/Productivity_Maxing/blob/main/LICENSE">
+          <LegalLink href={REPO_LICENSE_URL}>
             LICENSE file
           </LegalLink>{' '}
           on GitHub.

@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import NavLinks from './NavLinks';
 import UserMenu from './UserMenu';
 import MobileMenu from './MobileMenu';
-import { MenuIcon, XIcon } from '../UI/Icons';
+import { MenuIcon, XIcon, SearchIcon } from '../UI/Icons';
 import { useAuth } from '../../context/useAuth';
 
 export default function Navbar() {
@@ -22,7 +22,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-neutral-950 border-b border-neutral-800 text-white sticky top-0 z-50">
+    <nav className="print-hide bg-neutral-950 border-b border-neutral-800 text-white sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex-shrink-0">
@@ -92,6 +92,20 @@ export default function Navbar() {
 
           {/* 3. Menu do Utilizador + botão de hambúrguer em mobile */}
           <div className="flex items-center gap-2">
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('pmaxing:open-command-palette'))}
+                aria-label="Open command palette"
+                title="Search / go to (Ctrl+K)"
+                className="hidden sm:flex items-center gap-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors rounded-md px-2.5 py-1.5"
+              >
+                <SearchIcon className="shrink-0" />
+                <kbd className="text-[10px] border border-neutral-700 rounded px-1 py-0.5">
+                  {navigator.platform.toUpperCase().includes('MAC') ? '⌘K' : 'Ctrl+K'}
+                </kbd>
+              </button>
+            )}
             {isAuthenticated ? (
               <UserMenu user={user} onLogout={handleLogout} />
             ) : (

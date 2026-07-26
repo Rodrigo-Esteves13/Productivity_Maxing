@@ -6,6 +6,7 @@ import type {
   PeriodAverage,
   ProgramAverage,
   PeriodComparisonEntry,
+  CreditsSummary,
 } from '../types/models';
 
 // PROGRAMS
@@ -46,6 +47,13 @@ export const getProgramPeriods = async (programId: string): Promise<AcademicPeri
 // Cumulative average of the WHOLE program (archived periods included).
 export const getProgramAverage = async (programId: string): Promise<ProgramAverage> => {
   const response = await api.get<ProgramAverage>(`/programs/${programId}/average`);
+  return response.data;
+};
+
+// ECTS (or equivalent) credits accumulated so far in the WHOLE program
+// (archived periods included) - see CreditsSummary for the shape.
+export const getProgramCredits = async (programId: string): Promise<CreditsSummary> => {
+  const response = await api.get<CreditsSummary>(`/programs/${programId}/credits`);
   return response.data;
 };
 

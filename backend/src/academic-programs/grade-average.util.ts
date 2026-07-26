@@ -101,3 +101,119 @@ export function computeCreditWeightedAverage(
     totalWeight,
   };
 }
+
+// Parses the "min-max" gradeScale string stored on AcademicProgram (e.g.
+// "0-20", "0-100") into numbers. Falls back to the app's original default
+// (0-20) for any value that doesn't match the expected shape, rather than
+// throwing - a malformed/legacy gradeScale shouldn't take down the whole
+// credits summary endpoint.
+export interface ParsedGradeScale {
+  min: number;
+  max: number;
+}
+
+const DEFAULT_GRADE_SCALE: ParsedGradeScale = { min: 0, max: 20 };
+
+export function parseGradeScale(gradeScale: string): ParsedGradeScale {
+  const match = /^(-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)$/.exec(gradeScale.trim());
+  if (!match) return DEFAULT_GRADE_SCALE;
+
+  const min = Number(match[1]);
+  const max = Number(match[2]);
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
+    return DEFAULT_GRADE_SCALE;
+  }
+  return { min, max };
+}
+
+// The pass mark for a scale, used only for the ECTS credits counter below.
+// There's no "passing grade" concept stored anywhere in the schema (the
+// app has never needed one before this), so this uses the simplest
+// reasonable convention - the midpoint of the scale (e.g. 10/20, 50/100) -
+// documented here so it's easy to swap for a per-program configurable
+// value later if that becomes an explicit idea in the backlog.
+export function getPassThreshold(gradeScale: string): number {
+  const { min, max } = parseGradeScale(gradeScale);
+  return min + (max - min) / 2;
+}
+
+export interface CreditsAreaSummary {
+  areaId: string;
+  areaName: string;
+  credits: number | null;
+  average: number | null;
+  passed: boolean;
+}
+
+export interface CreditsSummary {
+  programId: string;
+  programName: string;
+  gradeScale: string;
+  passThreshold: number;
+  // Sum of Area.credits for Areas whose weighted average is at/above
+  // passThreshold. Areas without credits set contribute 0 here (there's
+  // nothing numeric to add), even if they'd otherwise count as passed.
+  earnedCredits: number;
+  // Sum of Area.credits for every Area with at least one graded task,
+  // pass or fail - lets the frontend show "X of Y ECTS attempted" instead
+  // of just a bare earned number with no context.
+  attemptedCredits: number;
+  areas: CreditsAreaSummary[];
+}
+
+export function computeCreditsSummary(
+  programId: string,
+  programName: string,
+  gradeScale: string,
+  tasks: AreaGradedTaskLike[],
+  areas: (AreaCreditsLike & { name: string })[],
+): CreditsSummary {
+  const passThreshold = getPassThreshold(gradeScale);
+  const areaById = new Map(areas.map((a) => [a.id, a]));
+
+  const tasksByArea = new Map<string, AreaGradedTaskLike[]>();
+  for (const task of tasks) {
+    const bucket = tasksByArea.get(task.areaId);
+    if (bucket) {
+      bucket.push(task);
+    } else {
+      tasksByArea.set(task.areaId, [task]);
+    }
+  }
+
+  let earnedCredits = 0;
+  let attemptedCredits = 0;
+  const areaSummaries: CreditsAreaSummary[] = [];
+
+  for (const [areaId, areaTasks] of tasksByArea) {
+    const area = areaById.get(areaId);
+    if (!area) continue; // shouldn't happen (FK integrity), but never trust it blindly
+
+    const { average } = computeWeightedAverage(areaTasks);
+    if (average === null) continue; // no graded task yet in this Area - not "attempted"
+
+    const passed = average >= passThreshold;
+    if (area.credits !== null) {
+      attemptedCredits += area.credits;
+      if (passed) earnedCredits += area.credits;
+    }
+
+    areaSummaries.push({
+      areaId,
+      areaName: area.name,
+      credits: area.credits,
+      average,
+      passed,
+    });
+  }
+
+  return {
+    programId,
+    programName,
+    gradeScale,
+    passThreshold,
+    earnedCredits,
+    attemptedCredits,
+    areas: areaSummaries,
+  };
+}

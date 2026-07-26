@@ -1,6 +1,5 @@
 import { GithubIcon, ArrowUpRightIcon } from '../UI/Icons';
-
-const REPO_URL = 'https://github.com/Rodrigo-Esteves13/Productivity_Maxing';
+import { REPO_URL } from '../../lib/constants';
 
 export default function FooterBrand() {
   return (

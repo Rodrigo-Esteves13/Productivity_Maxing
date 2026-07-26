@@ -13,6 +13,7 @@ import {
   togglePeriodPin,
 } from '../../api/academicService';
 import { useAcademic } from '../../context/useAcademic';
+import { PinIcon } from '../UI/Icons';
 import type { AcademicPeriod, AcademicProgram } from '../../types/models';
 
 interface ManagePeriodsModalProps {
@@ -221,8 +222,8 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
                     <div>
                       <p className="text-sm font-medium text-neutral-100">
                         {period.isPinned && (
-                          <span className="mr-1 text-violet-400" title="Pinned">
-                            📌
+                          <span className="mr-1 inline-flex align-middle text-violet-400" title="Pinned">
+                            <PinIcon />
                           </span>
                         )}
                         {period.name}

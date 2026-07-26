@@ -12,7 +12,9 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
   constructor(private authService: AuthService) {
     super({
       clientID: process.env.DISCORD_CLIENT_ID || '',
-      clientSecret: process.env.DISCORD_CLIENT_SECRET || '',
+      // DISCORD_CLIENT_SECRET is enforced at boot by assertRequiredEnvVars()
+      // in main.ts - no silent '' fallback here anymore.
+      clientSecret: process.env.DISCORD_CLIENT_SECRET as string,
       callbackURL: process.env.DISCORD_CALLBACK_URL || '',
       scope: ['identify', 'email'],
       passReqToCallback: true,

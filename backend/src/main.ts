@@ -22,6 +22,13 @@ const REQUIRED_ENV_VARS = [
   // de irem para a tabela Identity - ver auth/crypto/token-cipher.ts.
   // Gera um valor com: openssl rand -base64 32
   'TOKEN_ENCRYPTION_KEY',
+  // Sem estas, as Strategies OAuth (ver auth/strategies/*.ts) arrancavam
+  // silenciosamente com clientSecret === '' em vez de falhar alto - um
+  // provider mal configurado no Render passava despercebido até alguém
+  // tentar fazer login com esse provider e falhar de forma confusa.
+  'GOOGLE_CLIENT_SECRET',
+  'GITHUB_CLIENT_SECRET',
+  'DISCORD_CLIENT_SECRET',
 ] as const;
 
 function assertRequiredEnvVars(): void {

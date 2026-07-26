@@ -2,6 +2,7 @@ import FooterBrand from './FooterBrand';
 import FooterLinkGroup from './FooterLinkGroup';
 import TechBadge from './TechBadge';
 import FooterBottomBar from './FooterBottomBar';
+import { REPO_URL, REPO_ISSUES_URL } from '../../lib/constants';
 
 const PRODUCT_LINKS = [
   { label: 'Dashboard', to: '/dashboard' },
@@ -10,8 +11,8 @@ const PRODUCT_LINKS = [
 ];
 
 const RESOURCE_LINKS = [
-  { label: 'GitHub Repo', href: 'https://github.com/Rodrigo-Esteves13/Productivity_Maxing' },
-  { label: 'Report an Issue', href: 'https://github.com/Rodrigo-Esteves13/Productivity_Maxing/issues' },
+  { label: 'GitHub Repo', href: REPO_URL },
+  { label: 'Report an Issue', href: REPO_ISSUES_URL },
 ];
 
 const LEGAL_LINKS = [
@@ -23,7 +24,7 @@ const STACK = ['React', 'TypeScript', 'Tailwind v4', 'NestJS', 'Prisma', 'Supaba
 
 export default function Footer() {
   return (
-    <footer className="relative border-t border-neutral-800 bg-neutral-950">
+    <footer className="print-hide relative border-t border-neutral-800 bg-neutral-950">
       {/* Linha de brilho subtil no topo do footer, para separar bem do conteúdo */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
 

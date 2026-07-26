@@ -7,7 +7,7 @@ import EmptyState from '../components/UI/EmptyState';
 import TasksTable from '../components/Dashboard/TasksTable';
 import DashboardFilters from '../components/Dashboard/DashboardFilters';
 import { EMPTY_DASHBOARD_FILTERS, type DashboardFiltersState } from '../components/Dashboard/dashboardFilters.types';
-import { getUserTasks, getUserAreas, getTaskMetadata } from '../api/userService';
+import { getUserTasks, getUserAreas, getTaskMetadata, bulkUpdateTaskStatus, bulkDeleteTasks } from '../api/userService';
 import { getDateStatus } from '../utils/taskDateStatus';
 import type { Task, Area, AcademicTaskTypeOption } from '../types/models';
 import useDocumentTitle from '../hooks/useDocumentTitle';
@@ -21,8 +21,13 @@ import AtRiskTasksCard from '../components/Dashboard/AtRiskTasksCard';
 import AreaBreakdownCard from '../components/Dashboard/AreaBreakdownCard';
 import StudyActivityCard from '../components/Dashboard/StudyActivityCard';
 import ProgramsOverviewCard from '../components/Dashboard/ProgramsOverviewCard';
+import CreditsAccumulatedCard from '../components/Dashboard/CreditsAccumulatedCard';
 import { DashboardWidgetToggles } from '../components/Dashboard/DashboardWidgetToggles';
 import { useDashboardWidgetPrefs } from '../hooks/useDashboardWidgetPrefs';
+import { PrinterIcon, UploadIcon } from '../components/UI/Icons';
+import BulkActionsBar from '../components/Dashboard/BulkActionsBar';
+import TaskExportButtons from '../components/Dashboard/TaskExportButtons';
+import TaskImportModal from '../components/Dashboard/TaskImportModal';
 
 const DASHBOARD_TASK_TYPE_KEY = 'ACADEMICO';
 
@@ -37,6 +42,8 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<DashboardFiltersState>(EMPTY_DASHBOARD_FILTERS);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Instantiates the reschedule hook
   const { rescheduleToTomorrow, reschedulingId } = useQuickReschedule((updatedTask) => {
@@ -48,6 +55,62 @@ export default function Dashboard() {
   const { activeProgram, activePeriod, isViewingAllPeriods } = useAcademic();
   const periodParam = isViewingAllPeriods ? 'all' : activePeriod?.id;
   const { visibility, toggle } = useDashboardWidgetPrefs();
+
+  // A stale selection pointing at tasks that are no longer visible (e.g.
+  // after narrowing the filters, or after a bulk action already removed/
+  // completed them) is more confusing than useful, so any filter change
+  // just resets it.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [filters]);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      const allSelected = filteredTasks.length > 0 && filteredTasks.every((t) => prev.has(t.id));
+      return allSelected ? new Set() : new Set(filteredTasks.map((t) => t.id));
+    });
+  };
+
+  const handleBulkMarkDone = async () => {
+    const ids = Array.from(selectedIds);
+    await bulkUpdateTaskStatus(ids, 'COMPLETED');
+    setTasks((prev) =>
+      prev.map((t) =>
+        ids.includes(t.id)
+          ? { ...t, progressStatus: 'COMPLETED', completedAt: t.completedAt ?? new Date().toISOString() }
+          : t,
+      ),
+    );
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    await bulkDeleteTasks(ids);
+    setTasks((prev) => prev.filter((t) => !ids.includes(t.id)));
+    setSelectedIds(new Set());
+  };
+
+  const handleImported = async () => {
+    try {
+      const tasksData = await getUserTasks(periodParam);
+      setTasks(tasksData);
+    } catch (err) {
+      console.error('Failed to refresh tasks after import:', err);
+    }
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -103,10 +166,31 @@ export default function Dashboard() {
           title="Analytics Dashboard"
           description="Global view of all your academic activities, grades, and progress."
         />
-        <DashboardWidgetToggles visibility={visibility} toggle={toggle} />
+        <div className="print-hide flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200"
+          >
+            <UploadIcon />
+            Import
+          </button>
+          <TaskExportButtons tasks={filteredTasks} areas={academicAreas} academicTaskTypes={academicTaskTypes} />
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200"
+          >
+            <PrinterIcon />
+            Print
+          </button>
+          <DashboardWidgetToggles visibility={visibility} toggle={toggle} />
+        </div>
       </div>
 
       <GpaSummary showCreditSimulator={visibility.creditSimulator} />
+
+      {visibility.creditsAccumulated && <CreditsAccumulatedCard />}
 
       {visibility.programsOverview && <ProgramsOverviewCard />}
 
@@ -150,15 +234,17 @@ export default function Dashboard() {
         <ErrorState message={error} />
       ) : (
         <>
-          <DashboardFilters
-            filters={filters}
-            onChange={setFilters}
-            areas={academicAreas}
-            academicTaskTypes={academicTaskTypes}
-            difficulties={difficulties}
-            progressStatuses={progressStatuses}
-            onClear={() => setFilters(EMPTY_DASHBOARD_FILTERS)}
-          />
+          <div className="print-hide">
+            <DashboardFilters
+              filters={filters}
+              onChange={setFilters}
+              areas={academicAreas}
+              academicTaskTypes={academicTaskTypes}
+              difficulties={difficulties}
+              progressStatuses={progressStatuses}
+              onClear={() => setFilters(EMPTY_DASHBOARD_FILTERS)}
+            />
+          </div>
 
           {filteredTasks.length === 0 ? (
             <EmptyState
@@ -169,15 +255,32 @@ export default function Dashboard() {
               }
             />
           ) : (
-            <TasksTable 
-              tasks={filteredTasks} 
-              academicTaskTypes={academicTaskTypes} 
-              onReschedule={rescheduleToTomorrow}
-              reschedulingId={reschedulingId}
-            />
+            <>
+              <BulkActionsBar
+                selectedCount={selectedIds.size}
+                onMarkDone={handleBulkMarkDone}
+                onDelete={handleBulkDelete}
+                onClear={() => setSelectedIds(new Set())}
+              />
+              <TasksTable
+                tasks={filteredTasks}
+                academicTaskTypes={academicTaskTypes}
+                onReschedule={rescheduleToTomorrow}
+                reschedulingId={reschedulingId}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
+                onToggleSelectAll={toggleSelectAll}
+              />
+            </>
           )}
         </>
       )}
+
+      <TaskImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImported={handleImported}
+      />
     </PageLayout>
   );
 }

@@ -29,6 +29,38 @@ export interface TaskMeta {
   progressStatuses: string[];
 }
 
+// POST /tasks/import request row - see backend's ImportTaskRowDto. Built
+// on the frontend by mapping the spreadsheet's Area/Type NAME columns to
+// the IDs/keys the backend expects (see utils/parseTaskImportFile.ts).
+export interface ImportTaskRow {
+  areaId: string;
+  periodId?: string;
+  title: string;
+  date: string;
+  type: string;
+  academicType?: string;
+  topics?: string;
+  weightPercentage?: number;
+  difficulty?: Difficulty;
+  progressStatus?: ProgressStatus;
+  targetGrade?: number;
+  realGrade?: number;
+}
+
+// POST /tasks/import response.
+export interface ImportTaskRowResult {
+  row: number;
+  success: boolean;
+  taskId?: string;
+  error?: string;
+}
+
+export interface ImportTasksResult {
+  created: number;
+  failed: number;
+  results: ImportTaskRowResult[];
+}
+
 // Full records used only by the admin area (/admin/task-types,
 // /admin/academic-task-types) - distinct from the *Option types above
 // (those are the "trimmed down" version for populating selects, coming
@@ -134,6 +166,25 @@ export interface PeriodComparisonEntry extends WeightedAverage {
   periodName: string;
   startDate: string;
   isArchived: boolean;
+}
+
+// Returned by GET /programs/:id/credits.
+export interface CreditsAreaSummary {
+  areaId: string;
+  areaName: string;
+  credits: number | null;
+  average: number | null;
+  passed: boolean;
+}
+
+export interface CreditsSummary {
+  programId: string;
+  programName: string;
+  gradeScale: string;
+  passThreshold: number;
+  earnedCredits: number;
+  attemptedCredits: number;
+  areas: CreditsAreaSummary[];
 }
 
 export interface Area {

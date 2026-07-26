@@ -20,6 +20,7 @@ import TaskTypes from '../pages/TaskTypes';
 import PrivacyPolicy from '../pages/PrivacyPolicy';
 import TermsOfService from '../pages/TermsOfService';
 import CookieNotice from '../components/Legal/CookieNotice';
+import CommandPalette from '../components/CommandPalette/CommandPalette';
 
 export default function AppRouter() {
   return (
@@ -76,6 +77,10 @@ export default function AppRouter() {
       {/* Tem de estar aqui dentro do BrowserRouter, não no App.tsx - usa
           <Link> do react-router-dom, que precisa do contexto do Router. */}
       <CookieNotice />
+      {/* Mesma razão: CommandPalette usa useNavigate(), que também precisa
+          de estar dentro do Router. Gated internamente por isAuthenticated
+          - não faz sentido nas páginas públicas de login/registo. */}
+      <CommandPalette />
     </BrowserRouter>
   );
 }
