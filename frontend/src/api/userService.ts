@@ -1,6 +1,6 @@
 // src/api/userService.ts
 import api from './client';
-import type { User, Area, Task, TaskMeta, Role, ApiKeySummary } from '../types/models';
+import type { User, Area, Task, TaskMeta, Role, ApiKeySummary, ImportTaskRow, ImportTasksResult } from '../types/models';
 
 // AUTH ENDPOINTS
 // Login/registo já não devolvem o JWT no corpo - o backend define-o num
@@ -199,6 +199,14 @@ export async function bulkUpdateTaskStatus(
 
 export async function bulkDeleteTasks(ids: string[]): Promise<{ count: number }> {
   const response = await api.post<{ count: number }>('/tasks/bulk-delete', { ids });
+  return response.data;
+}
+
+// Excel/CSV import - see hooks/useTaskImport.ts, which parses the file
+// with SheetJS and maps its Area/Type NAME columns to the IDs/keys this
+// endpoint expects before calling it.
+export async function importTasks(rows: ImportTaskRow[]): Promise<ImportTasksResult> {
+  const response = await api.post<ImportTasksResult>('/tasks/import', { tasks: rows });
   return response.data;
 }
 

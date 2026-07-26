@@ -8,7 +8,8 @@ export type DashboardWidgetKey =
   | 'areaBreakdown'
   | 'studyActivity'
   | 'gradeCalculator'
-  | 'creditSimulator';
+  | 'creditSimulator'
+  | 'creditsAccumulated';
 
 export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   programsOverview: 'All programs overview',
@@ -19,6 +20,7 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   studyActivity: 'Study activity',
   gradeCalculator: 'Grade needed calculator',
   creditSimulator: '"What if" GPA simulator',
+  creditsAccumulated: 'ECTS credits accumulated',
 };
 
 const STORAGE_KEY = 'dashboard-widget-prefs';
@@ -35,6 +37,7 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   studyActivity: true,
   gradeCalculator: true,
   creditSimulator: true,
+  creditsAccumulated: true,
 };
 
 function loadPrefs(): Record<DashboardWidgetKey, boolean> {

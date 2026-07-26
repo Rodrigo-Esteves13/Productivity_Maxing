@@ -2,6 +2,7 @@ import FooterBrand from './FooterBrand';
 import FooterLinkGroup from './FooterLinkGroup';
 import TechBadge from './TechBadge';
 import FooterBottomBar from './FooterBottomBar';
+import { REPO_URL, REPO_ISSUES_URL } from '../../lib/constants';
 
 const PRODUCT_LINKS = [
   { label: 'Dashboard', to: '/dashboard' },
@@ -10,8 +11,8 @@ const PRODUCT_LINKS = [
 ];
 
 const RESOURCE_LINKS = [
-  { label: 'GitHub Repo', href: 'https://github.com/Rodrigo-Esteves13/Productivity_Maxing' },
-  { label: 'Report an Issue', href: 'https://github.com/Rodrigo-Esteves13/Productivity_Maxing/issues' },
+  { label: 'GitHub Repo', href: REPO_URL },
+  { label: 'Report an Issue', href: REPO_ISSUES_URL },
 ];
 
 const LEGAL_LINKS = [

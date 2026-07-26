@@ -3,6 +3,7 @@ import LegalPageLayout from '../components/Legal/LegalPageLayout';
 import LegalSection from '../components/Legal/LegalSection';
 import LegalLink from '../components/Legal/LegalLink';
 import LegalTable from '../components/Legal/LegalTable';
+import { REPO_URL } from '../lib/constants';
 
 const CONTACT_EMAIL = 'support@pmaxing.pt';
 const APP_DOMAIN = 'app.pmaxing.pt';
@@ -16,7 +17,7 @@ export default function PrivacyPolicy() {
         <p className="mb-3">
           Productivity Maxing ("the App") is an open-source, single-developer academic project built and
           maintained by me, Rodrigo Esteves. The source code is public on{' '}
-          <LegalLink href="https://github.com/Rodrigo-Esteves13/Productivity_Maxing">GitHub</LegalLink>{' '}
+          <LegalLink href={REPO_URL}>GitHub</LegalLink>{' '}
           under the MIT License.
         </p>
         <p className="mb-3">

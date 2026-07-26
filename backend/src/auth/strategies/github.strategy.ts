@@ -12,7 +12,9 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
   constructor(private authService: AuthService) {
     super({
       clientID: process.env.GITHUB_CLIENT_ID || '',
-      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
+      // GITHUB_CLIENT_SECRET is enforced at boot by assertRequiredEnvVars()
+      // in main.ts - no silent '' fallback here anymore.
+      clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
       callbackURL: process.env.GITHUB_CALLBACK_URL || '',
       scope: ['user:email'],
       passReqToCallback: true,

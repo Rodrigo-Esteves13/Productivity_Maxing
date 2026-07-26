@@ -9,6 +9,7 @@ import LoadingState from '../components/UI/LoadingState';
 import SetupInstructions from '../components/Agent/SetupInstructions';
 import TriggerRulesForm from '../components/Agent/TriggerRulesForm';
 import BlockListEditor from '../components/Agent/BlockListEditor';
+import { COPY_FEEDBACK_MS } from '../lib/constants';
 
 // Secção genérica com título + descrição, para não repetir o mesmo
 // wrapper de cartão em cada bloco da página.
@@ -52,7 +53,7 @@ export default function Agent() {
     const ok = await save();
     if (ok) {
       setJustSaved(true);
-      setTimeout(() => setJustSaved(false), 2000);
+      setTimeout(() => setJustSaved(false), COPY_FEEDBACK_MS);
     }
   };
 

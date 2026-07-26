@@ -92,7 +92,9 @@ export class CalendarService {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: process.env.GOOGLE_CLIENT_ID ?? '',
-        client_secret: process.env.GOOGLE_CLIENT_SECRET ?? '',
+        // GOOGLE_CLIENT_SECRET is enforced at boot by assertRequiredEnvVars()
+        // in main.ts - no silent '' fallback here anymore.
+        client_secret: process.env.GOOGLE_CLIENT_SECRET as string,
         refresh_token: tokens.refreshToken,
         grant_type: 'refresh_token',
       }),

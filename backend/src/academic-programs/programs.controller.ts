@@ -81,6 +81,18 @@ export class ProgramsController {
     return this.programsService.getAverage(user.id, id);
   }
 
+  @Get(':id/credits')
+  @ApiOperation({
+    summary:
+      'ECTS (or equivalent) credits accumulated so far: sum of Area.credits for every passed Area, across all periods',
+  })
+  getCreditsSummary(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
+    return this.programsService.getCreditsSummary(user.id, id);
+  }
+
   @Get(':id/periods-comparison')
   @ApiOperation({
     summary:

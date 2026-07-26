@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { UpdateProgramDto } from './dto/update-program.dto';
-import { computeCreditWeightedAverage } from './grade-average.util';
+import { computeCreditWeightedAverage, computeCreditsSummary } from './grade-average.util';
 
 @Injectable()
 export class ProgramsService {
@@ -106,6 +106,33 @@ export class ProgramsService {
       programName: program.name,
       ...computeCreditWeightedAverage(tasks, areas),
     };
+  }
+
+  /**
+   * ECTS (or equivalent) credits accumulated so far in this program: sums
+   * Area.credits for every Area where the weighted average of its graded
+   * tasks (across ALL periods, archived included - same "cumulative"
+   * scope as getAverage() above) is at/above the scale's pass threshold.
+   * See computeCreditsSummary()/getPassThreshold() in grade-average.util.ts
+   * for the exact rule - there's no explicit "passing grade" concept
+   * stored anywhere yet, so this uses the scale's midpoint as the mark.
+   */
+  async getCreditsSummary(userId: string, id: string) {
+    const program = await this.findOwnedOrThrow(userId, id);
+    const tasks = await this.prisma.task.findMany({
+      where: { period: { programId: id }, realGrade: { not: null } },
+      select: { realGrade: true, weightPercentage: true, areaId: true },
+    });
+    const areas = await this.prisma.area.findMany({
+      select: { id: true, name: true, credits: true },
+    });
+    return computeCreditsSummary(
+      program.id,
+      program.name,
+      program.gradeScale,
+      tasks,
+      areas,
+    );
   }
 
   /**

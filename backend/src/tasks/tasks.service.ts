@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PeriodsService } from '../academic-programs/periods.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { ImportTasksDto } from './dto/import-tasks.dto';
 
 const TASK_INCLUDE = {
   area: true,
@@ -342,6 +343,92 @@ export class TasksService {
       where: { id: { in: ids }, userId },
     });
     return { count: result.count };
+  }
+
+  /**
+   * Excel/CSV import (see ImportTasksDto): creates one task per row.
+   * Each row is validated and inserted independently and wrapped in its
+   * own try/catch - a single bad row (unknown Area, invalid type key,
+   * malformed date that slipped past the DTO's @IsDateString somehow)
+   * fails that row only, not the whole batch. A spreadsheet with 40 good
+   * rows and 2 typos should still create the 40, with the 2 reported back
+   * so the user can fix and re-import just those.
+   *
+   * The active period is resolved once outside the loop (self-healing
+   * side effects of resolveActivePeriodId - creating a default
+   * program/period on first use - should only happen once per import,
+   * not once per row).
+   */
+  async importTasks(userId: string, dto: ImportTasksDto) {
+    const activePeriodId = await this.periodsService.resolveActivePeriodId(userId);
+
+    let created = 0;
+    const results: {
+      row: number;
+      success: boolean;
+      taskId?: string;
+      error?: string;
+    }[] = [];
+
+    for (let i = 0; i < dto.tasks.length; i++) {
+      const row = dto.tasks[i];
+      try {
+        const typeIds = await this.resolveTypes(row.type, row.academicType);
+
+        // Area is the global catalog (no owner), but a stale/garbage
+        // areaId (e.g. re-importing an old export after an Area was
+        // renamed/removed) shouldn't silently create an orphaned task.
+        const area = await this.prisma.area.findUnique({
+          where: { id: row.areaId },
+        });
+        if (!area) {
+          throw new BadRequestException(`Area "${row.areaId}" not found.`);
+        }
+
+        const resolvedPeriodId = row.periodId
+          ? (await this.periodsService.findOwnedOrThrow(userId, row.periodId))
+              .id
+          : activePeriodId;
+
+        const progressStatus = row.progressStatus ?? 'ON_TRACK';
+        const completedAt = progressStatus === 'COMPLETED' ? new Date() : null;
+
+        const task = await this.prisma.task.create({
+          data: {
+            title: row.title,
+            date: new Date(row.date),
+            userId,
+            areaId: area.id,
+            periodId: resolvedPeriodId,
+            difficulty: row.difficulty ?? 'MEDIUM',
+            progressStatus,
+            weightPercentage: row.weightPercentage ?? null,
+            targetGrade: row.targetGrade ?? null,
+            realGrade: row.realGrade ?? null,
+            topics: row.topics ?? null,
+            completedAt,
+            ...typeIds,
+          },
+        });
+
+        created++;
+        results.push({ row: i + 1, success: true, taskId: task.id });
+      } catch (error) {
+        // BadRequestException messages here are all developer-authored,
+        // user-safe strings (see resolveTypes/the Area check above) - safe
+        // to forward as-is. Anything else (a raw Prisma/DB error) gets a
+        // generic message instead, same "never leak internals" rule as
+        // the rest of the app (see create() above).
+        const message =
+          error instanceof BadRequestException
+            ? error.message
+            : 'Unexpected error creating this task.';
+        results.push({ row: i + 1, success: false, error: message });
+        this.logger.warn(`Task import row ${i + 1} failed: ${message}`);
+      }
+    }
+
+    return { created, failed: results.length - created, results };
   }
 
   async getMeta() {

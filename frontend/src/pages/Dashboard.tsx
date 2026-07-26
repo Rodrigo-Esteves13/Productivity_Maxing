@@ -21,10 +21,13 @@ import AtRiskTasksCard from '../components/Dashboard/AtRiskTasksCard';
 import AreaBreakdownCard from '../components/Dashboard/AreaBreakdownCard';
 import StudyActivityCard from '../components/Dashboard/StudyActivityCard';
 import ProgramsOverviewCard from '../components/Dashboard/ProgramsOverviewCard';
+import CreditsAccumulatedCard from '../components/Dashboard/CreditsAccumulatedCard';
 import { DashboardWidgetToggles } from '../components/Dashboard/DashboardWidgetToggles';
 import { useDashboardWidgetPrefs } from '../hooks/useDashboardWidgetPrefs';
-import { PrinterIcon } from '../components/UI/Icons';
+import { PrinterIcon, UploadIcon } from '../components/UI/Icons';
 import BulkActionsBar from '../components/Dashboard/BulkActionsBar';
+import TaskExportButtons from '../components/Dashboard/TaskExportButtons';
+import TaskImportModal from '../components/Dashboard/TaskImportModal';
 
 const DASHBOARD_TASK_TYPE_KEY = 'ACADEMICO';
 
@@ -40,6 +43,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<DashboardFiltersState>(EMPTY_DASHBOARD_FILTERS);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Instantiates the reschedule hook
   const { rescheduleToTomorrow, reschedulingId } = useQuickReschedule((updatedTask) => {
@@ -99,6 +103,15 @@ export default function Dashboard() {
     setSelectedIds(new Set());
   };
 
+  const handleImported = async () => {
+    try {
+      const tasksData = await getUserTasks(periodParam);
+      setTasks(tasksData);
+    } catch (err) {
+      console.error('Failed to refresh tasks after import:', err);
+    }
+  };
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -156,6 +169,15 @@ export default function Dashboard() {
         <div className="print-hide flex items-center gap-4">
           <button
             type="button"
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200"
+          >
+            <UploadIcon />
+            Import
+          </button>
+          <TaskExportButtons tasks={filteredTasks} areas={academicAreas} academicTaskTypes={academicTaskTypes} />
+          <button
+            type="button"
             onClick={() => window.print()}
             className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200"
           >
@@ -167,6 +189,8 @@ export default function Dashboard() {
       </div>
 
       <GpaSummary showCreditSimulator={visibility.creditSimulator} />
+
+      {visibility.creditsAccumulated && <CreditsAccumulatedCard />}
 
       {visibility.programsOverview && <ProgramsOverviewCard />}
 
@@ -251,6 +275,12 @@ export default function Dashboard() {
           )}
         </>
       )}
+
+      <TaskImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImported={handleImported}
+      />
     </PageLayout>
   );
 }

@@ -16,6 +16,8 @@ import { ConfirmOverdueDto } from './dto/confirm-overdue.dto';
 import { BulkTaskIdsDto } from './dto/bulk-task-ids.dto';
 import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { ImportTasksDto } from './dto/import-tasks.dto';
 
 import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -85,6 +87,21 @@ export class TasksController {
     @Body() dto: BulkTaskIdsDto,
   ) {
     return this.tasksService.bulkRemove(user.id, dto.ids);
+  }
+
+  // Excel/CSV import (SheetJS parses the file client-side, see
+  // hooks/useTaskImport.ts on the frontend) - a bulk-create, so same
+  // literal-path-before-:id reasoning as bulk-status/bulk-delete above.
+  // Explicitly throttled tighter than the app default: up to 500 rows means
+  // up to 500 sequential DB writes per request, more expensive than any
+  // other endpoint in this controller.
+  @Post('import')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  importTasks(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ImportTasksDto,
+  ) {
+    return this.tasksService.importTasks(user.id, dto);
   }
 
   @Get(':id')

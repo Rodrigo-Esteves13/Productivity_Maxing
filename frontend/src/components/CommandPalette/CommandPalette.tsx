@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { getUserTasks } from '../../api/userService';
@@ -51,7 +51,7 @@ export default function CommandPalette() {
   // handled separately below, only while open, same split Modal.tsx uses.
   useEffect(() => {
     if (!isAuthenticated) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsOpen((prev) => !prev);
@@ -99,7 +99,7 @@ export default function CommandPalette() {
 
   useEffect(() => {
     if (!isOpen) return;
-    const handleEsc = (e: KeyboardEvent) => {
+    const handleEsc = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') setIsOpen(false);
     };
     window.addEventListener('keydown', handleEsc);
@@ -141,7 +141,7 @@ export default function CommandPalette() {
     }
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setActiveIndex((i) => Math.min(i + 1, items.length - 1));
