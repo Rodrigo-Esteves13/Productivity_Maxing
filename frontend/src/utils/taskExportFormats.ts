@@ -69,10 +69,10 @@ export function tasksToCsv(
   return lines.join('\n') + '\n';
 }
 
-// A pipe cell is escaped by replacing '|' with the HTML entity - the only
-// character that would otherwise break a Markdown table row.
+// Escape backslashes first, then pipes, and normalize newlines to spaces
+// so user-provided content cannot break Markdown table cell formatting.
 function escapeMarkdownCell(value: string): string {
-  return value.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+  return value.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
 }
 
 export function tasksToMarkdown(
