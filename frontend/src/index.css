@@ -68,3 +68,52 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background-color: var(--color-violet-700);
 }
+
+/* Accessibility: adjustable font size (see useAccessibilityPrefs).
+   --font-scale defaults to 1 here so nothing shifts before the hook
+   runs its first effect; the hook then overrides it via inline style
+   on <html> and persists the choice in localStorage. rem-based sizing
+   throughout the app means this one variable scales the whole UI. */
+html {
+  --font-scale: 1;
+  font-size: calc(16px * var(--font-scale));
+}
+
+/* Accessibility: high contrast mode (see useAccessibilityPrefs).
+   Toggled via data-contrast="high" on <html>. Pushes surfaces to pure
+   black/white and brightens the violet accent instead of touching
+   every component's classes individually - same trick as the
+   Nightshade palette itself (override the CSS variables; every
+   Tailwind neutral and violet class picks it up automatically). */
+[data-contrast='high'] {
+  --color-neutral-50: #ffffff;
+  --color-neutral-100: #ffffff;
+  --color-neutral-200: #f5f5f5;
+  --color-neutral-300: #e0e0e0;
+  --color-neutral-400: #cfcfcf;
+  --color-neutral-800: #000000;
+  --color-neutral-900: #000000;
+  --color-neutral-950: #000000;
+  --color-violet-400: #e0b3ff;
+  --color-violet-500: #d18cff;
+  --color-violet-600: #c266ff;
+}
+
+[data-contrast='high'] * {
+  border-color: currentColor !important;
+}
+
+/* Print-friendly dashboard (see the Print button on the Dashboard
+   page). Anything not meant for paper - nav, footer, filters, action
+   buttons, dropdowns - carries the .print-hide class; everything else
+   just switches to plain black-on-white to save ink. */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .print-hide {
+    display: none !important;
+  }
+}

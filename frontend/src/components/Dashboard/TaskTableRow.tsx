@@ -13,19 +13,34 @@ interface TaskTableRowProps {
   academicTaskTypes: AcademicTaskTypeOption[];
   onReschedule?: (e: React.MouseEvent, task: Task) => void;
   isRescheduling?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
-export default function TaskTableRow({ 
-  task, 
+export default function TaskTableRow({
+  task,
   academicTaskTypes,
   onReschedule,
-  isRescheduling = false
+  isRescheduling = false,
+  isSelected,
+  onToggleSelect,
 }: TaskTableRowProps) {
   const academicTypeLabel = resolveOptionLabel(task.academicType, academicTaskTypes);
   const status = getDateStatus(task);
 
   return (
     <tr className="border-b border-neutral-800 hover:bg-neutral-800/30 transition-colors">
+      {onToggleSelect && (
+        <td className="px-4 py-3 align-middle print-hide" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={!!isSelected}
+            onChange={() => onToggleSelect(task.id)}
+            className="accent-violet-500"
+            aria-label={`Select task ${task.title}`}
+          />
+        </td>
+      )}
       <td className="px-4 py-3 align-middle">
         <div>{new Date(task.date).toLocaleDateString()}</div>
         <div className="mt-1 flex flex-col items-start gap-1">

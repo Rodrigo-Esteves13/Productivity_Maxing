@@ -23,7 +23,7 @@ const STACK = ['React', 'TypeScript', 'Tailwind v4', 'NestJS', 'Prisma', 'Supaba
 
 export default function Footer() {
   return (
-    <footer className="relative border-t border-neutral-800 bg-neutral-950">
+    <footer className="print-hide relative border-t border-neutral-800 bg-neutral-950">
       {/* Linha de brilho subtil no topo do footer, para separar bem do conteúdo */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
 

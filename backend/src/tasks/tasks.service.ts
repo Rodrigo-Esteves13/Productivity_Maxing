@@ -68,7 +68,7 @@ export class TasksService {
       // constraints) que não devem ir para o cliente.
       this.logger.error('Erro ao criar task', error as Error);
       throw new InternalServerErrorException(
-        'Erro ao criar tarefa. Tenta novamente.',
+        'Failed to create task. Please try again.',
       );
     }
   }
@@ -294,6 +294,54 @@ export class TasksService {
     // Mesma razão do update() acima: where: { id, userId } em vez de só
     // { id }, para a condição de posse não depender só do findOne() prévio.
     return this.prisma.task.delete({ where: { id, userId } });
+  }
+
+  /**
+   * Bulk equivalent of update() for progressStatus only (see
+   * BulkUpdateStatusDto for why it's scoped this narrowly). updateMany()
+   * naturally enforces ownership via the userId in `where` - any id in
+   * `ids` that isn't this user's task is just silently excluded from the
+   * match, same "not found or no access" outcome as the single-task
+   * path, just without a thrown error per missing id (a partial bulk
+   * selection shouldn't fail the whole batch).
+   *
+   * completedAt is handled in two passes so the streak logic from the
+   * single-task update() still holds: a task newly moving to COMPLETED
+   * gets a fresh completedAt, but one already COMPLETED that's being
+   * moved to another status has completedAt cleared - never do we
+   * "reset" the completedAt of a task that was already COMPLETED and
+   * stays that way, since it's not part of either matched batch below.
+   */
+  async bulkUpdateStatus(
+    userId: string,
+    ids: string[],
+    progressStatus: ProgressStatus,
+  ) {
+    if (progressStatus === 'COMPLETED') {
+      const result = await this.prisma.task.updateMany({
+        where: { id: { in: ids }, userId, progressStatus: { not: 'COMPLETED' } },
+        data: { progressStatus, completedAt: new Date() },
+      });
+      return { count: result.count };
+    }
+
+    const result = await this.prisma.task.updateMany({
+      where: { id: { in: ids }, userId, progressStatus: 'COMPLETED' },
+      data: { progressStatus, completedAt: null },
+    });
+    const untouched = await this.prisma.task.updateMany({
+      where: { id: { in: ids }, userId, progressStatus: { not: 'COMPLETED' } },
+      data: { progressStatus },
+    });
+    return { count: result.count + untouched.count };
+  }
+
+  /** Bulk delete - same ownership scoping as bulkUpdateStatus() above. */
+  async bulkRemove(userId: string, ids: string[]) {
+    const result = await this.prisma.task.deleteMany({
+      where: { id: { in: ids }, userId },
+    });
+    return { count: result.count };
   }
 
   async getMeta() {

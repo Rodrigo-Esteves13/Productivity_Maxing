@@ -185,6 +185,23 @@ export async function deleteTask(id: string): Promise<void> {
   await api.delete(`/tasks/${id}`);
 }
 
+// BULK ACTIONS (multi-select on the Dashboard table)
+export async function bulkUpdateTaskStatus(
+  ids: string[],
+  progressStatus: Task['progressStatus'],
+): Promise<{ count: number }> {
+  const response = await api.patch<{ count: number }>('/tasks/bulk-status', {
+    ids,
+    progressStatus,
+  });
+  return response.data;
+}
+
+export async function bulkDeleteTasks(ids: string[]): Promise<{ count: number }> {
+  const response = await api.post<{ count: number }>('/tasks/bulk-delete', { ids });
+  return response.data;
+}
+
 export const exportMyData = async (): Promise<unknown> => {
   const response = await api.get('/users/me/export');
   return response.data;

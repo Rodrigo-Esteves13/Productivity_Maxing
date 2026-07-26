@@ -7,6 +7,7 @@ import PageHeader from '../components/Layout/PageHeader';
 import ProfileHeaderCard from '../components/Profile/ProfileHeaderCard';
 import DeleteAccountSection from '../components/Profile/DeleteAccountSection';
 import GoogleCalendarCard from '../components/Profile/GoogleCalendarCard';
+import AccessibilitySettingsCard from '../components/Profile/AccessibilitySettingsCard';
 import DeleteAccountModal from '../components/Profile/DeleteAccountModal';
 import EditProfileModal from '../components/Profile/EditProfileModal';
 import ActionButton from '../components/UI/ActionButton';
@@ -48,6 +49,8 @@ export default function Profile() {
       <ProfileHeaderCard user={user} initials={initials} stats={stats} isLoadingStats={stats.isLoading} />
 
       <GoogleCalendarCard />
+
+      <AccessibilitySettingsCard />
 
       <DeleteAccountSection onOpen={deleteAccount.open} />
 

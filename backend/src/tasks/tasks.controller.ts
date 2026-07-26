@@ -13,6 +13,8 @@ import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ConfirmOverdueDto } from './dto/confirm-overdue.dto';
+import { BulkTaskIdsDto } from './dto/bulk-task-ids.dto';
+import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
@@ -60,6 +62,29 @@ export class TasksController {
   @Get('overdue-checkins')
   findPendingOverdueCheckins(@CurrentUser() user: AuthenticatedUser) {
     return this.tasksService.findPendingOverdueCheckins(user.id);
+  }
+
+  // Mesma razão do overdue-checkins acima: rotas literais têm de vir
+  // antes de @Get/@Patch/@Delete(':id'), senão "bulk-status"/"bulk-delete"
+  // seriam interpretados como um :id.
+  @Patch('bulk-status')
+  bulkUpdateStatus(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: BulkUpdateStatusDto,
+  ) {
+    return this.tasksService.bulkUpdateStatus(
+      user.id,
+      dto.ids,
+      dto.progressStatus,
+    );
+  }
+
+  @Post('bulk-delete')
+  bulkRemove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: BulkTaskIdsDto,
+  ) {
+    return this.tasksService.bulkRemove(user.id, dto.ids);
   }
 
   @Get(':id')

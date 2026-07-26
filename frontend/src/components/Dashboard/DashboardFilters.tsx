@@ -3,6 +3,7 @@ import Input from '../UI/Input';
 import Select from '../UI/Select';
 import Button from '../UI/Button';
 import { formatEnumLabel } from '../../utils/formatEnumLabel';
+import SavedFilterViews from './SavedFilterViews';
 import type { Area, AcademicTaskTypeOption } from '../../types/models';
 import type { DashboardFiltersState } from './dashboardFilters.types';
 
@@ -119,6 +120,8 @@ export default function DashboardFilters({
           )}
         </div>
       </div>
+
+      <SavedFilterViews filters={filters} hasActiveFilters={hasActiveFilters} onApply={onChange} />
     </div>
   );
 }

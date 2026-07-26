@@ -14,13 +14,17 @@ interface TaskCardProps {
   // Novas props adicionadas aqui!
   onReschedule?: (e: React.MouseEvent, task: Task) => void;
   isRescheduling?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
-export default function TaskCard({ 
-  task, 
+export default function TaskCard({
+  task,
   academicTaskTypes,
   onReschedule,
-  isRescheduling = false
+  isRescheduling = false,
+  isSelected,
+  onToggleSelect,
 }: TaskCardProps) {
   const academicTypeLabel = resolveOptionLabel(task.academicType, academicTaskTypes);
   const status = getDateStatus(task);
@@ -28,13 +32,24 @@ export default function TaskCard({
   return (
     <div className="border-b border-neutral-800 p-4 last:border-b-0">
       <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="min-w-0">
+        <div className="min-w-0 flex items-start gap-2">
+          {onToggleSelect && (
+            <input
+              type="checkbox"
+              checked={!!isSelected}
+              onChange={() => onToggleSelect(task.id)}
+              className="accent-violet-500 print-hide mt-1"
+              aria-label={`Select task ${task.title}`}
+            />
+          )}
+          <div className="min-w-0">
           <div className="flex items-center gap-2 text-xs font-medium text-white">
             {task.area?.colorHex && <ColorDot color={task.area.colorHex} />}
             <span className="truncate">{task.area?.name || 'N/A'}</span>
           </div>
           <div className="font-medium text-neutral-100 mt-1 break-words">{task.title}</div>
           {task.topics && <div className="text-xs text-neutral-500 mt-0.5 break-words">{task.topics}</div>}
+          </div>
         </div>
         <div className="flex-shrink-0 text-right flex flex-col items-end">
           <DateStatusBadge status={status} />
