@@ -130,7 +130,7 @@ export class UsersService {
       }),
       this.prisma.apiKey.findMany({
         where: { userId: id },
-        select: { id: true, name: true, createdAt: true, lastUsed: true },
+        select: { id: true, name: true, scope: true, createdAt: true, lastUsed: true },
       }),
     ]);
 

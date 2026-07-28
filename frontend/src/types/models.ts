@@ -246,11 +246,18 @@ export interface ApiKey {
   lastUsed: string | null;
 }
 
+// Only ADMIN if the key was explicitly created with that scope by an
+// admin user - see backend AuthService.generateApiKey(), which refuses
+// to honor a requested ADMIN scope from anyone whose own Role isn't
+// already ADMIN.
+export type ApiKeyScope = 'TASKS' | 'ADMIN';
+
 // What GET /auth/api-keys actually returns - never includes keyHash or
 // userId, just enough for the user to recognize and manage their keys.
 export interface ApiKeySummary {
   id: string;
   name: string;
+  scope: ApiKeyScope;
   createdAt: string;
   lastUsed: string | null;
 }

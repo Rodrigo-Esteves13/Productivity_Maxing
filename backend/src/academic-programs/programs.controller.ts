@@ -13,13 +13,15 @@ import { ProgramsService } from './programs.service';
 import { PeriodsService } from './periods.service';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { UpdateProgramDto } from './dto/update-program.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
+// Programas são dados do PRÓPRIO user, mesmo perfil de risco que Tasks/
+// Periods - ver a nota equivalente em periods.controller.ts.
 @ApiTags('AcademicProgram')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtOrApiKeyAuthGuard)
 @Controller('programs')
 export class ProgramsController {
   constructor(

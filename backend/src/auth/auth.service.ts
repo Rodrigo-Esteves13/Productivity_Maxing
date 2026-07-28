@@ -10,7 +10,7 @@ import { randomUUID, randomBytes, scrypt as scryptCallback } from 'crypto';
 import { promisify } from 'util';
 import { createClient } from '@supabase/supabase-js';
 import { fileTypeFromBuffer } from 'file-type';
-import { Provider, User, Prisma } from '@prisma/client';
+import { Provider, User, Prisma, Role, ApiKeyScope } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import 'multer';
 import {
@@ -798,12 +798,27 @@ export class AuthService {
   async listApiKeys(userId: string) {
     return this.prisma.apiKey.findMany({
       where: { userId },
-      select: { id: true, name: true, createdAt: true, lastUsed: true },
+      select: { id: true, name: true, scope: true, createdAt: true, lastUsed: true },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async generateApiKey(userId: string, name: string) {
+  async generateApiKey(
+    userId: string,
+    name: string,
+    requestedScope: ApiKeyScope,
+    requesterRole: Role,
+  ) {
+    // Defense in depth: never trust the requested scope blindly, even
+    // though the DTO/controller should already be doing this check. Only
+    // an ADMIN user can ever mint an ADMIN-scoped key - a regular user
+    // requesting ADMIN scope silently gets TASKS instead of a 403, same
+    // as how a non-admin can't make themselves admin some other way.
+    const scope =
+      requestedScope === 'ADMIN' && requesterRole === 'ADMIN'
+        ? 'ADMIN'
+        : 'TASKS';
+
     // 32 bytes de entropia pura
     const rawToken = randomBytes(32).toString('base64url');
 
@@ -819,14 +834,18 @@ export class AuthService {
     );
 
     await this.prisma.apiKey.create({
-      data: { userId, keyHash, name },
+      data: { userId, keyHash, name, scope },
     });
 
-    this.logger.log(`API Key gerada para o utilizador: ${userId}`);
+    this.logger.log(
+      `API Key gerada para o utilizador: ${userId} (scope: ${scope})`,
+    );
     return { apiKey: rawToken };
   }
 
-  async validateApiKey(incomingToken: string): Promise<User | null> {
+  async validateApiKey(
+    incomingToken: string,
+  ): Promise<{ user: User; scope: ApiKeyScope } | null> {
     const secret = this.requireApiKeySecret();
 
     // Repetimos o mesmo cálculo (agora assíncrono) para verificar
@@ -849,7 +868,7 @@ export class AuthService {
           this.logger.error('Erro ao atualizar lastUsed da API Key', e),
         );
 
-      return apiKeyRecord.user;
+      return { user: apiKeyRecord.user, scope: apiKeyRecord.scope };
     }
 
     this.logger.warn('Tentativa falhada de uso de API Key.');

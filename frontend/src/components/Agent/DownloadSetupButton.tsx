@@ -49,7 +49,10 @@ export default function DownloadSetupButton() {
       // sítio errado.
       const [exeResponse, keyResult] = await Promise.all([
         fetch(VANILLA_EXE_URL),
-        createApiKey(`agent-desktop-${new Date().toISOString().slice(0, 10)}`),
+        // Explicit 'TASKS' - this key ends up embedded (base64-only, not
+        // encrypted) in a downloadable .exe, so it must never be able to
+        // reach admin routes, regardless of what the default might be.
+        createApiKey(`agent-desktop-${new Date().toISOString().slice(0, 10)}`, 'TASKS'),
       ]);
 
       if (!exeResponse.ok) {
