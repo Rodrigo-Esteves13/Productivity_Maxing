@@ -30,6 +30,18 @@ enum Role {
   ADMIN
 }
 
+// TASKS: can only do what the agent/task automation already needed
+// (tasks, agent config). ADMIN: can also manage the global catalog
+// (Areas, TaskTypes) via API key, same as an admin's browser session.
+// Kept as a real Postgres enum (not the generic EnumOption table used
+// for Difficulty/ProgressStatus/etc.) because this is a security control,
+// not editable product content - see Role/Provider above for the same
+// reasoning.
+enum ApiKeyScope {
+  TASKS
+  ADMIN
+}
+
 // Tipos de evento de segurança registados. Por agora só há um gatilho (o
 // ThrottlerGuard a bloquear um IP), mas fica como enum já para permitir
 // adicionar outros tipos de deteção no futuro (ex: falhas de login
@@ -206,11 +218,15 @@ model AcademicPeriod {
 }
 
 model ApiKey {
-  id        String    @id @default(uuid())
+  id        String      @id @default(uuid())
   userId    String
-  keyHash   String    @unique
+  keyHash   String      @unique
   name      String
-  createdAt DateTime  @default(now())
+  // Defaults to TASKS so every pre-existing key (including whatever the
+  // agent already has embedded) keeps exactly its current, narrower
+  // access after this migration - nothing is silently upgraded.
+  scope     ApiKeyScope @default(TASKS)
+  createdAt DateTime    @default(now())
   lastUsed  DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

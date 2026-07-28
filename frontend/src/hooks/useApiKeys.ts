@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getApiKeys, createApiKey, revokeApiKey } from '../api/userService';
-import type { ApiKeySummary } from '../types/models';
+import type { ApiKeySummary, ApiKeyScope } from '../types/models';
 
 interface UseApiKeysReturn {
   keys: ApiKeySummary[];
@@ -11,7 +11,7 @@ interface UseApiKeysReturn {
   // depois de o user fechar o aviso é intencional, não dá para voltar a
   // mostrar a mesma key outra vez.
   newlyCreatedKey: string | null;
-  createKey: (name: string) => Promise<void>;
+  createKey: (name: string, scope?: ApiKeyScope) => Promise<void>;
   removeKey: (id: string) => Promise<void>;
   clearNewKey: () => void;
 }
@@ -39,10 +39,10 @@ export function useApiKeys(): UseApiKeysReturn {
   }, [refresh]);
 
   const createKey = useCallback(
-    async (name: string) => {
+    async (name: string, scope: ApiKeyScope = 'TASKS') => {
       setIsCreating(true);
       try {
-        const { apiKey } = await createApiKey(name);
+        const { apiKey } = await createApiKey(name, scope);
         setNewlyCreatedKey(apiKey);
         await refresh();
       } finally {

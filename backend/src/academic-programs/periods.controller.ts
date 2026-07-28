@@ -12,13 +12,17 @@ import { PeriodsService } from './periods.service';
 import { CreatePeriodDto } from './dto/create-period.dto';
 import { UpdatePeriodDto } from './dto/update-period.dto';
 import { ArchivePeriodDto } from './dto/archive-period.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
+// Períodos são dados do PRÓPRIO user (ownership verificado via
+// findOwnedOrThrow em cada método do service), não um catálogo global
+// como Areas - por isso aceitam API Key sem exigir scope ADMIN, mesmo
+// perfil de risco que Tasks já tinha (ver JwtOrApiKeyAuthGuard).
 @ApiTags('AcademicPeriod')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtOrApiKeyAuthGuard)
 @Controller('periods')
 export class PeriodsController {
   constructor(private readonly periodsService: PeriodsService) {}

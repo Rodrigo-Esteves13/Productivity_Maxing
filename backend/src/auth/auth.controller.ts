@@ -33,13 +33,14 @@ type MulterLimitsWithFieldNestingDepth = NonNullable<
   fieldNestingDepth?: number;
 };
 import type { Request, Response } from 'express';
-import { User } from '@prisma/client';
+import { User, Role } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { SetPasswordDto } from './dto/set-password.dto';
+import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { GoogleLinkGuard } from './guards/google-link.guard';
@@ -425,9 +426,14 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async createApiKey(
     @CurrentUser() user: AuthenticatedUser,
-    @Body('name') name: string,
+    @Body() dto: CreateApiKeyDto,
   ) {
-    return this.authService.generateApiKey(user.id, name || 'Generic API Key');
+    return this.authService.generateApiKey(
+      user.id,
+      dto.name || 'Generic API Key',
+      dto.scope ?? 'TASKS',
+      user.role as Role,
+    );
   }
 
   @Delete('api-keys/:id')

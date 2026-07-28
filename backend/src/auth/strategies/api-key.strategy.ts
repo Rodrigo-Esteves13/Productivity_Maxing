@@ -14,11 +14,16 @@ export class ApiKeyStrategy extends PassportStrategy(
     super({ header: 'x-api-key', prefix: '' }, false);
   }
   async validate(apiKey: string) {
-    const user = await this.authService.validateApiKey(apiKey);
+    const result = await this.authService.validateApiKey(apiKey);
 
-    if (!user) {
+    if (!result) {
       throw new UnauthorizedException('Invalid or revoked API key.');
     }
-    return user;
+
+    // apiKeyScope only ever gets set here, on the API-key path - a normal
+    // JWT session (see JwtStrategy) never sets it, which is exactly the
+    // signal ApiKeyScopeGuard uses to tell "came in via API key" apart
+    // from "real session, already fully trusted".
+    return { ...result.user, apiKeyScope: result.scope };
   }
 }

@@ -1,6 +1,6 @@
 // src/api/userService.ts
 import api from './client';
-import type { User, Area, Task, TaskMeta, Role, ApiKeySummary, ImportTaskRow, ImportTasksResult } from '../types/models';
+import type { User, Area, Task, TaskMeta, Role, ApiKeySummary, ApiKeyScope, ImportTaskRow, ImportTasksResult } from '../types/models';
 
 // AUTH ENDPOINTS
 // Login/registo já não devolvem o JWT no corpo - o backend define-o num
@@ -245,8 +245,14 @@ export const getApiKeys = async (): Promise<ApiKeySummary[]> => {
 // A resposta traz a raw key em texto - é a ÚNICA vez que ela existe em
 // texto simples, o backend só guarda o hash. Mostra-a uma vez ao user e
 // depois esquece.
-export const createApiKey = async (name: string): Promise<{ apiKey: string }> => {
-  const response = await api.post<{ apiKey: string }>('/auth/api-keys', { name });
+// scope defaults to 'TASKS' - the backend refuses an 'ADMIN' request from
+// anyone whose own Role isn't already ADMIN (see AuthService.generateApiKey),
+// this is just what gets sent, not what's actually granted.
+export const createApiKey = async (
+  name: string,
+  scope: ApiKeyScope = 'TASKS',
+): Promise<{ apiKey: string }> => {
+  const response = await api.post<{ apiKey: string }>('/auth/api-keys', { name, scope });
   return response.data;
 };
 
