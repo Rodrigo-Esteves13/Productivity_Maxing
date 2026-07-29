@@ -6,7 +6,10 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { UpdateProgramDto } from './dto/update-program.dto';
-import { computeCreditWeightedAverage, computeCreditsSummary } from './grade-average.util';
+import {
+  computeCreditWeightedAverage,
+  computeCreditsSummary,
+} from './grade-average.util';
 
 @Injectable()
 export class ProgramsService {

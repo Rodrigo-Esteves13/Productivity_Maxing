@@ -13,7 +13,7 @@ export class CreateApiKeyDto {
     enum: ApiKeyScope,
     example: ApiKeyScope.TASKS,
     description:
-      'Defaults to TASKS. Requesting ADMIN only succeeds if the requester\'s own Role is ADMIN - see AuthService.generateApiKey().',
+      "Defaults to TASKS. Requesting ADMIN only succeeds if the requester's own Role is ADMIN - see AuthService.generateApiKey().",
   })
   @IsOptional()
   @IsEnum(ApiKeyScope)

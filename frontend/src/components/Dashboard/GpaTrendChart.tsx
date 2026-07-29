@@ -1,4 +1,15 @@
 import { useMemo } from 'react';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Dot,
+} from 'recharts';
+import type { DotProps } from 'recharts';
 import type { PeriodComparisonEntry } from '../../types/models';
 
 interface GpaTrendChartProps {
@@ -6,96 +17,118 @@ interface GpaTrendChartProps {
   scale: string;
 }
 
-const WIDTH = 600;
-const HEIGHT = 140;
-const PADDING_X = 28;
-const PADDING_Y = 16;
-
-// Parses a "0-20" style scale into its numeric ceiling, for the chart's
-// y-axis. Falls back to a sane default if the format is ever different.
-function scaleMax(scale: string): number {
-  const parts = scale.split('-').map(Number);
-  const max = parts[1];
-  return Number.isFinite(max) && max > 0 ? max : 20;
+// Parses a "0-20" style scale into its numeric floor/ceiling, for the
+// chart's y-axis. Falls back to a sane default if the format is ever
+// different.
+function parseScale(scale: string): { min: number; max: number } {
+  const [min, max] = scale.split('-').map(Number);
+  return Number.isFinite(min) && Number.isFinite(max) && max > min
+    ? { min, max }
+    : { min: 0, max: 20 };
 }
 
-// Small dependency-free SVG line chart - avoids pulling in a charting
-// library just for this one widget. Periods are already ordered by
-// startDate asc (see ProgramsService.getPeriodsComparison on the
-// backend); periods without a graded task yet (average === null) are
-// skipped, a line can't be drawn through a gap.
+function CustomTooltip({
+  active,
+  payload,
+  scale,
+}: {
+  active?: boolean;
+  payload?: { payload: PeriodComparisonEntry }[];
+  scale: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const entry = payload[0].payload;
+  return (
+    <div className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 shadow-xl">
+      <p className="text-xs font-medium text-neutral-200">{entry.periodName}</p>
+      <p className="text-sm font-bold text-violet-400">
+        {entry.average?.toFixed(2)} <span className="text-neutral-500 font-normal">/ {scale.split('-')[1] ?? scale}</span>
+      </p>
+      {entry.isArchived && <p className="text-[10px] text-neutral-500">Archived</p>}
+    </div>
+  );
+}
+
+// Custom dot: hollow ring for archived periods, solid violet for the active
+// one - active/currently-tracked period stands out at a glance.
+function TrendDot(props: DotProps & { payload?: PeriodComparisonEntry }) {
+  const { cx, cy, payload } = props;
+  if (cx === undefined || cy === undefined) return null;
+  const archived = payload?.isArchived;
+  return (
+    <Dot
+      cx={cx}
+      cy={cy}
+      r={4}
+      fill={archived ? '#171717' : '#a78bfa'}
+      stroke="#a78bfa"
+      strokeWidth={2}
+    />
+  );
+}
+
+// Period-over-period GPA trend, rendered with Recharts (gradient area fill,
+// animated draw-in, themed tooltip) instead of a hand-rolled SVG.
+// Periods are already ordered by startDate asc (see
+// ProgramsService.getPeriodsComparison on the backend); periods without a
+// graded task yet (average === null) are dropped, a line can't be drawn
+// through a gap.
 export default function GpaTrendChart({ entries, scale }: GpaTrendChartProps) {
-  // All hooks run unconditionally, before the "not enough data" early
-  // return below - conditional returns can only happen after every hook
-  // call, per the rules of hooks.
-  const graded = useMemo(
-    () =>
-      entries.filter(
-        (e): e is PeriodComparisonEntry & { average: number } => e.average !== null,
-      ),
+  const { min, max } = useMemo(() => parseScale(scale), [scale]);
+
+  const data = useMemo(
+    () => entries.filter((e) => e.average !== null),
     [entries],
   );
 
-  const { points, linePath, areaPath } = useMemo(() => {
-    const max = scaleMax(scale);
-    const usableWidth = WIDTH - PADDING_X * 2;
-    const usableHeight = HEIGHT - PADDING_Y * 2;
-
-    const pts = graded.map((entry, index) => {
-      const x = PADDING_X + (index / Math.max(graded.length - 1, 1)) * usableWidth;
-      const clamped = Math.min(Math.max(entry.average, 0), max);
-      const y = PADDING_Y + usableHeight - (clamped / max) * usableHeight;
-      return { x, y, entry };
-    });
-
-    const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-    const area =
-      pts.length > 0
-        ? `${line} L ${pts[pts.length - 1].x} ${HEIGHT - PADDING_Y} L ${pts[0].x} ${HEIGHT - PADDING_Y} Z`
-        : '';
-
-    return { points: pts, linePath: line, areaPath: area };
-  }, [graded, scale]);
-
-  if (graded.length < 2) return null;
+  if (data.length < 2) return null;
 
   return (
-    <svg
-      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-      className="w-full h-32"
-      preserveAspectRatio="none"
-      role="img"
-      aria-label="GPA trend across periods"
-    >
-      <path d={areaPath} fill="url(#gpa-trend-gradient)" opacity={0.25} />
-      <path d={linePath} fill="none" stroke="#a78bfa" strokeWidth={2} />
-      {points.map((p, i) => (
-        <g key={p.entry.periodId}>
-          <circle
-            cx={p.x}
-            cy={p.y}
-            r={3.5}
-            fill={p.entry.isArchived ? '#737373' : '#a78bfa'}
+    <div className="h-48 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 12, right: 12, bottom: 0, left: 0 }}>
+          <defs>
+            <linearGradient id="gpaTrendFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.35} />
+              <stop offset="100%" stopColor="#a78bfa" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+
+          <CartesianGrid stroke="#262626" strokeDasharray="3 3" vertical={false} />
+
+          <XAxis
+            dataKey="periodName"
+            tick={{ fill: '#737373', fontSize: 11 }}
+            axisLine={{ stroke: '#404040' }}
+            tickLine={false}
+            interval="preserveStartEnd"
           />
-          <text
-            x={p.x}
-            y={HEIGHT - 2}
-            fontSize={9}
-            fill="#737373"
-            textAnchor={i === 0 ? 'start' : i === points.length - 1 ? 'end' : 'middle'}
-          >
-            {p.entry.periodName.length > 12
-              ? `${p.entry.periodName.slice(0, 11)}…`
-              : p.entry.periodName}
-          </text>
-        </g>
-      ))}
-      <defs>
-        <linearGradient id="gpa-trend-gradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#a78bfa" />
-          <stop offset="100%" stopColor="#a78bfa" stopOpacity={0} />
-        </linearGradient>
-      </defs>
-    </svg>
+          <YAxis
+            domain={[min, max]}
+            tick={{ fill: '#737373', fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+            width={36}
+          />
+
+          <Tooltip
+            content={<CustomTooltip scale={scale} />}
+            cursor={{ stroke: '#a78bfa', strokeDasharray: '3 3', strokeOpacity: 0.5 }}
+          />
+
+          <Area
+            type="monotone"
+            dataKey="average"
+            stroke="#a78bfa"
+            strokeWidth={2.5}
+            fill="url(#gpaTrendFill)"
+            dot={<TrendDot />}
+            activeDot={{ r: 6, fill: '#a78bfa', stroke: '#171717', strokeWidth: 2 }}
+            animationDuration={600}
+            isAnimationActive
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
   );
 }

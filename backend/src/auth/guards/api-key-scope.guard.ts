@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ApiKeyScope } from '@prisma/client';
 import { REQUIRE_API_KEY_SCOPE_KEY } from '../decorators/require-api-key-scope.decorator';

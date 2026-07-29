@@ -90,4 +90,3 @@ export class AreasController {
     return this.areasService.remove(id);
   }
 }
-
