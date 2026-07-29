@@ -39,7 +39,7 @@ export class ImportTaskRowDto {
   @ApiPropertyOptional({
     example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
     description:
-      'Period ID. Optional - if omitted, uses the user\'s active period, same as POST /tasks.',
+      "Period ID. Optional - if omitted, uses the user's active period, same as POST /tasks.",
   })
   @IsOptional()
   @IsString()
@@ -54,7 +54,8 @@ export class ImportTaskRowDto {
 
   @ApiProperty({
     example: '2026-06-30T00:00:00Z',
-    description: 'Task date (ISO format). The frontend converts the spreadsheet cell to ISO before sending.',
+    description:
+      'Task date (ISO format). The frontend converts the spreadsheet cell to ISO before sending.',
   })
   @IsDateString()
   date: string;
@@ -77,13 +78,19 @@ export class ImportTaskRowDto {
   @MaxLength(100)
   academicType?: string;
 
-  @ApiPropertyOptional({ example: 'Limits, Derivatives', description: 'Topics to study' })
+  @ApiPropertyOptional({
+    example: 'Limits, Derivatives',
+    description: 'Topics to study',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(5000)
   topics?: string;
 
-  @ApiPropertyOptional({ example: 25.5, description: 'Weight toward final grade (%)' })
+  @ApiPropertyOptional({
+    example: 25.5,
+    description: 'Weight toward final grade (%)',
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -93,7 +100,8 @@ export class ImportTaskRowDto {
   @ApiPropertyOptional({
     enum: Difficulty,
     example: Difficulty.MEDIUM,
-    description: 'Perceived difficulty. Defaults to MEDIUM when the spreadsheet column is empty.',
+    description:
+      'Perceived difficulty. Defaults to MEDIUM when the spreadsheet column is empty.',
   })
   @IsOptional()
   @IsEnum(Difficulty)
@@ -115,7 +123,10 @@ export class ImportTaskRowDto {
   @Max(20)
   targetGrade?: number;
 
-  @ApiPropertyOptional({ example: 14.5, description: 'Actual grade obtained (0-20)' })
+  @ApiPropertyOptional({
+    example: 14.5,
+    description: 'Actual grade obtained (0-20)',
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -126,7 +137,8 @@ export class ImportTaskRowDto {
 export class ImportTasksDto {
   @ApiProperty({
     type: [ImportTaskRowDto],
-    description: 'Rows parsed from the uploaded spreadsheet, one per task to create.',
+    description:
+      'Rows parsed from the uploaded spreadsheet, one per task to create.',
   })
   @IsArray()
   @ArrayMinSize(1)

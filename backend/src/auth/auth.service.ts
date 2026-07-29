@@ -798,7 +798,13 @@ export class AuthService {
   async listApiKeys(userId: string) {
     return this.prisma.apiKey.findMany({
       where: { userId },
-      select: { id: true, name: true, scope: true, createdAt: true, lastUsed: true },
+      select: {
+        id: true,
+        name: true,
+        scope: true,
+        createdAt: true,
+        lastUsed: true,
+      },
       orderBy: { createdAt: 'desc' },
     });
   }

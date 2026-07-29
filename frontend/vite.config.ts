@@ -97,7 +97,7 @@ export default defineConfig({
     }),
   ],
   build: {
-    chunkSizeWarningLimit: 800,
+    chunkSizeWarningLimit: 1500,
   },
   server: {
     host: true,

@@ -320,7 +320,11 @@ export class TasksService {
   ) {
     if (progressStatus === 'COMPLETED') {
       const result = await this.prisma.task.updateMany({
-        where: { id: { in: ids }, userId, progressStatus: { not: 'COMPLETED' } },
+        where: {
+          id: { in: ids },
+          userId,
+          progressStatus: { not: 'COMPLETED' },
+        },
         data: { progressStatus, completedAt: new Date() },
       });
       return { count: result.count };
@@ -360,7 +364,8 @@ export class TasksService {
    * not once per row).
    */
   async importTasks(userId: string, dto: ImportTasksDto) {
-    const activePeriodId = await this.periodsService.resolveActivePeriodId(userId);
+    const activePeriodId =
+      await this.periodsService.resolveActivePeriodId(userId);
 
     let created = 0;
     const results: {
