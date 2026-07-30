@@ -174,6 +174,12 @@ model AcademicProgram {
   isActive   Boolean  @default(true)
   order      Int      @default(0)
   createdAt  DateTime @default(now())
+  // Default for whether the final (credit-weighted) average is rounded to
+  // the nearest whole number, e.g. some unis round the semester/course
+  // final grade even though individual test grades stay decimal.
+  // AcademicPeriod.roundFinalGrade can override this per period; null
+  // there means "inherit this default".
+  roundFinalGrade Boolean @default(true)
 
   user           User             @relation("UserPrograms", fields: [userId], references: [id], onDelete: Cascade)
   periods        AcademicPeriod[]
@@ -207,6 +213,10 @@ model AcademicPeriod {
   // level - a partial unique index would need raw SQL in the migration).
   isPinned   Boolean   @default(false)
   createdAt  DateTime  @default(now())
+  // Overrides AcademicProgram.roundFinalGrade for this period specifically.
+  // null = inherit the program's default (the common case) - only set this
+  // when a period genuinely needs to diverge from its program's setting.
+  roundFinalGrade Boolean?
 
   program        AcademicProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
   tasks          Task[]

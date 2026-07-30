@@ -26,7 +26,7 @@ export interface AcademicContextType {
   // Creates a new program (dashboard) and already attaches a first period
   // to it, activating everything right after - this is what "+ Create new
   // program" in the selector calls.
-  createProgram: (name: string) => Promise<void>;
+  createProgram: (name: string, roundFinalGrade?: boolean) => Promise<void>;
   // Permanently deletes a program (only allowed if it has no tasks left in
   // it - the backend enforces this and returns a 409 otherwise). If the
   // deleted program was the active one, falls back to another remaining

@@ -9,6 +9,7 @@ import { UpdateProgramDto } from './dto/update-program.dto';
 import {
   computeCreditWeightedAverage,
   computeCreditsSummary,
+  resolveRoundFinalGrade,
 } from './grade-average.util';
 
 @Injectable()
@@ -44,6 +45,8 @@ export class ProgramsService {
         name: dto.name,
         gradeScale: dto.gradeScale ?? '0-20',
         order: dto.order ?? 0,
+        // Omitted (undefined) falls through to the schema default (true).
+        roundFinalGrade: dto.roundFinalGrade,
       },
     });
   }
@@ -104,10 +107,15 @@ export class ProgramsService {
     const areas = await this.prisma.area.findMany({
       select: { id: true, credits: true },
     });
+    const result = computeCreditWeightedAverage(
+      tasks,
+      areas,
+      program.roundFinalGrade,
+    );
     return {
       programId: program.id,
       programName: program.name,
-      ...computeCreditWeightedAverage(tasks, areas),
+      ...result,
     };
   }
 
@@ -135,6 +143,7 @@ export class ProgramsService {
       program.gradeScale,
       tasks,
       areas,
+      program.roundFinalGrade,
     );
   }
 
@@ -144,7 +153,7 @@ export class ProgramsService {
    * a university GPA makes no sense, different scales/contexts).
    */
   async getPeriodsComparison(userId: string, id: string) {
-    await this.findOwnedOrThrow(userId, id);
+    const program = await this.findOwnedOrThrow(userId, id);
     const periods = await this.prisma.academicPeriod.findMany({
       where: { programId: id },
       orderBy: { startDate: 'asc' },
@@ -159,12 +168,23 @@ export class ProgramsService {
       select: { id: true, credits: true },
     });
 
-    return periods.map((period) => ({
-      periodId: period.id,
-      periodName: period.name,
-      startDate: period.startDate,
-      isArchived: period.isArchived,
-      ...computeCreditWeightedAverage(period.tasks, areas),
-    }));
+    return periods.map((period) => {
+      const shouldRound = resolveRoundFinalGrade(
+        program.roundFinalGrade,
+        period.roundFinalGrade,
+      );
+      const result = computeCreditWeightedAverage(
+        period.tasks,
+        areas,
+        shouldRound,
+      );
+      return {
+        periodId: period.id,
+        periodName: period.name,
+        startDate: period.startDate,
+        isArchived: period.isArchived,
+        ...result,
+      };
+    });
   }
 }

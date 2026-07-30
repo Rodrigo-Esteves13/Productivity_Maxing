@@ -199,8 +199,8 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     // nothing.
   };
 
-  const createProgram = async (name: string) => {
-    const program = await createProgramRequest({ name });
+  const createProgram = async (name: string, roundFinalGrade?: boolean) => {
+    const program = await createProgramRequest({ name, roundFinalGrade });
     const period = await createPeriodRequest({
       programId: program.id,
       name: 'Period 1',

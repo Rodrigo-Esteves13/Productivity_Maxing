@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsDateString,
+  IsBoolean,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -39,4 +40,14 @@ export class CreatePeriodDto {
   @IsOptional()
   @IsDateString()
   endDate?: string;
+
+  @ApiPropertyOptional({
+    example: null,
+    description:
+      'Overrides the program default for rounding the final average. true/false to override, null (or omitted) to inherit the program setting.',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  roundFinalGrade?: boolean | null;
 }

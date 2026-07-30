@@ -121,6 +121,10 @@ export interface AcademicProgram {
   isActive: boolean;
   order: number;
   createdAt: string;
+  // Default for whether each subject's final grade is rounded to the
+  // nearest whole number before the credit-weighted average is computed.
+  // Periods can override this individually (see AcademicPeriod.roundFinalGrade).
+  roundFinalGrade: boolean;
 }
 
 export interface AcademicPeriod {
@@ -135,6 +139,9 @@ export interface AcademicPeriod {
   // instead of the chronologically most recent one - see togglePeriodPin.
   isPinned: boolean;
   createdAt: string;
+  // Overrides AcademicProgram.roundFinalGrade for this period. null = inherit
+  // the program's default.
+  roundFinalGrade: boolean | null;
 }
 
 // Returned by GET /periods/:id/average and GET /programs/:id/average.

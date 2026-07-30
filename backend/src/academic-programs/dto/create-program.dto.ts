@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsInt,
+  IsBoolean,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -34,4 +35,14 @@ export class CreateProgramDto {
   @IsOptional()
   @IsInt()
   order?: number;
+
+  @ApiPropertyOptional({
+    example: true,
+    description:
+      'Default for whether the final (credit-weighted) average is rounded to the nearest whole number. Periods can override this individually.',
+    default: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  roundFinalGrade?: boolean;
 }
