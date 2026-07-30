@@ -19,6 +19,7 @@ export const createProgram = async (data: {
   name: string;
   gradeScale?: string;
   order?: number;
+  roundFinalGrade?: boolean;
 }): Promise<AcademicProgram> => {
   const response = await api.post<AcademicProgram>('/programs', data);
   return response.data;
@@ -26,7 +27,13 @@ export const createProgram = async (data: {
 
 export const updateProgram = async (
   id: string,
-  data: { name?: string; gradeScale?: string; order?: number; isActive?: boolean },
+  data: {
+    name?: string;
+    gradeScale?: string;
+    order?: number;
+    isActive?: boolean;
+    roundFinalGrade?: boolean;
+  },
 ): Promise<AcademicProgram> => {
   const response = await api.patch<AcademicProgram>(`/programs/${id}`, data);
   return response.data;
@@ -74,6 +81,7 @@ export const createPeriod = async (data: {
   name: string;
   startDate: string;
   endDate?: string;
+  roundFinalGrade?: boolean | null;
 }): Promise<AcademicPeriod> => {
   const response = await api.post<AcademicPeriod>('/periods', data);
   return response.data;
@@ -83,7 +91,12 @@ export const createPeriod = async (data: {
 // use archivePeriod/restorePeriod for that.
 export const updatePeriod = async (
   id: string,
-  data: { name?: string; startDate?: string; endDate?: string | null },
+  data: {
+    name?: string;
+    startDate?: string;
+    endDate?: string | null;
+    roundFinalGrade?: boolean | null;
+  },
 ): Promise<AcademicPeriod> => {
   const response = await api.patch<AcademicPeriod>(`/periods/${id}`, data);
   return response.data;

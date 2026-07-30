@@ -8,7 +8,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ProgramsService } from './programs.service';
 import { CreatePeriodDto } from './dto/create-period.dto';
 import { UpdatePeriodDto } from './dto/update-period.dto';
-import { computeCreditWeightedAverage } from './grade-average.util';
+import {
+  computeCreditWeightedAverage,
+  resolveRoundFinalGrade,
+} from './grade-average.util';
 
 @Injectable()
 export class PeriodsService {
@@ -69,6 +72,12 @@ export class PeriodsService {
           : {}),
         ...(dto.endDate !== undefined
           ? { endDate: dto.endDate ? new Date(dto.endDate) : null }
+          : {}),
+        // null is a meaningful value here (explicitly go back to
+        // inheriting the program's default), so it's checked against
+        // undefined, not falsiness.
+        ...(dto.roundFinalGrade !== undefined
+          ? { roundFinalGrade: dto.roundFinalGrade }
           : {}),
       },
     });
@@ -192,6 +201,10 @@ export class PeriodsService {
    */
   async getAverage(userId: string, id: string) {
     const period = await this.findOwnedOrThrow(userId, id);
+    const program = await this.programsService.findOwnedOrThrow(
+      userId,
+      period.programId,
+    );
     const tasks = await this.prisma.task.findMany({
       where: { periodId: id, realGrade: { not: null } },
       select: { realGrade: true, weightPercentage: true, areaId: true },
@@ -199,10 +212,15 @@ export class PeriodsService {
     const areas = await this.prisma.area.findMany({
       select: { id: true, credits: true },
     });
+    const shouldRound = resolveRoundFinalGrade(
+      program.roundFinalGrade,
+      period.roundFinalGrade,
+    );
+    const result = computeCreditWeightedAverage(tasks, areas, shouldRound);
     return {
       periodId: period.id,
       periodName: period.name,
-      ...computeCreditWeightedAverage(tasks, areas),
+      ...result,
     };
   }
 

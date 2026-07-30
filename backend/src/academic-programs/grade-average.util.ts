@@ -67,6 +67,7 @@ export interface AreaCreditsLike {
 export function computeCreditWeightedAverage(
   tasks: AreaGradedTaskLike[],
   areas: AreaCreditsLike[],
+  roundFinalGrade: boolean,
 ): WeightedAverageResult {
   const creditsByArea = new Map(areas.map((a) => [a.id, a.credits]));
 
@@ -88,8 +89,13 @@ export function computeCreditWeightedAverage(
     const areaAverage = computeWeightedAverage(areaTasks);
     if (areaAverage.average === null) continue; // an Area with no graded tasks doesn't enter
 
+    // Each subject's own final grade is what gets rounded (e.g. 17.6 -> 18)
+    // - the credit-weighted average below is the normal, unrounded
+    // calculation over those (possibly rounded) subject grades.
+    const finalAreaGrade = roundAreaGrade(areaAverage.average, roundFinalGrade);
+
     const weight = creditsByArea.get(areaId) ?? 1;
-    weightedSum += areaAverage.average * weight;
+    weightedSum += (finalAreaGrade as number) * weight;
     totalWeight += weight;
     gradedTaskCount += areaAverage.gradedTaskCount;
   }
@@ -100,6 +106,30 @@ export function computeCreditWeightedAverage(
     gradedTaskCount,
     totalWeight,
   };
+}
+
+// Rounds a single Area's weighted average to the nearest whole number, when
+// the effective roundFinalGrade setting (period override, or the program
+// default if the period doesn't set one) is true. This is what most unis
+// actually do: each subject's own final grade gets rounded (e.g. 17.6 -> 18),
+// and the semester/program average is then the normal credit-weighted
+// average of those already-rounded subject grades - the average itself is
+// never rounded again.
+export function roundAreaGrade(
+  average: number | null,
+  roundFinalGrade: boolean,
+): number | null {
+  if (average === null || !roundFinalGrade) return average;
+  return Math.round(average);
+}
+
+// Resolves the effective rounding setting for a period: its own override
+// if set, otherwise the program's default.
+export function resolveRoundFinalGrade(
+  programDefault: boolean,
+  periodOverride: boolean | null | undefined,
+): boolean {
+  return periodOverride ?? programDefault;
 }
 
 // Parses the "min-max" gradeScale string stored on AcademicProgram (e.g.
@@ -167,6 +197,7 @@ export function computeCreditsSummary(
   gradeScale: string,
   tasks: AreaGradedTaskLike[],
   areas: (AreaCreditsLike & { name: string })[],
+  roundFinalGrade: boolean,
 ): CreditsSummary {
   const passThreshold = getPassThreshold(gradeScale);
   const areaById = new Map(areas.map((a) => [a.id, a]));
@@ -189,8 +220,12 @@ export function computeCreditsSummary(
     const area = areaById.get(areaId);
     if (!area) continue; // shouldn't happen (FK integrity), but never trust it blindly
 
-    const { average } = computeWeightedAverage(areaTasks);
-    if (average === null) continue; // no graded task yet in this Area - not "attempted"
+    const { average: rawAverage } = computeWeightedAverage(areaTasks);
+    if (rawAverage === null) continue; // no graded task yet in this Area - not "attempted"
+
+    // Same subject-level rounding as computeCreditWeightedAverage - pass/fail
+    // is judged on the grade as the uni would actually record it.
+    const average = roundAreaGrade(rawAverage, roundFinalGrade) as number;
 
     const passed = average >= passThreshold;
     if (area.credits !== null) {

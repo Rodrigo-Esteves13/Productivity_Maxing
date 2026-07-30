@@ -8,16 +8,18 @@ import FormError from '../UI/FormError';
 interface CreateProgramModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (name: string) => Promise<void>;
+  onCreate: (name: string, roundFinalGrade?: boolean) => Promise<void>;
 }
 
 export default function CreateProgramModal({ isOpen, onClose, onCreate }: CreateProgramModalProps) {
   const [name, setName] = useState('');
+  const [roundFinalGrade, setRoundFinalGrade] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleClose = () => {
     setName('');
+    setRoundFinalGrade(true);
     setError(null);
     onClose();
   };
@@ -29,7 +31,7 @@ export default function CreateProgramModal({ isOpen, onClose, onCreate }: Create
     setIsSubmitting(true);
     setError(null);
     try {
-      await onCreate(name.trim());
+      await onCreate(name.trim(), roundFinalGrade);
       handleClose();
     } catch {
       setError('Could not create the program. Try again.');
@@ -56,6 +58,30 @@ export default function CreateProgramModal({ isOpen, onClose, onCreate }: Create
             required
           />
         </FormField>
+
+        <label
+          htmlFor="program-round-final-grade"
+          className="flex items-start gap-2.5 rounded-lg border border-neutral-800 bg-neutral-900/50 p-3 cursor-pointer"
+        >
+          <input
+            id="program-round-final-grade"
+            type="checkbox"
+            checked={roundFinalGrade}
+            onChange={(e) => setRoundFinalGrade(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-800 text-violet-500 focus:ring-violet-500 focus:ring-offset-neutral-900"
+          />
+          <span>
+            <span className="block text-sm text-neutral-200">
+              Round each subject's final grade
+            </span>
+            <span className="block text-xs text-neutral-500">
+              Rounds each subject to the nearest whole number before
+              computing the credit-weighted average - matches how most
+              universities record final grades. Individual periods can
+              override this later.
+            </span>
+          </span>
+        </label>
 
         {error && <FormError message={error} />}
 
