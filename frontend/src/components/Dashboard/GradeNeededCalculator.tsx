@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Task, Area } from '../../types/models';
 import { TargetIcon } from '../UI/Icons';
+import { computeWeightCoverage } from '../../utils/weightCoverage';
 
 interface GradeNeededCalculatorProps {
   tasks: Task[];
@@ -43,7 +44,23 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
     0,
   );
   const totalWeightGraded = graded.reduce((sum, t) => sum + (t.weightPercentage ?? 1), 0);
-  const remainingWeight = ungraded.reduce((sum, t) => sum + (t.weightPercentage ?? 1), 0);
+  const remainingWeightFromTasks = ungraded.reduce((sum, t) => sum + (t.weightPercentage ?? 1), 0);
+
+  // Within a single course, weights are expected to add up to 100% of the
+  // final grade - but tasks get added over the semester as they're
+  // announced, so what's on file right now (graded + ungraded) may fall
+  // short of that (e.g. a final exam not yet turned into a task). That
+  // gap is itself "remaining weight" to solve for, even with no task
+  // representing it yet - only computed for a single-area scope (across
+  // the whole period, weight isn't on a shared 100% basis - Areas are
+  // combined by credits instead) and only when every task in scope has an
+  // explicit weightPercentage (see computeWeightCoverage).
+  const isSingleArea = scope !== WHOLE_PERIOD_VALUE;
+  const coverage = computeWeightCoverage(scopedTasks);
+  const weightGap =
+    isSingleArea && coverage.allWeighted ? Math.max(0, 100 - coverage.totalWeight) : 0;
+
+  const remainingWeight = remainingWeightFromTasks + weightGap;
 
   const targetNum = Number(target);
   const hasValidTarget = target !== '' && !Number.isNaN(targetNum);
@@ -89,6 +106,13 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
         />
       </div>
 
+      {weightGap > 0 && (
+        <p className="text-xs text-amber-400 mb-2">
+          Tasks on file for this course only add up to {coverage.totalWeight.toFixed(0)}% of the
+          grade - treating the missing {weightGap.toFixed(0)}% as still to be graded.
+        </p>
+      )}
+
       {!hasValidTarget && (
         <p className="text-sm text-neutral-500">Set a target average to see what you need.</p>
       )}
@@ -103,10 +127,14 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
         <p className={`text-sm ${impossible ? 'text-red-400' : 'text-neutral-200'}`}>
           You need an average of{' '}
           <span className="font-bold text-lg">{neededAverage.toFixed(2)}</span> on the{' '}
-          {ungraded.length} remaining task(s) to reach {targetNum.toFixed(2)}.
+          {ungraded.length > 0
+            ? `${ungraded.length} remaining task(s)${weightGap > 0 ? ' plus the ungraded part of the course' : ''}`
+            : 'ungraded part of the course'}{' '}
+          to reach {targetNum.toFixed(2)}.
           {impossible && ' Not achievable within this grade scale.'}
         </p>
       )}
     </div>
   );
 }
+

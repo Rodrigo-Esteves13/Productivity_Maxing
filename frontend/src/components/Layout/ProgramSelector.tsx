@@ -7,11 +7,14 @@ import RenameProgramModal from './RenameProgramModal';
 import ManagePeriodsModal from './ManagePeriodsModal';
 
 const CREATE_NEW_VALUE = '__create_new__';
+const NO_PROGRAM_VALUE = '__no_program__';
 
 export default function ProgramSelector() {
   const {
     programs,
     activeProgram,
+    isViewingAllPrograms,
+    viewAllPrograms,
     switchProgram,
     createProgram,
     removeProgram,
@@ -31,6 +34,10 @@ export default function ProgramSelector() {
   const handleChange = (value: string) => {
     if (value === CREATE_NEW_VALUE) {
       setIsCreateModalOpen(true);
+      return;
+    }
+    if (value === NO_PROGRAM_VALUE) {
+      viewAllPrograms();
       return;
     }
     switchProgram(value);
@@ -67,7 +74,7 @@ export default function ProgramSelector() {
       <Select
         aria-label="Active program"
         className="w-auto min-w-[220px]"
-        value={activeProgram?.id ?? ''}
+        value={isViewingAllPrograms ? NO_PROGRAM_VALUE : (activeProgram?.id ?? '')}
         onChange={(e) => handleChange(e.target.value)}
       >
         {programs
@@ -77,6 +84,7 @@ export default function ProgramSelector() {
               {program.name}
             </option>
           ))}
+        <option value={NO_PROGRAM_VALUE}>No program (all tasks)</option>
         <option value={CREATE_NEW_VALUE}>+ Create new program</option>
       </Select>
 

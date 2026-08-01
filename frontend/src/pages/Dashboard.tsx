@@ -18,13 +18,16 @@ import PeriodProgressBar from '../components/Dashboard/PeriodProgressBar';
 import GradeNeededCalculator from '../components/Dashboard/GradeNeededCalculator';
 import UpcomingTasksCard from '../components/Dashboard/UpcomingTasksCard';
 import AtRiskTasksCard from '../components/Dashboard/AtRiskTasksCard';
+import DeadlineOverlapCard from '../components/Dashboard/DeadlineOverlapCard';
+import OverloadAlertCard from '../components/Dashboard/OverloadAlertCard';
 import AreaBreakdownCard from '../components/Dashboard/AreaBreakdownCard';
 import StudyActivityCard from '../components/Dashboard/StudyActivityCard';
 import ProgramsOverviewCard from '../components/Dashboard/ProgramsOverviewCard';
 import CreditsAccumulatedCard from '../components/Dashboard/CreditsAccumulatedCard';
 import { DashboardWidgetToggles } from '../components/Dashboard/DashboardWidgetToggles';
 import { useDashboardWidgetPrefs } from '../hooks/useDashboardWidgetPrefs';
-import { PrinterIcon, UploadIcon } from '../components/UI/Icons';
+import { useTableDensity } from '../hooks/useTableDensity';
+import { PrinterIcon, UploadIcon, SlidersIcon } from '../components/UI/Icons';
 import BulkActionsBar from '../components/Dashboard/BulkActionsBar';
 import TaskExportButtons from '../components/Dashboard/TaskExportButtons';
 import TaskImportModal from '../components/Dashboard/TaskImportModal';
@@ -52,9 +55,13 @@ export default function Dashboard() {
 
   // The Dashboard always follows the period selected at the top of the
   // page (PeriodSelector, in PageLayout) - switching period = refetch.
-  const { activeProgram, activePeriod, isViewingAllPeriods } = useAcademic();
-  const periodParam = isViewingAllPeriods ? 'all' : activePeriod?.id;
+  // "No program" (isViewingAllPrograms) also falls into the backend's
+  // 'all' - no periodId restriction at all, so it already returns tasks
+  // across every program, not just the active one.
+  const { activeProgram, activePeriod, isViewingAllPeriods, isViewingAllPrograms } = useAcademic();
+  const periodParam = isViewingAllPeriods || isViewingAllPrograms ? 'all' : activePeriod?.id;
   const { visibility, toggle } = useDashboardWidgetPrefs();
+  const { density, toggleDensity } = useTableDensity();
 
   // A stale selection pointing at tasks that are no longer visible (e.g.
   // after narrowing the filters, or after a bulk action already removed/
@@ -184,6 +191,15 @@ export default function Dashboard() {
             <PrinterIcon />
             Print
           </button>
+          <button
+            type="button"
+            onClick={toggleDensity}
+            title="Toggle table row density"
+            className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200"
+          >
+            <SlidersIcon />
+            {density === 'compact' ? 'Comfortable' : 'Compact'}
+          </button>
           <DashboardWidgetToggles visibility={visibility} toggle={toggle} />
         </div>
       </div>
@@ -198,10 +214,18 @@ export default function Dashboard() {
         <PeriodProgressBar period={activePeriod} tasks={academicTasks} />
       )}
 
-      {!isLoading && !error && academicTasks.length > 0 && (visibility.upcoming || visibility.atRisk) && (
+      {visibility.overloadAlert && !isLoading && !error && academicTasks.length > 0 && (
+        <OverloadAlertCard tasks={academicTasks} areas={academicAreas} />
+      )}
+
+      {!isLoading && !error && academicTasks.length > 0 &&
+        (visibility.upcoming || visibility.atRisk || visibility.deadlineOverlap) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           {visibility.upcoming && <UpcomingTasksCard tasks={academicTasks} areas={academicAreas} />}
           {visibility.atRisk && <AtRiskTasksCard tasks={academicTasks} areas={academicAreas} />}
+          {visibility.deadlineOverlap && (
+            <DeadlineOverlapCard tasks={academicTasks} areas={academicAreas} />
+          )}
         </div>
       )}
 
@@ -270,6 +294,7 @@ export default function Dashboard() {
                 selectedIds={selectedIds}
                 onToggleSelect={toggleSelect}
                 onToggleSelectAll={toggleSelectAll}
+                density={density}
               />
             </>
           )}

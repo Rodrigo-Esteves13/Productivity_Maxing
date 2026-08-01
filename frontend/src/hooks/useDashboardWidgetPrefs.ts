@@ -3,8 +3,10 @@ import { useEffect, useState } from 'react';
 export type DashboardWidgetKey =
   | 'programsOverview'
   | 'periodProgress'
+  | 'overloadAlert'
   | 'upcoming'
   | 'atRisk'
+  | 'deadlineOverlap'
   | 'areaBreakdown'
   | 'studyActivity'
   | 'gradeCalculator'
@@ -14,8 +16,10 @@ export type DashboardWidgetKey =
 export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   programsOverview: 'All programs overview',
   periodProgress: 'Period pace',
+  overloadAlert: 'Heavy week alert',
   upcoming: 'Next 7 days',
   atRisk: 'At risk',
+  deadlineOverlap: 'Deadline overlaps',
   areaBreakdown: 'Breakdown by course',
   studyActivity: 'Study activity',
   gradeCalculator: 'Grade needed calculator',
@@ -31,8 +35,10 @@ const STORAGE_KEY = 'dashboard-widget-prefs';
 const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   programsOverview: true,
   periodProgress: true,
+  overloadAlert: true,
   upcoming: true,
   atRisk: true,
+  deadlineOverlap: true,
   areaBreakdown: true,
   studyActivity: true,
   gradeCalculator: true,

@@ -20,6 +20,17 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
   const [periods, setPeriods] = useState<AcademicPeriod[]>([]);
   const [activePeriod, setActivePeriod] = useState<AcademicPeriod | null>(null);
   const [isViewingAllPeriods, setIsViewingAllPeriods] = useState(false);
+  // Separate axis from isViewingAllPeriods (that one aggregates periods
+  // WITHIN the active program; this one steps outside any single program
+  // entirely - see viewAllPrograms()). activeProgram/activePeriod keep
+  // tracking the real underlying program/period the whole time (so
+  // switching back to a concrete program restores exactly where the user
+  // left off) - only what's EXPOSED to consumers below is nulled out
+  // while this is true, so every program-scoped widget that already
+  // guards on `!activeProgram` (GpaSummary, CreditsAccumulatedCard, the
+  // Archive/RestorePeriod buttons, ...) hides itself automatically with
+  // no changes needed on their end.
+  const [isViewingAllPrograms, setIsViewingAllPrograms] = useState(false);
   const [showArchivedPeriods, setShowArchivedPeriods] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -154,6 +165,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated, user?.id, load]);
 
   const switchPeriod = async (periodId: string | 'all') => {
+    setIsViewingAllPrograms(false);
     if (periodId === 'all') {
       // "View all periods" is just a local view mode - it doesn't make
       // sense to persist it on the backend as the "active period" (that
@@ -180,6 +192,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     const program = programs.find((p) => p.id === programId);
     if (!program) return;
 
+    setIsViewingAllPrograms(false);
     // Optimistic, same as switchPeriod.
     setActiveProgram(program);
     activeProgramIdRef.current = program.id;
@@ -200,6 +213,7 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
   };
 
   const createProgram = async (name: string, roundFinalGrade?: boolean) => {
+    setIsViewingAllPrograms(false);
     const program = await createProgramRequest({ name, roundFinalGrade });
     const period = await createPeriodRequest({
       programId: program.id,
@@ -263,14 +277,25 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     setShowArchivedPeriods((prev) => !prev);
   };
 
+  // Steps outside any single program - "No program (all tasks)" in
+  // ProgramSelector. Doesn't touch the underlying activeProgram/
+  // activePeriod state at all, only the derived values exposed below, so
+  // switching back to a real program (switchProgram/switchPeriod, both of
+  // which clear this) picks up exactly where the user left off.
+  const viewAllPrograms = () => {
+    setIsViewingAllPrograms(true);
+  };
+
   return (
     <AcademicContext.Provider
       value={{
         programs,
-        activeProgram,
+        activeProgram: isViewingAllPrograms ? null : activeProgram,
         periods,
-        activePeriod,
+        activePeriod: isViewingAllPrograms ? null : activePeriod,
         isViewingAllPeriods,
+        isViewingAllPrograms,
+        viewAllPrograms,
         showArchivedPeriods,
         toggleShowArchivedPeriods,
         isLoading,
