@@ -35,8 +35,11 @@ export function useTasksPage() {
   });
 
   // Segue sempre o período selecionado no topo da página (PeriodSelector).
-  const { activePeriod, isViewingAllPeriods } = useAcademic();
-  const periodParam = isViewingAllPeriods ? 'all' : activePeriod?.id;
+  // "No program" (isViewingAllPrograms) também cai no 'all' do backend -
+  // esse filtro já não tem qualquer restrição de periodId, logo já
+  // devolve as tasks de todos os programas, não só do período ativo.
+  const { activePeriod, isViewingAllPeriods, isViewingAllPrograms } = useAcademic();
+  const periodParam = isViewingAllPeriods || isViewingAllPrograms ? 'all' : activePeriod?.id;
 
   const fetchData = async () => {
     try {

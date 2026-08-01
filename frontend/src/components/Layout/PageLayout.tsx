@@ -7,10 +7,12 @@ import { useOverdueCheckins } from '../../hooks/useOverdueCheckins';
 import OverdueCheckinModal from '../Tasks/OverdueCheckinModal';
 import AcademicSelectors from './AcademicSelectors';
 
-// Pages whose content doesn't change with the active program/period, so
-// the Program/Period pickers up top would just sit there doing nothing -
-// Profile is account-level settings, not scoped to any one program.
-const ROUTES_WITHOUT_ACADEMIC_SELECTORS = ['/profile'];
+// Only Dashboard and Tasks actually change with the active program/period
+// - everywhere else (Focus, Profile, Developer, Agent, Areas, admin
+// pages, ...) the Program/Period pickers up top would just sit there
+// doing nothing, or worse, look like they filter content that isn't
+// actually scoped by them.
+const ROUTES_WITH_ACADEMIC_SELECTORS = ['/dashboard', '/tasks'];
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -20,7 +22,7 @@ export default function PageLayout({ children }: PageLayoutProps) {
   const { isAuthenticated } = useAuth();
   const { pathname } = useLocation();
   const showAcademicSelectors =
-    isAuthenticated && !ROUTES_WITHOUT_ACADEMIC_SELECTORS.includes(pathname);
+    isAuthenticated && ROUTES_WITH_ACADEMIC_SELECTORS.includes(pathname);
 
   // Fica aqui (em vez de em cada página individual) precisamente porque
   // o PageLayout é o único ponto comum a todas as páginas autenticadas -

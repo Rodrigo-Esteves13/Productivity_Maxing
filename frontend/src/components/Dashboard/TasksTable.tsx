@@ -2,6 +2,7 @@ import TasksTableHeader from './TasksTableHeader';
 import TaskTableRow from './TaskTableRow';
 import TaskCard from './TaskCard';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
+import type { TableDensity } from '../../hooks/useTableDensity';
 
 interface TasksTableProps {
   tasks: Task[];
@@ -11,6 +12,7 @@ interface TasksTableProps {
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
   onToggleSelectAll?: () => void;
+  density?: TableDensity;
 }
 
 export default function TasksTable({ 
@@ -21,6 +23,7 @@ export default function TasksTable({
   selectedIds,
   onToggleSelect,
   onToggleSelectAll,
+  density = 'comfortable',
 }: TasksTableProps) {
   if (tasks.length === 0) {
     return (
@@ -61,6 +64,7 @@ export default function TasksTable({
                 isRescheduling={reschedulingId === task.id}
                 isSelected={selectedIds?.has(task.id)}
                 onToggleSelect={onToggleSelect}
+                density={density}
               />
             ))}
           </tbody>

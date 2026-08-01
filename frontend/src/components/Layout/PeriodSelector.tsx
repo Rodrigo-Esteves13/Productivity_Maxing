@@ -15,6 +15,7 @@ export default function PeriodSelector() {
     periods,
     activePeriod,
     isViewingAllPeriods,
+    isViewingAllPrograms,
     switchPeriod,
     showArchivedPeriods,
     toggleShowArchivedPeriods,
@@ -33,7 +34,7 @@ export default function PeriodSelector() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  if (isLoading) return null;
+  if (isLoading || isViewingAllPrograms) return null;
 
   const hasArchived = periods.some((p) => p.isArchived);
   const visiblePeriods = [...periods]

@@ -10,6 +10,13 @@ export interface AcademicContextType {
   // 'all' = aggregated view ("View all periods"), no single period
   // selected - see PeriodSelector.
   isViewingAllPeriods: boolean;
+  // Steps outside any single program entirely ("No program (all tasks)"
+  // in ProgramSelector) - independent of isViewingAllPeriods, which stays
+  // scoped to periods within one program. While true, activeProgram and
+  // activePeriod above are both null (the real selection is preserved
+  // internally and restored by switchProgram/switchPeriod).
+  isViewingAllPrograms: boolean;
+  viewAllPrograms: () => void;
   // Archived periods are hidden from the selector by default - this
   // toggles showing them (still read-only-ish there, but reachable and
   // restorable, instead of just gone).

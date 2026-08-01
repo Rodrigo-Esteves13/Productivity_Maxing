@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import type { Task, Area } from '../../types/models';
 import { ChartPieIcon } from '../UI/Icons';
+import { computeWeightCoverage } from '../../utils/weightCoverage';
+import Sparkline from '../UI/Sparkline';
 
 interface AreaBreakdownCardProps {
   tasks: Task[];
@@ -18,6 +20,16 @@ interface AreaRow {
   area: Area;
   average: number | null;
   gradedCount: number;
+  // Percent of the course's weight actually on file (graded + ungraded
+  // tasks combined) - null when tasks in this Area don't all have an
+  // explicit weightPercentage (see computeWeightCoverage), in which case
+  // there's nothing meaningful to compare against 100%.
+  weightCoveredPct: number | null;
+  // realGrade of every graded task in this Area, oldest first - the
+  // sequence the sparkline draws. Not the running average, the individual
+  // grades themselves - a dip on one hard test should be visible, not
+  // smoothed away.
+  gradeHistory: number[];
 }
 
 // Same per-Area weighted average as the backend's computeWeightedAverage
@@ -35,6 +47,13 @@ function computeAreaAverage(tasks: Task[]): { average: number | null; gradedCoun
   };
 }
 
+function computeGradeHistory(tasks: Task[]): number[] {
+  return tasks
+    .filter((t) => t.realGrade !== null)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .map((t) => t.realGrade!);
+}
+
 export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdownCardProps) {
   const max = scaleMax(scale);
 
@@ -43,7 +62,14 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
       .map((area) => {
         const areaTasks = tasks.filter((t) => t.areaId === area.id);
         const { average, gradedCount } = computeAreaAverage(areaTasks);
-        return { area, average, gradedCount };
+        const coverage = computeWeightCoverage(areaTasks);
+        return {
+          area,
+          average,
+          gradedCount,
+          weightCoveredPct: coverage.allWeighted ? coverage.totalWeight : null,
+          gradeHistory: computeGradeHistory(areaTasks),
+        };
       })
       .filter((row) => row.gradedCount > 0)
       .sort((a, b) => (b.average ?? 0) - (a.average ?? 0));
@@ -58,7 +84,7 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
         Breakdown by course
       </p>
       <ul className="space-y-3">
-        {rows.map(({ area, average }) => (
+        {rows.map(({ area, average, weightCoveredPct, gradeHistory }) => (
           <li key={area.id}>
             <div className="flex items-center justify-between text-sm mb-1">
               <div className="flex items-center gap-2 min-w-0">
@@ -70,10 +96,25 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
                 <span className="text-xs text-neutral-500 shrink-0">
                   {area.credits ? `${area.credits} credits` : 'no credits set'}
                 </span>
+                {weightCoveredPct !== null && weightCoveredPct < 100 && (
+                  <span
+                    className="text-xs text-amber-400 shrink-0"
+                    title="Percent of this course's weight covered by tasks on file - the rest isn't graded yet, so this average is preliminary"
+                  >
+                    {weightCoveredPct.toFixed(0)}% of grade so far
+                  </span>
+                )}
               </div>
-              <span className="font-semibold text-neutral-200 shrink-0">
-                {average !== null ? average.toFixed(2) : '-'}
-              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <Sparkline
+                  values={gradeHistory}
+                  max={max}
+                  className="shrink-0"
+                />
+                <span className="font-semibold text-neutral-200">
+                  {average !== null ? average.toFixed(2) : '-'}
+                </span>
+              </div>
             </div>
             <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden">
               <div
