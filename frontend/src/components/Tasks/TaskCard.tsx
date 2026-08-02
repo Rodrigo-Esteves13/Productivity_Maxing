@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from 'react';
-import type { Task } from '../../types/models';
+import type { Task, Area } from '../../types/models';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import RescheduleButton from '../UI/RescheduleButton';
@@ -10,17 +10,26 @@ interface TaskCardProps {
   onSelect?: (task: Task) => void;
   onReschedule?: (e: React.MouseEvent, task: Task) => void;
   isRescheduling?: boolean;
+  // Both optional and only meaningful together - without a full Area
+  // list to pick from there's nothing to offer besides the current one,
+  // so the badge just stays a plain, non-interactive label (same as
+  // before this prop existed).
+  areas?: Area[];
+  onMoveArea?: (task: Task, areaId: string) => void;
 }
 
 export default function TaskCard({ 
   task, 
   onSelect,
   onReschedule,
-  isRescheduling = false 
+  isRescheduling = false,
+  areas,
+  onMoveArea,
 }: TaskCardProps) {
   const areaName = task.area?.name || 'No Area';
   const isInteractive = Boolean(onSelect);
   const status = getDateStatus(task);
+  const canMoveArea = Boolean(areas && areas.length > 1 && onMoveArea);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (!onSelect) return;
@@ -61,9 +70,33 @@ export default function TaskCard({
           espaço de sobra e nada disputa largura com o +1 Day. */}
       <div className="mt-auto pt-2 text-xs text-neutral-400 space-y-1.5">
         <div className="flex items-center gap-2">
-          <span className="px-2 py-1 bg-neutral-800 rounded-md font-medium text-neutral-300 truncate max-w-[10rem]">
-            {areaName}
-          </span>
+          {canMoveArea ? (
+            // A <select> instead of a real dropdown menu - free keyboard
+            // nav and native mobile picker UI for a plain "pick one of
+            // these" choice, no extra popover-positioning code needed.
+            // Styled to still read as the same badge it replaces.
+            <select
+              value={task.areaId}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                e.stopPropagation();
+                onMoveArea!(task, e.target.value);
+              }}
+              title="Move to a different Area"
+              className="px-2 py-1 bg-neutral-800 rounded-md font-medium text-neutral-300 truncate max-w-[10rem] border border-transparent hover:border-neutral-600 focus:border-violet-500 outline-none cursor-pointer"
+            >
+              {areas!.map((area) => (
+                <option key={area.id} value={area.id}>
+                  {area.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="px-2 py-1 bg-neutral-800 rounded-md font-medium text-neutral-300 truncate max-w-[10rem]">
+              {areaName}
+            </span>
+          )}
           <span>•</span>
           <span className={status === 'overdue' ? 'text-red-400 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>
             {new Date(task.date).toLocaleDateString()}

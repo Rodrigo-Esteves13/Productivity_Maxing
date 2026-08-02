@@ -1,18 +1,22 @@
 import TaskCard from './TaskCard';
-import type { Task } from '../../types/models';
+import type { Task, Area } from '../../types/models';
 
 interface TaskGridProps {
   tasks: Task[];
   onSelect: (task: Task) => void;
   onReschedule?: (e: React.MouseEvent, task: Task) => void;
   reschedulingId?: string | null;
+  areas?: Area[];
+  onMoveArea?: (task: Task, areaId: string) => void;
 }
 
 export default function TaskGrid({ 
   tasks, 
   onSelect, 
   onReschedule, 
-  reschedulingId 
+  reschedulingId,
+  areas,
+  onMoveArea,
 }: TaskGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -23,6 +27,8 @@ export default function TaskGrid({
           onSelect={onSelect} 
           onReschedule={onReschedule}
           isRescheduling={reschedulingId === task.id}
+          areas={areas}
+          onMoveArea={onMoveArea}
         />
       ))}
     </div>
