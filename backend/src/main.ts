@@ -6,6 +6,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import type { Express } from 'express';
 import { getFrontendUrl } from './config/app.config';
+import { JsonLogger } from './common/logger/json-logger.service';
+import { isMaintenanceMode } from './common/guards/maintenance.guard';
 
 // Variáveis obrigatórias para o backend funcionar com segurança. Se
 // qualquer uma faltar, a app não deve arrancar silenciosamente com um
@@ -44,6 +46,7 @@ async function bootstrap() {
   assertRequiredEnvVars();
 
   const app = await NestFactory.create(AppModule);
+  app.useLogger(new JsonLogger());
 
   // Em produção corremos atrás do proxy do Render (e a firewall dele já
   // filtra a maior parte do lixo antes de chegar cá). Sem isto, req.ip
@@ -87,6 +90,14 @@ async function bootstrap() {
   );
 
   const isProd = process.env.NODE_ENV === 'production';
+
+  if (isMaintenanceMode()) {
+    // MaintenanceGuard (global, see app.module.ts) is what actually
+    // enforces this on every request past this point - this is just a
+    // startup breadcrumb so "why is everything 503ing" isn't a mystery
+    // the first time someone checks the deploy logs.
+    new JsonLogger().warn('MAINTENANCE_MODE is enabled - all non-/health requests will 503.', 'Bootstrap');
+  }
 
   // Swagger só em não-produção: em prod dá a qualquer visitante o mapa
   // completo de rotas e DTOs da API de graça, sem necessidade nenhuma.

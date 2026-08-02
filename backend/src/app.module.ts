@@ -15,8 +15,10 @@ import { StudySessionsModule } from './study-sessions/study-sessions.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { AgentModule } from './agent/agent.module';
 import { AcademicProgramsModule } from './academic-programs/academic-programs.module';
+import { TelemetryModule } from './telemetry/telemetry.module';
 import { CsrfGuard } from './auth/guards/csrf.guard';
 import { LoggingThrottlerGuard } from './common/guards/logging-throttler.guard';
+import { MaintenanceGuard } from './common/guards/maintenance.guard';
 import { RequestUserLoggerInterceptor } from './common/interceptors/request-user-logger.interceptor';
 
 @Module({
@@ -40,10 +42,21 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     CalendarModule,
     AgentModule,
     AcademicProgramsModule,
+    TelemetryModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
+    // Runs first (registration order = execution order for APP_GUARD):
+    // when MAINTENANCE_MODE is on, every request short-circuits here with
+    // a 503 before it can even hit the throttler or CSRF check below - no
+    // reason to count a maintenance-window request against anyone's rate
+    // limit, or to require a CSRF token nobody can obtain from a page
+    // that never rendered.
+    {
+      provide: APP_GUARD,
+      useClass: MaintenanceGuard,
+    },
     // O Guard global entra aqui para proteger todas as rotas automaticamente.
     // LoggingThrottlerGuard é um ThrottlerGuard normal (mesmos limites,
     // mesmo comportamento) que só acrescenta: grava um SecurityLog sempre

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getCsrfToken, setCsrfToken } from './csrfStore';
+import { MAINTENANCE_EVENT } from '../lib/maintenanceEvents';
 
 // Create the base Axios instance
 const api = axios.create({
@@ -56,6 +57,17 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const url = error.config?.url as string | undefined;
+
+    // Checked first, and unconditionally (even for /auth/csrf and
+    // /auth/me) - a maintenance window is a global app state, not
+    // something specific to one request, and it should override even the
+    // auth-check exemption below.
+    if (status === 503 && error.response?.data?.code === 'MAINTENANCE_MODE') {
+      window.dispatchEvent(
+        new CustomEvent(MAINTENANCE_EVENT, { detail: error.response.data.message }),
+      );
+      return Promise.reject(error);
+    }
 
     if (status === 401 && !isAuthCheckRequest(url)) {
       console.warn('Session expired or unauthorized. Logging out...');

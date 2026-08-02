@@ -1,0 +1,81 @@
+# Dependabot config for Productivity_Maxing.
+#
+# Assumed repo layout (monorepo, matching the zips this project ships as -
+# src_frontend/src_backend/prisma/agent): top-level /frontend, /backend,
+# /agent directories, plus /.github/workflows for the CI itself. If the
+# real layout differs (e.g. backend and frontend are separate repos, or
+# nested one level deeper), just adjust the `directory:` values below -
+# everything else stays the same.
+#
+# Design choices, so future-you doesn't have to rediscover the reasoning:
+# - Weekly, not daily: this is a solo project - daily PRs would just pile
+#   up unread. Monday morning gives a coffee-time backlog instead of a
+#   drip that's easy to ignore.
+# - open-pull-requests-limit kept low (5) per ecosystem: a wall of 40 bot
+#   PRs is exactly the "so many notifications you stop reading any of
+#   them" failure mode this is meant to prevent.
+# - Patch/minor grouped into one PR per ecosystem: one review instead of
+#   fifteen for routine bumps. Majors are NOT grouped - they're the ones
+#   actually worth reading individually (breaking changes).
+# - `@nestjs/*` and `prisma`/`@prisma/*` pinned to their own group even
+#   within backend - these tend to need coordinated bumps (a NestJS minor
+#   can require matching bumps across every @nestjs/* package at once;
+#   Prisma client and CLI must stay in lockstep) and are risky enough to
+#   review on their own rather than folded into the general "minor" PR.
+version: 2
+updates:
+  # --- Frontend (React / Vite / TS / Tailwind) ---
+  - package-ecosystem: 'npm'
+    directory: '/frontend'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    open-pull-requests-limit: 5
+    labels: ['dependencies', 'frontend']
+    groups:
+      frontend-patch-minor:
+        update-types: ['patch', 'minor']
+    ignore:
+      # Tailwind v4 is still fairly new - a major bump here has a real
+      # chance of touching every className in the app. Worth a deliberate
+      # look, not an auto-grouped PR.
+      - dependency-name: 'tailwindcss'
+        update-types: ['version-update:semver-major']
+
+  # --- Backend (NestJS / Prisma) ---
+  - package-ecosystem: 'npm'
+    directory: '/backend'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    open-pull-requests-limit: 5
+    labels: ['dependencies', 'backend']
+    groups:
+      backend-patch-minor:
+        update-types: ['patch', 'minor']
+        exclude-patterns: ['@nestjs/*', 'prisma', '@prisma/*']
+      nestjs:
+        patterns: ['@nestjs/*']
+      prisma:
+        patterns: ['prisma', '@prisma/*']
+
+  # --- Go agent ---
+  - package-ecosystem: 'gomod'
+    directory: '/agent'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    open-pull-requests-limit: 5
+    labels: ['dependencies', 'agent']
+    groups:
+      agent-patch-minor:
+        update-types: ['patch', 'minor']
+
+  # --- GitHub Actions workflows themselves ---
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    open-pull-requests-limit: 5
+    labels: ['dependencies', 'ci']
