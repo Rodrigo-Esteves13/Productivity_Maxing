@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import Sparkline from '../components/UI/Sparkline';
 
 const meta: Meta<typeof Sparkline> = {
