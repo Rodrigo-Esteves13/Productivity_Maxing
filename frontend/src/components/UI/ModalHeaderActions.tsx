@@ -1,4 +1,4 @@
-import { PencilIcon, TrashIcon, UndoIcon } from './Icons';
+import { PencilIcon, TrashIcon, UndoIcon, CheckIcon } from './Icons';
 
 const DuplicateIcon = () => (
   <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -11,10 +11,16 @@ interface ModalHeaderActionsProps {
   onToggleEdit: () => void;
   onDelete: () => void;
   onDuplicate?: () => void;
+  // Omit entirely when the task is already completed (or completion
+  // doesn't apply in this context) - see the ternary passed in from
+  // Tasks.tsx, same "undefined hides the button" convention as
+  // onDuplicate above.
+  onComplete?: () => void;
   deleteTitle?: string;
   editTitle?: string;
   cancelEditTitle?: string;
   duplicateTitle?: string;
+  completeTitle?: string;
 }
 
 export default function ModalHeaderActions({
@@ -22,13 +28,26 @@ export default function ModalHeaderActions({
   onToggleEdit,
   onDelete,
   onDuplicate,
+  onComplete,
   deleteTitle = 'Delete',
   editTitle = 'Edit',
   cancelEditTitle = 'Cancel edit',
   duplicateTitle = 'Duplicate',
+  completeTitle = 'Mark complete',
 }: ModalHeaderActionsProps) {
   return (
     <div className="flex items-center gap-1">
+      {/* Botão de Marcar como Concluída - antes do Duplicar, só fora de edição */}
+      {!isEditing && onComplete && (
+        <button
+          onClick={onComplete}
+          title={completeTitle}
+          className="text-neutral-400 hover:text-emerald-400 transition-colors p-1"
+        >
+          <CheckIcon />
+        </button>
+      )}
+
       {/* Botão de Duplicar - Aparece antes do Apagar e esconde-se durante a edição */}
       {!isEditing && onDuplicate && (
         <button

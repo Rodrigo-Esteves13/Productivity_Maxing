@@ -12,6 +12,7 @@ import EmptyState from '../components/UI/EmptyState';
 import ModalHeaderActions from '../components/UI/ModalHeaderActions';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useTasksPage } from '../hooks/useTasksPage';
+import { useTaskShortcuts } from '../hooks/useTaskShortcuts';
 
 export default function Tasks() {
   useDocumentTitle('Tasks');
@@ -37,9 +38,31 @@ export default function Tasks() {
     handleUpdateTask,
     handleDeleteTask,
     handleDuplicateTask,
+    markSelectedTaskComplete,
+    moveTaskToArea,
     rescheduleToTomorrow,
     reschedulingId
   } = useTasksPage();
+
+  // 'n' anywhere on the page (unless a detail view is already open, to
+  // avoid stacking a second modal on top of it); 'c'/'e'/Delete only while
+  // viewing a task's details and not already editing it - see
+  // useTaskShortcuts for the full guard (ignored while typing in a form
+  // field, disabled outright while any form is open).
+  useTaskShortcuts(
+    {
+      onCreate: () => {
+        if (!selectedTask) openCreateModal();
+      },
+      onComplete:
+        selectedTask && !isEditing && selectedTask.progressStatus !== 'COMPLETED'
+          ? markSelectedTaskComplete
+          : undefined,
+      onEdit: selectedTask && !isEditing ? toggleEditing : undefined,
+      onDelete: selectedTask && !isEditing ? handleDeleteTask : undefined,
+    },
+    isCreateModalOpen || isEditing,
+  );
 
   return (
     <PageLayout>
@@ -47,9 +70,14 @@ export default function Tasks() {
         title="My Tasks"
         description="Manage, filter, and track the progress of all your tasks."
         action={
-          <ActionButton color="violet" onClick={openCreateModal}>
-            + New Task
-          </ActionButton>
+          <div className="flex items-center gap-2">
+            <ActionButton color="violet" onClick={openCreateModal}>
+              + New Task
+            </ActionButton>
+            <kbd className="hidden sm:inline text-[10px] text-neutral-500 border border-neutral-700 rounded px-1.5 py-0.5">
+              N
+            </kbd>
+          </div>
         }
       />
 
@@ -65,6 +93,8 @@ export default function Tasks() {
           onSelect={handleSelectTask} 
           onReschedule={rescheduleToTomorrow}
           reschedulingId={reschedulingId}
+          areas={areas}
+          onMoveArea={moveTaskToArea}
         />
       )}
 
@@ -92,8 +122,12 @@ export default function Tasks() {
               onToggleEdit={toggleEditing}
               onDelete={handleDeleteTask}
               onDuplicate={handleDuplicateTask}
-              deleteTitle="Delete task"
-              editTitle="Edit task"
+              onComplete={
+                selectedTask.progressStatus !== 'COMPLETED' ? markSelectedTaskComplete : undefined
+              }
+              deleteTitle="Delete task (Del)"
+              editTitle="Edit task (E)"
+              completeTitle="Mark complete (C)"
             />
           )
         }

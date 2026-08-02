@@ -224,6 +224,41 @@ export function useTasksPage() {
   }, [selectedTask, closeDetailModal]);
   // Não coloquei 'handleCreateTask' nas dependências para evitar loop de re-renders
 
+  // Lightweight counterpart to handleUpdateTask - sends only the one
+  // changed field instead of a whole TaskEditForm payload. Safe because
+  // UpdateTaskDto on the backend is a PartialType(CreateTaskDto) (same
+  // reasoning bulkUpdateTaskStatus already relies on); this is what the
+  // 'c' keyboard shortcut calls, so completing a task doesn't require
+  // opening the edit form first.
+  const markSelectedTaskComplete = useCallback(async () => {
+    if (!selectedTask || selectedTask.progressStatus === 'COMPLETED') return;
+    try {
+      const updated = await updateTask(selectedTask.id, { progressStatus: 'COMPLETED' });
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      setSelectedTask(updated);
+    } catch {
+      alert('Could not mark the task as completed. Please try again.');
+    }
+  }, [selectedTask]);
+
+  // Same partial-PATCH pattern as markSelectedTaskComplete, but for any
+  // task in the list (not just the one open in the detail modal) - this
+  // is what the quick Area dropdown on each TaskCard calls, so
+  // recategorizing a task doesn't require opening it first.
+  const moveTaskToArea = useCallback(
+    async (task: Task, areaId: string) => {
+      if (task.areaId === areaId) return;
+      try {
+        const updated = await updateTask(task.id, { areaId });
+        setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+        setSelectedTask((prev) => (prev?.id === updated.id ? updated : prev));
+      } catch {
+        alert('Could not move the task to that area. Please try again.');
+      }
+    },
+    [],
+  );
+
   return {
     tasks,
     areas,
@@ -248,5 +283,7 @@ export function useTasksPage() {
     rescheduleToTomorrow,
     reschedulingId,
     handleDuplicateTask,
+    markSelectedTaskComplete,
+    moveTaskToArea,
   };
 }
