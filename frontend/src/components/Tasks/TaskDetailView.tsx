@@ -29,6 +29,11 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       <DetailRow label="Type">{typeLabel}</DetailRow>
       {academicTypeLabel && <DetailRow label="Academic Type">{academicTypeLabel}</DetailRow>}
       {task.topics && <DetailRow label="Topics">{task.topics}</DetailRow>}
+      {task.notes && (
+        <DetailRow label="Notes">
+          <span className="whitespace-pre-wrap">{task.notes}</span>
+        </DetailRow>
+      )}
 
       {task.referenceLink && (
         <DetailRow label="Reference Link">

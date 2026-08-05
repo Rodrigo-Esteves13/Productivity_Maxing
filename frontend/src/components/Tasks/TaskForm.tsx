@@ -45,6 +45,7 @@ export default function TaskForm({
     areaId: '',
     topics: '',
     referenceLink: '',
+    notes: '',
     targetGrade: '',
     weightPercentage: '',
     // Task nova nunca tem evento ainda - fica ao critério do utilizador

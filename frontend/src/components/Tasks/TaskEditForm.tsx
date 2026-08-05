@@ -47,6 +47,7 @@ function buildInitialValues(task: Task): TaskFormFieldValues {
     progressStatus: task.progressStatus,
     areaId: task.areaId,
     topics: task.topics ?? '',
+    notes: task.notes ?? '',
     referenceLink: task.referenceLink ?? '',
     targetGrade: task.targetGrade != null ? String(task.targetGrade) : '',
     weightPercentage: task.weightPercentage != null ? String(task.weightPercentage) : '',

@@ -7,6 +7,7 @@ import {
   IsNumber,
   IsInt,
   IsUrl,
+  IsBoolean,
   Min,
   Max,
   MaxLength,
@@ -79,6 +80,23 @@ export class CreateTaskDto {
   @IsString()
   @MaxLength(5000)
   topics?: string;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Whether this task is pinned to the top of every list',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isPinned?: boolean;
+
+  @ApiPropertyOptional({
+    example: 'Went well overall, but need to review integration by parts.',
+    description: 'Free-form notes/journaling about the task',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  notes?: string;
 
   @ApiPropertyOptional({
     example: 25.5,

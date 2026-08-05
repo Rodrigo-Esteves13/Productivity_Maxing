@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import TaskGrid from '../components/Tasks/TaskGrid';
@@ -40,9 +41,18 @@ export default function Tasks() {
     handleDuplicateTask,
     markSelectedTaskComplete,
     moveTaskToArea,
+    toggleTaskPin,
     rescheduleToTomorrow,
     reschedulingId
   } = useTasksPage();
+
+  // Pinned tasks float to the top, everything else keeps whatever order
+  // the backend returned it in (a stable sort - only the pinned/
+  // not-pinned split moves anything, nothing else gets reshuffled).
+  const sortedTasks = useMemo(
+    () => [...tasks].sort((a, b) => Number(b.isPinned) - Number(a.isPinned)),
+    [tasks],
+  );
 
   // 'n' anywhere on the page (unless a detail view is already open, to
   // avoid stacking a second modal on top of it); 'c'/'e'/Delete only while
@@ -89,12 +99,13 @@ export default function Tasks() {
         <EmptyState message="You have no tasks registered." />
       ) : (
         <TaskGrid 
-          tasks={tasks} 
+          tasks={sortedTasks} 
           onSelect={handleSelectTask} 
           onReschedule={rescheduleToTomorrow}
           reschedulingId={reschedulingId}
           areas={areas}
           onMoveArea={moveTaskToArea}
+          onTogglePin={toggleTaskPin}
         />
       )}
 
@@ -125,6 +136,8 @@ export default function Tasks() {
               onComplete={
                 selectedTask.progressStatus !== 'COMPLETED' ? markSelectedTaskComplete : undefined
               }
+              isPinned={selectedTask.isPinned}
+              onTogglePin={() => toggleTaskPin(selectedTask)}
               deleteTitle="Delete task (Del)"
               editTitle="Edit task (E)"
               completeTitle="Mark complete (C)"

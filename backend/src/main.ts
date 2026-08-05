@@ -96,7 +96,10 @@ async function bootstrap() {
     // enforces this on every request past this point - this is just a
     // startup breadcrumb so "why is everything 503ing" isn't a mystery
     // the first time someone checks the deploy logs.
-    new JsonLogger().warn('MAINTENANCE_MODE is enabled - all non-/health requests will 503.', 'Bootstrap');
+    new JsonLogger().warn(
+      'MAINTENANCE_MODE is enabled - all non-/health requests will 503.',
+      'Bootstrap',
+    );
   }
 
   // Swagger só em não-produção: em prod dá a qualquer visitante o mapa

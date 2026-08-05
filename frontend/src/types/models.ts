@@ -220,6 +220,8 @@ export interface Task {
   type: TaskType;
   academicType: AcademicTaskType | null;
   topics: string | null;
+  notes: string | null;
+  isPinned: boolean;
 
   // Execution Metadata
   weightPercentage: number | null;

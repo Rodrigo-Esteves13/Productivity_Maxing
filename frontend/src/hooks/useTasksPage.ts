@@ -259,6 +259,19 @@ export function useTasksPage() {
     [],
   );
 
+  // Same partial-PATCH pattern as moveTaskToArea/markSelectedTaskComplete
+  // - works on any task in the list, not just the one open in the detail
+  // modal, since pinning happens from the card/row directly.
+  const toggleTaskPin = useCallback(async (task: Task) => {
+    try {
+      const updated = await updateTask(task.id, { isPinned: !task.isPinned });
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      setSelectedTask((prev) => (prev?.id === updated.id ? updated : prev));
+    } catch {
+      alert('Could not update the pin. Please try again.');
+    }
+  }, []);
+
   return {
     tasks,
     areas,
@@ -285,5 +298,6 @@ export function useTasksPage() {
     handleDuplicateTask,
     markSelectedTaskComplete,
     moveTaskToArea,
+    toggleTaskPin,
   };
 }

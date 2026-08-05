@@ -23,6 +23,7 @@ export interface TaskFormFieldValues {
   areaId: string;
   topics: string;
   referenceLink: string;
+  notes: string;
   targetGrade: string;
   weightPercentage: string;
   realGrade?: string;
@@ -143,8 +144,10 @@ export default function TaskFormFields({
       <OptionalInfoFields
         topics={values.topics}
         referenceLink={values.referenceLink}
+        notes={values.notes}
         onTopicsChange={(v) => onChange('topics', v)}
         onReferenceLinkChange={(v) => onChange('referenceLink', v)}
+        onNotesChange={(v) => onChange('notes', v)}
         calendarConnected={calendarConnected}
         syncToCalendar={values.syncToCalendar}
         onSyncToCalendarChange={(v) => onChange('syncToCalendar', v)}

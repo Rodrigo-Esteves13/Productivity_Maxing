@@ -3,6 +3,7 @@ import type { Task, Area } from '../../types/models';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import RescheduleButton from '../UI/RescheduleButton';
+import { PinIcon } from '../UI/Icons';
 import { getDateStatus } from '../../utils/taskDateStatus';
 
 interface TaskCardProps {
@@ -16,6 +17,7 @@ interface TaskCardProps {
   // before this prop existed).
   areas?: Area[];
   onMoveArea?: (task: Task, areaId: string) => void;
+  onTogglePin?: (task: Task) => void;
 }
 
 export default function TaskCard({ 
@@ -25,6 +27,7 @@ export default function TaskCard({
   isRescheduling = false,
   areas,
   onMoveArea,
+  onTogglePin,
 }: TaskCardProps) {
   const areaName = task.area?.name || 'No Area';
   const isInteractive = Boolean(onSelect);
@@ -49,17 +52,35 @@ export default function TaskCard({
       // mesma altura (a grelha já estica a linha para o mais alto - isto só
       // faz o cartão em si preencher esse espaço), para o rodapé (mt-auto)
       // ficar sempre à mesma altura entre cards, seja qual for o conteúdo.
-      className={`relative flex flex-col h-full p-4 bg-neutral-900/50 border border-neutral-800 rounded-xl hover:border-violet-500/50 transition-colors ${
-        isInteractive ? 'cursor-pointer' : ''
-      }`}
+      // border-violet-500/40 quando pinned - uma pista visual sutil mesmo
+      // sem reparar no ícone (útil quando a grelha tem muitos cards e o
+      // pin fica fora do primeiro relance).
+      className={`relative flex flex-col h-full p-4 bg-neutral-900/50 border rounded-xl transition-colors ${
+        task.isPinned ? 'border-violet-500/40' : 'border-neutral-800 hover:border-violet-500/50'
+      } ${isInteractive ? 'cursor-pointer' : ''}`}
     >
-      {/* Cabeçalho só com o status - a dificuldade voltou para o rodapé.
+      {/* Cabeçalho: pin + status. A dificuldade voltou para o rodapé.
           Com 2 badges aqui, títulos longos ficavam a lutar por espaço e
           quebravam de forma inconsistente entre cards. Com só 1 badge,
           o título tem sempre a largura que precisa. */}
       <div className="flex justify-between items-start mb-3 gap-3">
         <h3 className="text-lg font-medium text-white line-clamp-2 min-w-0">{task.title}</h3>
-        <div className="flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {onTogglePin && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onTogglePin(task);
+              }}
+              title={task.isPinned ? 'Unpin task' : 'Pin task'}
+              className={`p-0.5 transition-colors ${
+                task.isPinned ? 'text-violet-400' : 'text-neutral-600 hover:text-neutral-300'
+              }`}
+            >
+              <PinIcon />
+            </button>
+          )}
           <StatusBadge status={task.progressStatus} />
         </div>
       </div>

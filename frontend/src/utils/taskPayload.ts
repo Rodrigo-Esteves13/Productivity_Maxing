@@ -42,6 +42,7 @@ export function buildTaskPayload(
       : {}),
     topics: formData.topics || undefined,
     referenceLink: formData.referenceLink || undefined,
+    notes: formData.notes || undefined,
     academicType: formData.academicType || undefined,
   };
 }
