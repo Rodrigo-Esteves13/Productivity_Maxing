@@ -48,6 +48,7 @@ export default function TaskForm({
     notes: '',
     targetGrade: '',
     weightPercentage: '',
+    estimatedMinutes: '',
     // Task nova nunca tem evento ainda - fica ao critério do utilizador
     // marcar a checkbox, não vem pré-marcada.
     syncToCalendar: false,

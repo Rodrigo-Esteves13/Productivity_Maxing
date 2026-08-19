@@ -8,7 +8,12 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PredictDurationDto } from './dto/predict-duration.dto';
 import { DIFFICULTY_WEIGHT } from '../common/difficulty-weight.util';
-import { fitScaler, applyScaler, invertScaler, solveOls } from './prediction-math.util';
+import {
+  fitScaler,
+  applyScaler,
+  invertScaler,
+  solveOls,
+} from './prediction-math.util';
 import type { Scaler } from './prediction-math.util';
 import { trainMlp } from './prediction-mlp.util';
 import type { DurationPrediction, PredictionMethod } from './prediction.types';

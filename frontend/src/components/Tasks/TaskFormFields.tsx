@@ -1,6 +1,7 @@
 import type { TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
 import { useTaskTypeLogic } from '../../hooks/useTaskTypeLogic';
 import { useCalendarStatus } from '../../hooks/useCalendarStatus';
+import { useDurationPrediction } from '../../hooks/useDurationPrediction';
 import TitleDateAreaFields from './fields/TitleDateAreaFields';
 import DifficultyTypeFields from './fields/DifficultyTypeFields';
 import AcademicFields from './fields/AcademicFields';
@@ -26,6 +27,7 @@ export interface TaskFormFieldValues {
   notes: string;
   targetGrade: string;
   weightPercentage: string;
+  estimatedMinutes: string;
   realGrade?: string;
   progressStatus?: string;
   // Flags só de UI - nunca são enviadas como estão para os endpoints de
@@ -45,6 +47,10 @@ interface TaskFormFieldsProps {
   idPrefix: string;
   values: TaskFormFieldValues;
   onChange: (field: keyof TaskFormFieldValues, value: string | boolean) => void;
+  // Só definido em edição (TaskEditForm) - permite ao pedido de previsão
+  // também devolver actualMinutes para esta task em concreto. Ausente na
+  // criação (TaskForm), onde a task ainda não existe.
+  taskId?: string;
   areas: AreaOption[];
   taskTypes: TaskTypeOption[];
   academicTaskTypes: AcademicTaskTypeOption[];
@@ -58,6 +64,7 @@ export default function TaskFormFields({
   idPrefix,
   values,
   onChange,
+  taskId,
   areas,
   taskTypes,
   academicTaskTypes,
@@ -78,6 +85,15 @@ export default function TaskFormFields({
   // null enquanto carrega - tratado como "não conectado" para o checkbox
   // não aparecer disponível antes de sabermos ao certo.
   const calendarConnected = useCalendarStatus() === true;
+
+  const { prediction: durationPrediction, isLoading: isDurationPredictionLoading } =
+    useDurationPrediction({
+      type: values.type,
+      academicType: values.academicType,
+      difficulty: values.difficulty,
+      weightPercentage: values.weightPercentage,
+      taskId,
+    });
 
   return (
     <>
@@ -137,8 +153,12 @@ export default function TaskFormFields({
         idPrefix={idPrefix}
         targetGrade={values.targetGrade}
         weightPercentage={values.weightPercentage}
+        estimatedMinutes={values.estimatedMinutes}
         onTargetGradeChange={(v) => onChange('targetGrade', v)}
         onWeightPercentageChange={(v) => onChange('weightPercentage', v)}
+        onEstimatedMinutesChange={(v) => onChange('estimatedMinutes', v)}
+        prediction={durationPrediction}
+        isPredictionLoading={isDurationPredictionLoading}
       />
 
       <OptionalInfoFields

@@ -2,17 +2,21 @@
 // user já tem dados de treino suficientes (ver PREDICTION_THRESHOLDS em
 // prediction.service.ts).
 //
-// @tensorflow/tfjs-node é importado DINAMICAMENTE aqui dentro, nunca no
-// topo do ficheiro - é exatamente por isto que se torna arriscado usar
-// tfjs-node (bindings nativos C++) em vez do tfjs puro (ver a nota de
-// `npm install` em PREDICTION_SETUP.md): se o import estivesse no topo e
-// os bindings falhassem a carregar num ambiente de deploy (Render sem a
-// imagem certa), TODO o boot do Nest cairia, não só esta feature. Com o
-// import dinâmico, uma falha aqui só rebenta esta chamada em concreto -
-// PredictionService apanha o erro e cai para regressão linear em vez de
-// derrubar o backend inteiro.
+// @tensorflow/tfjs (versão pura JS/WASM, não tfjs-node) - trocado do
+// tfjs-node depois de este introduzir uma vulnerabilidade crítica no
+// `npm audit` (arbitrary file write via tar/@mapbox/node-pre-gyp, o
+// mecanismo que o tfjs-node usa para ir buscar o binário nativo
+// pré-compilado - ver PREDICTION_SETUP.md para o histórico). Sem
+// bindings nativos, este pacote não tem essa cadeia de dependências
+// nem esse risco de build.
+//
+// O import continua dinâmico (nunca no topo do ficheiro) mesmo sem o
+// risco de bindings nativos - falha isolada aqui (ex: um bug de
+// versão) só rebenta esta chamada em concreto, PredictionService apanha
+// o erro e cai para regressão linear em vez de arrastar o resto do
+// backend.
 
-type TFModule = typeof import('@tensorflow/tfjs-node');
+type TFModule = typeof import('@tensorflow/tfjs');
 
 export interface TrainedMlp {
   predict: (features: number[]) => number;
@@ -25,7 +29,12 @@ export async function trainMlp(
   X: number[][],
   y: number[],
 ): Promise<TrainedMlp> {
-  const tf: TFModule = await import('@tensorflow/tfjs-node');
+  const tf: TFModule = await import('@tensorflow/tfjs');
+  // Sem isto, o tfjs pode tentar arrancar com o backend WebGL (o
+  // default em browser) que não existe em Node - tf.ready() garante que
+  // fica no backend CPU puro, que é o que este pacote traz por default
+  // fora do browser.
+  await tf.ready();
 
   const numFeatures = X[0].length;
   const xTensor = tf.tensor2d(X);

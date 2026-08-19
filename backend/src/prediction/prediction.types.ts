@@ -1,4 +1,5 @@
-export type PredictionMethod = 'insufficient_data' | 'linear_regression' | 'mlp';
+export type PredictionMethod =
+  'insufficient_data' | 'linear_regression' | 'mlp';
 
 export interface DurationPrediction {
   // null quando method = 'insufficient_data' - não há sugestão nenhuma

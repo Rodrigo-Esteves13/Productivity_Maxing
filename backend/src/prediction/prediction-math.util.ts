@@ -93,9 +93,7 @@ function gaussJordanSolve(A: number[][], b: number[]): number[] {
       // Singular mesmo depois da regularização de Ridge - extremamente
       // improvável dado RIDGE_LAMBDA acima, mas falha em segurança em vez
       // de dividir por quase-zero e devolver coeficientes de lixo.
-      throw new Error(
-        'Matrix is singular, cannot solve for OLS coefficients.',
-      );
+      throw new Error('Matrix is singular, cannot solve for OLS coefficients.');
     }
 
     for (let j = col; j <= n; j++) {
