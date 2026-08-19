@@ -355,12 +355,26 @@ model Task {
   title  String
   date   DateTime
 
+  // Pinned tasks surface first everywhere the task list is sorted (see
+  // TaskGrid.tsx/TasksTable.tsx on the frontend) - a lightweight
+  // "keep this one visible" override independent of date/status/
+  // difficulty, for whatever the user is actively keeping an eye on.
+  isPinned Boolean @default(false)
+
   // Tipologia e Categorização
   taskTypeId     String
   taskType       TaskType          @relation(fields: [taskTypeId], references: [id])
   academicTypeId String?
   academicType   AcademicTaskType? @relation(fields: [academicTypeId], references: [id])
   topics         String?
+
+  // Notas livres/journaling sobre a task - reflexão pós-conclusão, o que
+  // correu bem/mal num exame, contexto que não cabe no título nem nos
+  // topics. Sem limite de tamanho a nível de schema (@db.Text em vez do
+  // varchar por omissão) porque isto é, por natureza, para escrever à
+  // vontade - o limite prático fica só no DTO (ver CreateTaskDto), não
+  // aqui.
+  notes String? @db.Text
 
   // A que período (semestre/ano letivo, dentro de um AcademicProgram) esta
   // task pertence. Obrigatório - toda a task nova tem sempre um período
@@ -376,6 +390,15 @@ model Task {
   difficulty       Difficulty
   progressStatus   ProgressStatus @default(ON_TRACK)
   referenceLink    String?
+
+  // Duração esperada em minutos, escrita manualmente pelo user ao criar/
+  // editar a task. Distinto de calendarDurationMinutes (esse só serve o
+  // bloco do evento no Google Calendar); este é o "quanto tempo acho que
+  // isto vai levar" que alimenta a feature de previsão de duração - é o
+  // par (estimativa manual, tempo real via StudySession.taskId) usado
+  // como dados de treino em PredictionService. Null para tasks antigas
+  // criadas antes deste campo existir.
+  estimatedMinutes Int?
 
   // Avaliação (Relevante para contexto Académico/Trabalho)
   targetGrade Float?

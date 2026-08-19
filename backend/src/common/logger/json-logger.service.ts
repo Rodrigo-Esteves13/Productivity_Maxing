@@ -37,7 +37,12 @@ function write(line: LogLine): void {
  */
 export class JsonLogger implements LoggerService {
   log(message: unknown, context?: string): void {
-    write({ timestamp: new Date().toISOString(), level: 'log', context, message: String(message) });
+    write({
+      timestamp: new Date().toISOString(),
+      level: 'log',
+      context,
+      message: String(message),
+    });
   }
 
   error(message: unknown, trace?: string, context?: string): void {
@@ -51,14 +56,29 @@ export class JsonLogger implements LoggerService {
   }
 
   warn(message: unknown, context?: string): void {
-    write({ timestamp: new Date().toISOString(), level: 'warn', context, message: String(message) });
+    write({
+      timestamp: new Date().toISOString(),
+      level: 'warn',
+      context,
+      message: String(message),
+    });
   }
 
   debug(message: unknown, context?: string): void {
-    write({ timestamp: new Date().toISOString(), level: 'debug', context, message: String(message) });
+    write({
+      timestamp: new Date().toISOString(),
+      level: 'debug',
+      context,
+      message: String(message),
+    });
   }
 
   verbose(message: unknown, context?: string): void {
-    write({ timestamp: new Date().toISOString(), level: 'verbose', context, message: String(message) });
+    write({
+      timestamp: new Date().toISOString(),
+      level: 'verbose',
+      context,
+      message: String(message),
+    });
   }
 }

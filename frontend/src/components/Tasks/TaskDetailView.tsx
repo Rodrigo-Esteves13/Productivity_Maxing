@@ -3,6 +3,7 @@ import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import DetailRow from '../UI/DetailRow';
 import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
+import { useDurationPrediction } from '../../hooks/useDurationPrediction';
 
 interface TaskDetailViewProps {
   task: Task;
@@ -13,6 +14,17 @@ interface TaskDetailViewProps {
 export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes = [] }: TaskDetailViewProps) {
   const typeLabel = resolveOptionLabel(task.type, taskTypes);
   const academicTypeLabel = resolveOptionLabel(task.academicType, academicTaskTypes);
+  // Reutiliza o mesmo hook do formulário só para ir buscar actualMinutes
+  // (soma real das StudySessions desta task) - o predictedMinutes que
+  // ele também devolve não é mostrado aqui, o detail view só quer
+  // Estimado vs Real, não uma sugestão para editar.
+  const { prediction: durationInfo } = useDurationPrediction({
+    type: task.type,
+    academicType: task.academicType ?? '',
+    difficulty: task.difficulty,
+    weightPercentage: task.weightPercentage != null ? String(task.weightPercentage) : '',
+    taskId: task.id,
+  });
   return (
     <div>
       <DetailRow label="Title">{task.title}</DetailRow>
@@ -29,6 +41,11 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       <DetailRow label="Type">{typeLabel}</DetailRow>
       {academicTypeLabel && <DetailRow label="Academic Type">{academicTypeLabel}</DetailRow>}
       {task.topics && <DetailRow label="Topics">{task.topics}</DetailRow>}
+      {task.notes && (
+        <DetailRow label="Notes">
+          <span className="whitespace-pre-wrap">{task.notes}</span>
+        </DetailRow>
+      )}
 
       {task.referenceLink && (
         <DetailRow label="Reference Link">
@@ -45,6 +62,16 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
 
       {task.weightPercentage != null && (
         <DetailRow label="Weight">{task.weightPercentage}%</DetailRow>
+      )}
+      {(task.estimatedMinutes != null || durationInfo?.actualMinutes != null) && (
+        <DetailRow label="Duration">
+          <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+            {task.estimatedMinutes != null && <span>Estimated: {task.estimatedMinutes} min</span>}
+            {durationInfo?.actualMinutes != null && (
+              <span>Actual: {durationInfo.actualMinutes} min</span>
+            )}
+          </div>
+        </DetailRow>
       )}
       {task.targetGrade != null && (
         <DetailRow label="Target Grade">{task.targetGrade}</DetailRow>

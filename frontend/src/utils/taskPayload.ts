@@ -37,11 +37,15 @@ export function buildTaskPayload(
     weightPercentage: formData.weightPercentage
       ? parseFloat(formData.weightPercentage)
       : undefined,
+    estimatedMinutes: formData.estimatedMinutes
+      ? parseInt(formData.estimatedMinutes, 10)
+      : undefined,
     ...(includeRealGrade
       ? { realGrade: formData.realGrade ? parseFloat(formData.realGrade) : undefined }
       : {}),
     topics: formData.topics || undefined,
     referenceLink: formData.referenceLink || undefined,
+    notes: formData.notes || undefined,
     academicType: formData.academicType || undefined,
   };
 }

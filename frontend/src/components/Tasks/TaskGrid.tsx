@@ -8,6 +8,7 @@ interface TaskGridProps {
   reschedulingId?: string | null;
   areas?: Area[];
   onMoveArea?: (task: Task, areaId: string) => void;
+  onTogglePin?: (task: Task) => void;
 }
 
 export default function TaskGrid({ 
@@ -17,6 +18,7 @@ export default function TaskGrid({
   reschedulingId,
   areas,
   onMoveArea,
+  onTogglePin,
 }: TaskGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -29,6 +31,7 @@ export default function TaskGrid({
           isRescheduling={reschedulingId === task.id}
           areas={areas}
           onMoveArea={onMoveArea}
+          onTogglePin={onTogglePin}
         />
       ))}
     </div>

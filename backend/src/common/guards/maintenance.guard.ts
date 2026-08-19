@@ -43,7 +43,8 @@ export class MaintenanceGuard implements CanActivate {
 
     throw new ServiceUnavailableException({
       code: 'MAINTENANCE_MODE',
-      message: "Productivity Maxing is down for scheduled maintenance. We'll be back shortly.",
+      message:
+        "Productivity Maxing is down for scheduled maintenance. We'll be back shortly.",
     });
   }
 }

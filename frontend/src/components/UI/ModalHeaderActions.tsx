@@ -1,4 +1,4 @@
-import { PencilIcon, TrashIcon, UndoIcon, CheckIcon } from './Icons';
+import { PencilIcon, TrashIcon, UndoIcon, CheckIcon, PinIcon } from './Icons';
 
 const DuplicateIcon = () => (
   <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -16,6 +16,10 @@ interface ModalHeaderActionsProps {
   // Tasks.tsx, same "undefined hides the button" convention as
   // onDuplicate above.
   onComplete?: () => void;
+  // isPinned only matters together with onTogglePin - it's what decides
+  // the icon's color and the tooltip text (Pin vs Unpin).
+  isPinned?: boolean;
+  onTogglePin?: () => void;
   deleteTitle?: string;
   editTitle?: string;
   cancelEditTitle?: string;
@@ -29,6 +33,8 @@ export default function ModalHeaderActions({
   onDelete,
   onDuplicate,
   onComplete,
+  isPinned = false,
+  onTogglePin,
   deleteTitle = 'Delete',
   editTitle = 'Edit',
   cancelEditTitle = 'Cancel edit',
@@ -37,6 +43,19 @@ export default function ModalHeaderActions({
 }: ModalHeaderActionsProps) {
   return (
     <div className="flex items-center gap-1">
+      {/* Botão de Pin - antes de tudo, sempre visível fora de edição */}
+      {!isEditing && onTogglePin && (
+        <button
+          onClick={onTogglePin}
+          title={isPinned ? 'Unpin task' : 'Pin task'}
+          className={`transition-colors p-1 ${
+            isPinned ? 'text-violet-400 hover:text-violet-300' : 'text-neutral-400 hover:text-violet-400'
+          }`}
+        >
+          <PinIcon />
+        </button>
+      )}
+
       {/* Botão de Marcar como Concluída - antes do Duplicar, só fora de edição */}
       {!isEditing && onComplete && (
         <button

@@ -220,12 +220,17 @@ export interface Task {
   type: TaskType;
   academicType: AcademicTaskType | null;
   topics: string | null;
+  notes: string | null;
+  isPinned: boolean;
 
   // Execution Metadata
   weightPercentage: number | null;
   difficulty: Difficulty;
   progressStatus: ProgressStatus;
   referenceLink: string | null;
+  // How long you expect this task to take, in minutes. Manual estimate -
+  // see api/predictionService.ts for the model-generated suggestion.
+  estimatedMinutes: number | null;
   
   // Evaluation
   targetGrade: number | null;

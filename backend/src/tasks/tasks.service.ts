@@ -11,6 +11,7 @@ import { PeriodsService } from '../academic-programs/periods.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ImportTasksDto } from './dto/import-tasks.dto';
+import { DIFFICULTY_WEIGHT } from '../common/difficulty-weight.util';
 
 const TASK_INCLUDE = {
   area: true,
@@ -127,16 +128,8 @@ export class TasksService {
       include: TASK_INCLUDE,
     });
 
-    const difficultyWeight: Record<Difficulty, number> = {
-      VERY_EASY: 1,
-      EASY: 2,
-      MEDIUM: 3,
-      HARD: 4,
-      VERY_HARD: 5,
-    };
-
     const priorityScore = (t: TaskWithIncludes) =>
-      t.weightPercentage ?? difficultyWeight[t.difficulty] * 10;
+      t.weightPercentage ?? DIFFICULTY_WEIGHT[t.difficulty] * 10;
 
     const sorted = [...tasks].sort(
       (a, b) => priorityScore(b) - priorityScore(a),

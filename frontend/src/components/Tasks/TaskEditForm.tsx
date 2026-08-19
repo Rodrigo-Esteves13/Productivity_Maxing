@@ -47,9 +47,11 @@ function buildInitialValues(task: Task): TaskFormFieldValues {
     progressStatus: task.progressStatus,
     areaId: task.areaId,
     topics: task.topics ?? '',
+    notes: task.notes ?? '',
     referenceLink: task.referenceLink ?? '',
     targetGrade: task.targetGrade != null ? String(task.targetGrade) : '',
     weightPercentage: task.weightPercentage != null ? String(task.weightPercentage) : '',
+    estimatedMinutes: task.estimatedMinutes != null ? String(task.estimatedMinutes) : '',
     realGrade: task.realGrade != null ? String(task.realGrade) : '',
     // Pré-marcada se a task já tem um evento - desmarcar e gravar remove-o
     // (ver handleUpdateTask em useTasksPage.ts).
@@ -110,6 +112,7 @@ export default function TaskEditForm({
         idPrefix="edit-task"
         values={formData}
         onChange={updateField}
+        taskId={task.id}
         areas={areas}
         taskTypes={taskTypes}
         academicTaskTypes={academicTaskTypes}

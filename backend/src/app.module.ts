@@ -16,6 +16,7 @@ import { CalendarModule } from './calendar/calendar.module';
 import { AgentModule } from './agent/agent.module';
 import { AcademicProgramsModule } from './academic-programs/academic-programs.module';
 import { TelemetryModule } from './telemetry/telemetry.module';
+import { PredictionModule } from './prediction/prediction.module';
 import { CsrfGuard } from './auth/guards/csrf.guard';
 import { LoggingThrottlerGuard } from './common/guards/logging-throttler.guard';
 import { MaintenanceGuard } from './common/guards/maintenance.guard';
@@ -43,6 +44,7 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     AgentModule,
     AcademicProgramsModule,
     TelemetryModule,
+    PredictionModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,10 +1,13 @@
 import Input from '../../UI/Input';
+import Textarea from '../../UI/Textarea';
 
 interface OptionalInfoFieldsProps {
   topics: string;
   referenceLink: string;
+  notes: string;
   onTopicsChange: (value: string) => void;
   onReferenceLinkChange: (value: string) => void;
+  onNotesChange: (value: string) => void;
   calendarConnected: boolean;
   syncToCalendar: boolean;
   onSyncToCalendarChange: (value: boolean) => void;
@@ -40,8 +43,10 @@ function formatDurationHint(minutes: number): string {
 export default function OptionalInfoFields({
   topics,
   referenceLink,
+  notes,
   onTopicsChange,
   onReferenceLinkChange,
+  onNotesChange,
   calendarConnected,
   syncToCalendar,
   onSyncToCalendarChange,
@@ -73,6 +78,13 @@ export default function OptionalInfoFields({
           className="w-full"
         />
       </div>
+      <Textarea
+        placeholder="Notes - reflections, how it went, anything worth remembering later"
+        value={notes}
+        onChange={(e) => onNotesChange(e.target.value)}
+        rows={3}
+        className="w-full"
+      />
       <div className="flex items-start gap-2 pt-1">
         <input
           type="checkbox"
