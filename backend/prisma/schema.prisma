@@ -391,6 +391,15 @@ model Task {
   progressStatus   ProgressStatus @default(ON_TRACK)
   referenceLink    String?
 
+  // Duração esperada em minutos, escrita manualmente pelo user ao criar/
+  // editar a task. Distinto de calendarDurationMinutes (esse só serve o
+  // bloco do evento no Google Calendar); este é o "quanto tempo acho que
+  // isto vai levar" que alimenta a feature de previsão de duração - é o
+  // par (estimativa manual, tempo real via StudySession.taskId) usado
+  // como dados de treino em PredictionService. Null para tasks antigas
+  // criadas antes deste campo existir.
+  estimatedMinutes Int?
+
   // Avaliação (Relevante para contexto Académico/Trabalho)
   targetGrade Float?
   realGrade   Float?

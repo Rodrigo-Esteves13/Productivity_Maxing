@@ -228,6 +228,9 @@ export interface Task {
   difficulty: Difficulty;
   progressStatus: ProgressStatus;
   referenceLink: string | null;
+  // How long you expect this task to take, in minutes. Manual estimate -
+  // see api/predictionService.ts for the model-generated suggestion.
+  estimatedMinutes: number | null;
   
   // Evaluation
   targetGrade: number | null;

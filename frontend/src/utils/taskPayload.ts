@@ -37,6 +37,9 @@ export function buildTaskPayload(
     weightPercentage: formData.weightPercentage
       ? parseFloat(formData.weightPercentage)
       : undefined,
+    estimatedMinutes: formData.estimatedMinutes
+      ? parseInt(formData.estimatedMinutes, 10)
+      : undefined,
     ...(includeRealGrade
       ? { realGrade: formData.realGrade ? parseFloat(formData.realGrade) : undefined }
       : {}),

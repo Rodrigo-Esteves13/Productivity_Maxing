@@ -108,6 +108,17 @@ export class CreateTaskDto {
   @Max(100)
   weightPercentage?: number;
 
+  @ApiPropertyOptional({
+    example: 90,
+    description:
+      'How long you expect this task to take, in minutes. Purely informational on its own, and also the manual half of the duration-prediction feature: compared against real StudySession time and fed as a training feature for POST /predictions/duration.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(30 * 24 * 60)
+  estimatedMinutes?: number;
+
   @ApiProperty({
     enum: Difficulty,
     example: Difficulty.MEDIUM,
