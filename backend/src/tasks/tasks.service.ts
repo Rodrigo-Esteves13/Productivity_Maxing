@@ -12,6 +12,8 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ImportTasksDto } from './dto/import-tasks.dto';
 import { DIFFICULTY_WEIGHT } from '../common/difficulty-weight.util';
+import { runWithConcurrencyLimit } from '../common/concurrency.util';
+import { TaskMetaCacheService } from '../common/task-meta-cache.service';
 
 const TASK_INCLUDE = {
   area: true,
@@ -24,6 +26,13 @@ type TaskWithIncludes = Prisma.TaskGetPayload<{
   include: typeof TASK_INCLUDE;
 }>;
 
+// How many rows' worth of task.create() calls run in flight at once during
+// importTasks(). High enough to actually speed things up over sequential,
+// low enough to stay well under typical pooled-connection limits (Supabase/
+// PgBouncer session mode here, see PrismaService) even if several users
+// import at the same time.
+const IMPORT_CREATE_CONCURRENCY = 10;
+
 @Injectable()
 export class TasksService {
   private readonly logger = new Logger(TasksService.name);
@@ -31,6 +40,7 @@ export class TasksService {
   constructor(
     private prisma: PrismaService,
     private periodsService: PeriodsService,
+    private taskMetaCache: TaskMetaCacheService,
   ) {}
 
   async create(userId: string, dto: CreateTaskDto) {
@@ -344,54 +354,120 @@ export class TasksService {
 
   /**
    * Excel/CSV import (see ImportTasksDto): creates one task per row.
-   * Each row is validated and inserted independently and wrapped in its
-   * own try/catch - a single bad row (unknown Area, invalid type key,
-   * malformed date that slipped past the DTO's @IsDateString somehow)
-   * fails that row only, not the whole batch. A spreadsheet with 40 good
-   * rows and 2 typos should still create the 40, with the 2 reported back
-   * so the user can fix and re-import just those.
+   * Each row is validated and inserted independently - a single bad row
+   * (unknown Area, invalid type key, malformed date that slipped past the
+   * DTO's @IsDateString somehow) fails that row only, not the whole batch.
+   * A spreadsheet with 40 good rows and 2 typos should still create the
+   * 40, with the 2 reported back so the user can fix and re-import just
+   * those.
    *
-   * The active period is resolved once outside the loop (self-healing
-   * side effects of resolveActivePeriodId - creating a default
-   * program/period on first use - should only happen once per import,
-   * not once per row).
+   * Previously this validated AND created one row fully at a time - up to
+   * 3 sequential DB round-trips per row (resolveTypes' 1-2 lookups + an
+   * Area lookup) before even getting to the create, all `await`ed one
+   * after another. For a 500-row import that's up to ~1500 round-trips
+   * that could never overlap. Two changes fix that without changing the
+   * partial-success behavior at all:
+   *
+   * 1. Every *lookup* (active TaskTypes, active AcademicTaskTypes, the
+   *    distinct Areas referenced, the distinct owned Periods referenced)
+   *    is fetched ONCE up front with `findMany({ where: { id/key: { in:
+   *    [...] } } })` into in-memory Maps, then every row resolves against
+   *    those Maps synchronously - zero DB calls in the per-row validation.
+   * 2. The actual `task.create()` calls (the one part of this that has to
+   *    stay a real DB write per row) run with bounded concurrency instead
+   *    of one full await before starting the next - see
+   *    runWithConcurrencyLimit in common/concurrency.util.ts.
+   *
+   * The active period is still resolved once outside the loop either way
+   * (self-healing side effects of resolveActivePeriodId - creating a
+   * default program/period on first use - should only happen once per
+   * import, not once per row).
    */
   async importTasks(userId: string, dto: ImportTasksDto) {
+    const rows = dto.tasks;
+
     const activePeriodId =
       await this.periodsService.resolveActivePeriodId(userId);
 
-    let created = 0;
-    const results: {
-      row: number;
-      success: boolean;
-      taskId?: string;
-      error?: string;
-    }[] = [];
+    // --- Batch-fetch every lookup this import could possibly need, once. ---
+    const distinctAreaIds = [...new Set(rows.map((r) => r.areaId))];
+    const distinctPeriodIds = [
+      ...new Set(
+        rows.map((r) => r.periodId).filter((id): id is string => !!id),
+      ),
+    ];
 
-    for (let i = 0; i < dto.tasks.length; i++) {
-      const row = dto.tasks[i];
+    const [taskTypes, academicTaskTypes, areas, ownedPeriods] =
+      await Promise.all([
+        this.prisma.taskType.findMany({ where: { isActive: true } }),
+        this.prisma.academicTaskType.findMany({ where: { isActive: true } }),
+        this.prisma.area.findMany({
+          where: { id: { in: distinctAreaIds } },
+        }),
+        // Sempre chamado, mesmo com distinctPeriodIds vazio (`in: []`
+        // devolve zero linhas, comportamento normal do Prisma - não é um
+        // caso especial). O ramo condicional que estava aqui antes
+        // (`? findMany(...) : Promise.resolve([])`) fazia o TypeScript
+        // perder a inferência do tipo do tuple inteiro devolvido por
+        // Promise.all (dois branches de Promise com tipos diferentes),
+        // o que degradava `ownedPeriods` (e por arrasto `areas` também)
+        // para `any[]` - a causa real dos 2 erros do `npm run lint`
+        // ("Unsafe member access .id on an any value" /
+        // "no-unsafe-assignment"). Uma query sempre-igual, sem ramo,
+        // resolve isto na origem em vez de apenas silenciar o aviso.
+        this.prisma.academicPeriod.findMany({
+          where: {
+            id: { in: distinctPeriodIds },
+            program: { userId },
+          },
+        }),
+      ]);
+
+    const taskTypeByKey = new Map(taskTypes.map((t) => [t.key, t]));
+    const academicTypeByKey = new Map(academicTaskTypes.map((a) => [a.key, a]));
+    const areaById = new Map(areas.map((a) => [a.id, a]));
+    const ownedPeriodById = new Map(ownedPeriods.map((p) => [p.id, p]));
+
+    // --- Validate every row against the Maps above - no DB calls here. ---
+    type PreparedRow = {
+      rowNumber: number;
+      data: Prisma.TaskCreateArgs['data'];
+    };
+    type FailedRow = { rowNumber: number; error: string };
+
+    const prepared: PreparedRow[] = [];
+    const failed: FailedRow[] = [];
+
+    rows.forEach((row, i) => {
+      const rowNumber = i + 1;
       try {
-        const typeIds = await this.resolveTypes(row.type, row.academicType);
+        const typeIds = this.resolveTypesFromCache(
+          taskTypeByKey,
+          academicTypeByKey,
+          row.type,
+          row.academicType,
+        );
 
-        // Area is the global catalog (no owner), but a stale/garbage
-        // areaId (e.g. re-importing an old export after an Area was
-        // renamed/removed) shouldn't silently create an orphaned task.
-        const area = await this.prisma.area.findUnique({
-          where: { id: row.areaId },
-        });
+        const area = areaById.get(row.areaId);
         if (!area) {
           throw new BadRequestException(`Area "${row.areaId}" not found.`);
         }
 
-        const resolvedPeriodId = row.periodId
-          ? (await this.periodsService.findOwnedOrThrow(userId, row.periodId))
-              .id
-          : activePeriodId;
+        let resolvedPeriodId = activePeriodId;
+        if (row.periodId) {
+          if (!ownedPeriodById.has(row.periodId)) {
+            throw new BadRequestException(
+              `Period "${row.periodId}" not found or no access.`,
+            );
+          }
+          resolvedPeriodId = row.periodId;
+        }
 
         const progressStatus = row.progressStatus ?? 'ON_TRACK';
         const completedAt = progressStatus === 'COMPLETED' ? new Date() : null;
 
-        const task = await this.prisma.task.create({
+        prepared.push({
+          rowNumber,
           data: {
             title: row.title,
             date: new Date(row.date),
@@ -408,28 +484,79 @@ export class TasksService {
             ...typeIds,
           },
         });
-
-        created++;
-        results.push({ row: i + 1, success: true, taskId: task.id });
       } catch (error) {
-        // BadRequestException messages here are all developer-authored,
-        // user-safe strings (see resolveTypes/the Area check above) - safe
-        // to forward as-is. Anything else (a raw Prisma/DB error) gets a
-        // generic message instead, same "never leak internals" rule as
-        // the rest of the app (see create() above).
         const message =
           error instanceof BadRequestException
             ? error.message
-            : 'Unexpected error creating this task.';
-        results.push({ row: i + 1, success: false, error: message });
-        this.logger.warn(`Task import row ${i + 1} failed: ${message}`);
+            : 'Unexpected error validating this row.';
+        failed.push({ rowNumber, error: message });
+        this.logger.warn(`Task import row ${rowNumber} failed: ${message}`);
       }
-    }
+    });
 
+    // --- Create only the rows that passed validation, bounded-concurrent. ---
+    type RowOutcome = {
+      row: number;
+      success: boolean;
+      taskId?: string;
+      error?: string;
+    };
+
+    const createOutcomes = await runWithConcurrencyLimit(
+      prepared,
+      IMPORT_CREATE_CONCURRENCY,
+      async (item): Promise<RowOutcome> => {
+        try {
+          const task = await this.prisma.task.create({ data: item.data });
+          return { row: item.rowNumber, success: true, taskId: task.id };
+        } catch (error) {
+          // Same "never leak internals" rule as create() above - a raw
+          // Prisma/DB error could contain column/constraint names.
+          this.logger.warn(
+            `Task import row ${item.rowNumber} failed at insert: ${(error as Error).message}`,
+          );
+          return {
+            row: item.rowNumber,
+            success: false,
+            error: 'Unexpected error creating this task.',
+          };
+        }
+      },
+    );
+
+    const results: RowOutcome[] = [
+      ...failed.map((f) => ({
+        row: f.rowNumber,
+        success: false,
+        error: f.error,
+      })),
+      ...createOutcomes,
+    ].sort((a, b) => a.row - b.row);
+
+    const created = results.filter((r) => r.success).length;
     return { created, failed: results.length - created, results };
   }
 
+  // Same shape for every user (this is a global catalog, not scoped to
+  // anyone) and hit on every single Dashboard/Tasks page load - see the
+  // waterfall fix in Dashboard.tsx/useTasksPage.ts, which made this fire
+  // immediately on mount specifically because it's cheap and doesn't
+  // change per-request. Caching it turns that into a DB round-trip only
+  // once per TTL window (or immediately after an admin actually changes a
+  // TaskType/AcademicTaskType - see TaskMetaCacheService.invalidate(),
+  // called from TaskTypesService) instead of on every page load from
+  // every user.
   async getMeta() {
+    const cached =
+      this.taskMetaCache.get<Awaited<ReturnType<typeof this.buildMeta>>>();
+    if (cached) return cached;
+
+    const meta = await this.buildMeta();
+    this.taskMetaCache.set(meta);
+    return meta;
+  }
+
+  private async buildMeta() {
     const [taskTypes, academicTaskTypes] = await Promise.all([
       this.prisma.taskType.findMany({
         where: { isActive: true },
@@ -475,6 +602,45 @@ export class TasksService {
     const academicType = await this.prisma.academicTaskType.findUnique({
       where: { key: academicTypeKey },
     });
+    if (
+      !academicType ||
+      !academicType.isActive ||
+      academicType.taskTypeId !== taskType.id
+    ) {
+      throw new BadRequestException(
+        `Academic subcategory "${academicTypeKey}" invalid for type "${typeKey}".`,
+      );
+    }
+
+    return { taskTypeId: taskType.id, academicTypeId: academicType.id };
+  }
+
+  // Same validation as resolveTypes() above, but synchronous and backed by
+  // pre-fetched Maps instead of a DB call per invocation - see
+  // importTasks(). Any behavior difference here is a bug: this must stay
+  // in lockstep with resolveTypes()'s rules (active-only, subcategory must
+  // belong to the given type).
+  private resolveTypesFromCache(
+    taskTypeByKey: Map<string, { id: string; isActive: boolean }>,
+    academicTypeByKey: Map<
+      string,
+      { id: string; isActive: boolean; taskTypeId: string }
+    >,
+    typeKey: string,
+    academicTypeKey?: string,
+  ) {
+    const taskType = taskTypeByKey.get(typeKey);
+    if (!taskType || !taskType.isActive) {
+      throw new BadRequestException(
+        `Task type "${typeKey}" invalid or inactive.`,
+      );
+    }
+
+    if (!academicTypeKey) {
+      return { taskTypeId: taskType.id, academicTypeId: null };
+    }
+
+    const academicType = academicTypeByKey.get(academicTypeKey);
     if (
       !academicType ||
       !academicType.isActive ||

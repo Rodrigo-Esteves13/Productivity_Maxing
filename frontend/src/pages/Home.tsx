@@ -1,13 +1,40 @@
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
-import useDocumentTitle from '../hooks/useDocumentTitle';
+import FaqSection from '../components/Home/FaqSection';
+import StickyMobileCta from '../components/Home/StickyMobileCta';
+import useSeo from '../hooks/useSeo';
+
+const HOME_DESCRIPTION =
+  'Free task and grade tracker for academic life. Organize subjects into Areas, track deadlines and ' +
+  'difficulty, and compare target vs real grades - with optional Google Calendar sync.';
+
+// Module-level constant so the reference (and its string content) stays
+// stable across renders - useSeo compares jsonLd by value, so this avoids
+// re-running the head-mutation effect on every Home re-render for no reason.
+const HOME_JSON_LD = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Productivity Maxing',
+  applicationCategory: 'ProductivityApplication',
+  operatingSystem: 'Web',
+  description: HOME_DESCRIPTION,
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'EUR',
+  },
+});
 
 // Homepage pública. Necessária para o Google OAuth (brand verification):
 // tem de existir uma homepage pública, no mesmo domínio da app, que descreva
 // a funcionalidade e linke Privacy Policy + Terms (o Footer já trata disso).
 export default function Home() {
-  useDocumentTitle('Productivity Maxing');
+  useSeo({
+    description: HOME_DESCRIPTION,
+    path: '/',
+    jsonLd: HOME_JSON_LD,
+  });
   const navigate = useNavigate();
 
   return (
@@ -17,9 +44,8 @@ export default function Home() {
           Productivity <span className="text-violet-400">Maxing</span>
         </h1>
         <p className="mt-5 max-w-xl text-neutral-400 text-lg">
-          Task and grade tracker for academic life. Organize subjects into Areas, track
-          deadlines, difficulty and progress, and keep an eye on your target vs real grades,
-          all in one place.
+          Task and grade tracker for academic life. Organize subjects into Areas, track deadlines,
+          difficulty and progress, and keep an eye on your target vs real grades, all in one place.
         </p>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
@@ -54,7 +80,13 @@ export default function Home() {
             </p>
           </div>
         </div>
+
+        <FaqSection />
       </div>
+
+      {/* Fora do <div> de texto centrado de propósito - é fixed, não deve
+          herdar/ser afetado pelo layout de fluxo do hero acima dele. */}
+      <StickyMobileCta />
     </PageLayout>
   );
 }

@@ -4,3 +4,33 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=()
+
+# Vite's build output filenames are content-hashed (e.g.
+# assets/index-a1b2c3d4.js) - the hash only changes when the content does,
+# so these can be cached "forever" (a year, effectively immutable). A
+# deploy ships new filenames, never overwrites an old one under the same
+# name, so there's no staleness risk in caching this aggressively. This
+# was previously unset, meaning it fell back to whatever Netlify's
+# platform default is instead of an explicit, verifiable policy.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# App icons/manifest images change rarely but aren't content-hashed like
+# /assets/* - a shorter cache (30 days) instead of "forever" so a real
+# icon update doesn't require also renaming every reference to it.
+/icons/*
+  Cache-Control: public, max-age=2592000
+
+/favicon.svg
+  Cache-Control: public, max-age=2592000
+
+/og-image.png
+  Cache-Control: public, max-age=2592000
+
+# index.html is the one file that must NEVER be cached long - it's what
+# points at the current hashed /assets/* filenames, and it's already
+# fetched fresh from the network on every navigation per the service
+# worker's own navigateFallback: null (see vite.config.ts). Explicit here
+# too so the policy doesn't depend on remembering that SW detail.
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate

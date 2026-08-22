@@ -2,8 +2,8 @@ import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import Modal from '../components/UI/Modal';
 import ActionButton from '../components/UI/ActionButton';
-import LoadingState from '../components/UI/LoadingState';
 import ErrorState from '../components/UI/ErrorState';
+import TableSkeleton from '../components/UI/TableSkeleton';
 import TaskTypesTable from '../components/TaskTypes/TaskTypesTable';
 import AcademicTaskTypesTable from '../components/TaskTypes/AcademicTaskTypesTable';
 import TaskTypeForm from '../components/TaskTypes/TaskTypeForm';
@@ -45,7 +45,10 @@ export default function TaskTypes() {
       />
 
       {isLoading ? (
-        <LoadingState message="Loading task types..." />
+        <div className="space-y-10">
+          <TableSkeleton rows={4} columns={3} />
+          <TableSkeleton rows={4} columns={3} />
+        </div>
       ) : error ? (
         <ErrorState message={error} />
       ) : (

@@ -2,13 +2,20 @@ import PageLayout from '../components/Layout/PageLayout';
 import LegalPageLayout from '../components/Legal/LegalPageLayout';
 import LegalSection from '../components/Legal/LegalSection';
 import LegalLink from '../components/Legal/LegalLink';
-import { REPO_URL, REPO_LICENSE_URL } from '../lib/constants';
+import useSeo from '../hooks/useSeo';
+import { REPO_URL, REPO_LICENSE_URL, CONTACT_EMAIL, APP_DOMAIN } from '../lib/constants';
 
-const CONTACT_EMAIL = 'support@pmaxing.pt';
-const APP_DOMAIN = 'app.pmaxing.pt';
 const LAST_UPDATED = '07/07/2026';
 
 export default function TermsOfService() {
+  useSeo({
+    title: 'Terms of Service',
+    description:
+      'The terms that govern using Productivity Maxing: acceptable use, your content, warranty, and liability.',
+    path: '/terms',
+    noindex: true, // legal boilerplate, not something worth ranking for
+  });
+
   return (
     <PageLayout>
     <LegalPageLayout title="Terms of Service for Productivity Maxing" lastUpdated={LAST_UPDATED}>
@@ -88,6 +95,10 @@ export default function TermsOfService() {
             LICENSE file
           </LegalLink>{' '}
           on GitHub.
+        </p>
+        <p className="mt-3">
+          The downloadable Windows companion agent is covered separately by its own{' '}
+          <LegalLink href="/eula">End User License Agreement</LegalLink>.
         </p>
       </LegalSection>
 

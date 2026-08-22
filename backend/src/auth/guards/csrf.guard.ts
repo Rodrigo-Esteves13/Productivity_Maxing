@@ -4,9 +4,11 @@ import {
   ExecutionContext,
   ForbiddenException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { timingSafeEqual } from 'crypto';
 import { ACCESS_TOKEN_COOKIE, CSRF_COOKIE } from '../cookie.config';
+import { SKIP_CSRF_KEY } from '../../common/decorators/skip-csrf.decorator';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -43,10 +45,27 @@ function safeCompare(a: string, b: string): boolean {
  * (access_token presente). Pedidos autenticados por API Key (header
  * x-api-key, usado pelo agente/scripts, nunca por um browser) não passam
  * por aqui: não há cookie automático a atacar, logo não há CSRF a proteger.
+ *
+ * Exceção adicional: rotas marcadas com @SkipCsrf() (ver
+ * common/decorators/skip-csrf.decorator.ts) - hoje só o TelemetryController.
+ * Essas rotas são propositadamente públicas/sem estado; a presença de um
+ * access_token cookie no browser de quem as chama é incidental (o
+ * visitante calha por acaso estar autenticado noutra aba), não significa
+ * que o pedido em si depende da sessão.
  */
 @Injectable()
 export class CsrfGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+
   canActivate(context: ExecutionContext): boolean {
+    const skipCsrf = this.reflector.getAllAndOverride<boolean>(SKIP_CSRF_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (skipCsrf) {
+      return true;
+    }
+
     const req = context.switchToHttp().getRequest<Request>();
 
     if (SAFE_METHODS.has(req.method.toUpperCase())) {

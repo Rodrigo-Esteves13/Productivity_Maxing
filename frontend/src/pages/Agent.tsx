@@ -5,7 +5,7 @@ import { useAgentConfig } from '../hooks/useAgentConfig';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ActionButton from '../components/UI/ActionButton';
-import LoadingState from '../components/UI/LoadingState';
+import FormSkeleton from '../components/UI/FormSkeleton';
 import SetupInstructions from '../components/Agent/SetupInstructions';
 import TriggerRulesForm from '../components/Agent/TriggerRulesForm';
 import BlockListEditor from '../components/Agent/BlockListEditor';
@@ -86,7 +86,7 @@ export default function Agent() {
           description="Changes here apply on the agent's next poll - no need to restart it."
         >
           {configLoading || !config ? (
-            <LoadingState message="Loading configuration..." />
+            <FormSkeleton sections={1} />
           ) : (
             <>
               {!config.isConfigured && (

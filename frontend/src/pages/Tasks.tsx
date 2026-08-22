@@ -7,13 +7,15 @@ import TaskEditForm from '../components/Tasks/TaskEditForm';
 import Modal from '../components/UI/Modal';
 import TaskForm from '../components/Tasks/TaskForm';
 import ActionButton from '../components/UI/ActionButton';
-import LoadingState from '../components/UI/LoadingState';
 import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
+import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import ModalHeaderActions from '../components/UI/ModalHeaderActions';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useTasksPage } from '../hooks/useTasksPage';
 import { useTaskShortcuts } from '../hooks/useTaskShortcuts';
+import { useShowArchivedTasks } from '../hooks/useShowArchivedTasks';
+import { isTaskArchived } from '../utils/taskArchive';
 
 export default function Tasks() {
   useDocumentTitle('Tasks');
@@ -46,12 +48,24 @@ export default function Tasks() {
     reschedulingId
   } = useTasksPage();
 
+  const { showArchived, toggleShowArchived } = useShowArchivedTasks();
+
+  const archivedCount = useMemo(
+    () => tasks.filter((task) => isTaskArchived(task)).length,
+    [tasks],
+  );
+
+  const visibleTasks = useMemo(
+    () => (showArchived ? tasks : tasks.filter((task) => !isTaskArchived(task))),
+    [tasks, showArchived],
+  );
+
   // Pinned tasks float to the top, everything else keeps whatever order
   // the backend returned it in (a stable sort - only the pinned/
   // not-pinned split moves anything, nothing else gets reshuffled).
   const sortedTasks = useMemo(
-    () => [...tasks].sort((a, b) => Number(b.isPinned) - Number(a.isPinned)),
-    [tasks],
+    () => [...visibleTasks].sort((a, b) => Number(b.isPinned) - Number(a.isPinned)),
+    [visibleTasks],
   );
 
   // 'n' anywhere on the page (unless a detail view is already open, to
@@ -80,23 +94,41 @@ export default function Tasks() {
         title="My Tasks"
         description="Manage, filter, and track the progress of all your tasks."
         action={
-          <div className="flex items-center gap-2">
-            <ActionButton color="violet" onClick={openCreateModal}>
-              + New Task
-            </ActionButton>
-            <kbd className="hidden sm:inline text-[10px] text-neutral-500 border border-neutral-700 rounded px-1.5 py-0.5">
-              N
-            </kbd>
+          <div className="flex items-center gap-4">
+            {archivedCount > 0 && (
+              <label className="flex items-center gap-1.5 text-sm text-neutral-400 select-none cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={toggleShowArchived}
+                  className="accent-violet-500"
+                />
+                Show archived ({archivedCount})
+              </label>
+            )}
+            <div className="flex items-center gap-2">
+              <ActionButton color="violet" onClick={openCreateModal}>
+                + New Task
+              </ActionButton>
+              <kbd className="hidden sm:inline text-[10px] text-neutral-500 border border-neutral-700 rounded px-1.5 py-0.5">
+                N
+              </kbd>
+            </div>
           </div>
         }
       />
 
       {isLoading ? (
-        <LoadingState message="Loading data..." className="h-64" />
+        <CardGridSkeleton cards={6} />
       ) : error ? (
         <ErrorState message={error} />
       ) : tasks.length === 0 ? (
         <EmptyState message="You have no tasks registered." />
+      ) : visibleTasks.length === 0 ? (
+        // Every task exists, but they're all completed-and-old enough to
+        // be archived, and the toggle above is off - "no tasks" would be
+        // actively misleading here (the user very much has tasks).
+        <EmptyState message={`All ${archivedCount} of your tasks are archived. Toggle "Show archived" above to see them.`} />
       ) : (
         <TaskGrid 
           tasks={sortedTasks} 

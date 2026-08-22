@@ -1,9 +1,9 @@
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import Modal from '../components/UI/Modal';
-import LoadingState from '../components/UI/LoadingState';
 import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
+import TableSkeleton from '../components/UI/TableSkeleton';
 import UsersTable from '../components/Users/UsersTable';
 import UserEditForm from '../components/Users/UserEditForm';
 import { useAuth } from '../context/useAuth';
@@ -34,7 +34,7 @@ export default function Users() {
       />
 
       {isLoading ? (
-        <LoadingState message="Loading users..." />
+        <TableSkeleton rows={6} columns={5} />
       ) : error ? (
         <ErrorState message={error} />
       ) : users.length === 0 ? (

@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { COPY_FEEDBACK_MS } from '../../lib/constants';
+import CopyButton from '../UI/CopyButton';
 
 interface NewApiKeyModalProps {
   apiKey: string;
@@ -11,14 +10,6 @@ interface NewApiKeyModalProps {
 // key para sempre, por isso o aviso é bem explícito e o fecho é sempre uma
 // ação consciente do user (sem clique-fora nem Escape a fechar por acidente).
 export default function NewApiKeyModal({ apiKey, onClose }: NewApiKeyModalProps) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(apiKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), COPY_FEEDBACK_MS);
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className="bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -36,13 +27,7 @@ export default function NewApiKeyModal({ apiKey, onClose }: NewApiKeyModalProps)
             <code className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2.5 text-sm text-violet-300 font-mono break-all">
               {apiKey}
             </code>
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="shrink-0 px-3 py-2.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium text-neutral-200 transition-colors"
-            >
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
+            <CopyButton text={apiKey} />
           </div>
 
           <button

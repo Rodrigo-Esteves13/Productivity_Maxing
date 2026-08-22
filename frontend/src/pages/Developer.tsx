@@ -5,8 +5,8 @@ import { useAuth } from '../context/useAuth';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ActionButton from '../components/UI/ActionButton';
-import LoadingState from '../components/UI/LoadingState';
 import EmptyState from '../components/UI/EmptyState';
+import TableSkeleton from '../components/UI/TableSkeleton';
 import ApiKeysTable from '../components/Developer/ApiKeysTable';
 import NewApiKeyModal from '../components/Developer/NewApiKeyModal';
 import type { ApiKeyScope } from '../types/models';
@@ -74,7 +74,7 @@ export default function Developer() {
       </form>
 
       {isLoading ? (
-        <LoadingState message="Loading API keys..." />
+        <TableSkeleton rows={3} columns={4} />
       ) : keys.length === 0 ? (
         <EmptyState message="You don't have any API keys yet. Generate one above to get started." />
       ) : (

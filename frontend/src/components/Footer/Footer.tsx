@@ -18,6 +18,8 @@ const RESOURCE_LINKS = [
 const LEGAL_LINKS = [
   { label: 'Privacy Policy', to: '/privacy' },
   { label: 'Terms of Service', to: '/terms' },
+  { label: 'EULA (Agent)', to: '/eula' },
+  { label: 'DMCA Policy', to: '/dmca' },
 ];
 
 const STACK = ['React', 'TypeScript', 'Tailwind v4', 'NestJS', 'Prisma', 'Supabase', 'Go Agent'];

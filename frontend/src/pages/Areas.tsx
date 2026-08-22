@@ -2,9 +2,9 @@ import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import Modal from '../components/UI/Modal';
 import ActionButton from '../components/UI/ActionButton';
-import LoadingState from '../components/UI/LoadingState';
 import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
+import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import ModalHeaderActions from '../components/UI/ModalHeaderActions';
 import AreaGrid from '../components/Areas/AreaGrid';
 import AreaForm from '../components/Areas/AreaForm';
@@ -47,7 +47,7 @@ export default function Areas() {
       />
 
       {isLoading ? (
-        <LoadingState message="Loading areas..." />
+        <CardGridSkeleton cards={6} />
       ) : error ? (
         <ErrorState message={error} />
       ) : areas.length === 0 ? (
