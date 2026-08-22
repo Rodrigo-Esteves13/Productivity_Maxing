@@ -9,10 +9,14 @@ import FormError from '../components/UI/FormError';
 import AuthCard from '../components/Auth/AuthCard';
 import OAuthProviderList from '../components/Auth/OAuthProviderList';
 import AuthSwitchLink from '../components/Auth/AuthSwitchLink';
-import useDocumentTitle from '../hooks/useDocumentTitle';
+import useSeo from '../hooks/useSeo';
 
 export default function Register() {
-  useDocumentTitle('Register');
+  useSeo({
+    title: 'Register',
+    description: 'Create a free Productivity Maxing account to start tracking tasks, deadlines, and grades.',
+    path: '/register',
+  });
   const navigate = useNavigate();
   const { login } = useAuth();
 

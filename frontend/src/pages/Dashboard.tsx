@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
-import LoadingState from '../components/UI/LoadingState';
 import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
 import TasksTable from '../components/Dashboard/TasksTable';
+import TasksTableSkeleton from '../components/Dashboard/TasksTableSkeleton';
 import DashboardFilters from '../components/Dashboard/DashboardFilters';
 import { EMPTY_DASHBOARD_FILTERS, type DashboardFiltersState } from '../components/Dashboard/dashboardFilters.types';
 import { getUserTasks, getUserAreas, getTaskMetadata, bulkUpdateTaskStatus, bulkDeleteTasks } from '../api/userService';
@@ -27,6 +27,8 @@ import CreditsAccumulatedCard from '../components/Dashboard/CreditsAccumulatedCa
 import { DashboardWidgetToggles } from '../components/Dashboard/DashboardWidgetToggles';
 import { useDashboardWidgetPrefs } from '../hooks/useDashboardWidgetPrefs';
 import { useTableDensity } from '../hooks/useTableDensity';
+import { useShowArchivedTasks } from '../hooks/useShowArchivedTasks';
+import { isTaskArchived } from '../utils/taskArchive';
 import { PrinterIcon, UploadIcon, SlidersIcon } from '../components/UI/Icons';
 import BulkActionsBar from '../components/Dashboard/BulkActionsBar';
 import TaskExportButtons from '../components/Dashboard/TaskExportButtons';
@@ -42,7 +44,13 @@ export default function Dashboard() {
   const [difficulties, setDifficulties] = useState<string[]>([]);
   const [progressStatuses, setProgressStatuses] = useState<string[]>([]);
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isTasksLoading, setIsTasksLoading] = useState(true);
+  const [isMetaLoading, setIsMetaLoading] = useState(true);
+  // Kept as a single derived flag so every existing `!isLoading` guard
+  // below (the widget cards, the table/filters swap) doesn't need to be
+  // touched individually - it's still true exactly when it used to be
+  // true, "everything this page needs is in".
+  const isLoading = isTasksLoading || isMetaLoading;
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<DashboardFiltersState>(EMPTY_DASHBOARD_FILTERS);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -58,10 +66,11 @@ export default function Dashboard() {
   // "No program" (isViewingAllPrograms) also falls into the backend's
   // 'all' - no periodId restriction at all, so it already returns tasks
   // across every program, not just the active one.
-  const { activeProgram, activePeriod, isViewingAllPeriods, isViewingAllPrograms } = useAcademic();
+  const { activeProgram, activePeriod, isViewingAllPeriods, isViewingAllPrograms, isLoading: isAcademicLoading } = useAcademic();
   const periodParam = isViewingAllPeriods || isViewingAllPrograms ? 'all' : activePeriod?.id;
   const { visibility, toggle } = useDashboardWidgetPrefs();
   const { density, toggleDensity } = useTableDensity();
+  const { showArchived, toggleShowArchived } = useShowArchivedTasks();
 
   // A stale selection pointing at tasks that are no longer visible (e.g.
   // after narrowing the filters, or after a bulk action already removed/
@@ -119,29 +128,60 @@ export default function Dashboard() {
     }
   };
 
+  // Areas and task metadata (types, difficulties, statuses) are a global
+  // catalog, not scoped to any academic period - getUserAreas() and
+  // getTaskMetadata() take no arguments at all. They used to be bundled
+  // into the SAME effect as the tasks fetch below, gated on `periodParam`
+  // - which meant they sat waiting through the ENTIRE
+  // AuthContext -> AcademicContext resolution chain (fetchCsrfToken ->
+  // refreshUser -> getPrograms -> getProgramPeriods, several sequential
+  // network round-trips) before firing, even though they never needed
+  // any of that. Splitting this out means they start the moment Dashboard
+  // mounts, in parallel with that whole chain, instead of after it.
   useEffect(() => {
-    async function fetchData() {
+    async function fetchMeta() {
       try {
-        setIsLoading(true);
-        const [tasksData, areasData, metaData] = await Promise.all([
-          getUserTasks(periodParam),
-          getUserAreas(),
-          getTaskMetadata(),
-        ]);
-        setTasks(tasksData);
+        setIsMetaLoading(true);
+        const [areasData, metaData] = await Promise.all([getUserAreas(), getTaskMetadata()]);
         setAreas(areasData);
         setAcademicTaskTypes(metaData.academicTaskTypes);
         setDifficulties(metaData.difficulties);
         setProgressStatuses(metaData.progressStatuses);
       } catch (err) {
-        console.error('Failed to load dashboard', err);
+        console.error('Failed to load dashboard metadata', err);
         setError('Could not load the dashboard data.');
       } finally {
-        setIsLoading(false);
+        setIsMetaLoading(false);
       }
     }
-    fetchData();
-  }, [periodParam]);
+    fetchMeta();
+  }, []);
+
+  useEffect(() => {
+    // AcademicContext resolves activeProgram/activePeriod asynchronously
+    // (getPrograms -> getProgramPeriods) - before that finishes,
+    // activePeriod is null and periodParam is undefined, but this effect
+    // would still fire on that undefined value the instant Dashboard
+    // mounts, then fire AGAIN moments later once the real period comes
+    // in. That's a whole extra tasks fetch, thrown away, on literally
+    // every Dashboard load - waiting for isAcademicLoading to clear means
+    // this only ever fires once, with the real value.
+    if (isAcademicLoading) return;
+
+    async function fetchTasks() {
+      try {
+        setIsTasksLoading(true);
+        const tasksData = await getUserTasks(periodParam);
+        setTasks(tasksData);
+      } catch (err) {
+        console.error('Failed to load dashboard tasks', err);
+        setError('Could not load the dashboard data.');
+      } finally {
+        setIsTasksLoading(false);
+      }
+    }
+    fetchTasks();
+  }, [periodParam, isAcademicLoading]);
 
   const academicTasks = useMemo(
     () => tasks.filter((task) => task.type === DASHBOARD_TASK_TYPE_KEY),
@@ -153,9 +193,15 @@ export default function Dashboard() {
     return areas.filter((area) => areaIdsWithAcademicTasks.has(area.id));
   }, [areas, academicTasks]);
 
+  const archivedCount = useMemo(
+    () => academicTasks.filter((task) => isTaskArchived(task)).length,
+    [academicTasks],
+  );
+
   const filteredTasks = useMemo(() => {
     const search = filters.search.trim().toLowerCase();
     return academicTasks.filter((task) => {
+      if (!showArchived && isTaskArchived(task)) return false;
       if (search && !task.title.toLowerCase().includes(search)) return false;
       if (filters.areaId && task.areaId !== filters.areaId) return false;
       if (filters.academicType && task.academicType !== filters.academicType) return false;
@@ -164,7 +210,7 @@ export default function Dashboard() {
       if (filters.dateStatus && getDateStatus(task) !== filters.dateStatus) return false;
       return true;
     });
-  }, [academicTasks, filters]);
+  }, [academicTasks, filters, showArchived]);
 
   return (
     <PageLayout>
@@ -200,6 +246,17 @@ export default function Dashboard() {
             <SlidersIcon />
             {density === 'compact' ? 'Comfortable' : 'Compact'}
           </button>
+          {archivedCount > 0 && (
+            <label className="flex items-center gap-1.5 text-sm text-neutral-400 select-none cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={toggleShowArchived}
+                className="accent-violet-500"
+              />
+              Show archived ({archivedCount})
+            </label>
+          )}
           <DashboardWidgetToggles visibility={visibility} toggle={toggle} />
         </div>
       </div>
@@ -253,7 +310,7 @@ export default function Dashboard() {
       )}
 
       {isLoading ? (
-        <LoadingState message="Compiling data..." className="h-64" />
+        <TasksTableSkeleton />
       ) : error ? (
         <ErrorState message={error} />
       ) : (

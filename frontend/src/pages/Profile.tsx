@@ -10,6 +10,7 @@ import GoogleCalendarCard from '../components/Profile/GoogleCalendarCard';
 import AccessibilitySettingsCard from '../components/Profile/AccessibilitySettingsCard';
 import DeleteAccountModal from '../components/Profile/DeleteAccountModal';
 import EditProfileModal from '../components/Profile/EditProfileModal';
+import FormSkeleton from '../components/UI/FormSkeleton';
 import ActionButton from '../components/UI/ActionButton';
 import { PencilIcon } from '../components/UI/Icons';
 import { useAuth } from '../context/useAuth';
@@ -24,9 +25,8 @@ export default function Profile() {
   if (isLoadingUser || !user) {
     return (
       <PageLayout>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-neutral-400 animate-pulse">Loading profile...</p>
-        </div>
+        <PageHeader title="User Profile" description="Manage your personal information and settings." />
+        <FormSkeleton sections={4} />
       </PageLayout>
     );
   }

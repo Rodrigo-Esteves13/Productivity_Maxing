@@ -1,0 +1,30 @@
+# Productivity Maxing
+
+> Free, open-source task and grade tracker for academic life. Organize
+> coursework into Areas, track deadlines and difficulty, compare target vs
+> real grades, and optionally sync deadlines to Google Calendar.
+
+Productivity Maxing is a single-developer web app (React/TypeScript frontend,
+NestJS/Prisma/PostgreSQL backend) for students. It is not a general-purpose
+task manager - it's built specifically around academic workflows: courses
+("Areas"), graded work with weight/difficulty, target-vs-real grade tracking,
+and study-session/focus logging.
+
+## Pages
+
+- [Home](https://app.pmaxing.pt/): product overview and sign-up entry point.
+- [Register](https://app.pmaxing.pt/register): create a free account.
+- [Login](https://app.pmaxing.pt/login): sign in (email/password, Google, GitHub, or Discord).
+- [Privacy Policy](https://app.pmaxing.pt/privacy): what data is collected and why.
+- [Terms of Service](https://app.pmaxing.pt/terms): usage terms for the hosted app.
+- [EULA](https://app.pmaxing.pt/eula): license terms for the downloadable Windows companion agent.
+- [DMCA Policy](https://app.pmaxing.pt/dmca): copyright notice-and-takedown process.
+
+## Source
+
+- [GitHub repository](https://github.com/Rodrigo-Esteves13/Productivity_Maxing) - MIT licensed, open source.
+
+## Notes for automated agents
+
+Everything past the homepage and auth pages requires a logged-in session -
+there is no public content to crawl or summarize beyond what's listed above.

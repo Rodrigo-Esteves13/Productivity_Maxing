@@ -1,0 +1,79 @@
+# Productivity Maxing - app.pmaxing.pt
+# Default: allow normal search-engine crawlers on public pages only.
+# Everything behind auth is disallowed - it's not indexable content anyway
+# (it 404s/redirects to login for a crawler with no session), this just
+# says so explicitly instead of leaving it to be discovered the hard way.
+User-agent: *
+Allow: /$
+Allow: /login
+Allow: /register
+Allow: /forgot-password
+Allow: /privacy
+Allow: /terms
+Allow: /eula
+Allow: /dmca
+Disallow: /dashboard
+Disallow: /tasks
+Disallow: /focus
+Disallow: /profile
+Disallow: /developer
+Disallow: /agent
+Disallow: /areas
+Disallow: /users
+Disallow: /security
+Disallow: /task-types
+Disallow: /reset-password
+Disallow: /auth/
+
+# --- AI training crawlers ---
+# Blocked from training/scraping. This does not affect normal search
+# indexing above (Googlebot, Bingbot, etc. are not in this list), and it
+# does not - and cannot - block API access, browsing agents fetching a
+# page on a user's behalf, or crawlers that ignore robots.txt entirely;
+# it only opts out the well-behaved ones that respect it.
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: Diffbot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+User-agent: cohere-ai
+Disallow: /
+
+User-agent: Meta-ExternalAgent
+Disallow: /
+
+User-agent: Meta-ExternalFetcher
+Disallow: /
+
+Sitemap: https://app.pmaxing.pt/sitemap.xml

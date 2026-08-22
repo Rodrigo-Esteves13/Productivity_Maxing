@@ -1,5 +1,6 @@
 import { DownloadIcon } from '../UI/Icons';
 import DownloadSetupButton from './DownloadSetupButton';
+import CopyButton from '../UI/CopyButton';
 import { AGENT_EXE_DOWNLOAD_PATH } from '../../lib/agentConstants';
 
 // href aponta para o binário VANILLA (sem key nenhuma) servido a partir de
@@ -10,6 +11,8 @@ import { AGENT_EXE_DOWNLOAD_PATH } from '../../lib/agentConstants';
 // -H=windowsgui é importante: sem isso volta a abrir uma janela de
 // consola preta ao correr.
 const DOWNLOAD_URL = AGENT_EXE_DOWNLOAD_PATH;
+const SET_KEY_COMMAND = 'pmaxing-agent.exe -set-key PASTE_YOUR_KEY_HERE';
+const DEBUG_COMMAND = 'pmaxing-agent.exe -debug';
 
 export default function SetupInstructions() {
   return (
@@ -50,9 +53,12 @@ export default function SetupInstructions() {
             <DownloadIcon className="w-3.5 h-3.5" />
             Download pmaxing-agent.exe (plain)
           </a>
-          <pre className="bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-xs text-neutral-300 overflow-x-auto">
-            {'pmaxing-agent.exe -set-key PASTE_YOUR_KEY_HERE'}
-          </pre>
+          <div className="flex items-start gap-2">
+            <pre className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-xs text-neutral-300 overflow-x-auto">
+              {SET_KEY_COMMAND}
+            </pre>
+            <CopyButton text={SET_KEY_COMMAND} label="Copy" />
+          </div>
           <p>
             To see live logs instead of the background log file (kept at{' '}
             <code className="text-violet-300 bg-neutral-900 px-1 rounded">
@@ -60,9 +66,12 @@ export default function SetupInstructions() {
             </code>
             ), run it from a terminal with:
           </p>
-          <pre className="bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-xs text-neutral-300 overflow-x-auto">
-            {'pmaxing-agent.exe -debug'}
-          </pre>
+          <div className="flex items-start gap-2">
+            <pre className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-xs text-neutral-300 overflow-x-auto">
+              {DEBUG_COMMAND}
+            </pre>
+            <CopyButton text={DEBUG_COMMAND} label="Copy" />
+          </div>
         </div>
       </details>
 

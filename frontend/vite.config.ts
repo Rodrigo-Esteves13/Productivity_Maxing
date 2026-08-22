@@ -83,7 +83,18 @@ export default defineConfig({
     }
   })],
   build: {
-    chunkSizeWarningLimit: 1500
+    chunkSizeWarningLimit: 1500,
+    // 'hidden': gera os .map normalmente (útil para dar deobfuscate a um
+    // stack trace que caia no ErrorBoundary/telemetry), mas NÃO injeta o
+    // comentário `//# sourceMappingURL=` no JS servido - um visitante a
+    // abrir o DevTools não vê o teu código-fonte original, só o bundle
+    // minificado. Os .map ficam no output do build (dist/assets/*.map);
+    // não são publicados automaticamente só por existirem, mas confirma
+    // que o Netlify não os está a servir publicamente (não deviam estar
+    // referenciados por nada, logo ninguém os encontra por engano, mas
+   
+    // vale a pena um Disallow: /**/*.map no robots.txt se quiseres reforçar).
+    sourcemap: 'hidden'
   },
   server: {
     host: true,

@@ -22,7 +22,6 @@ export function useTasksPage() {
   const [difficulties, setDifficulties] = useState<string[]>([]);
   const [progressStatuses, setProgressStatuses] = useState<string[]>([]);
 
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -38,18 +37,25 @@ export function useTasksPage() {
   // "No program" (isViewingAllPrograms) também cai no 'all' do backend -
   // esse filtro já não tem qualquer restrição de periodId, logo já
   // devolve as tasks de todos os programas, não só do período ativo.
-  const { activePeriod, isViewingAllPeriods, isViewingAllPrograms } = useAcademic();
+  const { activePeriod, isViewingAllPeriods, isViewingAllPrograms, isLoading: isAcademicLoading } = useAcademic();
   const periodParam = isViewingAllPeriods || isViewingAllPrograms ? 'all' : activePeriod?.id;
 
-  const fetchData = async () => {
+  const [isTasksLoading, setIsTasksLoading] = useState(true);
+  const [isMetaLoading, setIsMetaLoading] = useState(true);
+  // Kept as a single derived flag for every existing `isLoading` read
+  // below/in Tasks.tsx - true exactly when it used to be true.
+  const isLoading = isTasksLoading || isMetaLoading;
+
+  // Same split as Dashboard.tsx's fetch effects, and the same reason:
+  // Areas + task metadata don't depend on periodParam at all (getUserAreas
+  // and getTaskMetadata take no arguments), so there's no reason for them
+  // to wait behind AcademicContext's own load (getPrograms ->
+  // getProgramPeriods) just because they used to share one Promise.all
+  // with the tasks fetch that DOES need periodParam.
+  const fetchMeta = async () => {
     try {
-      setIsLoading(true);
-      const [tasksData, areasData, metaData] = await Promise.all([
-        getUserTasks(periodParam),
-        getUserAreas(),
-        getTaskMetadata(),
-      ]);
-      setTasks(tasksData);
+      setIsMetaLoading(true);
+      const [areasData, metaData] = await Promise.all([getUserAreas(), getTaskMetadata()]);
       setAreas(areasData);
       setTaskTypes(metaData.taskTypes);
       setAcademicTaskTypes(metaData.academicTaskTypes);
@@ -58,14 +64,36 @@ export function useTasksPage() {
     } catch {
       setError('Could not load the data.');
     } finally {
-      setIsLoading(false);
+      setIsMetaLoading(false);
+    }
+  };
+
+  const fetchTasks = async () => {
+    try {
+      setIsTasksLoading(true);
+      const tasksData = await getUserTasks(periodParam);
+      setTasks(tasksData);
+    } catch {
+      setError('Could not load the data.');
+    } finally {
+      setIsTasksLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchMeta();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [periodParam]);
+  }, []);
+
+  useEffect(() => {
+    // See Dashboard.tsx's identical guard: without this, periodParam is
+    // briefly `undefined` before AcademicContext resolves
+    // activePeriod, firing this effect once wastefully, then again a
+    // moment later with the real value.
+    if (isAcademicLoading) return;
+    fetchTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodParam, isAcademicLoading]);
 
   // Aplica o resultado da checkbox "Add to Google Calendar" depois de criar
   // ou atualizar uma task. Nunca lança - se a chamada ao Google falhar, a

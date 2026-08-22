@@ -9,10 +9,14 @@ import FormError from '../components/UI/FormError';
 import AuthCard from '../components/Auth/AuthCard';
 import OAuthProviderList from '../components/Auth/OAuthProviderList';
 import AuthSwitchLink from '../components/Auth/AuthSwitchLink';
-import useDocumentTitle from '../hooks/useDocumentTitle';
+import useSeo from '../hooks/useSeo';
 
 export default function Login() {
-  useDocumentTitle('Login');
+  useSeo({
+    title: 'Login',
+    description: 'Log in to Productivity Maxing to manage your academic tasks, deadlines, and grades.',
+    path: '/login',
+  });
   const navigate = useNavigate();
   const { login } = useAuth();
 

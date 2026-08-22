@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
 import {
   getPrograms,
   getProgramPeriods,
@@ -164,55 +164,69 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user?.id, load]);
 
-  const switchPeriod = async (periodId: string | 'all') => {
-    setIsViewingAllPrograms(false);
-    if (periodId === 'all') {
-      // "View all periods" is just a local view mode - it doesn't make
-      // sense to persist it on the backend as the "active period" (that
-      // concept always points to one real, concrete period).
-      setIsViewingAllPeriods(true);
-      return;
-    }
-    const period = periods.find((p) => p.id === periodId);
-    if (!period) return;
-
-    // Optimistic: the UI updates right away, the backend request runs in
-    // parallel - switching periods should feel instant.
-    setActivePeriod(period);
-    activePeriodIdRef.current = period.id;
-    setIsViewingAllPeriods(false);
-    try {
-      await activatePeriod(periodId);
-    } catch (err) {
-      console.error('Failed to persist active period:', err);
-    }
-  };
-
-  const switchProgram = async (programId: string) => {
-    const program = programs.find((p) => p.id === programId);
-    if (!program) return;
-
-    setIsViewingAllPrograms(false);
-    // Optimistic, same as switchPeriod.
-    setActiveProgram(program);
-    activeProgramIdRef.current = program.id;
-    setIsViewingAllPeriods(false);
-    const period = await loadPeriodsFor(program);
-    if (period) {
-      try {
-        await activatePeriod(period.id);
-      } catch (err) {
-        console.error('Failed to persist active program/period:', err);
+  // Same reasoning as the useCallback wrapping in AuthContext.tsx: this
+  // Provider's `value` is memoized below, but a useMemo is only as
+  // stable as its dependencies - a function recreated on every render
+  // still busts the memo on every render. Wrapping every handler exposed
+  // through the context value in useCallback is what actually lets
+  // Tasks/Dashboard/PageLayout (all heavy useAcademic() consumers) skip
+  // re-rendering when neither this context's data nor their own props
+  // changed.
+  const switchPeriod = useCallback(
+    async (periodId: string | 'all') => {
+      setIsViewingAllPrograms(false);
+      if (periodId === 'all') {
+        // "View all periods" is just a local view mode - it doesn't make
+        // sense to persist it on the backend as the "active period" (that
+        // concept always points to one real, concrete period).
+        setIsViewingAllPeriods(true);
+        return;
       }
-    }
-    // A program with no periods yet (shouldn't happen via createProgram,
-    // which always creates a first one - only reachable for a program
-    // created some other way, e.g. a direct API call). It stays with no
-    // active period until one is created; PeriodSelector simply shows
-    // nothing.
-  };
+      const period = periods.find((p) => p.id === periodId);
+      if (!period) return;
 
-  const createProgram = async (name: string, roundFinalGrade?: boolean) => {
+      // Optimistic: the UI updates right away, the backend request runs in
+      // parallel - switching periods should feel instant.
+      setActivePeriod(period);
+      activePeriodIdRef.current = period.id;
+      setIsViewingAllPeriods(false);
+      try {
+        await activatePeriod(periodId);
+      } catch (err) {
+        console.error('Failed to persist active period:', err);
+      }
+    },
+    [periods],
+  );
+
+  const switchProgram = useCallback(
+    async (programId: string) => {
+      const program = programs.find((p) => p.id === programId);
+      if (!program) return;
+
+      setIsViewingAllPrograms(false);
+      // Optimistic, same as switchPeriod.
+      setActiveProgram(program);
+      activeProgramIdRef.current = program.id;
+      setIsViewingAllPeriods(false);
+      const period = await loadPeriodsFor(program);
+      if (period) {
+        try {
+          await activatePeriod(period.id);
+        } catch (err) {
+          console.error('Failed to persist active program/period:', err);
+        }
+      }
+      // A program with no periods yet (shouldn't happen via createProgram,
+      // which always creates a first one - only reachable for a program
+      // created some other way, e.g. a direct API call). It stays with no
+      // active period until one is created; PeriodSelector simply shows
+      // nothing.
+    },
+    [programs, loadPeriodsFor],
+  );
+
+  const createProgram = useCallback(async (name: string, roundFinalGrade?: boolean) => {
     setIsViewingAllPrograms(false);
     const program = await createProgramRequest({ name, roundFinalGrade });
     const period = await createPeriodRequest({
@@ -232,82 +246,104 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Failed to persist active program/period:', err);
     }
-  };
+  }, []);
 
-  const removeProgram = async (programId: string) => {
-    await deleteProgramRequest(programId);
+  const removeProgram = useCallback(
+    async (programId: string) => {
+      await deleteProgramRequest(programId);
 
-    const remaining = programs.filter((p) => p.id !== programId);
-    setPrograms(remaining);
+      const remaining = programs.filter((p) => p.id !== programId);
+      setPrograms(remaining);
 
-    if (activeProgram?.id !== programId) return;
+      if (activeProgram?.id !== programId) return;
 
-    // The deleted program was the active one - fall back to another
-    // remaining program automatically, same idea as switchProgram.
-    const nextProgram =
-      remaining.find((p) => p.isActive) ?? remaining[0] ?? null;
-    setActiveProgram(nextProgram);
-    activeProgramIdRef.current = nextProgram?.id ?? null;
-    setIsViewingAllPeriods(false);
-    if (nextProgram) {
-      const period = await loadPeriodsFor(nextProgram);
-      if (period) {
-        try {
-          await activatePeriod(period.id);
-        } catch (err) {
-          console.error('Failed to persist active program/period:', err);
+      // The deleted program was the active one - fall back to another
+      // remaining program automatically, same idea as switchProgram.
+      const nextProgram =
+        remaining.find((p) => p.isActive) ?? remaining[0] ?? null;
+      setActiveProgram(nextProgram);
+      activeProgramIdRef.current = nextProgram?.id ?? null;
+      setIsViewingAllPeriods(false);
+      if (nextProgram) {
+        const period = await loadPeriodsFor(nextProgram);
+        if (period) {
+          try {
+            await activatePeriod(period.id);
+          } catch (err) {
+            console.error('Failed to persist active program/period:', err);
+          }
         }
+      } else {
+        setPeriods([]);
+        setActivePeriod(null);
+        activePeriodIdRef.current = null;
       }
-    } else {
-      setPeriods([]);
-      setActivePeriod(null);
-      activePeriodIdRef.current = null;
-    }
-  };
+    },
+    [programs, activeProgram, loadPeriodsFor],
+  );
 
-  const restorePeriod = async (periodId: string) => {
-    const restored = await restorePeriodRequest(periodId);
-    setPeriods((prev) => prev.map((p) => (p.id === periodId ? restored : p)));
-    if (activePeriod?.id === periodId) {
-      setActivePeriod(restored);
-    }
-  };
+  const restorePeriod = useCallback(
+    async (periodId: string) => {
+      const restored = await restorePeriodRequest(periodId);
+      setPeriods((prev) => prev.map((p) => (p.id === periodId ? restored : p)));
+      if (activePeriod?.id === periodId) {
+        setActivePeriod(restored);
+      }
+    },
+    [activePeriod],
+  );
 
-  const toggleShowArchivedPeriods = () => {
+  const toggleShowArchivedPeriods = useCallback(() => {
     setShowArchivedPeriods((prev) => !prev);
-  };
+  }, []);
 
   // Steps outside any single program - "No program (all tasks)" in
   // ProgramSelector. Doesn't touch the underlying activeProgram/
   // activePeriod state at all, only the derived values exposed below, so
   // switching back to a real program (switchProgram/switchPeriod, both of
   // which clear this) picks up exactly where the user left off.
-  const viewAllPrograms = () => {
+  const viewAllPrograms = useCallback(() => {
     setIsViewingAllPrograms(true);
-  };
+  }, []);
 
-  return (
-    <AcademicContext.Provider
-      value={{
-        programs,
-        activeProgram: isViewingAllPrograms ? null : activeProgram,
-        periods,
-        activePeriod: isViewingAllPrograms ? null : activePeriod,
-        isViewingAllPeriods,
-        isViewingAllPrograms,
-        viewAllPrograms,
-        showArchivedPeriods,
-        toggleShowArchivedPeriods,
-        isLoading,
-        switchPeriod,
-        restorePeriod,
-        switchProgram,
-        createProgram,
-        removeProgram,
-        refresh: load,
-      }}
-    >
-      {children}
-    </AcademicContext.Provider>
+  const value = useMemo(
+    () => ({
+      programs,
+      activeProgram: isViewingAllPrograms ? null : activeProgram,
+      periods,
+      activePeriod: isViewingAllPrograms ? null : activePeriod,
+      isViewingAllPeriods,
+      isViewingAllPrograms,
+      viewAllPrograms,
+      showArchivedPeriods,
+      toggleShowArchivedPeriods,
+      isLoading,
+      switchPeriod,
+      restorePeriod,
+      switchProgram,
+      createProgram,
+      removeProgram,
+      refresh: load,
+    }),
+    [
+      programs,
+      activeProgram,
+      periods,
+      activePeriod,
+      isViewingAllPeriods,
+      isViewingAllPrograms,
+      viewAllPrograms,
+      showArchivedPeriods,
+      toggleShowArchivedPeriods,
+      isLoading,
+      switchPeriod,
+      restorePeriod,
+      switchProgram,
+      createProgram,
+      removeProgram,
+      load,
+    ],
   );
+
+  return <AcademicContext.Provider value={value}>{children}</AcademicContext.Provider>;
 }

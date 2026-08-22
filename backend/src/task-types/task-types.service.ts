@@ -9,10 +9,14 @@ import { UpdateTaskTypeDto } from './dto/update-task-type.dto';
 import { CreateAcademicTaskTypeDto } from './dto/create-academic-task-type.dto';
 import { UpdateAcademicTaskTypeDto } from './dto/update-academic-task-type.dto';
 import { slugifyToKey } from './utils/generate-key';
+import { TaskMetaCacheService } from '../common/task-meta-cache.service';
 
 @Injectable()
 export class TaskTypesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly taskMetaCache: TaskMetaCacheService,
+  ) {}
 
   // TaskType
 
@@ -30,24 +34,38 @@ export class TaskTypesService {
         .findUnique({ where: { key: candidate } })
         .then((found) => found !== null),
     );
-    return this.prisma.taskType.create({ data: { ...dto, key } });
+    const created = await this.prisma.taskType.create({
+      data: { ...dto, key },
+    });
+    // Só invalida DEPOIS do write ter sucesso - se o create falhar (ex:
+    // validação), a cache existente continua válida, não há razão para a
+    // deitar fora por uma escrita que nunca aconteceu.
+    this.taskMetaCache.invalidate();
+    return created;
   }
 
   async updateTaskType(id: string, dto: UpdateTaskTypeDto) {
     await this.getTaskTypeOrThrow(id);
     // "key" nunca está no dto (nem existe no DTO) - não há risco de a
     // update tentar tocar-lhe, mesmo por engano.
-    return this.prisma.taskType.update({ where: { id }, data: dto });
+    const updated = await this.prisma.taskType.update({
+      where: { id },
+      data: dto,
+    });
+    this.taskMetaCache.invalidate();
+    return updated;
   }
 
   // Soft delete: nunca apagamos a sério. Apagar de facto partiria todas as
   // Tasks que já usam este tipo (FK), por isso só desativamos.
   async removeTaskType(id: string) {
     await this.getTaskTypeOrThrow(id);
-    return this.prisma.taskType.update({
+    const removed = await this.prisma.taskType.update({
       where: { id },
       data: { isActive: false },
     });
+    this.taskMetaCache.invalidate();
+    return removed;
   }
 
   private async getTaskTypeOrThrow(id: string) {
@@ -83,10 +101,12 @@ export class TaskTypesService {
     );
 
     const { taskTypeId, ...rest } = dto;
-    return this.prisma.academicTaskType.create({
+    const created = await this.prisma.academicTaskType.create({
       data: { ...rest, key, taskTypeId },
       include: { taskType: true },
     });
+    this.taskMetaCache.invalidate();
+    return created;
   }
 
   async updateAcademicTaskType(id: string, dto: UpdateAcademicTaskTypeDto) {
@@ -103,19 +123,23 @@ export class TaskTypesService {
       }
     }
 
-    return this.prisma.academicTaskType.update({
+    const updated = await this.prisma.academicTaskType.update({
       where: { id },
       data: dto,
       include: { taskType: true },
     });
+    this.taskMetaCache.invalidate();
+    return updated;
   }
 
   async removeAcademicTaskType(id: string) {
     await this.getAcademicTaskTypeOrThrow(id);
-    return this.prisma.academicTaskType.update({
+    const removed = await this.prisma.academicTaskType.update({
       where: { id },
       data: { isActive: false },
     });
+    this.taskMetaCache.invalidate();
+    return removed;
   }
 
   private async getAcademicTaskTypeOrThrow(id: string) {

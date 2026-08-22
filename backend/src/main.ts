@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
@@ -69,6 +70,12 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   app.use(helmet());
+  // Gzips every JSON response over ~1KB by default (the compression
+  // package's own threshold) - a task list of any real size is mostly
+  // repeated key names ("title", "progressStatus", "difficulty", ...),
+  // which compresses extremely well. Needs `npm install compression
+  // @types/compression` in the backend - wasn't already a dependency.
+  app.use(compression());
   // Necessário para o JwtStrategy e o CsrfGuard conseguirem ler
   // req.cookies - sem isto, req.cookies fica sempre undefined.
   app.use(cookieParser());

@@ -3,13 +3,20 @@ import LegalPageLayout from '../components/Legal/LegalPageLayout';
 import LegalSection from '../components/Legal/LegalSection';
 import LegalLink from '../components/Legal/LegalLink';
 import LegalTable from '../components/Legal/LegalTable';
-import { REPO_URL } from '../lib/constants';
+import useSeo from '../hooks/useSeo';
+import { REPO_URL, CONTACT_EMAIL, APP_DOMAIN } from '../lib/constants';
 
-const CONTACT_EMAIL = 'support@pmaxing.pt';
-const APP_DOMAIN = 'app.pmaxing.pt';
 const LAST_UPDATED = '07/07/2026';
 
 export default function PrivacyPolicy() {
+  useSeo({
+    title: 'Privacy Policy',
+    description:
+      'How Productivity Maxing collects, uses, and protects your account, task, and Google Calendar sync data.',
+    path: '/privacy',
+    noindex: true, // legal boilerplate, not something worth ranking for
+  });
+
   return (
     <PageLayout>
     <LegalPageLayout title="Privacy Policy for Productivity Maxing" lastUpdated={LAST_UPDATED}>

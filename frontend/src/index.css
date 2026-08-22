@@ -47,6 +47,17 @@ body {
   background-color: var(--color-neutral-950);
 }
 
+/* Defensive: a single element overflowing its container (a fixed-width
+   table, a long unbroken string, a wide inline SVG) shouldn't be able to
+   push the whole page sideways on mobile. Anything that legitimately
+   needs horizontal scroll (the tables in TasksTable.tsx, code blocks)
+   already opts in with its own `overflow-x-auto` wrapper, so this only
+   catches accidental overflow, not intentional scrollable regions. */
+html,
+body {
+  overflow-x: hidden;
+}
+
 ::selection {
   background-color: var(--color-violet-700);
   color: var(--color-neutral-50);

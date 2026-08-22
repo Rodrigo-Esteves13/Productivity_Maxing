@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-
-const DISMISSED_KEY = 'pm_cookie_notice_dismissed';
+import { COOKIE_NOTICE_DISMISSED_KEY } from '../../lib/constants';
 
 /**
  * Aviso informativo sobre cookies - NÃO é um bloqueio/consent-gate, porque
@@ -17,12 +16,12 @@ export default function CookieNotice() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const dismissed = window.localStorage.getItem(DISMISSED_KEY);
+    const dismissed = window.localStorage.getItem(COOKIE_NOTICE_DISMISSED_KEY);
     if (!dismissed) setVisible(true);
   }, []);
 
   const dismiss = () => {
-    window.localStorage.setItem(DISMISSED_KEY, 'true');
+    window.localStorage.setItem(COOKIE_NOTICE_DISMISSED_KEY, 'true');
     setVisible(false);
   };
 

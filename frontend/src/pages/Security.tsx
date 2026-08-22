@@ -1,7 +1,7 @@
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
-import LoadingState from '../components/UI/LoadingState';
 import ErrorState from '../components/UI/ErrorState';
+import TableSkeleton from '../components/UI/TableSkeleton';
 import SecurityStatsCards from '../components/Security/SecurityStatsCards';
 import SecurityLogsFilters from '../components/Security/SecurityLogsFilters';
 import SecurityLogsTable from '../components/Security/SecurityLogsTable';
@@ -45,7 +45,7 @@ export default function Security() {
       />
 
       {isLoading ? (
-        <LoadingState message="Loading security logs..." />
+        <TableSkeleton rows={8} columns={5} />
       ) : error ? (
         <ErrorState message={error} />
       ) : (
