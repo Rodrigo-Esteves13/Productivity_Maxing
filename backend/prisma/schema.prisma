@@ -68,6 +68,11 @@ enum Difficulty {
   VERY_HARD
 }
 
+// Priority deixou de ser um enum fixo (ver TaskType/AcademicTaskType logo
+// abaixo, mesma decisão já tomada para eles) - passou a ser um catálogo
+// editável pelo admin em runtime, sem precisar de deploy para
+// adicionar/renomear/reordenar níveis de prioridade. Ver model Priority.
+
 // Como as regras dentro de AgentConfig se combinam: ANY (basta uma regra
 // ativa dar true) ou ALL (todas as regras ativas têm de dar true).
 enum AgentTriggerMode {
@@ -116,6 +121,22 @@ model AcademicTaskType {
 
   taskTypeId String
   taskType   TaskType @relation(fields: [taskTypeId], references: [id])
+
+  tasks Task[]
+}
+
+/// Urgência manual da task, independente da Difficulty (uma task pode ser
+/// "fácil" e "urgente" ao mesmo tempo, ex: um email rápido que tem de sair
+/// hoje). Mesmo padrão do TaskType: catálogo editável pelo admin em
+/// runtime (label/colorHex/order), não um enum preso ao código - deixa de
+/// ser preciso um deploy para renomear/reordenar/adicionar níveis.
+model Priority {
+  id       String  @id @default(uuid())
+  key      String  @unique
+  label    String
+  colorHex String? @default("#808080")
+  order    Int     @default(0)
+  isActive Boolean @default(true)
 
   tasks Task[]
 }
@@ -388,6 +409,16 @@ model Task {
   // Metadados de Execução
   weightPercentage Float?
   difficulty       Difficulty
+  // Opcional (como academicTypeId, não como taskTypeId) de propósito: uma
+  // migração que tornasse isto obrigatório exigiria dar um valor a toda a
+  // task já existente na BD antes de aplicar a constraint NOT NULL - mais
+  // uma migração distinta, teria de correr depois do seed de Priority
+  // (prisma/scripts/seed-priorities.ts) já ter inserido pelo menos uma
+  // linha para apontar. Ficar opcional evita essa dependência de ordem;
+  // pode-se apertar para obrigatório mais tarde, já com o catálogo
+  // semeado e todas as tasks com um valor real.
+  priorityId       String?
+  priority         Priority?      @relation(fields: [priorityId], references: [id])
   progressStatus   ProgressStatus @default(ON_TRACK)
   referenceLink    String?
 

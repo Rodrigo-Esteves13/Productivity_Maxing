@@ -9,7 +9,7 @@ import {
   deleteTask,
 } from '../api/userService';
 import { syncTaskToCalendar, unsyncTaskFromCalendar } from '../api/calendarService';
-import type { Task, Area, TaskTypeOption, AcademicTaskTypeOption } from '../types/models';
+import type { Task, Area, TaskTypeOption, AcademicTaskTypeOption, PriorityOption } from '../types/models';
 import { useQuickReschedule } from './useQuickReschedule';
 import { useAcademic } from '../context/useAcademic';
 
@@ -20,6 +20,7 @@ export function useTasksPage() {
   const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
   const [academicTaskTypes, setAcademicTaskTypes] = useState<AcademicTaskTypeOption[]>([]);
   const [difficulties, setDifficulties] = useState<string[]>([]);
+  const [priorities, setPriorities] = useState<PriorityOption[]>([]);
   const [progressStatuses, setProgressStatuses] = useState<string[]>([]);
 
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +61,12 @@ export function useTasksPage() {
       setTaskTypes(metaData.taskTypes);
       setAcademicTaskTypes(metaData.academicTaskTypes);
       setDifficulties(metaData.difficulties);
+      // `?? []` de propósito: se o backend ainda não tiver a migração da
+      // Priority aplicada (ou estiver a correr uma versão mais antiga do
+      // código durante um deploy), metaData.priorities vem undefined - sem
+      // isto, isso sobrescrevia o estado inicial (`useState<string[]>([])`)
+      // com undefined, e o `.includes()` em DifficultyTypeFields rebentava.
+      setPriorities(metaData.priorities ?? []);
       setProgressStatuses(metaData.progressStatuses);
     } catch {
       setError('Could not load the data.');
@@ -306,6 +313,7 @@ export function useTasksPage() {
     taskTypes,
     academicTaskTypes,
     difficulties,
+    priorities,
     progressStatuses,
     isLoading,
     error,

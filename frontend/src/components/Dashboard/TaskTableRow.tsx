@@ -1,5 +1,6 @@
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
+import PriorityBadge from '../UI/PriorityBadge';
 import DateStatusBadge from '../UI/DateStatusBadge';
 import ColorDot from '../UI/ColorDot';
 import RescheduleButton from '../UI/RescheduleButton';
@@ -79,7 +80,14 @@ export default function TaskTableRow({
           <div className="mt-0.5">{task.weightPercentage ? `${task.weightPercentage}%` : 'N/A'}</div>
         )}
       </td>
-      <td className={`${cellPadding} align-middle`}><DifficultyBadge difficulty={task.difficulty} /></td>
+      <td className={`${cellPadding} align-middle`}>
+        <DifficultyBadge difficulty={task.difficulty} />
+        {!isCompact && task.priority && (
+          <div className="mt-1">
+            <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
+          </div>
+        )}
+      </td>
       <td className={`${cellPadding} align-middle text-center`}><StatusBadge status={task.progressStatus} /></td>
       <td className={`${cellPadding} align-middle text-center text-xs`}>
         <span className="font-medium text-blue-400">{task.targetGrade ?? 'N/A'}</span>

@@ -1,6 +1,7 @@
 import type { Task, TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
+import PriorityBadge from '../UI/PriorityBadge';
 import DetailRow from '../UI/DetailRow';
 import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
 import { useDurationPrediction } from '../../hooks/useDurationPrediction';
@@ -37,6 +38,11 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       <DetailRow label="Difficulty">
         <DifficultyBadge difficulty={task.difficulty} />
       </DetailRow>
+      {task.priority && (
+        <DetailRow label="Priority">
+          <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
+        </DetailRow>
+      )}
 
       <DetailRow label="Type">{typeLabel}</DetailRow>
       {academicTypeLabel && <DetailRow label="Academic Type">{academicTypeLabel}</DetailRow>}

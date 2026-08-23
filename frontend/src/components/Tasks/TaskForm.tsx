@@ -3,7 +3,7 @@ import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
 import { buildTaskPayload } from '../../utils/taskPayload';
-import type { TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
+import type { TaskTypeOption, AcademicTaskTypeOption, PriorityOption } from '../../types/models';
 
 interface AreaOption {
   id: string;
@@ -18,6 +18,7 @@ interface TaskFormProps {
   taskTypes: TaskTypeOption[];
   academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
+  priorities: PriorityOption[];
 }
 
 export default function TaskForm({
@@ -27,6 +28,7 @@ export default function TaskForm({
   taskTypes,
   academicTaskTypes,
   difficulties,
+  priorities,
 }: TaskFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -42,6 +44,13 @@ export default function TaskForm({
     type: '',
     academicType: '',
     difficulty: difficulties[0] || '',
+    // priorities[0] (não 'MEDIUM' fixo) - Priority passou a ser um
+    // catálogo gerido pelo admin em /task-types, a key 'MEDIUM' do seed
+    // inicial pode não existir mais se ele a renomear/apagar. priorities
+    // já vem ordenada por `order` do backend, por isso [0] é sempre "a
+    // primeira da lista tal como o admin a configurou" - mesma lógica que
+    // já se aplicava a difficulties[0] acima.
+    priority: priorities[0]?.key || '',
     areaId: '',
     topics: '',
     referenceLink: '',
@@ -100,6 +109,7 @@ export default function TaskForm({
         taskTypes={taskTypes}
         academicTaskTypes={academicTaskTypes}
         difficulties={difficulties}
+        priorities={priorities}
       />
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800">

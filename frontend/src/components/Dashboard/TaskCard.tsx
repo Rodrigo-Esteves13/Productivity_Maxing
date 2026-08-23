@@ -1,5 +1,6 @@
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
+import PriorityBadge from '../UI/PriorityBadge';
 import DateStatusBadge from '../UI/DateStatusBadge';
 import ColorDot from '../UI/ColorDot';
 import RescheduleButton from '../UI/RescheduleButton';
@@ -62,6 +63,9 @@ export default function TaskCard({
       {/* Linha 1: badges informativos, podem dar wrap livremente sem afetar mais nada */}
       <div className="flex flex-wrap items-center gap-2 mt-3">
         <DifficultyBadge difficulty={task.difficulty} />
+        {task.priority && (
+          <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
+        )}
         <StatusBadge status={task.progressStatus} />
         <span className="text-[11px] text-neutral-400">{academicTypeLabel}</span>
       </div>

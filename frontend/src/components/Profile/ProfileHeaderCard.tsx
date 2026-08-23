@@ -26,10 +26,10 @@ export default function ProfileHeaderCard({ user, initials, stats, isLoadingStat
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-8 border-t border-neutral-800">
-        <ProfileStat label="Completed Tasks" value={isLoadingStats ? '-' : stats.completed} />
-        <ProfileStat label="Active Tasks" value={isLoadingStats ? '-' : stats.active} />
-        <ProfileStat label="Projects" value={isLoadingStats ? '-' : stats.projects} />
-        <ProfileStat label="Streak" value={isLoadingStats ? '-' : `${stats.streak}d`} />
+        <ProfileStat label="Completed Tasks" value={stats.completed} isLoading={isLoadingStats} />
+        <ProfileStat label="Active Tasks" value={stats.active} isLoading={isLoadingStats} />
+        <ProfileStat label="Projects" value={stats.projects} isLoading={isLoadingStats} />
+        <ProfileStat label="Streak" value={`${stats.streak}d`} isLoading={isLoadingStats} />
       </div>
     </div>
   );

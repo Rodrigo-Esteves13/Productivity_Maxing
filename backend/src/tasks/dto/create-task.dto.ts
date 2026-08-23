@@ -128,6 +128,16 @@ export class CreateTaskDto {
   difficulty: Difficulty;
 
   @ApiPropertyOptional({
+    example: 'HIGH',
+    description:
+      'Priority key (see GET /tasks/meta). Managed by admins in /admin/priorities. Manual urgency, independent of difficulty (e.g. an easy task can still be urgent). Omit for no priority set.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  priority?: string;
+
+  @ApiPropertyOptional({
     enum: ProgressStatus,
     example: ProgressStatus.ON_TRACK,
     description: 'Current progress status',

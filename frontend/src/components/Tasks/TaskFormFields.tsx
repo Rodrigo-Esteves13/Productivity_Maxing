@@ -1,4 +1,4 @@
-import type { TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
+import type { TaskTypeOption, AcademicTaskTypeOption, PriorityOption } from '../../types/models';
 import { useTaskTypeLogic } from '../../hooks/useTaskTypeLogic';
 import { useCalendarStatus } from '../../hooks/useCalendarStatus';
 import { useDurationPrediction } from '../../hooks/useDurationPrediction';
@@ -21,6 +21,7 @@ export interface TaskFormFieldValues {
   type: string;
   academicType: string;
   difficulty: string;
+  priority: string;
   areaId: string;
   topics: string;
   referenceLink: string;
@@ -55,6 +56,7 @@ interface TaskFormFieldsProps {
   taskTypes: TaskTypeOption[];
   academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
+  priorities: PriorityOption[];
   progressStatuses?: string[];
   showRealGrade?: boolean;
   showProgressStatus?: boolean;
@@ -69,6 +71,7 @@ export default function TaskFormFields({
   taskTypes,
   academicTaskTypes,
   difficulties,
+  priorities,
   progressStatuses = [],
   showRealGrade = false,
   showProgressStatus = false,
@@ -119,12 +122,15 @@ export default function TaskFormFields({
       <DifficultyTypeFields
         idPrefix={idPrefix}
         difficulty={values.difficulty}
+        priority={values.priority}
         type={values.type}
         difficulties={difficulties}
+        priorities={priorities}
         taskTypes={taskTypes}
         isTypeLockedByArea={isTypeLockedByArea}
         lockedByAreaName={selectedArea?.name}
         onDifficultyChange={(v) => onChange('difficulty', v)}
+        onPriorityChange={(v) => onChange('priority', v)}
         onTypeChange={(v) => {
           onChange('type', v);
           // Muda-se o tipo, limpa-se o academicType para não ficar

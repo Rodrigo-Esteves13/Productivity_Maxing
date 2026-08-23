@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { TasksModule } from './tasks/tasks.module';
 import { TaskTypesModule } from './task-types/task-types.module';
+import { PrioritiesModule } from './priorities/priorities.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AreasModule } from './areas/areas.module';
 import { AuthModule } from './auth/auth.module';
@@ -34,6 +35,7 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     UsersModule,
     TasksModule,
     TaskTypesModule,
+    PrioritiesModule,
     PrismaModule,
     AreasModule,
     AuthModule,

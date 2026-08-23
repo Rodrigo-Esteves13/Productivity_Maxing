@@ -3,6 +3,10 @@ export type Provider = 'GOOGLE' | 'DISCORD' | 'GITHUB';
 export type Role = 'USER' | 'ADMIN';
 export type ProgressStatus = 'AHEAD' | 'ON_TRACK' | 'BEHIND' | 'VERY_BEHIND' | 'COMPLETED';
 export type Difficulty = 'VERY_EASY' | 'EASY' | 'MEDIUM' | 'HARD' | 'VERY_HARD';
+// Priority stopped being a fixed union ('LOW'|'MEDIUM'|'HIGH') the moment
+// it became an admin-managed catalog (see AdminPriority/PriorityOption
+// below) - it's just whatever key the admin's Priority rows use, a plain
+// string, same as `type`/`academicType` already were.
 export type SecurityEventType = 'RATE_LIMIT_EXCEEDED';
 // No longer fixed union types: now they come from the DB (a table the
 // admin can edit), so they're `string` (the "key" returned by /tasks/meta).
@@ -26,6 +30,7 @@ export interface TaskMeta {
   taskTypes: TaskTypeOption[];
   academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
+  priorities: PriorityOption[];
   progressStatuses: string[];
 }
 
@@ -85,6 +90,24 @@ export interface AdminAcademicTaskType {
   isActive: boolean;
   taskTypeId: string;
   taskType: { id: string; key: string; label: string; colorHex: string | null } | null;
+}
+
+export interface AdminPriority {
+  id: string;
+  key: string;
+  label: string;
+  colorHex: string | null;
+  order: number;
+  isActive: boolean;
+}
+
+// Shape returned in TaskMeta.priorities (see /tasks/meta) - same trimmed
+// "for populating selects" shape as TaskTypeOption, now that Priority is
+// a real admin-managed catalog instead of a fixed enum.
+export interface PriorityOption {
+  key: string;
+  label: string;
+  colorHex: string | null;
 }
 
 // 
@@ -226,6 +249,13 @@ export interface Task {
   // Execution Metadata
   weightPercentage: number | null;
   difficulty: Difficulty;
+  // Nullable, ao contrário de difficulty - ver comentário em priorityId no
+  // schema.prisma (opcional de propósito). priorityLabel/priorityColorHex
+  // vêm prontos do backend (toResponse) para as badges não precisarem de
+  // cruzar com a lista de /tasks/meta só para mostrar um texto e uma cor.
+  priority: string | null;
+  priorityLabel: string | null;
+  priorityColorHex: string | null;
   progressStatus: ProgressStatus;
   referenceLink: string | null;
   // How long you expect this task to take, in minutes. Manual estimate -

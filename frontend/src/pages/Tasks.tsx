@@ -25,6 +25,7 @@ export default function Tasks() {
     taskTypes,
     academicTaskTypes,
     difficulties,
+    priorities,
     progressStatuses,
     isLoading,
     error,
@@ -150,6 +151,7 @@ export default function Tasks() {
           taskTypes={taskTypes}
           academicTaskTypes={academicTaskTypes}
           difficulties={difficulties}
+          priorities={priorities}
         />
       </Modal>
 
@@ -187,6 +189,7 @@ export default function Tasks() {
               taskTypes={taskTypes}
               academicTaskTypes={academicTaskTypes}
               difficulties={difficulties}
+              priorities={priorities}
               progressStatuses={progressStatuses}
             />
           ) : (

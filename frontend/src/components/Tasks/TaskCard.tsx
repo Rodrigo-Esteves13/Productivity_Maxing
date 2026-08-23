@@ -2,6 +2,7 @@ import type { KeyboardEvent } from 'react';
 import type { Task, Area } from '../../types/models';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
+import PriorityBadge from '../UI/PriorityBadge';
 import RescheduleButton from '../UI/RescheduleButton';
 import { PinIcon } from '../UI/Icons';
 import { getDateStatus } from '../../utils/taskDateStatus';
@@ -125,7 +126,12 @@ export default function TaskCard({
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <DifficultyBadge difficulty={task.difficulty} />
+          <div className="flex items-center gap-1.5">
+            <DifficultyBadge difficulty={task.difficulty} />
+            {task.priority && (
+              <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
+            )}
+          </div>
           {status === 'overdue' && onReschedule && (
             <RescheduleButton
               isLoading={isRescheduling}
