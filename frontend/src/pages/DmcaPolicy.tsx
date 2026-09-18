@@ -24,14 +24,14 @@ export default function DmcaPolicy() {
           ("the App") to do the same. This policy explains how to report content you believe infringes your
           copyright. It's modeled on the notice-and-takedown process of the U.S. Digital Millennium
           Copyright Act (DMCA); it isn't a claim that the App qualifies for DMCA safe-harbor status, since I
-          operate from Portugal rather than the U.S. — it's published as a good-faith, familiar process for
+          operate from Portugal rather than the U.S., it's published as a good-faith, familiar process for
           reporting infringement regardless of where a report comes from.
         </p>
       </LegalSection>
 
       <LegalSection number={2} title="What this covers">
         <p>
-          Almost everything in the App is private data you enter yourself (tasks, grades, notes) — the App
+          Almost everything in the App is private data you enter yourself (tasks, grades, notes); the App
           has no public content feed. This policy exists mainly for the small amount of content that could
           be visible beyond just you: an uploaded avatar image, or anything else made available in a way
           that isn't purely private to your own account.

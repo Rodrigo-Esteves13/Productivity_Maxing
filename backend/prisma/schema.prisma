@@ -68,6 +68,22 @@ enum Difficulty {
   VERY_HARD
 }
 
+// Como o user chega ao campus - nem todo o estudante tem carro (a pé +
+// metro é tão válido como conduzir). Usado por
+// ScheduleService.estimateCommute() para escolher o `mode` certo no
+// pedido à Google Distance Matrix API (os valores batem certo com os
+// aceites pela própria API: driving/walking/bicycling/transit). Também
+// guardado mesmo quando o commute é definido manualmente (sem chamar a
+// API), só para o CommuteSettingsCard lembrar a escolha da próxima vez
+// que o user abrir a página - não afeta em nada o StudyPlanService, que
+// só olha para commuteMinutes, seja qual for o modo por trás do número.
+enum CommuteMode {
+  DRIVING
+  WALKING
+  BICYCLING
+  TRANSIT
+}
+
 // Priority deixou de ser um enum fixo (ver TaskType/AcademicTaskType logo
 // abaixo, mesma decisão já tomada para eles) - passou a ser um catálogo
 // editável pelo admin em runtime, sem precisar de deploy para
@@ -169,14 +185,49 @@ model User {
   activePeriodId  String?
   activePeriod    AcademicPeriod?  @relation("UserActivePeriod", fields: [activePeriodId], references: [id], onDelete: SetNull)
 
+  // Horário/plano de estudo (Fase 6) - tudo opcional, null = feature nunca
+  // configurada por este user, não "configurada com valor zero".
+  //
+  // commuteMinutes: buffer de viagem (minutos, um sentido) aplicado antes/
+  // depois de blocos de aulas presenciais no cálculo de tempo livre do
+  // StudyPlanService. Pode ser escrito à mão OU calculado a partir de
+  // homeAddress/campusAddress via POST /schedule/commute/estimate (Google
+  // Maps Distance Matrix, só corre com GOOGLE_MAPS_API_KEY configurada) -
+  // de qualquer forma o resultado fica sempre neste único campo, o
+  // gerador de plano nunca precisa de saber qual dos dois caminhos foi
+  // usado.
+  commuteMinutes Int?
+  homeAddress    String?
+  campusAddress  String?
+  // Tem default (ao contrário dos outros campos desta secção) porque não
+  // faz sentido ficar "por definir" - o dropdown no frontend precisa
+  // sempre de um valor selecionado, e TRANSIT é a opção mais segura para
+  // quem ainda não configurou nada (não assume que toda a gente tem
+  // carro).
+  commuteMode CommuteMode @default(TRANSIT)
+
+  // Janela de sono/indisponibilidade, em minutos desde a meia-noite (hora
+  // de Lisboa). Suporta virar a meia-noite (ex: 23:00-07:00 ->
+  // start=1380, end=420) - ver isWithinQuietHours() em
+  // study-plan.service.ts. Os dois só contam quando ambos estão
+  // definidos; um sozinho é tratado como "nunca configurado" (evita gerar
+  // uma janela de 0 minutos ou o dia inteiro por engano a partir de um
+  // valor a meio).
+  quietHoursStart Int?
+  quietHoursEnd   Int?
+
   // Relações
-  identities    Identity[]
-  tasks         Task[]
-  apiKeys       ApiKey[]
-  securityLogs  SecurityLog[]
-  studySessions StudySession[]
-  agentConfig   AgentConfig?
-  programs      AcademicProgram[] @relation("UserPrograms")
+  identities       Identity[]
+  tasks            Task[]
+  apiKeys          ApiKey[]
+  securityLogs     SecurityLog[]
+  studySessions    StudySession[]
+  agentConfig      AgentConfig?
+  programs         AcademicProgram[] @relation("UserPrograms")
+  classOccurrences ClassOccurrence[]
+  bannedIps        BannedIp[]
+  areaScheduleLinks AreaScheduleLink[]
+  notebookEntries   NotebookEntry[]
 }
 
 /// Um "dashboard" académico do user (ex: "Secundário", "Licenciatura em
@@ -366,6 +417,10 @@ model Area {
   // Relações
   tasks         Task[]
   studySessions StudySession[]
+  // Ligação por user a um texto de disciplina do horário (ver
+  // AreaScheduleLink) e as entradas do caderno desta cadeira.
+  scheduleLinks   AreaScheduleLink[]
+  notebookEntries NotebookEntry[]
 }
 
 /// Representa uma ação executável dentro de uma Área (Area).
@@ -381,6 +436,14 @@ model Task {
   // "keep this one visible" override independent of date/status/
   // difficulty, for whatever the user is actively keeping an eye on.
   isPinned Boolean @default(false)
+
+  // Ordem manual (drag-and-drop no TaskGrid) - menor primeiro. Uma task
+  // nova entra sempre no fim (ver TasksService.create: max atual + 1),
+  // nunca a 0, para não saltar para o topo da lista de alguém sem ter
+  // sido arrastada para lá. findAll() ordena por isto antes de `date`;
+  // PATCH /tasks/reorder é o único sítio que muda isto (ver
+  // TasksService.reorder).
+  sortOrder Int @default(0)
 
   // Tipologia e Categorização
   taskTypeId     String
@@ -419,6 +482,13 @@ model Task {
   // semeado e todas as tasks com um valor real.
   priorityId       String?
   priority         Priority?      @relation(fields: [priorityId], references: [id])
+  // Incrementado no backend (tasks.service.ts update()) sempre que a data
+  // muda para um valor MAIS TARDE que a anterior - conta qualquer forma de
+  // adiar (o botão rápido "+1 Day" e uma edição manual da data no form),
+  // não só um caminho específico. Nunca decresce, mesmo que a task seja
+  // adiantada de novo - é uma contagem histórica de "quantas vezes isto já
+  // foi empurrado", não um estado atual.
+  postponedCount   Int            @default(0)
   progressStatus   ProgressStatus @default(ON_TRACK)
   referenceLink    String?
 
@@ -475,6 +545,9 @@ model Task {
   @@index([taskTypeId])
   @@index([academicTypeId])
   @@index([periodId])
+  // findAll() ordena por [sortOrder, date] dentro de userId+periodId - sem
+  // isto, o mesmo raciocínio dos índices acima aplica-se ao ORDER BY.
+  @@index([userId, sortOrder])
 }
 
 /// Registo persistente de eventos de segurança - hoje só bloqueios do
@@ -507,6 +580,27 @@ model SecurityLog {
   @@index([ip])
   @@index([createdAt])
   @@index([userId])
+}
+
+/// IP banido manualmente por um admin (ver /admin/banned-ips e
+/// BannedIpGuard). Separado de SecurityLog de propósito: SecurityLog é só
+/// telemetria (o que aconteceu), isto é a decisão em si (o que fazer a
+/// partir de agora) - um IP pode ter zero SecurityLogs e ainda assim ser
+/// banido preventivamente, e um ban não apaga o histórico de logs que já
+/// existia.
+model BannedIp {
+  id        String   @id @default(uuid())
+  ip        String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+
+  // Quem baniu - opcional pelo mesmo motivo do SecurityLog.userId: nunca
+  // se apaga o ban só porque a conta do admin que o criou foi apagada
+  // depois.
+  bannedByUserId String?
+  bannedBy       User?   @relation(fields: [bannedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([ip])
 }
 
 /// Uma sessão de estudo/foco: início, fim (null enquanto está a decorrer),
@@ -543,4 +637,143 @@ model StudySession {
   @@index([userId, startedAt])
   @@index([taskId])
   @@index([areaId])
+}
+
+/// Uma aula concreta, numa data concreta - importada do .ics do horário
+/// publicado pela faculdade (ver ScheduleService.importOccurrences).
+///
+/// DELIBERADAMENTE não existe um "modelo recorrente com exceções"
+/// (weekday + RRULE + EXDATE): o .ics real da Maiêutica não usa RRULE nem
+/// EXDATE nenhum, é uma lista plana de um VEVENT por aula por semana, numa
+/// janela curta (~2-3 semanas de cada vez, não o semestre todo). Tentar
+/// inferir "isto mudou só esta semana" vs "isto mudou para sempre" a partir
+/// disto seria adivinhar - em vez disso, isto reflete exatamente o que o
+/// ficheiro diz em cada reimportação. A vista semanal e o cálculo de tempo
+/// livre do StudyPlanService leem sempre as ocorrências reais mais
+/// recentes, nunca um "molde" semanal guardado à parte - se a faculdade
+/// mudar uma aula (pontual ou definitivamente), a próxima reimportação já
+/// reflete isso sem precisar de nenhuma migração de dados.
+model ClassOccurrence {
+  id     String @id @default(uuid())
+  userId String
+
+  // Dia da aula (meia-noite UTC desse dia, hora de Lisboa) - startMinutes/
+  // endMinutes é que guardam a hora exata, não isto. Sempre calculado a
+  // partir do DTSTART do .ics já convertido para hora local de Lisboa
+  // (ver toLisbonWallClock() em schedule.service.ts) - nunca a data UTC
+  // crua, que podia cair no dia errado perto da meia-noite.
+  date         DateTime
+  startMinutes Int
+  endMinutes   Int
+
+  subject   String
+  location  String?
+  professor String?
+
+  // Chave natural do VEVENT original (campo UID do .ics). Garante que
+  // reimportar o mesmo ficheiro, ou uma janela nova que sobrepõe a
+  // anterior, faz upsert em vez de duplicar linhas - ver
+  // ScheduleService.importOccurrences (upsert por [userId, externalUid]).
+  externalUid String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Entradas do caderno criadas a partir desta aula específica (ver
+  // NotebookEntry.classOccurrenceId) - SetNull lá, não Cascade: apagar a
+  // ocorrência (ex: reimport que já não a inclui) nunca deve apagar o
+  // apontamento que o utilizador escreveu durante essa aula.
+  notebookEntries NotebookEntry[]
+
+  // userId: toda a query (vista semanal, cálculo de slots livres do plano
+  // de estudo) filtra sempre por dono - mesma lógica de indexação do
+  // resto do schema.
+  // [userId, date]: a vista semanal e o StudyPlanService filtram sempre
+  // por intervalo de datas dentro do próprio user.
+  // [userId, externalUid]: chave de upsert do import - tem de ser única
+  // para o upsert nunca duplicar uma ocorrência já importada antes.
+  @@unique([userId, externalUid])
+  @@index([userId])
+  @@index([userId, date])
+}
+
+/// Liga, por user, um texto literal de disciplina tal como aparece no
+/// .ics importado (ex: "PC", "Prog. Computadores") a uma Area (cadeira)
+/// do catálogo global. Necessário porque Area é global/partilhada (ver
+/// nota em AcademicProgram) mas o texto do horário varia por
+/// user/faculdade/semestre - sem esta tabela não há como saber que "PC"
+/// no teu horário é a mesma cadeira que a tua Area "Programação e
+/// Computadores". Usada só pelo NotebookService para sugerir
+/// automaticamente o título de uma entrada nova quando há aula agora.
+model AreaScheduleLink {
+  id              String @id @default(uuid())
+  userId          String
+  areaId          String
+  scheduleSubject String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area Area @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  // Um mesmo texto de disciplina do horário só pode apontar para UMA Area
+  // por user (evita ambiguidade no match "aula agora"). Uma Area pode ter
+  // vários scheduleSubject diferentes ligados (ex: "PC" e "Prog. Comp."
+  // em semestres diferentes, mesma cadeira).
+  @@unique([userId, scheduleSubject])
+  @@index([userId, areaId])
+}
+
+/// Uma entrada do "caderno" de uma cadeira: texto, desenho à mão
+/// (drawingStrokes, vetorial - ver NotebookService/NotebookCanvas no
+/// frontend) e fotos (NotebookPhoto), tudo na mesma página, como um
+/// caderno físico real. classOccurrenceId liga a entrada à aula
+/// detetada automaticamente (ver AreaScheduleLink) quando existe match
+/// na hora de criação; fica null quando o utilizador cria a entrada sem
+/// estar dentro do horário de nenhuma aula dessa cadeira.
+model NotebookEntry {
+  id                String @id @default(uuid())
+  userId            String
+  areaId            String
+  classOccurrenceId String?
+
+  title       String
+  textContent String?
+
+  // Traços vetoriais do desenho à mão, não um PNG rasterizado - permite
+  // reabrir a entrada e continuar a desenhar/apagar um traço específico.
+  // Formato: [{ points: [{x,y,pressure?}], color, width }].
+  drawingStrokes Json?
+
+  date DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area            Area             @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  classOccurrence ClassOccurrence? @relation(fields: [classOccurrenceId], references: [id], onDelete: SetNull)
+  photos          NotebookPhoto[]
+
+  @@index([userId, areaId, date])
+}
+
+/// Uma foto anexada a uma NotebookEntry. Guarda só o caminho no bucket
+/// privado do Supabase Storage (nunca base64 na base de dados, nunca um
+/// URL público - são apontamentos pessoais, não avatares) - o backend
+/// gera um signed URL de curta duração sempre que a entrada é lida (ver
+/// NotebookService.attachSignedUrls).
+model NotebookPhoto {
+  id              String @id @default(uuid())
+  notebookEntryId String
+  storagePath     String
+  position        Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  notebookEntry NotebookEntry @relation(fields: [notebookEntryId], references: [id], onDelete: Cascade)
+
+  @@index([notebookEntryId])
 }

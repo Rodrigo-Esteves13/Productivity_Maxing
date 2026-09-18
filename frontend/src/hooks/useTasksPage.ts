@@ -7,6 +7,7 @@ import {
   updateTask,
   getTaskMetadata,
   deleteTask,
+  reorderTasks,
 } from '../api/userService';
 import { syncTaskToCalendar, unsyncTaskFromCalendar } from '../api/calendarService';
 import type { Task, Area, TaskTypeOption, AcademicTaskTypeOption, PriorityOption } from '../types/models';
@@ -307,6 +308,37 @@ export function useTasksPage() {
     }
   }, []);
 
+  // Drag-and-drop no TaskGrid. orderedIds é a sequência VISÍVEL completa
+  // após o drop (já inclui a task movida na posição nova) - atualiza o
+  // estado local otimisticamente (a UI não espera pela rede) e só
+  // reverte se o PATCH falhar. Tasks que não estavam em orderedIds (ex:
+  // arquivadas e escondidas pelo toggle "Show archived") mantêm a sua
+  // posição relativa entre si, só são empurradas para depois das que
+  // foram reordenadas.
+  const reorderTasksInState = useCallback(
+    async (orderedIds: string[]) => {
+      const previousTasks = tasks;
+      const indexById = new Map(orderedIds.map((id, i) => [id, i]));
+      const newTasks = [...tasks].sort((a, b) => {
+        const ai = indexById.get(a.id);
+        const bi = indexById.get(b.id);
+        if (ai === undefined && bi === undefined) return 0;
+        if (ai === undefined) return 1;
+        if (bi === undefined) return -1;
+        return ai - bi;
+      });
+      setTasks(newTasks);
+
+      try {
+        await reorderTasks(orderedIds);
+      } catch {
+        setTasks(previousTasks);
+        alert('Could not save the new order. Please try again.');
+      }
+    },
+    [tasks],
+  );
+
   return {
     tasks,
     areas,
@@ -335,5 +367,6 @@ export function useTasksPage() {
     markSelectedTaskComplete,
     moveTaskToArea,
     toggleTaskPin,
+    reorderTasksInState,
   };
 }

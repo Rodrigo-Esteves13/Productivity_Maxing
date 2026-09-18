@@ -63,6 +63,15 @@ export class TasksService {
     // (que é o prazo/alvo, não o dia em que foi de facto concluída).
     const completedAt = rest.progressStatus === 'COMPLETED' ? new Date() : null;
 
+    // Task nova entra sempre no fim da ordem manual, nunca a 0 (que
+    // saltaria para o topo da lista de alguém) - ver comentário em
+    // Task.sortOrder no schema.prisma.
+    const maxSortOrder = await this.prisma.task.aggregate({
+      where: { userId },
+      _max: { sortOrder: true },
+    });
+    const sortOrder = (maxSortOrder._max.sortOrder ?? 0) + 1;
+
     try {
       const task = await this.prisma.task.create({
         data: {
@@ -72,6 +81,7 @@ export class TasksService {
           periodId: resolvedPeriodId,
           completedAt,
           priorityId,
+          sortOrder,
           ...typeIds,
         },
         include: TASK_INCLUDE,
@@ -108,9 +118,47 @@ export class TasksService {
     const tasks = await this.prisma.task.findMany({
       where,
       include: TASK_INCLUDE,
-      orderBy: { date: 'asc' },
+      // sortOrder primeiro: é a ordem manual (drag-and-drop no TaskGrid,
+      // ver reorder() abaixo). `date` como desempate cobre tasks que
+      // nunca foram arrastadas (todas com sortOrder=0 por omissão) -
+      // sem isto, ficariam na ordem arbitrária em que o Postgres as
+      // devolvesse.
+      orderBy: [{ sortOrder: 'asc' }, { date: 'asc' }],
     });
     return tasks.map((t) => this.toResponse(t));
+  }
+
+  /**
+   * Aplica uma nova ordem manual (drag-and-drop no TaskGrid) a um
+   * conjunto de tasks do próprio user - taskIds é a sequência completa
+   * tal como veio do frontend, sortOrder de cada uma vira o seu índice
+   * nessa lista. Tasks fora da lista (ex: arquivadas, escondidas da
+   * grid) não são tocadas.
+   */
+  async reorder(userId: string, taskIds: string[]): Promise<void> {
+    const owned = await this.prisma.task.findMany({
+      where: { id: { in: taskIds }, userId },
+      select: { id: true },
+    });
+
+    // Defesa contra IDOR: se algum ID não pertence a este user (ou já
+    // não existe), o pedido inteiro é rejeitado - nunca aplicamos só a
+    // parte "válida" em silêncio, o frontend saberia que a operação
+    // falhou e o utilizador vê a lista voltar ao estado anterior.
+    if (owned.length !== taskIds.length) {
+      throw new BadRequestException(
+        'One or more tasks in the list do not belong to you.',
+      );
+    }
+
+    await this.prisma.$transaction(
+      taskIds.map((id, index) =>
+        this.prisma.task.update({
+          where: { id },
+          data: { sortOrder: index },
+        }),
+      ),
+    );
   }
 
   /**
@@ -179,9 +227,7 @@ export class TasksService {
     // ausente no objeto `data` como "não mexer", mas só porque este bloco
     // o retira explicitamente do objeto antes disso importar.
     const priorityIdUpdate =
-      priority !== undefined
-        ? { priorityId: await this.resolvePriorityId(priority) }
-        : {};
+      priority !== undefined ? { priorityId: await this.resolvePriorityId(priority) } : {};
 
     // Só mexemos em periodId se vier explicitamente no PATCH - e, tal como
     // no create(), validamos sempre posse antes de aceitar (o user podia
@@ -226,6 +272,20 @@ export class TasksService {
       // não queremos "reiniciar" a data de conclusão original.
     }
 
+    // "Adiada" = a nova data é MAIS TARDE que a que já lá estava. Uma
+    // task movida para uma data mais cedo (raro, mas acontece ao corrigir
+    // um erro de digitação) não conta - isto é uma contagem histórica de
+    // procrastinação, não "a data mudou". Comparação por getTime() em vez
+    // de string, para não depender do formato exato que o date-string do
+    // DTO vier a assumir.
+    let postponedCountUpdate: { postponedCount?: { increment: number } } = {};
+    if (date) {
+      const newDate = new Date(date);
+      if (newDate.getTime() > existing.date.getTime()) {
+        postponedCountUpdate = { postponedCount: { increment: 1 } };
+      }
+    }
+
     // where: { id, userId } em vez de só { id } - o findFirst() acima já
     // garante que a task é do utilizador antes de chegarmos aqui, mas
     // repetir a condição de posse também no update final é defesa em
@@ -241,6 +301,7 @@ export class TasksService {
         ...completedAtUpdate,
         ...periodIdUpdate,
         ...priorityIdUpdate,
+        ...postponedCountUpdate,
       },
       include: TASK_INCLUDE,
     });
@@ -408,9 +469,7 @@ export class TasksService {
     // --- Batch-fetch every lookup this import could possibly need, once. ---
     const distinctAreaIds = [...new Set(rows.map((r) => r.areaId))];
     const distinctPeriodIds = [
-      ...new Set(
-        rows.map((r) => r.periodId).filter((id): id is string => !!id),
-      ),
+      ...new Set(rows.map((r) => r.periodId).filter((id): id is string => !!id)),
     ];
 
     const [taskTypes, academicTaskTypes, areas, ownedPeriods] =
@@ -498,7 +557,7 @@ export class TasksService {
             topics: row.topics ?? null,
             completedAt,
             ...typeIds,
-          },
+          } as Prisma.TaskCreateArgs['data'],
         });
       } catch (error) {
         const message =
@@ -541,11 +600,7 @@ export class TasksService {
     );
 
     const results: RowOutcome[] = [
-      ...failed.map((f) => ({
-        row: f.rowNumber,
-        success: false,
-        error: f.error,
-      })),
+      ...failed.map((f) => ({ row: f.rowNumber, success: false, error: f.error })),
       ...createOutcomes,
     ].sort((a, b) => a.row - b.row);
 
@@ -563,8 +618,7 @@ export class TasksService {
   // called from TaskTypesService) instead of on every page load from
   // every user.
   async getMeta() {
-    const cached =
-      this.taskMetaCache.get<Awaited<ReturnType<typeof this.buildMeta>>>();
+    const cached = this.taskMetaCache.get<Awaited<ReturnType<typeof this.buildMeta>>>();
     if (cached) return cached;
 
     const meta = await this.buildMeta();
@@ -625,9 +679,7 @@ export class TasksService {
       where: { key: priorityKey },
     });
     if (!priority || !priority.isActive) {
-      throw new BadRequestException(
-        `Priority "${priorityKey}" invalid or inactive.`,
-      );
+      throw new BadRequestException(`Priority "${priorityKey}" invalid or inactive.`);
     }
     return priority.id;
   }

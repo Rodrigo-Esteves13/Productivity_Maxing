@@ -10,6 +10,8 @@ interface SecurityLogsTableProps {
   pageSize: number;
   onNextPage: () => void;
   onPrevPage: () => void;
+  onBanIp: (ip: string) => void;
+  bannedIpSet: Set<string>;
 }
 
 export default function SecurityLogsTable({
@@ -19,6 +21,8 @@ export default function SecurityLogsTable({
   pageSize,
   onNextPage,
   onPrevPage,
+  onBanIp,
+  bannedIpSet,
 }: SecurityLogsTableProps) {
   const rangeStart = total === 0 ? 0 : skip + 1;
   const rangeEnd = Math.min(skip + pageSize, total);
@@ -36,7 +40,14 @@ export default function SecurityLogsTable({
                 </td>
               </tr>
             ) : (
-              logs.map((log) => <SecurityLogRow key={log.id} log={log} />)
+              logs.map((log) => (
+                <SecurityLogRow
+                  key={log.id}
+                  log={log}
+                  onBanIp={onBanIp}
+                  isBanned={bannedIpSet.has(log.ip)}
+                />
+              ))
             )}
           </tbody>
         </table>

@@ -3,6 +3,7 @@ import TaskTableRow from './TaskTableRow';
 import TaskCard from './TaskCard';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
 import type { TableDensity } from '../../hooks/useTableDensity';
+import { useTasksTableColumnOrder } from '../../hooks/useTasksTableColumnOrder';
 
 interface TasksTableProps {
   tasks: Task[];
@@ -25,6 +26,8 @@ export default function TasksTable({
   onToggleSelectAll,
   density = 'comfortable',
 }: TasksTableProps) {
+  const { columnOrder, reorderColumns } = useTasksTableColumnOrder();
+
   if (tasks.length === 0) {
     return (
       <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
@@ -53,7 +56,12 @@ export default function TasksTable({
 
       <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-sm text-left text-neutral-300">
-          <TasksTableHeader allSelected={allSelected} onToggleAll={onToggleSelectAll} />
+          <TasksTableHeader
+            allSelected={allSelected}
+            onToggleAll={onToggleSelectAll}
+            columnOrder={columnOrder}
+            onReorder={reorderColumns}
+          />
           <tbody>
             {tasks.map((task) => (
               <TaskTableRow 
@@ -65,6 +73,7 @@ export default function TasksTable({
                 isSelected={selectedIds?.has(task.id)}
                 onToggleSelect={onToggleSelect}
                 density={density}
+                columnOrder={columnOrder}
               />
             ))}
           </tbody>

@@ -18,6 +18,11 @@ import { AgentModule } from './agent/agent.module';
 import { AcademicProgramsModule } from './academic-programs/academic-programs.module';
 import { TelemetryModule } from './telemetry/telemetry.module';
 import { PredictionModule } from './prediction/prediction.module';
+import { ScheduleModule } from './schedule/schedule.module';
+import { StudyPlanModule } from './study-plan/study-plan.module';
+import { NotebookModule } from './notebook/notebook.module';
+import { BannedIpsModule } from './banned-ips/banned-ips.module';
+import { BannedIpGuard } from './common/guards/banned-ip.guard';
 import { CsrfGuard } from './auth/guards/csrf.guard';
 import { LoggingThrottlerGuard } from './common/guards/logging-throttler.guard';
 import { MaintenanceGuard } from './common/guards/maintenance.guard';
@@ -47,10 +52,21 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     AcademicProgramsModule,
     TelemetryModule,
     PredictionModule,
+    ScheduleModule,
+    StudyPlanModule,
+    NotebookModule,
+    BannedIpsModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
+    // Primeiro de todos: um IP banido nem sequer deve saber que a app está
+    // em manutenção, ou receber um 429 do throttler - só um 403 seco, o
+    // mais cedo possível no pipeline. Ver common/guards/banned-ip.guard.ts.
+    {
+      provide: APP_GUARD,
+      useClass: BannedIpGuard,
+    },
     // Runs first (registration order = execution order for APP_GUARD):
     // when MAINTENANCE_MODE is on, every request short-circuits here with
     // a 503 before it can even hit the throttler or CSRF check below - no

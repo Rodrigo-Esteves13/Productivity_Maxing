@@ -18,6 +18,7 @@ import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ImportTasksDto } from './dto/import-tasks.dto';
+import { ReorderTasksDto } from './dto/reorder-tasks.dto';
 
 import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -79,6 +80,13 @@ export class TasksController {
       dto.ids,
       dto.progressStatus,
     );
+  }
+
+  // Drag-and-drop no TaskGrid (frontend) - mesma razão de posicionamento
+  // das rotas acima, "reorder" nunca pode ser lido como um :id.
+  @Patch('reorder')
+  reorder(@CurrentUser() user: AuthenticatedUser, @Body() dto: ReorderTasksDto) {
+    return this.tasksService.reorder(user.id, dto.taskIds);
   }
 
   @Post('bulk-delete')

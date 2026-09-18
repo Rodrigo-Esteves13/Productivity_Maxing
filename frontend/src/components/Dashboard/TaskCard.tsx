@@ -1,6 +1,7 @@
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
+import PostponedIndicator from '../UI/PostponedIndicator';
 import DateStatusBadge from '../UI/DateStatusBadge';
 import ColorDot from '../UI/ColorDot';
 import RescheduleButton from '../UI/RescheduleButton';
@@ -68,10 +69,12 @@ export default function TaskCard({
         )}
         <StatusBadge status={task.progressStatus} />
         <span className="text-[11px] text-neutral-400">{academicTypeLabel}</span>
+        <PostponedIndicator count={task.postponedCount} />
       </div>
 
-      {/* Linha 2: ações (Sync à esquerda, Reschedule à direita) — linha própria e fixa,
-          nunca mistura com os badges acima, por isso nunca fica "+1 Day" órfão a meio de um wrap */}
+      {/* Row 2: actions (Sync on the left, Reschedule on the right), its own fixed
+          row that never mixes with the badges above, so "+1 Day" never ends up
+          orphaned mid-wrap. */}
       <div className="flex items-center gap-2 mt-2">
         <CalendarSyncButton task={task} />
         {status === 'overdue' && onReschedule && (

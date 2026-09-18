@@ -66,6 +66,59 @@ export interface ImportTasksResult {
   results: ImportTaskRowResult[];
 }
 
+// Uma aula concreta, já gravada (GET /schedule). Ver comentário completo
+// no model ClassOccurrence do schema.prisma para o "porquê" de não haver
+// recorrência/exceções aqui - isto é sempre uma ocorrência real e datada.
+export interface ClassOccurrence {
+  id: string;
+  userId: string;
+  date: string;
+  startMinutes: number;
+  endMinutes: number;
+  subject: string;
+  location: string | null;
+  professor: string | null;
+  externalUid: string;
+}
+
+// Uma linha já parseada de um .ics (ver utils/parseIcsSchedule.ts) - é o
+// que vai no body de POST /schedule/import.
+export interface ImportScheduleRow {
+  date: string;
+  startMinutes: number;
+  endMinutes: number;
+  subject: string;
+  location?: string;
+  professor?: string;
+  externalUid: string;
+}
+
+export interface ImportScheduleRowResult {
+  row: number;
+  success: boolean;
+  error?: string;
+}
+
+export interface ImportScheduleResult {
+  imported: number;
+  failed: number;
+  results: ImportScheduleRowResult[];
+}
+
+// GET /study-plan response.
+export interface StudyPlanSuggestion {
+  date: string;
+  startMinutes: number;
+  endMinutes: number;
+  taskId: string;
+  taskTitle: string;
+}
+
+export interface StudyPlanResult {
+  suggestions: StudyPlanSuggestion[];
+  warnings: string[];
+}
+
 // Full records used only by the admin area (/admin/task-types,
 // /admin/academic-task-types) - distinct from the *Option types above
 // (those are the "trimmed down" version for populating selects, coming
@@ -114,6 +167,11 @@ export interface PriorityOption {
 // MODELS
 // 
 
+// Bate certo com o enum CommuteMode do schema.prisma e com os valores
+// aceites pela Google Distance Matrix API (em minúsculas no pedido - ver
+// ScheduleService.estimateCommute).
+export type CommuteMode = 'DRIVING' | 'WALKING' | 'BICYCLING' | 'TRANSIT';
+
 export interface User {
   id: string;
   email: string;
@@ -130,6 +188,18 @@ export interface User {
   // AcademicContext hasn't resolved/created the default "General" yet.
   activeProgramId: string | null;
   activePeriodId: string | null;
+
+  // Horário/plano de estudo (Fase 6) - todos opcionais, null = nunca
+  // configurado. Ver CommuteSettingsCard.tsx e Schedule.tsx.
+  commuteMinutes: number | null;
+  // Nem todo o estudante tem carro - ver comentário completo em
+  // CommuteMode no schema.prisma. Sempre definido (tem @default no
+  // schema), nunca null.
+  commuteMode: CommuteMode;
+  homeAddress: string | null;
+  campusAddress: string | null;
+  quietHoursStart: number | null;
+  quietHoursEnd: number | null;
 
   // Optional relations (depends on what your backend returns)
   areas?: Area[];
@@ -245,6 +315,9 @@ export interface Task {
   topics: string | null;
   notes: string | null;
   isPinned: boolean;
+  // Manual drag-and-drop order in TaskGrid - lower first. Set via
+  // PATCH /tasks/reorder (reorderTasks in userService.ts).
+  sortOrder: number;
 
   // Execution Metadata
   weightPercentage: number | null;
@@ -256,6 +329,10 @@ export interface Task {
   priority: string | null;
   priorityLabel: string | null;
   priorityColorHex: string | null;
+  // Histórico, nunca decresce - ver comentário em schema.prisma. Conta
+  // qualquer vez que a data mudou para mais tarde, não só o botão rápido
+  // "+1 Day".
+  postponedCount: number;
   progressStatus: ProgressStatus;
   referenceLink: string | null;
   // How long you expect this task to take, in minutes. Manual estimate -
@@ -340,6 +417,15 @@ export interface SecurityLogsStats {
   topOffenders: { ip: string; count: number }[];
 }
 
+export interface BannedIp {
+  id: string;
+  ip: string;
+  reason: string | null;
+  createdAt: string;
+  bannedByUserId: string | null;
+  bannedBy: { id: string; name: string | null; email: string } | null;
+}
+
 // FOCUS / STUDY SESSIONS
 
 export interface StudySession {
@@ -376,4 +462,53 @@ export interface AgentConfig {
   failMode: AgentFailMode;
   pollIntervalSeconds: number;
   isConfigured: boolean;
+}
+// --- Notebook ---------------------------------------------------------
+
+export interface StrokePoint {
+  x: number;
+  y: number;
+  pressure?: number;
+}
+
+// Um traço vetorial completo - ver comentário em NotebookEntry.drawingStrokes
+// no schema.prisma para o "porquê" de não guardar um PNG rasterizado.
+export interface Stroke {
+  points: StrokePoint[];
+  color: string;
+  width: number;
+}
+
+export interface NotebookPhoto {
+  id: string;
+  notebookEntryId: string;
+  storagePath: string;
+  position: number;
+  // Signed URL gerado pelo backend a cada leitura, expira sozinho - nunca
+  // guardar isto entre navegações.
+  url: string | null;
+}
+
+export interface NotebookEntry {
+  id: string;
+  userId: string;
+  areaId: string;
+  classOccurrenceId: string | null;
+  title: string;
+  textContent: string | null;
+  drawingStrokes: Stroke[] | null;
+  date: string;
+  photos: NotebookPhoto[];
+}
+
+export interface AreaScheduleLink {
+  id: string;
+  userId: string;
+  areaId: string;
+  scheduleSubject: string;
+}
+
+export interface DetectClassResult {
+  occurrence: ClassOccurrence | null;
+  suggestedTitle: string | null;
 }

@@ -3,6 +3,7 @@ import type { Task, Area } from '../../types/models';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
+import PostponedIndicator from '../UI/PostponedIndicator';
 import RescheduleButton from '../UI/RescheduleButton';
 import { PinIcon } from '../UI/Icons';
 import { getDateStatus } from '../../utils/taskDateStatus';
@@ -131,6 +132,7 @@ export default function TaskCard({
             {task.priority && (
               <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
             )}
+            <PostponedIndicator count={task.postponedCount} />
           </div>
           {status === 'overdue' && onReschedule && (
             <RescheduleButton

@@ -45,6 +45,7 @@ export default function Tasks() {
     markSelectedTaskComplete,
     moveTaskToArea,
     toggleTaskPin,
+    reorderTasksInState,
     rescheduleToTomorrow,
     reschedulingId
   } = useTasksPage();
@@ -139,6 +140,7 @@ export default function Tasks() {
           areas={areas}
           onMoveArea={moveTaskToArea}
           onTogglePin={toggleTaskPin}
+          onReorder={reorderTasksInState}
         />
       )}
 

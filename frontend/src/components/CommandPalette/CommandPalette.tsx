@@ -21,6 +21,7 @@ const NAV_COMMANDS: NavCommand[] = [
   { id: 'nav-dashboard', label: 'Dashboard', path: '/dashboard' },
   { id: 'nav-tasks', label: 'Tasks', path: '/tasks' },
   { id: 'nav-focus', label: 'Focus', path: '/focus' },
+  { id: 'nav-schedule', label: 'Schedule', path: '/schedule' },
   { id: 'nav-profile', label: 'Profile', path: '/profile' },
   { id: 'nav-developer', label: 'Developer', path: '/developer' },
   { id: 'nav-agent', label: 'Agent', path: '/agent' },

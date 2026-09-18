@@ -43,7 +43,10 @@ type SessionWithRelations = Prisma.StudySessionGetPayload<{
 // em vez de 7x24 - com o volume de dados de um único utilizador, um
 // heatmap por hora exata ficaria demasiado esparso para ser legível;
 // blocos de 4h já mostram um padrão útil ("estudo melhor à tarde").
-const HOUR_BUCKET_SIZE = 4;
+// Exportado: StudyPlanService precisa de mapear um minuto-do-dia exato
+// para o mesmo bucket de 4h do heatmap, para preferir slots livres nas
+// horas onde o user historicamente estuda melhor.
+export const HOUR_BUCKET_SIZE = 4;
 const HOUR_BUCKET_COUNT = 24 / HOUR_BUCKET_SIZE;
 
 export interface HeatmapCell {

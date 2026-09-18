@@ -18,6 +18,8 @@ export default function NavLinks({ currentPath }: NavLinksProps) {
         <Link to="/dashboard" className={getLinkClass('/dashboard')}>Dashboard</Link>
         <Link to="/tasks" className={getLinkClass('/tasks')}>Tasks</Link>
         <Link to="/focus" className={getLinkClass('/focus')}>Focus</Link>
+        <Link to="/schedule" className={getLinkClass('/schedule')}>Schedule</Link>
+        <Link to="/notebook" className={getLinkClass('/notebook')}>Notebook</Link>
         <Link to="/profile" className={getLinkClass('/profile')}>Profile</Link>
       </div>
     </div>
