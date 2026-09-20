@@ -26,9 +26,10 @@ export class AreasService {
   }
 
   private toResponse(area: {
+    id: string;
     defaultTaskType: { key: string } | null;
     [key: string]: unknown;
-  }) {
+  }): { id: string; defaultTaskType: string | null; [key: string]: unknown } {
     const { defaultTaskType, ...rest } = area;
     return { ...rest, defaultTaskType: defaultTaskType?.key ?? null };
   }
@@ -48,9 +49,36 @@ export class AreasService {
     return this.toResponse(area);
   }
 
-  async findAll() {
-    const areas = await this.prisma.area.findMany({ include: AREA_INCLUDE });
-    return areas.map((a) => this.toResponse(a));
+  // periodId nunca filtra o catálogo (uma cadeira pode ser real e atual
+  // mesmo sem task nenhuma ainda - ex: o professor já começou a dar
+  // matéria antes de haver qualquer avaliação/trabalho marcado). Quando
+  // vem um periodId concreto, cada Area é só ANOTADA com usedInPeriod -
+  // o Notebook usa isto para agrupar/ordenar ("deste período" primeiro),
+  // nunca para esconder. 'all' ou omitido: devolve o catálogo global tal
+  // e qual, sem a anotação (é o que a página /tasks precisa para o
+  // dropdown ao criar uma task, sem nenhum grupo a fazer sentido lá).
+  async findAll(userId: string, periodId?: string) {
+    const areas = await this.prisma.area.findMany({
+      include: AREA_INCLUDE,
+      orderBy: { name: 'asc' },
+    });
+    const responses = areas.map((a) => this.toResponse(a));
+
+    if (!periodId || periodId === 'all') return responses;
+
+    const usedAreaIds = new Set(
+      (
+        await this.prisma.task.findMany({
+          where: { userId, periodId },
+          select: { areaId: true },
+          distinct: ['areaId'],
+        })
+      ).map((t) => t.areaId),
+    );
+    return responses.map((a) => ({
+      ...a,
+      usedInPeriod: usedAreaIds.has(a.id),
+    }));
   }
 
   async findOne(id: string) {

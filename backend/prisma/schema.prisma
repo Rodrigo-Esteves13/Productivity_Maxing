@@ -742,11 +742,53 @@ model NotebookEntry {
   title       String
   textContent String?
 
+  // Preso a código de propósito (mesma lógica do AuthProvider mais acima):
+  // só CLASS liga à sugestão automática de classNumber incremental, não
+  // faz sentido ser um catálogo editável pelo admin.
+  entryType NotebookEntryType @default(NOTE)
+  // Só relevante quando entryType = CLASS. Guardado como campo próprio
+  // (não extraído do título por regex) precisamente para a sugestão de
+  // "próxima aula" ser robusta - ver NotebookEntry no frontend
+  // (nextClassNumber = maior classNumber já usado nesta Area + 1). Duas
+  // entradas CLASS podem ter o mesmo número de propósito (ex: a mesma
+  // aula deu para duas cadeiras diferentes e o utilizador quis duas
+  // entradas separadas) - por isso não há unique constraint aqui.
+  classNumber Int?
+
   // Traços vetoriais do desenho à mão, não um PNG rasterizado - permite
   // reabrir a entrada e continuar a desenhar/apagar um traço específico.
   // Formato: [{ points: [{x,y,pressure?}], color, width }].
   drawingStrokes Json?
 
+  // Tabelas estruturadas (linhas x colunas de texto), separadas de
+  // textContent de propósito - um <table> real editável na UI em vez de
+  // pipes Markdown escritos à mão dentro do textarea (ilegível a olho
+  // nu). Formato: [{ id, rows: string[][] }]. Ver upsert-notebook-entry.dto.ts
+  // para os limites de tamanho (NotebookTableDto/NotebookTableRowDto).
+  tables Json?
+
+  // Ícones posicionáveis no canvas (router/switch/firewall/...) - ao
+  // contrário de drawingStrokes (traço à mão, imutável), isto guarda
+  // posição/tamanho próprios que o frontend deixa arrastar/redimensionar
+  // depois de colocados. Formato: [{ id, type, x, y, width, height, label }].
+  // Ver CanvasShapeDto em upsert-notebook-entry.dto.ts.
+  canvasShapes Json?
+
+  // Ligações entre duas formas de canvasShapes (por id) - sem coordenadas
+  // próprias, o frontend recalcula o traço da linha a partir da posição
+  // atual das duas formas a cada render, por isso "segue" quando uma
+  // forma é arrastada. Formato: [{ id, fromShapeId, toShapeId, label }].
+  // Ver CanvasLinkDto em upsert-notebook-entry.dto.ts.
+  canvasLinks Json?
+
+  // Etiquetas de texto soltas no canvas (não presas a uma forma) - texto
+  // livre escrito com o teclado por cima do desenho. Formato:
+  // [{ id, x, y, text }]. Ver CanvasTextDto em upsert-notebook-entry.dto.ts.
+  canvasTexts Json?
+
+  // Editável pelo utilizador (não é createdAt) - de propósito, para
+  // conseguir meter apontamentos antigos no sítio certo da ordem
+  // cronológica em vez de tudo cair na data em que foi digitalizado.
   date DateTime
 
   createdAt DateTime @default(now())
@@ -758,6 +800,12 @@ model NotebookEntry {
   photos          NotebookPhoto[]
 
   @@index([userId, areaId, date])
+}
+
+enum NotebookEntryType {
+  NOTE
+  STUDY
+  CLASS
 }
 
 /// Uma foto anexada a uma NotebookEntry. Guarda só o caminho no bucket

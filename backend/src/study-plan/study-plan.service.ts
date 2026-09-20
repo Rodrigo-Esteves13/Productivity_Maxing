@@ -64,7 +64,11 @@ export class StudyPlanService {
   async generate(userId: string, days: number): Promise<StudyPlanResult> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { commuteMinutes: true, quietHoursStart: true, quietHoursEnd: true },
+      select: {
+        commuteMinutes: true,
+        quietHoursStart: true,
+        quietHoursEnd: true,
+      },
     });
 
     const { today, nowMinutes } = this.getLisbonNow();
@@ -102,7 +106,10 @@ export class StudyPlanService {
     // estuda mais/melhor.
     const heatmapScore = new Map<string, number>();
     for (const cell of heatmap) {
-      heatmapScore.set(`${cell.dayOfWeek}:${cell.hourBucket}`, cell.totalMinutes);
+      heatmapScore.set(
+        `${cell.dayOfWeek}:${cell.hourBucket}`,
+        cell.totalMinutes,
+      );
     }
 
     // Constrói o mapa de slots livres por dia, já sem aulas+viagem nem
@@ -111,9 +118,7 @@ export class StudyPlanService {
     for (let i = 0; i < days; i++) {
       const day = addDays(today, i);
       const key = dateKey(day);
-      const dayOccurrences = occurrences.filter(
-        (o) => dateKey(o.date) === key,
-      );
+      const dayOccurrences = occurrences.filter((o) => dateKey(o.date) === key);
       const minMinute = i === 0 ? nowMinutes : 0; // nunca sugerir no passado de hoje
       freeByDay.set(
         key,
@@ -138,7 +143,8 @@ export class StudyPlanService {
     const sortedTasks = [...tasks].sort((a, b) => {
       const dateDiff = a.date.getTime() - b.date.getTime();
       if (dateDiff !== 0) return dateDiff;
-      const weightDiff = (b.weightPercentage ?? -1) - (a.weightPercentage ?? -1);
+      const weightDiff =
+        (b.weightPercentage ?? -1) - (a.weightPercentage ?? -1);
       if (weightDiff !== 0) return weightDiff;
       return DIFFICULTY_ORDER[b.difficulty] - DIFFICULTY_ORDER[a.difficulty];
     });
@@ -201,7 +207,10 @@ export class StudyPlanService {
           slot.start = blockEnd;
           remaining -= available;
           dailyBudget -= available;
-          usedMinutesByDay.set(key, (usedMinutesByDay.get(key) ?? 0) + available);
+          usedMinutesByDay.set(
+            key,
+            (usedMinutesByDay.get(key) ?? 0) + available,
+          );
         }
       }
 
@@ -304,9 +313,14 @@ export class StudyPlanService {
       hourCycle: 'h23',
     }).formatToParts(now);
 
-    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '0';
+    const get = (type: string) =>
+      parts.find((p) => p.type === type)?.value ?? '0';
     const today = new Date(
-      Date.UTC(Number(get('year')), Number(get('month')) - 1, Number(get('day'))),
+      Date.UTC(
+        Number(get('year')),
+        Number(get('month')) - 1,
+        Number(get('day')),
+      ),
     );
     const nowMinutes = Number(get('hour')) * 60 + Number(get('minute'));
     return { today, nowMinutes };

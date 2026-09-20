@@ -28,7 +28,9 @@ export class BannedIpsService implements OnModuleInit {
   async onModuleInit() {
     const rows = await this.prisma.bannedIp.findMany({ select: { ip: true } });
     this.cache = new Set(rows.map((r) => r.ip));
-    this.logger.log(`Carregados ${this.cache.size} IP(s) banido(s) para a cache.`);
+    this.logger.log(
+      `Carregados ${this.cache.size} IP(s) banido(s) para a cache.`,
+    );
   }
 
   // Chamado pelo BannedIpGuard em TODOS os pedidos - tem de ser síncrono
@@ -45,7 +47,9 @@ export class BannedIpsService implements OnModuleInit {
   }
 
   async ban(adminUserId: string, dto: CreateBannedIpDto) {
-    const existing = await this.prisma.bannedIp.findUnique({ where: { ip: dto.ip } });
+    const existing = await this.prisma.bannedIp.findUnique({
+      where: { ip: dto.ip },
+    });
     if (existing) {
       throw new ConflictException(`${dto.ip} is already banned.`);
     }

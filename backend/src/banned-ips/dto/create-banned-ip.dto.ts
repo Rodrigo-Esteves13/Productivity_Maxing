@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsOptional, MaxLength, IsIP } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  MaxLength,
+  IsIP,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateBannedIpDto {
@@ -11,7 +17,9 @@ export class CreateBannedIpDto {
   @IsIP()
   ip: string;
 
-  @ApiPropertyOptional({ example: 'Tentativas repetidas de login com credenciais aleatórias' })
+  @ApiPropertyOptional({
+    example: 'Tentativas repetidas de login com credenciais aleatórias',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(500)

@@ -8,14 +8,19 @@ export interface UseNotebookAreasResult {
   error: string;
 }
 
-export function useNotebookAreas(): UseNotebookAreasResult {
+// periodId: 'all' ou undefined devolve o catálogo global inteiro; um id
+// concreto filtra para as Areas que já têm alguma task do user nesse
+// período (ver AreasService.findAll) - é o que dá o "só as cadeiras
+// deste semestre" no seletor do Notebook.
+export function useNotebookAreas(periodId?: string): UseNotebookAreasResult {
   const [areas, setAreas] = useState<Area[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
-    getUserAreas()
+    setIsLoading(true);
+    getUserAreas(periodId)
       .then((data) => {
         if (cancelled) return;
         setAreas(data);
@@ -30,7 +35,7 @@ export function useNotebookAreas(): UseNotebookAreasResult {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [periodId]);
 
   return { areas, isLoading, error };
 }

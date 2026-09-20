@@ -1,10 +1,16 @@
 // src/api/notebookService.ts
 import api from './client';
 import type {
-  AreaScheduleLink,
+  CanvasLink,
+  CanvasShape,
+  CanvasTextItem,
   DetectClassResult,
   NotebookEntry,
+  NotebookEntryType,
   NotebookPhoto,
+  NotebookSearchResult,
+  NotebookTable,
+  ScheduleLinkResult,
   Stroke,
 } from '../types/models';
 
@@ -12,8 +18,14 @@ export interface CreateNotebookEntryPayload {
   areaId: string;
   classOccurrenceId?: string;
   title: string;
+  entryType?: NotebookEntryType;
+  classNumber?: number;
   textContent?: string;
   drawingStrokes?: Stroke[];
+  tables?: NotebookTable[];
+  canvasShapes?: CanvasShape[];
+  canvasLinks?: CanvasLink[];
+  canvasTexts?: CanvasTextItem[];
   date: string;
 }
 
@@ -74,10 +86,8 @@ export const deleteNotebookPhoto = async (
   await api.delete(`/notebook/entries/${entryId}/photos/${photoId}`);
 };
 
-export const getScheduleLink = async (
-  areaId: string,
-): Promise<AreaScheduleLink | null> => {
-  const response = await api.get<AreaScheduleLink | null>('/notebook/schedule-links', {
+export const getScheduleLink = async (areaId: string): Promise<ScheduleLinkResult> => {
+  const response = await api.get<ScheduleLinkResult>('/notebook/schedule-links', {
     params: { areaId },
   });
   return response.data;
@@ -86,11 +96,11 @@ export const getScheduleLink = async (
 export const upsertScheduleLink = async (
   areaId: string,
   scheduleSubject: string,
-): Promise<AreaScheduleLink> => {
-  const response = await api.post<AreaScheduleLink>('/notebook/schedule-links', {
-    areaId,
-    scheduleSubject,
-  });
+): Promise<ScheduleLinkResult> => {
+  const response = await api.post<{ scheduleSubject: string }>(
+    '/notebook/schedule-links',
+    { areaId, scheduleSubject },
+  );
   return response.data;
 };
 
@@ -101,6 +111,13 @@ export const removeScheduleLink = async (areaId: string): Promise<void> => {
 export const detectClassNow = async (areaId: string): Promise<DetectClassResult> => {
   const response = await api.get<DetectClassResult>('/notebook/detect-class', {
     params: { areaId },
+  });
+  return response.data;
+};
+
+export const searchNotebook = async (query: string): Promise<NotebookSearchResult[]> => {
+  const response = await api.get<NotebookSearchResult[]>('/notebook/search', {
+    params: { q: query },
   });
   return response.data;
 };

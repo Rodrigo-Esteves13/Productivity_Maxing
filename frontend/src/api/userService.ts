@@ -141,8 +141,8 @@ export const exportUserData = async (id: string): Promise<Record<string, unknown
 };
 
 // AREA ENDPOINTS
-export const getUserAreas = async (): Promise<Area[]> => {
-  const response = await api.get<Area[]>('/areas');
+export const getUserAreas = async (periodId?: string): Promise<Area[]> => {
+  const response = await api.get<Area[]>('/areas', { params: periodId ? { periodId } : undefined });
   return response.data;
 };
 export async function createArea(areaData: { name: string; colorHex: string; defaultTaskType?: string | null; credits?: number | null }): Promise<Area> {

@@ -1,11 +1,17 @@
 import type { NotebookEntry } from '../../types/models';
-import { PencilIcon } from '../UI/Icons';
+import { PencilIcon, BookOpenIcon, GraduationCapIcon } from '../UI/Icons';
 
 interface NotebookEntryListProps {
   entries: NotebookEntry[];
   selectedId: string | null;
   onSelect: (entry: NotebookEntry) => void;
 }
+
+const TYPE_ICON = {
+  NOTE: PencilIcon,
+  STUDY: BookOpenIcon,
+  CLASS: GraduationCapIcon,
+} as const;
 
 export default function NotebookEntryList({ entries, selectedId, onSelect }: NotebookEntryListProps) {
   if (entries.length === 0) {
@@ -20,6 +26,7 @@ export default function NotebookEntryList({ entries, selectedId, onSelect }: Not
     <ul className="space-y-1">
       {entries.map((entry) => {
         const isSelected = entry.id === selectedId;
+        const Icon = TYPE_ICON[entry.entryType];
         return (
           <li key={entry.id}>
             <button
@@ -31,8 +38,13 @@ export default function NotebookEntryList({ entries, selectedId, onSelect }: Not
                   : 'text-neutral-300 hover:bg-neutral-800'
               }`}
             >
-              <PencilIcon className="h-3.5 w-3.5 shrink-0 opacity-60" />
-              <span className="flex-1 truncate">{entry.title || 'Untitled entry'}</span>
+              <Icon className="h-3.5 w-3.5 shrink-0 opacity-60" />
+              <span className="flex-1 truncate">
+                {entry.entryType === 'CLASS' && entry.classNumber != null && (
+                  <span className="mr-1 text-violet-400">#{entry.classNumber}</span>
+                )}
+                {entry.title || 'Untitled entry'}
+              </span>
               <span className="shrink-0 text-xs text-neutral-500">
                 {new Date(entry.date).toLocaleDateString('pt-PT', {
                   day: '2-digit',

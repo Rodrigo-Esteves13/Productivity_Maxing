@@ -20,10 +20,10 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
   useEffect(() => {
     let cancelled = false;
     getScheduleLink(areaId)
-      .then((link) => {
+      .then((result) => {
         if (cancelled) return;
-        setLinkedSubject(link?.scheduleSubject ?? null);
-        setDraft(link?.scheduleSubject ?? '');
+        setLinkedSubject(result.scheduleSubject);
+        setDraft(result.scheduleSubject ?? '');
       })
       .catch(() => {
         /* silencioso: isto é só a sugestão automática, nunca deve bloquear

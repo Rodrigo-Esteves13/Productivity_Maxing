@@ -1,4 +1,10 @@
-import { IsArray, ArrayMinSize, ArrayMaxSize, IsString, IsUUID } from 'class-validator';
+import {
+  IsArray,
+  ArrayMinSize,
+  ArrayMaxSize,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 // A ordem completa em que as tasks devem passar a aparecer - o índice de

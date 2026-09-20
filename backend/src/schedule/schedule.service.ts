@@ -153,7 +153,10 @@ export class ScheduleService {
       const res = await fetch(url.toString());
       payload = (await res.json()) as DistanceMatrixResponse;
     } catch (error) {
-      this.logger.error('Falha ao contactar a Distance Matrix API', error as Error);
+      this.logger.error(
+        'Falha ao contactar a Distance Matrix API',
+        error as Error,
+      );
       throw new InternalServerErrorException(
         'Could not reach the maps service. Try again later.',
       );
@@ -177,8 +180,12 @@ export class ScheduleService {
       // servidor - é o primeiro sítio a olhar quando isto falha.
       this.logger.warn(
         `Distance Matrix devolveu um erro: payload.status=${payload.status}` +
-          (payload.error_message ? `, error_message="${payload.error_message}"` : '') +
-          (element ? `, element.status=${element.status}` : ', sem elemento na resposta'),
+          (payload.error_message
+            ? `, error_message="${payload.error_message}"`
+            : '') +
+          (element
+            ? `, element.status=${element.status}`
+            : ', sem elemento na resposta'),
       );
       throw new BadRequestException(
         "Couldn't calculate a route between those two addresses. Check them and try again, or set the commute time manually.",

@@ -14,7 +14,12 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+} from '@nestjs/swagger';
 import type { Options as MulterOptions } from 'multer';
 import 'multer';
 import { NotebookService } from './notebook.service';
@@ -27,9 +32,12 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
-// Mesmo tipo auxiliar que auth.controller.ts usa para fieldNestingDepth -
-// ver o comentário lá junto do uploadAvatar sobre o TS2353 do @types/multer.
-type MulterLimitsWithFieldNestingDepth = MulterOptions['limits'] & {
+// Mesma mitigação e o mesmo motivo do TS2353 do @types/multer que
+// AuthController.uploadAvatar já documenta (GHSA-72gw-mp4g-v24j,
+// fieldNestingDepth ainda não está no tipo Options.limits instalado).
+type MulterLimitsWithFieldNestingDepth = NonNullable<
+  MulterOptions['limits']
+> & {
   fieldNestingDepth?: number;
 };
 
@@ -41,7 +49,9 @@ export class NotebookController {
   constructor(private readonly notebookService: NotebookService) {}
 
   @Get('entries')
-  @ApiOperation({ summary: 'Lists notebook entries for an area, newest first.' })
+  @ApiOperation({
+    summary: 'Lists notebook entries for an area, newest first.',
+  })
   @ApiQuery({ name: 'areaId', required: true })
   findAllForArea(
     @CurrentUser() user: AuthenticatedUser,
@@ -103,7 +113,9 @@ export class NotebookController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     if (!file) {
-      throw new BadRequestException('No file was sent (field name must be "photo").');
+      throw new BadRequestException(
+        'No file was sent (field name must be "photo").',
+      );
     }
     return this.notebookService.addPhoto(user.id, id, file);
   }
@@ -157,5 +169,15 @@ export class NotebookController {
     @Query('areaId', ParseUUIDPipe) areaId: string,
   ) {
     return this.notebookService.detectClassNow(user.id, areaId);
+  }
+
+  @Get('search')
+  @ApiOperation({
+    summary:
+      "Free-text search across all of the caller's notebook entries - matches title, content, subject name and formatted date (dd/mm/yyyy).",
+  })
+  @ApiQuery({ name: 'q', required: true })
+  search(@CurrentUser() user: AuthenticatedUser, @Query('q') q: string) {
+    return this.notebookService.search(user.id, q ?? '');
   }
 }

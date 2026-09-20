@@ -29,7 +29,11 @@ export class UpdateProfileDto {
   // também podem ser gravados diretamente aqui (edição manual), embora o
   // caminho normal para os três juntos seja POST /schedule/commute/
   // estimate.
-  @ApiPropertyOptional({ example: 25, description: 'One-way commute time in minutes, used by the study plan generator.' })
+  @ApiPropertyOptional({
+    example: 25,
+    description:
+      'One-way commute time in minutes, used by the study plan generator.',
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
@@ -59,14 +63,21 @@ export class UpdateProfileDto {
   // Minutos desde a meia-noite (hora de Lisboa). Só fazem efeito quando
   // os dois são enviados juntos - ver comentário em
   // User.quietHoursStart/quietHoursEnd no schema.prisma.
-  @ApiPropertyOptional({ example: 1380, description: 'Quiet hours start, minutes since midnight (e.g. 23:00 = 1380).' })
+  @ApiPropertyOptional({
+    example: 1380,
+    description:
+      'Quiet hours start, minutes since midnight (e.g. 23:00 = 1380).',
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(1439)
   quietHoursStart?: number;
 
-  @ApiPropertyOptional({ example: 420, description: 'Quiet hours end, minutes since midnight (e.g. 07:00 = 420).' })
+  @ApiPropertyOptional({
+    example: 420,
+    description: 'Quiet hours end, minutes since midnight (e.g. 07:00 = 420).',
+  })
   @IsOptional()
   @IsInt()
   @Min(0)

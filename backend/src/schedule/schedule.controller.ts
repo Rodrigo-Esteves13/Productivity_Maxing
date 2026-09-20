@@ -1,5 +1,10 @@
 import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ScheduleService } from './schedule.service';
 import { ImportScheduleDto } from './dto/import-schedule.dto';

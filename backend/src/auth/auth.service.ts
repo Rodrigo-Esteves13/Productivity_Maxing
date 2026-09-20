@@ -10,7 +10,14 @@ import { randomUUID, randomBytes, scrypt as scryptCallback } from 'crypto';
 import { promisify } from 'util';
 import { createClient } from '@supabase/supabase-js';
 import { fileTypeFromBuffer } from 'file-type';
-import { Provider, User, Prisma, Role, ApiKeyScope, CommuteMode } from '@prisma/client';
+import {
+  Provider,
+  User,
+  Prisma,
+  Role,
+  ApiKeyScope,
+  CommuteMode,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import 'multer';
 import {

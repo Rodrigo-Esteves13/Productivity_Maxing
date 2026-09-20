@@ -4,9 +4,9 @@ import type { Stroke } from '../types/models';
 // ponto fica visivelmente "poligonal" com um rato normal (poucos pontos
 // por segundo comparado a uma caneta em ecrã tátil); isto suaviza sem
 // perder a forma real do traço.
-export function strokeToPathData(stroke: Stroke): string {
+export function strokeToPathData(stroke: Stroke | null | undefined): string {
+  if (!stroke || !stroke.points || stroke.points.length === 0) return '';
   const { points } = stroke;
-  if (points.length === 0) return '';
   if (points.length === 1) {
     const [p] = points;
     return `M ${p.x} ${p.y} L ${p.x} ${p.y}`;

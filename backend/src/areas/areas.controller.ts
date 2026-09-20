@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Delete,
+  Query,
   ParseUUIDPipe,
   UseGuards,
 } from '@nestjs/common';
@@ -13,11 +14,18 @@ import { Role, ApiKeyScope } from '@prisma/client';
 import { AreasService } from './areas.service';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RequireApiKeyScope } from '../auth/decorators/require-api-key-scope.decorator';
 import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { ApiKeyScopeGuard } from '../auth/guards/api-key-scope.guard';
 
 // A GESTÃO (criar/editar/apagar) é exclusiva de ADMIN - ver os guards em
@@ -56,10 +64,15 @@ export class AreasController {
   @ApiBearerAuth()
   @Get()
   @ApiOperation({
-    summary: 'Lists the global catalog of areas (any authenticated user)',
+    summary:
+      "Lists the global catalog of areas (any authenticated user), always in full. Optional periodId annotates each area with usedInPeriod (has a task of the caller in that period) - used by the Notebook to group 'this period' first without ever hiding a subject.",
   })
-  findAll() {
-    return this.areasService.findAll();
+  @ApiQuery({ name: 'periodId', required: false })
+  findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('periodId') periodId?: string,
+  ) {
+    return this.areasService.findAll(user.id, periodId);
   }
 
   @UseGuards(JwtOrApiKeyAuthGuard)

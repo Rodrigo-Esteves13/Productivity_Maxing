@@ -11,20 +11,38 @@ export interface UseDrawingCanvasResult {
   startStroke: (point: StrokePoint) => void;
   extendStroke: (point: StrokePoint) => void;
   endStroke: () => void;
+  eraseNear: (point: StrokePoint) => void;
   undo: () => void;
   clear: () => void;
   canUndo: boolean;
 }
 
-const DEFAULT_COLOR = '#EDE9FE'; // violeta claro sobre o fundo escuro do Nightshade
+// Preto por default - é o que a maioria escreve à mão num papel real (ver
+// pedido do utilizador). O canvas tem fundo tipo papel (ver NotebookCanvas),
+// não o Nightshade escuro do resto da app, por isso preto aqui é visível
+// desde a primeira pincelada, ao contrário do tema anterior.
+const DEFAULT_COLOR = '#1C1C1E';
 const DEFAULT_WIDTH = 2.5;
+
+// Distância (nas coordenadas fixas do viewBox, ver NotebookCanvas) a que o
+// apagador ainda conta como "a tocar" num traço - dá alguma margem em vez
+// de exigir acertar exatamente em cima de um pixel do traço.
+const ERASE_RADIUS = 14;
+
+function distance(a: StrokePoint, b: StrokePoint): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function strokeIsNear(stroke: Stroke, point: StrokePoint): boolean {
+  return stroke.points.some((p) => distance(p, point) <= ERASE_RADIUS);
+}
 
 /**
  * Captura de traços vetoriais para o caderno (ver NotebookEntry.drawingStrokes
  * no schema.prisma para o "porquê" de vetorial em vez de rasterizado). Este
- * hook só guarda estado e regras (um traço de cada vez, undo por stroke
- * inteiro) - o componente <NotebookCanvas> é que traduz pointer events daqui
- * para SVG, mantendo os dois com responsabilidade única.
+ * hook só guarda estado e regras (um traço de cada vez, apagar por traço
+ * inteiro, undo) - o componente <NotebookCanvas> é que traduz pointer events
+ * daqui para SVG, mantendo os dois com responsabilidade única.
  */
 export function useDrawingCanvas(initialStrokes: Stroke[] = []): UseDrawingCanvasResult {
   const [strokes, setStrokes] = useState<Stroke[]>(initialStrokes);
@@ -55,14 +73,27 @@ export function useDrawingCanvas(initialStrokes: Stroke[] = []): UseDrawingCanva
   }, []);
 
   const endStroke = useCallback(() => {
-    if (!activeRef.current || activeRef.current.points.length < 2) {
-      activeRef.current = null;
-      setCurrentStroke(null);
-      return;
-    }
-    setStrokes((prev) => [...prev, activeRef.current as Stroke]);
+    // Captura o traço ANTES de mexer no ref. O updater passado a
+    // setStrokes só corre depois desta função terminar (o React só o
+    // invoca na fase de commit) - se ele lesse activeRef.current
+    // diretamente, já apanhava null (posto na linha a seguir), porque o
+    // JS síncrono acaba de correr primeiro. Era exatamente isto que
+    // rebentava o NotebookCanvas com "null has no properties" ao soltar
+    // o rato.
+    const finishedStroke = activeRef.current;
     activeRef.current = null;
     setCurrentStroke(null);
+
+    if (!finishedStroke || finishedStroke.points.length < 2) return;
+    setStrokes((prev) => [...prev, finishedStroke]);
+  }, []);
+
+  // Apaga o traço inteiro que passar perto do ponto, não s(pixel a pixel)
+  // - mais previsível de usar com rato do que um apagador de precisão, e
+  // muito mais simples de guardar/reabrir do que "buracos" dentro de um
+  // traço vetorial.
+  const eraseNear = useCallback((point: StrokePoint) => {
+    setStrokes((prev) => prev.filter((stroke) => !strokeIsNear(stroke, point)));
   }, []);
 
   const undo = useCallback(() => {
@@ -85,6 +116,7 @@ export function useDrawingCanvas(initialStrokes: Stroke[] = []): UseDrawingCanva
     startStroke,
     extendStroke,
     endStroke,
+    eraseNear,
     undo,
     clear,
     canUndo: strokes.length > 0,

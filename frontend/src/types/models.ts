@@ -297,6 +297,10 @@ export interface Area {
   // Credits (ECTS or equivalent) for this course. null = no credits set
   // (e.g. secondary school) - enters with weight 1 in the average calculation.
   credits: number | null;
+  // Só vem preenchido quando GET /areas foi chamado com um periodId
+  // concreto - nunca usado para esconder a Area, só para agrupar/ordenar
+  // no seletor do Notebook (ver NotebookSubjectPicker).
+  usedInPeriod?: boolean;
 }
 
 export interface Task {
@@ -329,6 +333,9 @@ export interface Task {
   priority: string | null;
   priorityLabel: string | null;
   priorityColorHex: string | null;
+  // Ordem de /admin/priorities (menor = mais prioritário), null sem
+  // prioridade - só usado pelo modo de ordenação "Priority" em Tasks.tsx.
+  priorityOrder: number | null;
   // Histórico, nunca decresce - ver comentário em schema.prisma. Conta
   // qualquer vez que a data mudou para mais tarde, não só o botão rápido
   // "+1 Day".
@@ -479,6 +486,57 @@ export interface Stroke {
   width: number;
 }
 
+// Uma tabela estruturada dentro de uma entrada - ver comentário em
+// NotebookEntry.tables no schema.prisma. `id` é só para servir de
+// key/referência local ao editar; gerado no frontend, o backend guarda-o
+// tal como vem.
+export interface NotebookTable {
+  id: string;
+  rows: string[][];
+}
+
+// Uma etiqueta de texto solta no canvas (não presa a nenhuma forma) -
+// para escrever palavras/frases com o teclado por cima do desenho à
+// mão, em vez de só símbolos/formas. x/y são o canto superior esquerdo,
+// nas mesmas coordenadas fixas do viewBox (ver VIEW_WIDTH/VIEW_HEIGHT em
+// NotebookCanvas.tsx).
+export interface CanvasTextItem {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+}
+
+// Ícone posicionável no canvas - ver comentário em
+// NotebookEntry.canvasShapes no schema.prisma. x/y/width/height nas
+// mesmas coordenadas fixas do viewBox do canvas (ver VIEW_WIDTH/
+// VIEW_HEIGHT em NotebookCanvas.tsx), não em pixels de ecrã.
+export type CanvasShapeType = 'router' | 'switch' | 'firewall' | 'server' | 'pc' | 'cloud' | 'ap';
+
+export interface CanvasShape {
+  id: string;
+  type: CanvasShapeType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label: string;
+}
+
+// Uma ligação entre duas formas - recalculada a cada render a partir da
+// posição atual de fromShapeId/toShapeId (ver clipPointToRectEdge em
+// canvasGeometry.ts), por isso "segue" a forma quando é arrastada, sem
+// guardar coordenadas próprias. Se uma forma referenciada for apagada, a
+// ligação fica órfã e deixa de ser desenhada (ver NotebookCanvas.tsx) -
+// na prática nunca acontece porque apagar uma forma apaga também as suas
+// ligações (removeLinksForShape).
+export interface CanvasLink {
+  id: string;
+  fromShapeId: string;
+  toShapeId: string;
+  label: string;
+}
+
 export interface NotebookPhoto {
   id: string;
   notebookEntryId: string;
@@ -489,26 +547,36 @@ export interface NotebookPhoto {
   url: string | null;
 }
 
+export type NotebookEntryType = 'NOTE' | 'STUDY' | 'CLASS';
+
 export interface NotebookEntry {
   id: string;
   userId: string;
   areaId: string;
   classOccurrenceId: string | null;
   title: string;
+  entryType: NotebookEntryType;
+  // Só tem significado quando entryType é 'CLASS' - ver comentário no
+  // schema.prisma sobre porque não é derivado do título.
+  classNumber: number | null;
   textContent: string | null;
   drawingStrokes: Stroke[] | null;
+  tables: NotebookTable[] | null;
+  canvasShapes: CanvasShape[] | null;
+  canvasLinks: CanvasLink[] | null;
+  canvasTexts: CanvasTextItem[] | null;
   date: string;
   photos: NotebookPhoto[];
 }
 
-export interface AreaScheduleLink {
-  id: string;
-  userId: string;
-  areaId: string;
-  scheduleSubject: string;
+export interface NotebookSearchResult extends NotebookEntry {
+  area: { id: string; name: string; colorHex: string };
+}
+
+export interface ScheduleLinkResult {
+  scheduleSubject: string | null;
 }
 
 export interface DetectClassResult {
   occurrence: ClassOccurrence | null;
-  suggestedTitle: string | null;
 }

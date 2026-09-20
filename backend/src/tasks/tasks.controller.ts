@@ -85,7 +85,10 @@ export class TasksController {
   // Drag-and-drop no TaskGrid (frontend) - mesma razão de posicionamento
   // das rotas acima, "reorder" nunca pode ser lido como um :id.
   @Patch('reorder')
-  reorder(@CurrentUser() user: AuthenticatedUser, @Body() dto: ReorderTasksDto) {
+  reorder(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ReorderTasksDto,
+  ) {
     return this.tasksService.reorder(user.id, dto.taskIds);
   }
 

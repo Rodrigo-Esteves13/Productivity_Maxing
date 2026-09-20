@@ -227,7 +227,9 @@ export class TasksService {
     // ausente no objeto `data` como "não mexer", mas só porque este bloco
     // o retira explicitamente do objeto antes disso importar.
     const priorityIdUpdate =
-      priority !== undefined ? { priorityId: await this.resolvePriorityId(priority) } : {};
+      priority !== undefined
+        ? { priorityId: await this.resolvePriorityId(priority) }
+        : {};
 
     // Só mexemos em periodId se vier explicitamente no PATCH - e, tal como
     // no create(), validamos sempre posse antes de aceitar (o user podia
@@ -469,7 +471,9 @@ export class TasksService {
     // --- Batch-fetch every lookup this import could possibly need, once. ---
     const distinctAreaIds = [...new Set(rows.map((r) => r.areaId))];
     const distinctPeriodIds = [
-      ...new Set(rows.map((r) => r.periodId).filter((id): id is string => !!id)),
+      ...new Set(
+        rows.map((r) => r.periodId).filter((id): id is string => !!id),
+      ),
     ];
 
     const [taskTypes, academicTaskTypes, areas, ownedPeriods] =
@@ -557,7 +561,7 @@ export class TasksService {
             topics: row.topics ?? null,
             completedAt,
             ...typeIds,
-          } as Prisma.TaskCreateArgs['data'],
+          },
         });
       } catch (error) {
         const message =
@@ -600,7 +604,11 @@ export class TasksService {
     );
 
     const results: RowOutcome[] = [
-      ...failed.map((f) => ({ row: f.rowNumber, success: false, error: f.error })),
+      ...failed.map((f) => ({
+        row: f.rowNumber,
+        success: false,
+        error: f.error,
+      })),
       ...createOutcomes,
     ].sort((a, b) => a.row - b.row);
 
@@ -618,7 +626,8 @@ export class TasksService {
   // called from TaskTypesService) instead of on every page load from
   // every user.
   async getMeta() {
-    const cached = this.taskMetaCache.get<Awaited<ReturnType<typeof this.buildMeta>>>();
+    const cached =
+      this.taskMetaCache.get<Awaited<ReturnType<typeof this.buildMeta>>>();
     if (cached) return cached;
 
     const meta = await this.buildMeta();
@@ -679,7 +688,9 @@ export class TasksService {
       where: { key: priorityKey },
     });
     if (!priority || !priority.isActive) {
-      throw new BadRequestException(`Priority "${priorityKey}" invalid or inactive.`);
+      throw new BadRequestException(
+        `Priority "${priorityKey}" invalid or inactive.`,
+      );
     }
     return priority.id;
   }
@@ -787,6 +798,10 @@ export class TasksService {
       priority: priority?.key ?? null,
       priorityLabel: priority?.label ?? null,
       priorityColorHex: priority?.colorHex ?? null,
+      // Ordem definida em /admin/priorities (menor = mais prioritário, mesma
+      // convenção do resto dos catálogos) - null para tasks sem prioridade,
+      // usado pelo modo de ordenação "Priority" em Tasks.tsx.
+      priorityOrder: priority?.order ?? null,
     };
   }
 }

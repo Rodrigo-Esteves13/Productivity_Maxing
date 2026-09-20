@@ -8,6 +8,10 @@ import {
 } from '../api/notebookService';
 import type { NotebookEntry } from '../types/models';
 
+function byDateDesc(a: NotebookEntry, b: NotebookEntry): number {
+  return new Date(b.date).getTime() - new Date(a.date).getTime();
+}
+
 export interface UseNotebookEntriesResult {
   entries: NotebookEntry[];
   isLoading: boolean;
@@ -58,7 +62,7 @@ export function useNotebookEntries(areaId: string | null): UseNotebookEntriesRes
 
   const createEntry = useCallback(async (payload: CreateNotebookEntryPayload) => {
     const created = await createNotebookEntry(payload);
-    setEntries((prev) => [created, ...prev]);
+    setEntries((prev) => [created, ...prev].sort(byDateDesc));
     setSelectedEntry(created);
     return created;
   }, []);
@@ -66,7 +70,9 @@ export function useNotebookEntries(areaId: string | null): UseNotebookEntriesRes
   const updateEntry = useCallback(
     async (id: string, payload: UpdateNotebookEntryPayload) => {
       const updated = await updateNotebookEntry(id, payload);
-      setEntries((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+      setEntries((prev) =>
+        prev.map((e) => (e.id === updated.id ? updated : e)).sort(byDateDesc),
+      );
       setSelectedEntry((prev) => (prev?.id === updated.id ? updated : prev));
     },
     [],

@@ -2,7 +2,6 @@ import type { Task, TaskTypeOption, AcademicTaskTypeOption } from '../../types/m
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
-import PostponedIndicator from '../UI/PostponedIndicator';
 import DetailRow from '../UI/DetailRow';
 import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
 import { useDurationPrediction } from '../../hooks/useDurationPrediction';

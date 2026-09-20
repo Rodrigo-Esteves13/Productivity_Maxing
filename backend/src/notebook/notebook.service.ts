@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
+import { Prisma } from '@prisma/client';
 import { fileTypeFromBuffer } from 'file-type';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -19,7 +20,8 @@ import { UpsertScheduleLinkDto } from './dto/upsert-schedule-link.dto';
 // apontamentos e fotos pessoais de aulas, não fotos de perfil. Tem de
 // existir no projeto Supabase com "Public bucket" DESLIGADO; o acesso é
 // sempre via signed URL de curta duração (ver attachSignedUrls).
-const NOTEBOOK_BUCKET = process.env.SUPABASE_NOTEBOOK_BUCKET ?? 'notebook-photos';
+const NOTEBOOK_BUCKET =
+  process.env.SUPABASE_NOTEBOOK_BUCKET ?? 'notebook-photos';
 
 // Tempo de vida do signed URL devolvido ao frontend - só precisa de
 // sobreviver ao carregamento da página de uma entrada, nunca fica
@@ -74,7 +76,9 @@ export class NotebookService {
   // URL em si (expira), só o caminho no bucket.
   private async attachSignedUrls<
     T extends { photos: { id: string; storagePath: string }[] },
-  >(entry: T): Promise<T & { photos: (T['photos'][number] & { url: string | null })[] }> {
+  >(
+    entry: T,
+  ): Promise<T & { photos: (T['photos'][number] & { url: string | null })[] }> {
     const photosWithUrls = await Promise.all(
       entry.photos.map(async (photo) => {
         const { data, error } = await this.storage.storage
@@ -84,9 +88,8 @@ export class NotebookService {
           this.logger.warn(
             `Could not sign URL for notebook photo ${photo.id}: ${error.message}`,
           );
-          return { ...photo, url: null };
         }
-        return { ...photo, url: data.signedUrl };
+        return { ...photo, url: data?.signedUrl ?? null };
       }),
     );
     return { ...entry, photos: photosWithUrls };
@@ -130,10 +133,16 @@ export class NotebookService {
         areaId: dto.areaId,
         classOccurrenceId: dto.classOccurrenceId,
         title: dto.title,
+        entryType: dto.entryType,
+        classNumber: dto.classNumber,
         textContent: dto.textContent,
-        drawingStrokes: dto.drawingStrokes as object[] | undefined,
+        drawingStrokes: dto.drawingStrokes,
+        tables: dto.tables,
+        canvasShapes: dto.canvasShapes,
+        canvasLinks: dto.canvasLinks,
+        canvasTexts: dto.canvasTexts,
         date: new Date(dto.date),
-      },
+      } as Prisma.NotebookEntryCreateArgs['data'],
       include: { photos: true },
     });
     return this.attachSignedUrls(entry);
@@ -146,10 +155,16 @@ export class NotebookService {
       where: { id },
       data: {
         title: dto.title,
+        entryType: dto.entryType,
+        classNumber: dto.classNumber,
         textContent: dto.textContent,
-        drawingStrokes: dto.drawingStrokes as object[] | undefined,
+        drawingStrokes: dto.drawingStrokes,
+        tables: dto.tables,
+        canvasShapes: dto.canvasShapes,
+        canvasLinks: dto.canvasLinks,
+        canvasTexts: dto.canvasTexts,
         date: dto.date ? new Date(dto.date) : undefined,
-      },
+      } as Prisma.NotebookEntryUpdateArgs['data'],
       include: { photos: { orderBy: { position: 'asc' } } },
     });
     return this.attachSignedUrls(entry);
@@ -168,7 +183,9 @@ export class NotebookService {
         .from(NOTEBOOK_BUCKET)
         .remove(paths)
         .catch((err) =>
-          this.logger.warn(`Could not delete notebook photos from storage: ${err}`),
+          this.logger.warn(
+            `Could not delete notebook photos from storage: ${err}`,
+          ),
         );
     }
 
@@ -196,20 +213,34 @@ export class NotebookService {
       .upload(path, file.buffer, { contentType: detected.mime, upsert: false });
 
     if (uploadError) {
-      this.logger.error('Error uploading notebook photo to Supabase', uploadError);
-      throw new BadRequestException('Could not upload the photo. Please try again.');
+      this.logger.error(
+        'Error uploading notebook photo to Supabase',
+        uploadError,
+      );
+      throw new BadRequestException(
+        'Could not upload the photo. Please try again.',
+      );
     }
 
     const nextPosition = entry.photos.length;
     const photo = await this.prisma.notebookPhoto.create({
-      data: { notebookEntryId: entryId, storagePath: path, position: nextPosition },
+      data: {
+        notebookEntryId: entryId,
+        storagePath: path,
+        position: nextPosition,
+      },
     });
 
-    const { data, error } = await this.storage.storage
+    const { data: signedUrlData, error: signError } = await this.storage.storage
       .from(NOTEBOOK_BUCKET)
       .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+    if (signError) {
+      this.logger.warn(
+        `Could not sign URL for new notebook photo: ${signError.message}`,
+      );
+    }
 
-    return { ...photo, url: error ? null : data.signedUrl };
+    return { ...photo, url: signedUrlData?.signedUrl ?? null };
   }
 
   async removePhoto(userId: string, entryId: string, photoId: string) {
@@ -225,7 +256,9 @@ export class NotebookService {
       .remove([photo.storagePath]);
     if (error) {
       this.logger.error('Error deleting notebook photo from Supabase', error);
-      throw new BadRequestException('Could not delete the photo. Please try again.');
+      throw new BadRequestException(
+        'Could not delete the photo. Please try again.',
+      );
     }
 
     await this.prisma.notebookPhoto.delete({ where: { id: photoId } });
@@ -235,14 +268,27 @@ export class NotebookService {
   // --- AreaScheduleLink -----------------------------------------------
 
   async findScheduleLink(userId: string, areaId: string) {
-    return this.prisma.areaScheduleLink.findFirst({ where: { userId, areaId } });
+    const link = await this.prisma.areaScheduleLink.findFirst({
+      where: { userId, areaId },
+    });
+    // NUNCA devolver um `null` nu daqui - um controller a devolver null
+    // deixa a serialização da resposta dependente de como o
+    // Nest/Express trata esse caso específico (viu-se isto a sair sem
+    // Content-Type certo nalguns clientes). Um objeto, mesmo vazio por
+    // dentro, serializa sempre da mesma forma.
+    return { scheduleSubject: link?.scheduleSubject ?? null };
   }
 
   async upsertScheduleLink(userId: string, dto: UpsertScheduleLinkDto) {
     await this.assertAreaExists(dto.areaId);
 
     const existingForSubject = await this.prisma.areaScheduleLink.findUnique({
-      where: { userId_scheduleSubject: { userId, scheduleSubject: dto.scheduleSubject } },
+      where: {
+        userId_scheduleSubject: {
+          userId,
+          scheduleSubject: dto.scheduleSubject,
+        },
+      },
     });
     if (existingForSubject && existingForSubject.areaId !== dto.areaId) {
       throw new ConflictException(
@@ -262,7 +308,11 @@ export class NotebookService {
     }
 
     return this.prisma.areaScheduleLink.create({
-      data: { userId, areaId: dto.areaId, scheduleSubject: dto.scheduleSubject },
+      data: {
+        userId,
+        areaId: dto.areaId,
+        scheduleSubject: dto.scheduleSubject,
+      },
     });
   }
 
@@ -270,7 +320,8 @@ export class NotebookService {
     const existing = await this.prisma.areaScheduleLink.findFirst({
       where: { userId, areaId },
     });
-    if (!existing) throw new NotFoundException('No schedule link for this area.');
+    if (!existing)
+      throw new NotFoundException('No schedule link for this area.');
 
     await this.prisma.areaScheduleLink.delete({ where: { id: existing.id } });
     return { deleted: true };
@@ -281,13 +332,16 @@ export class NotebookService {
   /**
    * Devolve a ClassOccurrence de hoje desta Area (via AreaScheduleLink)
    * cuja janela [startMinutes, endMinutes] cobre a hora atual (com
-   * margem), e um título sugerido pronto a editar. `classNumber` fica em
-   * branco de propósito - só o utilizador sabe o número da aula, ver
-   * pedido original ("Aula x (depois eu meto o numero)").
+   * margem). O número da aula (classNumber) NÃO é sugerido aqui - o
+   * frontend calcula-o a partir das entradas já carregadas dessa Area
+   * (maior classNumber existente + 1), porque só ele sabe quais já
+   * existem sem outra ida à BD, e porque o número tem de poder ser
+   * repetido de propósito quando uma aula física deu para duas cadeiras
+   * diferentes (ver pedido original do utilizador).
    */
   async detectClassNow(userId: string, areaId: string) {
-    const link = await this.findScheduleLink(userId, areaId);
-    if (!link) return { occurrence: null, suggestedTitle: null };
+    const { scheduleSubject } = await this.findScheduleLink(userId, areaId);
+    if (!scheduleSubject) return { occurrence: null };
 
     const now = new Date();
     const startOfDay = new Date(now);
@@ -299,7 +353,7 @@ export class NotebookService {
     const todaysOccurrences = await this.prisma.classOccurrence.findMany({
       where: {
         userId,
-        subject: link.scheduleSubject,
+        subject: scheduleSubject,
         date: { gte: startOfDay, lte: endOfDay },
       },
     });
@@ -310,13 +364,44 @@ export class NotebookService {
         nowMinutes <= occ.endMinutes + CLASS_MATCH_MARGIN_MINUTES,
     );
 
-    if (!match) return { occurrence: null, suggestedTitle: null };
+    return { occurrence: match ?? null };
+  }
 
-    const weekday = now.toLocaleDateString('pt-PT', { weekday: 'long' });
-    const day = now.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
-    return {
-      occurrence: match,
-      suggestedTitle: `Aula ___ de ${weekday}, ${day}`,
-    };
+  // --- Pesquisa -----------------------------------------------------
+
+  /**
+   * Pesquisa em texto livre por título, conteúdo, nome da cadeira e data
+   * (formatada dd/mm/aaaa) - à escala de um caderno pessoal (algumas
+   * centenas de entradas ao longo de vários anos, não milhares), filtrar
+   * em JS depois de um único findMany é mais simples e mais correto do
+   * que tentar exprimir "contém esta substring na data formatada" em SQL,
+   * e continua instantâneo a este volume.
+   */
+  async search(userId: string, query: string) {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+
+    const entries = await this.prisma.notebookEntry.findMany({
+      where: { userId },
+      include: {
+        photos: { orderBy: { position: 'asc' } },
+        area: { select: { id: true, name: true, colorHex: true } },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    const matches = entries.filter((entry) => {
+      const dateLabel = entry.date.toLocaleDateString('pt-PT');
+      return (
+        entry.title.toLowerCase().includes(q) ||
+        (entry.textContent ?? '').toLowerCase().includes(q) ||
+        entry.area.name.toLowerCase().includes(q) ||
+        dateLabel.includes(q)
+      );
+    });
+
+    return Promise.all(
+      matches.slice(0, 50).map((entry) => this.attachSignedUrls(entry)),
+    );
   }
 }
