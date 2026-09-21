@@ -8,8 +8,11 @@ import TaskTypesTable from '../components/TaskTypes/TaskTypesTable';
 import AcademicTaskTypesTable from '../components/TaskTypes/AcademicTaskTypesTable';
 import TaskTypeForm from '../components/TaskTypes/TaskTypeForm';
 import AcademicTaskTypeForm from '../components/TaskTypes/AcademicTaskTypeForm';
+import PrioritiesTable from '../components/Priorities/PrioritiesTable';
+import PriorityForm from '../components/Priorities/PriorityForm';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useTaskTypesPage } from '../hooks/useTaskTypesPage';
+import { usePrioritiesPage } from '../hooks/usePrioritiesPage';
 
 export default function TaskTypes() {
   useDocumentTitle('Task Type Management');
@@ -36,6 +39,25 @@ export default function TaskTypes() {
     handleEditAcademic,
     handleToggleAcademicActive,
   } = useTaskTypesPage();
+
+  // Módulo próprio (usePrioritiesPage/prioritiesAdminService/PrioritiesModule
+  // no backend) - não faz parte do catálogo de TaskType, mas mora na mesma
+  // página de admin porque é o mesmo tipo de trabalho (gerir um catálogo
+  // pequeno editável em runtime) e evitou abrir uma rota/nav-link novos só
+  // para isto.
+  const {
+    priorities,
+    isLoading: isPrioritiesLoading,
+    error: prioritiesError,
+    isSubmitting: isPrioritySubmitting,
+    isCreateOpen: isCreatePriorityOpen,
+    setIsCreateOpen: setIsCreatePriorityOpen,
+    editingPriority,
+    setEditingPriority,
+    handleCreate: handleCreatePriority,
+    handleEdit: handleEditPriority,
+    handleToggleActive: handleTogglePriorityActive,
+  } = usePrioritiesPage();
 
   return (
     <PageLayout>
@@ -79,6 +101,26 @@ export default function TaskTypes() {
               onEdit={setEditingAcademic}
               onToggleActive={handleToggleAcademicActive}
             />
+          </section>
+
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-white">Priorities</h2>
+              <ActionButton color="amber" onClick={() => setIsCreatePriorityOpen(true)}>
+                + New Priority
+              </ActionButton>
+            </div>
+            {isPrioritiesLoading ? (
+              <TableSkeleton rows={3} columns={3} />
+            ) : prioritiesError ? (
+              <ErrorState message={prioritiesError} />
+            ) : (
+              <PrioritiesTable
+                priorities={priorities}
+                onEdit={setEditingPriority}
+                onToggleActive={handleTogglePriorityActive}
+              />
+            )}
           </section>
         </div>
       )}
@@ -157,6 +199,45 @@ export default function TaskTypes() {
             onSubmit={handleEditAcademic}
             onCancel={() => setEditingAcademic(null)}
             isSubmitting={isSubmitting}
+            submitLabel="Save Changes"
+            submittingLabel="Saving..."
+          />
+        )}
+      </Modal>
+
+      {/* Criar Priority */}
+      <Modal
+        isOpen={isCreatePriorityOpen}
+        onClose={() => setIsCreatePriorityOpen(false)}
+        title="Create New Priority"
+      >
+        <PriorityForm
+          idPrefix="create-priority"
+          onSubmit={handleCreatePriority}
+          onCancel={() => setIsCreatePriorityOpen(false)}
+          isSubmitting={isPrioritySubmitting}
+          submitLabel="Create Priority"
+          submittingLabel="Creating..."
+        />
+      </Modal>
+
+      {/* Editar Priority */}
+      <Modal
+        isOpen={editingPriority !== null}
+        onClose={() => setEditingPriority(null)}
+        title="Edit Priority"
+      >
+        {editingPriority && (
+          <PriorityForm
+            idPrefix="edit-priority"
+            initialValues={{
+              label: editingPriority.label,
+              colorHex: editingPriority.colorHex ?? '#a3a3a3',
+              order: editingPriority.order,
+            }}
+            onSubmit={handleEditPriority}
+            onCancel={() => setEditingPriority(null)}
+            isSubmitting={isPrioritySubmitting}
             submitLabel="Save Changes"
             submittingLabel="Saving..."
           />

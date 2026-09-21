@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import TaskGrid from '../components/Tasks/TaskGrid';
+import TaskSortControl from '../components/Tasks/TaskSortControl';
 import TaskDetailView from '../components/Tasks/TaskDetailView';
 import TaskEditForm from '../components/Tasks/TaskEditForm';
 import Modal from '../components/UI/Modal';
@@ -15,6 +16,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useTasksPage } from '../hooks/useTasksPage';
 import { useTaskShortcuts } from '../hooks/useTaskShortcuts';
 import { useShowArchivedTasks } from '../hooks/useShowArchivedTasks';
+import { useTaskSortMode } from '../hooks/useTaskSortMode';
 import { isTaskArchived } from '../utils/taskArchive';
 
 export default function Tasks() {
@@ -25,6 +27,7 @@ export default function Tasks() {
     taskTypes,
     academicTaskTypes,
     difficulties,
+    priorities,
     progressStatuses,
     isLoading,
     error,
@@ -44,11 +47,13 @@ export default function Tasks() {
     markSelectedTaskComplete,
     moveTaskToArea,
     toggleTaskPin,
+    reorderTasksInState,
     rescheduleToTomorrow,
     reschedulingId
   } = useTasksPage();
 
   const { showArchived, toggleShowArchived } = useShowArchivedTasks();
+  const { sortMode, setSortMode } = useTaskSortMode();
 
   const archivedCount = useMemo(
     () => tasks.filter((task) => isTaskArchived(task)).length,
@@ -60,13 +65,28 @@ export default function Tasks() {
     [tasks, showArchived],
   );
 
-  // Pinned tasks float to the top, everything else keeps whatever order
-  // the backend returned it in (a stable sort - only the pinned/
-  // not-pinned split moves anything, nothing else gets reshuffled).
-  const sortedTasks = useMemo(
-    () => [...visibleTasks].sort((a, b) => Number(b.isPinned) - Number(a.isPinned)),
-    [visibleTasks],
-  );
+  // Pinned flutua sempre para o topo, em qualquer modo. Dentro de cada
+  // grupo (pinned / não-pinned): 'manual' é um sort estável que preserva a
+  // ordem que já veio do backend (sortOrder, ver reorderTasksInState);
+  // 'date' ordena por data mais próxima primeiro; 'priority' por
+  // priorityOrder ascendente (menor = mais prioritário, mesma convenção de
+  // /admin/priorities), tasks sem prioridade sempre no fim do grupo.
+  const sortedTasks = useMemo(() => {
+    return [...visibleTasks].sort((a, b) => {
+      const pinnedDiff = Number(b.isPinned) - Number(a.isPinned);
+      if (pinnedDiff !== 0) return pinnedDiff;
+
+      if (sortMode === 'date') {
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      }
+      if (sortMode === 'priority') {
+        const aOrder = a.priorityOrder ?? Number.POSITIVE_INFINITY;
+        const bOrder = b.priorityOrder ?? Number.POSITIVE_INFINITY;
+        return aOrder - bOrder;
+      }
+      return 0;
+    });
+  }, [visibleTasks, sortMode]);
 
   // 'n' anywhere on the page (unless a detail view is already open, to
   // avoid stacking a second modal on top of it); 'c'/'e'/Delete only while
@@ -95,6 +115,7 @@ export default function Tasks() {
         description="Manage, filter, and track the progress of all your tasks."
         action={
           <div className="flex items-center gap-4">
+            <TaskSortControl sortMode={sortMode} onChange={setSortMode} />
             {archivedCount > 0 && (
               <label className="flex items-center gap-1.5 text-sm text-neutral-400 select-none cursor-pointer">
                 <input
@@ -138,6 +159,7 @@ export default function Tasks() {
           areas={areas}
           onMoveArea={moveTaskToArea}
           onTogglePin={toggleTaskPin}
+          onReorder={sortMode === 'manual' ? reorderTasksInState : undefined}
         />
       )}
 
@@ -150,6 +172,7 @@ export default function Tasks() {
           taskTypes={taskTypes}
           academicTaskTypes={academicTaskTypes}
           difficulties={difficulties}
+          priorities={priorities}
         />
       </Modal>
 
@@ -187,6 +210,7 @@ export default function Tasks() {
               taskTypes={taskTypes}
               academicTaskTypes={academicTaskTypes}
               difficulties={difficulties}
+              priorities={priorities}
               progressStatuses={progressStatuses}
             />
           ) : (

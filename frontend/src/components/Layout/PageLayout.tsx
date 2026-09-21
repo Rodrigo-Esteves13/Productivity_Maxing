@@ -10,12 +10,12 @@ import SkipToContentLink from '../UI/SkipToContentLink';
 import ScrollProgressBar from '../UI/ScrollProgressBar';
 import BackToTopButton from '../UI/BackToTopButton';
 
-// Only Dashboard and Tasks actually change with the active program/period
-// - everywhere else (Focus, Profile, Developer, Agent, Areas, admin
-// pages, ...) the Program/Period pickers up top would just sit there
-// doing nothing, or worse, look like they filter content that isn't
-// actually scoped by them.
-const ROUTES_WITH_ACADEMIC_SELECTORS = ['/dashboard', '/tasks'];
+// Only Dashboard, Tasks and Notebook actually change with the active
+// program/period - everywhere else (Focus, Profile, Developer, Agent,
+// Areas, admin pages, ...) the Program/Period pickers up top would just
+// sit there doing nothing, or worse, look like they filter content that
+// isn't actually scoped by them.
+const ROUTES_WITH_ACADEMIC_SELECTORS = ['/dashboard', '/tasks', '/notebook'];
 
 interface PageLayoutProps {
   children: ReactNode;

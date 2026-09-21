@@ -8,6 +8,7 @@ import ProfileHeaderCard from '../components/Profile/ProfileHeaderCard';
 import DeleteAccountSection from '../components/Profile/DeleteAccountSection';
 import GoogleCalendarCard from '../components/Profile/GoogleCalendarCard';
 import AccessibilitySettingsCard from '../components/Profile/AccessibilitySettingsCard';
+import CommuteSettingsCard from '../components/Schedule/CommuteSettingsCard';
 import DeleteAccountModal from '../components/Profile/DeleteAccountModal';
 import EditProfileModal from '../components/Profile/EditProfileModal';
 import FormSkeleton from '../components/UI/FormSkeleton';
@@ -51,6 +52,8 @@ export default function Profile() {
       <GoogleCalendarCard />
 
       <AccessibilitySettingsCard />
+
+      <CommuteSettingsCard user={user} onUserUpdate={updateUser} />
 
       <DeleteAccountSection onOpen={deleteAccount.open} />
 

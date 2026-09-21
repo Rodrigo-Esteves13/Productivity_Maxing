@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import Modal from '../UI/Modal';
 import { useTaskImport } from '../../hooks/useTaskImport';
 import { CheckIcon, AlertTriangleIcon } from '../UI/Icons';
@@ -37,11 +37,16 @@ export default function TaskImportModal({ isOpen, onClose, onImported }: TaskImp
   };
 
   // Notify the parent as soon as we know at least one task was created -
-  // not on every render, just once per successful import.
-  if (stage === 'done' && outcome?.backendResult && outcome.backendResult.created > 0 && !hasNotifiedRef.current) {
-    hasNotifiedRef.current = true;
-    onImported();
-  }
+  // not on every render, just once per successful import. Runs as an
+  // effect (not during render) so calling the parent's onImported - which
+  // may itself trigger a state update, e.g. a task refetch - never
+  // happens while this component is still rendering.
+  useEffect(() => {
+    if (stage === 'done' && outcome?.backendResult && outcome.backendResult.created > 0 && !hasNotifiedRef.current) {
+      hasNotifiedRef.current = true;
+      onImported();
+    }
+  }, [stage, outcome, onImported]);
 
   const isBusy = stage === 'reading' || stage === 'importing';
 

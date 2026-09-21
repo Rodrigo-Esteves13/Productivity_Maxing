@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import NavLinks from './NavLinks';
 import UserMenu from './UserMenu';
 import MobileMenu from './MobileMenu';
+import AdminMenu from './AdminMenu';
 import { MenuIcon, XIcon, SearchIcon } from '../UI/Icons';
 import { useAuth } from '../../context/useAuth';
 
@@ -34,60 +35,16 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* 2. Links Normais + Link de Admin - só a partir de md. Em
+          {/* 2. Links Normais + dropdown de Admin - só a partir de md. Em
               mobile isto vivia sempre aberto e não cabia (Areas/Users
-              nunca escondiam), por isso passa a viver no MobileMenu. */}
+              nunca escondiam), por isso passa a viver no MobileMenu. Os 4
+              links de admin deixaram de ir soltos para a barra (era isso
+              que estourava a largura em ecrãs de portátil, ~1280-1366px);
+              agora vivem atrás de um único trigger "Admin" (AdminMenu). */}
           <div className="hidden md:flex items-center gap-6">
             {isAuthenticated && <NavLinks currentPath={location.pathname} />}
 
-            {role === 'ADMIN' && (
-              <>
-                <Link
-                  to="/areas"
-                  aria-current={location.pathname.startsWith('/areas') ? 'page' : undefined}
-                  className={`text-sm font-bold transition-colors px-3 py-1.5 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 ${
-                    location.pathname.startsWith('/areas')
-                      ? 'text-amber-400 bg-amber-400/10'
-                      : 'text-amber-500/70 hover:text-amber-400 hover:bg-neutral-800'
-                  }`}
-                >
-                  Areas
-                </Link>
-                <Link
-                  to="/users"
-                  aria-current={location.pathname.startsWith('/users') ? 'page' : undefined}
-                  className={`text-sm font-bold transition-colors px-3 py-1.5 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 ${
-                    location.pathname.startsWith('/users')
-                      ? 'text-amber-400 bg-amber-400/10'
-                      : 'text-amber-500/70 hover:text-amber-400 hover:bg-neutral-800'
-                  }`}
-                >
-                  Users
-                </Link>
-                <Link
-                  to="/task-types"
-                  aria-current={location.pathname.startsWith('/task-types') ? 'page' : undefined}
-                  className={`text-sm font-bold transition-colors px-3 py-1.5 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 ${
-                    location.pathname.startsWith('/task-types')
-                      ? 'text-amber-400 bg-amber-400/10'
-                      : 'text-amber-500/70 hover:text-amber-400 hover:bg-neutral-800'
-                  }`}
-                >
-                  Task Types
-                </Link>
-                <Link
-                  to="/security"
-                  aria-current={location.pathname.startsWith('/security') ? 'page' : undefined}
-                  className={`text-sm font-bold transition-colors px-3 py-1.5 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 ${
-                    location.pathname.startsWith('/security')
-                      ? 'text-amber-400 bg-amber-400/10'
-                      : 'text-amber-500/70 hover:text-amber-400 hover:bg-neutral-800'
-                  }`}
-                >
-                  Security
-                </Link>
-              </>
-            )}
+            {role === 'ADMIN' && <AdminMenu currentPath={location.pathname} />}
           </div>
 
           {/* 3. Menu do Utilizador + botão de hambúrguer em mobile */}

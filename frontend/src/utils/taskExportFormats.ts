@@ -48,11 +48,25 @@ function toRow(
 // quote, or a newline, and any quote inside it is doubled. Plain fields
 // (the vast majority: titles, area names, single-word statuses) are left
 // unquoted for a cleaner file, which is valid CSV either way.
+//
+// Before that: a leading apostrophe is prepended to any field starting
+// with =, +, -, or @ - Excel/Sheets/LibreOffice treat a cell starting
+// with one of those as a formula, so a task title or topics value like
+// `=cmd|'/c calc'!A1` would execute on open instead of showing as text
+// (CSV/formula injection). The apostrophe forces "treat as text" in
+// every major spreadsheet app without changing what's visually shown.
+const FORMULA_TRIGGER_CHARS = ['=', '+', '-', '@'];
+
+function neutralizeFormulaPrefix(value: string): string {
+  return FORMULA_TRIGGER_CHARS.includes(value.charAt(0)) ? `'${value}` : value;
+}
+
 function escapeCsvField(value: string): string {
-  if (/[",\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
+  const safeValue = neutralizeFormulaPrefix(value);
+  if (/[",\n]/.test(safeValue)) {
+    return `"${safeValue.replace(/"/g, '""')}"`;
   }
-  return value;
+  return safeValue;
 }
 
 export function tasksToCsv(

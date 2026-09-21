@@ -1,5 +1,6 @@
 import { useTodayPlan } from '../../hooks/useTodayPlan';
 import DifficultyBadge from '../UI/DifficultyBadge';
+import PriorityBadge from '../UI/PriorityBadge';
 import LoadingState from '../UI/LoadingState';
 import ErrorState from '../UI/ErrorState';
 import EmptyState from '../UI/EmptyState';
@@ -35,7 +36,12 @@ export default function TodayPlan() {
                   </p>
                 )}
               </div>
-              <DifficultyBadge difficulty={task.difficulty} />
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                {task.priority && (
+                  <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
+                )}
+                <DifficultyBadge difficulty={task.difficulty} />
+              </div>
             </li>
           ))}
         </ol>

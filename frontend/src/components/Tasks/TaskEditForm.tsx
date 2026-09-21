@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { Task, TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
+import type { Task, TaskTypeOption, AcademicTaskTypeOption, PriorityOption } from '../../types/models';
 import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
@@ -20,6 +20,7 @@ interface TaskEditFormProps {
   taskTypes: TaskTypeOption[];
   academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
+  priorities: PriorityOption[];
   progressStatuses: string[];
 }
 
@@ -44,6 +45,11 @@ function buildInitialValues(task: Task): TaskFormFieldValues {
     type: task.type,
     academicType: task.academicType ?? '',
     difficulty: task.difficulty,
+    // task.priority pode ser null (ver comment em priorityId no
+    // schema.prisma - é opcional). '' representa "sem priority definida"
+    // de forma honesta, em vez de forçar uma escolha que o utilizador
+    // nunca fez.
+    priority: task.priority ?? '',
     progressStatus: task.progressStatus,
     areaId: task.areaId,
     topics: task.topics ?? '',
@@ -69,6 +75,7 @@ export default function TaskEditForm({
   taskTypes,
   academicTaskTypes,
   difficulties,
+  priorities,
   progressStatuses,
 }: TaskEditFormProps) {
   const initialValues = useMemo(() => buildInitialValues(task), [task]);
@@ -117,6 +124,7 @@ export default function TaskEditForm({
         taskTypes={taskTypes}
         academicTaskTypes={academicTaskTypes}
         difficulties={difficulties}
+        priorities={priorities}
         progressStatuses={progressStatuses}
         showRealGrade
         showProgressStatus

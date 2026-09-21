@@ -5,12 +5,18 @@ import {
   stopStudySession,
   type StartStudySessionInput,
 } from '../api/studySessionsService';
-import { getUserAreas } from '../api/userService';
-import type { StudySession, Area } from '../types/models';
+import { getUserAreas, getUserTasks } from '../api/userService';
+import type { StudySession, Area, Task } from '../types/models';
 
 export function useStudySession() {
   const [activeSession, setActiveSession] = useState<StudySession | null>(null);
   const [areas, setAreas] = useState<Area[]>([]);
+  // TODAS as tasks pendentes (não só as de hoje) - estudar com antecedência
+  // para uma prova/entrega futura é o caso normal, não a exceção (ver
+  // pedido do Rodrigo: "eu não estudo para um teste no próprio dia"). O
+  // Today's Plan (useTodayPlan) continua a existir para o que É só de
+  // hoje; isto aqui é uma lista separada, deliberadamente mais larga.
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -23,12 +29,30 @@ export function useStudySession() {
     try {
       setIsLoading(true);
       setError('');
-      const [session, areasData] = await Promise.all([
+      // getUserTasks() sem periodId = período ativo do user (mesmo default
+      // do resto da app) - não faz sentido oferecer aqui tasks de
+      // semestres antigos já arquivados.
+      const [session, areasData, tasksData] = await Promise.all([
         getActiveStudySession(),
         getUserAreas(),
+        getUserTasks(),
       ]);
       setActiveSession(session);
-      setAreas(areasData);
+      // Area é um catálogo global (schema.prisma: sem periodId nem
+      // programId - serve tanto para cadeiras como para "Natação",
+      // "Condução", etc.), por isso não há como filtrar "as cadeiras
+      // deste semestre" diretamente na tabela. O sinal que existe é
+      // indireto: que Areas têm pelo menos uma task no período ativo
+      // (tasksData já vem filtrado a esse período, ver getUserTasks()
+      // acima). Uma cadeira nova sem tasks ainda não aparece aqui - é a
+      // limitação real desta abordagem sem mexer no schema.
+      const areaIdsInPeriod = new Set(tasksData.map((t) => t.areaId));
+      setAreas(areasData.filter((a) => areaIdsInPeriod.has(a.id)));
+      setTasks(
+        tasksData
+          .filter((t) => t.progressStatus !== 'COMPLETED')
+          .sort((a, b) => a.date.localeCompare(b.date)),
+      );
     } catch {
       setError('Could not load the study session.');
     } finally {
@@ -99,6 +123,7 @@ export function useStudySession() {
   return {
     activeSession,
     areas,
+    tasks,
     elapsedSeconds,
     isLoading,
     isSubmitting,

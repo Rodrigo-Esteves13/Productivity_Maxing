@@ -19,6 +19,7 @@ const TASK_INCLUDE = {
   area: true,
   taskType: true,
   academicType: true,
+  priority: true,
 } as const;
 
 // Automatically infer the type of a Task when it includes the relations above
@@ -44,8 +45,9 @@ export class TasksService {
   ) {}
 
   async create(userId: string, dto: CreateTaskDto) {
-    const { date, type, academicType, periodId, ...rest } = dto;
+    const { date, type, academicType, periodId, priority, ...rest } = dto;
     const typeIds = await this.resolveTypes(type, academicType);
+    const priorityId = await this.resolvePriorityId(priority);
 
     // Se o cliente (frontend atual, ainda sem seletor de período) não
     // mandar periodId, usa-se o período ativo do user - é isto que garante
@@ -61,6 +63,15 @@ export class TasksService {
     // (que é o prazo/alvo, não o dia em que foi de facto concluída).
     const completedAt = rest.progressStatus === 'COMPLETED' ? new Date() : null;
 
+    // Task nova entra sempre no fim da ordem manual, nunca a 0 (que
+    // saltaria para o topo da lista de alguém) - ver comentário em
+    // Task.sortOrder no schema.prisma.
+    const maxSortOrder = await this.prisma.task.aggregate({
+      where: { userId },
+      _max: { sortOrder: true },
+    });
+    const sortOrder = (maxSortOrder._max.sortOrder ?? 0) + 1;
+
     try {
       const task = await this.prisma.task.create({
         data: {
@@ -69,6 +80,8 @@ export class TasksService {
           userId, // Agora temos a certeza absoluta que o ID não está vazio!
           periodId: resolvedPeriodId,
           completedAt,
+          priorityId,
+          sortOrder,
           ...typeIds,
         },
         include: TASK_INCLUDE,
@@ -105,9 +118,47 @@ export class TasksService {
     const tasks = await this.prisma.task.findMany({
       where,
       include: TASK_INCLUDE,
-      orderBy: { date: 'asc' },
+      // sortOrder primeiro: é a ordem manual (drag-and-drop no TaskGrid,
+      // ver reorder() abaixo). `date` como desempate cobre tasks que
+      // nunca foram arrastadas (todas com sortOrder=0 por omissão) -
+      // sem isto, ficariam na ordem arbitrária em que o Postgres as
+      // devolvesse.
+      orderBy: [{ sortOrder: 'asc' }, { date: 'asc' }],
     });
     return tasks.map((t) => this.toResponse(t));
+  }
+
+  /**
+   * Aplica uma nova ordem manual (drag-and-drop no TaskGrid) a um
+   * conjunto de tasks do próprio user - taskIds é a sequência completa
+   * tal como veio do frontend, sortOrder de cada uma vira o seu índice
+   * nessa lista. Tasks fora da lista (ex: arquivadas, escondidas da
+   * grid) não são tocadas.
+   */
+  async reorder(userId: string, taskIds: string[]): Promise<void> {
+    const owned = await this.prisma.task.findMany({
+      where: { id: { in: taskIds }, userId },
+      select: { id: true },
+    });
+
+    // Defesa contra IDOR: se algum ID não pertence a este user (ou já
+    // não existe), o pedido inteiro é rejeitado - nunca aplicamos só a
+    // parte "válida" em silêncio, o frontend saberia que a operação
+    // falhou e o utilizador vê a lista voltar ao estado anterior.
+    if (owned.length !== taskIds.length) {
+      throw new BadRequestException(
+        'One or more tasks in the list do not belong to you.',
+      );
+    }
+
+    await this.prisma.$transaction(
+      taskIds.map((id, index) =>
+        this.prisma.task.update({
+          where: { id },
+          data: { sortOrder: index },
+        }),
+      ),
+    );
   }
 
   /**
@@ -166,7 +217,19 @@ export class TasksService {
     if (!existing)
       throw new NotFoundException(`Task not found or you don't have access.`);
 
-    const { date, type, academicType, periodId, ...rest } = dto;
+    const { date, type, academicType, periodId, priority, ...rest } = dto;
+
+    // Mesmo padrão condicional que periodIdUpdate/typeIds acima: só mexe
+    // em priorityId se `priority` vier explicitamente no PATCH. Sem isto,
+    // um PATCH que só muda o título, por exemplo, ia (por causa do
+    // `...rest` do spread) tentar reescrever priorityId com `undefined`
+    // sempre que o campo não fosse enviado - o Prisma trata um campo
+    // ausente no objeto `data` como "não mexer", mas só porque este bloco
+    // o retira explicitamente do objeto antes disso importar.
+    const priorityIdUpdate =
+      priority !== undefined
+        ? { priorityId: await this.resolvePriorityId(priority) }
+        : {};
 
     // Só mexemos em periodId se vier explicitamente no PATCH - e, tal como
     // no create(), validamos sempre posse antes de aceitar (o user podia
@@ -211,6 +274,20 @@ export class TasksService {
       // não queremos "reiniciar" a data de conclusão original.
     }
 
+    // "Adiada" = a nova data é MAIS TARDE que a que já lá estava. Uma
+    // task movida para uma data mais cedo (raro, mas acontece ao corrigir
+    // um erro de digitação) não conta - isto é uma contagem histórica de
+    // procrastinação, não "a data mudou". Comparação por getTime() em vez
+    // de string, para não depender do formato exato que o date-string do
+    // DTO vier a assumir.
+    let postponedCountUpdate: { postponedCount?: { increment: number } } = {};
+    if (date) {
+      const newDate = new Date(date);
+      if (newDate.getTime() > existing.date.getTime()) {
+        postponedCountUpdate = { postponedCount: { increment: 1 } };
+      }
+    }
+
     // where: { id, userId } em vez de só { id } - o findFirst() acima já
     // garante que a task é do utilizador antes de chegarmos aqui, mas
     // repetir a condição de posse também no update final é defesa em
@@ -225,6 +302,8 @@ export class TasksService {
         ...typeIds,
         ...completedAtUpdate,
         ...periodIdUpdate,
+        ...priorityIdUpdate,
+        ...postponedCountUpdate,
       },
       include: TASK_INCLUDE,
     });
@@ -557,7 +636,7 @@ export class TasksService {
   }
 
   private async buildMeta() {
-    const [taskTypes, academicTaskTypes] = await Promise.all([
+    const [taskTypes, academicTaskTypes, priorities] = await Promise.all([
       this.prisma.taskType.findMany({
         where: { isActive: true },
         orderBy: { order: 'asc' },
@@ -567,6 +646,16 @@ export class TasksService {
         where: { isActive: true },
         orderBy: { order: 'asc' },
         include: { taskType: { select: { key: true } } },
+      }),
+      // Já não é Object.values(Priority) - deixou de ser um enum, é um
+      // catálogo editável pelo admin (ver model Priority/PrioritiesModule).
+      // Mesma shape que taskTypes acima (key/label/colorHex), de propósito:
+      // o frontend trata as duas listas da mesma forma (PriorityBadge usa
+      // colorHex tal como as badges de TaskType).
+      this.prisma.priority.findMany({
+        where: { isActive: true },
+        orderBy: { order: 'asc' },
+        select: { key: true, label: true, colorHex: true },
       }),
     ]);
 
@@ -578,8 +667,32 @@ export class TasksService {
         taskTypeKey: a.taskType.key,
       })),
       difficulties: Object.values(Difficulty),
+      priorities,
       progressStatuses: Object.values(ProgressStatus),
     };
+  }
+
+  // Resolve a key de Priority ("LOW", "HIGH", ou qualquer key nova que o
+  // admin venha a criar em /admin/priorities) para o id real na BD. Mesmo
+  // espírito do resolveTypes() logo abaixo, mas mais simples: sem
+  // hierarquia pai/filho para validar, e o campo é opcional (ver comentário
+  // em priorityId no schema.prisma) - omitido ou string vazia = sem
+  // priority definida, undefined passa direto para o Prisma como "não
+  // mexer neste campo".
+  private async resolvePriorityId(
+    priorityKey: string | undefined,
+  ): Promise<string | null | undefined> {
+    if (!priorityKey) return undefined;
+
+    const priority = await this.prisma.priority.findUnique({
+      where: { key: priorityKey },
+    });
+    if (!priority || !priority.isActive) {
+      throw new BadRequestException(
+        `Priority "${priorityKey}" invalid or inactive.`,
+      );
+    }
+    return priority.id;
   }
 
   // Resolve as keys ("ACADEMICO", "TRABALHO_PRATICO", ...) vindas do frontend
@@ -656,19 +769,39 @@ export class TasksService {
 
   // Substituímos o "any" pelo tipo gerado pelo Prisma
   private toResponse(task: TaskWithIncludes) {
-    const { taskType, taskTypeId, academicType, academicTypeId, ...rest } =
-      task;
+    const {
+      taskType,
+      taskTypeId,
+      academicType,
+      academicTypeId,
+      priority,
+      priorityId,
+      ...rest
+    } = task;
 
     // A declaração "void" marca as variáveis como lidas pelo interpretador,
     // o que previne o erro @typescript-eslint/no-unused-vars sem teres
     // de apagar os IDs da desestruturação.
     void taskTypeId;
     void academicTypeId;
+    void priorityId;
 
     return {
       ...rest,
       type: taskType.key,
       academicType: academicType?.key ?? null,
+      // priority.key mantém a mesma forma de string que o frontend já
+      // usava com o enum antigo (values.priority etc.) - zero mudança
+      // nos formulários. colorHex vai à parte para a PriorityBadge não
+      // precisar de repetir a lista de cores localmente, mesmo raciocínio
+      // que levou taskType a já incluir colorHex.
+      priority: priority?.key ?? null,
+      priorityLabel: priority?.label ?? null,
+      priorityColorHex: priority?.colorHex ?? null,
+      // Ordem definida em /admin/priorities (menor = mais prioritário, mesma
+      // convenção do resto dos catálogos) - null para tasks sem prioridade,
+      // usado pelo modo de ordenação "Priority" em Tasks.tsx.
+      priorityOrder: priority?.order ?? null,
     };
   }
 }

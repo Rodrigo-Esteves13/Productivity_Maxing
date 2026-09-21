@@ -10,7 +10,14 @@ import { randomUUID, randomBytes, scrypt as scryptCallback } from 'crypto';
 import { promisify } from 'util';
 import { createClient } from '@supabase/supabase-js';
 import { fileTypeFromBuffer } from 'file-type';
-import { Provider, User, Prisma, Role, ApiKeyScope } from '@prisma/client';
+import {
+  Provider,
+  User,
+  Prisma,
+  Role,
+  ApiKeyScope,
+  CommuteMode,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import 'multer';
 import {
@@ -585,10 +592,44 @@ export class AuthService {
 
   // PERFIL (nome + avatar)
 
-  async updateProfile(userId: string, data: { name?: string }): Promise<User> {
+  async updateProfile(
+    userId: string,
+    data: {
+      name?: string;
+      commuteMinutes?: number;
+      commuteMode?: CommuteMode;
+      homeAddress?: string;
+      campusAddress?: string;
+      quietHoursStart?: number;
+      quietHoursEnd?: number;
+    },
+  ): Promise<User> {
+    // Cada campo só entra no `data` do Prisma se veio mesmo no pedido -
+    // um PATCH parcial (ex: só { quietHoursStart: 1380 }) nunca pode
+    // apagar os outros campos que não foram enviados.
     return this.prisma.user.update({
       where: { id: userId },
-      data: { ...(data.name !== undefined ? { name: data.name } : {}) },
+      data: {
+        ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.commuteMinutes !== undefined
+          ? { commuteMinutes: data.commuteMinutes }
+          : {}),
+        ...(data.commuteMode !== undefined
+          ? { commuteMode: data.commuteMode }
+          : {}),
+        ...(data.homeAddress !== undefined
+          ? { homeAddress: data.homeAddress }
+          : {}),
+        ...(data.campusAddress !== undefined
+          ? { campusAddress: data.campusAddress }
+          : {}),
+        ...(data.quietHoursStart !== undefined
+          ? { quietHoursStart: data.quietHoursStart }
+          : {}),
+        ...(data.quietHoursEnd !== undefined
+          ? { quietHoursEnd: data.quietHoursEnd }
+          : {}),
+      },
     });
   }
 

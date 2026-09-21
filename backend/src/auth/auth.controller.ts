@@ -260,6 +260,15 @@ export class AuthController {
         // precisar de um pedido extra.
         activeProgramId: true,
         activePeriodId: true,
+        // Horário/plano de estudo (Fase 6) - ver User.commuteMinutes no
+        // schema.prisma. O frontend precisa disto logo no arranque para
+        // pré-preencher o CommuteSettingsCard sem um pedido extra.
+        commuteMinutes: true,
+        commuteMode: true,
+        homeAddress: true,
+        campusAddress: true,
+        quietHoursStart: true,
+        quietHoursEnd: true,
         // Só usado para derivar hasPassword abaixo - nunca sai do backend.
         supabaseAuthId: true,
       },
@@ -286,7 +295,15 @@ export class AuthController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateProfileDto,
   ) {
-    return this.authService.updateProfile(user.id, { name: dto.name });
+    return this.authService.updateProfile(user.id, {
+      name: dto.name,
+      commuteMinutes: dto.commuteMinutes,
+      commuteMode: dto.commuteMode,
+      homeAddress: dto.homeAddress,
+      campusAddress: dto.campusAddress,
+      quietHoursStart: dto.quietHoursStart,
+      quietHoursEnd: dto.quietHoursEnd,
+    });
   }
 
   // Define ou muda a password da conta autenticada. Não pede a password

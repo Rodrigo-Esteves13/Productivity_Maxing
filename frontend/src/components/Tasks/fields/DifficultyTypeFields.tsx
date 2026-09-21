@@ -1,42 +1,41 @@
 import FormField from '../../UI/FormField';
 import Select from '../../UI/Select';
-import type { TaskTypeOption } from '../../../types/models';
+import type { TaskTypeOption, PriorityOption } from '../../../types/models';
 import { formatEnumLabel } from '../../../utils/formatEnumLabel';
 
 interface DifficultyTypeFieldsProps {
   idPrefix: string;
   difficulty: string;
+  priority: string;
   type: string;
   difficulties: string[];
+  priorities: PriorityOption[];
   taskTypes: TaskTypeOption[];
   isTypeLockedByArea: boolean;
   lockedByAreaName?: string;
   onDifficultyChange: (value: string) => void;
+  onPriorityChange: (value: string) => void;
   onTypeChange: (value: string) => void;
-  // Antes isto "destrancava" o Type mantendo a Area escolhida, o que
-  // permitia uma combinação Type != Area.defaultTaskType - inválida
-  // (a Area tem literalmente um TaskType associado, uma Task nessa Area
-  // com Type diferente não faz sentido de dados). O botão passa a limpar
-  // só a Area, nada mais: sem Area escolhida, o Type deixa de estar
-  // trancado por natureza (useTaskTypeLogic), sem abrir a porta a
-  // inconsistências.
   onClearArea?: () => void;
 }
 
 export default function DifficultyTypeFields({
   idPrefix,
   difficulty,
+  priority,
   type,
   difficulties,
+  priorities,
   taskTypes,
   isTypeLockedByArea,
   lockedByAreaName,
   onDifficultyChange,
+  onPriorityChange,
   onTypeChange,
   onClearArea,
 }: DifficultyTypeFieldsProps) {
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <FormField label="Difficulty" htmlFor={`${idPrefix}-difficulty`}>
         <Select
           id={`${idPrefix}-difficulty`}
@@ -47,6 +46,21 @@ export default function DifficultyTypeFields({
           {difficulties.map((d) => (
             <option key={d} value={d}>
               {formatEnumLabel(d)}
+            </option>
+          ))}
+        </Select>
+      </FormField>
+      <FormField label="Priority" htmlFor={`${idPrefix}-priority`}>
+        <Select
+          id={`${idPrefix}-priority`}
+          value={priority}
+          onChange={(e) => onPriorityChange(e.target.value)}
+          className="w-full"
+        >
+          <option value="">No priority</option>
+          {priorities.map((p) => (
+            <option key={p.key} value={p.key}>
+              {p.label}
             </option>
           ))}
         </Select>

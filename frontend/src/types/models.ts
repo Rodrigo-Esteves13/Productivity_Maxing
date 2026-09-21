@@ -3,6 +3,10 @@ export type Provider = 'GOOGLE' | 'DISCORD' | 'GITHUB';
 export type Role = 'USER' | 'ADMIN';
 export type ProgressStatus = 'AHEAD' | 'ON_TRACK' | 'BEHIND' | 'VERY_BEHIND' | 'COMPLETED';
 export type Difficulty = 'VERY_EASY' | 'EASY' | 'MEDIUM' | 'HARD' | 'VERY_HARD';
+// Priority stopped being a fixed union ('LOW'|'MEDIUM'|'HIGH') the moment
+// it became an admin-managed catalog (see AdminPriority/PriorityOption
+// below) - it's just whatever key the admin's Priority rows use, a plain
+// string, same as `type`/`academicType` already were.
 export type SecurityEventType = 'RATE_LIMIT_EXCEEDED';
 // No longer fixed union types: now they come from the DB (a table the
 // admin can edit), so they're `string` (the "key" returned by /tasks/meta).
@@ -26,6 +30,7 @@ export interface TaskMeta {
   taskTypes: TaskTypeOption[];
   academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
+  priorities: PriorityOption[];
   progressStatuses: string[];
 }
 
@@ -61,6 +66,59 @@ export interface ImportTasksResult {
   results: ImportTaskRowResult[];
 }
 
+// Uma aula concreta, já gravada (GET /schedule). Ver comentário completo
+// no model ClassOccurrence do schema.prisma para o "porquê" de não haver
+// recorrência/exceções aqui - isto é sempre uma ocorrência real e datada.
+export interface ClassOccurrence {
+  id: string;
+  userId: string;
+  date: string;
+  startMinutes: number;
+  endMinutes: number;
+  subject: string;
+  location: string | null;
+  professor: string | null;
+  externalUid: string;
+}
+
+// Uma linha já parseada de um .ics (ver utils/parseIcsSchedule.ts) - é o
+// que vai no body de POST /schedule/import.
+export interface ImportScheduleRow {
+  date: string;
+  startMinutes: number;
+  endMinutes: number;
+  subject: string;
+  location?: string;
+  professor?: string;
+  externalUid: string;
+}
+
+export interface ImportScheduleRowResult {
+  row: number;
+  success: boolean;
+  error?: string;
+}
+
+export interface ImportScheduleResult {
+  imported: number;
+  failed: number;
+  results: ImportScheduleRowResult[];
+}
+
+// GET /study-plan response.
+export interface StudyPlanSuggestion {
+  date: string;
+  startMinutes: number;
+  endMinutes: number;
+  taskId: string;
+  taskTitle: string;
+}
+
+export interface StudyPlanResult {
+  suggestions: StudyPlanSuggestion[];
+  warnings: string[];
+}
+
 // Full records used only by the admin area (/admin/task-types,
 // /admin/academic-task-types) - distinct from the *Option types above
 // (those are the "trimmed down" version for populating selects, coming
@@ -87,9 +145,32 @@ export interface AdminAcademicTaskType {
   taskType: { id: string; key: string; label: string; colorHex: string | null } | null;
 }
 
+export interface AdminPriority {
+  id: string;
+  key: string;
+  label: string;
+  colorHex: string | null;
+  order: number;
+  isActive: boolean;
+}
+
+// Shape returned in TaskMeta.priorities (see /tasks/meta) - same trimmed
+// "for populating selects" shape as TaskTypeOption, now that Priority is
+// a real admin-managed catalog instead of a fixed enum.
+export interface PriorityOption {
+  key: string;
+  label: string;
+  colorHex: string | null;
+}
+
 // 
 // MODELS
 // 
+
+// Bate certo com o enum CommuteMode do schema.prisma e com os valores
+// aceites pela Google Distance Matrix API (em minúsculas no pedido - ver
+// ScheduleService.estimateCommute).
+export type CommuteMode = 'DRIVING' | 'WALKING' | 'BICYCLING' | 'TRANSIT';
 
 export interface User {
   id: string;
@@ -107,6 +188,18 @@ export interface User {
   // AcademicContext hasn't resolved/created the default "General" yet.
   activeProgramId: string | null;
   activePeriodId: string | null;
+
+  // Horário/plano de estudo (Fase 6) - todos opcionais, null = nunca
+  // configurado. Ver CommuteSettingsCard.tsx e Schedule.tsx.
+  commuteMinutes: number | null;
+  // Nem todo o estudante tem carro - ver comentário completo em
+  // CommuteMode no schema.prisma. Sempre definido (tem @default no
+  // schema), nunca null.
+  commuteMode: CommuteMode;
+  homeAddress: string | null;
+  campusAddress: string | null;
+  quietHoursStart: number | null;
+  quietHoursEnd: number | null;
 
   // Optional relations (depends on what your backend returns)
   areas?: Area[];
@@ -204,6 +297,10 @@ export interface Area {
   // Credits (ECTS or equivalent) for this course. null = no credits set
   // (e.g. secondary school) - enters with weight 1 in the average calculation.
   credits: number | null;
+  // Só vem preenchido quando GET /areas foi chamado com um periodId
+  // concreto - nunca usado para esconder a Area, só para agrupar/ordenar
+  // no seletor do Notebook (ver NotebookSubjectPicker).
+  usedInPeriod?: boolean;
 }
 
 export interface Task {
@@ -222,10 +319,27 @@ export interface Task {
   topics: string | null;
   notes: string | null;
   isPinned: boolean;
+  // Manual drag-and-drop order in TaskGrid - lower first. Set via
+  // PATCH /tasks/reorder (reorderTasks in userService.ts).
+  sortOrder: number;
 
   // Execution Metadata
   weightPercentage: number | null;
   difficulty: Difficulty;
+  // Nullable, ao contrário de difficulty - ver comentário em priorityId no
+  // schema.prisma (opcional de propósito). priorityLabel/priorityColorHex
+  // vêm prontos do backend (toResponse) para as badges não precisarem de
+  // cruzar com a lista de /tasks/meta só para mostrar um texto e uma cor.
+  priority: string | null;
+  priorityLabel: string | null;
+  priorityColorHex: string | null;
+  // Ordem de /admin/priorities (menor = mais prioritário), null sem
+  // prioridade - só usado pelo modo de ordenação "Priority" em Tasks.tsx.
+  priorityOrder: number | null;
+  // Histórico, nunca decresce - ver comentário em schema.prisma. Conta
+  // qualquer vez que a data mudou para mais tarde, não só o botão rápido
+  // "+1 Day".
+  postponedCount: number;
   progressStatus: ProgressStatus;
   referenceLink: string | null;
   // How long you expect this task to take, in minutes. Manual estimate -
@@ -310,6 +424,15 @@ export interface SecurityLogsStats {
   topOffenders: { ip: string; count: number }[];
 }
 
+export interface BannedIp {
+  id: string;
+  ip: string;
+  reason: string | null;
+  createdAt: string;
+  bannedByUserId: string | null;
+  bannedBy: { id: string; name: string | null; email: string } | null;
+}
+
 // FOCUS / STUDY SESSIONS
 
 export interface StudySession {
@@ -346,4 +469,117 @@ export interface AgentConfig {
   failMode: AgentFailMode;
   pollIntervalSeconds: number;
   isConfigured: boolean;
+}
+// --- Notebook ---------------------------------------------------------
+
+export interface StrokePoint {
+  x: number;
+  y: number;
+  pressure?: number;
+}
+
+// Um traço vetorial completo - ver comentário em NotebookEntry.drawingStrokes
+// no schema.prisma para o "porquê" de não guardar um PNG rasterizado.
+export interface Stroke {
+  points: StrokePoint[];
+  color: string;
+  width: number;
+}
+
+// Uma tabela estruturada dentro de uma entrada - ver comentário em
+// NotebookEntry.tables no schema.prisma. `id` é só para servir de
+// key/referência local ao editar; gerado no frontend, o backend guarda-o
+// tal como vem.
+export interface NotebookTable {
+  id: string;
+  rows: string[][];
+}
+
+// Uma etiqueta de texto solta no canvas (não presa a nenhuma forma) -
+// para escrever palavras/frases com o teclado por cima do desenho à
+// mão, em vez de só símbolos/formas. x/y são o canto superior esquerdo,
+// nas mesmas coordenadas fixas do viewBox (ver VIEW_WIDTH/VIEW_HEIGHT em
+// NotebookCanvas.tsx). fontSize/color são opcionais no que vem da API
+// (entradas antigas não os têm) - o frontend aplica um default ao ler.
+export interface CanvasTextItem {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  fontSize?: number;
+  color?: string;
+}
+
+// Ícone posicionável no canvas - ver comentário em
+// NotebookEntry.canvasShapes no schema.prisma. x/y/width/height nas
+// mesmas coordenadas fixas do viewBox do canvas (ver VIEW_WIDTH/
+// VIEW_HEIGHT em NotebookCanvas.tsx), não em pixels de ecrã.
+export type CanvasShapeType = 'router' | 'switch' | 'firewall' | 'server' | 'pc' | 'cloud' | 'ap';
+
+export interface CanvasShape {
+  id: string;
+  type: CanvasShapeType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label: string;
+}
+
+// Uma ligação entre duas formas - recalculada a cada render a partir da
+// posição atual de fromShapeId/toShapeId (ver clipPointToRectEdge em
+// canvasGeometry.ts), por isso "segue" a forma quando é arrastada, sem
+// guardar coordenadas próprias. Se uma forma referenciada for apagada, a
+// ligação fica órfã e deixa de ser desenhada (ver NotebookCanvas.tsx) -
+// na prática nunca acontece porque apagar uma forma apaga também as suas
+// ligações (removeLinksForShape).
+export interface CanvasLink {
+  id: string;
+  fromShapeId: string;
+  toShapeId: string;
+  label: string;
+}
+
+export interface NotebookPhoto {
+  id: string;
+  notebookEntryId: string;
+  storagePath: string;
+  position: number;
+  // Signed URL gerado pelo backend a cada leitura, expira sozinho - nunca
+  // guardar isto entre navegações.
+  url: string | null;
+}
+
+export type NotebookEntryType = 'NOTE' | 'STUDY' | 'CLASS';
+
+export interface NotebookEntry {
+  id: string;
+  userId: string;
+  areaId: string;
+  classOccurrenceId: string | null;
+  title: string;
+  entryType: NotebookEntryType;
+  // Só tem significado quando entryType é 'CLASS' - ver comentário no
+  // schema.prisma sobre porque não é derivado do título.
+  classNumber: number | null;
+  textContent: string | null;
+  drawingStrokes: Stroke[] | null;
+  tables: NotebookTable[] | null;
+  canvasShapes: CanvasShape[] | null;
+  canvasLinks: CanvasLink[] | null;
+  canvasTexts: CanvasTextItem[] | null;
+  date: string;
+  photos: NotebookPhoto[];
+}
+
+export interface NotebookSearchResult extends NotebookEntry {
+  area: { id: string; name: string; colorHex: string };
+}
+
+export interface ScheduleLinkResult {
+  scheduleSubject: string | null;
+}
+
+export interface DetectClassResult {
+  occurrence: ClassOccurrence | null;
 }

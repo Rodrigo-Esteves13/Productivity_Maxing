@@ -1,83 +1,77 @@
 import type { SVGProps } from 'react';
+import {
+  Pencil,
+  X,
+  Menu,
+  Trash2,
+  LogOut,
+  Heart,
+  Download,
+  Upload,
+  ArrowUpRight,
+  Calendar,
+  Check,
+  Pin,
+  ChevronDown,
+  Undo2,
+  GraduationCap,
+  TrendingUp,
+  Gauge,
+  Clock,
+  BookOpen,
+  PieChart,
+  Calculator,
+  Target,
+  AlertTriangle,
+  Flame,
+  Activity,
+  Search,
+  Printer,
+  SlidersHorizontal,
+  Eye,
+  EyeOff,
+  Copy,
+  ArrowUp,
+  Mail,
+  Image,
+  Flag,
+  GripVertical,
+  Eraser,
+  Shield,
+  Table2,
+  Sigma,
+  Network,
+  Code2,
+  Plus,
+  Link2,
+  Type,
+} from 'lucide-react';
 
+// Re-exports finos sobre o lucide-react, mantendo os nomes que o resto da
+// app já usa (import { PencilIcon } from '.../Icons') - zero mudanças nos
+// ~47 ficheiros que importam daqui. `size={16}` só define o default (o
+// tamanho real na maioria dos sítios já vem de className, ex: "h-4 w-4",
+// que o CSS sobrepõe ao atributo width/height do próprio SVG).
+//
+// GoogleIcon/DiscordIcon/GithubIcon ficam à parte, mais abaixo - são
+// marcas (brand marks) para os botões de OAuth, não ícones genéricos, e o
+// lucide-react não inclui logótipos de marcas (nunca incluiu o do
+// GitHub, e descontinuou os que tinha doutras).
 export function PencilIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
-  );
+  return <Pencil size={16} {...props} />;
 }
 
 export function XIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M18 6 6 18" />
-      <path d="M6 6l12 12" />
-    </svg>
-  );
+  return <X size={16} {...props} />;
 }
 
 export function MenuIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M4 6h16" />
-      <path d="M4 12h16" />
-      <path d="M4 18h16" />
-    </svg>
-  );
+  return <Menu size={16} {...props} />;
 }
 
 export function TrashIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M3 6h18" />
-      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-    </svg>
-  );
+  return <Trash2 size={16} {...props} />;
 }
-
 export function GoogleIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -122,571 +116,172 @@ export function GithubIcon(props: SVGProps<SVGSVGElement>) {
 }
 
 export function LogoutIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path fillRule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z" />
-      <path fillRule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z" />
-    </svg>
-  );
+  return <LogOut size={16} {...props} />;
 }
 
 export function HeartIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M8 14.25c-.2 0-.39-.07-.54-.2C4.9 11.87 1 8.36 1 5.44 1 3.1 2.79 1.5 4.9 1.5c1.2 0 2.32.55 3.1 1.5.78-.95 1.9-1.5 3.1-1.5 2.11 0 3.9 1.6 3.9 3.94 0 2.92-3.9 6.43-6.46 8.61-.15.13-.34.2-.54.2z" />
-    </svg>
-  );
+  return <Heart size={16} {...props} />;
 }
 
 export function DownloadIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <path d="M7 10l5 5 5-5" />
-      <path d="M12 15V3" />
-    </svg>
-  );
+  return <Download size={16} {...props} />;
 }
 
 export function UploadIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <path d="M17 8l-5-5-5 5" />
-      <path d="M12 3v12" />
-    </svg>
-  );
+  return <Upload size={16} {...props} />;
 }
 
 export function ArrowUpRightIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={14}
-      height={14}
-      {...props}
-    >
-      <path d="M7 17 17 7" />
-      <path d="M7 7h10v10" />
-    </svg>
-  );
+  return <ArrowUpRight size={16} {...props} />;
 }
 
 export function CalendarIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4" />
-      <path d="M8 2v4" />
-      <path d="M3 10h18" />
-    </svg>
-  );
+  return <Calendar size={16} {...props} />;
 }
 
 export function CheckIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
+  return <Check size={16} {...props} />;
 }
 
 export function PinIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M12 17v5" />
-      <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16h14v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a1 1 0 0 0 0-2H8a1 1 0 0 0 0 2h1z" />
-    </svg>
-  );
+  return <Pin size={16} {...props} />;
 }
 
 export function ChevronDownIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M5 7.5L10 12.5L15 7.5" />
-    </svg>
-  );
+  return <ChevronDown size={16} {...props} />;
 }
 
-// Usado no botão "cancelar edição" do ModalHeaderActions - fica visualmente
-// distinto do XIcon (que fecha o Modal inteiro) para não haver dois X no
-// mesmo header a fazerem coisas diferentes (um cancela a edição e volta à
-// vista de detalhe, o outro fecha tudo).
+// UndoIcon usa o glifo "Undo2" do lucide - é o que corresponde à seta
+// curva com gancho que já usávamos (o "Undo" do lucide é uma curva
+// diferente, mais parecida com um "voltar atrás" de navegador).
 export function UndoIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M9 14 4 9l5-5" />
-      <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
-    </svg>
-  );
+  return <Undo2 size={16} {...props} />;
 }
 
-// Ícones abaixo são usados nos títulos dos cards do Dashboard - um por
-// card, ao lado do <p className="uppercase tracking-wide ..."> - para dar
-// um ponto de reconhecimento visual rápido ao correr o olho pela grelha
-// de widgets, sem depender só de texto em maiúsculas pequeno.
 export function GraduationCapIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M22 10 12 5 2 10l10 5 10-5Z" />
-      <path d="M6 12v5c0 1.5 2.5 3 6 3s6-1.5 6-3v-5" />
-    </svg>
-  );
+  return <GraduationCap size={16} {...props} />;
 }
 
 export function TrendingUpIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M3 17 9 11 13 15 21 7" />
-      <path d="M15 7h6v6" />
-    </svg>
-  );
+  return <TrendingUp size={16} {...props} />;
 }
 
 export function GaugeIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-      <path d="M12 13 16 9" />
-      <path d="M4.6 19a9 9 0 1 1 14.8 0" />
-    </svg>
-  );
+  return <Gauge size={16} {...props} />;
 }
 
 export function ClockIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 3" />
-    </svg>
-  );
+  return <Clock size={16} {...props} />;
 }
 
 export function BookOpenIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M12 6c-2-1.3-4.6-2-7-2v13c2.4 0 5 .7 7 2 2-1.3 4.6-2 7-2V4c-2.4 0-5 .7-7 2Z" />
-      <path d="M12 6v13" />
-    </svg>
-  );
+  return <BookOpen size={16} {...props} />;
 }
 
+// ChartPieIcon -> PieChart no lucide-react (nome diferente, mesmo glifo).
 export function ChartPieIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M21.2 15.3a10 10 0 1 1-6.5-13.2" />
-      <path d="M12 12 21.2 8.6" />
-      <path d="M12 12V2a10 10 0 0 1 9.2 6" />
-    </svg>
-  );
+  return <PieChart size={16} {...props} />;
 }
 
 export function CalculatorIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <rect x="4" y="2" width="16" height="20" rx="2" />
-      <path d="M8 6h8" />
-      <path d="M8 11h.01" />
-      <path d="M12 11h.01" />
-      <path d="M16 11h.01" />
-      <path d="M8 15h.01" />
-      <path d="M12 15h.01" />
-      <path d="M16 15v3" />
-      <path d="M8 19h.01" />
-      <path d="M12 19h.01" />
-    </svg>
-  );
+  return <Calculator size={16} {...props} />;
 }
 
 export function TargetIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="5" />
-      <circle cx="12" cy="12" r="1" />
-    </svg>
-  );
+  return <Target size={16} {...props} />;
 }
 
 export function AlertTriangleIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M12 3 2 20h20L12 3Z" />
-      <path d="M12 10v4" />
-      <path d="M12 17h.01" />
-    </svg>
-  );
+  return <AlertTriangle size={16} {...props} />;
 }
 
 export function FlameIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M12 2c1 3-2 4-2 7a4 4 0 0 0 8 0c0-1-1-2-1-2 1 4-1 6-3 6a4 4 0 0 1-4-4c0-2 2-3 1-6a6 6 0 0 0-3 5c0 4 3 7 6 7s6-3 6-7c0-4-3-7-3-7 1 2-1 3-1 3" />
-    </svg>
-  );
+  return <Flame size={16} {...props} />;
 }
 
 export function ActivityIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M3 12h4l3 8 4-16 3 8h4" />
-    </svg>
-  );
+  return <Activity size={16} {...props} />;
 }
 
 export function SearchIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
-  );
+  return <Search size={16} {...props} />;
 }
 
 export function PrinterIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M6 9V2h12v7" />
-      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-      <path d="M6 14h12v8H6z" />
-    </svg>
-  );
+  return <Printer size={16} {...props} />;
 }
 
+// SlidersIcon usa "SlidersHorizontal" - é a variante com as barras na
+// horizontal, que é o desenho que já tínhamos (o "Sliders" simples do
+// lucide é a variante vertical).
 export function SlidersIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M4 6h6" />
-      <path d="M14 6h6" />
-      <path d="M4 12h10" />
-      <path d="M18 12h2" />
-      <path d="M4 18h2" />
-      <path d="M10 18h10" />
-      <circle cx="12" cy="6" r="2" />
-      <circle cx="16" cy="12" r="2" />
-      <circle cx="8" cy="18" r="2" />
-    </svg>
-  );
+  return <SlidersHorizontal size={16} {...props} />;
 }
 
 export function EyeIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
+  return <Eye size={16} {...props} />;
 }
 
 export function EyeOffIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 5.06-5.94M9.9 4.24A10.4 10.4 0 0 1 12 4c7 0 11 8 11 8a20.3 20.3 0 0 1-2.19 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-      <path d="M1 1l22 22" />
-    </svg>
-  );
+  return <EyeOff size={16} {...props} />;
 }
 
 export function CopyIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <rect x="9" y="9" width="13" height="13" rx="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-    </svg>
-  );
+  return <Copy size={16} {...props} />;
 }
 
 export function ArrowUpIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <path d="M12 19V5" />
-      <path d="M5 12l7-7 7 7" />
-    </svg>
-  );
+  return <ArrowUp size={16} {...props} />;
 }
 
 export function MailIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={16}
-      height={16}
-      {...props}
-    >
-      <rect x="2" y="4" width="20" height="16" rx="2" />
-      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-    </svg>
-  );
+  return <Mail size={16} {...props} />;
+}
+
+export function ImageIcon(props: SVGProps<SVGSVGElement>) {
+  return <Image size={16} {...props} />;
+}
+
+export function FlagIcon(props: SVGProps<SVGSVGElement>) {
+  return <Flag size={16} {...props} />;
+}
+
+export function GripVerticalIcon(props: SVGProps<SVGSVGElement>) {
+  return <GripVertical size={16} {...props} />;
+}
+
+export function EraserIcon(props: SVGProps<SVGSVGElement>) {
+  return <Eraser size={16} {...props} />;
+}
+
+export function ShieldIcon(props: SVGProps<SVGSVGElement>) {
+  return <Shield size={16} {...props} />;
+}
+
+export function TableIcon(props: SVGProps<SVGSVGElement>) {
+  return <Table2 size={16} {...props} />;
+}
+
+export function SigmaIcon(props: SVGProps<SVGSVGElement>) {
+  return <Sigma size={16} {...props} />;
+}
+
+export function NetworkIcon(props: SVGProps<SVGSVGElement>) {
+  return <Network size={16} {...props} />;
+}
+
+export function CodeIcon(props: SVGProps<SVGSVGElement>) {
+  return <Code2 size={16} {...props} />;
+}
+
+export function PlusIcon(props: SVGProps<SVGSVGElement>) {
+  return <Plus size={16} {...props} />;
+}
+
+export function LinkIcon(props: SVGProps<SVGSVGElement>) {
+  return <Link2 size={16} {...props} />;
+}
+
+export function TypeIcon(props: SVGProps<SVGSVGElement>) {
+  return <Type size={16} {...props} />;
 }

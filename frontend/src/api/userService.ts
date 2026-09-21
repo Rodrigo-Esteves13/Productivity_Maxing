@@ -1,6 +1,6 @@
 // src/api/userService.ts
 import api from './client';
-import type { User, Area, Task, TaskMeta, Role, ApiKeySummary, ApiKeyScope, ImportTaskRow, ImportTasksResult } from '../types/models';
+import type { User, Area, Task, TaskMeta, Role, ApiKeySummary, ApiKeyScope, ImportTaskRow, ImportTasksResult, CommuteMode } from '../types/models';
 
 // AUTH ENDPOINTS
 // Login/registo já não devolvem o JWT no corpo - o backend define-o num
@@ -68,7 +68,15 @@ export const getUserProfile = async (): Promise<User> => {
 };
 
 // Atualiza o nome do utilizador autenticado.
-export const updateUserProfile = async (data: { name?: string }): Promise<User> => {
+export const updateUserProfile = async (data: {
+  name?: string;
+  commuteMinutes?: number;
+  commuteMode?: CommuteMode;
+  homeAddress?: string;
+  campusAddress?: string;
+  quietHoursStart?: number;
+  quietHoursEnd?: number;
+}): Promise<User> => {
   const response = await api.patch<User>('/auth/me', data);
   return response.data;
 };
@@ -133,8 +141,8 @@ export const exportUserData = async (id: string): Promise<Record<string, unknown
 };
 
 // AREA ENDPOINTS
-export const getUserAreas = async (): Promise<Area[]> => {
-  const response = await api.get<Area[]>('/areas');
+export const getUserAreas = async (periodId?: string): Promise<Area[]> => {
+  const response = await api.get<Area[]>('/areas', { params: periodId ? { periodId } : undefined });
   return response.data;
 };
 export async function createArea(areaData: { name: string; colorHex: string; defaultTaskType?: string | null; credits?: number | null }): Promise<Area> {
@@ -183,6 +191,13 @@ export async function updateTask(id: string, taskData: any): Promise<Task> {
 
 export async function deleteTask(id: string): Promise<void> {
   await api.delete(`/tasks/${id}`);
+}
+
+// Drag-and-drop no TaskGrid - taskIds é a sequência completa tal como
+// deve passar a aparecer; o backend converte o índice de cada uma em
+// sortOrder (ver TasksService.reorder).
+export async function reorderTasks(taskIds: string[]): Promise<void> {
+  await api.patch('/tasks/reorder', { taskIds });
 }
 
 // BULK ACTIONS (multi-select on the Dashboard table)

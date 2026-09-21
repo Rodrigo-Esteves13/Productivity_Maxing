@@ -2,6 +2,8 @@ import type { SecurityLog } from '../../types/models';
 
 interface SecurityLogRowProps {
   log: SecurityLog;
+  onBanIp: (ip: string) => void;
+  isBanned: boolean;
 }
 
 const METHOD_STYLES: Record<string, string> = {
@@ -12,13 +14,28 @@ const METHOD_STYLES: Record<string, string> = {
   DELETE: 'text-red-400',
 };
 
-export default function SecurityLogRow({ log }: SecurityLogRowProps) {
+export default function SecurityLogRow({ log, onBanIp, isBanned }: SecurityLogRowProps) {
   return (
     <tr className="border-b border-neutral-800 last:border-0 hover:bg-neutral-900/40">
       <td className="px-4 py-3 text-neutral-400">
         {new Date(log.createdAt).toLocaleString()}
       </td>
-      <td className="px-4 py-3 font-mono text-neutral-200">{log.ip}</td>
+      <td className="px-4 py-3 font-mono text-neutral-200">
+        <div className="flex items-center gap-2">
+          <span>{log.ip}</span>
+          {isBanned ? (
+            <span className="text-xs text-neutral-600">banned</span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onBanIp(log.ip)}
+              className="text-xs text-amber-500 hover:text-amber-400 hover:underline"
+            >
+              Ban
+            </button>
+          )}
+        </div>
+      </td>
       <td className={`px-4 py-3 font-semibold ${METHOD_STYLES[log.method] ?? 'text-neutral-300'}`}>
         {log.method}
       </td>

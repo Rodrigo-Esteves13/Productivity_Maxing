@@ -27,6 +27,8 @@ import LoadingState from '../components/UI/LoadingState';
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const Tasks = lazy(() => import('../pages/Tasks'));
 const Focus = lazy(() => import('../pages/Focus'));
+const Schedule = lazy(() => import('../pages/Schedule'));
+const Notebook = lazy(() => import('../pages/Notebook'));
 const Profile = lazy(() => import('../pages/Profile'));
 const Developer = lazy(() => import('../pages/Developer'));
 const Agent = lazy(() => import('../pages/Agent'));
@@ -69,6 +71,14 @@ export default function AppRouter() {
           <Route
             path="/focus"
             element={<PrivateRoute><Focus /></PrivateRoute>}
+          />
+          <Route
+            path="/schedule"
+            element={<PrivateRoute><Schedule /></PrivateRoute>}
+          />
+          <Route
+            path="/notebook"
+            element={<PrivateRoute><Notebook /></PrivateRoute>}
           />
           <Route
             path="/profile"
