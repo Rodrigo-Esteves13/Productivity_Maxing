@@ -169,13 +169,19 @@ function extractProfessor(description: string): string | undefined {
 // \n ou \N -> quebra de linha real. A ordem importa - \\ tem de ser
 // tratado primeiro, senão "\\n" seria lido como "\" + newline em vez de
 // ficar como um "\" literal seguido de "n".
+//
+// O placeholder \uE000 (início da Private Use Area do Unicode, nunca
+// usado em texto normal) protege um "\" literal de ser apanhado pelos
+// passos seguintes - era \u0000 antes, mas isso é um carácter de
+// controlo e o oxlint (no-control-regex) assinalava-o; \uE000 cumpre a
+// mesma função sem disparar o aviso.
 function unescapeIcsText(value: string): string {
   return value
-    .replace(/\\\\/g, '\u0000') // placeholder temporário para "\\" literal
+    .replace(/\\\\/g, '\uE000') // placeholder temporário para "\\" literal
     .replace(/\\n/gi, '\n')
     .replace(/\\,/g, ',')
     .replace(/\\;/g, ';')
-    .replace(/\u0000/g, '\\');
+    .replace(/\uE000/g, '\\');
 }
 
 // "20260914T171500Z" -> dia local (YYYY-MM-DD) e minutos desde a meia-

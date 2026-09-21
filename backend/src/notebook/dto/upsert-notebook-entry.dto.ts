@@ -191,7 +191,8 @@ export class CanvasLinkDto {
 // Etiqueta de texto solta no canvas - x/y sem Min/Max (mesmo critério do
 // StrokePointDto/CanvasShapeDto acima); text limitado a 300 chars, é uma
 // etiqueta curta sobre o desenho, não um campo de notas (isso já existe
-// em textContent).
+// em textContent). fontSize/color opcionais - entradas criadas antes
+// desta feature não os têm, o frontend aplica um default ao ler.
 export class CanvasTextDto {
   @ApiProperty({ example: 'f7a8...' })
   @IsString()
@@ -211,6 +212,18 @@ export class CanvasTextDto {
   @IsString()
   @MaxLength(300)
   text: string;
+
+  @ApiPropertyOptional({ example: 14 })
+  @IsOptional()
+  @IsNumber()
+  @Min(8)
+  @Max(72)
+  fontSize?: number;
+
+  @ApiPropertyOptional({ example: '#1C1C1E' })
+  @IsOptional()
+  @IsHexColor()
+  color?: string;
 }
 
 export class CreateNotebookEntryDto {

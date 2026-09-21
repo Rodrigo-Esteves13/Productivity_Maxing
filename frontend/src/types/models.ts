@@ -499,12 +499,15 @@ export interface NotebookTable {
 // para escrever palavras/frases com o teclado por cima do desenho à
 // mão, em vez de só símbolos/formas. x/y são o canto superior esquerdo,
 // nas mesmas coordenadas fixas do viewBox (ver VIEW_WIDTH/VIEW_HEIGHT em
-// NotebookCanvas.tsx).
+// NotebookCanvas.tsx). fontSize/color são opcionais no que vem da API
+// (entradas antigas não os têm) - o frontend aplica um default ao ler.
 export interface CanvasTextItem {
   id: string;
   x: number;
   y: number;
   text: string;
+  fontSize?: number;
+  color?: string;
 }
 
 // Ícone posicionável no canvas - ver comentário em

@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { CanvasTextItem } from '../../types/models';
 import type { SvgPoint } from './NotebookShapeNode';
+import { DEFAULT_TEXT_FONT_SIZE, DEFAULT_TEXT_COLOR } from '../../hooks/useCanvasTexts';
 
 interface NotebookTextNodeProps {
   item: CanvasTextItem;
@@ -30,6 +31,8 @@ export default function NotebookTextNode({
   onStartEdit,
 }: NotebookTextNodeProps) {
   const dragRef = useRef<{ startPoint: SvgPoint; startX: number; startY: number } | null>(null);
+  const fontSize = item.fontSize ?? DEFAULT_TEXT_FONT_SIZE;
+  const color = item.color ?? DEFAULT_TEXT_COLOR;
 
   const handlePointerDown = (e: ReactPointerEvent<SVGTextElement>) => {
     if (readOnly || isEditing) return;
@@ -64,8 +67,8 @@ export default function NotebookTextNode({
         <rect
           x={item.x - 4}
           y={item.y - 2}
-          width={Math.max(item.text.length * 6.5, 16) + 8}
-          height={22}
+          width={Math.max(item.text.length * fontSize * 0.55, 16) + 8}
+          height={fontSize + 8}
           rx={3}
           fill="none"
           stroke="#7C3AED"
@@ -74,9 +77,9 @@ export default function NotebookTextNode({
       )}
       <text
         x={item.x}
-        y={item.y + 14}
-        fontSize={14}
-        fill="#1C1C1E"
+        y={item.y + fontSize}
+        fontSize={fontSize}
+        fill={color}
         style={{ paintOrder: 'stroke', stroke: 'rgba(245,241,232,0.75)', strokeWidth: 4 }}
         className={readOnly ? '' : 'cursor-move select-none'}
         onPointerDown={handlePointerDown}

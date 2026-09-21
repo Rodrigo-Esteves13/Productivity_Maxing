@@ -4,6 +4,7 @@ import type { UseDrawingCanvasResult } from '../../hooks/useDrawingCanvas';
 import type { UseCanvasShapesResult } from '../../hooks/useCanvasShapes';
 import type { UseCanvasLinksResult } from '../../hooks/useCanvasLinks';
 import type { UseCanvasTextsResult } from '../../hooks/useCanvasTexts';
+import { DEFAULT_TEXT_FONT_SIZE, DEFAULT_TEXT_COLOR } from '../../hooks/useCanvasTexts';
 import { strokeToPathData } from '../../utils/strokeToPath';
 import { CANVAS_SHAPE_DEFS } from './canvasShapeDefs';
 import { computeLinkEndpoints } from './canvasGeometry';
@@ -127,6 +128,7 @@ export default function NotebookCanvas({ canvas, shapes, links, texts, readOnly 
 
   const selectedShape = shapes.shapes.find((shape) => shape.id === shapes.selectedId) ?? null;
   const selectedLink = links.links.find((link) => link.id === links.selectedLinkId) ?? null;
+  const selectedText = texts.texts.find((item) => item.id === texts.selectedId) ?? null;
   const shapesById = new Map(shapes.shapes.map((shape) => [shape.id, shape]));
 
   const handleDeleteSelectedShape = () => {
@@ -226,17 +228,46 @@ export default function NotebookCanvas({ canvas, shapes, links, texts, readOnly 
             </button>
           </div>
 
-          {texts.selectedId && !texts.editingId && (
-            <button
-              type="button"
-              onClick={() => texts.removeText(texts.selectedId as string)}
-              aria-label="Delete text"
-              title="Delete (or press Delete/Backspace)"
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-400 hover:bg-neutral-800"
-            >
-              <TrashIcon className="h-3.5 w-3.5" />
-              Delete text
-            </button>
+          {selectedText && !texts.editingId && (
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={10}
+                max={36}
+                step={1}
+                value={selectedText.fontSize ?? DEFAULT_TEXT_FONT_SIZE}
+                onChange={(e) => texts.setFontSize(selectedText.id, Number(e.target.value))}
+                className="w-20 accent-violet-500"
+                aria-label="Text size"
+                title="Text size"
+              />
+              <div className="flex items-center gap-1">
+                {COLOR_SWATCHES.map((swatch) => (
+                  <button
+                    key={swatch}
+                    type="button"
+                    aria-label={`Text color ${swatch}`}
+                    onClick={() => texts.setColor(selectedText.id, swatch)}
+                    className={`h-5 w-5 rounded-full border-2 transition-transform ${
+                      (selectedText.color ?? DEFAULT_TEXT_COLOR) === swatch
+                        ? 'scale-110 border-violet-400'
+                        : 'border-neutral-700'
+                    }`}
+                    style={{ backgroundColor: swatch }}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => texts.removeText(selectedText.id)}
+                aria-label="Delete text"
+                title="Delete (or press Delete/Backspace)"
+                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-400 hover:bg-neutral-800"
+              >
+                <TrashIcon className="h-3.5 w-3.5" />
+                Delete text
+              </button>
+            </div>
           )}
 
           <div className="ml-auto flex items-center gap-2">
@@ -519,7 +550,7 @@ export default function NotebookCanvas({ canvas, shapes, links, texts, readOnly 
 }
 
 interface TextEditOverlayProps {
-  item: { x: number; y: number; text: string };
+  item: { x: number; y: number; text: string; fontSize?: number; color?: string };
   svgRef: RefObject<SVGSVGElement | null>;
   onChangeText: (text: string) => void;
   onCommit: () => void;
@@ -529,11 +560,16 @@ interface TextEditOverlayProps {
 // <input> dentro de <foreignObject> - essa via não estava a aparecer de
 // todo nalguns browsers, um overlay comum é muito mais previsível.
 // Segue as coordenadas do viewBox fixo (VIEW_WIDTH/VIEW_HEIGHT) através
-// do mesmo fator de escala que toSvgPoint usa ao contrário.
+// do mesmo fator de escala que toSvgPoint usa ao contrário. O
+// tamanho/cor escolhidos (ver controlos "selected text" acima) refletem-
+// se ao vivo aqui, para o que se vê a escrever já bater certo com o que
+// fica depois de gravado.
 function TextEditOverlay({ item, svgRef, onChangeText, onCommit }: TextEditOverlayProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const rect = svgRef.current?.getBoundingClientRect();
   const scale = rect ? rect.width / VIEW_WIDTH : 1;
+  const fontSize = item.fontSize ?? DEFAULT_TEXT_FONT_SIZE;
+  const color = item.color ?? DEFAULT_TEXT_COLOR;
 
   // useEffect corre sempre depois do <input> estar montado no DOM (parte
   // do commit do React), ao contrário de autoFocus cujo timing exato
@@ -564,10 +600,11 @@ function TextEditOverlay({ item, svgRef, onChangeText, onCommit }: TextEditOverl
         left: item.x * scale,
         top: item.y * scale,
         width: 220 * scale,
-        fontSize: 14 * scale,
+        fontSize: fontSize * scale,
+        color,
         lineHeight: 1.3,
       }}
-      className="rounded border border-violet-500 bg-white/95 px-1.5 py-1 text-neutral-900 outline-none"
+      className="rounded border border-violet-500 bg-white/95 px-1.5 py-1 outline-none"
     />
   );
 }
