@@ -7,6 +7,9 @@ import { REPO_URL, REPO_ISSUES_URL } from '../../lib/constants';
 const PRODUCT_LINKS = [
   { label: 'Dashboard', to: '/dashboard' },
   { label: 'Tasks', to: '/tasks' },
+  { label: 'Focus', to: '/focus' },
+  { label: 'Schedule', to: '/schedule' },
+  { label: 'Notebook', to: '/notebook' },
   { label: 'Profile', to: '/profile' },
 ];
 

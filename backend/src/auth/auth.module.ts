@@ -11,11 +11,13 @@ import { DiscordStrategy } from './strategies/discord.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ApiKeyStrategy } from './strategies/api-key.strategy';
 import { GoogleCalendarLinkGuard } from './guards/google-calendar-link.guard';
+import { AccountStatusModule } from '../account-status/account-status.module';
 
 @Module({
   imports: [
     PrismaModule,
     MailModule,
+    AccountStatusModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: process.env.JWT_SECRET,

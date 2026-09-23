@@ -132,6 +132,29 @@ export const deleteUser = async (id: string): Promise<void> => {
   await api.delete(`/users/${id}`);
 };
 
+// Suspensão temporária (backend exige `until` no futuro e `reason` não
+// vazio) - o backend recusa contra a própria conta do admin.
+export const suspendUser = async (
+  id: string,
+  data: { reason: string; until: string },
+): Promise<User> => {
+  const response = await api.post<User>(`/users/${id}/suspend`, data);
+  return response.data;
+};
+
+// Banimento permanente - mesma regra de "não contra ti próprio".
+export const banUser = async (id: string, reason: string): Promise<User> => {
+  const response = await api.post<User>(`/users/${id}/ban`, { reason });
+  return response.data;
+};
+
+// Levanta um ban ou termina uma suspensão antes do tempo, voltando a
+// ACTIVE.
+export const reactivateUser = async (id: string): Promise<User> => {
+  const response = await api.post<User>(`/users/${id}/reactivate`);
+  return response.data;
+};
+
 // Exportação de dados (portabilidade GDPR) de um utilizador, usado tanto
 // para um admin exportar os dados de qualquer pessoa, como para o próprio
 // exportar os seus. Devolve o JSON completo pronto a descarregar.

@@ -14,15 +14,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import {
-  ApiTags,
-  ApiBearerAuth,
-  ApiOperation,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import type { Options as MulterOptions } from 'multer';
 import 'multer';
-import { NotebookService } from './notebook.service';
+import { NotebookService, ATTACHMENT_MAX_SIZE_BYTES } from './notebook.service';
 import {
   CreateNotebookEntryDto,
   UpdateNotebookEntryDto,
@@ -49,9 +45,7 @@ export class NotebookController {
   constructor(private readonly notebookService: NotebookService) {}
 
   @Get('entries')
-  @ApiOperation({
-    summary: 'Lists notebook entries for an area, newest first.',
-  })
+  @ApiOperation({ summary: 'Lists notebook entries for an area, newest first.' })
   @ApiQuery({ name: 'areaId', required: true })
   findAllForArea(
     @CurrentUser() user: AuthenticatedUser,
@@ -93,9 +87,48 @@ export class NotebookController {
     return this.notebookService.remove(user.id, id);
   }
 
+  // --- Partilha (link público só de leitura) ----------------------------
+  // O endpoint que consome o token (GET /notebook/shared/:token) NÃO vive
+  // aqui - fica no NotebookShareController à parte, porque esta classe
+  // toda tem @UseGuards(JwtAuthGuard) e um link de partilha é, por
+  // definição, para quem não tem sessão nenhuma.
+  @Get('entries/:id/share')
+  @ApiOperation({ summary: 'Whether this entry currently has an active share link.' })
+  getShareStatus(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.notebookService.getShareStatus(user.id, id);
+  }
+
+  @Post('entries/:id/share')
+  @ApiOperation({
+    summary: 'Creates (or returns the existing) read-only share link for this entry.',
+  })
+  createShare(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.notebookService.createShare(user.id, id);
+  }
+
+  @Delete('entries/:id/share')
+  @ApiOperation({ summary: 'Stops sharing this entry - the previous link stops working immediately.' })
+  revokeShare(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.notebookService.revokeShare(user.id, id);
+  }
+
   // Mesmos limites/mitigação multer que o upload de avatar (ver
   // AuthController.uploadAvatar): 1 ficheiro, 0 campos extra, profundidade
   // de aninhamento zero.
+  // @Throttle dedicado (achado do security audit): sem isto, um upload
+  // de ficheiro só tinha o limite global do ThrottlerModule, ao contrário
+  // dos endpoints de auth - um endpoint caro em I/O de storage merece o
+  // mesmo tratamento.
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('entries/:id/photos')
   @UseInterceptors(
     FileInterceptor('photo', {
@@ -113,9 +146,7 @@ export class NotebookController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     if (!file) {
-      throw new BadRequestException(
-        'No file was sent (field name must be "photo").',
-      );
+      throw new BadRequestException('No file was sent (field name must be "photo").');
     }
     return this.notebookService.addPhoto(user.id, id, file);
   }
@@ -127,6 +158,44 @@ export class NotebookController {
     @Param('photoId', ParseUUIDPipe) photoId: string,
   ) {
     return this.notebookService.removePhoto(user.id, id, photoId);
+  }
+
+  // Mesma mitigação multer que addPhoto acima; limite maior (documentos/
+  // código pesam mais que uma foto comprimida) e o próprio
+  // notebookService valida o tipo real do ficheiro pelos magic bytes
+  // (ou, para texto puro, pela ausência de bytes binários) antes de
+  // aceitar - ver ATTACHMENT_BINARY_MIME_TO_EXT/ATTACHMENT_TEXT_EXTENSIONS
+  // em notebook.service.ts.
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Post('entries/:id/attachments')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: ATTACHMENT_MAX_SIZE_BYTES,
+        files: 1,
+        fields: 0,
+        fieldNestingDepth: 1,
+      } as MulterLimitsWithFieldNestingDepth,
+    }),
+  )
+  addAttachment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file was sent (field name must be "file").');
+    }
+    return this.notebookService.addAttachment(user.id, id, file);
+  }
+
+  @Delete('entries/:id/attachments/:attachmentId')
+  removeAttachment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('attachmentId', ParseUUIDPipe) attachmentId: string,
+  ) {
+    return this.notebookService.removeAttachment(user.id, id, attachmentId);
   }
 
   @Get('schedule-links')
@@ -174,7 +243,7 @@ export class NotebookController {
   @Get('search')
   @ApiOperation({
     summary:
-      "Free-text search across all of the caller's notebook entries - matches title, content, subject name and formatted date (dd/mm/yyyy).",
+      'Free-text search across all of the caller\'s notebook entries - matches title, content, subject name and formatted date (dd/mm/yyyy).',
   })
   @ApiQuery({ name: 'q', required: true })
   search(@CurrentUser() user: AuthenticatedUser, @Query('q') q: string) {

@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Delete,
   Body,
   ParseUUIDPipe,
@@ -18,6 +19,7 @@ import {
 import { Role } from '@prisma/client';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { SuspendUserDto, BanUserDto } from './dto/update-user-status.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -184,5 +186,63 @@ export class UsersController {
     }
     await this.usersService.remove(id);
     return { message: 'User deleted.' };
+  }
+
+  // --- Ban / suspend --------------------------------------------------
+  // ADMIN only, e nunca contra a própria conta (mesmo raciocínio de
+  // update()/remove() acima) - senão um admin podia bloquear-se a si
+  // próprio e, se fosse o último admin, ninguém conseguiria desfazer.
+
+  @Post(':id/suspend')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Temporarily suspends a user account until a given date (Admin only)',
+  })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  suspend(
+    @CurrentUser() me: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SuspendUserDto,
+  ) {
+    if (me.id === id) {
+      throw new ForbiddenException('You cannot suspend your own account.');
+    }
+    return this.usersService.suspendUser(me.id, id, dto);
+  }
+
+  @Post(':id/ban')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Permanently bans a user account (Admin only)' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  ban(
+    @CurrentUser() me: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: BanUserDto,
+  ) {
+    if (me.id === id) {
+      throw new ForbiddenException('You cannot ban your own account.');
+    }
+    return this.usersService.banUser(me.id, id, dto);
+  }
+
+  @Post(':id/reactivate')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Lifts a ban or ends a suspension early, restoring ACTIVE status (Admin only)',
+  })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  reactivate(
+    @CurrentUser() me: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.usersService.reactivateUser(me.id, id);
   }
 }

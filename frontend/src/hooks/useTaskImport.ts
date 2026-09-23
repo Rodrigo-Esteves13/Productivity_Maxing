@@ -6,6 +6,12 @@ import type { AcademicPeriod, ImportTasksResult } from '../types/models';
 
 export type ImportStage = 'idle' | 'reading' | 'importing' | 'done' | 'error';
 
+// Must match the backend's @ArrayMaxSize(500) on ImportTasksDto.rows (see
+// backend/src/tasks/dto/import-tasks.dto.ts). Checked here too so an
+// oversized spreadsheet fails fast with a clear message instead of
+// spending a full parse + upload only to be rejected by the backend.
+const MAX_IMPORT_ROWS = 500;
+
 export interface ParseError {
   row: number;
   message: string;
@@ -61,6 +67,14 @@ export function useTaskImport() {
 
       if (rows.length === 0) {
         setOutcome({ parseErrors, backendResult: null });
+        setStage('error');
+        return;
+      }
+
+      if (rows.length > MAX_IMPORT_ROWS) {
+        setErrorMessage(
+          `That file has ${rows.length} valid rows, which is more than the ${MAX_IMPORT_ROWS}-row import limit. Split it into smaller files and import them one at a time.`,
+        );
         setStage('error');
         return;
       }

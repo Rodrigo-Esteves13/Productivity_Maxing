@@ -37,6 +37,7 @@ const Users = lazy(() => import('../pages/Users'));
 const Security = lazy(() => import('../pages/Security'));
 const TaskTypes = lazy(() => import('../pages/TaskTypes'));
 const PrivacyPolicy = lazy(() => import('../pages/PrivacyPolicy'));
+const SharedNotebookEntry = lazy(() => import('../pages/SharedNotebookEntry'));
 const TermsOfService = lazy(() => import('../pages/TermsOfService'));
 const Eula = lazy(() => import('../pages/Eula'));
 const DmcaPolicy = lazy(() => import('../pages/DmcaPolicy'));
@@ -58,6 +59,9 @@ export default function AppRouter() {
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/eula" element={<Eula />} />
           <Route path="/dmca" element={<DmcaPolicy />} />
+          {/* Também pública - quem recebe um link de "Share" numa lesson do
+              Notebook não tem (nem precisa de) conta nenhuma. */}
+          <Route path="/shared/:token" element={<SharedNotebookEntry />} />
 
           {/* ROTAS PRIVADAS */}
           <Route

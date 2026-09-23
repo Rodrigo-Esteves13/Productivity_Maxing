@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboa
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { getUserTasks } from '../../api/userService';
-import type { Task } from '../../types/models';
+import { searchNotebook } from '../../api/notebookService';
+import { setPendingNotebookEntry } from '../../lib/pendingNotebookEntry';
+import type { Task, NotebookSearchResult } from '../../types/models';
 import { SearchIcon } from '../UI/Icons';
 
 // Static "go to page" commands - mirrors the routes in AppRouter.tsx and
@@ -22,6 +24,7 @@ const NAV_COMMANDS: NavCommand[] = [
   { id: 'nav-tasks', label: 'Tasks', path: '/tasks' },
   { id: 'nav-focus', label: 'Focus', path: '/focus' },
   { id: 'nav-schedule', label: 'Schedule', path: '/schedule' },
+  { id: 'nav-notebook', label: 'Notebook', path: '/notebook' },
   { id: 'nav-profile', label: 'Profile', path: '/profile' },
   { id: 'nav-developer', label: 'Developer', path: '/developer' },
   { id: 'nav-agent', label: 'Agent', path: '/agent' },
@@ -32,10 +35,17 @@ const NAV_COMMANDS: NavCommand[] = [
 ];
 
 const MAX_TASK_RESULTS = 6;
+const MAX_NOTEBOOK_RESULTS = 6;
+// Ao contrário das tasks (pré-carregadas de uma vez e filtradas
+// localmente), o notebook pode ter muitas entradas por Area - por isso
+// vai a pedido ao endpoint GET /notebook/search já existente, com debounce
+// para não martelar a API a cada tecla premida.
+const NOTEBOOK_SEARCH_DEBOUNCE_MS = 250;
 
 type PaletteItem =
   | { kind: 'nav'; id: string; label: string; path: string }
-  | { kind: 'task'; id: string; label: string; task: Task };
+  | { kind: 'task'; id: string; label: string; task: Task }
+  | { kind: 'notebook'; id: string; label: string; entry: NotebookSearchResult };
 
 export default function CommandPalette() {
   const { isAuthenticated, user } = useAuth();
@@ -45,6 +55,7 @@ export default function CommandPalette() {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [tasks, setTasks] = useState<Task[] | null>(null);
+  const [notebookResults, setNotebookResults] = useState<NotebookSearchResult[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Global Cmd/Ctrl+K to open, from anywhere in the app (not just when
@@ -98,6 +109,35 @@ export default function CommandPalette() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
+  // Pesquisa ao notebook (título, conteúdo, cadeira, data formatada - ver
+  // NotebookService.search no backend) sempre que a query muda, com
+  // debounce. Antes disto, Cmd+K só encontrava Tasks - o conteúdo do
+  // caderno ficava invisível à pesquisa global.
+  useEffect(() => {
+    if (!isOpen) return;
+    const q = query.trim();
+    if (q === '') {
+      setNotebookResults([]);
+      return;
+    }
+
+    let cancelled = false;
+    const id = window.setTimeout(() => {
+      searchNotebook(q)
+        .then((results) => {
+          if (!cancelled) setNotebookResults(results);
+        })
+        .catch(() => {
+          if (!cancelled) setNotebookResults([]);
+        });
+    }, NOTEBOOK_SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(id);
+    };
+  }, [isOpen, query]);
+
   useEffect(() => {
     if (!isOpen) return;
     const handleEsc = (e: globalThis.KeyboardEvent) => {
@@ -126,8 +166,15 @@ export default function CommandPalette() {
             .slice(0, MAX_TASK_RESULTS)
             .map((t) => ({ kind: 'task', id: t.id, label: t.title, task: t }));
 
-    return [...navMatches, ...taskMatches];
-  }, [query, tasks, user]);
+    const notebookMatches: PaletteItem[] =
+      q === ''
+        ? []
+        : notebookResults
+            .slice(0, MAX_NOTEBOOK_RESULTS)
+            .map((entry) => ({ kind: 'notebook', id: entry.id, label: entry.title, entry }));
+
+    return [...navMatches, ...taskMatches, ...notebookMatches];
+  }, [query, tasks, notebookResults, user]);
 
   // Clamp instead of reset-on-every-keystroke - keeps the highlighted row
   // stable when it's still a valid index after the result list shrinks.
@@ -137,8 +184,15 @@ export default function CommandPalette() {
     setIsOpen(false);
     if (item.kind === 'nav') {
       navigate(item.path);
-    } else {
+    } else if (item.kind === 'task') {
       navigate(`/tasks?open=${item.task.id}`);
+    } else {
+      // A página Notebook filtra as entradas por Area selecionada - não
+      // dá para "saltar" direto para uma entrada só com o path, por isso
+      // deixamos a entrada pronta a consumir e o próprio Notebook.tsx
+      // trata de selecionar a Area certa e abrir a entrada no mount.
+      setPendingNotebookEntry(item.entry);
+      navigate('/notebook');
     }
   };
 
@@ -177,7 +231,7 @@ export default function CommandPalette() {
               setActiveIndex(0);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Go to a page, or search a task..."
+            placeholder="Go to a page, or search a task or notebook entry..."
             className="flex-1 bg-transparent text-white placeholder:text-neutral-500 outline-none text-sm"
           />
           <kbd className="hidden sm:inline text-[10px] text-neutral-500 border border-neutral-700 rounded px-1.5 py-0.5">
@@ -203,7 +257,7 @@ export default function CommandPalette() {
             >
               <span className="truncate">{item.label}</span>
               <span className="text-[10px] uppercase tracking-wide text-neutral-500 shrink-0">
-                {item.kind === 'nav' ? 'Go to' : 'Task'}
+                {item.kind === 'nav' ? 'Go to' : item.kind === 'task' ? 'Task' : 'Notebook'}
               </span>
             </button>
           ))}

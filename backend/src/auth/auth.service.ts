@@ -17,6 +17,7 @@ import {
   Role,
   ApiKeyScope,
   CommuteMode,
+  UserStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import 'multer';
@@ -33,6 +34,7 @@ import { OAuthAccountConflictException } from './exceptions/oauth-account-confli
 import { MailService } from '../mail/mail.service';
 import { GOOGLE_REVOKE_URL } from './google-oauth.constants';
 import { getFrontendUrl } from '../config/app.config';
+import { AccountStatusService } from '../account-status/account-status.service';
 
 // scryptSync bloqueia a thread principal do event loop enquanto corre -
 // numa rota chamada em CADA pedido autenticado por API Key
@@ -101,6 +103,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private mailService: MailService,
+    private accountStatus: AccountStatusService,
   ) {
     // Anon key chega para signUp/signInWithPassword, são os mesmos endpoints
     // públicos que o supabase-js usaria no browser, não operações de admin
@@ -170,6 +173,8 @@ export class AuthService {
       // Só preenche o avatarUrl se o utilizador ainda não tiver nenhum -
       // nunca sobrescreve um avatar carregado manualmente (uploadAvatar em
       // auth.service.ts) nem um já preenchido por um provider anterior.
+      this.assertAccountIsUsable(existingIdentity.user);
+
       if (!existingIdentity.user.avatarUrl && data.photo) {
         return this.prisma.user.update({
           where: { id: existingIdentity.user.id },
@@ -228,6 +233,12 @@ export class AuthService {
         throw err;
       }
     }
+
+    // `user` já existia (email verificado a bater com uma conta anterior)
+    // ou acabou de ser criado agora mesmo - só faz sentido verificar no
+    // primeiro caso, mas chamar sempre é inofensivo (uma conta recém-criada
+    // nunca é BANNED/SUSPENDED).
+    this.assertAccountIsUsable(user);
 
     await this.prisma.identity.create({
       data: {
@@ -448,6 +459,12 @@ export class AuthService {
   ): Promise<User> {
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
+      // Direto à BD (não à cache do AccountStatusService) - login é raro
+      // o suficiente para não valer a pena otimizar, e é o momento em
+      // que uma suspensão já expirada deve mesmo ser corrigida antes de
+      // emitir um novo JWT, não só "tratada como ativa" na próxima leitura.
+      this.assertAccountIsUsable(existing);
+
       if (supabaseAuthId && existing.supabaseAuthId !== supabaseAuthId) {
         return this.prisma.user.update({
           where: { id: existing.id },
@@ -460,6 +477,44 @@ export class AuthService {
     return this.prisma.user.create({
       data: { id: randomUUID(), email, name, supabaseAuthId },
     });
+  }
+
+  /**
+   * Bloqueia login (password e OAuth convergem ambos em syncLocalUser)
+   * para uma conta banida ou ainda dentro do período de suspensão. Ao
+   * contrário do JwtStrategy (que só pode confiar na cache por questões
+   * de performance), aqui compensa corrigir logo uma suspensão expirada
+   * na BD - é um caminho raro, não um pedido autenticado normal.
+   */
+  private assertAccountIsUsable(user: User): void {
+    if (user.status === UserStatus.BANNED) {
+      throw new UnauthorizedException('This account has been banned.');
+    }
+    if (user.status === UserStatus.SUSPENDED) {
+      if (user.suspendedUntil && user.suspendedUntil.getTime() <= Date.now()) {
+        this.prisma.user
+          .update({
+            where: { id: user.id },
+            data: {
+              status: UserStatus.ACTIVE,
+              suspendedUntil: null,
+              statusReason: null,
+              statusUpdatedAt: new Date(),
+              statusUpdatedByUserId: null,
+            },
+          })
+          .then(() => this.accountStatus.clearBlocked(user.id))
+          .catch((err) =>
+            this.logger.warn(`Could not auto-reactivate ${user.id}: ${err}`),
+          );
+        return;
+      }
+      const until =
+        user.suspendedUntil?.toLocaleDateString() ?? 'an unknown date';
+      throw new UnauthorizedException(
+        `This account is suspended until ${until}.`,
+      );
+    }
   }
 
   // RECUPERAÇÃO / DEFINIÇÃO DE PASSWORD

@@ -172,6 +172,8 @@ export interface PriorityOption {
 // ScheduleService.estimateCommute).
 export type CommuteMode = 'DRIVING' | 'WALKING' | 'BICYCLING' | 'TRANSIT';
 
+export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'BANNED';
+
 export interface User {
   id: string;
   email: string;
@@ -183,6 +185,15 @@ export interface User {
   // Auth) - false for accounts that only ever signed in via OAuth. Never
   // exposes supabaseAuthId itself, only this boolean.
   hasPassword: boolean;
+
+  // Só vem preenchido nas respostas de admin (GET/PATCH /users, /users/:id)
+  // - ver USER_ADMIN_SELECT em users.service.ts. Opcional aqui porque
+  // /auth/me (o "eu" da app, ver AuthContext) não os devolve.
+  status?: UserStatus;
+  suspendedUntil?: string | null;
+  statusReason?: string | null;
+  statusUpdatedAt?: string | null;
+  statusUpdatedBy?: { id: string; name: string | null; email: string } | null;
 
   // Active dashboard (selected Program + Period) - null while
   // AcademicContext hasn't resolved/created the default "General" yet.
@@ -550,6 +561,31 @@ export interface NotebookPhoto {
   url: string | null;
 }
 
+// Ficheiro geral anexado a uma entrada (PDF, DOCX/PPTX/XLSX, ZIP,
+// código/texto) - ver comentário em NotebookAttachment no schema.prisma.
+// originalFileName é o nome tal como foi enviado, para mostrar/descarregar;
+// extension é o tipo real validado no backend (pode não bater certo com a
+// extensão do originalFileName, se o utilizador tiver enviado um ficheiro
+// mal nomeado).
+export interface NotebookAttachment {
+  id: string;
+  notebookEntryId: string;
+  storagePath: string;
+  originalFileName: string;
+  extension: string;
+  sizeBytes: number;
+  // Signed URL com download forçado, gerado pelo backend a cada leitura.
+  url: string | null;
+}
+
+// Um link guardado à parte do textContent - ver comentário em
+// NotebookEntry.usefulLinks no schema.prisma.
+export interface UsefulLink {
+  id: string;
+  label: string;
+  url: string;
+}
+
 export type NotebookEntryType = 'NOTE' | 'STUDY' | 'CLASS';
 
 export interface NotebookEntry {
@@ -568,12 +604,41 @@ export interface NotebookEntry {
   canvasShapes: CanvasShape[] | null;
   canvasLinks: CanvasLink[] | null;
   canvasTexts: CanvasTextItem[] | null;
+  usefulLinks: UsefulLink[] | null;
+  // Altura do viewBox do whiteboard (largura fica sempre fixa em 800) -
+  // null/undefined = usa o default (ver DEFAULT_CANVAS_HEIGHT em
+  // NotebookCanvas.tsx). Extensível pelo botão "Add more space", em vez
+  // de suportar várias boards por entrada (mais simples, resolve o mesmo
+  // problema de "ficar sem espaço").
+  canvasHeight: number | null;
   date: string;
   photos: NotebookPhoto[];
+  attachments: NotebookAttachment[];
 }
 
 export interface NotebookSearchResult extends NotebookEntry {
   area: { id: string; name: string; colorHex: string };
+}
+
+// Forma pública devolvida por GET /notebook/shared/:token - de propósito
+// mais pequena que NotebookEntry (sem id/userId/areaId/classOccurrenceId
+// internos), ver NotebookService.getSharedEntry no backend.
+export interface SharedNotebookEntry {
+  title: string;
+  entryType: NotebookEntryType;
+  classNumber: number | null;
+  textContent: string | null;
+  drawingStrokes: Stroke[] | null;
+  tables: NotebookTable[] | null;
+  canvasShapes: CanvasShape[] | null;
+  canvasLinks: CanvasLink[] | null;
+  canvasTexts: CanvasTextItem[] | null;
+  canvasHeight: number | null;
+  usefulLinks: UsefulLink[] | null;
+  date: string;
+  area: { name: string; colorHex: string };
+  photos: NotebookPhoto[];
+  attachments: NotebookAttachment[];
 }
 
 export interface ScheduleLinkResult {

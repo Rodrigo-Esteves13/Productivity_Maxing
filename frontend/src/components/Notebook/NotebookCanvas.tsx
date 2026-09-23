@@ -23,14 +23,29 @@ interface NotebookCanvasProps {
   // Desativa a captura de pointer events sem esconder o desenho já feito -
   // usado quando a entrada está só a ser vista, não editada.
   readOnly?: boolean;
+  // Altura do viewBox (largura fica sempre em VIEW_WIDTH) - default
+  // DEFAULT_VIEW_HEIGHT quando a entrada ainda não tem canvasHeight
+  // guardado. Ver NotebookEntry.canvasHeight no schema.
+  canvasHeight?: number;
+  // Presente só quando editável - mostra o botão "Add more space" que
+  // aumenta canvasHeight em GROW_STEP, até MAX_VIEW_HEIGHT. Em vez de
+  // suportar várias whiteboards por entrada, resolve o mesmo problema
+  // ("fiquei sem espaço a meio da aula") sem mexer no modelo de dados
+  // (um array de boards obrigava a mudar strokes/shapes/links/texts todos
+  // para arrays-de-arrays, e a UI de trocar entre boards).
+  onGrowCanvas?: () => void;
 }
 
-// viewBox fixo: os traços guardados na BD ficam sempre nestas coordenadas,
-// independentemente do tamanho do ecrã em que foram desenhados - o SVG
-// escala visualmente via width/height CSS, mas as coordenadas internas
-// (e portanto o que vai para a API) nunca mudam com o viewport.
-const VIEW_WIDTH = 800;
-const VIEW_HEIGHT = 500;
+// viewBox fixo em largura: os traços guardados na BD ficam sempre nestas
+// coordenadas, independentemente do tamanho do ecrã em que foram
+// desenhados - o SVG escala visualmente via width/height CSS, mas as
+// coordenadas internas (e portanto o que vai para a API) nunca mudam com
+// o viewport. A altura é que passou a ser variável por entrada (ver
+// canvasHeight acima).
+export const VIEW_WIDTH = 800;
+export const DEFAULT_VIEW_HEIGHT = 500;
+export const MAX_VIEW_HEIGHT = 4000;
+export const GROW_STEP = 400;
 
 // Preto/cinza-escuro primeiro (é o que a maioria usa por default num
 // papel real), depois um punhado de cores para destacar - nada de "tema
@@ -45,8 +60,17 @@ const COLOR_SWATCHES = [
   '#7C3AED', // violeta (accent da app, para quem quiser continuar a usá-lo)
 ];
 
-export default function NotebookCanvas({ canvas, shapes, links, texts, readOnly = false }: NotebookCanvasProps) {
+export default function NotebookCanvas({
+  canvas,
+  shapes,
+  links,
+  texts,
+  readOnly = false,
+  canvasHeight,
+  onGrowCanvas,
+}: NotebookCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const viewHeight = canvasHeight ?? DEFAULT_VIEW_HEIGHT;
   const isDrawingRef = useRef(false);
   const [tool, setTool] = useState<DrawTool>('pen');
 
@@ -55,12 +79,12 @@ export default function NotebookCanvas({ canvas, shapes, links, texts, readOnly 
     if (!svg) return null;
     const rect = svg.getBoundingClientRect();
     const scaleX = VIEW_WIDTH / rect.width;
-    const scaleY = VIEW_HEIGHT / rect.height;
+    const scaleY = viewHeight / rect.height;
     return {
       x: (e.clientX - rect.left) * scaleX,
       y: (e.clientY - rect.top) * scaleY,
     };
-  }, []);
+  }, [viewHeight]);
 
   const toStrokePoint = useCallback(
     (e: ReactPointerEvent<SVGSVGElement>) => {
@@ -230,6 +254,16 @@ export default function NotebookCanvas({ canvas, shapes, links, texts, readOnly 
 
           {selectedText && !texts.editingId && (
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => texts.startEditing(selectedText.id)}
+                aria-label="Edit text"
+                title="Edit (or double-click/double-tap the text)"
+                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-neutral-300 hover:bg-neutral-800"
+              >
+                <PencilIcon className="h-3.5 w-3.5" />
+                Edit
+              </button>
               <input
                 type="range"
                 min={10}
@@ -401,7 +435,7 @@ export default function NotebookCanvas({ canvas, shapes, links, texts, readOnly 
       <div className="relative">
         <svg
           ref={svgRef}
-          viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
+          viewBox={`0 0 ${VIEW_WIDTH} ${viewHeight}`}
           // Focável só quando editável - é o que faz o Delete/Backspace do
           // teclado apagar a forma/ligação/texto selecionado (ver
           // handleKeyDown) sem interferir com nenhum input fora do canvas.
@@ -545,6 +579,21 @@ export default function NotebookCanvas({ canvas, shapes, links, texts, readOnly 
           />
         )}
       </div>
+
+      {/* Alternativa a ter várias whiteboards por entrada: em vez de mudar
+          o modelo de dados todo para arrays-de-boards, deixa aumentar o
+          espaço vertical disponível na mesma board quando se fica sem
+          espaço a meio de uma aula. */}
+      {!readOnly && onGrowCanvas && (
+        <button
+          type="button"
+          onClick={onGrowCanvas}
+          disabled={viewHeight >= MAX_VIEW_HEIGHT}
+          className="mt-2 w-full rounded-md border border-dashed border-neutral-700 py-1.5 text-xs font-medium text-neutral-400 hover:border-violet-500 hover:text-violet-400 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-neutral-700 disabled:hover:text-neutral-400"
+        >
+          {viewHeight >= MAX_VIEW_HEIGHT ? 'Maximum whiteboard size reached' : '+ Add more space'}
+        </button>
+      )}
     </div>
   );
 }

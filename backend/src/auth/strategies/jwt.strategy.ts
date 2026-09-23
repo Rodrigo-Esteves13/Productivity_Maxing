@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import type { Request } from 'express';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
 import { ACCESS_TOKEN_COOKIE } from '../cookie.config';
+import { AccountStatusService } from '../../account-status/account-status.service';
 
 // Extrai o JWT do cookie HttpOnly em vez do header Authorization - o token
 // já não é acessível a JS no browser, o que é o ponto todo da migração.
@@ -13,7 +14,7 @@ function cookieExtractor(req: Request): string | null {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor() {
+  constructor(private readonly accountStatus: AccountStatusService) {
     // Sem fallback para '': assinar/verificar com uma secret vazia deixaria
     // qualquer atacante forjar tokens válidos (jwt.sign(payload, '')) se
     // JWT_SECRET não estivesse definida em produção por erro de config.
@@ -37,6 +38,16 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   validate(payload: JwtPayload) {
+    // Efeito imediato de um ban/suspend mesmo com um JWT ainda válido -
+    // sem isto, a conta continuava a funcionar até o token expirar (até
+    // 7 dias, ver JwtModule.register em auth.module.ts). Consulta uma
+    // cache em memória (ver AccountStatusService), não a BD - isto corre
+    // em TODOS os pedidos autenticados.
+    const { blocked, reason } = this.accountStatus.isBlocked(payload.sub);
+    if (blocked) {
+      throw new UnauthorizedException(reason);
+    }
+
     // fica disponível como req.user em qualquer rota protegida por JwtAuthGuard
     return { id: payload.sub, email: payload.email, role: payload.role };
   }

@@ -30,6 +30,16 @@ enum Role {
   ADMIN
 }
 
+// ACTIVE: normal. SUSPENDED: temporário, sempre com suspendedUntil
+// definido (auto-reativa sozinho quando essa data passa - ver
+// JwtStrategy.validate() e UsersService.isBlocked()). BANNED:
+// permanente, sem suspendedUntil.
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
 // TASKS: can only do what the agent/task automation already needed
 // (tasks, agent config). ADMIN: can also manage the global catalog
 // (Areas, TaskTypes) via API key, same as an admin's browser session.
@@ -168,6 +178,19 @@ model User {
   avatarUrl String?
   createdAt DateTime @default(now())
 
+  // Ban/suspend - efeito imediato mesmo com um JWT ainda válido (ver
+  // JwtStrategy.validate(), que consulta isto por request). SUSPENDED
+  // sempre com suspendedUntil definido; passada essa data, tratado como
+  // ACTIVE automaticamente (sem cron - ver UsersService.isBlocked/
+  // reactivateIfExpired). BANNED nunca tem suspendedUntil (indefinido).
+  status                UserStatus @default(ACTIVE)
+  suspendedUntil        DateTime?
+  statusReason          String?
+  statusUpdatedAt       DateTime?
+  statusUpdatedByUserId String?
+  statusUpdatedBy       User?      @relation("UserStatusChangedBy", fields: [statusUpdatedByUserId], references: [id], onDelete: SetNull)
+  statusChangesMade     User[]     @relation("UserStatusChangedBy")
+
   // Id do utilizador no Supabase Auth (auth.users), só existe para contas
   // email+password. Precisamos disto para apagar a credencial real no
   // deleteAccount - sem isto, apagar o User "espelho" não apaga o login,
@@ -228,6 +251,7 @@ model User {
   bannedIps        BannedIp[]
   areaScheduleLinks AreaScheduleLink[]
   notebookEntries   NotebookEntry[]
+  notebookShares    NotebookShare[]
 }
 
 /// Um "dashboard" académico do user (ex: "Secundário", "Licenciatura em
@@ -786,6 +810,17 @@ model NotebookEntry {
   // [{ id, x, y, text }]. Ver CanvasTextDto em upsert-notebook-entry.dto.ts.
   canvasTexts Json?
 
+  // Links úteis por entrada (não um campo de notas de texto livre) -
+  // para não os ter de meter no meio do textContent. Formato:
+  // [{ id, label, url }]. Ver UsefulLinkDto em upsert-notebook-entry.dto.ts.
+  usefulLinks Json?
+
+  // Altura do viewBox do whiteboard (largura fica sempre fixa em 800) -
+  // null = usa o default do frontend. Extensível pelo botão "Add more
+  // space" no NotebookCanvas, para quem fica sem espaço no desenho sem
+  // ter de criar uma segunda entrada só para continuar a aula.
+  canvasHeight Int?
+
   // Editável pelo utilizador (não é createdAt) - de propósito, para
   // conseguir meter apontamentos antigos no sítio certo da ordem
   // cronológica em vez de tudo cair na data em que foi digitalizado.
@@ -798,8 +833,30 @@ model NotebookEntry {
   area            Area             @relation(fields: [areaId], references: [id], onDelete: Cascade)
   classOccurrence ClassOccurrence? @relation(fields: [classOccurrenceId], references: [id], onDelete: SetNull)
   photos          NotebookPhoto[]
+  attachments     NotebookAttachment[]
+  share           NotebookShare?
 
   @@index([userId, areaId, date])
+}
+
+// Link de partilha "só de leitura" para uma lesson (NotebookEntry) - uma
+// linha por entrada (@unique em notebookEntryId), criada a pedido do
+// dono via POST /notebook/entries/:id/share e removida via DELETE no
+// mesmo endpoint (deixar de partilhar = apagar a linha, não um soft
+// revoke - simples e sem estado extra para gerir). O token é o único
+// "segredo": GET /notebook/shared/:token não passa por JwtAuthGuard
+// nenhum, é a única credencial de quem recebe o link.
+model NotebookShare {
+  id              String   @id @default(uuid())
+  notebookEntryId String   @unique
+  token           String   @unique @default(uuid())
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  notebookEntry NotebookEntry @relation(fields: [notebookEntryId], references: [id], onDelete: Cascade)
+  createdBy     User          @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([token])
 }
 
 enum NotebookEntryType {
@@ -818,6 +875,27 @@ model NotebookPhoto {
   notebookEntryId String
   storagePath     String
   position        Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  notebookEntry NotebookEntry @relation(fields: [notebookEntryId], references: [id], onDelete: Cascade)
+
+  @@index([notebookEntryId])
+}
+
+// Ficheiros gerais anexados a uma entrada (PDF, DOCX/PPTX/XLSX, ZIP,
+// código/texto: PY/TXT/MD/JSON/CSV) - bucket próprio, separado das fotos
+// (nunca público, sempre via signed URL forçado a download - ver
+// ATTACHMENT_BUCKET/addAttachment em notebook.service.ts). originalFileName
+// é só para mostrar/descarregar; storagePath é sempre um UUID gerado no
+// servidor, nunca derivado do nome que o utilizador mandou.
+model NotebookAttachment {
+  id               String @id @default(uuid())
+  notebookEntryId  String
+  storagePath      String
+  originalFileName String
+  extension        String
+  sizeBytes        Int
 
   createdAt DateTime @default(now())
 

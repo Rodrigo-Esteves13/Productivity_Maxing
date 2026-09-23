@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { getAllUsers, updateUser, deleteUser, exportUserData } from '../api/userService';
+import {
+  getAllUsers,
+  updateUser,
+  deleteUser,
+  exportUserData,
+  suspendUser,
+  banUser,
+  reactivateUser,
+} from '../api/userService';
 import { downloadJson } from '../utils/downloadJson';
 import type { User } from '../types/models';
 import type { UserFormValues } from '../components/Users/UserEditForm';
@@ -12,6 +20,13 @@ export function useUsersPage(currentUserId: string | undefined) {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [exportingId, setExportingId] = useState<string | null>(null);
+
+  // Ban/suspend - 'target' + 'mode' juntos controlam o modal (ver
+  // UserStatusModal): null = fechado.
+  const [statusActionTarget, setStatusActionTarget] = useState<User | null>(null);
+  const [statusActionMode, setStatusActionMode] = useState<'ban' | 'suspend' | null>(null);
+  const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -79,6 +94,54 @@ export function useUsersPage(currentUserId: string | undefined) {
     }
   };
 
+  const openStatusModal = (target: User, mode: 'ban' | 'suspend') => {
+    setStatusActionTarget(target);
+    setStatusActionMode(mode);
+  };
+
+  const closeStatusModal = () => {
+    setStatusActionTarget(null);
+    setStatusActionMode(null);
+  };
+
+  // `until` só é usado quando mode === 'suspend' - ver UserStatusModal.
+  const handleSubmitStatusAction = async (payload: { reason: string; until?: string }) => {
+    if (!statusActionTarget || !statusActionMode) return;
+
+    setIsSubmittingStatus(true);
+    try {
+      const updated =
+        statusActionMode === 'ban'
+          ? await banUser(statusActionTarget.id, payload.reason)
+          : await suspendUser(statusActionTarget.id, {
+              reason: payload.reason,
+              until: payload.until!,
+            });
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+      closeStatusModal();
+    } catch {
+      alert(
+        statusActionMode === 'ban'
+          ? 'Error banning user. Check the backend.'
+          : 'Error suspending user. Check the backend.',
+      );
+    } finally {
+      setIsSubmittingStatus(false);
+    }
+  };
+
+  const handleReactivateUser = async (target: User) => {
+    setReactivatingId(target.id);
+    try {
+      const updated = await reactivateUser(target.id);
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+    } catch {
+      alert('Error reactivating user. Check the backend.');
+    } finally {
+      setReactivatingId(null);
+    }
+  };
+
   return {
     users,
     isLoading,
@@ -90,5 +153,13 @@ export function useUsersPage(currentUserId: string | undefined) {
     handleEditUser,
     handleDeleteUser,
     handleExportUser,
+    statusActionTarget,
+    statusActionMode,
+    isSubmittingStatus,
+    reactivatingId,
+    openStatusModal,
+    closeStatusModal,
+    handleSubmitStatusAction,
+    handleReactivateUser,
   };
 }
