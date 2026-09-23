@@ -10,6 +10,7 @@ import {
   IsEnum,
   IsIn,
   IsHexColor,
+  IsUrl,
   Min,
   Max,
   MaxLength,
@@ -226,6 +227,28 @@ export class CanvasTextDto {
   color?: string;
 }
 
+// Um link guardado à parte do textContent, para não ter de o escrever a
+// meio das notas. `url` tem de ser http(s) explícito - sem isso, um
+// "link" podia ser um `javascript:...` que executava no clicar, já que o
+// frontend mostra isto como um <a href> a sério.
+export class UsefulLinkDto {
+  @ApiProperty({ example: 'c4d5...' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(64)
+  id: string;
+
+  @ApiProperty({ example: 'Course syllabus' })
+  @IsString()
+  @MaxLength(120)
+  label: string;
+
+  @ApiProperty({ example: 'https://example.com/syllabus.pdf' })
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  @MaxLength(2000)
+  url: string;
+}
+
 export class CreateNotebookEntryDto {
   @ApiProperty({ example: 'a1b2c3d4-...' })
   @IsUUID()
@@ -320,6 +343,25 @@ export class CreateNotebookEntryDto {
   @Type(() => CanvasTextDto)
   canvasTexts?: CanvasTextDto[];
 
+  @ApiPropertyOptional({ type: [UsefulLinkDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => UsefulLinkDto)
+  usefulLinks?: UsefulLinkDto[];
+
+  @ApiPropertyOptional({
+    example: 900,
+    description:
+      'Height (in viewBox units, width stays fixed at 800) of the whiteboard canvas. Lets a user who runs out of drawing space grow it instead of splitting the lesson into two entries.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(500)
+  @Max(4000)
+  canvasHeight?: number;
+
   @ApiProperty({ example: '2026-09-18T00:00:00.000Z' })
   @IsDateString()
   date: string;
@@ -393,6 +435,21 @@ export class UpdateNotebookEntryDto {
   @ValidateNested({ each: true })
   @Type(() => CanvasTextDto)
   canvasTexts?: CanvasTextDto[];
+
+  @ApiPropertyOptional({ type: [UsefulLinkDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => UsefulLinkDto)
+  usefulLinks?: UsefulLinkDto[];
+
+  @ApiPropertyOptional({ example: 900 })
+  @IsOptional()
+  @IsInt()
+  @Min(500)
+  @Max(4000)
+  canvasHeight?: number;
 
   @ApiPropertyOptional({ example: '2026-09-18T00:00:00.000Z' })
   @IsOptional()

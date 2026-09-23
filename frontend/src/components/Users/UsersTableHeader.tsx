@@ -5,6 +5,7 @@ export default function UsersTableHeader() {
         <th className="px-4 py-3 font-medium">User</th>
         <th className="px-4 py-3 font-medium">Email</th>
         <th className="px-4 py-3 font-medium text-center">Role</th>
+        <th className="px-4 py-3 font-medium text-center">Status</th>
         <th className="px-4 py-3 font-medium">Joined</th>
         <th className="px-4 py-3 font-medium text-right">Actions</th>
       </tr>

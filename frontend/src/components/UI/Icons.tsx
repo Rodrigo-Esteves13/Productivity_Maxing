@@ -45,6 +45,7 @@ import {
   Plus,
   Link2,
   Type,
+  File,
 } from 'lucide-react';
 
 // Re-exports finos sobre o lucide-react, mantendo os nomes que o resto da
@@ -284,4 +285,8 @@ export function LinkIcon(props: SVGProps<SVGSVGElement>) {
 
 export function TypeIcon(props: SVGProps<SVGSVGElement>) {
   return <Type size={16} {...props} />;
+}
+
+export function FileIcon(props: SVGProps<SVGSVGElement>) {
+  return <File size={16} {...props} />;
 }

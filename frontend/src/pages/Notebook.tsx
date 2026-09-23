@@ -16,10 +16,13 @@ import {
   detectClassNow,
   uploadNotebookPhoto,
   deleteNotebookPhoto,
+  uploadNotebookAttachment,
+  deleteNotebookAttachment,
   searchNotebook,
 } from '../api/notebookService';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { BookOpenIcon, SearchIcon, XIcon } from '../components/UI/Icons';
+import { consumePendingNotebookEntry } from '../lib/pendingNotebookEntry';
 import type { NotebookSearchResult } from '../types/models';
 
 // Título nunca pode ficar vazio (o backend exige @IsNotEmpty) - sem aula
@@ -143,6 +146,15 @@ export default function Notebook() {
     setJustCreatedEntryId(null);
   };
 
+  // Vinda do Command Palette global (Cmd/Ctrl+K -> resultado de notebook):
+  // consome a entrada deixada em sessionStorage e abre-a, uma única vez,
+  // logo ao entrar na página - ver lib/pendingNotebookEntry.ts.
+  useEffect(() => {
+    const pending = consumePendingNotebookEntry();
+    if (pending) handleSelectSearchResult(pending);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const isSearchActive = searchQuery.trim().length > 0;
 
   return (
@@ -246,7 +258,7 @@ export default function Notebook() {
                       entry={selectedEntry}
                       suggestedClassNumber={nextClassNumber}
                       startInEditMode={selectedEntry.id === justCreatedEntryId}
-                      onSave={({ title, entryType, classNumber, textContent, drawingStrokes, tables, canvasShapes, canvasLinks, canvasTexts, date }) =>
+                      onSave={({ title, entryType, classNumber, textContent, drawingStrokes, tables, canvasShapes, canvasLinks, canvasTexts, usefulLinks, canvasHeight, date }) =>
                         updateEntry(selectedEntry.id, {
                           title,
                           entryType,
@@ -257,6 +269,8 @@ export default function Notebook() {
                           canvasShapes,
                           canvasLinks,
                           canvasTexts,
+                          usefulLinks,
+                          canvasHeight,
                           date,
                         })
                       }
@@ -273,6 +287,20 @@ export default function Notebook() {
                         selectEntry({
                           ...selectedEntry,
                           photos: selectedEntry.photos.filter((p) => p.id !== photoId),
+                        });
+                      }}
+                      onUploadAttachment={async (file) => {
+                        const attachment = await uploadNotebookAttachment(selectedEntry.id, file);
+                        selectEntry({
+                          ...selectedEntry,
+                          attachments: [...selectedEntry.attachments, attachment],
+                        });
+                      }}
+                      onDeleteAttachment={async (attachmentId) => {
+                        await deleteNotebookAttachment(selectedEntry.id, attachmentId);
+                        selectEntry({
+                          ...selectedEntry,
+                          attachments: selectedEntry.attachments.filter((a) => a.id !== attachmentId),
                         });
                       }}
                     />

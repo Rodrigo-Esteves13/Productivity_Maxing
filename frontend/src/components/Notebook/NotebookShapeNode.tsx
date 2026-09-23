@@ -198,19 +198,34 @@ export default function NotebookShapeNode({
       />
 
       {isSelected && !readOnly && !connectMode && (
-        <rect
-          x={shape.x + shape.width - HANDLE_SIZE / 2}
-          y={shape.y + shape.height - HANDLE_SIZE / 2}
-          width={HANDLE_SIZE}
-          height={HANDLE_SIZE}
-          rx={2}
-          fill="#7C3AED"
-          className="cursor-nwse-resize"
-          onPointerDown={handleResizePointerDown}
-          onPointerMove={handleResizePointerMove}
-          onPointerUp={handleResizePointerUp}
-          onPointerLeave={handleResizePointerUp}
-        />
+        <g>
+          {/* Alvo de toque maior que o quadrado visível - 14 unidades a
+              escalar para um ecrã de telemóvel dá uns 6px reais, bem
+              abaixo do mínimo tocável (~44px); esta área invisível de 30
+              unidades resolve isso sem mudar o aspeto no desktop. */}
+          <rect
+            x={shape.x + shape.width - 15}
+            y={shape.y + shape.height - 15}
+            width={30}
+            height={30}
+            fill="transparent"
+            pointerEvents="all"
+            className="cursor-nwse-resize"
+            onPointerDown={handleResizePointerDown}
+            onPointerMove={handleResizePointerMove}
+            onPointerUp={handleResizePointerUp}
+            onPointerLeave={handleResizePointerUp}
+          />
+          <rect
+            x={shape.x + shape.width - HANDLE_SIZE / 2}
+            y={shape.y + shape.height - HANDLE_SIZE / 2}
+            width={HANDLE_SIZE}
+            height={HANDLE_SIZE}
+            rx={2}
+            fill="#7C3AED"
+            pointerEvents="none"
+          />
+        </g>
       )}
     </g>
   );
