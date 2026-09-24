@@ -20,7 +20,8 @@ import { UpsertScheduleLinkDto } from './dto/upsert-schedule-link.dto';
 // apontamentos e fotos pessoais de aulas, não fotos de perfil. Tem de
 // existir no projeto Supabase com "Public bucket" DESLIGADO; o acesso é
 // sempre via signed URL de curta duração (ver attachSignedUrls).
-const NOTEBOOK_BUCKET = process.env.SUPABASE_NOTEBOOK_BUCKET ?? 'notebook-photos';
+const NOTEBOOK_BUCKET =
+  process.env.SUPABASE_NOTEBOOK_BUCKET ?? 'notebook-photos';
 
 // Tempo de vida do signed URL devolvido ao frontend - só precisa de
 // sobreviver ao carregamento da página de uma entrada, nunca fica
@@ -39,7 +40,8 @@ const ALLOWED_MIME_TO_EXT: Record<string, string> = {
 // sempre via signed URL, e sempre com download forçado (ver
 // addAttachment/attachSignedUrls) para nunca ser aberto inline no
 // browser.
-const ATTACHMENT_BUCKET = process.env.SUPABASE_NOTEBOOK_ATTACHMENTS_BUCKET ?? 'notebook-attachments';
+const ATTACHMENT_BUCKET =
+  process.env.SUPABASE_NOTEBOOK_ATTACHMENTS_BUCKET ?? 'notebook-attachments';
 
 // Formatos com magic bytes reais - detetados pelo conteúdo do ficheiro,
 // nunca pela extensão que o cliente diz que é (mesmo critério das
@@ -48,8 +50,10 @@ const ATTACHMENT_BUCKET = process.env.SUPABASE_NOTEBOOK_ATTACHMENTS_BUCKET ?? 'n
 const ATTACHMENT_BINARY_MIME_TO_EXT: Record<string, string> = {
   'application/pdf': 'pdf',
   'application/zip': 'zip',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+    'docx',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+    'pptx',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
 };
 
@@ -70,11 +74,13 @@ const ATTACHMENT_MAX_PER_ENTRY = 10;
 // addAttachment), por isso isto não é uma defesa contra path traversal,
 // é só higiene do nome mostrado.
 function sanitizeFileName(name: string): string {
-  return name
-    .replace(/[\\/]/g, '_')
-    // eslint-disable-next-line no-control-regex -- remover caracteres de controlo é o próprio objetivo desta regex, não uma apanhada sem querer.
-    .replace(/[\x00-\x1F\x7F"]/g, '')
-    .trim();
+  return (
+    name
+      .replace(/[\\/]/g, '_')
+      // eslint-disable-next-line no-control-regex -- remover caracteres de controlo é o próprio objetivo desta regex, não uma apanhada sem querer.
+      .replace(/[\x00-\x1F\x7F"]/g, '')
+      .trim()
+  );
 }
 
 // Heurística "isto parece texto ou binário": um NUL byte não aparece em
@@ -134,7 +140,11 @@ export class NotebookService {
   private async attachSignedUrls<
     T extends {
       photos: { id: string; storagePath: string }[];
-      attachments: { id: string; storagePath: string; originalFileName: string }[];
+      attachments: {
+        id: string;
+        storagePath: string;
+        originalFileName: string;
+      }[];
     },
   >(
     entry: T,
@@ -174,7 +184,11 @@ export class NotebookService {
         }),
       ),
     ]);
-    return { ...entry, photos: photosWithUrls, attachments: attachmentsWithUrls };
+    return {
+      ...entry,
+      photos: photosWithUrls,
+      attachments: attachmentsWithUrls,
+    };
   }
 
   async findAllForArea(userId: string, areaId: string) {
@@ -275,7 +289,9 @@ export class NotebookService {
         .from(NOTEBOOK_BUCKET)
         .remove(paths)
         .catch((err) =>
-          this.logger.warn(`Could not delete notebook photos from storage: ${err}`),
+          this.logger.warn(
+            `Could not delete notebook photos from storage: ${err}`,
+          ),
         );
     }
 
@@ -285,7 +301,9 @@ export class NotebookService {
         .from(ATTACHMENT_BUCKET)
         .remove(paths)
         .catch((err) =>
-          this.logger.warn(`Could not delete notebook attachments from storage: ${err}`),
+          this.logger.warn(
+            `Could not delete notebook attachments from storage: ${err}`,
+          ),
         );
     }
 
@@ -324,7 +342,9 @@ export class NotebookService {
     // deleteMany (não delete) porque não há garantia de que exista uma
     // partilha ativa - "parar de partilhar" quando já não há nada para
     // parar não deve dar 404, é um estado final igualmente válido.
-    await this.prisma.notebookShare.deleteMany({ where: { notebookEntryId: entryId } });
+    await this.prisma.notebookShare.deleteMany({
+      where: { notebookEntryId: entryId },
+    });
     return { shared: false, token: null };
   }
 
@@ -346,7 +366,8 @@ export class NotebookService {
         },
       },
     });
-    if (!share) throw new NotFoundException('This share link is invalid or was removed.');
+    if (!share)
+      throw new NotFoundException('This share link is invalid or was removed.');
 
     const { notebookEntry: entry } = share;
     const withUrls = await this.attachSignedUrls(entry);
@@ -389,20 +410,31 @@ export class NotebookService {
       .upload(path, file.buffer, { contentType: detected.mime, upsert: false });
 
     if (uploadError) {
-      this.logger.error('Error uploading notebook photo to Supabase', uploadError);
-      throw new BadRequestException('Could not upload the photo. Please try again.');
+      this.logger.error(
+        'Error uploading notebook photo to Supabase',
+        uploadError,
+      );
+      throw new BadRequestException(
+        'Could not upload the photo. Please try again.',
+      );
     }
 
     const nextPosition = entry.photos.length;
     const photo = await this.prisma.notebookPhoto.create({
-      data: { notebookEntryId: entryId, storagePath: path, position: nextPosition },
+      data: {
+        notebookEntryId: entryId,
+        storagePath: path,
+        position: nextPosition,
+      },
     });
 
     const { data: signedUrlData, error: signError } = await this.storage.storage
       .from(NOTEBOOK_BUCKET)
       .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
     if (signError) {
-      this.logger.warn(`Could not sign URL for new notebook photo: ${signError.message}`);
+      this.logger.warn(
+        `Could not sign URL for new notebook photo: ${signError.message}`,
+      );
     }
 
     return { ...photo, url: signedUrlData?.signedUrl ?? null };
@@ -421,14 +453,20 @@ export class NotebookService {
       .remove([photo.storagePath]);
     if (error) {
       this.logger.error('Error deleting notebook photo from Supabase', error);
-      throw new BadRequestException('Could not delete the photo. Please try again.');
+      throw new BadRequestException(
+        'Could not delete the photo. Please try again.',
+      );
     }
 
     await this.prisma.notebookPhoto.delete({ where: { id: photoId } });
     return { deleted: true };
   }
 
-  async addAttachment(userId: string, entryId: string, file: Express.Multer.File) {
+  async addAttachment(
+    userId: string,
+    entryId: string,
+    file: Express.Multer.File,
+  ) {
     const entry = await this.findOwnedEntryOrThrow(userId, entryId);
 
     if (entry.attachments.length >= ATTACHMENT_MAX_PER_ENTRY) {
@@ -456,7 +494,10 @@ export class NotebookService {
     let ext: string | undefined;
     if (detected) {
       ext = ATTACHMENT_BINARY_MIME_TO_EXT[detected.mime];
-    } else if (ATTACHMENT_TEXT_EXTENSIONS.has(claimedExt) && !looksLikeBinary(file.buffer)) {
+    } else if (
+      ATTACHMENT_TEXT_EXTENSIONS.has(claimedExt) &&
+      !looksLikeBinary(file.buffer)
+    ) {
       ext = claimedExt;
     }
 
@@ -475,8 +516,13 @@ export class NotebookService {
       });
 
     if (uploadError) {
-      this.logger.error('Error uploading notebook attachment to Supabase', uploadError);
-      throw new BadRequestException('Could not upload the file. Please try again.');
+      this.logger.error(
+        'Error uploading notebook attachment to Supabase',
+        uploadError,
+      );
+      throw new BadRequestException(
+        'Could not upload the file. Please try again.',
+      );
     }
 
     const attachment = await this.prisma.notebookAttachment.create({
@@ -491,15 +537,23 @@ export class NotebookService {
 
     const { data: signedUrlData, error: signError } = await this.storage.storage
       .from(ATTACHMENT_BUCKET)
-      .createSignedUrl(path, SIGNED_URL_TTL_SECONDS, { download: originalFileName });
+      .createSignedUrl(path, SIGNED_URL_TTL_SECONDS, {
+        download: originalFileName,
+      });
     if (signError) {
-      this.logger.warn(`Could not sign URL for new notebook attachment: ${signError.message}`);
+      this.logger.warn(
+        `Could not sign URL for new notebook attachment: ${signError.message}`,
+      );
     }
 
     return { ...attachment, url: signedUrlData?.signedUrl ?? null };
   }
 
-  async removeAttachment(userId: string, entryId: string, attachmentId: string) {
+  async removeAttachment(
+    userId: string,
+    entryId: string,
+    attachmentId: string,
+  ) {
     await this.findOwnedEntryOrThrow(userId, entryId);
 
     const attachment = await this.prisma.notebookAttachment.findFirst({
@@ -511,11 +565,18 @@ export class NotebookService {
       .from(ATTACHMENT_BUCKET)
       .remove([attachment.storagePath]);
     if (error) {
-      this.logger.error('Error deleting notebook attachment from Supabase', error);
-      throw new BadRequestException('Could not delete the file. Please try again.');
+      this.logger.error(
+        'Error deleting notebook attachment from Supabase',
+        error,
+      );
+      throw new BadRequestException(
+        'Could not delete the file. Please try again.',
+      );
     }
 
-    await this.prisma.notebookAttachment.delete({ where: { id: attachmentId } });
+    await this.prisma.notebookAttachment.delete({
+      where: { id: attachmentId },
+    });
     return { deleted: true };
   }
 
@@ -537,7 +598,12 @@ export class NotebookService {
     await this.assertAreaExists(dto.areaId);
 
     const existingForSubject = await this.prisma.areaScheduleLink.findUnique({
-      where: { userId_scheduleSubject: { userId, scheduleSubject: dto.scheduleSubject } },
+      where: {
+        userId_scheduleSubject: {
+          userId,
+          scheduleSubject: dto.scheduleSubject,
+        },
+      },
     });
     if (existingForSubject && existingForSubject.areaId !== dto.areaId) {
       throw new ConflictException(
@@ -557,7 +623,11 @@ export class NotebookService {
     }
 
     return this.prisma.areaScheduleLink.create({
-      data: { userId, areaId: dto.areaId, scheduleSubject: dto.scheduleSubject },
+      data: {
+        userId,
+        areaId: dto.areaId,
+        scheduleSubject: dto.scheduleSubject,
+      },
     });
   }
 
@@ -565,7 +635,8 @@ export class NotebookService {
     const existing = await this.prisma.areaScheduleLink.findFirst({
       where: { userId, areaId },
     });
-    if (!existing) throw new NotFoundException('No schedule link for this area.');
+    if (!existing)
+      throw new NotFoundException('No schedule link for this area.');
 
     await this.prisma.areaScheduleLink.delete({ where: { id: existing.id } });
     return { deleted: true };
@@ -645,6 +716,8 @@ export class NotebookService {
       );
     });
 
-    return Promise.all(matches.slice(0, 50).map((entry) => this.attachSignedUrls(entry)));
+    return Promise.all(
+      matches.slice(0, 50).map((entry) => this.attachSignedUrls(entry)),
+    );
   }
 }

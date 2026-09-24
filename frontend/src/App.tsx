@@ -4,19 +4,22 @@ import { AcademicProvider } from './context/AcademicContext';
 import OfflineBanner from './pwa/OfflineBanner';
 import AccessibilityEffects from './components/Accessibility/AccessibilityEffects';
 import MaintenanceGate from './components/Maintenance/MaintenanceGate';
+import AccountBlockedGate from './components/AccountBlocked/AccountBlockedGate';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 
 function App() {
   return (
     <ErrorBoundary>
       <MaintenanceGate>
-        <AuthProvider>
-          <AcademicProvider>
-            <AccessibilityEffects />
-            <OfflineBanner />
-            <AppRouter />
-          </AcademicProvider>
-        </AuthProvider>
+        <AccountBlockedGate>
+          <AuthProvider>
+            <AcademicProvider>
+              <AccessibilityEffects />
+              <OfflineBanner />
+              <AppRouter />
+            </AcademicProvider>
+          </AuthProvider>
+        </AccountBlockedGate>
       </MaintenanceGate>
     </ErrorBoundary>
   );

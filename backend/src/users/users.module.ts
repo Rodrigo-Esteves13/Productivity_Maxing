@@ -15,5 +15,9 @@ import { AccountStatusModule } from '../account-status/account-status.module';
   imports: [PrismaModule, AuthModule, AccountStatusModule],
   controllers: [UsersController],
   providers: [UsersService],
+  // Exportado para AppealsModule reaproveitar reactivateUser() no
+  // approve de um appeal (ver appeals.module.ts) - continua sem criar
+  // ciclo, nada aqui importa AppealsModule.
+  exports: [UsersService],
 })
 export class UsersModule {}

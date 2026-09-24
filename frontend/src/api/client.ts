@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { getCsrfToken, setCsrfToken } from './csrfStore';
 import { MAINTENANCE_EVENT } from '../lib/maintenanceEvents';
+import { ACCOUNT_BLOCKED_EVENT } from '../lib/accountBlockedEvents';
 
 // Create the base Axios instance
 const api = axios.create({
@@ -66,6 +67,19 @@ api.interceptors.response.use(
       window.dispatchEvent(
         new CustomEvent(MAINTENANCE_EVENT, { detail: error.response.data.message }),
       );
+      return Promise.reject(error);
+    }
+
+    // Conta ficou SUSPENDED/BANNED a meio de uma sessão já autenticada
+    // (ver JwtStrategy no backend - isto corre em qualquer pedido, não só
+    // no login). Ao contrário do 401 genérico abaixo, NÃO limpamos o CSRF
+    // nem mandamos para /login - o cookie de sessão continua válido para
+    // JwtBlockedAwareGuard, e é exatamente isso que AccountBlockedGate
+    // precisa para o próprio ecrã de bloqueio conseguir chamar
+    // GET /account-status/me e POST /appeals. (O caso "bloqueado logo no
+    // login" é diferente - não passa por aqui, ver Login.tsx.)
+    if (status === 401 && error.response?.data?.code === 'ACCOUNT_BLOCKED') {
+      window.dispatchEvent(new CustomEvent(ACCOUNT_BLOCKED_EVENT));
       return Promise.reject(error);
     }
 

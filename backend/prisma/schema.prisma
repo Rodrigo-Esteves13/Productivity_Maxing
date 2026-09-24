@@ -40,6 +40,11 @@ enum UserStatus {
   BANNED
 }
 
+enum AppealResolution {
+  APPROVED
+  DENIED
+}
+
 // TASKS: can only do what the agent/task automation already needed
 // (tasks, agent config). ADMIN: can also manage the global catalog
 // (Areas, TaskTypes) via API key, same as an admin's browser session.
@@ -191,6 +196,13 @@ model User {
   statusUpdatedBy       User?      @relation("UserStatusChangedBy", fields: [statusUpdatedByUserId], references: [id], onDelete: SetNull)
   statusChangesMade     User[]     @relation("UserStatusChangedBy")
 
+  // Pedidos de recurso contra a própria suspensão/ban (AccountBlockedPage
+  // no frontend) - ver o modelo UserAppeal. appealsResolved é o lado do
+  // ADMIN que decidiu (approve/deny), nunca a mesma pessoa que "appeals".
+  appeals         UserAppeal[] @relation("UserAppeals")
+  appealsResolved UserAppeal[] @relation("UserAppealResolutions")
+
+
   // Id do utilizador no Supabase Auth (auth.users), só existe para contas
   // email+password. Precisamos disto para apagar a credencial real no
   // deleteAccount - sem isto, apagar o User "espelho" não apaga o login,
@@ -253,6 +265,38 @@ model User {
   notebookEntries   NotebookEntry[]
   notebookShares    NotebookShare[]
 }
+
+/// Recurso submetido pelo próprio utilizador contra a sua suspensão/ban
+/// (ver AccountBlockedPage no frontend e AppealsService no backend).
+/// Alcançável mesmo sem sessão normal - ver JwtBlockedAwareStrategy sobre
+/// como um utilizador BANNED/SUSPENDED consegue autenticar-se só para
+/// isto, sem desbloquear mais nenhuma rota da app.
+model UserAppeal {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation("UserAppeals", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Snapshot do status/motivo no momento da submissão - para o pedido
+  // continuar a fazer sentido a um admin mesmo que statusReason mude
+  // entretanto (ex: segunda ofensa antes de este appeal ser revisto).
+  statusAtSubmission UserStatus
+  reasonAtSubmission String?
+  message            String     @db.Text
+
+  createdAt DateTime @default(now())
+
+  // Tudo null enquanto pendente - AppealsService.create() recusa uma
+  // segunda submissão enquanto existir uma com resolvedAt null.
+  resolution       AppealResolution?
+  resolutionNote   String?
+  resolvedAt       DateTime?
+  resolvedByUserId String?
+  resolvedBy       User?             @relation("UserAppealResolutions", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([resolvedAt])
+}
+
 
 /// Um "dashboard" académico do user (ex: "Secundário", "Licenciatura em
 /// Engenharia Informática"). Cada user pode ter vários, para não misturar

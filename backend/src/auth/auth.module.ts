@@ -9,6 +9,7 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { GithubStrategy } from './strategies/github.strategy';
 import { DiscordStrategy } from './strategies/discord.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { JwtBlockedAwareStrategy } from './strategies/jwt-blocked-aware.strategy';
 import { ApiKeyStrategy } from './strategies/api-key.strategy';
 import { GoogleCalendarLinkGuard } from './guards/google-calendar-link.guard';
 import { AccountStatusModule } from '../account-status/account-status.module';
@@ -28,6 +29,7 @@ import { AccountStatusModule } from '../account-status/account-status.module';
   providers: [
     AuthService,
     JwtStrategy,
+    JwtBlockedAwareStrategy,
     GoogleStrategy,
     GithubStrategy,
     DiscordStrategy,

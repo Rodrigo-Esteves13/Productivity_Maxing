@@ -27,9 +27,9 @@ export class ApiKeyStrategy extends PassportStrategy(
     // Mesmo efeito imediato de ban/suspend que o JwtStrategy - uma API
     // Key continua tecnicamente válida (não expira como o cookie), por
     // isso sem isto seria uma forma de contornar um ban.
-    const { blocked, reason } = this.accountStatus.isBlocked(result.user.id);
+    const { blocked, message } = this.accountStatus.isBlocked(result.user.id);
     if (blocked) {
-      throw new UnauthorizedException(reason);
+      throw new UnauthorizedException(message);
     }
 
     // apiKeyScope only ever gets set here, on the API-key path - a normal
