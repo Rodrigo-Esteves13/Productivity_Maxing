@@ -217,6 +217,36 @@ export interface User {
   tasks?: Task[];
 }
 
+export type AppealResolution = 'APPROVED' | 'DENIED';
+
+export interface AppealSummary {
+  id: string;
+  createdAt: string;
+  resolution: AppealResolution | null;
+  resolutionNote: string | null;
+  resolvedAt: string | null;
+}
+
+// GET /account-status/me - alimenta o AccountBlockedPage.
+export interface AccountStatusInfo {
+  status: UserStatus;
+  suspendedUntil: string | null;
+  statusReason: string | null;
+  statusUpdatedAt: string | null;
+  appeal: AppealSummary | null;
+}
+
+// Vista de admin (GET /appeals) - além de tudo o que AppealSummary já
+// tem, inclui quem submeteu e quem resolveu.
+export interface AppealAdmin extends AppealSummary {
+  message: string;
+  statusAtSubmission: UserStatus;
+  reasonAtSubmission: string | null;
+  user: { id: string; name: string | null; email: string };
+  resolvedBy: { id: string; name: string | null; email: string } | null;
+}
+
+
 export interface AcademicProgram {
   id: string;
   userId: string;

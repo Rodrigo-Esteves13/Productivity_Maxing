@@ -1,6 +1,20 @@
 // src/api/userService.ts
 import api from './client';
-import type { User, Area, Task, TaskMeta, Role, ApiKeySummary, ApiKeyScope, ImportTaskRow, ImportTasksResult, CommuteMode } from '../types/models';
+import type {
+  User,
+  Area,
+  Task,
+  TaskMeta,
+  Role,
+  ApiKeySummary,
+  ApiKeyScope,
+  ImportTaskRow,
+  ImportTasksResult,
+  CommuteMode,
+  AccountStatusInfo,
+  AppealAdmin,
+  AppealResolution,
+} from '../types/models';
 
 // AUTH ENDPOINTS
 // Login/registo já não devolvem o JWT no corpo - o backend define-o num
@@ -296,4 +310,52 @@ export const createApiKey = async (
 
 export const revokeApiKey = async (id: string): Promise<void> => {
   await api.delete(`/auth/api-keys/${id}`);
+};
+
+// ACCOUNT STATUS / APPEALS (AccountBlockedPage)
+// bearerToken só vem preenchido no caso "bloqueado logo no login" - aí
+// não existe cookie de sessão nenhum (o login em si falhou), o appealToken
+// devolvido nesse erro (ver AuthService.accountBlockedResponse) é enviado
+// via header em vez disso. No caso "bloqueado a meio de uma sessão", vem
+// undefined e o cookie normal (withCredentials, já default em `api`)
+// resolve sozinho - ver JwtBlockedAwareStrategy no backend.
+const bearerConfig = (bearerToken?: string) =>
+  bearerToken ? { headers: { Authorization: `Bearer ${bearerToken}` } } : undefined;
+
+export const getMyAccountStatus = async (bearerToken?: string): Promise<AccountStatusInfo> => {
+  const response = await api.get<AccountStatusInfo>(
+    '/account-status/me',
+    bearerConfig(bearerToken),
+  );
+  return response.data;
+};
+
+export const submitAppeal = async (
+  message: string,
+  bearerToken?: string,
+): Promise<{ id: string; createdAt: string }> => {
+  const response = await api.post<{ id: string; createdAt: string }>(
+    '/appeals',
+    { message },
+    bearerConfig(bearerToken),
+  );
+  return response.data;
+};
+
+// Admin only (Users page) - status defaults a 'pending' no backend.
+export const getAppeals = async (status: 'pending' | 'all' = 'pending'): Promise<AppealAdmin[]> => {
+  const response = await api.get<AppealAdmin[]>('/appeals', { params: { status } });
+  return response.data;
+};
+
+export const resolveAppeal = async (
+  id: string,
+  resolution: AppealResolution,
+  resolutionNote?: string,
+): Promise<AppealAdmin> => {
+  const response = await api.patch<AppealAdmin>(`/appeals/${id}/resolve`, {
+    resolution,
+    resolutionNote,
+  });
+  return response.data;
 };

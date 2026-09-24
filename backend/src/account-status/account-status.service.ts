@@ -50,8 +50,19 @@ export class AccountStatusService implements OnModuleInit {
    * mesmo antes de a BD ser corrigida - reactivateIfExpired() escreve
    * isso na BD de forma assíncrona (fire-and-forget), para este caminho
    * nunca esperar por um UPDATE.
+   *
+   * "code" segue o mesmo padrão de MaintenanceGuard/MAINTENANCE_MODE - é
+   * o que o interceptor do axios no frontend usa para mostrar
+   * AccountBlockedPage em vez de simplesmente deslogar a pessoa. Ver
+   * AuthService.accountBlockedResponse() para o mesmo código do lado do
+   * login (esta cache não tem statusReason/appealToken - o frontend
+   * busca isso a GET /account-status/me, que já tem a sessão/cookie).
    */
-  isBlocked(userId: string): { blocked: boolean; reason?: string } {
+  isBlocked(userId: string): {
+    blocked: boolean;
+    code?: 'ACCOUNT_BLOCKED';
+    message?: string;
+  } {
     const info = this.cache.get(userId);
     if (!info) return { blocked: false };
 
@@ -64,11 +75,16 @@ export class AccountStatusService implements OnModuleInit {
       }
       return {
         blocked: true,
-        reason: 'Your account is temporarily suspended.',
+        code: 'ACCOUNT_BLOCKED',
+        message: 'Your account is temporarily suspended.',
       };
     }
 
-    return { blocked: true, reason: 'Your account has been banned.' };
+    return {
+      blocked: true,
+      code: 'ACCOUNT_BLOCKED',
+      message: 'Your account has been banned.',
+    };
   }
 
   private async reactivateIfExpired(userId: string): Promise<void> {

@@ -22,6 +22,7 @@ import { ScheduleModule } from './schedule/schedule.module';
 import { StudyPlanModule } from './study-plan/study-plan.module';
 import { NotebookModule } from './notebook/notebook.module';
 import { BannedIpsModule } from './banned-ips/banned-ips.module';
+import { AppealsModule } from './appeals/appeals.module';
 import { BannedIpGuard } from './common/guards/banned-ip.guard';
 import { CsrfGuard } from './auth/guards/csrf.guard';
 import { LoggingThrottlerGuard } from './common/guards/logging-throttler.guard';
@@ -56,6 +57,7 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     StudyPlanModule,
     NotebookModule,
     BannedIpsModule,
+    AppealsModule,
   ],
   controllers: [AppController],
   providers: [

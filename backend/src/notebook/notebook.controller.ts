@@ -14,7 +14,12 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Options as MulterOptions } from 'multer';
 import 'multer';
@@ -45,7 +50,9 @@ export class NotebookController {
   constructor(private readonly notebookService: NotebookService) {}
 
   @Get('entries')
-  @ApiOperation({ summary: 'Lists notebook entries for an area, newest first.' })
+  @ApiOperation({
+    summary: 'Lists notebook entries for an area, newest first.',
+  })
   @ApiQuery({ name: 'areaId', required: true })
   findAllForArea(
     @CurrentUser() user: AuthenticatedUser,
@@ -93,7 +100,9 @@ export class NotebookController {
   // toda tem @UseGuards(JwtAuthGuard) e um link de partilha é, por
   // definição, para quem não tem sessão nenhuma.
   @Get('entries/:id/share')
-  @ApiOperation({ summary: 'Whether this entry currently has an active share link.' })
+  @ApiOperation({
+    summary: 'Whether this entry currently has an active share link.',
+  })
   getShareStatus(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
@@ -103,7 +112,8 @@ export class NotebookController {
 
   @Post('entries/:id/share')
   @ApiOperation({
-    summary: 'Creates (or returns the existing) read-only share link for this entry.',
+    summary:
+      'Creates (or returns the existing) read-only share link for this entry.',
   })
   createShare(
     @CurrentUser() user: AuthenticatedUser,
@@ -113,7 +123,10 @@ export class NotebookController {
   }
 
   @Delete('entries/:id/share')
-  @ApiOperation({ summary: 'Stops sharing this entry - the previous link stops working immediately.' })
+  @ApiOperation({
+    summary:
+      'Stops sharing this entry - the previous link stops working immediately.',
+  })
   revokeShare(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
@@ -146,7 +159,9 @@ export class NotebookController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     if (!file) {
-      throw new BadRequestException('No file was sent (field name must be "photo").');
+      throw new BadRequestException(
+        'No file was sent (field name must be "photo").',
+      );
     }
     return this.notebookService.addPhoto(user.id, id, file);
   }
@@ -184,7 +199,9 @@ export class NotebookController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     if (!file) {
-      throw new BadRequestException('No file was sent (field name must be "file").');
+      throw new BadRequestException(
+        'No file was sent (field name must be "file").',
+      );
     }
     return this.notebookService.addAttachment(user.id, id, file);
   }
@@ -243,7 +260,7 @@ export class NotebookController {
   @Get('search')
   @ApiOperation({
     summary:
-      'Free-text search across all of the caller\'s notebook entries - matches title, content, subject name and formatted date (dd/mm/yyyy).',
+      "Free-text search across all of the caller's notebook entries - matches title, content, subject name and formatted date (dd/mm/yyyy).",
   })
   @ApiQuery({ name: 'q', required: true })
   search(@CurrentUser() user: AuthenticatedUser, @Query('q') q: string) {

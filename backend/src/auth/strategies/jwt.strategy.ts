@@ -43,9 +43,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     // 7 dias, ver JwtModule.register em auth.module.ts). Consulta uma
     // cache em memória (ver AccountStatusService), não a BD - isto corre
     // em TODOS os pedidos autenticados.
-    const { blocked, reason } = this.accountStatus.isBlocked(payload.sub);
+    const { blocked, code, message } = this.accountStatus.isBlocked(
+      payload.sub,
+    );
     if (blocked) {
-      throw new UnauthorizedException(reason);
+      throw new UnauthorizedException({ code, message });
     }
 
     // fica disponível como req.user em qualquer rota protegida por JwtAuthGuard
