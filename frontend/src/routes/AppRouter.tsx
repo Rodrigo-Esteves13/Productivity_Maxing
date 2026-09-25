@@ -35,6 +35,7 @@ const Agent = lazy(() => import('../pages/Agent'));
 const Areas = lazy(() => import('../pages/Areas'));
 const Users = lazy(() => import('../pages/Users'));
 const Security = lazy(() => import('../pages/Security'));
+const Appeals = lazy(() => import('../pages/Appeals'));
 const TaskTypes = lazy(() => import('../pages/TaskTypes'));
 const PrivacyPolicy = lazy(() => import('../pages/PrivacyPolicy'));
 const SharedNotebookEntry = lazy(() => import('../pages/SharedNotebookEntry'));
@@ -102,6 +103,7 @@ export default function AppRouter() {
             <Route path="/areas" element={<Areas />} />
             <Route path="/users" element={<Users />} />
             <Route path="/security" element={<Security />} />
+            <Route path="/appeals" element={<Appeals />} />
             <Route path="/task-types" element={<TaskTypes />} />
           </Route>
 

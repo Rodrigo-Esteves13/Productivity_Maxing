@@ -68,6 +68,9 @@ export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileM
           <Link to="/security" onClick={onNavigate} className={getAdminLinkClass('/security')}>
             Security
           </Link>
+          <Link to="/appeals" onClick={onNavigate} className={getAdminLinkClass('/appeals')}>
+            Appeals
+          </Link>
         </>
       )}
     </div>

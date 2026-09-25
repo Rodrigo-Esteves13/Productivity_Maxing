@@ -1,32 +1,9 @@
-import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsIn, IsOptional, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 
-// Não usamos PartialType/PaginationDto genérico porque isto é a única
-// listagem paginada do backend até agora - criar uma abstração para um
-// único uso só complicava sem ganho nenhum.
-export class QuerySecurityLogsDto {
-  @ApiPropertyOptional({
-    example: 0,
-    description: 'How many records to skip (for pagination)',
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  skip?: number = 0;
-
-  @ApiPropertyOptional({
-    example: 25,
-    description: 'How many records to return (max 100)',
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  take?: number = 25;
-
+// skip/take vêm de PaginationDto - também usado por QueryAppealsDto.
+export class QuerySecurityLogsDto extends PaginationDto {
   @ApiPropertyOptional({
     description: 'Filter by exact IP',
     example: '203.0.113.7',

@@ -14,6 +14,7 @@ import type {
   AccountStatusInfo,
   AppealAdmin,
   AppealResolution,
+  PaginatedAppeals,
 } from '../types/models';
 
 // AUTH ENDPOINTS
@@ -342,9 +343,15 @@ export const submitAppeal = async (
   return response.data;
 };
 
-// Admin only (Users page) - status defaults a 'pending' no backend.
-export const getAppeals = async (status: 'pending' | 'all' = 'pending'): Promise<AppealAdmin[]> => {
-  const response = await api.get<AppealAdmin[]>('/appeals', { params: { status } });
+// Admin only (Appeals page) - status defaults a 'pending' no backend.
+export interface GetAppealsQuery {
+  status?: 'pending' | 'all';
+  skip?: number;
+  take?: number;
+}
+
+export const getAppeals = async (query: GetAppealsQuery = {}): Promise<PaginatedAppeals> => {
+  const response = await api.get<PaginatedAppeals>('/appeals', { params: query });
   return response.data;
 };
 

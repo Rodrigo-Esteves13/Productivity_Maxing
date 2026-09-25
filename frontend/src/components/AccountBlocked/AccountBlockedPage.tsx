@@ -23,6 +23,12 @@ type LoadState =
   | { status: 'error' }
   | { status: 'loaded'; data: AccountStatusInfo };
 
+// Mesmo intervalo do poll em AccountBlockedGate.tsx - aqui é o lado "já
+// estou no ecrã de bloqueio", para uma appeal resolvida (ou o
+// suspend/ban ser levantado diretamente) aparecer sozinha, sem precisar
+// de refresh manual.
+const STATUS_POLL_INTERVAL_MS = 30000;
+
 function formatDate(value: string | null): string {
   if (!value) return 'an unknown date';
   return new Date(value).toLocaleString();
@@ -50,9 +56,32 @@ export default function AccountBlockedPage({
     }
   }, [bearerToken]);
 
+  // Same request as fetchStatus, but doesn't flash the "Loading
+  // details..." state on every tick - used by the background poll below,
+  // where the screen already has content on it and a refresh every 30s
+  // shouldn't blank it out. Failures are ignored: this is a background
+  // refresh, the manual "Try again" path already covers real errors.
+  const refreshSilently = useCallback(async () => {
+    try {
+      const data = await getMyAccountStatus(bearerToken);
+      setLoad({ status: 'loaded', data });
+    } catch {
+      // ignore - next tick tries again
+    }
+  }, [bearerToken]);
+
   useEffect(() => {
     fetchStatus();
   }, [fetchStatus]);
+
+  // While still restricted, poll in the background so a resolved appeal
+  // (or the restriction being lifted outright) shows up on its own
+  // instead of requiring a manual reload.
+  useEffect(() => {
+    if (load.status !== 'loaded' || load.data.status === 'ACTIVE') return;
+    const interval = setInterval(refreshSilently, STATUS_POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [load, refreshSilently]);
 
   const handleLogout = async () => {
     try {
@@ -75,6 +104,10 @@ export default function AccountBlockedPage({
     try {
       const result = await submitAppeal(message.trim(), bearerToken);
       setJustSubmittedAt(result.createdAt);
+      // Catches the server up quickly so `data.appeal` reflects the new
+      // appeal - see AccountBlockedDetails below for why that matters
+      // once the background poll starts running.
+      refreshSilently();
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       const backendMessage = (
@@ -172,15 +205,18 @@ function AccountBlockedDetails({
 }: DetailsProps) {
   const isBanned = data.status === 'BANNED';
 
-  // Um appeal "em vigor" é ou o que acabou de ser submetido nesta sessão
-  // (justSubmittedAt), ou o mais recente vindo do backend desde que ainda
-  // não tenha sido resolvido. Uma vez resolvido - sobretudo DENIED - o
-  // formulário volta a aparecer, para a pessoa poder tentar de novo.
-  const pendingAppeal = justSubmittedAt
-    ? { createdAt: justSubmittedAt }
-    : data.appeal && !data.appeal.resolvedAt
+  // Um appeal "em vigor" é o que o backend já confirma como não resolvido
+  // (data.appeal), com justSubmittedAt só como um fallback otimista para
+  // a janela curta entre o submit e o refreshSilently que o segue - ver
+  // handleSubmit. Sem essa ordem de prioridade, o poll em segundo plano
+  // nunca conseguiria mostrar uma resolução: justSubmittedAt continuaria
+  // a "ganhar" para sempre depois de o utilizador submeter uma vez.
+  const pendingAppeal =
+    data.appeal && !data.appeal.resolvedAt
       ? data.appeal
-      : null;
+      : !data.appeal && justSubmittedAt
+        ? { createdAt: justSubmittedAt }
+        : null;
   const resolvedAppeal = !pendingAppeal && data.appeal?.resolvedAt ? data.appeal : null;
 
   return (

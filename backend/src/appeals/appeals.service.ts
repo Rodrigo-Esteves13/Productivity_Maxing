@@ -5,9 +5,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
-import { AppealResolution, UserStatus } from '@prisma/client';
+import { AppealResolution, Prisma, UserStatus } from '@prisma/client';
 import { CreateAppealDto } from './dto/create-appeal.dto';
 import { ResolveAppealDto } from './dto/resolve-appeal.dto';
+import { QueryAppealsDto } from './dto/query-appeals.dto';
 
 const APPEAL_ADMIN_SELECT = {
   id: true,
@@ -90,13 +91,28 @@ export class AppealsService {
     });
   }
 
-  /** ADMIN only - ver o guard no controller. Mais recentes primeiro. */
-  findAll(onlyPending: boolean) {
-    return this.prisma.userAppeal.findMany({
-      where: onlyPending ? { resolvedAt: null } : {},
-      orderBy: { createdAt: 'desc' },
-      select: APPEAL_ADMIN_SELECT,
-    });
+  /**
+   * ADMIN only - ver o guard no controller. Mais recentes primeiro,
+   * paginado por skip/take (mesmo padrão do SecurityLogsService.findAll,
+   * incluindo o count numa única transação para não haver total
+   * dessincronizado da página devolvida sob concorrência).
+   */
+  async findAll(query: QueryAppealsDto) {
+    const where: Prisma.UserAppealWhereInput =
+      query.status !== 'all' ? { resolvedAt: null } : {};
+
+    const [total, appeals] = await this.prisma.$transaction([
+      this.prisma.userAppeal.count({ where }),
+      this.prisma.userAppeal.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: query.skip ?? 0,
+        take: query.take ?? 25,
+        select: APPEAL_ADMIN_SELECT,
+      }),
+    ]);
+
+    return { total, skip: query.skip ?? 0, take: query.take ?? 25, appeals };
   }
 
   /**
