@@ -459,7 +459,12 @@ export default function NotebookCanvas({
             // Draw/Eraser/Connect), o <svg> continua a ganhar o foco
             // normalmente, para o Delete do teclado funcionar.
             if (tool === 'text' && e.target === svgRef.current) return;
-            svgRef.current?.focus();
+            // preventScroll: sem isto, o browser tenta trazer o <svg>
+            // (que pode ser bem mais alto que o ecrã, é uma whiteboard
+            // que cresce) inteiro para a vista sempre que ganha foco -
+            // dava um scroll para baixo inesperado a cada forma nova
+            // desenhada, mesmo sem a área atual sair do ecrã.
+            svgRef.current?.focus({ preventScroll: true });
           }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -625,7 +630,12 @@ function TextEditOverlay({ item, svgRef, onChangeText, onCommit }: TextEditOverl
   // pode competir com o foco por omissão do browser no <svg> (tabIndex)
   // - era essa corrida que fazia a caixa falhar de vez em quando.
   useEffect(() => {
-    inputRef.current?.focus();
+    // preventScroll aqui pelo mesmo motivo do svgRef.focus() acima -
+    // este <input> é posicionado sobre um ponto do svg que pode estar
+    // fora da vista atual, e sem isto o browser desce a página até
+    // conseguir ver o <input> todo, não só a área onde se está a
+    // escrever.
+    inputRef.current?.focus({ preventScroll: true });
   }, []);
 
   return (

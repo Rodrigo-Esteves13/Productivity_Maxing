@@ -16,6 +16,7 @@ export default function Appeals() {
     isLoading,
     error,
     resolvingId,
+    feedback,
     goToNextPage,
     goToPrevPage,
     handleResolve,
@@ -27,6 +28,18 @@ export default function Appeals() {
         title="Appeals"
         description="Suspended and banned users waiting on a decision, most recently submitted first."
       />
+
+      {feedback && (
+        <div
+          className={`mb-4 rounded-lg border p-3 text-sm ${
+            feedback.type === 'success'
+              ? 'border-emerald-800 bg-emerald-950/50 text-emerald-300'
+              : 'border-red-500 bg-red-900/50 text-red-200'
+          }`}
+        >
+          {feedback.message}
+        </div>
+      )}
 
       {isLoading ? (
         <TableSkeleton rows={4} columns={1} />
