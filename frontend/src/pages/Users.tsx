@@ -7,7 +7,6 @@ import TableSkeleton from '../components/UI/TableSkeleton';
 import UsersTable from '../components/Users/UsersTable';
 import UserEditForm from '../components/Users/UserEditForm';
 import UserStatusModal from '../components/Users/UserStatusModal';
-import AppealsPanel from '../components/Users/AppealsPanel';
 import { useAuth } from '../context/useAuth';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useUsersPage } from '../hooks/useUsersPage';
@@ -42,8 +41,6 @@ export default function Users() {
         title="User Management"
         description="Area exclusive to Administrators to view, edit, and export or delete user accounts."
       />
-
-      <AppealsPanel />
 
       {isLoading ? (
         <TableSkeleton rows={6} columns={6} />

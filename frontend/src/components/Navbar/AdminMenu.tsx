@@ -21,6 +21,7 @@ const ADMIN_LINKS: AdminLink[] = [
   { to: '/users', label: 'Users' },
   { to: '/task-types', label: 'Task Types' },
   { to: '/security', label: 'Security' },
+  { to: '/appeals', label: 'Appeals' },
 ];
 
 export default function AdminMenu({ currentPath }: AdminMenuProps) {

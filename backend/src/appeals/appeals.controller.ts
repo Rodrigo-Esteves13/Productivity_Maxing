@@ -14,13 +14,13 @@ import {
   ApiOperation,
   ApiBearerAuth,
   ApiParam,
-  ApiQuery,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Role } from '@prisma/client';
 import { AppealsService } from './appeals.service';
 import { CreateAppealDto } from './dto/create-appeal.dto';
 import { ResolveAppealDto } from './dto/resolve-appeal.dto';
+import { QueryAppealsDto } from './dto/query-appeals.dto';
 import { JwtBlockedAwareGuard } from '../auth/guards/jwt-blocked-aware-auth.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -53,15 +53,9 @@ export class AppealsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Lists appeals (Admin only)' })
-  @ApiQuery({
-    name: 'status',
-    required: false,
-    enum: ['pending', 'all'],
-    description: 'Defaults to "pending" (unresolved only).',
-  })
-  findAll(@Query('status') status?: 'pending' | 'all') {
-    return this.appealsService.findAll(status !== 'all');
+  @ApiOperation({ summary: 'Lists appeals (Admin only), paginated' })
+  findAll(@Query() query: QueryAppealsDto) {
+    return this.appealsService.findAll(query);
   }
 
   @Patch(':id/resolve')

@@ -32,6 +32,7 @@ const NAV_COMMANDS: NavCommand[] = [
   { id: 'nav-users', label: 'Users', path: '/users', adminOnly: true },
   { id: 'nav-task-types', label: 'Task Types', path: '/task-types', adminOnly: true },
   { id: 'nav-security', label: 'Security', path: '/security', adminOnly: true },
+  { id: 'nav-appeals', label: 'Appeals', path: '/appeals', adminOnly: true },
 ];
 
 const MAX_TASK_RESULTS = 6;

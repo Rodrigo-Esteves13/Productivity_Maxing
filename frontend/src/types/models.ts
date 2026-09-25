@@ -246,6 +246,15 @@ export interface AppealAdmin extends AppealSummary {
   resolvedBy: { id: string; name: string | null; email: string } | null;
 }
 
+// GET /appeals - mesma forma paginada que PaginatedSecurityLogs.
+export interface PaginatedAppeals {
+  total: number;
+  skip: number;
+  take: number;
+  appeals: AppealAdmin[];
+}
+
+
 
 export interface AcademicProgram {
   id: string;

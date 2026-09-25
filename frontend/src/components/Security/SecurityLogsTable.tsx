@@ -1,6 +1,6 @@
 import SecurityLogsTableHeader from './SecurityLogsTableHeader';
 import SecurityLogRow from './SecurityLogRow';
-import Button from '../UI/Button';
+import Pagination from '../UI/Pagination';
 import type { SecurityLog } from '../../types/models';
 
 interface SecurityLogsTableProps {
@@ -24,9 +24,6 @@ export default function SecurityLogsTable({
   onBanIp,
   bannedIpSet,
 }: SecurityLogsTableProps) {
-  const rangeStart = total === 0 ? 0 : skip + 1;
-  const rangeEnd = Math.min(skip + pageSize, total);
-
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
       <div className="overflow-x-auto">
@@ -53,26 +50,9 @@ export default function SecurityLogsTable({
         </table>
       </div>
 
-      {total > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-neutral-800 text-sm text-neutral-400">
-          <span>
-            Showing {rangeStart}-{rangeEnd} of {total}
-          </span>
-          <div className="flex gap-2">
-            <Button type="button" variant="secondary" onClick={onPrevPage} disabled={skip === 0}>
-              Previous
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onNextPage}
-              disabled={skip + pageSize >= total}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
+      <div className="border-t border-neutral-800">
+        <Pagination total={total} skip={skip} pageSize={pageSize} onNextPage={onNextPage} onPrevPage={onPrevPage} />
+      </div>
     </div>
   );
 }
