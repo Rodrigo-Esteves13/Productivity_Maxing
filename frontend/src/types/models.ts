@@ -228,12 +228,21 @@ export interface AppealSummary {
 }
 
 // GET /account-status/me - alimenta o AccountBlockedPage.
+export interface AppealAvailability {
+  appealsUsed: number;
+  maxAppeals: number;
+  nextAppealAllowedAt: string | null;
+  appealsExhausted: boolean;
+}
+
 export interface AccountStatusInfo {
   status: UserStatus;
   suspendedUntil: string | null;
   statusReason: string | null;
   statusUpdatedAt: string | null;
   appeal: AppealSummary | null;
+  // null para contas ACTIVE - ver AccountStatusController.getMyStatus.
+  appealAvailability: AppealAvailability | null;
 }
 
 // Vista de admin (GET /appeals) - além de tudo o que AppealSummary já

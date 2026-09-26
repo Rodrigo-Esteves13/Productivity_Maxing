@@ -1,6 +1,8 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
+import { UserStatus } from '@prisma/client';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
+import { AccountStatusService } from './account-status.service';
 import { JwtBlockedAwareGuard } from '../auth/guards/jwt-blocked-aware-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
@@ -8,7 +10,10 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 @ApiTags('Account status')
 @Controller('account-status')
 export class AccountStatusController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accountStatus: AccountStatusService,
+  ) {}
 
   // Único consumidor deste endpoint: AccountBlockedPage no frontend - o
   // ecrã que substitui a app inteira quando a conta está SUSPENDED/
@@ -48,6 +53,14 @@ export class AccountStatusController {
       }),
     ]);
 
-    return { ...account, appeal: latestAppeal };
+    // Só vale a pena calcular isto para quem está mesmo restringido - a
+    // esmagadora maioria dos pedidos a este endpoint é de contas ACTIVE
+    // (ver AccountBlockedGate.tsx, que faz poll disto a toda a gente).
+    const appealAvailability =
+      account.status === UserStatus.ACTIVE
+        ? null
+        : await this.accountStatus.getAppealAvailability(user.id, account);
+
+    return { ...account, appeal: latestAppeal, appealAvailability };
   }
 }
