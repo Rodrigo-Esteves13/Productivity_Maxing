@@ -46,12 +46,12 @@ export default function AppealRow({ appeal, isResolving, onResolve }: AppealRowP
       </div>
 
       {appeal.reasonAtSubmission && (
-        <p className="mt-3 text-xs text-neutral-500">
+        <p className="mt-3 text-xs text-neutral-500 break-words">
           Original reason: {appeal.reasonAtSubmission}
         </p>
       )}
 
-      <p className="mt-2 text-sm text-neutral-300 whitespace-pre-wrap leading-relaxed">
+      <p className="mt-2 text-sm text-neutral-300 whitespace-pre-wrap break-words leading-relaxed">
         {appeal.message}
       </p>
       <p className="mt-2 text-xs text-neutral-600">

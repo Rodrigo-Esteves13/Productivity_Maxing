@@ -493,7 +493,7 @@ function NotebookEntryEditorForm({
             )}
           </div>
         ) : (
-          <div className="whitespace-pre-wrap rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-200">
+          <div className="whitespace-pre-wrap break-words rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-200">
             {textContent || <span className="text-neutral-600">No notes.</span>}
           </div>
         )}

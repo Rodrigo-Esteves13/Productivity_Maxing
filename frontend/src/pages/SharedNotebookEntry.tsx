@@ -88,7 +88,7 @@ function SharedNotebookEntryView({ entry }: { entry: SharedNotebookEntryData }) 
         </div>
 
         {entry.textContent && (
-          <div className="whitespace-pre-wrap rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-200">
+          <div className="whitespace-pre-wrap break-words rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-200">
             {entry.textContent}
           </div>
         )}

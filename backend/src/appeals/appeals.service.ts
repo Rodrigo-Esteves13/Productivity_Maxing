@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
+import { AccountStatusService } from '../account-status/account-status.service';
 import { AppealResolution, Prisma, UserStatus } from '@prisma/client';
 import { CreateAppealDto } from './dto/create-appeal.dto';
 import { ResolveAppealDto } from './dto/resolve-appeal.dto';
@@ -31,28 +32,11 @@ export class AppealsService {
     // reactivateUser() já trata do status/cache/statusReason, evita
     // duplicar essa lógica aqui.
     private readonly usersService: UsersService,
+    // Fonte única do limite de 3 appeals/cooldown - ver
+    // AccountStatusService.getAppealAvailability, também usado por
+    // AccountStatusController para mostrar a mesma coisa no ecrã.
+    private readonly accountStatus: AccountStatusService,
   ) {}
-
-  /**
-   * Chamado por AccountStatusController (GET /account-status/me) para o
-   * ecrã de bloqueio saber se já existe um appeal em curso, em vez de
-   * mostrar sempre o formulário. Devolve o mais recente independentemente
-   * do estado (resolvido ou não) - se o mais recente foi DENIED, o
-   * frontend mostra isso e ainda deixa submeter um novo.
-   */
-  findLatestForUser(userId: string) {
-    return this.prisma.userAppeal.findFirst({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        createdAt: true,
-        resolution: true,
-        resolutionNote: true,
-        resolvedAt: true,
-      },
-    });
-  }
 
   /**
    * Só alcançável via JwtBlockedAwareGuard (ver o comentário lá) - o
@@ -63,7 +47,12 @@ export class AppealsService {
   async create(userId: string, dto: CreateAppealDto) {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { status: true, statusReason: true },
+      select: {
+        status: true,
+        statusReason: true,
+        suspendedUntil: true,
+        statusUpdatedAt: true,
+      },
     });
 
     if (user.status === UserStatus.ACTIVE) {
@@ -77,6 +66,26 @@ export class AppealsService {
     if (pending) {
       throw new ConflictException(
         'You already have a pending appeal. Please wait for it to be reviewed.',
+      );
+    }
+
+    const availability = await this.accountStatus.getAppealAvailability(
+      userId,
+      user,
+    );
+    if (availability.appealsExhausted) {
+      throw new ConflictException(
+        `You've used all ${availability.maxAppeals} appeals available for this ${
+          user.status === UserStatus.BANNED ? 'ban' : 'suspension'
+        }.`,
+      );
+    }
+    if (
+      availability.nextAppealAllowedAt &&
+      availability.nextAppealAllowedAt.getTime() > Date.now()
+    ) {
+      throw new ConflictException(
+        `You can submit your final appeal starting ${availability.nextAppealAllowedAt.toISOString()}.`,
       );
     }
 
@@ -120,7 +129,8 @@ export class AppealsService {
    * efeito do botão "Reactivate" no painel de Users) - nunca duplicar
    * essa lógica aqui. DENIED só regista a decisão; a conta continua
    * bloqueada como estava, e a pessoa pode submeter um novo appeal
-   * depois (sem cooldown - não pareceu valer a pena para este volume).
+   * depois - sujeito ao limite/cooldown de
+   * AccountStatusService.getAppealAvailability (ver create() acima).
    */
   async resolve(adminId: string, appealId: string, dto: ResolveAppealDto) {
     const appeal = await this.prisma.userAppeal.findUnique({

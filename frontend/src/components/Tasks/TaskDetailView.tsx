@@ -58,7 +58,7 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       {task.topics && <DetailRow label="Topics">{task.topics}</DetailRow>}
       {task.notes && (
         <DetailRow label="Notes">
-          <span className="whitespace-pre-wrap">{task.notes}</span>
+          <span className="whitespace-pre-wrap break-words">{task.notes}</span>
         </DetailRow>
       )}
 

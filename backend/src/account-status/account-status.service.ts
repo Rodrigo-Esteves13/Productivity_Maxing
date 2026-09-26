@@ -7,6 +7,23 @@ interface BlockInfo {
   suspendedUntil: Date | null;
 }
 
+// 3 appeals por restrição (contados desde statusUpdatedAt - ver
+// getAppealAvailability). O cooldown abaixo só entra em jogo entre o 2º
+// e o 3º; o 1º->2º não tem espera além do normal "só depois do anterior
+// ser resolvido" (ver AppealsService.create).
+const MAX_APPEALS_PER_RESTRICTION = 3;
+const BAN_APPEAL_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 1 semana
+
+export interface AppealAvailability {
+  appealsUsed: number;
+  maxAppeals: number;
+  // null enquanto ainda não há cooldown a contar (0/1 appeals usados, ou
+  // já esgotado o limite) ou já passou - ver appealsExhausted para
+  // distinguir "sem limite nenhum" de "limite atingido".
+  nextAppealAllowedAt: Date | null;
+  appealsExhausted: boolean;
+}
+
 /**
  * À parte de UsersService (que vive em UsersModule, que já importa
  * AuthModule para reaproveitar o deleteAccount) de propósito: JwtStrategy
@@ -126,5 +143,55 @@ export class AccountStatusService implements OnModuleInit {
 
   clearBlocked(userId: string): void {
     this.cache.delete(userId);
+  }
+
+  /**
+   * Fonte única desta regra - usado tanto por AppealsService.create()
+   * (para recusar um appeal fora do prazo/limite) como por
+   * AccountStatusController (para o ecrã de bloqueio mostrar a contagem
+   * e, se aplicável, a data a partir de quando o 3º appeal fica
+   * disponível). "account" vem de quem chama porque tanto o controller
+   * como o create() já precisam de o ir buscar por outros motivos -
+   * evita uma segunda leitura do User aqui.
+   */
+  async getAppealAvailability(
+    userId: string,
+    account: {
+      status: UserStatus;
+      suspendedUntil: Date | null;
+      statusUpdatedAt: Date | null;
+    },
+  ): Promise<AppealAvailability> {
+    const restrictionStart = account.statusUpdatedAt ?? new Date(0);
+
+    const appealsThisRestriction = await this.prisma.userAppeal.findMany({
+      where: { userId, createdAt: { gte: restrictionStart } },
+      orderBy: { createdAt: 'asc' },
+      select: { resolvedAt: true },
+    });
+
+    const appealsUsed = appealsThisRestriction.length;
+    const appealsExhausted = appealsUsed >= MAX_APPEALS_PER_RESTRICTION;
+
+    let nextAppealAllowedAt: Date | null = null;
+    if (appealsUsed === 2 && !appealsExhausted) {
+      const secondAppeal = appealsThisRestriction[1];
+      // Só pode faltar resolvedAt aqui se já existisse um appeal
+      // pendente - e nesse caso create() já bloqueia mais cedo por
+      // outra razão, então isto nunca chega a ficar visível.
+      if (secondAppeal?.resolvedAt) {
+        const cooldownMs =
+          account.status === UserStatus.BANNED
+            ? BAN_APPEAL_COOLDOWN_MS
+            : account.suspendedUntil
+              ? (account.suspendedUntil.getTime() - restrictionStart.getTime()) / 2
+              : BAN_APPEAL_COOLDOWN_MS;
+        nextAppealAllowedAt = new Date(
+          secondAppeal.resolvedAt.getTime() + cooldownMs,
+        );
+      }
+    }
+
+    return { appealsUsed, maxAppeals: MAX_APPEALS_PER_RESTRICTION, nextAppealAllowedAt, appealsExhausted };
   }
 }
