@@ -415,6 +415,9 @@ export interface Task {
   // the task has a time set. Null = backend defaults to 60min.
   calendarDurationMinutes: number | null;
   createdAt: string;
+  // Prisma @updatedAt - touched on every update(), not just user-visible
+  // fields. Feeds StaleTasksCard.tsx ("pending, untouched in a while").
+  updatedAt: string;
   completedAt: string | null; // Actual moment it moved to COMPLETED
   lastOverdueCheckAt: string | null; // Last time the overdue check-in asked about this task
 
@@ -688,6 +691,29 @@ export interface SharedNotebookEntry {
   photos: NotebookPhoto[];
   attachments: NotebookAttachment[];
 }
+
+export type NotebookShareVisibility = 'PUBLIC' | 'AUTHORIZED';
+
+// Mirrors ShareAccessRequestStatus in the backend schema.
+export type ShareAccessRequestStatus = 'PENDING' | 'APPROVED' | 'DENIED';
+
+export interface ShareAccessRequest {
+  id: string;
+  status: ShareAccessRequestStatus;
+  createdAt: string;
+  decidedAt: string | null;
+  requestingUser: { id: string; name: string | null; email: string; avatarUrl: string | null };
+}
+
+// Mirrors SharedEntryResult in the backend's notebook.service.ts - a
+// visitor to /shared/:token can be in one of 5 states, not just
+// "here's the content or a 404". Only 'ok' carries the actual entry.
+export type SharedEntryResult =
+  | { status: 'ok'; entry: SharedNotebookEntry }
+  | { status: 'login_required' }
+  | { status: 'not_requested' }
+  | { status: 'pending' }
+  | { status: 'denied' };
 
 export interface ScheduleLinkResult {
   scheduleSubject: string | null;

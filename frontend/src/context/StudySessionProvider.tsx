@@ -1,0 +1,190 @@
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import {
+  getActiveStudySession,
+  startStudySession,
+  stopStudySession,
+  stopStudySessionOnUnload,
+  heartbeatStudySession,
+  type StartStudySessionInput,
+} from '../api/studySessionsService';
+import type { StudySession } from '../types/models';
+import { useAuth } from './useAuth';
+import { StudySessionContext } from './study-session-context';
+
+// How often we tell the backend "still here" while a session is running.
+// Kept well under StudySessionsService's STALE_SESSION_THRESHOLD_MS
+// (10 minutes server-side) so a couple of missed beats - a throttled
+// background tab, a brief network blip - never falsely auto-closes a
+// session that's genuinely still running.
+const HEARTBEAT_INTERVAL_MS = 60 * 1000;
+
+// Lifted out of useStudySession.ts (Focus page) so the active session,
+// its elapsed timer, start() and stop() are shared app-wide - GlobalStudyTimer
+// (visible on every page) and the Focus page's full widget now read the
+// exact same state instead of two independent pollers that could drift
+// out of sync with each other.
+export function StudySessionProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
+
+  const [activeSession, setActiveSession] = useState<StudySession | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // The pagehide listener below is registered once on mount, so a plain
+  // closure over `activeSession` would only ever see the value from the
+  // render that registered it - a ref kept in sync gives it the latest
+  // session instead.
+  const activeSessionRef = useRef<StudySession | null>(null);
+  useEffect(() => {
+    activeSessionRef.current = activeSession;
+  }, [activeSession]);
+
+  const fetchActive = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const session = await getActiveStudySession();
+      setActiveSession(session);
+    } catch {
+      setError('Could not load the study session.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setActiveSession(null);
+      setIsLoading(false);
+      return;
+    }
+    void fetchActive();
+  }, [isAuthenticated, fetchActive]);
+
+  // Local timer - recalculated from startedAt on every tick (not a naive
+  // increment), so it doesn't drift if the tab sits in the background and
+  // the browser throttles setInterval. Same approach the Focus page's own
+  // hook used before this state moved here.
+  useEffect(() => {
+    if (tickRef.current) {
+      clearInterval(tickRef.current);
+      tickRef.current = null;
+    }
+
+    if (!activeSession) {
+      setElapsedSeconds(0);
+      return;
+    }
+
+    const startedAtMs = new Date(activeSession.startedAt).getTime();
+    const updateElapsed = () => {
+      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000)));
+    };
+    updateElapsed();
+    tickRef.current = setInterval(updateElapsed, 1000);
+
+    return () => {
+      if (tickRef.current) clearInterval(tickRef.current);
+    };
+  }, [activeSession]);
+
+  // Heartbeat - tells the backend this session is still genuinely open.
+  // See StudySessionsService.autoCloseIfStale: without this, a session
+  // left running with the laptop closed or the browser killed outright
+  // would sit "active" until Rodrigo happens to look again, which was the
+  // whole original complaint.
+  useEffect(() => {
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+
+    if (!activeSession) return;
+
+    const sessionId = activeSession.id;
+    const ping = () => {
+      void heartbeatStudySession(sessionId).catch(() => {
+        // Best-effort - a missed beat or two doesn't matter, see
+        // STALE_SESSION_THRESHOLD_MS on the backend.
+      });
+    };
+    heartbeatRef.current = setInterval(ping, HEARTBEAT_INTERVAL_MS);
+
+    return () => {
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    };
+  }, [activeSession]);
+
+  // Best-effort clean stop when the tab actually closes or navigates away
+  // with a session still running. `pagehide` (not `beforeunload`/`unload`,
+  // both effectively deprecated for this) is the current recommendation
+  // for "the user is truly leaving" - it also reliably fires on tab
+  // close, unlike `visibilitychange`, which would also fire on every
+  // ordinary tab switch and wrongly stop the session then.
+  useEffect(() => {
+    const handlePageHide = () => {
+      const session = activeSessionRef.current;
+      if (session) {
+        stopStudySessionOnUnload(session.id);
+      }
+    };
+    window.addEventListener('pagehide', handlePageHide);
+    return () => window.removeEventListener('pagehide', handlePageHide);
+  }, []);
+
+  const start = useCallback(async (input: StartStudySessionInput) => {
+    try {
+      setIsSubmitting(true);
+      setError('');
+      const session = await startStudySession(input);
+      setActiveSession(session);
+    } catch {
+      setError('Could not start the session. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, []);
+
+  const stop = useCallback(
+    async (note?: string) => {
+      if (!activeSession) return;
+      try {
+        setIsSubmitting(true);
+        setError('');
+        await stopStudySession(activeSession.id, { note });
+        setActiveSession(null);
+      } catch {
+        setError('Could not stop the session. Please try again.');
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [activeSession],
+  );
+
+  return (
+    <StudySessionContext.Provider
+      value={{
+        activeSession,
+        elapsedSeconds,
+        isLoading,
+        isSubmitting,
+        error,
+        start,
+        stop,
+      }}
+    >
+      {children}
+    </StudySessionContext.Provider>
+  );
+}

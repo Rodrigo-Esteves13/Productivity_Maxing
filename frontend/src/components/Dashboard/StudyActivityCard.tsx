@@ -35,6 +35,23 @@ function intensityClass(minutes: number, maxMinutes: number): string {
 // backend) - there's no "daily study goal" concept anywhere in the data
 // model yet, and adding one felt like a separate decision. Easy to wire
 // up to a real setting later if it's worth persisting.
+//
+// This week vs last week (added later) reuses the exact same `days`
+// fetch - no separate endpoint or extra request, just a different sum
+// over data this card already has on hand.
+function sumLastNDays(days: DailyStudyTotal[], n: number, offsetFromEnd: number): number {
+  const end = days.length - offsetFromEnd;
+  const start = Math.max(0, end - n);
+  return days.slice(start, end).reduce((sum, d) => sum + d.totalMinutes, 0);
+}
+
+function formatWeekMinutes(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}m`;
+  return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
+}
+
 export default function StudyActivityCard() {
   const [days, setDays] = useState<DailyStudyTotal[]>([]);
   const [streak, setStreak] = useState<StudyStreak | null>(null);
@@ -162,6 +179,31 @@ export default function StudyActivityCard() {
           />
         </div>
       </div>
+
+      {(() => {
+        const thisWeek = sumLastNDays(days, 7, 0);
+        const lastWeek = sumLastNDays(days, 7, 7);
+        if (thisWeek === 0 && lastWeek === 0) return null;
+        const deltaPct =
+          lastWeek > 0 ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : null;
+        return (
+          <div className="mt-3 pt-3 border-t border-neutral-800 flex items-center justify-between text-xs text-neutral-500">
+            <span>
+              This week: <span className="text-neutral-300">{formatWeekMinutes(thisWeek)}</span>
+            </span>
+            <span>
+              vs last week: <span className="text-neutral-300">{formatWeekMinutes(lastWeek)}</span>
+              {deltaPct !== null && (
+                <span className={deltaPct >= 0 ? 'text-emerald-400' : 'text-neutral-400'}>
+                  {' '}
+                  ({deltaPct >= 0 ? '+' : ''}
+                  {deltaPct}%)
+                </span>
+              )}
+            </span>
+          </div>
+        );
+      })()}
     </div>
   );
 }

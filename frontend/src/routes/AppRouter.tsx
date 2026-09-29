@@ -10,6 +10,7 @@ import ResetPassword from '../pages/ResetPassword';
 import AuthCallback from '../components/Auth/AuthCallback';
 import CookieNotice from '../components/Legal/CookieNotice';
 import CommandPalette from '../components/CommandPalette/CommandPalette';
+import GlobalStudyTimer from '../components/Study/GlobalStudyTimer';
 import LoadingState from '../components/UI/LoadingState';
 
 // Route-level code splitting: everything below only downloads its JS chunk
@@ -123,6 +124,11 @@ export default function AppRouter() {
           de estar dentro do Router. Gated internamente por isAuthenticated
           - não faz sentido nas páginas públicas de login/registo. */}
       <CommandPalette />
+      {/* Same pattern as CommandPalette above: mounted once, gated
+          internally (isAuthenticated + an active session), so it stays
+          visible across every navigation instead of remounting per page
+          the way it would if it lived inside PageLayout instead. */}
+      <GlobalStudyTimer />
     </BrowserRouter>
   );
 }

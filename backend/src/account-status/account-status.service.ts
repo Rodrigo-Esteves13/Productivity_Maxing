@@ -184,7 +184,9 @@ export class AccountStatusService implements OnModuleInit {
           account.status === UserStatus.BANNED
             ? BAN_APPEAL_COOLDOWN_MS
             : account.suspendedUntil
-              ? (account.suspendedUntil.getTime() - restrictionStart.getTime()) / 2
+              ? (account.suspendedUntil.getTime() -
+                  restrictionStart.getTime()) /
+                2
               : BAN_APPEAL_COOLDOWN_MS;
         nextAppealAllowedAt = new Date(
           secondAppeal.resolvedAt.getTime() + cooldownMs,
@@ -192,6 +194,11 @@ export class AccountStatusService implements OnModuleInit {
       }
     }
 
-    return { appealsUsed, maxAppeals: MAX_APPEALS_PER_RESTRICTION, nextAppealAllowedAt, appealsExhausted };
+    return {
+      appealsUsed,
+      maxAppeals: MAX_APPEALS_PER_RESTRICTION,
+      nextAppealAllowedAt,
+      appealsExhausted,
+    };
   }
 }

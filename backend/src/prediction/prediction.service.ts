@@ -16,7 +16,11 @@ import {
 } from './prediction-math.util';
 import type { Scaler } from './prediction-math.util';
 import { trainMlp } from './prediction-mlp.util';
-import type { DurationPrediction, PredictionMethod } from './prediction.types';
+import type {
+  DurationPrediction,
+  PredictionMethod,
+  EstimationAccuracy,
+} from './prediction.types';
 
 // Abaixo disto, nem regressão linear se tenta - 10 amostras não chegam
 // para 5 coeficientes (bias + 4 features) sem overfitting quase garantido,
@@ -38,6 +42,11 @@ const RETRAIN_SAMPLE_DELTA = 5;
 // "média" que é basicamente o próprio valor a prever, um sinal
 // artificialmente forte que não generaliza.
 const TYPE_AVERAGE_SMOOTHING_K = 3;
+// Dentro disto (para qualquer lado) conta como "estimativa acertada" em
+// getEstimationAccuracy - sem alguma margem, praticamente nenhuma
+// estimativa manual bateria certo ao minuto e accurateCount seria sempre
+// ~0, o que não diz nada de útil ao Rodrigo.
+const ESTIMATION_ACCURACY_TOLERANCE_PCT = 20;
 
 const TRAINING_SELECT = {
   id: true,
@@ -343,6 +352,81 @@ export class PredictionService {
       });
     }
     return rows;
+  }
+
+  /**
+   * Historical accuracy of Rodrigo's own manual `estimatedMinutes` against
+   * real time logged via StudySession - deliberately separate from
+   * getOrTrainModel()/predictDuration() above: those predict a duration
+   * going forward, this looks backward at how good the human guess itself
+   * has been. Only tasks with both a manual estimate AND at least one
+   * finished session qualify - a task with no session yet has nothing to
+   * compare against.
+   */
+  async getEstimationAccuracy(userId: string): Promise<EstimationAccuracy> {
+    const tasks = await this.prisma.task.findMany({
+      where: { userId, estimatedMinutes: { not: null } },
+      select: {
+        estimatedMinutes: true,
+        studySessions: {
+          where: { endedAt: { not: null } },
+          select: { startedAt: true, endedAt: true },
+        },
+      },
+    });
+
+    let sampleSize = 0;
+    let sumAbsPercentError = 0;
+    let sumEstimated = 0;
+    let sumActual = 0;
+    let accurateCount = 0;
+    let overestimatedCount = 0;
+    let underestimatedCount = 0;
+
+    for (const task of tasks) {
+      if (task.studySessions.length === 0) continue;
+      const estimated = task.estimatedMinutes as number; // filtrado no where acima
+      if (estimated <= 0) continue; // evita divisão por zero abaixo, sem sentido de qualquer forma
+
+      const actual = this.sumSessionMinutes(task.studySessions);
+      const percentError = (Math.abs(actual - estimated) / estimated) * 100;
+
+      sampleSize += 1;
+      sumAbsPercentError += percentError;
+      sumEstimated += estimated;
+      sumActual += actual;
+
+      if (percentError <= ESTIMATION_ACCURACY_TOLERANCE_PCT) {
+        accurateCount += 1;
+      } else if (estimated > actual) {
+        overestimatedCount += 1;
+      } else {
+        underestimatedCount += 1;
+      }
+    }
+
+    if (sampleSize === 0) {
+      return {
+        sampleSize: 0,
+        avgAbsPercentError: null,
+        avgEstimatedMinutes: null,
+        avgActualMinutes: null,
+        accurateCount: 0,
+        overestimatedCount: 0,
+        underestimatedCount: 0,
+      };
+    }
+
+    return {
+      sampleSize,
+      avgAbsPercentError:
+        Math.round((sumAbsPercentError / sampleSize) * 10) / 10,
+      avgEstimatedMinutes: Math.round(sumEstimated / sampleSize),
+      avgActualMinutes: Math.round(sumActual / sampleSize),
+      accurateCount,
+      overestimatedCount,
+      underestimatedCount,
+    };
   }
 
   private async computeActualMinutesForTask(

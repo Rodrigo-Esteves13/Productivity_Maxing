@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { StudySessionsService } from './study-sessions.service';
 import { StartStudySessionDto } from './dto/start-study-session.dto';
 import { StopStudySessionDto } from './dto/stop-study-session.dto';
@@ -40,6 +41,19 @@ export class StudySessionsController {
     return this.studySessionsService.stop(user.id, id, dto);
   }
 
+  // Kept under the normal auth + CSRF guards (no @SkipCsrf here) -
+  // unlike TelemetryController's routes, this one DOES mutate a specific
+  // user's own session, so the double-submit check stays meaningful.
+  // Throttled independently of the global default: a live session pings
+  // this once a minute (see HEARTBEAT_INTERVAL_MS in
+  // StudySessionProvider.tsx), so 10/min per user is already generous
+  // headroom, not a tight limit.
+  @Post(':id/heartbeat')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  heartbeat(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.studySessionsService.heartbeat(user.id, id);
+  }
+
   @Get('active')
   getActive(@CurrentUser() user: AuthenticatedUser) {
     return this.studySessionsService.getActive(user.id);
@@ -48,6 +62,11 @@ export class StudySessionsController {
   @Get('heatmap')
   getHeatmap(@CurrentUser() user: AuthenticatedUser) {
     return this.studySessionsService.getHeatmap(user.id);
+  }
+
+  @Get('time-by-area')
+  getTimeByArea(@CurrentUser() user: AuthenticatedUser) {
+    return this.studySessionsService.getTimeByArea(user.id);
   }
 
   @Get('daily-totals')

@@ -24,3 +24,19 @@ export async function predictTaskDuration(
   const response = await api.post<DurationPrediction>('/predictions/duration', payload);
   return response.data;
 }
+
+// Mirrors EstimationAccuracy in the backend's prediction.types.ts.
+export interface EstimationAccuracy {
+  sampleSize: number;
+  avgAbsPercentError: number | null;
+  avgEstimatedMinutes: number | null;
+  avgActualMinutes: number | null;
+  accurateCount: number;
+  overestimatedCount: number;
+  underestimatedCount: number;
+}
+
+export async function getEstimationAccuracy(): Promise<EstimationAccuracy> {
+  const response = await api.get<EstimationAccuracy>('/predictions/accuracy');
+  return response.data;
+}

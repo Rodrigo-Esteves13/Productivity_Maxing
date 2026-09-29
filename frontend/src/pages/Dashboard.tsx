@@ -24,6 +24,14 @@ import AreaBreakdownCard from '../components/Dashboard/AreaBreakdownCard';
 import StudyActivityCard from '../components/Dashboard/StudyActivityCard';
 import ProgramsOverviewCard from '../components/Dashboard/ProgramsOverviewCard';
 import CreditsAccumulatedCard from '../components/Dashboard/CreditsAccumulatedCard';
+import ExamCountdownCard from '../components/Dashboard/ExamCountdownCard';
+import StaleTasksCard from '../components/Dashboard/StaleTasksCard';
+import TimeByAreaCard from '../components/Dashboard/TimeByAreaCard';
+import EstimationAccuracyCard from '../components/Dashboard/EstimationAccuracyCard';
+import DeadlineComplianceCard from '../components/Dashboard/DeadlineComplianceCard';
+import WeekdayLoadCard from '../components/Dashboard/WeekdayLoadCard';
+import TargetVsRealCard from '../components/Dashboard/TargetVsRealCard';
+import ProductivityByTypeCard from '../components/Dashboard/ProductivityByTypeCard';
 import { DashboardWidgetToggles } from '../components/Dashboard/DashboardWidgetToggles';
 import { useDashboardWidgetPrefs } from '../hooks/useDashboardWidgetPrefs';
 import { useTableDensity } from '../hooks/useTableDensity';
@@ -296,6 +304,36 @@ export default function Dashboard() {
             />
           )}
           {visibility.studyActivity && <StudyActivityCard />}
+        </div>
+      )}
+
+      {!isLoading && !error &&
+        (visibility.examCountdown || visibility.staleTasks || visibility.timeByArea || visibility.estimationAccuracy || visibility.deadlineCompliance || visibility.weekdayLoad || visibility.targetVsReal || visibility.productivityByType) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {visibility.examCountdown && academicTasks.length > 0 && (
+            <ExamCountdownCard tasks={academicTasks} areas={academicAreas} />
+          )}
+          {visibility.staleTasks && academicTasks.length > 0 && (
+            <StaleTasksCard tasks={academicTasks} areas={academicAreas} />
+          )}
+          {visibility.timeByArea && <TimeByAreaCard />}
+          {visibility.estimationAccuracy && <EstimationAccuracyCard />}
+          {visibility.deadlineCompliance && academicTasks.length > 0 && (
+            <DeadlineComplianceCard tasks={academicTasks} />
+          )}
+          {visibility.weekdayLoad && academicTasks.length > 0 && (
+            <WeekdayLoadCard tasks={academicTasks} />
+          )}
+          {visibility.targetVsReal && academicTasks.length > 0 && activeProgram && (
+            <TargetVsRealCard
+              tasks={academicTasks}
+              areas={academicAreas}
+              scale={activeProgram.gradeScale}
+            />
+          )}
+          {visibility.productivityByType && academicTasks.length > 0 && (
+            <ProductivityByTypeCard tasks={academicTasks} academicTaskTypes={academicTaskTypes} />
+          )}
         </div>
       )}
 

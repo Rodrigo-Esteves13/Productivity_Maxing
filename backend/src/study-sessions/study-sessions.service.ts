@@ -23,6 +23,20 @@ import { StopStudySessionDto } from './dto/stop-study-session.dto';
 // repetido, não é a fonte de verdade).
 const HEATMAP_CACHE_TTL_MS = 5 * 60 * 1000;
 
+// Uma sessão "ativa" sem heartbeat há mais tempo do que isto é tratada
+// como esquecida, não como a decorrer de facto - ver autoCloseIfStale()
+// mais abaixo. Deliberadamente bem maior do que HEARTBEAT_INTERVAL_MS do
+// frontend (60s, ver StudySessionProvider.tsx): um separador em
+// background chega a ter o setInterval do heartbeat estrangulado pelo
+// browser, e isto tem de tolerar perder alguns heartbeats seguidos sem
+// fechar uma sessão que ainda está genuinamente a decorrer.
+const STALE_SESSION_THRESHOLD_MS = 10 * 60 * 1000;
+
+// Só usada quando a sessão fechada automaticamente não tinha nenhuma nota
+// já escrita pelo utilizador - nunca substitui uma nota real.
+const AUTO_CLOSE_NOTE =
+  'Auto-stopped: the app lost contact with this session (tab closed or device went to sleep).';
+
 const SESSION_SELECT = {
   id: true,
   startedAt: true,
@@ -87,6 +101,16 @@ export interface TaskPriorityRow {
   areaName: string;
 }
 
+// One row of TimeByAreaCard.tsx on the Dashboard - total study time per
+// Area, across all-time finished sessions.
+export interface AreaTimeBreakdown {
+  areaId: string | null; // null = sessions with no resolvable Area at all
+  areaName: string;
+  areaColorHex: string | null;
+  totalMinutes: number;
+  sessionCount: number;
+}
+
 @Injectable()
 export class StudySessionsService {
   // chave = userId. Guarda o grid já calculado + o instante em que foi
@@ -99,6 +123,13 @@ export class StudySessionsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async start(userId: string, dto: StartStudySessionDto) {
+    // Antes de olhar para "já tens uma sessão ativa?": se essa sessão
+    // ativa está parada há mais do que STALE_SESSION_THRESHOLD_MS sem
+    // heartbeat, não é uma sessão a decorrer, é uma sessão esquecida -
+    // fecha-se sozinha aqui, para não bloquear Rodrigo de começar uma
+    // nova só porque ontem se esqueceu de parar a de ontem.
+    await this.autoCloseIfStale(userId);
+
     // Só uma sessão ativa de cada vez por utilizador - evita sobreposições
     // que corromperiam o heatmap e o histórico (ex: começar 2 sessões em
     // 2 separadores e só parar uma).
@@ -125,6 +156,10 @@ export class StudySessionsService {
         taskId: dto.taskId ?? null,
         areaId: dto.areaId ?? null,
         note: dto.note ?? null,
+        // Começa já com um heartbeat "de origem" - evita que uma sessão
+        // parada nos primeiros segundos (antes do primeiro ping real do
+        // frontend) seja lida como "sem heartbeat" por autoCloseIfStale.
+        lastHeartbeatAt: new Date(),
       },
       select: SESSION_SELECT,
     });
@@ -166,7 +201,35 @@ export class StudySessionsService {
     return this.toResponse(session);
   }
 
+  /**
+   * Chamado pelo frontend a cada HEARTBEAT_INTERVAL_MS (ver
+   * StudySessionProvider.tsx) enquanto uma sessão está ativa - é só um
+   * "ainda aqui" que atualiza lastHeartbeatAt. updateMany com
+   * where: { id, userId, endedAt: null } em vez de findFirst + update
+   * separados: uma única query, já protegida contra IDOR (nunca atualiza
+   * uma sessão de outro utilizador) e contra reanimar uma sessão já
+   * fechada por engano.
+   */
+  async heartbeat(userId: string, id: string): Promise<{ ok: true }> {
+    const result = await this.prisma.studySession.updateMany({
+      where: { id, userId, endedAt: null },
+      data: { lastHeartbeatAt: new Date() },
+    });
+    if (result.count === 0) {
+      throw new NotFoundException(
+        `Study session not found, not yours, or already stopped.`,
+      );
+    }
+    return { ok: true };
+  }
+
   async getActive(userId: string) {
+    // Mesma razão que em start(): uma sessão "ativa" sem heartbeat há
+    // muito tempo não deve continuar a aparecer como ativa só porque
+    // ninguém a foi parar - ver o comentário grande em
+    // STALE_SESSION_THRESHOLD_MS acima.
+    await this.autoCloseIfStale(userId);
+
     const session = await this.prisma.studySession.findFirst({
       where: { userId, endedAt: null },
       select: SESSION_SELECT,
@@ -289,6 +352,71 @@ export class StudySessionsService {
   }
 
   /**
+   * Total study time per Area, across every finished session ever logged
+   * - powers TimeByAreaCard.tsx on the Dashboard ("where does my study
+   * time actually go"). A session's Area is resolved as
+   * `session.areaId ?? session.task?.areaId` - the Focus start form lets
+   * you pick a Task OR an Area OR both (see StudySessionWidget.tsx), so a
+   * session started against a specific Task but with no Area explicitly
+   * chosen still counts toward that Task's own course instead of being
+   * silently dropped from the breakdown.
+   *
+   * Same "aggregate in JS from raw sessions" approach as getHeatmap()/
+   * getDailyTotals() above, for the same reason: there's no stored
+   * duration column to SQL-side SUM(), only startedAt/endedAt to diff.
+   * Not cached (unlike getHeatmap) - only called once per Dashboard load,
+   * doesn't need the same repeated-call protection.
+   */
+  async getTimeByArea(userId: string): Promise<AreaTimeBreakdown[]> {
+    const sessions = await this.prisma.studySession.findMany({
+      where: { userId, endedAt: { not: null } },
+      select: {
+        startedAt: true,
+        endedAt: true,
+        area: { select: { id: true, name: true, colorHex: true } },
+        task: {
+          select: {
+            area: { select: { id: true, name: true, colorHex: true } },
+          },
+        },
+      },
+    });
+
+    const totals = new Map<
+      string,
+      { name: string; colorHex: string | null; minutes: number; count: number }
+    >();
+
+    for (const session of sessions) {
+      if (!session.endedAt) continue; // já filtrado pelo where, é só para o TS
+      const resolvedArea = session.area ?? session.task?.area ?? null;
+      const key = resolvedArea?.id ?? 'none';
+      const minutes =
+        (session.endedAt.getTime() - session.startedAt.getTime()) / 60_000;
+
+      const entry = totals.get(key) ?? {
+        name: resolvedArea?.name ?? 'No area',
+        colorHex: resolvedArea?.colorHex ?? null,
+        minutes: 0,
+        count: 0,
+      };
+      entry.minutes += Math.max(0, minutes);
+      entry.count += 1;
+      totals.set(key, entry);
+    }
+
+    return Array.from(totals.entries())
+      .map(([key, entry]) => ({
+        areaId: key === 'none' ? null : key,
+        areaName: entry.name,
+        areaColorHex: entry.colorHex,
+        totalMinutes: Math.round(entry.minutes),
+        sessionCount: entry.count,
+      }))
+      .sort((a, b) => b.totalMinutes - a.totalMinutes);
+  }
+
+  /**
    * Streak = consecutive calendar days (up to and including today) with at
    * least one finished study session, walked day by day from the first
    * ever session. Deliberately computed fresh from raw session data every
@@ -370,6 +498,42 @@ export class StudySessionsService {
       activeToday: activeDays.has(todayKey),
       atRisk: currentStreak > 0 && !activeDays.has(todayKey),
     };
+  }
+
+  /**
+   * Finds this user's active session (if any) and, when it's gone quiet
+   * for longer than STALE_SESSION_THRESHOLD_MS, closes it as if it had
+   * been stopped at the last moment it was actually known to be running
+   * (lastHeartbeatAt, falling back to startedAt for a session that never
+   * got a single heartbeat). Closing it AT that timestamp rather than
+   * "now" is the whole point: it keeps the heatmap/streak/daily-totals
+   * honest instead of crediting Rodrigo with however many hours passed
+   * before he happened to reopen the app.
+   *
+   * Deliberately a plain lazy check on the two call sites that matter
+   * (start, getActive) instead of a cron/scheduled job - same philosophy
+   * as the heatmap cache above: no extra infrastructure for a single-user
+   * volume where "next time the app is opened" is soon enough.
+   */
+  private async autoCloseIfStale(userId: string): Promise<void> {
+    const active = await this.prisma.studySession.findFirst({
+      where: { userId, endedAt: null },
+      select: { id: true, startedAt: true, lastHeartbeatAt: true, note: true },
+    });
+    if (!active) return;
+
+    const lastSeenAt = active.lastHeartbeatAt ?? active.startedAt;
+    const staleForMs = Date.now() - lastSeenAt.getTime();
+    if (staleForMs < STALE_SESSION_THRESHOLD_MS) return;
+
+    await this.prisma.studySession.update({
+      where: { id: active.id },
+      data: {
+        endedAt: lastSeenAt,
+        note: active.note ?? AUTO_CLOSE_NOTE,
+      },
+    });
+    this.heatmapCache.delete(userId);
   }
 
   private async assertTaskOwnership(userId: string, taskId: string) {

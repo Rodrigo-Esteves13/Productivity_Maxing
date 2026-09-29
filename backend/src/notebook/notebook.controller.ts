@@ -29,6 +29,8 @@ import {
   UpdateNotebookEntryDto,
 } from './dto/upsert-notebook-entry.dto';
 import { UpsertScheduleLinkDto } from './dto/upsert-schedule-link.dto';
+import { UpdateShareVisibilityDto } from './dto/update-share-visibility.dto';
+import { DecideAccessRequestDto } from './dto/decide-access-request.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
@@ -132,6 +134,53 @@ export class NotebookController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.notebookService.revokeShare(user.id, id);
+  }
+
+  @Patch('entries/:id/share/visibility')
+  @ApiOperation({
+    summary:
+      'Switches an existing share between PUBLIC (link only) and AUTHORIZED (login + owner approval required), without changing the token.',
+  })
+  updateShareVisibility(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateShareVisibilityDto,
+  ) {
+    return this.notebookService.updateShareVisibility(
+      user.id,
+      id,
+      dto.visibility,
+    );
+  }
+
+  // Só faz sentido quando visibility = AUTHORIZED, mas devolve lista vazia
+  // (não 400) noutros casos - o painel em NotebookEntryShare.tsx pode
+  // pedir isto despreocupadamente sempre que está aberto.
+  @Get('entries/:id/share/requests')
+  @ApiOperation({
+    summary: "Pending/decided access requests for this entry's share link.",
+  })
+  listAccessRequests(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.notebookService.listAccessRequests(user.id, id);
+  }
+
+  @Patch('entries/:id/share/requests/:requestId')
+  @ApiOperation({ summary: 'Approve or deny a pending access request.' })
+  decideAccessRequest(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('requestId', ParseUUIDPipe) requestId: string,
+    @Body() dto: DecideAccessRequestDto,
+  ) {
+    return this.notebookService.decideAccessRequest(
+      user.id,
+      id,
+      requestId,
+      dto.decision,
+    );
   }
 
   // Mesmos limites/mitigação multer que o upload de avatar (ver

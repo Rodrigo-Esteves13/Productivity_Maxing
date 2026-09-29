@@ -11,7 +11,15 @@ export type DashboardWidgetKey =
   | 'studyActivity'
   | 'gradeCalculator'
   | 'creditSimulator'
-  | 'creditsAccumulated';
+  | 'creditsAccumulated'
+  | 'examCountdown'
+  | 'staleTasks'
+  | 'timeByArea'
+  | 'estimationAccuracy'
+  | 'deadlineCompliance'
+  | 'weekdayLoad'
+  | 'targetVsReal'
+  | 'productivityByType';
 
 export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   programsOverview: 'All programs overview',
@@ -25,6 +33,14 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   gradeCalculator: 'Grade needed calculator',
   creditSimulator: '"What if" GPA simulator',
   creditsAccumulated: 'ECTS credits accumulated',
+  examCountdown: 'Next graded evaluation',
+  staleTasks: 'Not touched in a while',
+  timeByArea: 'Time by course',
+  estimationAccuracy: 'Estimate accuracy',
+  deadlineCompliance: 'Deadlines met',
+  weekdayLoad: 'Deadlines by weekday',
+  targetVsReal: 'Target vs real',
+  productivityByType: 'Productivity by task type',
 };
 
 const STORAGE_KEY = 'dashboard-widget-prefs';
@@ -44,6 +60,14 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   gradeCalculator: true,
   creditSimulator: true,
   creditsAccumulated: true,
+  examCountdown: true,
+  staleTasks: true,
+  timeByArea: true,
+  estimationAccuracy: true,
+  deadlineCompliance: true,
+  weekdayLoad: true,
+  targetVsReal: true,
+  productivityByType: true,
 };
 
 function loadPrefs(): Record<DashboardWidgetKey, boolean> {

@@ -1,19 +1,12 @@
 import { useState } from 'react';
 import { useStudySession } from '../../hooks/useStudySession';
+import { formatElapsed } from '../../lib/formatDuration';
 import Button from '../UI/Button';
 import Select from '../UI/Select';
 import Input from '../UI/Input';
 import FormField from '../UI/FormField';
 import LoadingState from '../UI/LoadingState';
 import ErrorState from '../UI/ErrorState';
-
-function formatElapsed(totalSeconds: number): string {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return hours > 0 ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}` : `${pad(minutes)}:${pad(seconds)}`;
-}
 
 // Data curta para o rótulo da task no dropdown (ex: "20 Set") - timeZone
 // UTC de propósito: Task.date vem do backend como meia-noite UTC do dia
