@@ -11,9 +11,12 @@ import type {
   NotebookEntryType,
   NotebookPhoto,
   NotebookSearchResult,
+  NotebookShareVisibility,
   NotebookTable,
   ScheduleLinkResult,
-  SharedNotebookEntry,
+  ShareAccessRequest,
+  ShareAccessRequestStatus,
+  SharedEntryResult,
   Stroke,
   UsefulLink,
 } from '../types/models';
@@ -158,6 +161,7 @@ export const searchNotebook = async (query: string): Promise<NotebookSearchResul
 export interface ShareStatus {
   shared: boolean;
   token: string | null;
+  visibility: NotebookShareVisibility;
 }
 
 export const getShareStatus = async (entryId: string): Promise<ShareStatus> => {
@@ -175,13 +179,69 @@ export const revokeShare = async (entryId: string): Promise<ShareStatus> => {
   return response.data;
 };
 
-// Sem `api` (que injeta o Authorization/CSRF de uma sessão autenticada) -
-// quem abre um link partilhado normalmente não tem sessão nenhuma nesta
-// app, e o endpoint nem tem guard que os leia. Um cliente axios à parte,
-// sem credentials, evita mandar cookies desnecessários para um endpoint
-// público.
-export const getSharedNotebookEntry = async (token: string): Promise<SharedNotebookEntry> => {
+// Toggle PUBLIC <-> AUTHORIZED - só disponível depois de já haver uma
+// partilha (createShare acima), não recria/altera o token.
+export const updateShareVisibility = async (
+  entryId: string,
+  visibility: NotebookShareVisibility,
+): Promise<ShareStatus> => {
+  const response = await api.patch<ShareStatus>(
+    `/notebook/entries/${entryId}/share/visibility`,
+    { visibility },
+  );
+  return response.data;
+};
+
+// Lado do dono: quem pediu acesso a esta entry (partilha AUTHORIZED).
+export const getShareAccessRequests = async (
+  entryId: string,
+): Promise<ShareAccessRequest[]> => {
+  const response = await api.get<ShareAccessRequest[]>(
+    `/notebook/entries/${entryId}/share/requests`,
+  );
+  return response.data;
+};
+
+export const decideShareAccessRequest = async (
+  entryId: string,
+  requestId: string,
+  decision: 'APPROVED' | 'DENIED',
+): Promise<ShareAccessRequest> => {
+  const response = await api.patch<ShareAccessRequest>(
+    `/notebook/entries/${entryId}/share/requests/${requestId}`,
+    { decision },
+  );
+  return response.data;
+};
+
+// Sem `api` (que injeta o Authorization/CSRF de uma sessão autenticada por
+// omissão) - a maioria de quem abre um link partilhado não tem sessão
+// nenhuma nesta app, e uma partilha PUBLIC nem precisa que tenha. Um
+// cliente axios à parte, mas com `withCredentials: true`: ao contrário do
+// que este comentário dizia antes de existirem partilhas AUTHORIZED, os
+// cookies TÊM de ir - é assim que o backend (OptionalJwtAuthGuard, ver
+// NotebookShareController) reconhece uma pessoa já autenticada e decide
+// entre login_required/not_requested/pending/denied/ok. Sem sessão
+// nenhuma, os cookies simplesmente não têm nada para enviar - continua
+// a funcionar normalmente para uma partilha PUBLIC.
+export const getSharedNotebookEntry = async (token: string): Promise<SharedEntryResult> => {
   const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-  const response = await axios.get<SharedNotebookEntry>(`${baseURL}/notebook/shared/${token}`);
+  const response = await axios.get<SharedEntryResult>(`${baseURL}/notebook/shared/${token}`, {
+    withCredentials: true,
+  });
+  return response.data;
+};
+
+// Chamado pela pessoa DE FORA, já autenticada (ver Login.tsx: o redirect
+// depois do login volta para esta página). Usa `api`, não o axios cru
+// acima - isto MUTA estado (cria/atualiza um pedido) e precisa mesmo do
+// CSRF token; ver SharedNotebookEntry.tsx, que chama fetchCsrfToken()
+// antes disto se ainda não houver um token em memória.
+export const requestShareAccess = async (
+  token: string,
+): Promise<{ status: ShareAccessRequestStatus }> => {
+  const response = await api.post<{ status: ShareAccessRequestStatus }>(
+    `/notebook/shared/${token}/request-access`,
+  );
   return response.data;
 };

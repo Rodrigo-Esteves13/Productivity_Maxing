@@ -17,3 +17,27 @@ export interface DurationPrediction {
   // previsão. null quando não há sessões (ou quando não veio taskId).
   actualMinutes: number | null;
 }
+
+// Powers EstimationAccuracyCard.tsx on the Dashboard - a step back from
+// PredictionService's own model (which SUGGESTS a duration going
+// forward) to instead ask "historically, how good were Rodrigo's own
+// manual estimates". Only tasks with BOTH estimatedMinutes set AND at
+// least one finished StudySession logged count - see
+// PredictionService.getEstimationAccuracy.
+export interface EstimationAccuracy {
+  sampleSize: number;
+  // Mean of |actual-estimated|/estimated, as a percentage - 0 would mean
+  // every estimate landed exactly on the real time. null when
+  // sampleSize is 0 (nothing to compute yet).
+  avgAbsPercentError: number | null;
+  avgEstimatedMinutes: number | null;
+  avgActualMinutes: number | null;
+  // Within ESTIMATION_ACCURACY_TOLERANCE_PCT of the real time either way.
+  accurateCount: number;
+  // estimated meaningfully higher than actual (task took less time than
+  // guessed).
+  overestimatedCount: number;
+  // estimated meaningfully lower than actual (task took more time than
+  // guessed).
+  underestimatedCount: number;
+}

@@ -1,7 +1,8 @@
 import { useState, type SyntheticEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { loginRequest } from '../api/userService';
+import { isSafeRedirectPath } from '../lib/safeRedirect';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
@@ -25,6 +26,12 @@ export default function Login() {
   });
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [searchParams] = useSearchParams();
+  // e.g. Login reached from SharedNotebookEntry.tsx's "Log in" button on
+  // an AUTHORIZED share, so the person lands back where they started
+  // instead of the generic dashboard. Only ever trusted after
+  // isSafeRedirectPath() below - see that helper for why.
+  const redirectParam = searchParams.get('redirect');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,7 +53,9 @@ export default function Login() {
 
       // Usa o hook para guardar o csrf token em memória e notificar a app
       login(csrfToken);
-      navigate('/dashboard', { replace: true });
+      const destination =
+        redirectParam && isSafeRedirectPath(redirectParam) ? redirectParam : '/dashboard';
+      navigate(destination, { replace: true });
     } catch (err) {
       const data = (err as { response?: { data?: Record<string, unknown> } })?.response?.data;
       if (data?.code === 'ACCOUNT_BLOCKED' && typeof data.appealToken === 'string') {

@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
-import { getUserTasks } from '../../api/userService';
+import { createTask, getUserAreas, getUserTasks } from '../../api/userService';
 import { searchNotebook } from '../../api/notebookService';
 import { setPendingNotebookEntry } from '../../lib/pendingNotebookEntry';
-import type { Task, NotebookSearchResult } from '../../types/models';
-import { SearchIcon } from '../UI/Icons';
+import { parseQuickAddTask, quickAddToIsoDate } from '../../lib/parseQuickAddTask';
+import { getLastUsedAreaId, setLastUsedAreaId } from '../../lib/lastUsedArea';
+import type { Area, Task, NotebookSearchResult } from '../../types/models';
+import { PlusIcon, SearchIcon } from '../UI/Icons';
 
 // Static "go to page" commands - mirrors the routes in AppRouter.tsx and
 // the admin gating already used in Navbar.tsx (role === 'ADMIN'). Kept as
@@ -43,10 +45,31 @@ const MAX_NOTEBOOK_RESULTS = 6;
 // para não martelar a API a cada tecla premida.
 const NOTEBOOK_SEARCH_DEBOUNCE_MS = 250;
 
+// Quick-add defaults. Type matches the Dashboard's own default task type
+// (DASHBOARD_TASK_TYPE_KEY) - this is a student app first - and MEDIUM is
+// the neutral middle of the Difficulty scale. Both are shown in the row
+// so nothing about the created task is a hidden decision, and both are
+// one click away from being edited afterwards on the Tasks page.
+const QUICK_ADD_TASK_TYPE = 'ACADEMICO';
+const QUICK_ADD_DIFFICULTY = 'MEDIUM';
+// Typing "+" first forces quick-add mode (only the create row is shown),
+// so a stray Enter on a normal search can never create a task by accident.
+const QUICK_ADD_PREFIX = '+';
+
 type PaletteItem =
   | { kind: 'nav'; id: string; label: string; path: string }
   | { kind: 'task'; id: string; label: string; task: Task }
-  | { kind: 'notebook'; id: string; label: string; entry: NotebookSearchResult };
+  | { kind: 'notebook'; id: string; label: string; entry: NotebookSearchResult }
+  | {
+      kind: 'quick-add';
+      id: 'quick-add';
+      label: string;
+      title: string;
+      dateIso: string;
+      dateKey: string;
+      time: string | null;
+      area: Area | null;
+    };
 
 export default function CommandPalette() {
   const { isAuthenticated, user } = useAuth();
@@ -57,6 +80,10 @@ export default function CommandPalette() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [notebookResults, setNotebookResults] = useState<NotebookSearchResult[]>([]);
+  // null = not fetched yet (lazy, same as tasks); [] = fetched, none exist.
+  const [areas, setAreas] = useState<Area[] | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Global Cmd/Ctrl+K to open, from anywhere in the app (not just when
@@ -90,6 +117,7 @@ export default function CommandPalette() {
     if (!isOpen) return;
     setQuery('');
     setActiveIndex(0);
+    setCreateError('');
     // Autofocus needs a tick - the input isn't in the DOM yet on the same
     // render that flips isOpen to true.
     const id = window.setTimeout(() => inputRef.current?.focus(), 0);
@@ -104,6 +132,14 @@ export default function CommandPalette() {
       getUserTasks()
         .then(setTasks)
         .catch(() => setTasks([]));
+    }
+
+    // Same lazy approach for Areas - only needed by quick-add, so it is
+    // fetched on first open, not on every page load.
+    if (areas === null) {
+      getUserAreas()
+        .then(setAreas)
+        .catch(() => setAreas([]));
     }
 
     return () => window.clearTimeout(id);
@@ -149,8 +185,36 @@ export default function CommandPalette() {
   }, [isOpen]);
 
   const items = useMemo<PaletteItem[]>(() => {
-    const q = query.trim().toLowerCase();
+    const trimmed = query.trim();
+    const isQuickAddMode = trimmed.startsWith(QUICK_ADD_PREFIX);
+    const quickText = isQuickAddMode ? trimmed.slice(QUICK_ADD_PREFIX.length).trim() : trimmed;
+    const q = trimmed.toLowerCase();
     const isAdmin = user?.role === 'ADMIN';
+
+    // Area the new task would land in: last one used via quick-add if it
+    // still exists, otherwise the first available.
+    let quickArea: Area | null = null;
+    if (areas && areas.length > 0) {
+      const lastUsedId = getLastUsedAreaId();
+      quickArea = areas.find((a) => a.id === lastUsedId) ?? areas[0];
+    }
+
+    const quickAddItems: PaletteItem[] = [];
+    if (quickText !== '') {
+      const parsed = parseQuickAddTask(quickText);
+      quickAddItems.push({
+        kind: 'quick-add',
+        id: 'quick-add',
+        label: parsed.title,
+        title: parsed.title,
+        dateIso: quickAddToIsoDate(parsed.date, parsed.time),
+        dateKey: parsed.date,
+        time: parsed.time,
+        area: quickArea,
+      });
+    }
+
+    if (isQuickAddMode) return quickAddItems;
 
     const navMatches: PaletteItem[] = NAV_COMMANDS.filter((c) => !c.adminOnly || isAdmin)
       .filter((c) => q === '' || c.label.toLowerCase().includes(q))
@@ -174,14 +238,51 @@ export default function CommandPalette() {
             .slice(0, MAX_NOTEBOOK_RESULTS)
             .map((entry) => ({ kind: 'notebook', id: entry.id, label: entry.title, entry }));
 
-    return [...navMatches, ...taskMatches, ...notebookMatches];
-  }, [query, tasks, notebookResults, user]);
+    // Quick-add goes LAST, never first: Enter on a normal search must keep
+    // opening the top match, not creating a task named after the query.
+    return [...navMatches, ...taskMatches, ...notebookMatches, ...quickAddItems];
+  }, [query, tasks, notebookResults, user, areas]);
 
   // Clamp instead of reset-on-every-keystroke - keeps the highlighted row
   // stable when it's still a valid index after the result list shrinks.
   const clampedIndex = Math.min(activeIndex, Math.max(items.length - 1, 0));
 
+  const createQuickTask = async (item: Extract<PaletteItem, { kind: 'quick-add' }>) => {
+    if (isCreating || !item.area) return;
+    setIsCreating(true);
+    setCreateError('');
+    try {
+      const created: unknown = await createTask({
+        areaId: item.area.id,
+        title: item.title,
+        date: item.dateIso,
+        type: QUICK_ADD_TASK_TYPE,
+        difficulty: QUICK_ADD_DIFFICULTY,
+      });
+      setLastUsedAreaId(item.area.id);
+      // Keep the lazily-loaded task list in sync so a following search in
+      // the same session can find the task that was just created.
+      if (typeof created === 'object' && created !== null && 'id' in created) {
+        setTasks((prev) => (prev ? [...prev, created as Task] : prev));
+        setIsOpen(false);
+        navigate(`/tasks?open=${String((created as { id: unknown }).id)}`);
+      } else {
+        setIsOpen(false);
+        navigate('/tasks');
+      }
+    } catch {
+      // Palette stays open with the typed text intact, so nothing is lost.
+      setCreateError('Could not create the task. Please try again.');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   const selectItem = (item: PaletteItem) => {
+    if (item.kind === 'quick-add') {
+      void createQuickTask(item);
+      return;
+    }
     setIsOpen(false);
     if (item.kind === 'nav') {
       navigate(item.path);
@@ -232,7 +333,7 @@ export default function CommandPalette() {
               setActiveIndex(0);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Go to a page, or search a task or notebook entry..."
+            placeholder="Go to a page, search, or type + to add a task..."
             className="flex-1 bg-transparent text-white placeholder:text-neutral-500 outline-none text-sm"
           />
           <kbd className="hidden sm:inline text-[10px] text-neutral-500 border border-neutral-700 rounded px-1.5 py-0.5">
@@ -244,24 +345,60 @@ export default function CommandPalette() {
           {items.length === 0 && (
             <p className="px-4 py-3 text-sm text-neutral-500">No matches.</p>
           )}
-          {items.map((item, index) => (
-            <button
-              key={`${item.kind}-${item.id}`}
-              type="button"
-              onClick={() => selectItem(item)}
-              onMouseEnter={() => setActiveIndex(index)}
-              className={`w-full flex items-center justify-between gap-3 text-left px-4 py-2 text-sm transition-colors ${
-                index === clampedIndex
-                  ? 'bg-violet-500/15 text-white'
-                  : 'text-neutral-300 hover:bg-neutral-800'
-              }`}
-            >
-              <span className="truncate">{item.label}</span>
-              <span className="text-[10px] uppercase tracking-wide text-neutral-500 shrink-0">
-                {item.kind === 'nav' ? 'Go to' : item.kind === 'task' ? 'Task' : 'Notebook'}
-              </span>
-            </button>
-          ))}
+          {createError && (
+            <p role="alert" className="px-4 py-2 text-xs text-red-400">
+              {createError}
+            </p>
+          )}
+          {items.map((item, index) => {
+            const rowClass = `w-full flex items-center justify-between gap-3 text-left px-4 py-2 text-sm transition-colors ${
+              index === clampedIndex
+                ? 'bg-violet-500/15 text-white'
+                : 'text-neutral-300 hover:bg-neutral-800'
+            }`;
+
+            if (item.kind === 'quick-add') {
+              const noArea = areas !== null && !item.area;
+              const dateLabel = item.time ? `${item.dateKey} ${item.time}` : item.dateKey;
+              return (
+                <button
+                  key="quick-add"
+                  type="button"
+                  disabled={isCreating || !item.area}
+                  onClick={() => selectItem(item)}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  className={`${rowClass} disabled:cursor-not-allowed disabled:opacity-60`}
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <PlusIcon className="shrink-0 text-violet-400" />
+                    <span className="truncate">
+                      {isCreating ? 'Creating...' : `Create "${item.title}"`}
+                    </span>
+                  </span>
+                  <span className="text-[10px] text-neutral-500 shrink-0 text-right">
+                    {noArea
+                      ? 'Create an Area first'
+                      : `${item.area?.name ?? '...'} - ${dateLabel} - ${QUICK_ADD_TASK_TYPE.toLowerCase()}, ${QUICK_ADD_DIFFICULTY.toLowerCase()}`}
+                  </span>
+                </button>
+              );
+            }
+
+            return (
+              <button
+                key={`${item.kind}-${item.id}`}
+                type="button"
+                onClick={() => selectItem(item)}
+                onMouseEnter={() => setActiveIndex(index)}
+                className={rowClass}
+              >
+                <span className="truncate">{item.label}</span>
+                <span className="text-[10px] uppercase tracking-wide text-neutral-500 shrink-0">
+                  {item.kind === 'nav' ? 'Go to' : item.kind === 'task' ? 'Task' : 'Notebook'}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

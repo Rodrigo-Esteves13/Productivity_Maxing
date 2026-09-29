@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { PredictionService } from './prediction.service';
 import { PredictDurationDto } from './dto/predict-duration.dto';
@@ -19,5 +19,10 @@ export class PredictionController {
     @Body() dto: PredictDurationDto,
   ) {
     return this.predictionService.predictDuration(user.id, dto);
+  }
+
+  @Get('accuracy')
+  getEstimationAccuracy(@CurrentUser() user: AuthenticatedUser) {
+    return this.predictionService.getEstimationAccuracy(user.id);
   }
 }

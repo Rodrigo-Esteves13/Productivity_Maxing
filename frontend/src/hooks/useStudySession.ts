@@ -1,29 +1,35 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  getActiveStudySession,
-  startStudySession,
-  stopStudySession,
-  type StartStudySessionInput,
-} from '../api/studySessionsService';
+import { useCallback, useEffect, useState } from 'react';
 import { getUserAreas, getUserTasks } from '../api/userService';
-import type { StudySession, Area, Task } from '../types/models';
+import type { Area, Task } from '../types/models';
+import { useActiveStudySession } from '../context/useActiveStudySession';
 
+// The active-session part (activeSession/elapsedSeconds/start/stop) now
+// lives in StudySessionProvider (see src/context) - shared with
+// GlobalStudyTimer.tsx, the mini timer visible on every page, so it and
+// the Focus page's full widget are always looking at exactly the same
+// running session instead of two independent pollers. This hook adds only
+// what's specific to the Focus page itself: the areas/tasks pickers used
+// to start a new session.
 export function useStudySession() {
-  const [activeSession, setActiveSession] = useState<StudySession | null>(null);
-  const [areas, setAreas] = useState<Area[]>([]);
+  const {
+    activeSession,
+    elapsedSeconds,
+    isSubmitting,
+    error: sessionError,
+    start,
+    stop,
+  } = useActiveStudySession();
+
   // TODAS as tasks pendentes (não só as de hoje) - estudar com antecedência
   // para uma prova/entrega futura é o caso normal, não a exceção (ver
   // pedido do Rodrigo: "eu não estudo para um teste no próprio dia"). O
   // Today's Plan (useTodayPlan) continua a existir para o que É só de
   // hoje; isto aqui é uma lista separada, deliberadamente mais larga.
+  const [areas, setAreas] = useState<Area[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchInitialData = useCallback(async () => {
     try {
@@ -32,12 +38,10 @@ export function useStudySession() {
       // getUserTasks() sem periodId = período ativo do user (mesmo default
       // do resto da app) - não faz sentido oferecer aqui tasks de
       // semestres antigos já arquivados.
-      const [session, areasData, tasksData] = await Promise.all([
-        getActiveStudySession(),
+      const [areasData, tasksData] = await Promise.all([
         getUserAreas(),
         getUserTasks(),
       ]);
-      setActiveSession(session);
       // Area é um catálogo global (schema.prisma: sem periodId nem
       // programId - serve tanto para cadeiras como para "Natação",
       // "Condução", etc.), por isso não há como filtrar "as cadeiras
@@ -64,62 +68,6 @@ export function useStudySession() {
     void fetchInitialData();
   }, [fetchInitialData]);
 
-  // Timer local (não depende do backend a cada segundo) - recalcula sempre
-  // a partir de startedAt, para não desviar se o separador ficar em
-  // background e o setInterval atrasar.
-  useEffect(() => {
-    if (tickRef.current) {
-      clearInterval(tickRef.current);
-      tickRef.current = null;
-    }
-
-    if (!activeSession) {
-      setElapsedSeconds(0);
-      return;
-    }
-
-    const startedAtMs = new Date(activeSession.startedAt).getTime();
-    const updateElapsed = () => {
-      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000)));
-    };
-    updateElapsed();
-    tickRef.current = setInterval(updateElapsed, 1000);
-
-    return () => {
-      if (tickRef.current) clearInterval(tickRef.current);
-    };
-  }, [activeSession]);
-
-  const start = useCallback(async (input: StartStudySessionInput) => {
-    try {
-      setIsSubmitting(true);
-      setError('');
-      const session = await startStudySession(input);
-      setActiveSession(session);
-    } catch {
-      setError('Could not start the session. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, []);
-
-  const stop = useCallback(
-    async (note?: string) => {
-      if (!activeSession) return;
-      try {
-        setIsSubmitting(true);
-        setError('');
-        await stopStudySession(activeSession.id, { note });
-        setActiveSession(null);
-      } catch {
-        setError('Could not stop the session. Please try again.');
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [activeSession],
-  );
-
   return {
     activeSession,
     areas,
@@ -127,7 +75,7 @@ export function useStudySession() {
     elapsedSeconds,
     isLoading,
     isSubmitting,
-    error,
+    error: error || sessionError,
     start,
     stop,
   };

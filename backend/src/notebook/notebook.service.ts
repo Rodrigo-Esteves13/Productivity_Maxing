@@ -99,6 +99,19 @@ function looksLikeBinary(buffer: Buffer): boolean {
 // sugestão desaparecer.
 const CLASS_MATCH_MARGIN_MINUTES = 15;
 
+// Uma pessoa a abrir /shared/:token pode estar em 5 estados diferentes -
+// ver NotebookService.getSharedEntry. O controller devolve isto tal e
+// qual (200 OK sempre que o token existe); só um token inexistente ou
+// removido continua a dar 404 (ver NotebookShareController), porque
+// isso é um erro genuíno de "este link não existe", não um dos estados
+// normais de uma partilha AUTHORIZED.
+export type SharedEntryResult =
+  | { status: 'ok'; entry: Record<string, unknown> }
+  | { status: 'login_required' }
+  | { status: 'not_requested' }
+  | { status: 'pending' }
+  | { status: 'denied' };
+
 @Injectable()
 export class NotebookService {
   private readonly logger = new Logger(NotebookService.name);
@@ -311,20 +324,25 @@ export class NotebookService {
     return { deleted: true };
   }
 
-  // --- Partilha (link "só de leitura" para amigos, sem precisarem de
-  // conta) --------------------------------------------------------------
+  // --- Partilha (link para amigos, sem precisarem de conta - ou, em modo
+  // AUTHORIZED, com conta E aprovação do dono) ----------------------------
   // Uma linha por entrada (@unique em notebookEntryId no schema) - "criar
   // partilha" é upsert (idempotente: se já existe, devolve a existente em
   // vez de gerar um segundo token e invalidar o anterior sem avisar quem
   // já tem o link antigo). "Parar de partilhar" apaga a linha - sem soft
-  // revoke, o token deixa de ser válido de imediato.
+  // revoke, o token deixa de ser válido de imediato, e cascade apaga
+  // também qualquer NotebookShareAccessRequest pendente.
 
   async getShareStatus(userId: string, entryId: string) {
     await this.findOwnedEntryOrThrow(userId, entryId);
     const share = await this.prisma.notebookShare.findUnique({
       where: { notebookEntryId: entryId },
     });
-    return { shared: !!share, token: share?.token ?? null };
+    return {
+      shared: !!share,
+      token: share?.token ?? null,
+      visibility: share?.visibility ?? 'PUBLIC',
+    };
   }
 
   async createShare(userId: string, entryId: string) {
@@ -334,7 +352,7 @@ export class NotebookService {
       create: { notebookEntryId: entryId, createdByUserId: userId },
       update: {},
     });
-    return { shared: true, token: share.token };
+    return { shared: true, token: share.token, visibility: share.visibility };
   }
 
   async revokeShare(userId: string, entryId: string) {
@@ -345,15 +363,160 @@ export class NotebookService {
     await this.prisma.notebookShare.deleteMany({
       where: { notebookEntryId: entryId },
     });
-    return { shared: false, token: null };
+    return { shared: false, token: null, visibility: 'PUBLIC' as const };
   }
 
-  // Público - SEM JwtAuthGuard (ver NotebookShareController). O token
-  // UUID é a única credencial; não confirma nem infirma se `token` "quase
-  // corresponde" a nada (findUnique simples, 404 genérico), e nunca
-  // devolve userId/areaId/classOccurrenceId internos - só o que uma
-  // pessoa de fora precisa para ver a lesson.
-  async getSharedEntry(token: string) {
+  // Troca PUBLIC <-> AUTHORIZED sem tocar no token - quem já tinha o link
+  // guardado continua a usar o mesmo, só passa a precisar de sessão +
+  // aprovação a partir de agora (ou deixa de precisar, se voltar a
+  // PUBLIC). À parte de createShare de propósito: criar a partilha e
+  // mudar o seu modo são ações distintas, e não faz sentido
+  // "createShare({visibility: AUTHORIZED})" reaproveitar o upsert de
+  // create acima e arriscar sobrescrever silenciosamente uma partilha já
+  // existente que o dono só queria voltar a ler o token de.
+  async updateShareVisibility(
+    userId: string,
+    entryId: string,
+    visibility: 'PUBLIC' | 'AUTHORIZED',
+  ) {
+    await this.findOwnedEntryOrThrow(userId, entryId);
+    const share = await this.prisma.notebookShare.findUnique({
+      where: { notebookEntryId: entryId },
+    });
+    if (!share) {
+      throw new NotFoundException(
+        'Create a share link before changing who can access it.',
+      );
+    }
+    const updated = await this.prisma.notebookShare.update({
+      where: { notebookEntryId: entryId },
+      data: { visibility },
+    });
+    return {
+      shared: true,
+      token: updated.token,
+      visibility: updated.visibility,
+    };
+  }
+
+  // Chamado pela pessoa DE FORA a pedir acesso a uma partilha AUTHORIZED -
+  // precisa de sessão (ver NotebookShareController), mas nunca precisa de
+  // ser dona da entry (isso é bloqueado abaixo: o dono já vê tudo, pedir
+  // acesso à própria partilha não faz sentido). Upsert em vez de create
+  // simples: pedir de novo depois de um DENIED volta a PENDING (dá à
+  // pessoa uma segunda oportunidade sem o dono ter de apagar nada à mão);
+  // pedir de novo estando já PENDING ou APPROVED é idempotente, devolve o
+  // estado atual sem o alterar.
+  async requestAccess(requestingUserId: string, token: string) {
+    const share = await this.prisma.notebookShare.findUnique({
+      where: { token },
+    });
+    if (!share) {
+      throw new NotFoundException('This share link is invalid or was removed.');
+    }
+    if (share.visibility !== 'AUTHORIZED') {
+      throw new BadRequestException(
+        'This share does not require requesting access.',
+      );
+    }
+    if (share.createdByUserId === requestingUserId) {
+      throw new BadRequestException('You already own this shared lesson.');
+    }
+
+    const existing = await this.prisma.notebookShareAccessRequest.findUnique({
+      where: {
+        notebookShareId_requestingUserId: {
+          notebookShareId: share.id,
+          requestingUserId,
+        },
+      },
+    });
+    if (existing && existing.status !== 'DENIED') {
+      return { status: existing.status };
+    }
+
+    const request = await this.prisma.notebookShareAccessRequest.upsert({
+      where: {
+        notebookShareId_requestingUserId: {
+          notebookShareId: share.id,
+          requestingUserId,
+        },
+      },
+      create: {
+        notebookShareId: share.id,
+        requestingUserId,
+        status: 'PENDING',
+      },
+      update: { status: 'PENDING', decidedAt: null },
+    });
+    return { status: request.status };
+  }
+
+  // Lado do dono: a lista de quem pediu acesso a esta entry, para o
+  // painel de aprovação em NotebookEntryShare.tsx. findOwnedEntryOrThrow
+  // é a verificação de posse - sem partilha nenhuma ainda, devolve uma
+  // lista vazia em vez de 404 (pedir a lista antes de a entry alguma vez
+  // ter sido partilhada não é um erro, é só "nada para mostrar ainda").
+  async listAccessRequests(userId: string, entryId: string) {
+    await this.findOwnedEntryOrThrow(userId, entryId);
+    const share = await this.prisma.notebookShare.findUnique({
+      where: { notebookEntryId: entryId },
+    });
+    if (!share) return [];
+
+    return this.prisma.notebookShareAccessRequest.findMany({
+      where: { notebookShareId: share.id },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        decidedAt: true,
+        requestingUser: {
+          select: { id: true, name: true, email: true, avatarUrl: true },
+        },
+      },
+    });
+  }
+
+  // Lado do dono: aprova ou nega um pedido específico. requestId E entryId
+  // são ambos verificados juntos (o where abaixo cruza
+  // notebookShare.notebookEntryId com o entryId já confirmado como do
+  // dono) - defesa contra IDOR: um requestId de OUTRA entry (de outro
+  // dono qualquer) nunca é encontrado através deste caminho, mesmo que
+  // alguém adivinhe o UUID.
+  async decideAccessRequest(
+    userId: string,
+    entryId: string,
+    requestId: string,
+    decision: 'APPROVED' | 'DENIED',
+  ) {
+    await this.findOwnedEntryOrThrow(userId, entryId);
+    const request = await this.prisma.notebookShareAccessRequest.findFirst({
+      where: { id: requestId, notebookShare: { notebookEntryId: entryId } },
+    });
+    if (!request) {
+      throw new NotFoundException('Access request not found.');
+    }
+
+    const updated = await this.prisma.notebookShareAccessRequest.update({
+      where: { id: requestId },
+      data: { status: decision, decidedAt: new Date() },
+    });
+    return { id: updated.id, status: updated.status };
+  }
+
+  // Público - SEM JwtAuthGuard de classe (ver NotebookShareController),
+  // mas com OptionalJwtAuthGuard nesta rota específica: `requestingUserId`
+  // vem preenchido quando quem pede já tem sessão, e fica null quando não
+  // tem - os dois casos são válidos, a diferença é só o que este método
+  // decide devolver. O token UUID continua a ser a única credencial que
+  // PROVA que se conhece o link; não confirma nem infirma se `token`
+  // "quase corresponde" a nada (findUnique simples, 404 genérico).
+  async getSharedEntry(
+    token: string,
+    requestingUserId: string | null,
+  ): Promise<SharedEntryResult> {
     const share = await this.prisma.notebookShare.findUnique({
       where: { token },
       include: {
@@ -369,24 +532,48 @@ export class NotebookService {
     if (!share)
       throw new NotFoundException('This share link is invalid or was removed.');
 
+    if (
+      share.visibility === 'AUTHORIZED' &&
+      share.createdByUserId !== requestingUserId
+    ) {
+      if (!requestingUserId) return { status: 'login_required' };
+
+      const request = await this.prisma.notebookShareAccessRequest.findUnique({
+        where: {
+          notebookShareId_requestingUserId: {
+            notebookShareId: share.id,
+            requestingUserId,
+          },
+        },
+      });
+      if (!request) return { status: 'not_requested' };
+      if (request.status === 'PENDING') return { status: 'pending' };
+      if (request.status === 'DENIED') return { status: 'denied' };
+      // status === 'APPROVED' falls through to the same rendering as a
+      // PUBLIC share, below.
+    }
+
     const { notebookEntry: entry } = share;
     const withUrls = await this.attachSignedUrls(entry);
     return {
-      title: withUrls.title,
-      entryType: withUrls.entryType,
-      classNumber: withUrls.classNumber,
-      textContent: withUrls.textContent,
-      drawingStrokes: withUrls.drawingStrokes,
-      tables: withUrls.tables,
-      canvasShapes: withUrls.canvasShapes,
-      canvasLinks: withUrls.canvasLinks,
-      canvasTexts: withUrls.canvasTexts,
-      canvasHeight: withUrls.canvasHeight,
-      usefulLinks: withUrls.usefulLinks,
-      date: withUrls.date,
-      area: entry.area,
-      photos: withUrls.photos,
-      attachments: withUrls.attachments,
+      status: 'ok',
+      entry: {
+        title: withUrls.title,
+        entryType: withUrls.entryType,
+        classNumber: withUrls.classNumber,
+        textContent: withUrls.textContent,
+        drawingStrokes: withUrls.drawingStrokes,
+        tables: withUrls.tables,
+        canvasShapes: withUrls.canvasShapes,
+        canvasLinks: withUrls.canvasLinks,
+        canvasTexts: withUrls.canvasTexts,
+        canvasHeight: withUrls.canvasHeight,
+        usefulLinks: withUrls.usefulLinks,
+        date: withUrls.date,
+        area: entry.area,
+        photos: withUrls.photos,
+        attachments: withUrls.attachments,
+      },
     };
   }
 

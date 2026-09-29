@@ -264,6 +264,7 @@ model User {
   areaScheduleLinks AreaScheduleLink[]
   notebookEntries   NotebookEntry[]
   notebookShares    NotebookShare[]
+  notebookShareAccessRequests NotebookShareAccessRequest[]
 }
 
 /// Recurso submetido pelo próprio utilizador contra a sua suspensão/ban
@@ -591,6 +592,13 @@ model Task {
   // antigas criadas antes deste campo existir.
   calendarDurationMinutes Int?
   createdAt             DateTime @default(now())
+  // Gerido automaticamente pelo Prisma (@updatedAt - toca em qualquer
+  // update(), não só os campos "visíveis"). Alimenta o StaleTasksCard
+  // no frontend ("esta task está pendente há muito tempo sem ninguém
+  // lhe tocar") - sem isto não havia sinal nenhum de "última atividade"
+  // numa task, só "quando foi criada" (createdAt), que não é a mesma
+  // pergunta.
+  updatedAt DateTime @updatedAt
 
   // Relações
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -682,6 +690,15 @@ model StudySession {
   // null enquanto a sessão está a decorrer - é o que StudySessionsService
   // usa para saber se há uma sessão "ativa" (no máximo 1 por utilizador).
   endedAt   DateTime?
+  // Atualizado periodicamente pelo frontend enquanto a sessão está ativa
+  // (ver StudySessionProvider.tsx, POST /study-sessions/:id/heartbeat) -
+  // é o sinal que StudySessionsService.autoCloseIfStale usa para saber
+  // se uma sessão "ativa" ainda está mesmo a decorrer, ou se ficou
+  // esquecida (separador fechado sem o pagehide disparar, portátil foi
+  // a baixo, etc.) e deve ser fechada sozinha em vez de continuar a
+  // contar horas fantasma até o utilizador reparar. null até ao
+  // primeiro heartbeat (mesmo instante do start(), na prática).
+  lastHeartbeatAt DateTime?
   note      String?
   createdAt DateTime  @default(now())
 
@@ -896,11 +913,51 @@ model NotebookShare {
   token           String   @unique @default(uuid())
   createdByUserId String
   createdAt       DateTime @default(now())
+  // PUBLIC (default, comportamento original: o token sozinho já chega) ou
+  // AUTHORIZED - nesse caso quem abre o link tem de ter sessão E um
+  // NotebookShareAccessRequest com status APPROVED. Campo no share, não
+  // na entry: é sobre COMO o link se comporta, não sobre o conteúdo em
+  // si, e um dia a mesma entry pode voltar a ser partilhada de outra
+  // forma sem isto arrastar histórico antigo.
+  visibility NotebookShareVisibility @default(PUBLIC)
 
-  notebookEntry NotebookEntry @relation(fields: [notebookEntryId], references: [id], onDelete: Cascade)
-  createdBy     User          @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  notebookEntry  NotebookEntry                @relation(fields: [notebookEntryId], references: [id], onDelete: Cascade)
+  createdBy      User                         @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  accessRequests NotebookShareAccessRequest[]
 
   @@index([token])
+}
+
+enum NotebookShareVisibility {
+  PUBLIC
+  AUTHORIZED
+}
+
+// Um pedido de acesso de uma pessoa autenticada a um NotebookShare
+// AUTHORIZED. Uma linha por (share, requestingUser) - @@unique abaixo -
+// para pedir de novo ser um upsert idempotente (ver
+// NotebookService.requestAccess) em vez de acumular pedidos duplicados
+// de quem carrega no botão mais do que uma vez.
+model NotebookShareAccessRequest {
+  id               String                    @id @default(uuid())
+  notebookShareId  String
+  requestingUserId String
+  status           ShareAccessRequestStatus  @default(PENDING)
+  createdAt        DateTime                  @default(now())
+  // Preenchido quando o dono aprova/nega - fica null enquanto PENDING.
+  decidedAt        DateTime?
+
+  notebookShare  NotebookShare @relation(fields: [notebookShareId], references: [id], onDelete: Cascade)
+  requestingUser User          @relation(fields: [requestingUserId], references: [id], onDelete: Cascade)
+
+  @@unique([notebookShareId, requestingUserId])
+  @@index([notebookShareId, status])
+}
+
+enum ShareAccessRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
 }
 
 enum NotebookEntryType {
