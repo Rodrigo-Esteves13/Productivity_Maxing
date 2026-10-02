@@ -6,6 +6,12 @@ export interface DurationPrediction {
   // para dar ainda, o frontend deve tratar isto como "sem previsão", não
   // como "previsão de 0 minutos".
   predictedMinutes: number | null;
+  // Intervalo de ~80% (o real cai aqui 8 vezes em 10, com base no
+  // histórico). null sem previsão ou sem dispersão mensurável.
+  rangeMinutes: { low: number; high: number } | null;
+  // Tasks deixadas de fora do treino por terem uma duração absurda
+  // (tipicamente uma sessão esquecida ligada).
+  trimmedSamples: number;
   method: PredictionMethod;
   // Quantas tasks concluídas (com tempo de estudo registado) entraram no
   // treino do modelo devolvido - usado pelo frontend para explicar a

@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ActionButton from '../components/UI/ActionButton';
 import WeekGrid from '../components/Schedule/WeekGrid';
 import ImportScheduleModal from '../components/Schedule/ImportScheduleModal';
 import StudyPlanCard from '../components/Study/StudyPlanCard';
+import CommitmentsCard from '../components/Schedule/CommitmentsCard';
+import ScheduleSyncCard from '../components/Schedule/ScheduleSyncCard';
 import { UploadIcon } from '../components/UI/Icons';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { requestCalendarSyncReview } from '../lib/calendarSyncEvents';
 
 export default function Schedule() {
   useDocumentTitle('Schedule');
@@ -17,6 +20,14 @@ export default function Schedule() {
   // mudado (aulas novas), mas tem o seu próprio hook - mais simples
   // remontá-lo com uma key do que ligar outro canal de refresh.
   const [scheduleVersion, setScheduleVersion] = useState(0);
+
+  // Qualquer mudança (turno, local, import): refaz a grelha e o plano E
+  // pergunta se o Google Calendar deve ser atualizado (o modal só abre se
+  // estiver ligado e houver diferenças).
+  const handleScheduleChanged = useCallback(() => {
+    setScheduleVersion((v) => v + 1);
+    requestCalendarSyncReview();
+  }, []);
 
   return (
     <PageLayout>
@@ -37,6 +48,8 @@ export default function Schedule() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <WeekGrid refreshKey={scheduleVersion} />
+          <CommitmentsCard onChanged={handleScheduleChanged} />
+          <ScheduleSyncCard />
         </div>
         <div key={scheduleVersion}>
           <StudyPlanCard />
@@ -46,7 +59,7 @@ export default function Schedule() {
       <ImportScheduleModal
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
-        onImported={() => setScheduleVersion((v) => v + 1)}
+        onImported={handleScheduleChanged}
       />
     </PageLayout>
   );

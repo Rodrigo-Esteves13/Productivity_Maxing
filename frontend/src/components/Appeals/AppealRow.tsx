@@ -25,10 +25,12 @@ export default function AppealRow({ appeal, isResolving, onResolve }: AppealRowP
   const [note, setNote] = useState('');
   const [showNoteFor, setShowNoteFor] = useState<AppealResolution | null>(null);
 
+  // Dispara a resolução e mais nada: a linha sai da lista no mesmo render
+  // (remoção otimista em useAppealsPage), por isso não há nada para
+  // "reiniciar" aqui. Repor showNoteFor a null antes da resposta era o que
+  // fazia os botões Approve/Deny voltarem a aparecer durante ~1s.
   const confirm = (resolution: AppealResolution) => {
-    onResolve(appeal.id, resolution, note.trim() || undefined);
-    setShowNoteFor(null);
-    setNote('');
+    void onResolve(appeal.id, resolution, note.trim() || undefined);
   };
 
   return (

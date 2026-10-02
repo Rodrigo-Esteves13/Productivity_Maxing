@@ -251,6 +251,11 @@ model User {
   quietHoursStart Int?
   quietHoursEnd   Int?
 
+  // Limite de estudo por dia usado pelo plano (minutos). null = default do
+  // servidor (DEFAULT_DAILY_STUDY_LIMIT_MINUTES em study-plan.constants.ts).
+  // Estudo planeado acima disto conta como overtime.
+  dailyStudyLimitMinutes Int?
+
   // Relações
   identities       Identity[]
   tasks            Task[]
@@ -260,6 +265,9 @@ model User {
   agentConfig      AgentConfig?
   programs         AcademicProgram[] @relation("UserPrograms")
   classOccurrences ClassOccurrence[]
+  workShifts       WorkShift[]
+  commitments      Commitment[]
+  calendarSyncedEvents CalendarSyncedEvent[]
   bannedIps        BannedIp[]
   areaScheduleLinks AreaScheduleLink[]
   notebookEntries   NotebookEntry[]
@@ -1003,4 +1011,91 @@ model NotebookAttachment {
   notebookEntry NotebookEntry @relation(fields: [notebookEntryId], references: [id], onDelete: Cascade)
 
   @@index([notebookEntryId])
+}
+
+/// Turno de trabalho / compromisso fixo (trabalho, ginásio, extra) inserido
+/// manualmente. Ou é semanal (dayOfWeek preenchido, date null) ou pontual
+/// (date preenchido, dayOfWeek null) - exatamente um dos dois, validado em
+/// WorkShiftsService.assertValidShift porque o Prisma não expressa isto.
+/// Tempo ocupado no cálculo de tempo livre do plano de estudo, com
+/// bufferMinutes de viagem/preparação de cada lado.
+model WorkShift {
+  id     String @id @default(uuid())
+  userId String
+
+  // Local/compromisso a que o turno pertence (ex: "McDonald's"). Nome e
+  // tempo de deslocação vêm daí. null = turno solto, criado antes de
+  // existirem Commitments: continua a funcionar com label/bufferMinutes.
+  commitmentId String?
+
+  // 0=Domingo..6=Sábado (mesma convenção de getUTCDay()).
+  dayOfWeek Int?
+  // Meia-noite UTC desse dia (hora de Lisboa), como ClassOccurrence.date.
+  date      DateTime?
+
+  startMinutes  Int
+  endMinutes    Int
+  bufferMinutes Int    @default(0)
+  label         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commitment Commitment? @relation(fields: [commitmentId], references: [id], onDelete: Cascade)
+
+  // Toda a query filtra por dono; [userId, date] serve os turnos pontuais
+  // dentro de um intervalo.
+  @@index([userId])
+  @@index([userId, date])
+  @@index([commitmentId])
+}
+
+/// Evento que ESTA app criou no Google Calendar (aulas, turnos, viagens,
+/// blocos de estudo). Só estes são atualizados/apagados num sync, nunca os
+/// eventos pessoais. sourceKey é a identidade estável (ex: "class:<id>"),
+/// contentHash deteta se o conteúdo mudou desde o último envio.
+model CalendarSyncedEvent {
+  id            String @id @default(uuid())
+  userId        String
+  sourceKey     String
+  googleEventId String
+  contentHash   String
+
+  // Dia (meia-noite UTC, hora de Lisboa) e minuto de fim do evento: servem
+  // para limitar o sync à janela pedida e para nunca apagar o que já passou.
+  windowDate   DateTime
+  startMinutes Int      @default(0)
+  endMinutes   Int
+  // Título enviado à Google: o modal de confirmação precisa dele para
+  // mostrar o que vai ser removido (a linha é tudo o que sabemos).
+  title        String   @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sourceKey])
+  @@index([userId, windowDate])
+}
+
+/// Local ou compromisso recorrente (ex: um trabalho, o ginásio) com o seu
+/// próprio tempo de deslocação. Os turnos agrupam-se aqui; mudar o nome ou
+/// a deslocação atualiza todos os turnos (e o plano de estudo) de uma vez.
+model Commitment {
+  id             String @id @default(uuid())
+  userId         String
+  name           String
+  // Minutos de viagem de cada lado de cada turno deste local.
+  commuteMinutes Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shifts WorkShift[]
+
+  @@unique([userId, name])
+  @@index([userId])
 }

@@ -105,18 +105,141 @@ export interface ImportScheduleResult {
   results: ImportScheduleRowResult[];
 }
 
-// GET /study-plan response.
+// GET /study-plan response. Mirrors study-plan.types.ts on the backend.
 export interface StudyPlanSuggestion {
   date: string;
   startMinutes: number;
   endMinutes: number;
   taskId: string;
   taskTitle: string;
+  isOvertime: boolean;
+}
+
+export type EstimateSource =
+  | 'manual'
+  | 'manual_calibrated'
+  | 'predicted'
+  | 'course_history'
+  | 'default';
+
+export interface StudyPlanTask {
+  taskId: string;
+  title: string;
+  areaName: string;
+  areaColorHex: string;
+  deadline: string;
+  estimateMinutes: number;
+  estimateSource: EstimateSource;
+  loggedMinutes: number;
+  neededMinutes: number;
+  plannedMinutes: number;
+  overtimeMinutes: number;
+  shortfallMinutes: number;
+}
+
+export interface StudyPlanDay {
+  date: string;
+  classMinutes: number;
+  workMinutes: number;
+  studyMinutes: number;
+  overtimeMinutes: number;
+  freeMinutes: number;
+}
+
+export type CapacityStatus = 'no_work' | 'on_track' | 'overtime' | 'short';
+
+export interface StudyPlanSummary {
+  status: CapacityStatus;
+  neededMinutes: number;
+  plannedMinutes: number;
+  overtimeMinutes: number;
+  shortfallMinutes: number;
+  availableMinutes: number;
+  calibrationFactor: number | null;
+  predictionMethod: 'insufficient_data' | 'linear_regression' | 'mlp';
 }
 
 export interface StudyPlanResult {
   suggestions: StudyPlanSuggestion[];
-  warnings: string[];
+  tasks: StudyPlanTask[];
+  days: StudyPlanDay[];
+  summary: StudyPlanSummary;
+  dailyLimitMinutes: number;
+  overtimeExtraMinutes: number;
+}
+
+// A stored work shift (GET /work-shifts). Exactly one of dayOfWeek (weekly)
+// or date (one-off) is set.
+export interface WorkShift {
+  id: string;
+  dayOfWeek: number | null;
+  date: string | null;
+  startMinutes: number;
+  endMinutes: number;
+  commitmentId: string | null;
+  // Já resolvidos no servidor: nome e deslocação do local, quando existe.
+  bufferMinutes: number;
+  label: string | null;
+}
+
+// Um local/compromisso (ex: um trabalho) com a sua deslocação própria.
+export interface Commitment {
+  id: string;
+  name: string;
+  commuteMinutes: number;
+}
+
+export interface CommitmentWithShifts extends Commitment {
+  shifts: WorkShift[];
+}
+
+export interface CommitmentsOverview {
+  commitments: CommitmentWithShifts[];
+  ungroupedShifts: WorkShift[];
+}
+
+export interface UpdateWorkShiftInput {
+  dayOfWeek?: number;
+  date?: string;
+  startMinutes?: number;
+  endMinutes?: number;
+  commitmentId?: string | null;
+}
+
+// GET /study-plan/courses: dados reais por cadeira.
+export interface CourseForecast {
+  areaId: string;
+  areaName: string;
+  areaColorHex: string;
+  studiedMinutes: number;
+  completedTasks: number;
+  avgMinutesPerCompletedTask: number | null;
+  avgMinutesPerGradedTask: number | null;
+  pendingTasks: number;
+  remainingMinutes: number;
+  nextDeadline: string | null;
+}
+
+// A shift expanded to a concrete day (GET /work-shifts/range).
+export interface WorkShiftOccurrence {
+  shiftId: string;
+  commitmentId: string | null;
+  date: string;
+  startMinutes: number;
+  endMinutes: number;
+  bufferMinutes: number;
+  label: string | null;
+  isRecurring: boolean;
+}
+
+export interface CreateWorkShiftInput {
+  commitmentId?: string;
+  dayOfWeek?: number;
+  date?: string;
+  startMinutes: number;
+  endMinutes: number;
+  bufferMinutes?: number;
+  label?: string;
 }
 
 // Full records used only by the admin area (/admin/task-types,

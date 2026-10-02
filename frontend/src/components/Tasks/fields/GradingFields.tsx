@@ -90,10 +90,20 @@ export default function GradingFields({
               type="button"
               onClick={() => onEstimatedMinutesChange(String(prediction!.predictedMinutes))}
               className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 border border-violet-900 hover:border-violet-700 rounded-md px-2 py-1 transition-colors"
-              title={`Based on ${prediction!.sampleSize} of your past tasks, via ${formatMethodLabel(prediction!.method)}`}
+              title={`Based on ${prediction!.sampleSize} of your past tasks, via ${formatMethodLabel(prediction!.method)}${
+                prediction!.trimmedSamples > 0
+                  ? `. ${prediction!.trimmedSamples} unusually long task(s) were ignored.`
+                  : ''
+              }`}
             >
               <ClockIcon className="w-3.5 h-3.5" />
               Suggested: {prediction!.predictedMinutes} min
+              {prediction!.rangeMinutes && (
+                <span className="text-violet-400/60">
+                  {' '}
+                  ({prediction!.rangeMinutes.low}-{prediction!.rangeMinutes.high})
+                </span>
+              )}
             </button>
           )}
         </div>

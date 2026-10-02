@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ErrorState from '../components/UI/ErrorState';
@@ -15,23 +15,29 @@ import { useQuickReschedule } from '../hooks/useQuickReschedule';
 import { useAcademic } from '../context/useAcademic';
 import GpaSummary from '../components/Dashboard/GpaSummary';
 import PeriodProgressBar from '../components/Dashboard/PeriodProgressBar';
-import GradeNeededCalculator from '../components/Dashboard/GradeNeededCalculator';
-import UpcomingTasksCard from '../components/Dashboard/UpcomingTasksCard';
-import AtRiskTasksCard from '../components/Dashboard/AtRiskTasksCard';
-import DeadlineOverlapCard from '../components/Dashboard/DeadlineOverlapCard';
 import OverloadAlertCard from '../components/Dashboard/OverloadAlertCard';
-import AreaBreakdownCard from '../components/Dashboard/AreaBreakdownCard';
-import StudyActivityCard from '../components/Dashboard/StudyActivityCard';
+import MasonryGrid from '../components/UI/MasonryGrid';
+import {
+  UpcomingTasksCard,
+  AtRiskTasksCard,
+  DeadlineOverlapCard,
+  AreaBreakdownCard,
+  StudyActivityCard,
+  StudyCapacityCard,
+  CourseForecastCard,
+  ExamCountdownCard,
+  StaleTasksCard,
+  TimeByAreaCard,
+  EstimationAccuracyCard,
+  DeadlineComplianceCard,
+  WeekdayLoadCard,
+  TargetVsRealCard,
+  ProductivityByTypeCard,
+  GradeNeededCalculator,
+  TaskImportModal,
+} from '../components/Dashboard/lazyCards';
 import ProgramsOverviewCard from '../components/Dashboard/ProgramsOverviewCard';
 import CreditsAccumulatedCard from '../components/Dashboard/CreditsAccumulatedCard';
-import ExamCountdownCard from '../components/Dashboard/ExamCountdownCard';
-import StaleTasksCard from '../components/Dashboard/StaleTasksCard';
-import TimeByAreaCard from '../components/Dashboard/TimeByAreaCard';
-import EstimationAccuracyCard from '../components/Dashboard/EstimationAccuracyCard';
-import DeadlineComplianceCard from '../components/Dashboard/DeadlineComplianceCard';
-import WeekdayLoadCard from '../components/Dashboard/WeekdayLoadCard';
-import TargetVsRealCard from '../components/Dashboard/TargetVsRealCard';
-import ProductivityByTypeCard from '../components/Dashboard/ProductivityByTypeCard';
 import { DashboardWidgetToggles } from '../components/Dashboard/DashboardWidgetToggles';
 import { useDashboardWidgetPrefs } from '../hooks/useDashboardWidgetPrefs';
 import { useTableDensity } from '../hooks/useTableDensity';
@@ -40,7 +46,6 @@ import { isTaskArchived } from '../utils/taskArchive';
 import { PrinterIcon, UploadIcon, SlidersIcon } from '../components/UI/Icons';
 import BulkActionsBar from '../components/Dashboard/BulkActionsBar';
 import TaskExportButtons from '../components/Dashboard/TaskExportButtons';
-import TaskImportModal from '../components/Dashboard/TaskImportModal';
 
 const DASHBOARD_TASK_TYPE_KEY = 'ACADEMICO';
 
@@ -283,33 +288,36 @@ export default function Dashboard() {
         <OverloadAlertCard tasks={academicTasks} areas={academicAreas} />
       )}
 
-      {!isLoading && !error && academicTasks.length > 0 &&
-        (visibility.upcoming || visibility.atRisk || visibility.deadlineOverlap) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          {visibility.upcoming && <UpcomingTasksCard tasks={academicTasks} areas={academicAreas} />}
-          {visibility.atRisk && <AtRiskTasksCard tasks={academicTasks} areas={academicAreas} />}
-          {visibility.deadlineOverlap && (
+      {/*
+        Masonry em JS (MasonryGrid): cada cartão vai para a coluna mais
+        curta e o último de cada coluna estica até ao fundo, por isso as
+        duas colunas acabam sempre à mesma altura, tenha o Dashboard 3 ou
+        14 cartões visíveis. Um cartão sem dados (renderiza null) não
+        ocupa lugar. Com CSS multi-column isto não era possível: não há
+        forma de esticar o último item de cada coluna.
+      */}
+      {!isLoading && !error && (
+        <MasonryGrid className="mb-6">
+          {visibility.studyCapacity && <StudyCapacityCard />}
+          {academicTasks.length > 0 && visibility.upcoming && (
+            <UpcomingTasksCard tasks={academicTasks} areas={academicAreas} />
+          )}
+          {academicTasks.length > 0 && visibility.atRisk && (
+            <AtRiskTasksCard tasks={academicTasks} areas={academicAreas} />
+          )}
+          {academicTasks.length > 0 && visibility.deadlineOverlap && (
             <DeadlineOverlapCard tasks={academicTasks} areas={academicAreas} />
           )}
-        </div>
-      )}
-
-      {!isLoading && !error && academicAreas.length > 0 && activeProgram && (visibility.areaBreakdown || visibility.studyActivity) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          {visibility.areaBreakdown && (
+          {academicAreas.length > 0 && activeProgram && visibility.areaBreakdown && (
             <AreaBreakdownCard
               tasks={academicTasks}
               areas={academicAreas}
               scale={activeProgram.gradeScale}
             />
           )}
-          {visibility.studyActivity && <StudyActivityCard />}
-        </div>
-      )}
-
-      {!isLoading && !error &&
-        (visibility.examCountdown || visibility.staleTasks || visibility.timeByArea || visibility.estimationAccuracy || visibility.deadlineCompliance || visibility.weekdayLoad || visibility.targetVsReal || visibility.productivityByType) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {academicAreas.length > 0 && activeProgram && visibility.studyActivity && (
+            <StudyActivityCard />
+          )}
           {visibility.examCountdown && academicTasks.length > 0 && (
             <ExamCountdownCard tasks={academicTasks} areas={academicAreas} />
           )}
@@ -317,6 +325,7 @@ export default function Dashboard() {
             <StaleTasksCard tasks={academicTasks} areas={academicAreas} />
           )}
           {visibility.timeByArea && <TimeByAreaCard />}
+        {visibility.courseForecast && <CourseForecastCard />}
           {visibility.estimationAccuracy && <EstimationAccuracyCard />}
           {visibility.deadlineCompliance && academicTasks.length > 0 && (
             <DeadlineComplianceCard tasks={academicTasks} />
@@ -334,16 +343,18 @@ export default function Dashboard() {
           {visibility.productivityByType && academicTasks.length > 0 && (
             <ProductivityByTypeCard tasks={academicTasks} academicTaskTypes={academicTaskTypes} />
           )}
-        </div>
+        </MasonryGrid>
       )}
 
       {visibility.gradeCalculator && !isLoading && !error && academicAreas.length > 0 && activeProgram && (
         <div className="mb-6">
-          <GradeNeededCalculator
-            tasks={academicTasks}
-            areas={academicAreas}
-            scale={activeProgram.gradeScale}
-          />
+          <Suspense fallback={null}>
+            <GradeNeededCalculator
+              tasks={academicTasks}
+              areas={academicAreas}
+              scale={activeProgram.gradeScale}
+            />
+          </Suspense>
         </div>
       )}
 
@@ -396,11 +407,15 @@ export default function Dashboard() {
         </>
       )}
 
-      <TaskImportModal
-        isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
-        onImported={handleImported}
-      />
+      {isImportModalOpen && (
+        <Suspense fallback={null}>
+          <TaskImportModal
+            isOpen={isImportModalOpen}
+            onClose={() => setIsImportModalOpen(false)}
+            onImported={handleImported}
+          />
+        </Suspense>
+      )}
     </PageLayout>
   );
 }

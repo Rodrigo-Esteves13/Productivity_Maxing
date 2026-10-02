@@ -7,12 +7,17 @@ export interface DurationPredictionRequest {
   difficulty: Difficulty;
   weightPercentage?: number;
   taskId?: string;
+  areaId?: string;
 }
 
 export type PredictionMethod = 'insufficient_data' | 'linear_regression' | 'mlp';
 
 export interface DurationPrediction {
   predictedMinutes: number | null;
+  // ~80% interval from your own history (null when there is no spread yet).
+  rangeMinutes: { low: number; high: number } | null;
+  // Tasks left out of training for having an absurd duration.
+  trimmedSamples: number;
   method: PredictionMethod;
   sampleSize: number;
   actualMinutes: number | null;

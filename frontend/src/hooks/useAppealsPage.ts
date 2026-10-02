@@ -15,7 +15,6 @@ export function useAppealsPage() {
   const [skip, setSkip] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
   const fetchAppeals = useCallback(async (skipOverride = 0) => {
@@ -77,32 +76,35 @@ export function useAppealsPage() {
     resolution: AppealResolution,
     resolutionNote?: string,
   ) => {
-    setResolvingId(id);
+    // Remoção OTIMISTA: o appeal sai da lista no mesmo render do clique.
+    // Antes, a linha só desaparecia depois da resposta do servidor, e
+    // durante esse segundo os botões Approve/Deny voltavam a aparecer
+    // (ver AppealRow). Guardamos o estado anterior para repor se o pedido
+    // falhar, em vez de deixar o admin a achar que resolveu algo que não
+    // resolveu.
+    const previousAppeals = appeals;
+    const previousTotal = total;
+    const wasLastItemOnPage = appeals.length <= 1 && skip > 0;
+
     setFeedback(null);
+    setAppeals((prev) => prev.filter((a) => a.id !== id));
+    setTotal((prev) => Math.max(0, prev - 1));
+
     try {
       await resolveAppeal(id, resolution, resolutionNote);
-
-      // Instant feedback: drop it from the list and the count right away
-      // instead of waiting on a refetch - the mutation already succeeded,
-      // there's nothing left to wait for from the user's point of view.
-      setAppeals((prev) => prev.filter((a) => a.id !== id));
-      setTotal((prev) => Math.max(0, prev - 1));
       setFeedback({
         type: 'success',
         message: resolution === 'APPROVED' ? 'Appeal approved.' : 'Appeal denied.',
       });
 
-      // The optimistic update above can leave this page with one fewer
-      // item than PAGE_SIZE while a later page still has more (or leave
-      // an empty page if this was the last item here) - reconcile against
-      // the server in the background so pagination stays correct without
-      // undoing the instant feedback above.
-      const wasLastItemOnPage = appeals.length <= 1 && skip > 0;
-      reconcileSilently(wasLastItemOnPage ? Math.max(0, skip - PAGE_SIZE) : skip);
+      // A remoção pode deixar esta página com menos de PAGE_SIZE itens
+      // enquanto há mais na seguinte (ou vazia, se era o último): reconcilia
+      // com o servidor em background, sem piscar a página.
+      void reconcileSilently(wasLastItemOnPage ? Math.max(0, skip - PAGE_SIZE) : skip);
     } catch {
+      setAppeals(previousAppeals);
+      setTotal(previousTotal);
       setFeedback({ type: 'error', message: 'Could not resolve this appeal. Please try again.' });
-    } finally {
-      setResolvingId(null);
     }
   };
 
@@ -113,7 +115,7 @@ export function useAppealsPage() {
     pageSize: PAGE_SIZE,
     isLoading,
     error,
-    resolvingId,
+    resolvingId: null as string | null,
     feedback,
     goToNextPage,
     goToPrevPage,

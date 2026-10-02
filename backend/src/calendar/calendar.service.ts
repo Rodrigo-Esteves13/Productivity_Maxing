@@ -112,6 +112,13 @@ export class CalendarService {
     return data.access_token;
   }
 
+  /** Access token válido para outros serviços do módulo (ex: sync do
+   * horário). Mantém getValidAccessToken privado, com um único ponto de
+   * entrada para o refresh. */
+  getAccessToken(userId: string): Promise<string> {
+    return this.getValidAccessToken(userId);
+  }
+
   // Junta toda a informação que também aparece no ecrã "Task Details" do
   // frontend (TaskDetailView.tsx), para o evento no Google Calendar não
   // ficar mais pobre do que a própria app - cada linha só entra se o campo

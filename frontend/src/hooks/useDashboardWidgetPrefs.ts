@@ -9,6 +9,8 @@ export type DashboardWidgetKey =
   | 'deadlineOverlap'
   | 'areaBreakdown'
   | 'studyActivity'
+  | 'studyCapacity'
+  | 'courseForecast'
   | 'gradeCalculator'
   | 'creditSimulator'
   | 'creditsAccumulated'
@@ -30,6 +32,8 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   deadlineOverlap: 'Deadline overlaps',
   areaBreakdown: 'Breakdown by course',
   studyActivity: 'Study activity',
+  studyCapacity: 'Study capacity',
+  courseForecast: 'Study time per course',
   gradeCalculator: 'Grade needed calculator',
   creditSimulator: '"What if" GPA simulator',
   creditsAccumulated: 'ECTS credits accumulated',
@@ -57,6 +61,8 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   deadlineOverlap: true,
   areaBreakdown: true,
   studyActivity: true,
+  studyCapacity: true,
+  courseForecast: true,
   gradeCalculator: true,
   creditSimulator: true,
   creditsAccumulated: true,

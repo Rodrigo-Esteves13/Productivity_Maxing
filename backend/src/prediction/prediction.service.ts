@@ -16,6 +16,12 @@ import {
 } from './prediction-math.util';
 import type { Scaler } from './prediction-math.util';
 import { trainMlp } from './prediction-mlp.util';
+import {
+  NEUTRAL_INTERVAL,
+  computeRatioInterval,
+  keepIndicesWithoutUpperOutliers,
+} from './prediction-stats.util';
+import type { RatioInterval } from './prediction-stats.util';
 import type {
   DurationPrediction,
   PredictionMethod,
@@ -42,15 +48,33 @@ const RETRAIN_SAMPLE_DELTA = 5;
 // "média" que é basicamente o próprio valor a prever, um sinal
 // artificialmente forte que não generaliza.
 const TYPE_AVERAGE_SMOOTHING_K = 3;
+// Igual ao anterior, mas por Area (a disciplina): uma cadeira "pesada"
+// tende a pedir mais tempo seja qual for o tipo de task, e isso o TaskType
+// sozinho não apanha. K maior que o do tipo porque há mais Areas do que
+// tipos, cada uma com menos tasks.
+const AREA_AVERAGE_SMOOTHING_K = 4;
+// Piso da previsão usada para calcular rácios e intervalos (evita
+// divisões por valores ~0 ou negativos de uma regressão mal comportada).
+const MIN_PREDICTED_MINUTES = 5;
 // Dentro disto (para qualquer lado) conta como "estimativa acertada" em
 // getEstimationAccuracy - sem alguma margem, praticamente nenhuma
 // estimativa manual bateria certo ao minuto e accurateCount seria sempre
 // ~0, o que não diz nada de útil ao Rodrigo.
 const ESTIMATION_ACCURACY_TOLERANCE_PCT = 20;
+// Calibração das estimativas manuais: só entram tasks CONCLUÍDAS (numa
+// task em curso o tempo real ainda está incompleto e puxaria o fator para
+// baixo) e só com amostra suficiente para não ser ruído.
+const MIN_SAMPLES_FOR_CALIBRATION = 3;
+// Um fator fora disto quase de certeza vem de dados estranhos (ex: uma
+// sessão esquecida ligada), não de um viés real de estimativa.
+const CALIBRATION_FACTOR_MIN = 0.5;
+const CALIBRATION_FACTOR_MAX = 2.5;
+const CALIBRATION_DECIMALS = 100;
 
 const TRAINING_SELECT = {
   id: true,
   taskTypeId: true,
+  areaId: true,
   difficulty: true,
   weightPercentage: true,
   estimatedMinutes: true,
@@ -64,6 +88,7 @@ type TrainingTask = Prisma.TaskGetPayload<{ select: typeof TRAINING_SELECT }>;
 
 interface TrainingRow {
   taskTypeId: string;
+  areaId: string;
   difficulty: keyof typeof DIFFICULTY_WEIGHT;
   weightPercentage: number | null;
   estimatedMinutes: number | null;
@@ -76,6 +101,9 @@ interface CachedModel {
   featureScalers: Scaler[];
   targetScaler: Scaler | null; // só para 'mlp'
   typeAverages: Map<string, number>;
+  areaAverages: Map<string, number>;
+  interval: RatioInterval;
+  trimmedSamples: number;
   globalMeanActualMinutes: number;
   predict: (rawFeatures: number[]) => number;
 }
@@ -84,6 +112,9 @@ interface ModelResult {
   method: PredictionMethod;
   sampleSize: number;
   typeAverages: Map<string, number>;
+  areaAverages: Map<string, number>;
+  interval: RatioInterval;
+  trimmedSamples: number;
   globalMeanActualMinutes: number;
   predict: ((rawFeatures: number[]) => number) | null;
 }
@@ -104,11 +135,14 @@ export class PredictionService {
     userId: string,
     dto: PredictDurationDto,
   ): Promise<DurationPrediction> {
-    let ownedTask: { estimatedMinutes: number | null } | null = null;
+    let ownedTask: {
+      estimatedMinutes: number | null;
+      areaId: string;
+    } | null = null;
     if (dto.taskId) {
       const task = await this.prisma.task.findFirst({
         where: { id: dto.taskId, userId },
-        select: { estimatedMinutes: true },
+        select: { estimatedMinutes: true, areaId: true },
       });
       if (!task) {
         throw new NotFoundException(`Task not found or you don't have access.`);
@@ -126,28 +160,131 @@ export class PredictionService {
     if (model.method === 'insufficient_data' || !model.predict) {
       return {
         predictedMinutes: null,
+        rangeMinutes: null,
+        trimmedSamples: model.trimmedSamples,
         method: 'insufficient_data',
         sampleSize: model.sampleSize,
         actualMinutes,
       };
     }
 
-    const rawFeatures = [
-      DIFFICULTY_WEIGHT[dto.difficulty],
-      dto.weightPercentage ?? 0,
-      ownedTask?.estimatedMinutes ?? 0,
-      model.typeAverages.get(taskTypeId) ?? model.globalMeanActualMinutes,
-    ];
+    const rawFeatures = this.buildRawFeatures(
+      {
+        difficulty: dto.difficulty,
+        weightPercentage: dto.weightPercentage ?? null,
+        estimatedMinutes: ownedTask?.estimatedMinutes ?? null,
+        taskTypeId,
+        // Numa task ainda por criar não há Area: cai na média global.
+        areaId: ownedTask?.areaId ?? dto.areaId ?? null,
+      },
+      model,
+    );
 
     const predictedRaw = model.predict(rawFeatures);
     const predictedMinutes = Math.max(0, Math.round(predictedRaw));
 
     return {
       predictedMinutes,
+      rangeMinutes: this.toRange(predictedMinutes, model.interval),
+      trimmedSamples: model.trimmedSamples,
       method: model.method,
       sampleSize: model.sampleSize,
       actualMinutes,
     };
+  }
+
+  /**
+   * Fator multiplicativo que corrige o viés das estimativas manuais do
+   * próprio utilizador: soma do tempo real / soma do estimado, sobre
+   * tasks concluídas. 1.3 = costuma demorar 30% mais do que estima.
+   * null quando ainda não há amostra suficiente. Somas em vez de média
+   * de rácios: uma task minúscula com rácio absurdo não domina o fator.
+   */
+  async getCalibrationFactor(userId: string): Promise<number | null> {
+    const tasks = await this.prisma.task.findMany({
+      where: {
+        userId,
+        progressStatus: 'COMPLETED',
+        estimatedMinutes: { gt: 0 },
+        studySessions: { some: { endedAt: { not: null } } },
+      },
+      select: {
+        estimatedMinutes: true,
+        studySessions: {
+          where: { endedAt: { not: null } },
+          select: { startedAt: true, endedAt: true },
+        },
+      },
+    });
+
+    let sumEstimated = 0;
+    let sumActual = 0;
+    let samples = 0;
+    for (const task of tasks) {
+      const actual = this.sumSessionMinutes(task.studySessions);
+      if (actual <= 0 || !task.estimatedMinutes) continue;
+      sumEstimated += task.estimatedMinutes;
+      sumActual += actual;
+      samples += 1;
+    }
+
+    if (samples < MIN_SAMPLES_FOR_CALIBRATION || sumEstimated <= 0) return null;
+
+    const raw = sumActual / sumEstimated;
+    const clamped = Math.min(
+      CALIBRATION_FACTOR_MAX,
+      Math.max(CALIBRATION_FACTOR_MIN, raw),
+    );
+    return Math.round(clamped * CALIBRATION_DECIMALS) / CALIBRATION_DECIMALS;
+  }
+
+  /**
+   * Previsão de duração em lote para o plano de estudo: treina/reutiliza
+   * o modelo do utilizador UMA vez e prevê todas as tasks pedidas (em vez
+   * de N chamadas a predictDuration, cada uma a recarregar os dados de
+   * treino). O chamador já filtrou para tasks do próprio utilizador.
+   */
+  async predictForTasks(
+    userId: string,
+    tasks: {
+      id: string;
+      taskTypeId: string;
+      areaId: string;
+      difficulty: keyof typeof DIFFICULTY_WEIGHT;
+      weightPercentage: number | null;
+    }[],
+  ): Promise<{
+    method: PredictionMethod;
+    minutesByTaskId: Map<string, number>;
+  }> {
+    const minutesByTaskId = new Map<string, number>();
+    if (tasks.length === 0) {
+      return { method: 'insufficient_data', minutesByTaskId };
+    }
+
+    const model = await this.getOrTrainModel(userId);
+    if (model.method === 'insufficient_data' || !model.predict) {
+      return { method: model.method, minutesByTaskId };
+    }
+
+    for (const task of tasks) {
+      const predicted = model.predict(
+        this.buildRawFeatures(
+          {
+            difficulty: task.difficulty,
+            weightPercentage: task.weightPercentage,
+            estimatedMinutes: null, // sem estimativa manual: é para estas que se prevê
+            taskTypeId: task.taskTypeId,
+            areaId: task.areaId,
+          },
+          model,
+        ),
+      );
+      if (Number.isFinite(predicted) && predicted > 0) {
+        minutesByTaskId.set(task.id, Math.round(predicted));
+      }
+    }
+    return { method: model.method, minutesByTaskId };
   }
 
   /**
@@ -160,7 +297,7 @@ export class PredictionService {
    * isso não precisa de uma verificação à parte para "mudou de fase".
    */
   private async getOrTrainModel(userId: string): Promise<ModelResult> {
-    const rows = await this.loadTrainingRows(userId);
+    const { rows, trimmedSamples } = await this.loadTrainingRows(userId);
     const sampleSize = rows.length;
     const method = this.decideMethod(sampleSize);
 
@@ -169,6 +306,9 @@ export class PredictionService {
         method,
         sampleSize,
         typeAverages: new Map(),
+        areaAverages: new Map(),
+        interval: NEUTRAL_INTERVAL,
+        trimmedSamples: 0,
         globalMeanActualMinutes: 0,
         predict: null,
       };
@@ -185,18 +325,29 @@ export class PredictionService {
         method: cached.method,
         sampleSize,
         typeAverages: cached.typeAverages,
+        areaAverages: cached.areaAverages,
+        interval: cached.interval,
+        trimmedSamples: cached.trimmedSamples,
         globalMeanActualMinutes: cached.globalMeanActualMinutes,
         predict: cached.predict,
       };
     }
 
-    const trained = await this.trainModel(method, rows, sampleSize);
+    const trained = await this.trainModel(
+      method,
+      rows,
+      sampleSize,
+      trimmedSamples,
+    );
     this.modelCache.set(userId, trained);
 
     return {
       method: trained.method,
       sampleSize,
       typeAverages: trained.typeAverages,
+      areaAverages: trained.areaAverages,
+      interval: trained.interval,
+      trimmedSamples: trained.trimmedSamples,
       globalMeanActualMinutes: trained.globalMeanActualMinutes,
       predict: trained.predict,
     };
@@ -214,23 +365,80 @@ export class PredictionService {
     method: 'linear_regression' | 'mlp',
     rows: TrainingRow[],
     sampleSize: number,
+    trimmedSamples: number,
+  ): Promise<CachedModel> {
+    const core = await this.trainCore(method, rows, sampleSize);
+
+    // Intervalo a partir de quanto o real se desviou do previsto no treino.
+    const predictions = rows.map((row) =>
+      Math.max(
+        MIN_PREDICTED_MINUTES,
+        core.predict(this.buildRawFeatures(row, core)),
+      ),
+    );
+    const interval = computeRatioInterval(
+      rows.map((row) => row.actualMinutes),
+      predictions,
+    );
+
+    return { ...core, interval, trimmedSamples };
+  }
+
+  // Features na MESMA ordem usada no treino e nas previsões. Uma única
+  // função para as duas pontas evita que treino e previsão divirjam.
+  private buildRawFeatures(
+    input: {
+      difficulty: keyof typeof DIFFICULTY_WEIGHT;
+      weightPercentage: number | null;
+      estimatedMinutes: number | null;
+      taskTypeId: string;
+      areaId: string | null;
+    },
+    model: Pick<
+      CachedModel,
+      'typeAverages' | 'areaAverages' | 'globalMeanActualMinutes'
+    >,
+  ): number[] {
+    return [
+      DIFFICULTY_WEIGHT[input.difficulty],
+      input.weightPercentage ?? 0,
+      input.estimatedMinutes ?? 0,
+      model.typeAverages.get(input.taskTypeId) ?? model.globalMeanActualMinutes,
+      (input.areaId ? model.areaAverages.get(input.areaId) : undefined) ??
+        model.globalMeanActualMinutes,
+    ];
+  }
+
+  private async trainCore(
+    method: 'linear_regression' | 'mlp',
+    rows: TrainingRow[],
+    sampleSize: number,
   ): Promise<CachedModel> {
     const globalMeanActualMinutes =
       rows.reduce((sum, r) => sum + r.actualMinutes, 0) / rows.length;
 
-    const typeAverages = this.computeSmoothedTypeAverages(
+    const typeAverages = this.computeSmoothedAverages(
       rows,
+      (row) => row.taskTypeId,
       globalMeanActualMinutes,
+      TYPE_AVERAGE_SMOOTHING_K,
+    );
+    const areaAverages = this.computeSmoothedAverages(
+      rows,
+      (row) => row.areaId,
+      globalMeanActualMinutes,
+      AREA_AVERAGE_SMOOTHING_K,
     );
 
-    const rawFeatureRows = rows.map((r) => [
-      DIFFICULTY_WEIGHT[r.difficulty],
-      r.weightPercentage ?? 0,
-      r.estimatedMinutes ?? 0,
-      typeAverages.get(r.taskTypeId) ?? globalMeanActualMinutes,
-    ]);
+    const rawFeatureRows = rows.map((r) =>
+      this.buildRawFeatures(r, {
+        typeAverages,
+        areaAverages,
+        globalMeanActualMinutes,
+      }),
+    );
 
-    const featureScalers: Scaler[] = [0, 1, 2, 3].map((col) =>
+    const featureScalers: Scaler[] = rawFeatureRows[0].map((_, col) =>
       fitScaler(rawFeatureRows.map((row) => row[col])),
     );
     const scaledFeatureRows = rawFeatureRows.map((row) =>
@@ -253,6 +461,9 @@ export class PredictionService {
         featureScalers,
         targetScaler: null,
         typeAverages,
+        areaAverages,
+        interval: NEUTRAL_INTERVAL,
+        trimmedSamples: 0,
         globalMeanActualMinutes,
         predict,
       };
@@ -277,6 +488,9 @@ export class PredictionService {
         featureScalers,
         targetScaler,
         typeAverages,
+        areaAverages,
+        interval: NEUTRAL_INTERVAL,
+        trimmedSamples: 0,
         globalMeanActualMinutes,
         predict,
       };
@@ -298,33 +512,38 @@ export class PredictionService {
         featureScalers,
         targetScaler: null,
         typeAverages,
+        areaAverages,
+        interval: NEUTRAL_INTERVAL,
+        trimmedSamples: 0,
         globalMeanActualMinutes,
         predict,
       };
     }
   }
 
-  private computeSmoothedTypeAverages(
+  private computeSmoothedAverages(
     rows: TrainingRow[],
+    keyOf: (row: TrainingRow) => string,
     globalMeanActualMinutes: number,
+    smoothingK: number,
   ): Map<string, number> {
-    const sumByType = new Map<string, { sum: number; count: number }>();
+    const sumByKey = new Map<string, { sum: number; count: number }>();
     for (const row of rows) {
-      const entry = sumByType.get(row.taskTypeId) ?? { sum: 0, count: 0 };
+      const key = keyOf(row);
+      const entry = sumByKey.get(key) ?? { sum: 0, count: 0 };
       entry.sum += row.actualMinutes;
       entry.count += 1;
-      sumByType.set(row.taskTypeId, entry);
+      sumByKey.set(key, entry);
     }
 
-    const typeAverages = new Map<string, number>();
-    for (const [taskTypeId, { sum, count }] of sumByType) {
-      typeAverages.set(
-        taskTypeId,
-        (sum + TYPE_AVERAGE_SMOOTHING_K * globalMeanActualMinutes) /
-          (count + TYPE_AVERAGE_SMOOTHING_K),
+    const averages = new Map<string, number>();
+    for (const [key, { sum, count }] of sumByKey) {
+      averages.set(
+        key,
+        (sum + smoothingK * globalMeanActualMinutes) / (count + smoothingK),
       );
     }
-    return typeAverages;
+    return averages;
   }
 
   /**
@@ -333,7 +552,9 @@ export class PredictionService {
    * nenhuma sessão terminada nunca entram no treino - não há label real
    * para elas.
    */
-  private async loadTrainingRows(userId: string): Promise<TrainingRow[]> {
+  private async loadTrainingRows(
+    userId: string,
+  ): Promise<{ rows: TrainingRow[]; trimmedSamples: number }> {
     const tasks: TrainingTask[] = await this.prisma.task.findMany({
       where: { userId, studySessions: { some: { endedAt: { not: null } } } },
       select: TRAINING_SELECT,
@@ -345,13 +566,20 @@ export class PredictionService {
       if (actualMinutes <= 0) continue;
       rows.push({
         taskTypeId: task.taskTypeId,
+        areaId: task.areaId,
         difficulty: task.difficulty,
         weightPercentage: task.weightPercentage,
         estimatedMinutes: task.estimatedMinutes,
         actualMinutes,
       });
     }
-    return rows;
+    // Sessões esquecidas ligadas inflacionam a duração real e ensinam ao
+    // modelo que tudo demora horas: fora do treino, mas contadas.
+    const keep = new Set(
+      keepIndicesWithoutUpperOutliers(rows.map((row) => row.actualMinutes)),
+    );
+    const cleaned = rows.filter((_, index) => keep.has(index));
+    return { rows: cleaned, trimmedSamples: rows.length - cleaned.length };
   }
 
   /**
@@ -454,6 +682,17 @@ export class PredictionService {
         (session.endedAt.getTime() - session.startedAt.getTime()) / 60_000;
     }
     return Math.round(Math.max(0, total));
+  }
+
+  private toRange(
+    predictedMinutes: number,
+    interval: RatioInterval,
+  ): { low: number; high: number } | null {
+    if (interval.lowRatio === 1 && interval.highRatio === 1) return null;
+    return {
+      low: Math.max(1, Math.round(predictedMinutes * interval.lowRatio)),
+      high: Math.round(predictedMinutes * interval.highRatio),
+    };
   }
 
   private async resolveTaskTypeId(typeKey: string): Promise<string> {
