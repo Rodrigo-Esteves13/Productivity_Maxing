@@ -32,6 +32,14 @@ const REQUIRED_ENV_VARS = [
   'GOOGLE_CLIENT_SECRET',
   'GITHUB_CLIENT_SECRET',
   'DISCORD_CLIENT_SECRET',
+  // Client IDs e callbacks pelo mesmo motivo: um '' aqui só rebentava no
+  // primeiro login com esse provider, com um erro do provider pouco claro.
+  'GOOGLE_CLIENT_ID',
+  'GITHUB_CLIENT_ID',
+  'DISCORD_CLIENT_ID',
+  'GOOGLE_CALLBACK_URL',
+  'GITHUB_CALLBACK_URL',
+  'DISCORD_CALLBACK_URL',
 ] as const;
 
 function assertRequiredEnvVars(): void {

@@ -3,6 +3,7 @@ import { getProgramCredits } from '../../api/academicService';
 import type { CreditsSummary } from '../../types/models';
 import { useAcademic } from '../../context/useAcademic';
 import { GraduationCapIcon } from '../UI/Icons';
+import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 
 // Cumulative across ALL periods of the active program (archived included) -
 // same scope as the cumulative average in GpaSummary, since "credits
@@ -48,11 +49,11 @@ export default function CreditsAccumulatedCard() {
   const passedAreas = summary.areas.filter((a) => a.passed && a.credits !== null);
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 mb-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1.5 mb-1">
+    <DashboardCard className="mb-4">
+      <CardHeading className="mb-1">
         <GraduationCapIcon className="shrink-0" />
         ECTS credits accumulated
-      </p>
+      </CardHeading>
       <p className="text-2xl font-bold text-violet-400">
         {summary.earnedCredits} <span className="text-neutral-500 text-lg">/ {summary.attemptedCredits}</span>
       </p>
@@ -69,6 +70,6 @@ export default function CreditsAccumulatedCard() {
           ))}
         </div>
       )}
-    </div>
+    </DashboardCard>
   );
 }

@@ -5,10 +5,21 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { ScheduleModule } from '../schedule/schedule.module';
 import { StudySessionsModule } from '../study-sessions/study-sessions.module';
+import { WorkShiftsModule } from '../work-shifts/work-shifts.module';
+import { PredictionModule } from '../prediction/prediction.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, ScheduleModule, StudySessionsModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    ScheduleModule,
+    StudySessionsModule,
+    WorkShiftsModule,
+    PredictionModule,
+  ],
   controllers: [StudyPlanController],
   providers: [StudyPlanService],
+  // CalendarModule reutiliza o plano para enviar os blocos ao Google Calendar.
+  exports: [StudyPlanService],
 })
 export class StudyPlanModule {}

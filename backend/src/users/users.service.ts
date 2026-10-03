@@ -2,7 +2,7 @@ import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { AccountStatusService } from '../account-status/account-status.service';
-import { Provider, UserStatus } from '@prisma/client';
+import { Prisma, Provider, UserStatus } from '@prisma/client';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SuspendUserDto, BanUserDto } from './dto/update-user-status.dto';
 
@@ -138,16 +138,23 @@ export class UsersService {
   }
 
   /** Levanta um ban ou termina uma suspensão antes do tempo. */
+  // Os campos que "reativar" muda. Fonte unica: reactivateUser() e a
+  // aprovacao de appeals (AppealsService, dentro de uma transacao) usam a
+  // mesma definicao, por isso nunca divergem.
+  buildReactivationData(adminId: string): Prisma.UserUpdateInput {
+    return {
+      status: UserStatus.ACTIVE,
+      suspendedUntil: null,
+      statusReason: null,
+      statusUpdatedAt: new Date(),
+      statusUpdatedBy: { connect: { id: adminId } },
+    };
+  }
+
   async reactivateUser(adminId: string, userId: string) {
     const updated = await this.prisma.user.update({
       where: { id: userId },
-      data: {
-        status: UserStatus.ACTIVE,
-        suspendedUntil: null,
-        statusReason: null,
-        statusUpdatedAt: new Date(),
-        statusUpdatedByUserId: adminId,
-      },
+      data: this.buildReactivationData(adminId),
       select: USER_ADMIN_SELECT,
     });
     this.accountStatus.clearBlocked(userId);

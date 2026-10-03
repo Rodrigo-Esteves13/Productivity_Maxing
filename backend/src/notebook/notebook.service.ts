@@ -15,13 +15,16 @@ import {
   UpdateNotebookEntryDto,
 } from './dto/upsert-notebook-entry.dto';
 import { UpsertScheduleLinkDto } from './dto/upsert-schedule-link.dto';
+import {
+  getNotebookAttachmentsBucket,
+  getNotebookBucket,
+} from '../config/app.config';
 
 // Bucket dedicado, separado do de avatars, e NUNCA público - são
 // apontamentos e fotos pessoais de aulas, não fotos de perfil. Tem de
 // existir no projeto Supabase com "Public bucket" DESLIGADO; o acesso é
 // sempre via signed URL de curta duração (ver attachSignedUrls).
-const NOTEBOOK_BUCKET =
-  process.env.SUPABASE_NOTEBOOK_BUCKET ?? 'notebook-photos';
+const NOTEBOOK_BUCKET = getNotebookBucket();
 
 // Tempo de vida do signed URL devolvido ao frontend - só precisa de
 // sobreviver ao carregamento da página de uma entrada, nunca fica
@@ -40,8 +43,7 @@ const ALLOWED_MIME_TO_EXT: Record<string, string> = {
 // sempre via signed URL, e sempre com download forçado (ver
 // addAttachment/attachSignedUrls) para nunca ser aberto inline no
 // browser.
-const ATTACHMENT_BUCKET =
-  process.env.SUPABASE_NOTEBOOK_ATTACHMENTS_BUCKET ?? 'notebook-attachments';
+const ATTACHMENT_BUCKET = getNotebookAttachmentsBucket();
 
 // Formatos com magic bytes reais - detetados pelo conteúdo do ficheiro,
 // nunca pela extensão que o cliente diz que é (mesmo critério das

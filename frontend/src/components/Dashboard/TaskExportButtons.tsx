@@ -2,6 +2,7 @@ import type { Area, AcademicTaskTypeOption, Task } from '../../types/models';
 import { tasksToCsv, tasksToMarkdown } from '../../utils/taskExportFormats';
 import { downloadTextFile } from '../../utils/downloadTextFile';
 import { DownloadIcon } from '../UI/Icons';
+import { todayKey } from '../../lib/dateKey';
 
 interface TaskExportButtonsProps {
   tasks: Task[];
@@ -15,7 +16,7 @@ interface TaskExportButtonsProps {
 // clicked). Purely client-side: no new backend endpoint needed, the tasks
 // are already loaded for the table itself.
 export default function TaskExportButtons({ tasks, areas, academicTaskTypes }: TaskExportButtonsProps) {
-  const dateStr = new Date().toISOString().split('T')[0];
+  const dateStr = todayKey();
 
   const handleExportCsv = () => {
     const csv = tasksToCsv(tasks, areas, academicTaskTypes);

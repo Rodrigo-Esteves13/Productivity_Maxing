@@ -11,11 +11,11 @@ import { isValidLoginState } from '../guards/oauth-guard.helpers';
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
   constructor(private authService: AuthService) {
     super({
-      clientID: process.env.GITHUB_CLIENT_ID || '',
-      // GITHUB_CLIENT_SECRET is enforced at boot by assertRequiredEnvVars()
-      // in main.ts - no silent '' fallback here anymore.
+      clientID: process.env.GITHUB_CLIENT_ID as string,
+      // GITHUB_CLIENT_ID/_SECRET/_CALLBACK_URL are enforced at boot by
+      // assertRequiredEnvVars() in main.ts - no silent '' fallback here.
       clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
-      callbackURL: process.env.GITHUB_CALLBACK_URL || '',
+      callbackURL: process.env.GITHUB_CALLBACK_URL as string,
       scope: ['user:email'],
       passReqToCallback: true,
     });

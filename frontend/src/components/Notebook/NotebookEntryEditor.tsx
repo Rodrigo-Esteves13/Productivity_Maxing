@@ -21,6 +21,7 @@ import NotebookTableEditor from './NotebookTableEditor';
 import DeleteEntryModal from './DeleteEntryModal';
 import NotebookEntryShare from './NotebookEntryShare';
 import { TrashIcon, ImageIcon, XIcon, CheckIcon, TableIcon, PencilIcon, PlusIcon, FileIcon, LinkIcon } from '../UI/Icons';
+import { getHttpStatus } from '../../lib/httpError';
 
 interface NotebookEntryEditorSavePayload {
   title: string;
@@ -260,7 +261,7 @@ function NotebookEntryEditorForm({
       // Antes disto, um erro aqui (ex: textContent > 50000 carateres, ou
       // um 403 por CSRF token dessincronizado) desaparecia em silêncio -
       // isSaving voltava a false e parecia ter gravado, sem gravar nada.
-      const status = (err as { response?: { status?: number } })?.response?.status;
+      const status = getHttpStatus(err);
       if (status === 400 && textContent.length > MAX_TEXT_CONTENT_LENGTH) {
         setSaveError(
           `Notes are too long (${textContent.length.toLocaleString()}/${MAX_TEXT_CONTENT_LENGTH.toLocaleString()} characters). Trim the text before saving.`,

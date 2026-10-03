@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ProgramAverage } from '../../types/models';
 import { CalculatorIcon } from '../UI/Icons';
+import DashboardCard from '../UI/DashboardCard';
 
 interface CreditSimulatorProps {
   programAverage: ProgramAverage;
@@ -35,7 +36,7 @@ export default function CreditSimulator({ programAverage, scale }: CreditSimulat
     : null;
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
+    <DashboardCard>
       <p className="text-xs uppercase tracking-wide text-neutral-500 mb-1 flex items-center gap-1.5">
         <CalculatorIcon className="shrink-0" />
         "What if" GPA simulator
@@ -80,6 +81,6 @@ export default function CreditSimulator({ programAverage, scale }: CreditSimulat
       ) : (
         <p className="text-sm text-neutral-500">Fill in both fields to simulate.</p>
       )}
-    </div>
+    </DashboardCard>
   );
 }

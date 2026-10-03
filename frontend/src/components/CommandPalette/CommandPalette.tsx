@@ -8,6 +8,7 @@ import { parseQuickAddTask, quickAddToIsoDate } from '../../lib/parseQuickAddTas
 import { getLastUsedAreaId, setLastUsedAreaId } from '../../lib/lastUsedArea';
 import type { Area, Task, NotebookSearchResult } from '../../types/models';
 import { PlusIcon, SearchIcon } from '../UI/Icons';
+import { ACADEMIC_TASK_TYPE_KEY } from '../../lib/constants';
 
 // Static "go to page" commands - mirrors the routes in AppRouter.tsx and
 // the admin gating already used in Navbar.tsx (role === 'ADMIN'). Kept as
@@ -50,7 +51,7 @@ const NOTEBOOK_SEARCH_DEBOUNCE_MS = 250;
 // the neutral middle of the Difficulty scale. Both are shown in the row
 // so nothing about the created task is a hidden decision, and both are
 // one click away from being edited afterwards on the Tasks page.
-const QUICK_ADD_TASK_TYPE = 'ACADEMICO';
+const QUICK_ADD_TASK_TYPE = ACADEMIC_TASK_TYPE_KEY;
 const QUICK_ADD_DIFFICULTY = 'MEDIUM';
 // Typing "+" first forces quick-add mode (only the create row is shown),
 // so a stray Enter on a normal search can never create a task by accident.

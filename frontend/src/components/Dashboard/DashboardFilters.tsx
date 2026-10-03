@@ -6,6 +6,7 @@ import { formatEnumLabel } from '../../utils/formatEnumLabel';
 import SavedFilterViews from './SavedFilterViews';
 import type { Area, AcademicTaskTypeOption } from '../../types/models';
 import type { DashboardFiltersState } from './dashboardFilters.types';
+import { ACADEMIC_TASK_TYPE_KEY } from '../../lib/constants';
 
 interface DashboardFiltersProps {
   filters: DashboardFiltersState;
@@ -63,7 +64,7 @@ export default function DashboardFilters({
           >
             <option value="">All Academic Types</option>
             {academicTaskTypes
-              .filter((t) => t.taskTypeKey === 'ACADEMICO')
+              .filter((t) => t.taskTypeKey === ACADEMIC_TASK_TYPE_KEY)
               .map((t) => (
                 <option key={t.key} value={t.key}>
                   {t.label}

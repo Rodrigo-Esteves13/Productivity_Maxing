@@ -1,22 +1,13 @@
 import { useEffect } from 'react';
 import { useSchedule } from '../../hooks/useSchedule';
+import { useWorkShiftRange } from '../../hooks/useWorkShiftRange';
+import { formatClock } from '../../lib/timeFormat';
 import LoadingState from '../UI/LoadingState';
 import ErrorState from '../UI/ErrorState';
-import type { ClassOccurrence } from '../../types/models';
+import type { ClassOccurrence, WorkShiftOccurrence } from '../../types/models';
+import { toDateKey } from '../../lib/dateKey';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-function formatMinutes(minutes: number): string {
-  const h = Math.floor(minutes / 60)
-    .toString()
-    .padStart(2, '0');
-  const m = (minutes % 60).toString().padStart(2, '0');
-  return `${h}:${m}`;
-}
-
-function toDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
 
 // weekStart/weekEnd (de useSchedule.ts) e todayKey têm de ser calculados
 // com os MESMOS métodos (UTC) - misturar getDate()/setDate() (hora local)
@@ -57,6 +48,18 @@ export default function WeekGrid({ refreshKey }: WeekGridProps) {
     if (refreshKey > 0) void refetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só queremos reagir a refreshKey, refetch já está sempre atualizado
   }, [refreshKey]);
+
+  const shiftOccurrences = useWorkShiftRange(
+    toDateKey(weekStart),
+    toDateKey(weekEnd),
+    refreshKey,
+  );
+  const shiftsByDay = new Map<string, WorkShiftOccurrence[]>();
+  for (const shift of shiftOccurrences) {
+    const list = shiftsByDay.get(shift.date) ?? [];
+    list.push(shift);
+    shiftsByDay.set(shift.date, list);
+  }
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(weekStart);
@@ -114,6 +117,7 @@ export default function WeekGrid({ refreshKey }: WeekGridProps) {
           {days.map((date, i) => {
             const key = toDateKey(date);
             const classes = occurrencesByDay.get(key) ?? [];
+            const shifts = shiftsByDay.get(key) ?? [];
             const isToday = key === todayKey;
 
             return (
@@ -127,13 +131,28 @@ export default function WeekGrid({ refreshKey }: WeekGridProps) {
                   {DAY_LABELS[i]} {date.getUTCDate()}
                 </p>
                 <div className="space-y-1.5">
-                  {classes.length === 0 && <p className="text-xs text-neutral-600">-</p>}
+                  {classes.length === 0 && shifts.length === 0 && (
+                    <p className="text-xs text-neutral-600">-</p>
+                  )}
                   {classes.map((occ) => (
                     <div key={occ.id} className="text-xs bg-neutral-800/60 rounded-md px-2 py-1">
                       <p className="text-neutral-200 font-medium leading-tight">{occ.subject}</p>
                       <p className="text-neutral-500 leading-tight">
-                        {formatMinutes(occ.startMinutes)}-{formatMinutes(occ.endMinutes)}
+                        {formatClock(occ.startMinutes)}-{formatClock(occ.endMinutes)}
                         {occ.location ? ` · ${occ.location}` : ''}
+                      </p>
+                    </div>
+                  ))}
+                  {shifts.map((shift) => (
+                    <div
+                      key={`${shift.shiftId}-${shift.date}`}
+                      className="text-xs bg-amber-950/30 border border-amber-900/40 rounded-md px-2 py-1"
+                    >
+                      <p className="text-amber-200 font-medium leading-tight">
+                        {shift.label ?? 'Commitment'}
+                      </p>
+                      <p className="text-amber-200/60 leading-tight">
+                        {formatClock(shift.startMinutes)}-{formatClock(shift.endMinutes)}
                       </p>
                     </div>
                   ))}

@@ -28,3 +28,7 @@ export const CONTACT_EMAIL = 'support@pmaxing.pt';
 // dismissed instead of the two silently overlapping at the same screen
 // position.
 export const COOKIE_NOTICE_DISMISSED_KEY = 'pm_cookie_notice_dismissed';
+
+// Chave do TaskType "Academico". Dashboard, filtros, import e atalho do
+// command palette comparavam todos com a mesma string solta.
+export const ACADEMIC_TASK_TYPE_KEY = 'ACADEMICO';

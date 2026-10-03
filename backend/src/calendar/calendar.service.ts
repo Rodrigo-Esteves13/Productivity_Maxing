@@ -91,7 +91,7 @@ export class CalendarService {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID ?? '',
+        client_id: process.env.GOOGLE_CLIENT_ID as string,
         // GOOGLE_CLIENT_SECRET is enforced at boot by assertRequiredEnvVars()
         // in main.ts - no silent '' fallback here anymore.
         client_secret: process.env.GOOGLE_CLIENT_SECRET as string,
@@ -110,6 +110,13 @@ export class CalendarService {
 
     const data = (await res.json()) as { access_token: string };
     return data.access_token;
+  }
+
+  /** Access token válido para outros serviços do módulo (ex: sync do
+   * horário). Mantém getValidAccessToken privado, com um único ponto de
+   * entrada para o refresh. */
+  getAccessToken(userId: string): Promise<string> {
+    return this.getValidAccessToken(userId);
   }
 
   // Junta toda a informação que também aparece no ecrã "Task Details" do

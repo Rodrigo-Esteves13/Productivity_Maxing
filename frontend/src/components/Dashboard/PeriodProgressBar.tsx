@@ -1,5 +1,7 @@
 import type { AcademicPeriod, Task } from '../../types/models';
 import { GaugeIcon } from '../UI/Icons';
+import ProgressBar from '../UI/ProgressBar';
+import DashboardCard from '../UI/DashboardCard';
 
 interface PeriodProgressBarProps {
   period: AcademicPeriod;
@@ -26,7 +28,7 @@ export default function PeriodProgressBar({ period, tasks }: PeriodProgressBarPr
   const isBehindPace = tasksDonePct < timeElapsedPct - 10; // 10pt margin before flagging it
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 mb-6 shadow-xl">
+    <DashboardCard className="mb-6">
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1.5">
           <GaugeIcon className="shrink-0" />
@@ -43,12 +45,7 @@ export default function PeriodProgressBar({ period, tasks }: PeriodProgressBarPr
             <span>Time elapsed</span>
             <span>{timeElapsedPct.toFixed(0)}%</span>
           </div>
-          <div className="h-2 rounded-full bg-neutral-800 overflow-hidden">
-            <div
-              className="h-full bg-neutral-500"
-              style={{ width: `${timeElapsedPct}%` }}
-            />
-          </div>
+          <ProgressBar thickness="md" percent={timeElapsedPct} fillClassName="bg-neutral-500" />
         </div>
 
         <div>
@@ -58,14 +55,13 @@ export default function PeriodProgressBar({ period, tasks }: PeriodProgressBarPr
               {completedCount}/{tasks.length} ({tasksDonePct.toFixed(0)}%)
             </span>
           </div>
-          <div className="h-2 rounded-full bg-neutral-800 overflow-hidden">
-            <div
-              className={`h-full ${isBehindPace ? 'bg-orange-500' : 'bg-violet-500'}`}
-              style={{ width: `${tasksDonePct}%` }}
-            />
-          </div>
+          <ProgressBar
+            thickness="md"
+            percent={tasksDonePct}
+            fillClassName={isBehindPace ? 'bg-orange-500' : 'bg-violet-500'}
+          />
         </div>
       </div>
-    </div>
+    </DashboardCard>
   );
 }

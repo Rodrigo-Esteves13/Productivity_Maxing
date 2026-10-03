@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getStudyPlan } from '../api/studyPlanService';
+import { getStudyPlan, updateStudyPlanSettings } from '../api/studyPlanService';
 import type { StudyPlanResult } from '../types/models';
 
 export function useStudyPlan(days = 7) {
@@ -11,8 +11,7 @@ export function useStudyPlan(days = 7) {
     try {
       setIsLoading(true);
       setError('');
-      const data = await getStudyPlan(days);
-      setPlan(data);
+      setPlan(await getStudyPlan(days));
     } catch {
       setError('Could not generate the study plan.');
     } finally {
@@ -24,5 +23,17 @@ export function useStudyPlan(days = 7) {
     void fetchPlan();
   }, [fetchPlan]);
 
-  return { plan, isLoading, error, refetch: fetchPlan };
+  const setDailyLimit = useCallback(
+    async (minutes: number) => {
+      try {
+        await updateStudyPlanSettings(minutes);
+        await fetchPlan();
+      } catch {
+        setError('Could not save the daily limit.');
+      }
+    },
+    [fetchPlan],
+  );
+
+  return { plan, isLoading, error, refetch: fetchPlan, setDailyLimit };
 }

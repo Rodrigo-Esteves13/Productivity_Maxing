@@ -1,5 +1,6 @@
 import type { Task } from '../types/models';
 import { getDateStatus } from './taskDateStatus';
+import { MS_PER_DAY } from '../lib/timeConstants';
 
 export interface OverloadWindow {
   // Inclusive rolling window, today through today+6 days (7 days total) -
@@ -17,7 +18,6 @@ export interface OverloadWindow {
 const OVERLOAD_THRESHOLD = 5;
 
 const WINDOW_DAYS = 7;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 function toMidnightUtc(date: Date): number {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
@@ -35,7 +35,7 @@ export function detectOverloadWeek(tasks: Task[], now: Date = new Date()): Overl
   const windowTasks = tasks.filter((task) => {
     const status = getDateStatus(task, now);
     if (status !== 'today' && status !== 'upcoming') return false;
-    const daysAway = (toMidnightUtc(new Date(task.date)) - todayMidnight) / DAY_MS;
+    const daysAway = (toMidnightUtc(new Date(task.date)) - todayMidnight) / MS_PER_DAY;
     return daysAway < WINDOW_DAYS;
   });
 

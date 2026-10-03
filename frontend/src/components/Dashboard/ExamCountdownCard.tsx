@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import type { Task, Area } from '../../types/models';
 import { getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import { GraduationCapIcon } from '../UI/Icons';
+import DashboardCard, { CardHeading } from '../UI/DashboardCard';
+import { useAreaLookup } from '../../hooks/useAreaLookup';
 
 interface ExamCountdownCardProps {
   tasks: Task[];
@@ -17,7 +19,7 @@ const MAX_SHOWN = 4;
 // and weight-toward-grade is the closest existing signal for "this one
 // actually counts".
 export default function ExamCountdownCard({ tasks, areas }: ExamCountdownCardProps) {
-  const areaById = new Map(areas.map((a) => [a.id, a]));
+  const areaById = useAreaLookup(areas);
 
   const graded = tasks
     .filter((t) => t.progressStatus !== 'COMPLETED')
@@ -32,11 +34,11 @@ export default function ExamCountdownCard({ tasks, areas }: ExamCountdownCardPro
   const nextArea = areaById.get(next.areaId);
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3 flex items-center gap-1.5">
+    <DashboardCard>
+      <CardHeading className="mb-3">
         <GraduationCapIcon className="shrink-0" />
         Next graded evaluation
-      </p>
+      </CardHeading>
 
       <div className="mb-3">
         <p className="text-2xl font-semibold text-violet-400">
@@ -76,6 +78,6 @@ export default function ExamCountdownCard({ tasks, areas }: ExamCountdownCardPro
       >
         View all tasks
       </Link>
-    </div>
+    </DashboardCard>
   );
 }

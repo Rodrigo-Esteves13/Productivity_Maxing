@@ -4,6 +4,7 @@ import Textarea from '../UI/Textarea';
 import { ShieldIcon, AlertTriangleIcon, ClockIcon } from '../UI/Icons';
 import { getMyAccountStatus, submitAppeal, logoutRequest } from '../../api/userService';
 import type { AccountStatusInfo, AppealAvailability } from '../../types/models';
+import { getHttpStatus } from '../../lib/httpError';
 
 interface AccountBlockedPageProps {
   // Só vem preenchido no caso "bloqueado logo no login" (ver Login.tsx) -
@@ -125,7 +126,7 @@ export default function AccountBlockedPage({
       // once the background poll starts running.
       refreshSilently();
     } catch (err) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
+      const status = getHttpStatus(err);
       const backendMessage = (
         err as { response?: { data?: { message?: string } } }
       )?.response?.data?.message;

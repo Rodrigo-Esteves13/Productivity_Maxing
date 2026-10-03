@@ -53,4 +53,14 @@ export class PredictDurationDto {
   @IsString()
   @MaxLength(100)
   taskId?: string;
+
+  @ApiPropertyOptional({
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    description:
+      'Area (course) of a task that does not exist yet. Only used to look up the average time YOU spent on that Area; ignored when taskId is set (the stored task decides).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  areaId?: string;
 }

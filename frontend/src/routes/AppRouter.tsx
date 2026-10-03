@@ -11,6 +11,7 @@ import AuthCallback from '../components/Auth/AuthCallback';
 import CookieNotice from '../components/Legal/CookieNotice';
 import CommandPalette from '../components/CommandPalette/CommandPalette';
 import GlobalStudyTimer from '../components/Study/GlobalStudyTimer';
+import CalendarSyncReviewModal from '../components/Schedule/CalendarSyncReviewModal';
 import LoadingState from '../components/UI/LoadingState';
 
 // Route-level code splitting: everything below only downloads its JS chunk
@@ -129,6 +130,10 @@ export default function AppRouter() {
           visible across every navigation instead of remounting per page
           the way it would if it lived inside PageLayout instead. */}
       <GlobalStudyTimer />
+      {/* Montado uma vez: abre sozinho a pedir Confirm/Deny quando o
+          horário, os turnos ou o plano mudam e o Google Calendar está
+          ligado. Gated internamente por isAuthenticated. */}
+      <CalendarSyncReviewModal />
     </BrowserRouter>
   );
 }

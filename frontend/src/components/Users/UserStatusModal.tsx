@@ -3,6 +3,7 @@ import Input from '../UI/Input';
 import Button from '../UI/Button';
 import FormField from '../UI/FormField';
 import type { User } from '../../types/models';
+import { toDateKey, todayKey } from '../../lib/dateKey';
 
 interface UserStatusModalProps {
   target: User;
@@ -18,7 +19,7 @@ interface UserStatusModalProps {
 function defaultUntilDate(): string {
   const d = new Date();
   d.setDate(d.getDate() + 7);
-  return d.toISOString().slice(0, 10);
+  return toDateKey(d);
 }
 
 export default function UserStatusModal({ target, mode, isSubmitting, onSubmit, onCancel }: UserStatusModalProps) {
@@ -71,7 +72,7 @@ export default function UserStatusModal({ target, mode, isSubmitting, onSubmit, 
             id="status-until"
             type="date"
             required
-            min={new Date().toISOString().slice(0, 10)}
+            min={todayKey()}
             value={until}
             onChange={(e) => setUntil(e.target.value)}
           />

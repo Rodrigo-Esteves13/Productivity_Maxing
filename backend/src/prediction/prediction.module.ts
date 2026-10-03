@@ -8,5 +8,7 @@ import { AuthModule } from '../auth/auth.module';
   imports: [PrismaModule, AuthModule],
   controllers: [PredictionController],
   providers: [PredictionService],
+  // StudyPlanModule usa a previsão e a calibração para estimar as tasks.
+  exports: [PredictionService],
 })
 export class PredictionModule {}

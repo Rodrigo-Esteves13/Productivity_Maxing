@@ -1,6 +1,7 @@
 import type { Area, AcademicTaskTypeOption, Task } from '../types/models';
 import { formatEnumLabel } from './formatEnumLabel';
 import { resolveOptionLabel } from './resolveOptionLabel';
+import { todayKey } from '../lib/dateKey';
 
 // Shared column set for both CSV and Markdown exports, so the two formats
 // never silently drift apart (one gaining a column the other doesn't have).
@@ -101,7 +102,7 @@ export function tasksToMarkdown(
     return `| ${cells.join(' | ')} |`;
   });
 
-  const generatedAt = new Date().toISOString().split('T')[0];
+  const generatedAt = todayKey();
   return [
     `# Task export (${generatedAt})`,
     '',

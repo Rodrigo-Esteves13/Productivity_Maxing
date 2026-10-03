@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { Task, Area } from '../../types/models';
 import { TargetIcon } from '../UI/Icons';
 import { computeWeightCoverage } from '../../utils/weightCoverage';
+import DashboardCard from '../UI/DashboardCard';
 
 interface GradeNeededCalculatorProps {
   tasks: Task[];
@@ -74,7 +75,7 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
   const impossible = neededAverage !== null && (neededAverage > max || neededAverage < 0);
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
+    <DashboardCard>
       <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3 flex items-center gap-1.5">
         <TargetIcon className="shrink-0" />
         What do I need on what's left?
@@ -134,7 +135,7 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
           {impossible && ' Not achievable within this grade scale.'}
         </p>
       )}
-    </div>
+    </DashboardCard>
   );
 }
 

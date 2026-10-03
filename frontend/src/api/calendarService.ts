@@ -37,3 +37,56 @@ export const unsyncTaskFromCalendar = async (
 export const disconnectGoogleCalendar = async (): Promise<void> => {
   await api.delete('/auth/google/calendar');
 };
+
+// ---- Sync do horário completo (aulas, turnos, viagens, blocos de estudo) ----
+
+export type SyncAction = 'create' | 'update' | 'remove';
+
+export interface SchedulePreviewItem {
+  action: SyncAction;
+  title: string;
+  date: string;
+  startMinutes: number;
+  endMinutes: number;
+}
+
+export interface SchedulePreview {
+  create: number;
+  update: number;
+  remove: number;
+  unchanged: number;
+  withinLimit: boolean;
+  days: number;
+  items: SchedulePreviewItem[];
+  hiddenCount: number;
+}
+
+export interface ScheduleSyncResult {
+  created: number;
+  updated: number;
+  deleted: number;
+  unchanged: number;
+  failed: number;
+}
+
+export interface RemoveAllResult {
+  deleted: number;
+  failed: number;
+  remaining: number;
+}
+
+// A janela (14 dias) é decidida pelo servidor: o utilizador não a escolhe.
+export const previewScheduleSync = async (): Promise<SchedulePreview> => {
+  const response = await api.get<SchedulePreview>('/calendar/schedule/preview');
+  return response.data;
+};
+
+export const syncSchedule = async (): Promise<ScheduleSyncResult> => {
+  const response = await api.post<ScheduleSyncResult>('/calendar/schedule/sync', {});
+  return response.data;
+};
+
+export const removeSyncedSchedule = async (): Promise<RemoveAllResult> => {
+  const response = await api.delete<RemoveAllResult>('/calendar/schedule');
+  return response.data;
+};

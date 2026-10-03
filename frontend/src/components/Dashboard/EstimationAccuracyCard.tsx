@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getEstimationAccuracy, type EstimationAccuracy } from '../../api/predictionService';
 import { TargetIcon } from '../UI/Icons';
+import DashboardCard, { CardHeading } from '../UI/DashboardCard';
+import LegendItem from '../UI/LegendItem';
 
 // How good Rodrigo's own manual `estimatedMinutes` guesses have actually
 // been, looking backward - the counterpart to the duration-prediction
@@ -38,11 +40,11 @@ export default function EstimationAccuracyCard() {
   const pct = (count: number) => (total > 0 ? Math.round((count / total) * 100) : 0);
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3 flex items-center gap-1.5">
+    <DashboardCard>
+      <CardHeading className="mb-3">
         <TargetIcon className="shrink-0" />
         Estimate accuracy
-      </p>
+      </CardHeading>
 
       <div className="flex items-end gap-2 mb-3">
         <span className="text-2xl font-semibold text-violet-400">
@@ -54,25 +56,22 @@ export default function EstimationAccuracyCard() {
       </div>
 
       <div className="flex h-2 rounded-full overflow-hidden bg-neutral-800 mb-2">
-        <div className="h-full bg-emerald-500" style={{ width: `${pct(data.accurateCount)}%` }} />
+        <div className="h-full bg-violet-500" style={{ width: `${pct(data.accurateCount)}%` }} />
         <div className="h-full bg-amber-500" style={{ width: `${pct(data.overestimatedCount)}%` }} />
         <div className="h-full bg-sky-500" style={{ width: `${pct(data.underestimatedCount)}%` }} />
       </div>
 
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-400">
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+        <LegendItem dotClassName="bg-violet-500">
           {data.accurateCount} on target
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+        </LegendItem>
+        <LegendItem dotClassName="bg-amber-500">
           {data.overestimatedCount} took less than guessed
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
+        </LegendItem>
+        <LegendItem dotClassName="bg-sky-500">
           {data.underestimatedCount} took more than guessed
-        </span>
+        </LegendItem>
       </div>
-    </div>
+    </DashboardCard>
   );
 }

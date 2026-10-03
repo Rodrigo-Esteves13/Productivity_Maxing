@@ -21,3 +21,29 @@ export function getFrontendUrl(): string {
 export function getGoogleMapsApiKey(): string | null {
   return process.env.GOOGLE_MAPS_API_KEY?.trim() || null;
 }
+
+// Buckets do Supabase Storage e nome do remetente dos emails. Todos tem
+// valor por omissao porque so mudam se o projeto Supabase usar outros nomes.
+const DEFAULT_AVATAR_BUCKET = 'avatars';
+const DEFAULT_NOTEBOOK_BUCKET = 'notebook-photos';
+const DEFAULT_NOTEBOOK_ATTACHMENTS_BUCKET = 'notebook-attachments';
+const DEFAULT_MAIL_FROM_NAME = 'Productivity Maxing';
+
+export function getAvatarBucket(): string {
+  return process.env.SUPABASE_AVATAR_BUCKET ?? DEFAULT_AVATAR_BUCKET;
+}
+
+export function getNotebookBucket(): string {
+  return process.env.SUPABASE_NOTEBOOK_BUCKET ?? DEFAULT_NOTEBOOK_BUCKET;
+}
+
+export function getNotebookAttachmentsBucket(): string {
+  return (
+    process.env.SUPABASE_NOTEBOOK_ATTACHMENTS_BUCKET ??
+    DEFAULT_NOTEBOOK_ATTACHMENTS_BUCKET
+  );
+}
+
+export function getMailFromName(): string {
+  return process.env.SMTP_FROM_NAME ?? DEFAULT_MAIL_FROM_NAME;
+}

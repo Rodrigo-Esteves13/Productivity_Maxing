@@ -20,6 +20,7 @@ import { TelemetryModule } from './telemetry/telemetry.module';
 import { PredictionModule } from './prediction/prediction.module';
 import { ScheduleModule } from './schedule/schedule.module';
 import { StudyPlanModule } from './study-plan/study-plan.module';
+import { WorkShiftsModule } from './work-shifts/work-shifts.module';
 import { NotebookModule } from './notebook/notebook.module';
 import { BannedIpsModule } from './banned-ips/banned-ips.module';
 import { AppealsModule } from './appeals/appeals.module';
@@ -55,6 +56,7 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     PredictionModule,
     ScheduleModule,
     StudyPlanModule,
+    WorkShiftsModule,
     NotebookModule,
     BannedIpsModule,
     AppealsModule,
