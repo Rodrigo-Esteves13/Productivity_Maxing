@@ -3,6 +3,9 @@ import type { Task, Area } from '../../types/models';
 import { getDateStatus } from '../../utils/taskDateStatus';
 import StatusBadge from '../UI/StatusBadge';
 import { AlertTriangleIcon } from '../UI/Icons';
+import DashboardCard, { CardHeading } from '../UI/DashboardCard';
+import ColorDot from '../UI/ColorDot';
+import { useAreaLookup } from '../../hooks/useAreaLookup';
 
 interface AtRiskTasksCardProps {
   tasks: Task[];
@@ -13,7 +16,7 @@ interface AtRiskTasksCardProps {
 // by the user regardless of date - the two signals don't always overlap
 // (a task can be behind schedule without technically being overdue yet).
 export default function AtRiskTasksCard({ tasks, areas }: AtRiskTasksCardProps) {
-  const areaById = new Map(areas.map((a) => [a.id, a]));
+  const areaById = useAreaLookup(areas);
 
   const atRisk = tasks
     .filter((t) => t.progressStatus !== 'COMPLETED')
@@ -29,11 +32,11 @@ export default function AtRiskTasksCard({ tasks, areas }: AtRiskTasksCardProps) 
   if (atRisk.length === 0) return null;
 
   return (
-    <div className="bg-neutral-900/50 border border-red-900/50 rounded-xl p-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-red-400 mb-3 flex items-center gap-1.5">
+    <DashboardCard tone="danger">
+      <CardHeading tone="danger" className="mb-3">
         <AlertTriangleIcon className="shrink-0" />
         At risk ({atRisk.length})
-      </p>
+      </CardHeading>
       <ul className="space-y-2">
         {atRisk.map((task) => {
           const area = areaById.get(task.areaId);
@@ -41,10 +44,7 @@ export default function AtRiskTasksCard({ tasks, areas }: AtRiskTasksCardProps) 
             <li key={task.id} className="flex items-center justify-between gap-2 text-sm">
               <div className="flex items-center gap-2 min-w-0">
                 {area && (
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: area.colorHex }}
-                  />
+                  <ColorDot size="xs" color={area.colorHex} />
                 )}
                 <span className="truncate text-neutral-200">{task.title}</span>
               </div>
@@ -59,6 +59,6 @@ export default function AtRiskTasksCard({ tasks, areas }: AtRiskTasksCardProps) 
       >
         View all tasks
       </Link>
-    </div>
+    </DashboardCard>
   );
 }

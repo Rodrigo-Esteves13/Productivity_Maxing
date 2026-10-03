@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
 import { computeProductivityByType } from '../../utils/productivityByType';
 import { ChartPieIcon } from '../UI/Icons';
+import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 
 interface ProductivityByTypeCardProps {
   tasks: Task[];
@@ -23,11 +24,11 @@ export default function ProductivityByTypeCard({
   if (tasks.length < MIN_TASKS_TO_SHOW || rows.length === 0) return null;
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3 flex items-center gap-1.5">
+    <DashboardCard>
+      <CardHeading className="mb-3">
         <ChartPieIcon className="shrink-0" />
         Productivity by task type
-      </p>
+      </CardHeading>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
@@ -67,6 +68,6 @@ export default function ProductivityByTypeCard({
           </tbody>
         </table>
       </div>
-    </div>
+    </DashboardCard>
   );
 }

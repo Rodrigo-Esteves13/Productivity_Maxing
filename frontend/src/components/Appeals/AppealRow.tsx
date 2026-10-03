@@ -6,7 +6,6 @@ import type { AppealAdmin, AppealResolution, UserStatus } from '../../types/mode
 
 interface AppealRowProps {
   appeal: AppealAdmin;
-  isResolving: boolean;
   onResolve: (id: string, resolution: AppealResolution, resolutionNote?: string) => Promise<void>;
 }
 
@@ -21,14 +20,13 @@ const ACCENT: Record<UserStatus, string> = {
   ACTIVE: 'border-l-neutral-700',
 };
 
-export default function AppealRow({ appeal, isResolving, onResolve }: AppealRowProps) {
+export default function AppealRow({ appeal, onResolve }: AppealRowProps) {
   const [note, setNote] = useState('');
   const [showNoteFor, setShowNoteFor] = useState<AppealResolution | null>(null);
 
   // Dispara a resolução e mais nada: a linha sai da lista no mesmo render
   // (remoção otimista em useAppealsPage), por isso não há nada para
-  // "reiniciar" aqui. Repor showNoteFor a null antes da resposta era o que
-  // fazia os botões Approve/Deny voltarem a aparecer durante ~1s.
+  // "reiniciar" aqui, nem estado de "a guardar" para mostrar.
   const confirm = (resolution: AppealResolution) => {
     void onResolve(appeal.id, resolution, note.trim() || undefined);
   };
@@ -67,34 +65,29 @@ export default function AppealRow({ appeal, isResolving, onResolve }: AppealRowP
             rows={2}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            disabled={isResolving}
           />
           <div className="mt-2 flex gap-2">
             <Button
               variant={showNoteFor === 'APPROVED' ? 'primary' : 'secondary'}
               className={showNoteFor === 'DENIED' ? 'border-red-800 text-red-400' : ''}
               onClick={() => confirm(showNoteFor)}
-              disabled={isResolving}
             >
-              {isResolving
-                ? 'Saving...'
-                : `Confirm ${showNoteFor === 'APPROVED' ? 'approve' : 'deny'}`}
+              {`Confirm ${showNoteFor === 'APPROVED' ? 'approve' : 'deny'}`}
             </Button>
-            <Button variant="secondary" onClick={() => setShowNoteFor(null)} disabled={isResolving}>
+            <Button variant="secondary" onClick={() => setShowNoteFor(null)}>
               Cancel
             </Button>
           </div>
         </div>
       ) : (
         <div className="mt-4 flex gap-2">
-          <Button onClick={() => setShowNoteFor('APPROVED')} disabled={isResolving}>
+          <Button onClick={() => setShowNoteFor('APPROVED')}>
             Approve
           </Button>
           <Button
             variant="secondary"
             className="border-red-800 text-red-400"
             onClick={() => setShowNoteFor('DENIED')}
-            disabled={isResolving}
           >
             Deny
           </Button>

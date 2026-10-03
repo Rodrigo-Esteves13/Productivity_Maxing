@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import type { Area, AcademicPeriod, ImportTaskRow, TaskMeta } from '../types/models';
+import { ACADEMIC_TASK_TYPE_KEY } from '../lib/constants';
 
 // Accepted column headers, case-insensitive, with a couple of common
 // aliases per column so a spreadsheet built without reading the docs
@@ -131,7 +132,7 @@ export function mapImportRows(
   periods: AcademicPeriod[],
 ): MapImportRowsResult {
   const defaultTaskTypeKey =
-    meta.taskTypes.find((t) => t.key === 'ACADEMICO')?.key ?? meta.taskTypes[0]?.key;
+    meta.taskTypes.find((t) => t.key === ACADEMIC_TASK_TYPE_KEY)?.key ?? meta.taskTypes[0]?.key;
 
   const rows: ImportTaskRow[] = [];
   const errors: { row: number; message: string }[] = [];

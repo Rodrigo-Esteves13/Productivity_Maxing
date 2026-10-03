@@ -135,28 +135,50 @@ export class AppealsService {
   async resolve(adminId: string, appealId: string, dto: ResolveAppealDto) {
     const appeal = await this.prisma.userAppeal.findUnique({
       where: { id: appealId },
-      select: { id: true, userId: true, resolvedAt: true },
+      select: { userId: true },
     });
     if (!appeal) {
       throw new NotFoundException('Appeal not found.');
     }
-    if (appeal.resolvedAt) {
-      throw new ConflictException('This appeal has already been resolved.');
-    }
 
-    if (dto.resolution === AppealResolution.APPROVED) {
-      await this.usersService.reactivateUser(adminId, appeal.userId);
-    }
+    // Uma transacao: marcar o appeal como resolvido e (se aprovado)
+    // reativar a conta ou acontecem os dois ou nenhum. Antes eram dois
+    // pedidos seguidos: se o segundo falhasse, a conta ficava reativada
+    // com o appeal ainda pendente. O updateMany com resolvedAt: null
+    // tambem fecha a corrida de dois admins a resolver o mesmo appeal.
+    const resolved = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.userAppeal.updateMany({
+        where: { id: appealId, resolvedAt: null },
+        data: {
+          resolution: dto.resolution,
+          resolutionNote: dto.resolutionNote,
+          resolvedAt: new Date(),
+          resolvedByUserId: adminId,
+        },
+      });
+      if (count === 0) {
+        throw new ConflictException('This appeal has already been resolved.');
+      }
 
-    return this.prisma.userAppeal.update({
-      where: { id: appealId },
-      data: {
-        resolution: dto.resolution,
-        resolutionNote: dto.resolutionNote,
-        resolvedAt: new Date(),
-        resolvedByUserId: adminId,
-      },
-      select: APPEAL_ADMIN_SELECT,
+      if (dto.resolution === AppealResolution.APPROVED) {
+        await tx.user.update({
+          where: { id: appeal.userId },
+          data: this.usersService.buildReactivationData(adminId),
+          select: { id: true },
+        });
+      }
+
+      return tx.userAppeal.findUniqueOrThrow({
+        where: { id: appealId },
+        select: APPEAL_ADMIN_SELECT,
+      });
     });
+
+    // Cache de ban/suspend em memoria: so depois do commit, para nunca
+    // desbloquear a conta na cache se a transacao tivesse falhado.
+    if (dto.resolution === AppealResolution.APPROVED) {
+      this.accountStatus.clearBlocked(appeal.userId);
+    }
+    return resolved;
   }
 }

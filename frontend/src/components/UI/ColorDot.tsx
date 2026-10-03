@@ -1,5 +1,5 @@
 type ColorDotVariant = 'circle' | 'square';
-type ColorDotSize = 'sm' | 'md';
+type ColorDotSize = 'xs' | 'sm' | 'md';
 
 interface ColorDotProps {
   color: string;
@@ -9,6 +9,7 @@ interface ColorDotProps {
 }
 
 const sizeClasses: Record<ColorDotSize, string> = {
+  xs: 'w-2 h-2',
   sm: 'w-4 h-4',
   md: 'w-5 h-5',
 };
@@ -17,8 +18,9 @@ export default function ColorDot({ color, variant = 'circle', size = 'sm', class
   const shapeClasses = variant === 'circle' ? 'rounded-full' : 'rounded border border-neutral-700';
 
   return (
-    <div
-      className={`${sizeClasses[size]} ${shapeClasses} flex-shrink-0 shadow-sm ${className}`}
+    <span
+      aria-hidden="true"
+      className={`inline-block ${sizeClasses[size]} ${shapeClasses} flex-shrink-0 shadow-sm ${className}`}
       style={{ backgroundColor: color }}
     />
   );

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Task } from '../../types/models';
 import { computeWeekdayDistribution } from '../../utils/weekdayDistribution';
 import { CalendarIcon } from '../UI/Icons';
+import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 
 interface WeekdayLoadCardProps {
   tasks: Task[];
@@ -20,11 +21,11 @@ export default function WeekdayLoadCard({ tasks }: WeekdayLoadCardProps) {
   const busiest = buckets.find((b) => b.total === max);
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3 flex items-center gap-1.5">
+    <DashboardCard>
+      <CardHeading className="mb-3">
         <CalendarIcon className="shrink-0" />
         Deadlines by weekday
-      </p>
+      </CardHeading>
       <p className="text-xs text-neutral-500 mb-3">
         Busiest: <span className="text-neutral-200">{busiest?.label}</span> ({max} of {total})
       </p>
@@ -59,6 +60,6 @@ export default function WeekdayLoadCard({ tasks }: WeekdayLoadCardProps) {
           Completed
         </span>
       </div>
-    </div>
+    </DashboardCard>
   );
 }

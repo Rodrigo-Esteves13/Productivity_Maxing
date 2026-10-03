@@ -1,6 +1,8 @@
 // src/api/workShiftsService.ts
 import api from './client';
 import type {
+  CopyWeekInput,
+  CopyWeekResult,
   CreateWorkShiftInput,
   UpdateWorkShiftInput,
   WorkShift,
@@ -35,4 +37,11 @@ export const updateWorkShift = async (
 
 export const deleteWorkShift = async (id: string): Promise<void> => {
   await api.delete(`/work-shifts/${id}`);
+};
+
+export const copyWeekShifts = async (
+  input: CopyWeekInput,
+): Promise<CopyWeekResult> => {
+  const response = await api.post<CopyWeekResult>('/work-shifts/copy-week', input);
+  return response.data;
 };

@@ -1,7 +1,7 @@
 import type { Task } from '../types/models';
 import { toLocalDayKey } from './profileStats';
+import { MS_PER_DAY } from '../lib/timeConstants';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface MonthCompliance {
   monthKey: string; // "YYYY-MM", local time
@@ -30,7 +30,7 @@ function effectiveDeadlineMs(task: Task): number {
     deadline.getUTCHours() === 0 &&
     deadline.getUTCMinutes() === 0 &&
     deadline.getUTCSeconds() === 0;
-  return deadline.getTime() + (isDateOnly ? DAY_MS : 0);
+  return deadline.getTime() + (isDateOnly ? MS_PER_DAY : 0);
 }
 
 // Shared by DeadlineComplianceCard and ProductivityByTypeCard so both

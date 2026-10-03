@@ -4,6 +4,7 @@ import ShiftForm from './ShiftForm';
 import type { ShiftFormValues } from './ShiftForm';
 import { describeShift } from './shiftText';
 import type { Commitment, UpdateWorkShiftInput, WorkShift } from '../../../types/models';
+import IconButton from '../../UI/IconButton';
 
 interface ShiftRowProps {
   shift: WorkShift;
@@ -65,22 +66,12 @@ export default function ShiftRow({ shift, isSaving, onEdit, onDelete, moveTarget
         )}
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        <button
-          type="button"
-          onClick={() => setIsEditing(true)}
-          aria-label="Edit shift"
-          className="text-neutral-500 hover:text-white p-1 rounded-md"
-        >
+        <IconButton label="Edit shift" onClick={() => setIsEditing(true)}>
           <PencilIcon />
-        </button>
-        <button
-          type="button"
-          onClick={() => void onDelete(shift.id)}
-          aria-label="Delete shift"
-          className="text-neutral-500 hover:text-red-400 p-1 rounded-md"
-        >
+        </IconButton>
+        <IconButton tone="danger" label="Delete shift" onClick={() => void onDelete(shift.id)}>
           <TrashIcon />
-        </button>
+        </IconButton>
       </div>
     </li>
   );

@@ -15,6 +15,7 @@ import {
 import { useAcademic } from '../../context/useAcademic';
 import { PinIcon } from '../UI/Icons';
 import type { AcademicPeriod, AcademicProgram } from '../../types/models';
+import { getHttpStatus } from '../../lib/httpError';
 
 interface ManagePeriodsModalProps {
   isOpen: boolean;
@@ -103,7 +104,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
       await loadPeriods();
       await refreshContext();
     } catch (err: any) {
-      const status = err?.response?.status;
+      const status = getHttpStatus(err);
       if (status === 409 && !forceConfirm) {
         // Most recent period in the program, no successor yet - ask for
         // explicit extra confirmation (see PeriodsService.archive).

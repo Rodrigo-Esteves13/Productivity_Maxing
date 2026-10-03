@@ -4,6 +4,7 @@ import FormError from '../UI/FormError';
 import Button from '../UI/Button';
 import { buildTaskPayload } from '../../utils/taskPayload';
 import type { TaskTypeOption, AcademicTaskTypeOption, PriorityOption } from '../../types/models';
+import { todayKey } from '../../lib/dateKey';
 
 interface AreaOption {
   id: string;
@@ -35,7 +36,7 @@ export default function TaskForm({
 
   const [formData, setFormData] = useState<TaskFormFieldValues>({
     title: '',
-    date: new Date().toISOString().split('T')[0],
+    date: todayKey(),
     // Sem tipo pré-selecionado: escolher o taskTypes[0] por omissão fazia
     // com que "Academic" (order 1 no seed) ficasse ativo em Areas sem tipo
     // associado (ex: hobbies), mostrando os campos académicos por engano.

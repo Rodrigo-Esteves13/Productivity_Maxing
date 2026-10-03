@@ -1,12 +1,21 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getAppeals, resolveAppeal } from '../api/userService';
-import type { AppealAdmin, AppealResolution } from '../types/models';
+import type { Feedback } from '../components/UI/FeedbackBanner';
+import type { AppealAdmin, AppealResolution, PaginatedAppeals } from '../types/models';
+import { getHttpStatus, HTTP_CONFLICT } from '../lib/httpError';
 
 const PAGE_SIZE = 10;
+const FEEDBACK_MS = 4000;
 
-interface Feedback {
-  type: 'success' | 'error';
-  message: string;
+const RESOLVED_MESSAGE: Record<AppealResolution, string> = {
+  APPROVED: 'Appeal approved.',
+  DENIED: 'Appeal denied.',
+};
+
+function insertAt<T>(list: T[], item: T, index: number): T[] {
+  const copy = [...list];
+  copy.splice(Math.min(index, copy.length), 0, item);
+  return copy;
 }
 
 export function useAppealsPage() {
@@ -17,96 +26,120 @@ export function useAppealsPage() {
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
-  const fetchAppeals = useCallback(async (skipOverride = 0) => {
-    try {
-      setIsLoading(true);
-      setError('');
-      const data = await getAppeals({ status: 'pending', skip: skipOverride, take: PAGE_SIZE });
-      setAppeals(data.appeals);
-      setTotal(data.total);
-      setSkip(data.skip);
-    } catch {
-      setError('Error loading appeals.');
-    } finally {
-      setIsLoading(false);
-    }
+  // Espelhos do estado para ler o valor atual dentro de callbacks async
+  // sem os recriar (e sem usar valores antigos de um render anterior).
+  const appealsRef = useRef(appeals);
+  const skipRef = useRef(skip);
+  appealsRef.current = appeals;
+  skipRef.current = skip;
+
+  // Ids que a pessoa ja resolveu (pedido em curso ou concluido). TODA a
+  // resposta do servidor passa por este filtro. Antes, um refetch que
+  // chegava a meio de outra resolucao trazia de volta uma linha ja
+  // removida, e os botoes Approve/Deny reapareciam ate ao refetch seguinte
+  // (~1s depois). Em caso de falha o id sai daqui e a linha volta.
+  const hiddenIdsRef = useRef(new Set<string>());
+  const inFlightIdsRef = useRef(new Set<string>());
+  // So a resposta do pedido MAIS RECENTE pode escrever no estado.
+  const requestSeqRef = useRef(0);
+
+  const applyPage = useCallback((data: PaginatedAppeals) => {
+    const hidden = hiddenIdsRef.current;
+    const visible = data.appeals.filter((appeal) => !hidden.has(appeal.id));
+    setAppeals(visible);
+    // O servidor ainda conta os que estao em curso; ja nao os mostramos.
+    setTotal(Math.max(0, data.total - (data.appeals.length - visible.length)));
+    setSkip(data.skip);
   }, []);
 
-  // Same request as fetchAppeals, but without the loading flag - used
-  // after a resolve, where the list already shows the (optimistically
-  // updated) right thing and a full-page skeleton flash would just make
-  // an already-applied action feel like it's redoing work. Failures are
-  // ignored: the mutation itself already succeeded, this is just
-  // reconciling pagination in the background (see handleResolve).
-  const reconcileSilently = useCallback(async (skipOverride: number) => {
-    try {
-      const data = await getAppeals({ status: 'pending', skip: skipOverride, take: PAGE_SIZE });
-      setAppeals(data.appeals);
-      setTotal(data.total);
-      setSkip(data.skip);
-    } catch {
-      // ignore - what's already on screen (from the optimistic update)
-      // stays put
-    }
-  }, []);
+  const load = useCallback(
+    async (skipTo: number, silent: boolean) => {
+      const seq = ++requestSeqRef.current;
+      try {
+        if (!silent) {
+          setIsLoading(true);
+          setError('');
+        }
+        const data = await getAppeals({ status: 'pending', skip: skipTo, take: PAGE_SIZE });
+        if (seq === requestSeqRef.current) applyPage(data);
+      } catch {
+        // Um refetch silencioso que falha deixa o que ja esta no ecra.
+        if (!silent && seq === requestSeqRef.current) setError('Error loading appeals.');
+      } finally {
+        if (!silent) setIsLoading(false);
+      }
+    },
+    [applyPage],
+  );
 
   useEffect(() => {
-    fetchAppeals(0);
-  }, [fetchAppeals]);
+    void load(0, false);
+  }, [load]);
 
-  // Clears itself so a stale "Appeal approved." doesn't linger forever.
+  // Limpa-se sozinho para um "Appeal approved." nao ficar para sempre.
   useEffect(() => {
     if (!feedback) return;
-    const timeout = setTimeout(() => setFeedback(null), 4000);
+    const timeout = setTimeout(() => setFeedback(null), FEEDBACK_MS);
     return () => clearTimeout(timeout);
   }, [feedback]);
 
   const goToNextPage = () => {
     if (skip + PAGE_SIZE >= total) return;
-    fetchAppeals(skip + PAGE_SIZE);
+    void load(skip + PAGE_SIZE, false);
   };
 
   const goToPrevPage = () => {
     if (skip === 0) return;
-    fetchAppeals(Math.max(0, skip - PAGE_SIZE));
+    void load(Math.max(0, skip - PAGE_SIZE), false);
   };
 
-  const handleResolve = async (
-    id: string,
-    resolution: AppealResolution,
-    resolutionNote?: string,
-  ) => {
-    // Remoção OTIMISTA: o appeal sai da lista no mesmo render do clique.
-    // Antes, a linha só desaparecia depois da resposta do servidor, e
-    // durante esse segundo os botões Approve/Deny voltavam a aparecer
-    // (ver AppealRow). Guardamos o estado anterior para repor se o pedido
-    // falhar, em vez de deixar o admin a achar que resolveu algo que não
-    // resolveu.
-    const previousAppeals = appeals;
-    const previousTotal = total;
-    const wasLastItemOnPage = appeals.length <= 1 && skip > 0;
+  const handleResolve = useCallback(
+    async (id: string, resolution: AppealResolution, resolutionNote?: string) => {
+      const index = appealsRef.current.findIndex((appeal) => appeal.id === id);
+      // Ja removido ou ja em curso (duplo clique): nada a fazer.
+      if (index === -1 || inFlightIdsRef.current.has(id)) return;
 
-    setFeedback(null);
-    setAppeals((prev) => prev.filter((a) => a.id !== id));
-    setTotal((prev) => Math.max(0, prev - 1));
+      const removed = appealsRef.current[index];
+      const remainingOnPage = appealsRef.current.length - 1;
+      inFlightIdsRef.current.add(id);
+      hiddenIdsRef.current.add(id);
 
-    try {
-      await resolveAppeal(id, resolution, resolutionNote);
-      setFeedback({
-        type: 'success',
-        message: resolution === 'APPROVED' ? 'Appeal approved.' : 'Appeal denied.',
-      });
+      // Remocao otimista: a linha sai no mesmo render do clique, sem
+      // esperar pelo servidor.
+      setFeedback(null);
+      setAppeals((prev) => prev.filter((appeal) => appeal.id !== id));
+      setTotal((prev) => Math.max(0, prev - 1));
 
-      // A remoção pode deixar esta página com menos de PAGE_SIZE itens
-      // enquanto há mais na seguinte (ou vazia, se era o último): reconcilia
-      // com o servidor em background, sem piscar a página.
-      void reconcileSilently(wasLastItemOnPage ? Math.max(0, skip - PAGE_SIZE) : skip);
-    } catch {
-      setAppeals(previousAppeals);
-      setTotal(previousTotal);
-      setFeedback({ type: 'error', message: 'Could not resolve this appeal. Please try again.' });
-    }
-  };
+      try {
+        await resolveAppeal(id, resolution, resolutionNote);
+        setFeedback({ type: 'success', message: RESOLVED_MESSAGE[resolution] });
+      } catch (caught) {
+        if (getHttpStatus(caught) !== HTTP_CONFLICT) {
+          // Falhou mesmo: a linha volta ao sitio onde estava, so ela.
+          hiddenIdsRef.current.delete(id);
+          setAppeals((prev) =>
+            prev.some((appeal) => appeal.id === id) ? prev : insertAt(prev, removed, index),
+          );
+          setTotal((prev) => prev + 1);
+          setFeedback({ type: 'error', message: 'Could not resolve this appeal. Please try again.' });
+          return;
+        }
+        // 409: outra pessoa ja a resolveu. Continua escondida.
+        setFeedback({ type: 'error', message: 'This appeal was already resolved by someone else.' });
+      } finally {
+        inFlightIdsRef.current.delete(id);
+      }
+
+      // A pagina pode ter ficado com menos de PAGE_SIZE itens enquanto ha
+      // mais na seguinte (ou vazia, se era o ultimo): reconcilia em
+      // background, sem piscar a pagina.
+      const currentSkip = skipRef.current;
+      const skipTo =
+        remainingOnPage === 0 && currentSkip > 0 ? Math.max(0, currentSkip - PAGE_SIZE) : currentSkip;
+      void load(skipTo, true);
+    },
+    [load],
+  );
 
   return {
     appeals,
@@ -115,7 +148,6 @@ export function useAppealsPage() {
     pageSize: PAGE_SIZE,
     isLoading,
     error,
-    resolvingId: null as string | null,
     feedback,
     goToNextPage,
     goToPrevPage,

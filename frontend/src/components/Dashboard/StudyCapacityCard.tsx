@@ -3,6 +3,8 @@ import { useStudyPlan } from '../../hooks/useStudyPlan';
 import { AlertTriangleIcon, ClockIcon } from '../UI/Icons';
 import { formatDuration } from '../../lib/timeFormat';
 import { BANNER_BY_STATUS } from '../Study/plan/planCopy';
+import ProgressBar from '../UI/ProgressBar';
+import { CardHeading } from '../UI/DashboardCard';
 
 const WINDOW_DAYS = 7;
 
@@ -28,10 +30,10 @@ export default function StudyCapacityCard() {
 
   return (
     <div className={`border rounded-xl p-4 shadow-xl bg-neutral-900/50 ${copy.containerClass}`}>
-      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-2 flex items-center gap-1.5">
+      <CardHeading className="mb-2">
         <Icon className="shrink-0" />
         Study capacity, next {WINDOW_DAYS} days
-      </p>
+      </CardHeading>
       <p className={`text-lg font-semibold ${copy.titleClass}`}>{copy.title}</p>
       <p className="text-sm text-neutral-300 mt-1">
         {copy.body({
@@ -41,19 +43,12 @@ export default function StudyCapacityCard() {
           dailyLimitMinutes,
         })}
       </p>
-      <div
-        className="mt-3 h-1.5 rounded-full bg-neutral-800 overflow-hidden"
-        role="progressbar"
-        aria-valuenow={fillPct}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label="Share of needed study time that fits in your week"
-      >
-        <div
-          className={`h-full ${needsAttention ? 'bg-amber-500' : 'bg-violet-500'}`}
-          style={{ width: `${fillPct}%` }}
-        />
-      </div>
+      <ProgressBar
+        className="mt-3"
+        percent={fillPct}
+        fillClassName={needsAttention ? 'bg-amber-500' : 'bg-violet-500'}
+        label="Share of needed study time that fits in your week"
+      />
       <p className="text-xs text-neutral-500 mt-2">
         {formatDuration(summary.plannedMinutes)} of {formatDuration(summary.neededMinutes)} scheduled
       </p>

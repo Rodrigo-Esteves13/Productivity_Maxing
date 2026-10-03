@@ -1,16 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getOverdueCheckins, confirmOverdueTask } from '../api/userService';
 import type { Task } from '../types/models';
+import { todayKey } from '../lib/dateKey';
 
 // Chave de localStorage usada só para evitar disparar o pedido de rede a
 // cada mudança de página no mesmo dia - o backend é sempre quem decide de
 // facto quais tasks ainda faltam confirmar (lastOverdueCheckAt), isto é só
 // uma otimização client-side.
 const LAST_CHECK_KEY = 'pmaxing:lastOverdueCheckDate';
-
-function todayKey(): string {
-  return new Date().toISOString().split('T')[0];
-}
 
 interface UseOverdueCheckinsReturn {
   pendingTasks: Task[];

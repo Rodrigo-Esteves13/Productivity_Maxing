@@ -18,6 +18,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { WorkShiftsService } from './work-shifts.service';
+import { WorkShiftCopyService } from './work-shift-copy.service';
+import { CopyWeekDto } from './dto/copy-week.dto';
 import { CreateWorkShiftsDto } from './dto/create-work-shifts.dto';
 import { UpdateWorkShiftDto } from './dto/update-work-shift.dto';
 import { WorkShiftRangeQueryDto } from './dto/work-shift-range.query.dto';
@@ -27,7 +29,10 @@ import { WorkShiftRangeQueryDto } from './dto/work-shift-range.query.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('work-shifts')
 export class WorkShiftsController {
-  constructor(private readonly workShiftsService: WorkShiftsService) {}
+  constructor(
+    private readonly workShiftsService: WorkShiftsService,
+    private readonly copyService: WorkShiftCopyService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -60,6 +65,18 @@ export class WorkShiftsController {
     @Body() dto: CreateWorkShiftsDto,
   ) {
     return this.workShiftsService.createMany(user.id, dto);
+  }
+
+  // Literal declarado antes de qualquer rota com :id no mesmo verbo.
+  @Post('copy-week')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({
+    summary:
+      "Copies a week's one-off shifts into another week, or makes them repeat every week.",
+  })
+  copyWeek(@CurrentUser() user: AuthenticatedUser, @Body() dto: CopyWeekDto) {
+    return this.copyService.copyWeek(user.id, dto);
   }
 
   @Patch(':id')

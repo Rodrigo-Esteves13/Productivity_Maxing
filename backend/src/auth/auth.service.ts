@@ -34,7 +34,7 @@ import {
 import { OAuthAccountConflictException } from './exceptions/oauth-account-conflict.exception';
 import { MailService } from '../mail/mail.service';
 import { GOOGLE_REVOKE_URL } from './google-oauth.constants';
-import { getFrontendUrl } from '../config/app.config';
+import { getAvatarBucket, getFrontendUrl } from '../config/app.config';
 import { AccountStatusService } from '../account-status/account-status.service';
 
 // scryptSync bloqueia a thread principal do event loop enquanto corre -
@@ -73,7 +73,7 @@ interface OAuthProfileData {
 // Tem de existir no projeto Supabase e estar marcado como público
 // (Storage -> Buckets -> "avatars" -> Public bucket = ON), para que o
 // avatarUrl gerado seja diretamente acessível pelo <img src>.
-const AVATAR_BUCKET = process.env.SUPABASE_AVATAR_BUCKET ?? 'avatars';
+const AVATAR_BUCKET = getAvatarBucket();
 
 // Mesmo URL usado no AuthController para os redirects de OAuth - usado aqui
 // só para o `redirectTo` do email de recuperação de password do Supabase,

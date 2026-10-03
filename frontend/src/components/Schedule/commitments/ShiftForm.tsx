@@ -7,6 +7,7 @@ import ErrorState from '../../UI/ErrorState';
 import { formatClock, parseClock } from '../../../lib/timeFormat';
 import { WEEKDAYS } from './shiftText';
 import type { WorkShift } from '../../../types/models';
+import ToggleChip from '../../UI/ToggleChip';
 
 type Repeat = 'weekly' | 'once';
 
@@ -86,19 +87,9 @@ export default function ShiftForm({ shift, submitLabel, isSaving, onSubmit, onCa
           </legend>
           <div className="flex flex-wrap gap-1.5">
             {WEEKDAYS.map((d) => (
-              <button
-                key={d.value}
-                type="button"
-                aria-pressed={days.includes(d.value)}
-                onClick={() => toggleDay(d.value)}
-                className={`px-2.5 py-1.5 rounded-lg text-sm border ${
-                  days.includes(d.value)
-                    ? 'border-violet-500 bg-violet-600/20 text-white'
-                    : 'border-neutral-700 text-neutral-400 hover:text-white'
-                }`}
-              >
+              <ToggleChip key={d.value} size="sm" pressed={days.includes(d.value)} onClick={() => toggleDay(d.value)}>
                 {d.label}
-              </button>
+              </ToggleChip>
             ))}
           </div>
         </fieldset>

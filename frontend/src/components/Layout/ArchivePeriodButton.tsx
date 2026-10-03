@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { archivePeriod } from '../../api/academicService';
 import { useAcademic } from '../../context/useAcademic';
+import { getHttpStatus } from '../../lib/httpError';
 
 // Never shows for the "View all" period (isViewingAllPeriods) nor for an
 // already-archived period (see RestorePeriodButton for that case) - only
@@ -24,7 +25,7 @@ export default function ArchivePeriodButton() {
       await archivePeriod(activePeriod.id, forceConfirm);
       await refresh();
     } catch (err: any) {
-      const status = err?.response?.status;
+      const status = getHttpStatus(err);
       if (status === 409) {
         // 409 = the backend refused because this is the program's most
         // recent period with no successor created yet - ask for explicit

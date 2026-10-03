@@ -15,7 +15,7 @@ export function useCalendarSyncReview() {
   const [phase, setPhase] = useState<ReviewPhase>('closed');
   const [preview, setPreview] = useState<SchedulePreview | null>(null);
   const [result, setResult] = useState<ScheduleSyncResult | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // Se o modal já está aberto, novos pedidos não o devem fechar nem trocar
   // o que a pessoa está a ler.
   const phaseRef = useRef<ReviewPhase>('closed');

@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import type { Task, Area } from '../../types/models';
 import { detectOverloadWeek } from '../../utils/detectOverloadWeek';
 import { AlertTriangleIcon } from '../UI/Icons';
+import DashboardCard, { CardHeading } from '../UI/DashboardCard';
+import ColorDot from '../UI/ColorDot';
 
 interface OverloadAlertCardProps {
   tasks: Task[];
@@ -12,7 +14,7 @@ interface OverloadAlertCardProps {
 // small per-course breakdown under the headline count - "where" the load
 // is concentrated is often more actionable than just "how many".
 function countByArea(tasks: Task[], areas: Area[]): { area: Area; count: number }[] {
-  const areaById = new Map(areas.map((a) => [a.id, a]));
+  const areaById = new Map(areas.map((area) => [area.id, area]));
   const counts = new Map<string, number>();
   for (const task of tasks) {
     counts.set(task.areaId, (counts.get(task.areaId) ?? 0) + 1);
@@ -30,11 +32,11 @@ export default function OverloadAlertCard({ tasks, areas }: OverloadAlertCardPro
   const breakdown = countByArea(overload.tasks, areas);
 
   return (
-    <div className="bg-neutral-900/50 border border-red-900/50 rounded-xl p-4 shadow-xl mb-6">
-      <p className="text-xs uppercase tracking-wide text-red-400 mb-2 flex items-center gap-1.5">
+    <DashboardCard tone="danger" className="mb-6">
+      <CardHeading tone="danger" className="mb-2">
         <AlertTriangleIcon className="shrink-0" />
         Heavy week ahead
-      </p>
+      </CardHeading>
       <p className="text-sm text-neutral-200 mb-3">
         <span className="font-bold text-lg">{overload.tasks.length}</span> pending tasks are due in
         the next 7 days - more than usual, worth planning ahead for.
@@ -43,10 +45,7 @@ export default function OverloadAlertCard({ tasks, areas }: OverloadAlertCardPro
         <ul className="flex flex-wrap gap-x-4 gap-y-1 mb-3">
           {breakdown.map(({ area, count }) => (
             <li key={area.id} className="flex items-center gap-1.5 text-xs text-neutral-400">
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: area.colorHex }}
-              />
+              <ColorDot size="xs" color={area.colorHex} />
               {area.name}: {count}
             </li>
           ))}
@@ -58,6 +57,6 @@ export default function OverloadAlertCard({ tasks, areas }: OverloadAlertCardPro
       >
         View all tasks
       </Link>
-    </div>
+    </DashboardCard>
   );
 }

@@ -17,3 +17,13 @@ export const MAX_RANGE_DAYS = 62;
 
 export const MAX_BUFFER_MINUTES = 240;
 export const MAX_LABEL_LENGTH = 80;
+
+// Modos de "copiar semana": 'one-off' repete os turnos pontuais de uma
+// semana noutra semana concreta; 'fixed' transforma-os em turnos semanais
+// (que se repetem todas as semanas até serem apagados).
+export const COPY_WEEK_MODES = ['one-off', 'fixed'] as const;
+export type CopyWeekMode = (typeof COPY_WEEK_MODES)[number];
+
+// Dia da semana (getUTCDay) em que uma semana começa para esta funcionalidade.
+export const WEEK_START_DAY = 1;
+export const DAYS_PER_WEEK = 7;

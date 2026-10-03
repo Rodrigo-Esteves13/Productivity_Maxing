@@ -2,6 +2,7 @@ import { useState } from 'react';
 // 1. Atualiza a importação aqui:
 import { exportMyData } from '../api/userService'; 
 import { downloadJson } from '../utils/downloadJson';
+import { todayKey } from '../lib/dateKey';
 
 interface UseDataExportReturn {
   isExporting: boolean;
@@ -21,7 +22,7 @@ export function useDataExport(): UseDataExportReturn {
       // 2. Chama a nova função aqui:
       const data = await exportMyData();
       
-      const dateStr = new Date().toISOString().split('T')[0];
+      const dateStr = todayKey();
       const filename = `pmaxing_export_${dateStr}.json`;
       
       downloadJson(data, filename);

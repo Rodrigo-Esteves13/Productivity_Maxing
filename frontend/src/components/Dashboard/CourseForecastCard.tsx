@@ -3,6 +3,8 @@ import { BookOpenIcon } from '../UI/Icons';
 import { useCourseForecast } from '../../hooks/useCourseForecast';
 import { formatDayLabel, formatDuration } from '../../lib/timeFormat';
 import type { CourseForecast } from '../../types/models';
+import DashboardCard, { CardHeading } from '../UI/DashboardCard';
+import ColorDot from '../UI/ColorDot';
 
 function typicalText(course: CourseForecast): string {
   if (course.avgMinutesPerGradedTask !== null) {
@@ -23,20 +25,17 @@ export default function CourseForecastCard() {
   if (isLoading || error || courses.length === 0) return null;
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3 flex items-center gap-1.5">
+    <DashboardCard>
+      <CardHeading className="mb-3">
         <BookOpenIcon className="shrink-0" />
         Study time per course
-      </p>
+      </CardHeading>
       <ul className="space-y-3">
         {courses.map((course) => (
           <li key={course.areaId}>
             <div className="flex items-baseline justify-between gap-3">
               <p className="text-sm text-neutral-200 flex items-center gap-2 min-w-0">
-                <span
-                  className="inline-block w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: course.areaColorHex }}
-                />
+                <ColorDot size="xs" color={course.areaColorHex} />
                 <span className="truncate">{course.areaName}</span>
               </p>
               <p className="text-xs text-neutral-500 shrink-0">
@@ -63,6 +62,6 @@ export default function CourseForecastCard() {
       >
         Open study plan
       </Link>
-    </div>
+    </DashboardCard>
   );
 }

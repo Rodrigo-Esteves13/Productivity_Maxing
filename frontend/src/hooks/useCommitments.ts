@@ -6,15 +6,19 @@ import {
   updateCommitment,
 } from '../api/commitmentsService';
 import {
+  copyWeekShifts,
   createWorkShifts,
   deleteWorkShift,
   updateWorkShift,
 } from '../api/workShiftsService';
 import type {
   CommitmentsOverview,
+  CopyWeekInput,
+  CopyWeekResult,
   CreateWorkShiftInput,
   UpdateWorkShiftInput,
 } from '../types/models';
+import { getHttpStatus, HTTP_CONFLICT } from '../lib/httpError';
 
 const EMPTY: CommitmentsOverview = { commitments: [], ungroupedShifts: [] };
 
@@ -25,6 +29,7 @@ export function useCommitments(onChanged: () => void) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const [copyResult, setCopyResult] = useState<CopyWeekResult | null>(null);
 
   const refetch = useCallback(async () => {
     try {
@@ -52,8 +57,7 @@ export function useCommitments(onChanged: () => void) {
         onChanged();
         return true;
       } catch (caught) {
-        const status = (caught as { response?: { status?: number } }).response?.status;
-        setError(status === 409 ? 'You already have one with that name.' : failureMessage);
+        setError(getHttpStatus(caught) === HTTP_CONFLICT ? 'You already have one with that name.' : failureMessage);
         return false;
       } finally {
         setIsSaving(false);
@@ -67,6 +71,8 @@ export function useCommitments(onChanged: () => void) {
     isLoading,
     isSaving,
     error,
+    copyResult,
+    clearCopyResult: () => setCopyResult(null),
     clearError: () => setError(''),
     addCommitment: (name: string, commuteMinutes: number) =>
       mutate(() => createCommitment({ name, commuteMinutes }), 'Could not create it.'),
@@ -78,6 +84,11 @@ export function useCommitments(onChanged: () => void) {
       mutate(() => createWorkShifts(shifts), 'Could not save the shift. Check the times.'),
     editShift: (id: string, changes: UpdateWorkShiftInput) =>
       mutate(() => updateWorkShift(id, changes), 'Could not save the shift. Check the times.'),
+    copyWeek: (input: CopyWeekInput) =>
+      mutate(
+        async () => setCopyResult(await copyWeekShifts(input)),
+        'Could not copy the week. Check the weeks you picked.',
+      ),
     removeShift: (id: string) =>
       mutate(() => deleteWorkShift(id), 'Could not delete the shift.'),
   };

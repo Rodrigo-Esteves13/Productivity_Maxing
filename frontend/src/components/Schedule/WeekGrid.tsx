@@ -5,12 +5,9 @@ import { formatClock } from '../../lib/timeFormat';
 import LoadingState from '../UI/LoadingState';
 import ErrorState from '../UI/ErrorState';
 import type { ClassOccurrence, WorkShiftOccurrence } from '../../types/models';
+import { toDateKey } from '../../lib/dateKey';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-function toDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
 
 // weekStart/weekEnd (de useSchedule.ts) e todayKey têm de ser calculados
 // com os MESMOS métodos (UTC) - misturar getDate()/setDate() (hora local)

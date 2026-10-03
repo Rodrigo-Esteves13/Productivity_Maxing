@@ -3,6 +3,9 @@ import type { Task, Area } from '../../types/models';
 import { ChartPieIcon } from '../UI/Icons';
 import { computeWeightCoverage } from '../../utils/weightCoverage';
 import Sparkline from '../UI/Sparkline';
+import ProgressBar from '../UI/ProgressBar';
+import DashboardCard, { CardHeading } from '../UI/DashboardCard';
+import ColorDot from '../UI/ColorDot';
 
 interface AreaBreakdownCardProps {
   tasks: Task[];
@@ -78,20 +81,17 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
   if (rows.length === 0) return null;
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3 flex items-center gap-1.5">
+    <DashboardCard>
+      <CardHeading className="mb-3">
         <ChartPieIcon className="shrink-0" />
         Breakdown by course
-      </p>
+      </CardHeading>
       <ul className="space-y-3">
         {rows.map(({ area, average, weightCoveredPct, gradeHistory }) => (
           <li key={area.id}>
             <div className="flex items-center justify-between text-sm mb-1">
               <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: area.colorHex }}
-                />
+                <ColorDot size="xs" color={area.colorHex} />
                 <span className="truncate text-neutral-200">{area.name}</span>
                 <span className="text-xs text-neutral-500 shrink-0">
                   {area.credits ? `${area.credits} credits` : 'no credits set'}
@@ -116,15 +116,10 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
                 </span>
               </div>
             </div>
-            <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden">
-              <div
-                className="h-full bg-violet-500"
-                style={{ width: `${average !== null ? Math.min((average / max) * 100, 100) : 0}%` }}
-              />
-            </div>
+            <ProgressBar percent={average !== null ? (average / max) * 100 : 0} />
           </li>
         ))}
       </ul>
-    </div>
+    </DashboardCard>
   );
 }

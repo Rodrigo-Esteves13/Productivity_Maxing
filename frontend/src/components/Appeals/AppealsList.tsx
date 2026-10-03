@@ -8,7 +8,6 @@ interface AppealsListProps {
   total: number;
   skip: number;
   pageSize: number;
-  resolvingId: string | null;
   onResolve: (id: string, resolution: AppealResolution, resolutionNote?: string) => Promise<void>;
   onNextPage: () => void;
   onPrevPage: () => void;
@@ -19,7 +18,6 @@ export default function AppealsList({
   total,
   skip,
   pageSize,
-  resolvingId,
   onResolve,
   onNextPage,
   onPrevPage,
@@ -31,12 +29,7 @@ export default function AppealsList({
   return (
     <div className="space-y-3">
       {appeals.map((appeal) => (
-        <AppealRow
-          key={appeal.id}
-          appeal={appeal}
-          isResolving={resolvingId === appeal.id}
-          onResolve={onResolve}
-        />
+        <AppealRow key={appeal.id} appeal={appeal} onResolve={onResolve} />
       ))}
 
       <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">

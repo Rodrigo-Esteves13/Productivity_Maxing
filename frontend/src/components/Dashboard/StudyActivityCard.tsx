@@ -6,6 +6,9 @@ import {
   type StudyStreak,
 } from '../../api/studySessionsService';
 import { ActivityIcon, FlameIcon } from '../UI/Icons';
+import ProgressBar from '../UI/ProgressBar';
+import DashboardCard, { CardHeading } from '../UI/DashboardCard';
+import { todayKey } from '../../lib/dateKey';
 
 const WINDOW_DAYS = 84; // ~12 weeks, GitHub-contributions-style grid
 const DEFAULT_GOAL_MINUTES = 60;
@@ -87,8 +90,8 @@ export default function StudyActivityCard() {
   if (!hasAnyData) return null;
 
   const maxMinutes = Math.max(0, ...days.map((d) => d.totalMinutes));
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const todayMinutes = days.find((d) => d.date === todayKey)?.totalMinutes ?? 0;
+  const today = todayKey();
+  const todayMinutes = days.find((d) => d.date === today)?.totalMinutes ?? 0;
   const goalPct = Math.min((todayMinutes / goalMinutes) * 100, 100);
 
   // Groups the flat day list into weeks (columns), Sunday-first, so it
@@ -109,12 +112,12 @@ export default function StudyActivityCard() {
   if (currentWeek.length > 0) weeks.push(currentWeek);
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
+    <DashboardCard>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <p className="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1.5">
+        <CardHeading>
           <ActivityIcon className="shrink-0" />
           Study activity
-        </p>
+        </CardHeading>
         {streak && streak.currentStreak > 0 && (
           <span
             className={`flex items-center gap-2 text-sm font-semibold ${
@@ -172,12 +175,11 @@ export default function StudyActivityCard() {
           </span>
           <span>{goalPct.toFixed(0)}%</span>
         </div>
-        <div className="h-2 rounded-full bg-neutral-800 overflow-hidden">
-          <div
-            className={`h-full ${goalPct >= 100 ? 'bg-emerald-500' : 'bg-violet-500'}`}
-            style={{ width: `${goalPct}%` }}
-          />
-        </div>
+        <ProgressBar
+          thickness="md"
+          percent={goalPct}
+          fillClassName={goalPct >= 100 ? 'bg-sky-500' : 'bg-violet-500'}
+        />
       </div>
 
       {(() => {
@@ -204,6 +206,6 @@ export default function StudyActivityCard() {
           </div>
         );
       })()}
-    </div>
+    </DashboardCard>
   );
 }

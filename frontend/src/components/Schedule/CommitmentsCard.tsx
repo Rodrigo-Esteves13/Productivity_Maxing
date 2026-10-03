@@ -7,6 +7,7 @@ import { PlusIcon } from '../UI/Icons';
 import { useCommitments } from '../../hooks/useCommitments';
 import CommitmentForm from './commitments/CommitmentForm';
 import CommitmentSection from './commitments/CommitmentSection';
+import CopyWeekPanel from './commitments/CopyWeekPanel';
 import ShiftRow from './commitments/ShiftRow';
 
 interface CommitmentsCardProps {
@@ -17,8 +18,10 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
   const {
     overview, isLoading, isSaving, error, clearError,
     addCommitment, editCommitment, removeCommitment, addShifts, editShift, removeShift,
+    copyWeek, copyResult, clearCopyResult,
   } = useCommitments(onChanged);
   const [isCreating, setIsCreating] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
 
   const { commitments, ungroupedShifts } = overview;
 
@@ -33,12 +36,31 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
           </p>
         </div>
         {!isCreating && (
-          <ActionButton onClick={() => { clearError(); setIsCreating(true); }} className="flex items-center gap-2 shrink-0">
-            <PlusIcon />
-            New
-          </ActionButton>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => { clearError(); clearCopyResult(); setIsCopying((open) => !open); }}
+              aria-expanded={isCopying}
+              className="px-3 py-2 text-sm text-neutral-300 hover:text-white border border-neutral-700 rounded-md"
+            >
+              Copy a week
+            </button>
+            <ActionButton onClick={() => { clearError(); setIsCreating(true); }} className="flex items-center gap-2">
+              <PlusIcon />
+              New
+            </ActionButton>
+          </div>
         )}
       </div>
+
+      {isCopying && (
+        <CopyWeekPanel
+          isSaving={isSaving}
+          result={copyResult}
+          onCopy={copyWeek}
+          onClose={() => { clearCopyResult(); setIsCopying(false); }}
+        />
+      )}
 
       {isCreating && (
         <div className="mb-4">

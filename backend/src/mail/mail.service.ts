@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import nodemailer, { type Transporter } from 'nodemailer';
-import { getFrontendUrl } from '../config/app.config';
+import { getFrontendUrl, getMailFromName } from '../config/app.config';
 
 // Serviço central de envio de emails do backend. Em vez de deixar o
 // Supabase Auth enviar (e formatar) os emails de autenticação, o backend
@@ -54,7 +54,7 @@ export class MailService {
     if (!transporter) return;
 
     const fromEmail = process.env.SMTP_FROM_EMAIL ?? process.env.SMTP_USER;
-    const fromName = process.env.SMTP_FROM_NAME ?? 'Productivity Maxing';
+    const fromName = getMailFromName();
     const frontendUrl = getFrontendUrl();
 
     try {

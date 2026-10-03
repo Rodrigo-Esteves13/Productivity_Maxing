@@ -206,6 +206,20 @@ export interface UpdateWorkShiftInput {
   commitmentId?: string | null;
 }
 
+export type CopyWeekMode = 'one-off' | 'fixed';
+
+export interface CopyWeekInput {
+  fromWeekStart: string;
+  toWeekStart?: string;
+  mode: CopyWeekMode;
+}
+
+export interface CopyWeekResult {
+  created: WorkShift[];
+  skipped: number;
+  sourceCount: number;
+}
+
 // GET /study-plan/courses: dados reais por cadeira.
 export interface CourseForecast {
   areaId: string;

@@ -1,10 +1,8 @@
 import type { Task } from '../types/models';
+import { MS_PER_HOUR, MS_PER_DAY } from '../lib/timeConstants';
+import { toDateKey } from '../lib/dateKey';
 
 export type DateStatus = 'completed' | 'overdue' | 'today' | 'upcoming';
-
-function toDayKey(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
 
 // Classifies the task by date + progressStatus:
 // - already completed (COMPLETED) always wins that classification, even if
@@ -14,15 +12,13 @@ export function getDateStatus(task: Task, now: Date = new Date()): DateStatus {
   if (task.progressStatus === 'COMPLETED') return 'completed';
 
   const taskDate = new Date(task.date);
-  const todayKey = toDayKey(now);
-  const taskKey = toDayKey(taskDate);
+  const todayKey = toDateKey(now);
+  const taskKey = toDateKey(taskDate);
 
   if (taskKey === todayKey) return 'today';
   return taskDate.getTime() < now.getTime() ? 'overdue' : 'upcoming';
 }
 
-const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * HOUR_MS;
 
 // Short text for the time remaining (or already elapsed) until the due
 // date, to complement DateStatusBadge (which only says "Overdue"/"Upcoming",
@@ -34,8 +30,8 @@ export function getRemainingTimeLabel(task: Task, now: Date = new Date()): strin
   const diffMs = new Date(task.date).getTime() - now.getTime();
   const absMs = Math.abs(diffMs);
 
-  const days = Math.floor(absMs / DAY_MS);
-  const hours = Math.floor((absMs % DAY_MS) / HOUR_MS);
+  const days = Math.floor(absMs / MS_PER_DAY);
+  const hours = Math.floor((absMs % MS_PER_DAY) / MS_PER_HOUR);
 
   let amount: string;
   if (days >= 1) {

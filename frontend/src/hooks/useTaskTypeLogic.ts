@@ -1,4 +1,5 @@
 import type { TaskTypeOption, AcademicTaskTypeOption } from '../types/models';
+import { ACADEMIC_TASK_TYPE_KEY } from '../lib/constants';
 
 interface AreaOption {
   id: string;
@@ -42,7 +43,7 @@ export function useTaskTypeLogic({
   academicTaskTypes,
 }: UseTaskTypeLogicOptions): UseTaskTypeLogicResult {
   const selectedTaskType = taskTypes.find((t) => t.key === type);
-  const isAcademic = selectedTaskType?.key === 'ACADEMICO';
+  const isAcademic = selectedTaskType?.key === ACADEMIC_TASK_TYPE_KEY;
   const availableAcademicTypes = academicTaskTypes.filter((a) => a.taskTypeKey === type);
 
   const selectedArea = areas.find((a) => a.id === areaId);

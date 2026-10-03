@@ -9,6 +9,8 @@ import type {
   CreateWorkShiftInput,
   UpdateWorkShiftInput,
 } from '../../../types/models';
+import IconButton from '../../UI/IconButton';
+import InlineConfirm from '../../UI/InlineConfirm';
 
 type Mode = 'view' | 'edit' | 'add-shift' | 'confirm-delete';
 
@@ -74,43 +76,25 @@ export default function CommitmentSection({
             </p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={() => setMode('edit')}
-              aria-label={`Edit ${commitment.name}`}
-              className="text-neutral-500 hover:text-white p-1 rounded-md"
-            >
+            <IconButton label={`Edit ${commitment.name}`} onClick={() => setMode('edit')}>
               <PencilIcon />
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('confirm-delete')}
-              aria-label={`Delete ${commitment.name}`}
-              className="text-neutral-500 hover:text-red-400 p-1 rounded-md"
-            >
+            </IconButton>
+            <IconButton tone="danger" label={`Delete ${commitment.name}`} onClick={() => setMode('confirm-delete')}>
               <TrashIcon />
-            </button>
+            </IconButton>
           </div>
         </div>
       )}
 
       {mode === 'confirm-delete' && (
-        <div role="alert" className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-neutral-300">
-            Delete {commitment.name} and its {commitment.shifts.length} shift(s)?
-          </span>
-          <button
-            type="button"
-            disabled={isSaving}
-            onClick={() => void onDeleteCommitment(commitment.id)}
-            className="px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white"
-          >
-            Yes, delete
-          </button>
-          <button type="button" onClick={() => setMode('view')} className="text-neutral-400 hover:text-white">
-            Cancel
-          </button>
-        </div>
+        <InlineConfirm
+          className="mt-3"
+          message={`Delete ${commitment.name} and its ${commitment.shifts.length} shift(s)?`}
+          confirmLabel="Yes, delete"
+          isBusy={isSaving}
+          onConfirm={() => void onDeleteCommitment(commitment.id)}
+          onCancel={() => setMode('view')}
+        />
       )}
 
       {commitment.shifts.length > 0 && (

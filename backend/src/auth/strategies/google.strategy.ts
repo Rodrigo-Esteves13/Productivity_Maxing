@@ -14,11 +14,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
   constructor(private authService: AuthService) {
     super({
-      clientID: process.env.GOOGLE_CLIENT_ID || '',
-      // GOOGLE_CLIENT_SECRET is enforced at boot by assertRequiredEnvVars()
-      // in main.ts - no silent '' fallback here anymore.
+      clientID: process.env.GOOGLE_CLIENT_ID as string,
+      // GOOGLE_CLIENT_ID/_SECRET/_CALLBACK_URL are enforced at boot by
+      // assertRequiredEnvVars() in main.ts - no silent '' fallback here.
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL || '',
+      callbackURL: process.env.GOOGLE_CALLBACK_URL as string,
       // v1.0: só scopes non-sensitive (email/profile), para o login com
       // Google não disparar o ecrã "app não verificada" nem consumir o
       // limite de 100 novos utilizadores enquanto não estivermos

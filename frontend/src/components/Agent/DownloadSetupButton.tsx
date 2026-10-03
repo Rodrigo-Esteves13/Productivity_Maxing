@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createApiKey } from '../../api/userService';
 import { DownloadIcon } from '../UI/Icons';
 import { AGENT_EXE_DOWNLOAD_PATH } from '../../lib/agentConstants';
+import { todayKey } from '../../lib/dateKey';
 
 // Setup num único clique: gera uma API key nova (nomeada automaticamente,
 // ex: "agent-desktop-2026-07-16") e cola-a ao fim do .exe vanilla antes de
@@ -52,7 +53,7 @@ export default function DownloadSetupButton() {
         // Explicit 'TASKS' - this key ends up embedded (base64-only, not
         // encrypted) in a downloadable .exe, so it must never be able to
         // reach admin routes, regardless of what the default might be.
-        createApiKey(`agent-desktop-${new Date().toISOString().slice(0, 10)}`, 'TASKS'),
+        createApiKey(`agent-desktop-${todayKey()}`, 'TASKS'),
       ]);
 
       if (!exeResponse.ok) {

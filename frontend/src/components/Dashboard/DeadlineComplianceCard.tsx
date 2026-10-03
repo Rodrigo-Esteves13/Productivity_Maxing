@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Task } from '../../types/models';
 import { computeDeadlineCompliance } from '../../utils/deadlineCompliance';
 import { CheckIcon } from '../UI/Icons';
+import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 
 interface DeadlineComplianceCardProps {
   tasks: Task[];
@@ -18,11 +19,11 @@ export default function DeadlineComplianceCard({ tasks }: DeadlineComplianceCard
   if (data.total < MIN_TASKS_TO_SHOW) return null;
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3 flex items-center gap-1.5">
+    <DashboardCard>
+      <CardHeading className="mb-3">
         <CheckIcon className="shrink-0" />
         Deadlines met
-      </p>
+      </CardHeading>
 
       <div className="flex items-end gap-2 mb-4">
         <span className="text-2xl font-semibold text-violet-400">{data.ratePct}%</span>
@@ -60,6 +61,6 @@ export default function DeadlineComplianceCard({ tasks }: DeadlineComplianceCard
           </div>
         ))}
       </div>
-    </div>
+    </DashboardCard>
   );
 }

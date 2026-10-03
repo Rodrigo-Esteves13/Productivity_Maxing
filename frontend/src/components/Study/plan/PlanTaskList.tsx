@@ -4,6 +4,8 @@ import { PencilIcon } from '../../UI/Icons';
 import EstimateEditor from './EstimateEditor';
 import { formatDayLabel, formatDuration } from '../../../lib/timeFormat';
 import { ESTIMATE_SOURCE_LABEL } from './planCopy';
+import ProgressBar from '../../UI/ProgressBar';
+import ColorDot from '../../UI/ColorDot';
 
 interface PlanTaskListProps {
   tasks: StudyPlanTask[];
@@ -38,10 +40,7 @@ export default function PlanTaskList({ tasks, calibrationFactor, onEstimateSaved
                 <div className="min-w-0">
                   <p className="text-sm text-neutral-200 truncate">{task.title}</p>
                   <p className="text-xs text-neutral-500 flex items-center gap-1.5">
-                    <span
-                      className="inline-block w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: task.areaColorHex }}
-                    />
+                    <ColorDot size="xs" color={task.areaColorHex} />
                     <span className="truncate">{task.areaName}</span>
                     <span>· due {formatDayLabel(task.deadline)}</span>
                   </p>
@@ -74,19 +73,12 @@ export default function PlanTaskList({ tasks, calibrationFactor, onEstimateSaved
                   }}
                 />
               )}
-              <div
-                className="mt-2 h-1.5 rounded-full bg-neutral-800 overflow-hidden"
-                role="progressbar"
-                aria-valuenow={pct}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={`${task.title} scheduled`}
-              >
-                <div
-                  className={`h-full ${isShort ? 'bg-red-500' : 'bg-violet-500'}`}
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
+              <ProgressBar
+                className="mt-2"
+                percent={pct}
+                fillClassName={isShort ? 'bg-red-500' : 'bg-violet-500'}
+                label={`${task.title} scheduled`}
+              />
               {(task.loggedMinutes > 0 || task.overtimeMinutes > 0 || isShort) && (
                 <p className="text-xs text-neutral-500 mt-1.5">
                   {task.loggedMinutes > 0 && `${formatDuration(task.loggedMinutes)} already studied`}

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSchedule } from '../api/scheduleService';
 import type { ClassOccurrence } from '../types/models';
+import { startOfWeek, todayUtcAnchored } from '../lib/weekDates';
+import { toDateKey } from '../lib/dateKey';
 
 // BUG HISTÓRICO (Set/2026): esta função e toDateKey() costumavam misturar
 // aritmética de datas em hora local (getDay/setDate/setHours) com
@@ -12,27 +14,6 @@ import type { ClassOccurrence } from '../types/models';
 // (Date.UTC/getUTCDay/setUTCDate), nunca com os equivalentes locais -
 // mesma convenção já usada em getLisbonNow() no StudyPlanService (backend)
 // e em formatDayLabel() no StudyPlanCard (frontend).
-function todayUtcAnchored(): Date {
-  const now = new Date();
-  // Lê o dia local (o que o utilizador vê no relógio dele) UMA vez com
-  // getters locais - é a única leitura local permitida, é para saber
-  // "que dia é hoje para esta pessoa". A partir daqui, tudo em UTC.
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-}
-
-function startOfWeek(date: Date): Date {
-  // Semana começa à segunda-feira - getUTCDay() é 0=Dom..6=Sáb, por isso
-  // um domingo (0) fica a 6 dias da última segunda, não a 0.
-  const result = new Date(date);
-  const day = result.getUTCDay();
-  const diff = day === 0 ? 6 : day - 1;
-  result.setUTCDate(result.getUTCDate() - diff);
-  return result;
-}
-
-function toDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
 
 // Fetches one week of ClassOccurrence at a time, com navegação
 // anterior/seguinte - mesma ideia do PeriodSelector para navegar entre

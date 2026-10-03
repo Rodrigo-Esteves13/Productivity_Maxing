@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import type { Task, Area } from '../../types/models';
 import { computeTargetVsReal } from '../../utils/targetVsReal';
 import { TargetIcon } from '../UI/Icons';
+import DashboardCard, { CardHeading } from '../UI/DashboardCard';
+import ColorDot from '../UI/ColorDot';
 
 interface TargetVsRealCardProps {
   tasks: Task[];
@@ -23,20 +25,17 @@ export default function TargetVsRealCard({ tasks, areas, scale }: TargetVsRealCa
   const max = scaleMax(scale);
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 shadow-xl">
-      <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3 flex items-center gap-1.5">
+    <DashboardCard>
+      <CardHeading className="mb-3">
         <TargetIcon className="shrink-0" />
         Target vs real
-      </p>
+      </CardHeading>
       <ul className="space-y-3">
         {rows.slice(0, 6).map((row) => (
           <li key={row.area.id} className="text-sm">
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: row.area.colorHex }}
-                />
+                <ColorDot size="xs" color={row.area.colorHex} />
                 <span className="truncate text-neutral-200">{row.area.name}</span>
               </div>
               <span
@@ -66,6 +65,6 @@ export default function TargetVsRealCard({ tasks, areas, scale }: TargetVsRealCa
           </li>
         ))}
       </ul>
-    </div>
+    </DashboardCard>
   );
 }

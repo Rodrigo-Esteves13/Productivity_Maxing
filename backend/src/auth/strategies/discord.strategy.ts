@@ -11,11 +11,11 @@ import { isValidLoginState } from '../guards/oauth-guard.helpers';
 export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
   constructor(private authService: AuthService) {
     super({
-      clientID: process.env.DISCORD_CLIENT_ID || '',
-      // DISCORD_CLIENT_SECRET is enforced at boot by assertRequiredEnvVars()
-      // in main.ts - no silent '' fallback here anymore.
+      clientID: process.env.DISCORD_CLIENT_ID as string,
+      // DISCORD_CLIENT_ID/_SECRET/_CALLBACK_URL are enforced at boot by
+      // assertRequiredEnvVars() in main.ts - no silent '' fallback here.
       clientSecret: process.env.DISCORD_CLIENT_SECRET as string,
-      callbackURL: process.env.DISCORD_CALLBACK_URL || '',
+      callbackURL: process.env.DISCORD_CALLBACK_URL as string,
       scope: ['identify', 'email'],
       passReqToCallback: true,
     });
