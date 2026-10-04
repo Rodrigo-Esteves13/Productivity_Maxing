@@ -41,7 +41,7 @@ export default function StudySessionWidget() {
 
   if (isLoading) {
     return (
-      <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6">
+      <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
         <LoadingState message="Loading study session..." />
       </div>
     );
@@ -105,7 +105,7 @@ export default function StudySessionWidget() {
   );
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 flex flex-col">
+    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 flex flex-col">
       <h2 className="text-lg font-semibold text-white mb-4">Study session</h2>
 
       {error && (

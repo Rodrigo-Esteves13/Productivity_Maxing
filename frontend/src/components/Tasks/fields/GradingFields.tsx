@@ -46,7 +46,7 @@ export default function GradingFields({
 
   return (
     <div className="space-y-3 pt-4 border-t border-neutral-800">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField label="Target Grade" htmlFor={`${idPrefix}-target-grade`}>
           <Input
             id={`${idPrefix}-target-grade`}

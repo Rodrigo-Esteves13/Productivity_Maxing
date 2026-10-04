@@ -54,7 +54,7 @@ export default function CommitmentForm({
         label="Name"
         value={name}
         maxLength={MAX_NAME_LENGTH}
-        placeholder="McDonald's, Gym..."
+        placeholder="Work, Gym..."
         onChange={(e) => setName(e.target.value)}
       />
       <Input

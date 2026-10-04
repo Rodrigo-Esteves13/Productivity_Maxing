@@ -17,6 +17,11 @@ import {
 import type { Scaler } from './prediction-math.util';
 import { trainMlp } from './prediction-mlp.util';
 import {
+  hasStudyTimeWhere,
+  resolveStudyMinutes,
+  sumSessionMinutes,
+} from '../common/session-minutes.util';
+import {
   NEUTRAL_INTERVAL,
   computeRatioInterval,
   keepIndicesWithoutUpperOutliers,
@@ -78,6 +83,7 @@ const TRAINING_SELECT = {
   difficulty: true,
   weightPercentage: true,
   estimatedMinutes: true,
+  recalledStudyMinutes: true,
   studySessions: {
     where: { endedAt: { not: null } },
     select: { startedAt: true, endedAt: true },
@@ -206,10 +212,11 @@ export class PredictionService {
         userId,
         progressStatus: 'COMPLETED',
         estimatedMinutes: { gt: 0 },
-        studySessions: { some: { endedAt: { not: null } } },
+        AND: [hasStudyTimeWhere()],
       },
       select: {
         estimatedMinutes: true,
+        recalledStudyMinutes: true,
         studySessions: {
           where: { endedAt: { not: null } },
           select: { startedAt: true, endedAt: true },
@@ -221,7 +228,10 @@ export class PredictionService {
     let sumActual = 0;
     let samples = 0;
     for (const task of tasks) {
-      const actual = this.sumSessionMinutes(task.studySessions);
+      const actual = resolveStudyMinutes(
+        task.studySessions,
+        task.recalledStudyMinutes,
+      );
       if (actual <= 0 || !task.estimatedMinutes) continue;
       sumEstimated += task.estimatedMinutes;
       sumActual += actual;
@@ -547,22 +557,25 @@ export class PredictionService {
   }
 
   /**
-   * Tasks do user com pelo menos uma StudySession terminada, convertidas
-   * em linhas de treino (actualMinutes = soma dessas sessões). Tasks sem
-   * nenhuma sessão terminada nunca entram no treino - não há label real
-   * para elas.
+   * Tasks do user com tempo de estudo conhecido (sessões terminadas, ou o
+   * tempo aproximado recordado quando não há sessões), convertidas em
+   * linhas de treino. Tasks sem nenhum tempo nunca entram no treino - não
+   * há label real para elas.
    */
   private async loadTrainingRows(
     userId: string,
   ): Promise<{ rows: TrainingRow[]; trimmedSamples: number }> {
     const tasks: TrainingTask[] = await this.prisma.task.findMany({
-      where: { userId, studySessions: { some: { endedAt: { not: null } } } },
+      where: { userId, AND: [hasStudyTimeWhere()] },
       select: TRAINING_SELECT,
     });
 
     const rows: TrainingRow[] = [];
     for (const task of tasks) {
-      const actualMinutes = this.sumSessionMinutes(task.studySessions);
+      const actualMinutes = resolveStudyMinutes(
+        task.studySessions,
+        task.recalledStudyMinutes,
+      );
       if (actualMinutes <= 0) continue;
       rows.push({
         taskTypeId: task.taskTypeId,
@@ -596,6 +609,7 @@ export class PredictionService {
       where: { userId, estimatedMinutes: { not: null } },
       select: {
         estimatedMinutes: true,
+        recalledStudyMinutes: true,
         studySessions: {
           where: { endedAt: { not: null } },
           select: { startedAt: true, endedAt: true },
@@ -612,11 +626,14 @@ export class PredictionService {
     let underestimatedCount = 0;
 
     for (const task of tasks) {
-      if (task.studySessions.length === 0) continue;
       const estimated = task.estimatedMinutes as number; // filtrado no where acima
       if (estimated <= 0) continue; // evita divisão por zero abaixo, sem sentido de qualquer forma
 
-      const actual = this.sumSessionMinutes(task.studySessions);
+      const actual = resolveStudyMinutes(
+        task.studySessions,
+        task.recalledStudyMinutes,
+      );
+      if (actual <= 0) continue; // sem tempo conhecido não há com que comparar
       const percentError = (Math.abs(actual - estimated) / estimated) * 100;
 
       sampleSize += 1;
@@ -669,19 +686,7 @@ export class PredictionService {
       select: { startedAt: true, endedAt: true },
     });
     if (sessions.length === 0) return null;
-    return this.sumSessionMinutes(sessions);
-  }
-
-  private sumSessionMinutes(
-    sessions: { startedAt: Date; endedAt: Date | null }[],
-  ): number {
-    let total = 0;
-    for (const session of sessions) {
-      if (!session.endedAt) continue; // já filtrado pelo where, só para o TS
-      total +=
-        (session.endedAt.getTime() - session.startedAt.getTime()) / 60_000;
-    }
-    return Math.round(Math.max(0, total));
+    return sumSessionMinutes(sessions);
   }
 
   private toRange(

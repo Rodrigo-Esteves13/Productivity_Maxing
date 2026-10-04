@@ -1,22 +1,15 @@
 import { useEffect } from 'react';
 import { useSchedule } from '../../hooks/useSchedule';
 import { useWorkShiftRange } from '../../hooks/useWorkShiftRange';
-import { formatClock } from '../../lib/timeFormat';
 import LoadingState from '../UI/LoadingState';
 import ErrorState from '../UI/ErrorState';
 import type { ClassOccurrence, WorkShiftOccurrence } from '../../types/models';
 import { toDateKey } from '../../lib/dateKey';
+import { mergeAgenda } from '../../lib/agenda';
+import { todayUtcAnchored } from '../../lib/weekDates';
+import WeekDayCell from './WeekDayCell';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-// weekStart/weekEnd (de useSchedule.ts) e todayKey têm de ser calculados
-// com os MESMOS métodos (UTC) - misturar getDate()/setDate() (hora local)
-// com toISOString() (UTC) foi exatamente o bug do dia errado que já
-// apanhámos aqui uma vez (ver comentário grande em useSchedule.ts).
-function todayUtcAnchored(): Date {
-  const now = new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-}
 
 function formatRangeLabel(start: Date, end: Date): string {
   const fmt = (d: Date) =>
@@ -74,15 +67,12 @@ export default function WeekGrid({ refreshKey }: WeekGridProps) {
     list.push(occ);
     occurrencesByDay.set(key, list);
   }
-  for (const list of occurrencesByDay.values()) {
-    list.sort((a, b) => a.startMinutes - b.startMinutes);
-  }
 
   const todayKey = toDateKey(todayUtcAnchored());
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div>
           <h2 className="text-lg font-semibold text-white">Schedule</h2>
           <p className="text-sm text-neutral-400">{formatRangeLabel(weekStart, weekEnd)}</p>
@@ -113,51 +103,19 @@ export default function WeekGrid({ refreshKey }: WeekGridProps) {
       {!isLoading && error && <ErrorState message={error} />}
 
       {!isLoading && !error && (
-        <div className="grid grid-cols-1 sm:grid-cols-7 gap-3">
+        // 1 coluna no telemovel, 2 em ecras medios e 7 so em ecras largos:
+        // 7 colunas em 640px deixavam cada dia com ~80px e o texto cortado.
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
           {days.map((date, i) => {
             const key = toDateKey(date);
-            const classes = occurrencesByDay.get(key) ?? [];
-            const shifts = shiftsByDay.get(key) ?? [];
-            const isToday = key === todayKey;
-
             return (
-              <div
+              <WeekDayCell
                 key={key}
-                className={`rounded-lg border p-2 min-h-[6rem] ${
-                  isToday ? 'border-violet-600/60 bg-violet-950/20' : 'border-neutral-800'
-                }`}
-              >
-                <p className="text-xs font-medium text-neutral-300 mb-2">
-                  {DAY_LABELS[i]} {date.getUTCDate()}
-                </p>
-                <div className="space-y-1.5">
-                  {classes.length === 0 && shifts.length === 0 && (
-                    <p className="text-xs text-neutral-600">-</p>
-                  )}
-                  {classes.map((occ) => (
-                    <div key={occ.id} className="text-xs bg-neutral-800/60 rounded-md px-2 py-1">
-                      <p className="text-neutral-200 font-medium leading-tight">{occ.subject}</p>
-                      <p className="text-neutral-500 leading-tight">
-                        {formatClock(occ.startMinutes)}-{formatClock(occ.endMinutes)}
-                        {occ.location ? ` · ${occ.location}` : ''}
-                      </p>
-                    </div>
-                  ))}
-                  {shifts.map((shift) => (
-                    <div
-                      key={`${shift.shiftId}-${shift.date}`}
-                      className="text-xs bg-amber-950/30 border border-amber-900/40 rounded-md px-2 py-1"
-                    >
-                      <p className="text-amber-200 font-medium leading-tight">
-                        {shift.label ?? 'Commitment'}
-                      </p>
-                      <p className="text-amber-200/60 leading-tight">
-                        {formatClock(shift.startMinutes)}-{formatClock(shift.endMinutes)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                label={DAY_LABELS[i]}
+                dayOfMonth={date.getUTCDate()}
+                isToday={key === todayKey}
+                items={mergeAgenda(occurrencesByDay.get(key) ?? [], shiftsByDay.get(key) ?? [])}
+              />
             );
           })}
         </div>

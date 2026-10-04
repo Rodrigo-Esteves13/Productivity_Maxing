@@ -220,6 +220,48 @@ export interface CopyWeekResult {
   sourceCount: number;
 }
 
+// GET /study-plan/grade-projection: nota prevista a partir do tempo de estudo.
+export type GradeProjectionStatus = 'ready' | 'not_enough_data' | 'no_clear_link' | 'nothing_pending';
+
+export interface GradeProjectionTask {
+  taskId: string;
+  title: string;
+  areaId: string;
+  areaName: string;
+  areaColorHex: string;
+  deadline: string;
+  weightPercentage: number;
+  minutesBasis: number;
+  projectedGrade: number | null;
+  rangeGrade: { low: number; high: number } | null;
+  gainPerExtraHour: number | null;
+  minutesForTarget: number | null;
+  targetGrade: number | null;
+  basis: 'course' | 'overall' | null;
+  sampleSize: number;
+  reason: 'not_enough_data' | 'no_clear_link' | null;
+  gradeMin: number;
+  gradeMax: number;
+}
+
+export interface BackfillCandidate {
+  taskId: string;
+  title: string;
+  areaName: string;
+  areaColorHex: string;
+  date: string;
+  grade: number;
+  gradeMax: number;
+}
+
+export interface GradeProjection {
+  status: GradeProjectionStatus;
+  trainingSamples: number;
+  minSamplesNeeded: number;
+  tasks: GradeProjectionTask[];
+  backfillCandidates: BackfillCandidate[];
+}
+
 // GET /study-plan/courses: dados reais por cadeira.
 export interface CourseForecast {
   areaId: string;
@@ -541,6 +583,8 @@ export interface Task {
   // How long you expect this task to take, in minutes. Manual estimate -
   // see api/predictionService.ts for the model-generated suggestion.
   estimatedMinutes: number | null;
+  // Tempo de estudo aproximado escrito de memoria (tasks antigas, sem sessoes).
+  recalledStudyMinutes?: number | null;
   
   // Evaluation
   targetGrade: number | null;

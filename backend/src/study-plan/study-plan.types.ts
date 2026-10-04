@@ -83,3 +83,58 @@ export interface CourseForecast {
   remainingMinutes: number;
   nextDeadline: string | null;
 }
+
+export type GradeProjectionStatus =
+  | 'ready' // há tasks pendentes com nota e pelo menos um modelo utilizável
+  | 'not_enough_data' // poucas tasks concluídas com nota e tempo registado
+  | 'no_clear_link' // há dados, mas o estudo não explica as notas
+  | 'nothing_pending'; // sem tasks com nota por fazer
+
+export interface GradeProjectionTask {
+  taskId: string;
+  title: string;
+  areaId: string;
+  areaName: string;
+  areaColorHex: string;
+  deadline: string; // YYYY-MM-DD
+  weightPercentage: number;
+  // Minutos de estudo em que a projeção se baseia (a estimativa do plano).
+  minutesBasis: number;
+  // null quando não há modelo utilizável para esta cadeira.
+  projectedGrade: number | null;
+  rangeGrade: { low: number; high: number } | null;
+  // Pontos de nota esperados por cada hora extra de estudo (>= 0).
+  gainPerExtraHour: number | null;
+  // Minutos de estudo para a nota esperada chegar ao alvo. null sem alvo,
+  // sem modelo, ou quando nem com o máximo de estudo o modelo lá chega.
+  minutesForTarget: number | null;
+  targetGrade: number | null;
+  basis: 'course' | 'overall' | null;
+  // Com quantas tasks passadas o modelo foi ajustado.
+  sampleSize: number;
+  // Explicação curta quando projectedGrade é null.
+  reason: 'not_enough_data' | 'no_clear_link' | null;
+  gradeMin: number;
+  gradeMax: number;
+}
+
+// Avaliação antiga com nota mas sem tempo de estudo conhecido: o utilizador
+// pode escrever, de memória, quanto estudou, para as previsões arrancarem.
+export interface BackfillCandidate {
+  taskId: string;
+  title: string;
+  areaName: string;
+  areaColorHex: string;
+  date: string; // YYYY-MM-DD
+  grade: number;
+  gradeMax: number;
+}
+
+export interface GradeProjectionResult {
+  status: GradeProjectionStatus;
+  // Tasks concluídas com nota e tempo de estudo (todas as cadeiras).
+  trainingSamples: number;
+  minSamplesNeeded: number;
+  tasks: GradeProjectionTask[];
+  backfillCandidates: BackfillCandidate[];
+}

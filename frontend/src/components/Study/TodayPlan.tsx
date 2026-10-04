@@ -9,7 +9,7 @@ export default function TodayPlan() {
   const { tasks, isLoading, error } = useTodayPlan();
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6">
+    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
       <h2 className="text-lg font-semibold text-white mb-4">Today's plan</h2>
 
       {isLoading && <LoadingState message="Loading today's tasks..." />}

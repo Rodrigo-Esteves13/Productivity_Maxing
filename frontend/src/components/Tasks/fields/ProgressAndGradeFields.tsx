@@ -25,7 +25,7 @@ export default function ProgressAndGradeFields({
   onRealGradeChange,
 }: ProgressAndGradeFieldsProps) {
   return (
-    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-neutral-800">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-neutral-800">
       {showProgressStatus && (
         <FormField label="Progress" htmlFor={`${idPrefix}-progress-status`}>
           <Select
