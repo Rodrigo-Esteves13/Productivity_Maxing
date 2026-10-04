@@ -62,6 +62,7 @@ import {
   csrfCookieOptions,
   clearCookieOptions,
 } from './cookie.config';
+import { isWellFormedCsrfToken } from './csrf-token.util';
 
 // URL do frontend para onde se redireciona depois do callback OAuth.
 // Ajustar em produção para o domínio real (Netlify).
@@ -153,7 +154,18 @@ export class AuthController {
       return { authenticated: false };
     }
 
-    const csrfToken = this.authService.generateCsrfToken();
+    // Reutiliza o token que o browser ja tem, em vez de gerar um novo de
+    // cada vez. O cookie csrf_token e UM so para todas as tabs, mas cada tab
+    // guarda o seu token em memoria: se abrir uma tab nova trocasse o
+    // cookie, as tabs antigas ficavam com um token que ja nao bate certo e
+    // todos os pedidos que alteram estado (incluindo o heartbeat da sessao
+    // de Focus) davam 403. Um token novo so nasce no login ou se o cookie
+    // nao existir/estiver mal formado.
+    const existing = cookies?.[CSRF_COOKIE];
+    const csrfToken = isWellFormedCsrfToken(existing)
+      ? existing
+      : this.authService.generateCsrfToken();
+    // Reescreve sempre o cookie: renova a validade (maxAge) do token reutilizado.
     res.cookie(CSRF_COOKIE, csrfToken, csrfCookieOptions());
     return { authenticated: true, csrfToken };
   }

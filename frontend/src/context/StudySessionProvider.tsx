@@ -16,6 +16,11 @@ import {
 import type { StudySession } from '../types/models';
 import { useAuth } from './useAuth';
 import { StudySessionContext } from './study-session-context';
+import { getHttpStatus } from '../lib/httpError';
+import { announceSessionChanged, onSessionChangedElsewhere } from '../lib/focusChannel';
+import { isAnotherTabOpen, registerTab } from '../lib/tabPresence';
+
+const HTTP_NOT_FOUND = 404;
 
 // How often we tell the backend "still here" while a session is running.
 // Kept well under StudySessionsService's STALE_SESSION_THRESHOLD_MS
@@ -62,6 +67,16 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Volta a perguntar ao servidor qual e a sessao ativa, SEM mostrar
+  // "a carregar" nem erro: usado para as tabs concordarem entre si.
+  const syncActive = useCallback(async () => {
+    try {
+      setActiveSession(await getActiveStudySession());
+    } catch {
+      // Falhou um sync em segundo plano: fica o estado que ja temos.
+    }
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated) {
       setActiveSession(null);
@@ -70,6 +85,29 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     }
     void fetchActive();
   }, [isAuthenticated, fetchActive]);
+
+  // Varias tabs abertas: quando outra comeca ou para a sessao, esta
+  // atualiza-se logo; e ao voltar a esta tab (vinda de outra) volta a
+  // perguntar ao servidor. Sem isto, uma tab antiga continuava a mostrar
+  // uma sessao que a outra ja tinha parado (ou nao via a que a outra comecou).
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const stopListening = onSessionChangedElsewhere(() => void syncActive());
+    const handleVisible = () => {
+      if (document.visibilityState === 'visible') void syncActive();
+    };
+    document.addEventListener('visibilitychange', handleVisible);
+    return () => {
+      stopListening();
+      document.removeEventListener('visibilitychange', handleVisible);
+    };
+  }, [isAuthenticated, syncActive]);
+
+  // Regista esta tab para as outras saberem que existe (ver pagehide abaixo).
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    return registerTab();
+  }, [isAuthenticated]);
 
   // Local timer - recalculated from startedAt on every tick (not a naive
   // increment), so it doesn't drift if the tab sits in the background and
@@ -113,9 +151,13 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
 
     const sessionId = activeSession.id;
     const ping = () => {
-      void heartbeatStudySession(sessionId).catch(() => {
+      void heartbeatStudySession(sessionId).catch((error: unknown) => {
         // Best-effort - a missed beat or two doesn't matter, see
-        // STALE_SESSION_THRESHOLD_MS on the backend.
+        // STALE_SESSION_THRESHOLD_MS on the backend. A 404 e diferente:
+        // a sessao ja nao esta ativa no servidor (parada noutra tab ou
+        // fechada por inatividade), por isso corrige-se o ecra em vez de
+        // continuar a mostrar um cronometro de uma sessao que ja acabou.
+        if (getHttpStatus(error) === HTTP_NOT_FOUND) void syncActive();
       });
     };
     heartbeatRef.current = setInterval(ping, HEARTBEAT_INTERVAL_MS);
@@ -123,7 +165,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
     };
-  }, [activeSession]);
+  }, [activeSession, syncActive]);
 
   // Best-effort clean stop when the tab actually closes or navigates away
   // with a session still running. `pagehide` (not `beforeunload`/`unload`,
@@ -134,7 +176,10 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handlePageHide = () => {
       const session = activeSessionRef.current;
-      if (session) {
+      // So pára a sessão se esta for a ÚLTIMA tab aberta. Com outra tab
+      // aberta a sessão continua a ser dela (mantém o heartbeat), e fechar
+      // uma tab duplicada não pode parar a sessão da outra.
+      if (session && !isAnotherTabOpen()) {
         stopStudySessionOnUnload(session.id);
       }
     };
@@ -148,6 +193,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
       setError('');
       const session = await startStudySession(input);
       setActiveSession(session);
+      announceSessionChanged();
     } catch {
       setError('Could not start the session. Please try again.');
     } finally {
@@ -163,6 +209,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
         setError('');
         await stopStudySession(activeSession.id, { note });
         setActiveSession(null);
+        announceSessionChanged();
       } catch {
         setError('Could not stop the session. Please try again.');
       } finally {
