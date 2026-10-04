@@ -3,7 +3,7 @@ import { PencilIcon, PlusIcon, TrashIcon } from '../../UI/Icons';
 import CommitmentForm from './CommitmentForm';
 import ShiftForm from './ShiftForm';
 import type { ShiftFormValues } from './ShiftForm';
-import ShiftRow from './ShiftRow';
+import ShiftList from './ShiftList';
 import type {
   CommitmentWithShifts,
   CreateWorkShiftInput,
@@ -97,19 +97,13 @@ export default function CommitmentSection({
         />
       )}
 
-      {commitment.shifts.length > 0 && (
-        <ul className="space-y-1.5 mt-3">
-          {commitment.shifts.map((shift) => (
-            <ShiftRow
-              key={shift.id}
-              shift={shift}
-              isSaving={isSaving}
-              onEdit={onEditShift}
-              onDelete={onDeleteShift}
-            />
-          ))}
-        </ul>
-      )}
+      <ShiftList
+        className="mt-3"
+        shifts={commitment.shifts}
+        isSaving={isSaving}
+        onEdit={onEditShift}
+        onDelete={onDeleteShift}
+      />
 
       {mode === 'add-shift' ? (
         <div className="mt-3">

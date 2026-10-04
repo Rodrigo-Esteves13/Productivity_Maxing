@@ -578,6 +578,14 @@ model Task {
   // criadas antes deste campo existir.
   estimatedMinutes Int?
 
+  // Tempo de estudo APROXIMADO, escrito de memória, para avaliações antigas
+  // feitas antes de haver sessões registadas. So conta quando a task nao
+  // tem nenhuma sessao terminada (as sessoes reais ganham sempre). Existe
+  // para as previsoes (duracao, calibracao, projecao de notas) poderem
+  // aprender com o historico que ja tens em vez de esperarem por meses de
+  // sessoes novas.
+  recalledStudyMinutes Int?
+
   // Avaliação (Relevante para contexto Académico/Trabalho)
   targetGrade Float?
   realGrade   Float?

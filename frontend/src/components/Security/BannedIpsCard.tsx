@@ -34,7 +34,7 @@ export default function BannedIpsCard({ prefillIp }: BannedIpsCardProps) {
   };
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 mb-6">
+    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 mb-6">
       <h2 className="text-lg font-semibold text-white mb-1">Banned IPs</h2>
       <p className="text-sm text-neutral-400 mb-4">
         A banned IP gets a flat 403 on every request, before rate limiting or anything else runs.

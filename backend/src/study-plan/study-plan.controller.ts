@@ -7,6 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { StudyPlanService } from './study-plan.service';
+import { GradeProjectionService } from './grade-projection.service';
 import { UpdateStudyPlanSettingsDto } from './dto/update-study-plan-settings.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -21,7 +22,10 @@ const MAX_DAYS = 30;
 @UseGuards(JwtAuthGuard)
 @Controller('study-plan')
 export class StudyPlanController {
-  constructor(private readonly studyPlanService: StudyPlanService) {}
+  constructor(
+    private readonly studyPlanService: StudyPlanService,
+    private readonly gradeProjectionService: GradeProjectionService,
+  ) {}
 
   // Mais pesado do que antes (pode treinar o modelo de previsão), por
   // isso tem throttle próprio em vez do default de 100/min.
@@ -53,6 +57,16 @@ export class StudyPlanController {
   })
   courses(@CurrentUser() user: AuthenticatedUser) {
     return this.studyPlanService.courses(user.id);
+  }
+
+  @Get('grade-projection')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @ApiOperation({
+    summary:
+      'Projects the grade of pending weighted tasks from how study time related to grades in finished ones, with a range. Reports "not enough data" or "no clear link" instead of guessing.',
+  })
+  gradeProjection(@CurrentUser() user: AuthenticatedUser) {
+    return this.gradeProjectionService.project(user.id);
   }
 
   @Patch('settings')

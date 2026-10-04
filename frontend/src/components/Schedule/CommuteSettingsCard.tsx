@@ -133,7 +133,7 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
   };
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 max-w-3xl mt-8">
+    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 max-w-3xl mt-8">
       <h2 className="text-lg font-semibold text-white mb-1">Commute &amp; quiet hours</h2>
       <p className="text-sm text-neutral-400 mb-4">
         Used by the study plan to avoid suggesting sessions while you're in transit or asleep.

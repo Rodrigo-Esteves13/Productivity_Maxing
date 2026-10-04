@@ -13,9 +13,11 @@ interface ShiftRowProps {
   onDelete: (id: string) => Promise<boolean>;
   // Só para turnos soltos: permite movê-los para um local.
   moveTargets?: Commitment[];
+  // Mostra o titulo do turno (eventos soltos) acima da data e hora.
+  showTitle?: boolean;
 }
 
-export default function ShiftRow({ shift, isSaving, onEdit, onDelete, moveTargets }: ShiftRowProps) {
+export default function ShiftRow({ shift, isSaving, onEdit, onDelete, moveTargets, showTitle = false }: ShiftRowProps) {
   const [isEditing, setIsEditing] = useState(false);
 
   const handleSubmit = async (values: ShiftFormValues): Promise<boolean> => {
@@ -48,8 +50,13 @@ export default function ShiftRow({ shift, isSaving, onEdit, onDelete, moveTarget
   return (
     <li className="flex items-center justify-between gap-2 rounded-lg bg-neutral-800/60 px-3 py-2">
       <div className="min-w-0">
-        <p className="text-sm text-neutral-200">{describeShift(shift)}</p>
-        {moveTargets && moveTargets.length > 0 && (
+        {showTitle && shift.label && (
+          <p className="truncate text-sm font-medium text-white">{shift.label}</p>
+        )}
+        <p className={showTitle && shift.label ? 'text-xs text-neutral-400' : 'text-sm text-neutral-200'}>
+          {describeShift(shift)}
+        </p>
+        {moveTargets && moveTargets.length > 0 && shift.dayOfWeek !== null && (
           <label className="text-xs text-neutral-500 flex items-center gap-1.5 mt-1">
             Move to
             <select

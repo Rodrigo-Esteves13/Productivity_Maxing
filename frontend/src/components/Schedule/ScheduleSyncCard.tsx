@@ -32,7 +32,7 @@ export default function ScheduleSyncCard() {
   };
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 mt-6">
+    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 mt-6">
       <h2 className="text-lg font-semibold text-white mb-1">Google Calendar</h2>
 
       {!connected ? (

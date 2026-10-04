@@ -1,6 +1,6 @@
 // src/api/studyPlanService.ts
 import api from './client';
-import type { CourseForecast, StudyPlanResult } from '../types/models';
+import type { CourseForecast, GradeProjection, StudyPlanResult } from '../types/models';
 
 export const getStudyPlan = async (days = 7): Promise<StudyPlanResult> => {
   const response = await api.get<StudyPlanResult>('/study-plan', {
@@ -16,6 +16,11 @@ export const updateStudyPlanSettings = async (
     '/study-plan/settings',
     { dailyLimitMinutes },
   );
+  return response.data;
+};
+
+export const getGradeProjection = async (): Promise<GradeProjection> => {
+  const response = await api.get<GradeProjection>('/study-plan/grade-projection');
   return response.data;
 };
 

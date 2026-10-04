@@ -12,12 +12,16 @@ const ACTION_LABEL: Record<SyncAction, string> = {
 };
 
 const ACTION_CLASS: Record<SyncAction, string> = {
-  create: 'text-emerald-400',
+  create: 'text-sky-400',
   update: 'text-amber-400',
   remove: 'text-red-400',
 };
 
 function Summary({ preview }: { preview: SchedulePreview }) {
+  // Por ordem de ocorrencia (dia e hora), nao pela ordem em que o servidor as calculou.
+  const sortedItems = [...preview.items].sort(
+    (a, b) => a.date.localeCompare(b.date) || a.startMinutes - b.startMinutes,
+  );
   const hasChanges = preview.create + preview.update + preview.remove > 0;
   if (!hasChanges) {
     return <p className="text-sm text-neutral-300">Your Google Calendar is already up to date.</p>;
@@ -31,14 +35,14 @@ function Summary({ preview }: { preview: SchedulePreview }) {
         </span>
       </p>
       <p className="text-sm mb-3">
-        <span className="text-emerald-400">{preview.create} to add</span>
+        <span className="text-sky-400">{preview.create} to add</span>
         {' · '}
         <span className="text-amber-400">{preview.update} to update</span>
         {' · '}
         <span className="text-red-400">{preview.remove} to remove</span>
       </p>
       <ul className="space-y-1 max-h-56 overflow-y-auto rounded-lg bg-neutral-800/40 p-2">
-        {preview.items.map((item, index) => (
+        {sortedItems.map((item, index) => (
           <li key={`${item.action}-${item.date}-${item.startMinutes}-${index}`} className="flex gap-2 text-xs">
             <span className={`w-14 shrink-0 font-medium ${ACTION_CLASS[item.action]}`}>
               {ACTION_LABEL[item.action]}
@@ -84,7 +88,7 @@ export default function CalendarSyncReviewModal() {
     >
       {phase === 'done' && result ? (
         <>
-          <p role="status" className="text-sm text-emerald-300">
+          <p role="status" className="text-sm text-sky-300">
             Added {result.created}, updated {result.updated}, removed {result.deleted}.
             {result.failed > 0 && (
               <span className="text-amber-400"> {result.failed} failed. Make another change or sync again to retry.</span>

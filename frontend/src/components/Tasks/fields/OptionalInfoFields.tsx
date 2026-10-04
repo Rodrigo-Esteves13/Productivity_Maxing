@@ -63,7 +63,7 @@ export default function OptionalInfoFields({
   return (
     <div className="space-y-4 pt-4 border-t border-neutral-800">
       <p className="text-xs font-semibold text-neutral-500 uppercase">Optional Information</p>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
           placeholder="Topics"
           value={topics}

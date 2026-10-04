@@ -119,6 +119,17 @@ export class CreateTaskDto {
   @Max(30 * 24 * 60)
   estimatedMinutes?: number;
 
+  @ApiPropertyOptional({
+    example: 480,
+    description:
+      'Rough study time in minutes, written from memory, for old tasks done before study sessions were logged. Only used when the task has no finished session. Feeds the duration, calibration and grade predictions.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(200 * 60)
+  recalledStudyMinutes?: number;
+
   @ApiProperty({
     enum: Difficulty,
     example: Difficulty.MEDIUM,

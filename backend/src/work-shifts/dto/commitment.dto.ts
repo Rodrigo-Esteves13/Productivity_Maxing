@@ -15,7 +15,7 @@ const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
 export class CreateCommitmentDto {
-  @ApiProperty({ example: "McDonald's" })
+  @ApiProperty({ example: 'Work' })
   @Transform(trim)
   @IsString()
   @IsNotEmpty()
@@ -30,7 +30,7 @@ export class CreateCommitmentDto {
 }
 
 export class UpdateCommitmentDto {
-  @ApiPropertyOptional({ example: "McDonald's" })
+  @ApiPropertyOptional({ example: 'Work' })
   @IsOptional()
   @Transform(trim)
   @IsString()

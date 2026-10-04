@@ -9,7 +9,11 @@ import {
 import { WorkShiftsService } from '../work-shifts/work-shifts.service';
 import { PredictionService } from '../prediction/prediction.service';
 import { DIFFICULTY_WEIGHT } from '../common/difficulty-weight.util';
-import { sumSessionMinutes } from '../common/session-minutes.util';
+import {
+  hasStudyTimeWhere,
+  resolveStudyMinutes,
+  sumSessionMinutes,
+} from '../common/session-minutes.util';
 import type { PredictionMethod } from '../prediction/prediction.types';
 import { addUtcDays, getLisbonNow, toDateKey } from '../common/date-key.util';
 import {
@@ -42,7 +46,7 @@ import type {
   StudyPlanTask,
 } from './study-plan.types';
 
-interface EstimableTask {
+export interface EstimableTask {
   id: string;
   taskTypeId: string;
   areaId: string;
@@ -53,7 +57,7 @@ interface EstimableTask {
 }
 
 // Campos que qualquer consulta de tasks para estimativa tem de selecionar.
-const ESTIMABLE_TASK_SELECT = {
+export const ESTIMABLE_TASK_SELECT = {
   id: true,
   title: true,
   difficulty: true,
@@ -94,7 +98,7 @@ function averageOf(bucket: HistoryBucket | undefined): number | null {
     : null;
 }
 
-interface ResolvedTaskEstimate {
+export interface ResolvedTaskEstimate {
   estimate: ResolvedEstimate;
   logged: number;
   needed: number;
@@ -380,7 +384,8 @@ export class StudyPlanService {
   // Estimativa final de cada task: manual (corrigida pelo teu histórico),
   // previsão, média da cadeira ou tabela por defeito. Partilhada pelo
   // plano e pelo resumo por cadeira, para os dois nunca divergirem.
-  private async resolveEstimates(
+  // Publico para o GradeProjectionService usar as MESMAS estimativas do plano.
+  async resolveEstimates(
     userId: string,
     tasks: EstimableTask[],
   ): Promise<{
@@ -450,11 +455,12 @@ export class StudyPlanService {
       where: {
         userId,
         progressStatus: 'COMPLETED',
-        studySessions: { some: { endedAt: { not: null } } },
+        AND: [hasStudyTimeWhere()],
       },
       select: {
         areaId: true,
         weightPercentage: true,
+        recalledStudyMinutes: true,
         studySessions: {
           where: { endedAt: { not: null } },
           select: { startedAt: true, endedAt: true },
@@ -464,7 +470,10 @@ export class StudyPlanService {
 
     const history = new Map<string, CourseHistory>();
     for (const task of done) {
-      const minutes = sumSessionMinutes(task.studySessions);
+      const minutes = resolveStudyMinutes(
+        task.studySessions,
+        task.recalledStudyMinutes,
+      );
       if (minutes <= 0) continue;
 
       const stats = history.get(task.areaId) ?? emptyHistory();

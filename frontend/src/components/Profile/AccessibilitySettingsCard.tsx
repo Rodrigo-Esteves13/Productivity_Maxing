@@ -8,7 +8,7 @@ export default function AccessibilitySettingsCard() {
   const { fontScale, setFontScale, highContrast, toggleHighContrast } = useAccessibilityPrefs();
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 max-w-3xl mt-8">
+    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 max-w-3xl mt-8">
       <h2 className="text-lg font-semibold text-white">Accessibility</h2>
       <p className="mt-1 text-sm text-neutral-400">
         These preferences are saved on this device and apply across the whole app.

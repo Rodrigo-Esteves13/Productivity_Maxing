@@ -25,7 +25,7 @@ export default function StudyPlanCard() {
   };
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6">
+    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
       <h2 className="text-lg font-semibold text-white mb-1">Suggested study plan</h2>
       <p className="text-sm text-neutral-400 mb-4">
         Next {PLAN_WINDOW_DAYS} days, fitted around classes, work, commute and quiet hours.

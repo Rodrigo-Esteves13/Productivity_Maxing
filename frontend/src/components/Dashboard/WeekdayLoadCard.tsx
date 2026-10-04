@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import type { Task } from '../../types/models';
 import { computeWeekdayDistribution } from '../../utils/weekdayDistribution';
 import { CalendarIcon } from '../UI/Icons';
-import DashboardCard, { CardHeading } from '../UI/DashboardCard';
+import DashboardCard, { CardBody, CardHeading } from '../UI/DashboardCard';
+import LegendItem from '../UI/LegendItem';
 
 interface WeekdayLoadCardProps {
   tasks: Task[];
@@ -21,45 +22,41 @@ export default function WeekdayLoadCard({ tasks }: WeekdayLoadCardProps) {
   const busiest = buckets.find((b) => b.total === max);
 
   return (
-    <DashboardCard>
+    <DashboardCard fillBody>
       <CardHeading className="mb-3">
         <CalendarIcon className="shrink-0" />
         Deadlines by weekday
       </CardHeading>
-      <p className="text-xs text-neutral-500 mb-3">
-        Busiest: <span className="text-neutral-200">{busiest?.label}</span> ({max} of {total})
-      </p>
-      <div className="flex items-end gap-2 h-24">
-        {buckets.map((b) => (
-          <div
-            key={b.label}
-            className="flex-1 flex flex-col items-center justify-end gap-1 h-full"
-            title={`${b.label}: ${b.pending} pending, ${b.completed} completed`}
-          >
-            <div className="w-full flex-1 flex flex-col justify-end">
-              <div
-                className="w-full bg-violet-500 rounded-t-sm"
-                style={{ height: `${max > 0 ? (b.pending / max) * 100 : 0}%` }}
-              />
-              <div
-                className="w-full bg-neutral-700"
-                style={{ height: `${max > 0 ? (b.completed / max) * 100 : 0}%` }}
-              />
+      <CardBody>
+        <p className="text-xs text-neutral-500 mb-3">
+          Busiest: <span className="text-neutral-200">{busiest?.label}</span> ({max} of {total})
+        </p>
+        <div className="flex items-end gap-2 h-24">
+          {buckets.map((b) => (
+            <div
+              key={b.label}
+              className="flex-1 flex flex-col items-center justify-end gap-1 h-full"
+              title={`${b.label}: ${b.pending} pending, ${b.completed} completed`}
+            >
+              <div className="w-full flex-1 flex flex-col justify-end">
+                <div
+                  className="w-full bg-violet-500 rounded-t-sm"
+                  style={{ height: `${max > 0 ? (b.pending / max) * 100 : 0}%` }}
+                />
+                <div
+                  className="w-full bg-neutral-700"
+                  style={{ height: `${max > 0 ? (b.completed / max) * 100 : 0}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-neutral-500">{b.label}</span>
             </div>
-            <span className="text-[10px] text-neutral-500">{b.label}</span>
-          </div>
-        ))}
-      </div>
-      <div className="flex gap-4 mt-2 text-[10px] text-neutral-500">
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-sm bg-violet-500" />
-          Pending
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-sm bg-neutral-700" />
-          Completed
-        </span>
-      </div>
+          ))}
+        </div>
+        <div className="flex gap-4 mt-2 text-[10px] text-neutral-500">
+          <LegendItem dotClassName="bg-violet-500">Pending</LegendItem>
+          <LegendItem dotClassName="bg-neutral-700">Completed</LegendItem>
+        </div>
+      </CardBody>
     </DashboardCard>
   );
 }

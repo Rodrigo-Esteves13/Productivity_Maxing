@@ -11,6 +11,7 @@ export type DashboardWidgetKey =
   | 'studyActivity'
   | 'studyCapacity'
   | 'courseForecast'
+  | 'gradeProjection'
   | 'gradeCalculator'
   | 'creditSimulator'
   | 'creditsAccumulated'
@@ -34,6 +35,7 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   studyActivity: 'Study activity',
   studyCapacity: 'Study capacity',
   courseForecast: 'Study time per course',
+  gradeProjection: 'Grade projection',
   gradeCalculator: 'Grade needed calculator',
   creditSimulator: '"What if" GPA simulator',
   creditsAccumulated: 'ECTS credits accumulated',
@@ -63,6 +65,7 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   studyActivity: true,
   studyCapacity: true,
   courseForecast: true,
+  gradeProjection: true,
   gradeCalculator: true,
   creditSimulator: true,
   creditsAccumulated: true,

@@ -11,6 +11,7 @@ export const AreaBreakdownCard = lazy(() => import('./AreaBreakdownCard'));
 export const StudyActivityCard = lazy(() => import('./StudyActivityCard'));
 export const StudyCapacityCard = lazy(() => import('./StudyCapacityCard'));
 export const CourseForecastCard = lazy(() => import('./CourseForecastCard'));
+export const GradeProjectionCard = lazy(() => import('./GradeProjectionCard'));
 export const ExamCountdownCard = lazy(() => import('./ExamCountdownCard'));
 export const StaleTasksCard = lazy(() => import('./StaleTasksCard'));
 export const TimeByAreaCard = lazy(() => import('./TimeByAreaCard'));

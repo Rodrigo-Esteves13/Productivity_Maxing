@@ -93,7 +93,7 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         placeholder="Subject text as it appears in your .ics (e.g. PC)"
-        className="w-64 rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none"
+        className="w-full sm:w-64 rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none"
       />
       <button
         type="button"
