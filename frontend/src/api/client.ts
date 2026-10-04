@@ -17,6 +17,35 @@ const api = axios.create({
 
 const SAFE_METHODS = new Set(['get', 'head', 'options']);
 
+// Mensagem exata que o CsrfGuard do backend devolve num 403 de CSRF. Serve
+// para distinguir "token desatualizado" de um 403 por falta de permissao.
+const CSRF_ERROR_MESSAGE = 'Invalid or missing CSRF token.';
+
+// Marca um pedido que ja foi repetido uma vez, para nunca entrar em ciclo.
+const RETRIED_AFTER_CSRF_REFRESH = '_retriedAfterCsrfRefresh';
+
+// Varias chamadas podem falhar ao mesmo tempo (ex: duas tabs, ou varios
+// pedidos em paralelo): partilham UM so pedido de token novo.
+let pendingCsrfRefresh: Promise<boolean> | null = null;
+
+function refreshCsrfToken(): Promise<boolean> {
+  if (!pendingCsrfRefresh) {
+    pendingCsrfRefresh = api
+      .get<{ authenticated: boolean; csrfToken?: string }>('/auth/csrf')
+      .then((response) => {
+        const token = response.data.csrfToken;
+        if (!response.data.authenticated || !token) return false;
+        setCsrfToken(token);
+        return true;
+      })
+      .catch(() => false)
+      .finally(() => {
+        pendingCsrfRefresh = null;
+      });
+  }
+  return pendingCsrfRefresh;
+}
+
 // Antes de qualquer pedido que altera estado, anexa o csrf token guardado em
 // memória. O backend compara-o com o valor do cookie csrf_token
 // (double-submit cookie) - ver CsrfGuard no backend.
@@ -81,6 +110,26 @@ api.interceptors.response.use(
     if (status === 401 && error.response?.data?.code === 'ACCOUNT_BLOCKED') {
       window.dispatchEvent(new CustomEvent(ACCOUNT_BLOCKED_EVENT));
       return Promise.reject(error);
+    }
+
+    // Token CSRF desatualizado (ex: login ou sessao renovada noutra tab
+    // trocou o cookie): pede um token novo e repete o pedido UMA vez. Sem
+    // isto, a tab antiga ficava sem conseguir gravar nada ate dar refresh.
+    const method = error.config?.method?.toLowerCase();
+    const alreadyRetried = Boolean(error.config?.[RETRIED_AFTER_CSRF_REFRESH]);
+    if (
+      status === 403 &&
+      error.response?.data?.message === CSRF_ERROR_MESSAGE &&
+      error.config &&
+      method &&
+      !SAFE_METHODS.has(method) &&
+      !alreadyRetried
+    ) {
+      return refreshCsrfToken().then((refreshed) => {
+        if (!refreshed) return Promise.reject(error);
+        error.config[RETRIED_AFTER_CSRF_REFRESH] = true;
+        return api.request(error.config);
+      });
     }
 
     if (status === 401 && !isAuthCheckRequest(url)) {
