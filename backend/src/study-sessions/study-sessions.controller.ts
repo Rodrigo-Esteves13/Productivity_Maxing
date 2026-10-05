@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -13,6 +14,8 @@ import { Throttle } from '@nestjs/throttler';
 import { StudySessionsService } from './study-sessions.service';
 import { StartStudySessionDto } from './dto/start-study-session.dto';
 import { StopStudySessionDto } from './dto/stop-study-session.dto';
+import { CreateManualSessionDto } from './dto/create-manual-session.dto';
+import { UpdateStudySessionDto } from './dto/update-study-session.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
@@ -30,6 +33,27 @@ export class StudySessionsController {
     @Body() dto: StartStudySessionDto,
   ) {
     return this.studySessionsService.start(user.id, dto);
+  }
+
+  @Post('manual')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  createManual(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateManualSessionDto,
+  ) {
+    return this.studySessionsService.createManual(user.id, dto);
+  }
+
+  @Get('history')
+  getHistory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('days') days?: string,
+  ) {
+    const parsed = Number(days);
+    return this.studySessionsService.history(
+      user.id,
+      Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
+    );
   }
 
   @Patch(':id/stop')
@@ -83,5 +107,21 @@ export class StudySessionsController {
   @Get('streak')
   getStreak(@CurrentUser() user: AuthenticatedUser) {
     return this.studySessionsService.getStreak(user.id);
+  }
+
+  @Patch(':id')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateStudySessionDto,
+  ) {
+    return this.studySessionsService.update(user.id, id, dto);
+  }
+
+  @Delete(':id')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.studySessionsService.remove(user.id, id);
   }
 }

@@ -11,6 +11,25 @@ export interface StartStudySessionInput {
 
 export interface StopStudySessionInput {
   note?: string;
+  // Quando a sessao acabou de facto, se foi antes de agora (ISO).
+  endedAt?: string;
+  focusRating?: number;
+}
+
+export interface ManualSessionInput {
+  startedAt: string;
+  endedAt: string;
+  taskId?: string;
+  areaId?: string;
+  note?: string;
+  focusRating?: number;
+}
+
+export interface UpdateSessionInput {
+  startedAt?: string;
+  endedAt?: string;
+  note?: string;
+  focusRating?: number;
 }
 
 export const startStudySession = async (
@@ -38,6 +57,25 @@ export const stopStudySession = async (
 // and there is fine, see the comment on the backend constant.
 export const heartbeatStudySession = async (id: string): Promise<void> => {
   await api.post(`/study-sessions/${id}/heartbeat`);
+};
+
+export const getSessionHistory = async (days = 14): Promise<StudySession[]> => {
+  const response = await api.get<StudySession[]>('/study-sessions/history', { params: { days } });
+  return response.data;
+};
+
+export const createManualSession = async (data: ManualSessionInput): Promise<StudySession> => {
+  const response = await api.post<StudySession>('/study-sessions/manual', data);
+  return response.data;
+};
+
+export const updateStudySession = async (id: string, data: UpdateSessionInput): Promise<StudySession> => {
+  const response = await api.patch<StudySession>(`/study-sessions/${id}`, data);
+  return response.data;
+};
+
+export const deleteStudySession = async (id: string): Promise<void> => {
+  await api.delete(`/study-sessions/${id}`);
 };
 
 export const getActiveStudySession = async (): Promise<StudySession | null> => {

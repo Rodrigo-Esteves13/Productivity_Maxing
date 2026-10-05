@@ -12,6 +12,7 @@ import {
   stopStudySessionOnUnload,
   heartbeatStudySession,
   type StartStudySessionInput,
+  type StopStudySessionInput,
 } from '../api/studySessionsService';
 import type { StudySession } from '../types/models';
 import { useAuth } from './useAuth';
@@ -19,6 +20,19 @@ import { StudySessionContext } from './study-session-context';
 import { getHttpStatus } from '../lib/httpError';
 import { announceSessionChanged, onSessionChangedElsewhere } from '../lib/focusChannel';
 import { isAnotherTabOpen, registerTab } from '../lib/tabPresence';
+import { startActivityTracking } from '../lib/idleClock';
+import {
+  clearBreak,
+  clearPlan,
+  loadBreak,
+  loadPlan,
+  remainingSeconds as computeRemaining,
+  saveBreak,
+  savePlan,
+  type ResumeSpec,
+  type RestBreak,
+  type TimerPlan,
+} from '../lib/focusTimer';
 
 const HTTP_NOT_FOUND = 404;
 
@@ -42,6 +56,8 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [timerPlan, setTimerPlan] = useState<TimerPlan | null>(null);
+  const [restBreak, setRestBreak] = useState<RestBreak | null>(() => loadBreak());
 
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -102,6 +118,18 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
       document.removeEventListener('visibilitychange', handleVisible);
     };
   }, [isAuthenticated, syncActive]);
+
+  // O plano de contagem decrescente vive no browser, por sessao: ao mudar
+  // de sessao (ou de tab, ou recarregar) volta a ser lido de la.
+  useEffect(() => {
+    setTimerPlan(activeSession ? loadPlan(activeSession.id) : null);
+  }, [activeSession]);
+
+  // Atividade da pessoa (para o aviso "ainda estas a estudar?"): so enquanto ha sessao.
+  useEffect(() => {
+    if (!isAuthenticated || !activeSession) return;
+    return startActivityTracking();
+  }, [isAuthenticated, activeSession]);
 
   // Regista esta tab para as outras saberem que existe (ver pagehide abaixo).
   useEffect(() => {
@@ -187,37 +215,60 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('pagehide', handlePageHide);
   }, []);
 
-  const start = useCallback(async (input: StartStudySessionInput) => {
-    try {
-      setIsSubmitting(true);
-      setError('');
-      const session = await startStudySession(input);
-      setActiveSession(session);
-      announceSessionChanged();
-    } catch {
-      setError('Could not start the session. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, []);
-
-  const stop = useCallback(
-    async (note?: string) => {
-      if (!activeSession) return;
+  const start = useCallback(
+    async (input: StartStudySessionInput, plan: TimerPlan | null = null) => {
       try {
         setIsSubmitting(true);
         setError('');
-        await stopStudySession(activeSession.id, { note });
+        const session = await startStudySession(input);
+        if (plan) savePlan(session.id, plan);
+        // Comecar um bloco novo termina a pausa (se havia uma).
+        clearBreak();
+        setRestBreak(null);
+        setActiveSession(session);
+        announceSessionChanged();
+        return true;
+      } catch {
+        setError('Could not start the session. Please try again.');
+        return false;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [],
+  );
+
+  const stop = useCallback(
+    async (options: StopStudySessionInput = {}) => {
+      if (!activeSession) return false;
+      try {
+        setIsSubmitting(true);
+        setError('');
+        await stopStudySession(activeSession.id, options);
+        clearPlan(activeSession.id);
         setActiveSession(null);
         announceSessionChanged();
+        return true;
       } catch {
         setError('Could not stop the session. Please try again.');
+        return false;
       } finally {
         setIsSubmitting(false);
       }
     },
     [activeSession],
   );
+
+  const startBreak = useCallback((minutes: number, resume: ResumeSpec | null) => {
+    const rest: RestBreak = { endsAt: Date.now() + minutes * 60_000, resume };
+    saveBreak(rest);
+    setRestBreak(rest);
+  }, []);
+
+  const endBreak = useCallback(() => {
+    clearBreak();
+    setRestBreak(null);
+  }, []);
 
   return (
     <StudySessionContext.Provider
@@ -229,6 +280,11 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
         error,
         start,
         stop,
+        timerPlan,
+        remainingSeconds: computeRemaining(elapsedSeconds, timerPlan),
+        restBreak,
+        startBreak,
+        endBreak,
       }}
     >
       {children}

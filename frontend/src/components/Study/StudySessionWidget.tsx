@@ -1,5 +1,14 @@
 import { useState } from 'react';
 import { useStudySession } from '../../hooks/useStudySession';
+import { useActiveStudySession } from '../../context/useActiveStudySession';
+import { useStopSession } from '../../hooks/useStopSession';
+import { requestNotifyPermission } from '../../lib/focusAlerts';
+import { enterFullscreen } from '../../lib/fullscreen';
+import type { TimerPlan } from '../../lib/focusTimer';
+import TimerModePicker from './focus/TimerModePicker';
+import StopSessionPanel from './focus/StopSessionPanel';
+import FocusModeOverlay from './focus/FocusModeOverlay';
+import OpenNotesLink from './focus/OpenNotesLink';
 import { formatElapsed } from '../../lib/formatDuration';
 import Button from '../UI/Button';
 import Select from '../UI/Select';
@@ -31,13 +40,16 @@ export default function StudySessionWidget() {
     isSubmitting,
     error,
     start,
-    stop,
   } = useStudySession();
+  const { remainingSeconds, timerPlan } = useActiveStudySession();
+  const { stopSession } = useStopSession();
 
+  const [plan, setPlan] = useState<TimerPlan | null>(null);
+  const [isStopping, setIsStopping] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
   const [taskId, setTaskId] = useState('');
   const [areaId, setAreaId] = useState('');
   const [note, setNote] = useState('');
-  const [stopNote, setStopNote] = useState('');
 
   if (isLoading) {
     return (
@@ -48,19 +60,21 @@ export default function StudySessionWidget() {
   }
 
   const handleStart = async () => {
-    await start({
-      taskId: taskId || undefined,
-      areaId: areaId || undefined,
-      note: note.trim() || undefined,
-    });
+    // O aviso de fim de bloco pode vir com a tab em segundo plano: pede-se
+    // a permissao agora, dentro do clique, que e quando o browser deixa.
+    if (plan) requestNotifyPermission();
+    const started = await start(
+      {
+        taskId: taskId || undefined,
+        areaId: areaId || undefined,
+        note: note.trim() || undefined,
+      },
+      plan,
+    );
+    if (!started) return;
     setTaskId('');
     setAreaId('');
     setNote('');
-  };
-
-  const handleStop = async () => {
-    await stop(stopNote.trim() || undefined);
-    setStopNote('');
   };
 
   const taskById = new Map(tasks.map((t) => [t.id, t]));
@@ -118,33 +132,52 @@ export default function StudySessionWidget() {
         <div className="flex flex-col gap-4">
           <div className="text-center py-6">
             <p className="text-4xl font-mono font-bold text-violet-400 tabular-nums">
-              {formatElapsed(elapsedSeconds)}
+              {formatElapsed(remainingSeconds ?? elapsedSeconds)}
+            </p>
+            <p className="mt-1 text-xs text-neutral-500">
+              {timerPlan === null
+                ? 'Counting up'
+                : remainingSeconds === 0
+                  ? 'Block finished'
+                  : `Left of ${timerPlan.focusMinutes} min`}
             </p>
             <p className="mt-2 text-sm text-neutral-400">
               {activeSession.task?.title ??
                 activeSession.area?.name ??
                 'Untitled session'}
             </p>
+            <div className="mt-2">
+              <OpenNotesLink areaId={activeSession.areaId} />
+            </div>
           </div>
 
-          <FormField label="Note (optional)" htmlFor="stop-note">
-            <Input
-              id="stop-note"
-              value={stopNote}
-              onChange={(e) => setStopNote(e.target.value)}
-              placeholder="What did you study?"
-              maxLength={500}
+          {isStopping ? (
+            <StopSessionPanel
+              taskTitle={activeSession.task?.title ?? null}
+              isSubmitting={isSubmitting}
+              onCancel={() => setIsStopping(false)}
+              onConfirm={async ({ markTaskDone, ...options }) => {
+                if (await stopSession(options, markTaskDone)) setIsStopping(false);
+              }}
             />
-          </FormField>
+          ) : (
+            <div className="flex gap-2">
+              <Button variant="primary" onClick={() => setIsStopping(true)} disabled={isSubmitting} className="flex-1">
+                Stop session
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  enterFullscreen();
+                  setIsFocusMode(true);
+                }}
+              >
+                Focus mode
+              </Button>
+            </div>
+          )}
 
-          <Button
-            variant="primary"
-            onClick={() => void handleStop()}
-            disabled={isSubmitting}
-            className="w-full"
-          >
-            {isSubmitting ? 'Stopping...' : 'Stop session'}
-          </Button>
+          {isFocusMode && <FocusModeOverlay onClose={() => setIsFocusMode(false)} />}
         </div>
       ) : (
         <div className="flex flex-col gap-4">
@@ -190,6 +223,10 @@ export default function StudySessionWidget() {
               placeholder="What are you going to study?"
               maxLength={500}
             />
+          </FormField>
+
+          <FormField label="Timer" htmlFor="session-timer">
+            <TimerModePicker value={plan} onChange={setPlan} />
           </FormField>
 
           <Button

@@ -716,6 +716,15 @@ model StudySession {
   // primeiro heartbeat (mesmo instante do start(), na prática).
   lastHeartbeatAt DateTime?
   note      String?
+
+  // Concentracao percebida, 1 (dispersa) a 5 (totalmente focada), dada ao
+  // parar. Opcional: quem nao responder nao perde nada.
+  focusRating Int?
+
+  // True quando a sessao foi escrita depois (esqueci-me de a ligar), em vez
+  // de cronometrada. Serve para a mostrar como tal no historico.
+  isManual Boolean @default(false)
+
   createdAt DateTime  @default(now())
 
   // Opcionais e independentes um do outro: dá para começar uma sessão sem
