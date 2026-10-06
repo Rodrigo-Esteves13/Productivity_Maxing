@@ -45,7 +45,11 @@ import { neutralizePreexistingCredential } from './oauth-merge.policy';
 // concorrentes de outros utilizadores ficam todos à espera atrás de um
 // único cálculo de hash. A versão assíncrona corre no thread pool do
 // libuv, sem bloquear o resto da app.
-const scrypt = promisify(scryptCallback);
+const scrypt = promisify(scryptCallback) as (
+  password: string | Buffer,
+  salt: string | Buffer,
+  keylen: number,
+) => Promise<Buffer>;
 
 interface OAuthProfileData {
   provider: Provider;
@@ -539,9 +543,7 @@ export class AuthService {
           })
           .then(() => this.accountStatus.clearBlocked(user.id))
           .catch((err: unknown) =>
-            this.logger.warn(
-              `Could not auto-reactivate ${user.id}: ${err instanceof Error ? err.message : String(err)}`,
-            ),
+            this.logger.warn(`Could not auto-reactivate ${user.id}: ${err instanceof Error ? err.message : String(err)}`),
           );
         return;
       }
@@ -809,9 +811,7 @@ export class AuthService {
     // Best-effort: limpar o avatar anterior guardado no nosso bucket.
     // Não bloqueia a resposta nem falha o pedido se der erro.
     this.deleteAvatarFileIfOwned(previousUser.avatarUrl).catch((err: unknown) =>
-      this.logger.warn(
-        `Could not delete the old avatar: ${err instanceof Error ? err.message : String(err)}`,
-      ),
+      this.logger.warn(`Could not delete the old avatar: ${err instanceof Error ? err.message : String(err)}`),
     );
 
     return updatedUser;
@@ -1008,9 +1008,7 @@ export class AuthService {
     const secret = this.requireApiKeySecret();
 
     // 64 é o tamanho do hash em bytes.
-    const keyHash = ((await scrypt(rawToken, secret, 64)) as Buffer).toString(
-      'hex',
-    );
+    const keyHash = (await scrypt(rawToken, secret, 64)).toString('hex');
 
     await this.prisma.apiKey.create({
       data: { userId, keyHash, name, scope },
@@ -1028,9 +1026,7 @@ export class AuthService {
     const secret = this.requireApiKeySecret();
 
     // Repetimos o mesmo cálculo (agora assíncrono) para verificar
-    const keyHash = (
-      (await scrypt(incomingToken, secret, 64)) as Buffer
-    ).toString('hex');
+    const keyHash = (await scrypt(incomingToken, secret, 64)).toString('hex');
 
     const apiKeyRecord = await this.prisma.apiKey.findUnique({
       where: { keyHash },
@@ -1044,10 +1040,7 @@ export class AuthService {
           data: { lastUsed: new Date() },
         })
         .catch((e: unknown) =>
-          this.logger.error(
-            'Erro ao atualizar lastUsed da API Key',
-            e instanceof Error ? e.message : String(e),
-          ),
+          this.logger.error('Erro ao atualizar lastUsed da API Key', e instanceof Error ? e.message : String(e)),
         );
 
       return { user: apiKeyRecord.user, scope: apiKeyRecord.scope };
