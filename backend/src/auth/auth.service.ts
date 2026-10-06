@@ -226,7 +226,7 @@ export class AuthService {
             avatarUrl: data.photo,
           },
         });
-      } catch (err) {
+      } catch (err: unknown) {
         // Corrida rara: dois logins simultâneos passam ambos o check acima
         // antes de qualquer um dos dois criar o User. Apanhamos o P2002
         // aqui também, em vez de deixar subir como erro genérico não tratado.
@@ -401,12 +401,12 @@ export class AuthService {
         // não bloqueamos a limpeza local por causa disso.
         if (!res.ok) {
           this.logger.warn(
-            `Revoke do refresh token Google devolveu ${res.status} - a continuar com a limpeza local.`,
+            `Revoke do refresh token Google devolveu ${res.status} a continuar com a limpeza local.`,
           );
         }
-      } catch (err) {
+      } catch (err: unknown) {
         this.logger.warn(
-          `Falha ao contactar o endpoint revoke da Google: ${err}`,
+          `Falha ao contactar o endpoint revoke da Google: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
     }
@@ -538,8 +538,10 @@ export class AuthService {
             },
           })
           .then(() => this.accountStatus.clearBlocked(user.id))
-          .catch((err) =>
-            this.logger.warn(`Could not auto-reactivate ${user.id}: ${err}`),
+          .catch((err: unknown) =>
+            this.logger.warn(
+              `Could not auto-reactivate ${user.id}: ${err instanceof Error ? err.message : String(err)}`,
+            ),
           );
         return;
       }
@@ -806,8 +808,10 @@ export class AuthService {
 
     // Best-effort: limpar o avatar anterior guardado no nosso bucket.
     // Não bloqueia a resposta nem falha o pedido se der erro.
-    this.deleteAvatarFileIfOwned(previousUser.avatarUrl).catch((err) =>
-      this.logger.warn(`Could not delete the old avatar: ${err}`),
+    this.deleteAvatarFileIfOwned(previousUser.avatarUrl).catch((err: unknown) =>
+      this.logger.warn(
+        `Could not delete the old avatar: ${err instanceof Error ? err.message : String(err)}`,
+      ),
     );
 
     return updatedUser;
@@ -1039,8 +1043,11 @@ export class AuthService {
           where: { id: apiKeyRecord.id },
           data: { lastUsed: new Date() },
         })
-        .catch((e) =>
-          this.logger.error('Erro ao atualizar lastUsed da API Key', e),
+        .catch((e: unknown) =>
+          this.logger.error(
+            'Erro ao atualizar lastUsed da API Key',
+            e instanceof Error ? e.message : String(e),
+          ),
         );
 
       return { user: apiKeyRecord.user, scope: apiKeyRecord.scope };
