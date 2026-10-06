@@ -36,6 +36,8 @@ import { MailService } from '../mail/mail.service';
 import { GOOGLE_REVOKE_URL } from './google-oauth.constants';
 import { getAvatarBucket, getFrontendUrl } from '../config/app.config';
 import { AccountStatusService } from '../account-status/account-status.service';
+import { SessionStateService } from '../account-status/session-state.service';
+import { neutralizePreexistingCredential } from './oauth-merge.policy';
 
 // scryptSync bloqueia a thread principal do event loop enquanto corre -
 // numa rota chamada em CADA pedido autenticado por API Key
@@ -105,6 +107,7 @@ export class AuthService {
     private jwtService: JwtService,
     private mailService: MailService,
     private accountStatus: AccountStatusService,
+    private sessionState: SessionStateService,
   ) {
     // Anon key chega para signUp/signInWithPassword, são os mesmos endpoints
     // públicos que o supabase-js usaria no browser, não operações de admin
@@ -189,6 +192,8 @@ export class AuthService {
     let user = data.emailVerified
       ? await this.prisma.user.findUnique({ where: { email: data.email } })
       : null;
+    // Funde-se numa conta que ja existia (em vez de criar uma nova).
+    const mergedIntoExisting = user !== null;
 
     if (!user) {
       // BUG CORRIGIDO: quando o email não é verificado (Discord nunca é;
@@ -240,6 +245,34 @@ export class AuthService {
     // primeiro caso, mas chamar sempre é inofensivo (uma conta recém-criada
     // nunca é BANNED/SUSPENDED).
     this.assertAccountIsUsable(user);
+
+    if (mergedIntoExisting) {
+      // SCR-001: ver oauth-merge.policy.ts. O registo por password nao
+      // exige confirmacao de email, por isso o email verificado pelo
+      // provider e que prova quem e o dono da conta.
+      user = await neutralizePreexistingCredential(
+        {
+          replacePassword: async (supabaseAuthId, newPassword) => {
+            const { error } = await this.storage.auth.admin.updateUserById(
+              supabaseAuthId,
+              { password: newPassword },
+            );
+            return error
+              ? {
+                  message: error.message,
+                  status: error.status,
+                  code: error.code,
+                }
+              : null;
+          },
+          revokeSessions: (userId) =>
+            this.sessionState.bumpTokenVersion(userId),
+          generatePassword: () => randomBytes(32).toString('hex'),
+        },
+        user,
+        await this.prisma.identity.count({ where: { userId: user.id } }),
+      );
+    }
 
     await this.prisma.identity.create({
       data: {
@@ -849,6 +882,8 @@ export class AuthService {
     await this.deleteAvatarFileIfOwned(user.avatarUrl);
 
     await this.prisma.user.delete({ where: { id: userId } });
+    // Sem isto, o JWT da conta apagada ainda passava ate a cache expirar.
+    this.sessionState.invalidate(userId);
   }
 
   /**
@@ -872,8 +907,17 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      tv: user.tokenVersion,
     };
     return this.jwtService.sign(payload, { expiresIn: '7d' });
+  }
+
+  /**
+   * Invalida todas as sessoes do utilizador (logout, troca de password).
+   * Devolve o utilizador atualizado para se poder emitir um token novo.
+   */
+  revokeAllSessions(userId: string): Promise<User> {
+    return this.sessionState.bumpTokenVersion(userId);
   }
 
   /**

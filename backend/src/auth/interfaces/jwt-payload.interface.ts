@@ -2,6 +2,9 @@ export interface JwtPayload {
   sub: string; // User.id (uuid)
   email: string;
   role: string;
+  // Versao das sessoes do utilizador quando o token foi emitido. Tokens
+  // antigos (anteriores a esta mudanca) nao a trazem e contam como 0.
+  tv?: number;
   iat?: number;
   exp?: number;
 }

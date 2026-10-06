@@ -113,7 +113,19 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(200)
-  logout(@Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    // Terminar sessao invalida o token no servidor (nao so apaga o cookie
+    // do browser): um cookie copiado antes deixa de funcionar. Vale para
+    // todos os dispositivos da conta. Se o cookie ja expirou ou e invalido,
+    // nao ha nada a invalidar e o logout continua a funcionar.
+    const payload = this.authService.verifyAccessTokenCookie(
+      req.cookies?.[ACCESS_TOKEN_COOKIE] as string | undefined,
+    );
+    if (payload) {
+      await this.authService.revokeAllSessions(payload.sub).catch((err) => {
+        this.logger.warn(`Could not revoke sessions on logout: ${String(err)}`);
+      });
+    }
     res.clearCookie(ACCESS_TOKEN_COOKIE, clearCookieOptions());
     res.clearCookie(CSRF_COOKIE, clearCookieOptions());
     return { message: 'Logged out.' };
@@ -328,8 +340,17 @@ export class AuthController {
   async setPassword(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: SetPasswordDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
     await this.authService.setPassword(user.id, dto.password);
+    // Mudar a password termina todas as outras sessoes (quem tivesse o
+    // cookie antigo fica de fora); esta continua, com um token novo.
+    const fresh = await this.authService.revokeAllSessions(user.id);
+    res.cookie(
+      ACCESS_TOKEN_COOKIE,
+      this.authService.issueJwt(fresh),
+      accessTokenCookieOptions(),
+    );
     return { message: 'Password updated successfully.' };
   }
 
@@ -430,7 +451,9 @@ export class AuthController {
     res.cookie(ACCESS_TOKEN_COOKIE, token, accessTokenCookieOptions());
     // Já não precisamos do state anti-CSRF do login OAuth depois de
     // consumido - limpa-o para não ficar pendurado nem ser reutilizável.
-    res.clearCookie(OAUTH_LOGIN_STATE_COOKIE, { path: '/', sameSite: 'lax' });
+    // Mesmos atributos com que foi criado (Secure, Path=/, sem Domain): para
+    // um cookie __Host- o browser ignora uma remocao que nao cumpra o prefixo.
+    res.clearCookie(OAUTH_LOGIN_STATE_COOKIE, clearCookieOptions());
 
     this.logger.log(
       `Login (OAuth) - user: ${user.email} (id=${user.id}, role=${user.role})`,
