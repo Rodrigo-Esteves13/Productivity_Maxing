@@ -48,7 +48,10 @@ export default function Notebook() {
   const groupByPeriod = Boolean(periodParam) && periodParam !== 'all';
 
   const { areas, isLoading: areasLoading, error: areasError } = useNotebookAreas(periodParam);
-  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
+  // ?area=<id> abre logo o caderno dessa cadeira (atalho do Focus).
+  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(
+    () => new URLSearchParams(window.location.search).get('area'),
+  );
   const {
     entries,
     isLoading: entriesLoading,

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   ConflictException,
@@ -7,6 +8,9 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StartStudySessionDto } from './dto/start-study-session.dto';
 import { StopStudySessionDto } from './dto/stop-study-session.dto';
+import { CreateManualSessionDto } from './dto/create-manual-session.dto';
+import { UpdateStudySessionDto } from './dto/update-study-session.dto';
+import { validateSessionWindow } from './session-window.util';
 
 // Meio-termo entre "recalcular tudo em memória a cada pedido" (o que
 // tínhamos antes - um findMany() à tabela toda do utilizador em CADA
@@ -37,11 +41,18 @@ const STALE_SESSION_THRESHOLD_MS = 10 * 60 * 1000;
 const AUTO_CLOSE_NOTE =
   'Auto-stopped: the app lost contact with this session (tab closed or device went to sleep).';
 
+const HISTORY_DEFAULT_DAYS = 14;
+const HISTORY_MAX_DAYS = 90;
+const HISTORY_MAX_ROWS = 300;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 const SESSION_SELECT = {
   id: true,
   startedAt: true,
   endedAt: true,
   note: true,
+  focusRating: true,
+  isManual: true,
   taskId: true,
   areaId: true,
   task: { select: { id: true, title: true } },
@@ -143,9 +154,9 @@ export class StudySessionsService {
       );
     }
 
-    if (dto.taskId) {
-      await this.assertTaskOwnership(userId, dto.taskId);
-    }
+    const task = dto.taskId
+      ? await this.assertTaskOwnership(userId, dto.taskId)
+      : null;
     if (dto.areaId) {
       await this.assertAreaExists(dto.areaId);
     }
@@ -154,7 +165,8 @@ export class StudySessionsService {
       data: {
         userId,
         taskId: dto.taskId ?? null,
-        areaId: dto.areaId ?? null,
+        // Sem area escolhida, usa a da task (ex: "Comecar" num bloco do plano).
+        areaId: dto.areaId ?? task?.areaId ?? null,
         note: dto.note ?? null,
         // Começa já com um heartbeat "de origem" - evita que uma sessão
         // parada nos primeiros segundos (antes do primeiro ping real do
@@ -173,7 +185,7 @@ export class StudySessionsService {
     // validamos posse antes).
     const existing = await this.prisma.studySession.findFirst({
       where: { id, userId },
-      select: { id: true, endedAt: true },
+      select: { id: true, startedAt: true, endedAt: true },
     });
     if (!existing) {
       throw new NotFoundException(
@@ -184,11 +196,21 @@ export class StudySessionsService {
       throw new ConflictException('This session has already been stopped.');
     }
 
+    // endedAt opcional: "parei de estudar as 14:32 e so agora me lembrei".
+    // Validado contra o inicio real e nunca no futuro.
+    const now = new Date();
+    const endedAt = dto.endedAt ? new Date(dto.endedAt) : now;
+    const problem = validateSessionWindow(existing.startedAt, endedAt, now);
+    if (problem) throw new BadRequestException(problem);
+
     const session = await this.prisma.studySession.update({
       where: { id, userId },
       data: {
-        endedAt: new Date(),
+        endedAt,
         ...(dto.note !== undefined ? { note: dto.note } : {}),
+        ...(dto.focusRating !== undefined
+          ? { focusRating: dto.focusRating }
+          : {}),
       },
       select: SESSION_SELECT,
     });
@@ -199,6 +221,105 @@ export class StudySessionsService {
     this.heatmapCache.delete(userId);
 
     return this.toResponse(session);
+  }
+
+  /** Sessoes terminadas dos ultimos `days` dias, da mais recente para a mais antiga. */
+  async history(userId: string, days?: number) {
+    const safeDays = Math.min(
+      Math.max(Math.trunc(days ?? HISTORY_DEFAULT_DAYS), 1),
+      HISTORY_MAX_DAYS,
+    );
+    const since = new Date(Date.now() - safeDays * MS_PER_DAY);
+    const rows = await this.prisma.studySession.findMany({
+      where: { userId, endedAt: { not: null }, startedAt: { gte: since } },
+      select: SESSION_SELECT,
+      orderBy: { startedAt: 'desc' },
+      take: HISTORY_MAX_ROWS,
+    });
+    return rows.map((row) => this.toResponse(row));
+  }
+
+  /** Regista uma sessao que nao foi cronometrada (esqueci-me de ligar). */
+  async createManual(userId: string, dto: CreateManualSessionDto) {
+    const start = new Date(dto.startedAt);
+    const end = new Date(dto.endedAt);
+    const problem = validateSessionWindow(start, end, new Date());
+    if (problem) throw new BadRequestException(problem);
+
+    const task = dto.taskId
+      ? await this.assertTaskOwnership(userId, dto.taskId)
+      : null;
+    if (dto.areaId) await this.assertAreaExists(dto.areaId);
+    await this.assertNoOverlap(userId, start, end);
+
+    const session = await this.prisma.studySession.create({
+      data: {
+        userId,
+        startedAt: start,
+        endedAt: end,
+        taskId: dto.taskId ?? null,
+        areaId: dto.areaId ?? task?.areaId ?? null,
+        note: dto.note ?? null,
+        focusRating: dto.focusRating ?? null,
+        isManual: true,
+      },
+      select: SESSION_SELECT,
+    });
+    this.heatmapCache.delete(userId);
+    return this.toResponse(session);
+  }
+
+  /** Corrige tempos, nota ou concentracao de uma sessao ja terminada. */
+  async update(userId: string, id: string, dto: UpdateStudySessionDto) {
+    const existing = await this.prisma.studySession.findFirst({
+      where: { id, userId },
+      select: { id: true, startedAt: true, endedAt: true },
+    });
+    if (!existing) {
+      throw new NotFoundException(
+        `Study session not found or you don't have access.`,
+      );
+    }
+    if (!existing.endedAt) {
+      throw new ConflictException('Stop the session before editing it.');
+    }
+
+    const start = dto.startedAt ? new Date(dto.startedAt) : existing.startedAt;
+    const end = dto.endedAt ? new Date(dto.endedAt) : existing.endedAt;
+    const problem = validateSessionWindow(start, end, new Date());
+    if (problem) throw new BadRequestException(problem);
+    await this.assertNoOverlap(userId, start, end, id);
+
+    const session = await this.prisma.studySession.update({
+      where: { id, userId },
+      data: {
+        startedAt: start,
+        endedAt: end,
+        ...(dto.note !== undefined ? { note: dto.note } : {}),
+        ...(dto.focusRating !== undefined
+          ? { focusRating: dto.focusRating }
+          : {}),
+      },
+      select: SESSION_SELECT,
+    });
+    this.heatmapCache.delete(userId);
+    return this.toResponse(session);
+  }
+
+  async remove(userId: string, id: string): Promise<{ ok: true }> {
+    // deleteMany com { id, userId, endedAt: not null }: nunca apaga uma
+    // sessao de outro utilizador, nem uma que ainda esta a decorrer (essa
+    // para-se, nao se apaga).
+    const result = await this.prisma.studySession.deleteMany({
+      where: { id, userId, endedAt: { not: null } },
+    });
+    if (result.count === 0) {
+      throw new NotFoundException(
+        `Study session not found, not yours, or still running.`,
+      );
+    }
+    this.heatmapCache.delete(userId);
+    return { ok: true };
   }
 
   /**
@@ -536,14 +657,39 @@ export class StudySessionsService {
     this.heatmapCache.delete(userId);
   }
 
+  // Duas sessoes do mesmo utilizador nao se podem sobrepor (corromperia o
+  // heatmap e os totais). `ignoreId` exclui a propria sessao ao edita-la.
+  private async assertNoOverlap(
+    userId: string,
+    start: Date,
+    end: Date,
+    ignoreId?: string,
+  ) {
+    const clash = await this.prisma.studySession.findFirst({
+      where: {
+        userId,
+        ...(ignoreId ? { id: { not: ignoreId } } : {}),
+        startedAt: { lt: end },
+        OR: [{ endedAt: { gt: start } }, { endedAt: null }],
+      },
+      select: { id: true },
+    });
+    if (clash) {
+      throw new ConflictException(
+        'This overlaps another study session. Adjust the times.',
+      );
+    }
+  }
+
   private async assertTaskOwnership(userId: string, taskId: string) {
     const task = await this.prisma.task.findFirst({
       where: { id: taskId, userId },
-      select: { id: true },
+      select: { id: true, areaId: true },
     });
     if (!task) {
       throw new NotFoundException(`Task not found or you don't have access.`);
     }
+    return task;
   }
 
   private async assertAreaExists(areaId: string) {

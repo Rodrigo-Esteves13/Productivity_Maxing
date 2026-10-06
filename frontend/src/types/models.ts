@@ -689,6 +689,10 @@ export interface StudySession {
   area: { id: string; name: string; colorHex: string } | null;
   // null while the session is active (endedAt doesn't exist yet)
   durationSeconds: number | null;
+  // 1 (dispersa) a 5 (totalmente focada); null se nao respondeste.
+  focusRating: number | null;
+  // Sessao escrita depois, nao cronometrada.
+  isManual: boolean;
 }
 
 export interface HeatmapCell {
