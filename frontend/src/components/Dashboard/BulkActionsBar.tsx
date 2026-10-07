@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CheckIcon, TrashIcon } from '../UI/Icons';
+import { useFeedback } from '../../context/useFeedback';
 
 interface BulkActionsBarProps {
   selectedCount: number;
@@ -19,6 +20,7 @@ export default function BulkActionsBar({
   onDelete,
   onClear,
 }: BulkActionsBarProps) {
+  const { confirm } = useFeedback();
   const [isMarkingDone, setIsMarkingDone] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -34,13 +36,13 @@ export default function BulkActionsBar({
   };
 
   const handleDelete = async () => {
-    if (
-      !window.confirm(
-        `Delete ${selectedCount} selected task${selectedCount === 1 ? '' : 's'}? This can't be undone.`,
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Delete tasks',
+      message: `Delete ${selectedCount} selected task${selectedCount === 1 ? '' : 's'}? This can't be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
     setIsDeleting(true);
     try {
       await onDelete();

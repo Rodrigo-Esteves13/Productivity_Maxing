@@ -10,11 +10,22 @@ import {
   reorderTasks,
 } from '../api/userService';
 import { syncTaskToCalendar, unsyncTaskFromCalendar } from '../api/calendarService';
-import type { Task, Area, TaskTypeOption, AcademicTaskTypeOption, PriorityOption } from '../types/models';
+import type {
+  Task,
+  Area,
+  TaskTypeOption,
+  AcademicTaskTypeOption,
+  PriorityOption,
+  TaskFormSubmission,
+  TaskWriteInput,
+} from '../types/models';
 import { useQuickReschedule } from './useQuickReschedule';
+import { isRequestCanceled } from '../lib/abortable';
 import { useAcademic } from '../context/useAcademic';
+import { useFeedback } from '../context/useFeedback';
 
 export function useTasksPage() {
+  const { notify, confirm } = useFeedback();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
 
@@ -76,14 +87,17 @@ export function useTasksPage() {
     }
   };
 
-  const fetchTasks = async () => {
+  // `signal` cancela o pedido quando o periodo muda a meio (a resposta do
+  // periodo antigo nunca pode pisar a do novo).
+  const fetchTasks = async (signal: AbortSignal) => {
     try {
       setIsTasksLoading(true);
-      const tasksData = await getUserTasks(periodParam);
+      const tasksData = await getUserTasks(periodParam, signal);
       setTasks(tasksData);
-    } catch {
+      setIsTasksLoading(false);
+    } catch (caught) {
+      if (isRequestCanceled(caught)) return;
       setError('Could not load the data.');
-    } finally {
       setIsTasksLoading(false);
     }
   };
@@ -99,7 +113,9 @@ export function useTasksPage() {
     // activePeriod, firing this effect once wastefully, then again a
     // moment later with the real value.
     if (isAcademicLoading) return;
-    fetchTasks();
+    const controller = new AbortController();
+    void fetchTasks(controller.signal);
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodParam, isAcademicLoading]);
 
@@ -127,11 +143,11 @@ export function useTasksPage() {
   const openCreateModal = () => setIsCreateModalOpen(true);
   const closeCreateModal = () => setIsCreateModalOpen(false);
 
-  const handleCreateTask = async (taskData: any) => {
+  const handleCreateTask = async (taskData: TaskFormSubmission | TaskWriteInput): Promise<Task> => {
     // syncToCalendar é só de UI - o backend (whitelist: true,
     // forbidNonWhitelisted: true) rejeitaria a criação se este campo fosse
     // enviado no payload de Task.
-    const { syncToCalendar, ...taskPayload } = taskData;
+    const { syncToCalendar, ...taskPayload } = taskData as TaskWriteInput & { syncToCalendar?: boolean };
     const created = await createTask(taskPayload);
     const finalTask = await applyCalendarSync(created, !!syncToCalendar);
     setTasks((prev) =>
@@ -179,7 +195,7 @@ export function useTasksPage() {
   const stopEditing = useCallback(() => setIsEditing(false), []);
 
   const handleUpdateTask = useCallback(
-    async (taskData: any) => {
+    async (taskData: TaskFormSubmission): Promise<Task | undefined> => {
       if (!selectedTask) return;
       const { syncToCalendar, ...taskPayload } = taskData;
       const updated = await updateTask(selectedTask.id, taskPayload);
@@ -195,9 +211,12 @@ export function useTasksPage() {
   const handleDeleteTask = useCallback(async () => {
     if (!selectedTask) return;
 
-    const confirmDelete = window.confirm(
-      'Are you sure you want to delete this task? This action is irreversible.'
-    );
+    const confirmDelete = await confirm({
+      title: 'Delete task',
+      message: 'Are you sure you want to delete this task? This action is irreversible.',
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
     if (!confirmDelete) return;
 
     // Só pergunta se a task estiver mesmo sincronizada - não faz sentido
@@ -206,7 +225,12 @@ export function useTasksPage() {
     // sincronizada normalmente quer os dois lados a condizer.
     const shouldRemoveFromCalendar =
       !!selectedTask.googleCalendarEventId &&
-      window.confirm('Also remove the linked event from Google Calendar?');
+      (await confirm({
+        title: 'Google Calendar',
+        message: 'Also remove the linked event from Google Calendar?',
+        confirmLabel: 'Remove event',
+        cancelLabel: 'Keep event',
+      }));
 
     try {
       if (shouldRemoveFromCalendar) {
@@ -221,17 +245,19 @@ export function useTasksPage() {
       setTasks((prev) => prev.filter((t) => t.id !== selectedTask.id));
       closeDetailModal();
     } catch {
-      alert('Could not delete the task. Please try again.');
+      notify('Could not delete the task. Please try again.', 'error');
     }
-  }, [selectedTask, closeDetailModal]);
+  }, [selectedTask, closeDetailModal, confirm, notify]);
 
   // Função de Duplicar corrigida!
   const handleDuplicateTask = useCallback(async () => {
     if (!selectedTask) return;
 
-    const confirmDuplicate = window.confirm(
-      'Do you want to duplicate this task? A clean copy will be created.'
-    );
+    const confirmDuplicate = await confirm({
+      title: 'Duplicate task',
+      message: 'Do you want to duplicate this task? A clean copy will be created (progress, grade and calendar event are not copied).',
+      confirmLabel: 'Duplicate',
+    });
     if (!confirmDuplicate) return;
 
     try {
@@ -247,6 +273,14 @@ export function useTasksPage() {
         difficulty: selectedTask.difficulty,
         referenceLink: selectedTask.referenceLink,
         targetGrade: selectedTask.targetGrade,
+        // Copia completa: tudo o que descreve a task em si. O que e estado
+        // (progresso, nota real, evento do Calendar, tempo ja estudado)
+        // fica de fora de proposito, para a copia comecar limpa.
+        periodId: selectedTask.periodId ?? undefined,
+        priority: selectedTask.priority ?? undefined,
+        notes: selectedTask.notes ?? undefined,
+        estimatedMinutes: selectedTask.estimatedMinutes ?? undefined,
+        calendarDurationMinutes: selectedTask.calendarDurationMinutes ?? undefined,
       };
 
       await handleCreateTask(newTaskData);
@@ -255,9 +289,12 @@ export function useTasksPage() {
       // Falha ao duplicar é sempre um erro de rede/API neste fluxo (a
       // criação em si já trata os seus próprios erros de validação) - não
       // precisamos do objeto de erro para dar uma mensagem útil aqui.
-      alert('Could not duplicate the task. Please check your connection.');
+      notify('Could not duplicate the task. Please check your connection.', 'error');
     }
-  }, [selectedTask, closeDetailModal]);
+  // handleCreateTask fica de fora de proposito: nao esta memoizado e
+  // incluí-lo recriaria este callback em cada render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTask, closeDetailModal, confirm, notify]);  // handleCreateTask fica de fora de proposito (ver comentario abaixo)
   // Não coloquei 'handleCreateTask' nas dependências para evitar loop de re-renders
 
   // Lightweight counterpart to handleUpdateTask - sends only the one
@@ -273,9 +310,9 @@ export function useTasksPage() {
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setSelectedTask(updated);
     } catch {
-      alert('Could not mark the task as completed. Please try again.');
+      notify('Could not mark the task as completed. Please try again.', 'error');
     }
-  }, [selectedTask]);
+  }, [selectedTask, notify]);
 
   // Same partial-PATCH pattern as markSelectedTaskComplete, but for any
   // task in the list (not just the one open in the detail modal) - this
@@ -289,10 +326,10 @@ export function useTasksPage() {
         setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
         setSelectedTask((prev) => (prev?.id === updated.id ? updated : prev));
       } catch {
-        alert('Could not move the task to that area. Please try again.');
+        notify('Could not move the task to that area. Please try again.', 'error');
       }
     },
-    [],
+    [notify],
   );
 
   // Same partial-PATCH pattern as moveTaskToArea/markSelectedTaskComplete
@@ -304,9 +341,9 @@ export function useTasksPage() {
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setSelectedTask((prev) => (prev?.id === updated.id ? updated : prev));
     } catch {
-      alert('Could not update the pin. Please try again.');
+      notify('Could not update the pin. Please try again.', 'error');
     }
-  }, []);
+  }, [notify]);
 
   // Drag-and-drop no TaskGrid. orderedIds é a sequência VISÍVEL completa
   // após o drop (já inclui a task movida na posição nova) - atualiza o
@@ -333,10 +370,10 @@ export function useTasksPage() {
         await reorderTasks(orderedIds);
       } catch {
         setTasks(previousTasks);
-        alert('Could not save the new order. Please try again.');
+        notify('Could not save the new order. Please try again.', 'error');
       }
     },
-    [tasks],
+    [tasks, notify],
   );
 
   return {

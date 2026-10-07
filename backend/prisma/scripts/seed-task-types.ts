@@ -24,14 +24,15 @@ async function main() {
   }
 
   const academicTypes = [
-    { key: 'FREQUENCIA', label: 'Test', order: 1 },
+    { key: 'FREQUENCIA', label: 'Test', order: 1, isEvent: true },
     { key: 'TRABALHO_PRATICO', label: 'Practical Assignment', order: 2 },
     { key: 'TAREFA_SECUNDARIA', label: 'Secondary Task', order: 3 },
   ];
   for (const t of academicTypes) {
     await prisma.academicTaskType.upsert({
       where: { key: t.key },
-      update: {},
+      // So reaplica a flag de evento; label/order editados no admin ficam.
+      update: t.isEvent ? { isEvent: true } : {},
       create: { ...t, taskTypeId: academic.id },
     });
   }

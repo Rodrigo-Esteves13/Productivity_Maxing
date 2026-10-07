@@ -194,6 +194,7 @@ export default function TaskTypes() {
               label: editingAcademic.label,
               taskTypeId: editingAcademic.taskTypeId,
               order: editingAcademic.order,
+              isEvent: editingAcademic.isEvent,
             }}
             taskTypes={taskTypes}
             onSubmit={handleEditAcademic}

@@ -11,6 +11,8 @@ import { PeriodsService } from '../academic-programs/periods.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ImportTasksDto } from './dto/import-tasks.dto';
+import { ConfirmOverdueDto } from './dto/confirm-overdue.dto';
+import { computeCheckedAt, computeOverdueWindow } from './overdue-window.util';
 import { DIFFICULTY_WEIGHT } from '../common/difficulty-weight.util';
 import { runWithConcurrencyLimit } from '../common/concurrency.util';
 import { TaskMetaCacheService } from '../common/task-meta-cache.service';
@@ -317,14 +319,16 @@ export class TasksService {
    * check-in" no frontend, uma vez por dia por task, até responderes.
    */
   async findPendingOverdueCheckins(userId: string) {
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+    const { startOfToday, overdueCutoff } = computeOverdueWindow(new Date());
 
     const tasks = await this.prisma.task.findMany({
       where: {
         userId,
-        date: { lt: new Date() },
+        date: { lt: overdueCutoff },
         progressStatus: { not: 'COMPLETED' },
+        // Testes/exames (isEvent) nao sao entregas: ninguem "marca como feito"
+        // no proprio dia, por isso nunca geram a pergunta de atraso.
+        NOT: { academicType: { isEvent: true } },
         OR: [
           { lastOverdueCheckAt: null },
           { lastOverdueCheckAt: { lt: startOfToday } },
@@ -346,12 +350,17 @@ export class TasksService {
   /**
    * Regista a resposta ao prompt de overdue check-in.
    * - isCompleted true: a task passa mesmo a COMPLETED (mesma lógica de
-   *   completedAt do update() normal, para o streak continuar fiável).
-   * - isCompleted false: só marcamos que já perguntámos hoje - o
-   *   progressStatus fica como está, e a pergunta volta a aparecer amanhã
-   *   se continuar por concluir.
+   *   completedAt do update() normal, para o streak continuar fiável), e
+   *   guarda a nota se vier (so quando concluida).
+   * - isCompleted false: só marcamos que já perguntámos - o progressStatus
+   *   fica como está. Por omissão a pergunta volta amanhã; com snoozeDays
+   *   só volta passados esses dias.
+   *
+   * Adiar N dias grava lastOverdueCheckAt no futuro (agora + N-1 dias): a
+   * query de findPendingOverdueCheckins só inclui tasks cuja marca seja
+   * anterior ao início de hoje, por isso uma marca futura esconde-a até lá.
    */
-  async confirmOverdue(userId: string, id: string, isCompleted: boolean) {
+  async confirmOverdue(userId: string, id: string, dto: ConfirmOverdueDto) {
     const existing = await this.prisma.task.findFirst({
       where: { id, userId },
     });
@@ -359,12 +368,23 @@ export class TasksService {
       throw new NotFoundException(`Task not found or you don't have access.`);
 
     const now = new Date();
+    const checkedAt = computeCheckedAt(
+      now,
+      dto.isCompleted ? 0 : (dto.snoozeDays ?? 0),
+    );
+
     const task = await this.prisma.task.update({
       where: { id, userId },
       data: {
-        lastOverdueCheckAt: now,
-        ...(isCompleted
-          ? { progressStatus: 'COMPLETED', completedAt: now }
+        lastOverdueCheckAt: checkedAt,
+        ...(dto.isCompleted
+          ? {
+              progressStatus: 'COMPLETED',
+              completedAt: now,
+              ...(dto.realGrade !== undefined
+                ? { realGrade: dto.realGrade }
+                : {}),
+            }
           : {}),
       },
       include: TASK_INCLUDE,
@@ -665,6 +685,7 @@ export class TasksService {
         key: a.key,
         label: a.label,
         taskTypeKey: a.taskType.key,
+        isEvent: a.isEvent,
       })),
       difficulties: Object.values(Difficulty),
       priorities,
@@ -790,6 +811,9 @@ export class TasksService {
       ...rest,
       type: taskType.key,
       academicType: academicType?.key ?? null,
+      // Tipos de data fixa (testes, exames): o momento em que se marca como
+      // feito nunca conta como atraso (ver wasCompletedOnTime no frontend).
+      academicTypeIsEvent: academicType?.isEvent ?? false,
       // priority.key mantém a mesma forma de string que o frontend já
       // usava com o enum antigo (values.priority etc.) - zero mudança
       // nos formulários. colorHex vai à parte para a PriorityBadge não

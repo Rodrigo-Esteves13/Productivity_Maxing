@@ -32,6 +32,7 @@ import {
   EyeOff,
   Copy,
   ArrowUp,
+  ArrowDown,
   Mail,
   Image,
   Flag,
@@ -233,6 +234,10 @@ export function CopyIcon(props: SVGProps<SVGSVGElement>) {
 
 export function ArrowUpIcon(props: SVGProps<SVGSVGElement>) {
   return <ArrowUp size={16} {...props} />;
+}
+
+export function ArrowDownIcon(props: SVGProps<SVGSVGElement>) {
+  return <ArrowDown size={16} {...props} />;
 }
 
 export function MailIcon(props: SVGProps<SVGSVGElement>) {

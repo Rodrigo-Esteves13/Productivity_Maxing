@@ -60,6 +60,7 @@ export default function PageLayout({ children }: PageLayoutProps) {
 
       {currentTask && (
         <OverdueCheckinModal
+          key={currentTask.id}
           task={currentTask}
           queueLength={pendingTasks.length}
           isAnswering={isAnswering}

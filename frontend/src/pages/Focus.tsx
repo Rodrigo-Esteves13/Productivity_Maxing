@@ -1,5 +1,6 @@
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
+import MasonryGrid from '../components/UI/MasonryGrid';
 import StudySessionWidget from '../components/Study/StudySessionWidget';
 import BestTimesHeatmap from '../components/Study/BestTimesHeatmap';
 import TodayPlan from '../components/Study/TodayPlan';
@@ -26,17 +27,18 @@ export default function Focus() {
         <StudyNowHint />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="flex flex-col gap-6">
-          <StudySessionWidget />
-          <TodayBlocks plan={plan} isLoading={isLoading} error={error} />
-        </div>
-        <div className="flex flex-col gap-6">
-          <DayProgressCard dailyLimitMinutes={plan?.dailyLimitMinutes ?? null} />
-          <TodayPlan />
-          <SessionHistoryCard />
-        </div>
-      </div>
+      {/* Masonry em vez de duas colunas fixas: o historico de sessoes e muito
+          mais alto que o resto e deixava um buraco enorme na coluna da
+          esquerda. Cada cartao vai para a coluna mais curta e o ultimo de
+          cada coluna estica, por isso acabam ao mesmo nivel. A ordem
+          importa: a sessao ativa fica sempre em primeiro lugar. */}
+      <MasonryGrid>
+        <StudySessionWidget />
+        <DayProgressCard dailyLimitMinutes={plan?.dailyLimitMinutes ?? null} />
+        <TodayBlocks plan={plan} isLoading={isLoading} error={error} />
+        <TodayPlan />
+        <SessionHistoryCard />
+      </MasonryGrid>
 
       <div className="mt-6">
         <BestTimesHeatmap />

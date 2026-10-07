@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsInt,
+  IsBoolean,
   IsUUID,
   MaxLength,
 } from 'class-validator';
@@ -36,4 +37,13 @@ export class CreateAcademicTaskTypeDto {
   @IsOptional()
   @IsInt()
   order?: number;
+
+  @ApiPropertyOptional({
+    example: true,
+    description:
+      'Fixed-date event (test, exam, presentation). Finishing it after the day never counts as late.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isEvent?: boolean;
 }

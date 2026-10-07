@@ -11,8 +11,10 @@ import {
 import { downloadJson } from '../utils/downloadJson';
 import type { User } from '../types/models';
 import type { UserFormValues } from '../components/Users/UserEditForm';
+import { useFeedback } from '../context/useFeedback';
 
 export function useUsersPage(currentUserId: string | undefined) {
+  const { notify, confirm } = useFeedback();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -60,7 +62,7 @@ export function useUsersPage(currentUserId: string | undefined) {
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       setEditingUser(null);
     } catch {
-      alert('Error saving changes. Check the backend.');
+      notify('Error saving changes. Check the backend.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -69,16 +71,19 @@ export function useUsersPage(currentUserId: string | undefined) {
   const handleDeleteUser = async (target: User) => {
     if (target.id === currentUserId) return; // botão já vem desativado, isto é só defesa extra
 
-    const confirmed = window.confirm(
-      `Are you sure you want to permanently delete "${target.name || target.email}"? This cannot be undone.`
-    );
+    const confirmed = await confirm({
+      title: 'Delete user',
+      message: `Are you sure you want to permanently delete "${target.name || target.email}"? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
     if (!confirmed) return;
 
     try {
       await deleteUser(target.id);
       setUsers((prev) => prev.filter((u) => u.id !== target.id));
     } catch {
-      alert('Error deleting user. Check the backend.');
+      notify('Error deleting user. Check the backend.', 'error');
     }
   };
 
@@ -88,7 +93,7 @@ export function useUsersPage(currentUserId: string | undefined) {
       const data = await exportUserData(target.id);
       downloadJson(data, `user-${target.email}-export.json`);
     } catch {
-      alert('Error exporting user data. Check the backend.');
+      notify('Error exporting user data. Check the backend.', 'error');
     } finally {
       setExportingId(null);
     }
@@ -120,10 +125,11 @@ export function useUsersPage(currentUserId: string | undefined) {
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       closeStatusModal();
     } catch {
-      alert(
+      notify(
         statusActionMode === 'ban'
           ? 'Error banning user. Check the backend.'
           : 'Error suspending user. Check the backend.',
+        'error',
       );
     } finally {
       setIsSubmittingStatus(false);
@@ -136,7 +142,7 @@ export function useUsersPage(currentUserId: string | undefined) {
       const updated = await reactivateUser(target.id);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
     } catch {
-      alert('Error reactivating user. Check the backend.');
+      notify('Error reactivating user. Check the backend.', 'error');
     } finally {
       setReactivatingId(null);
     }

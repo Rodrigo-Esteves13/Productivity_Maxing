@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getOverdueCheckins, confirmOverdueTask } from '../api/userService';
+import { getOverdueCheckins, confirmOverdueTask, type OverdueAnswer } from '../api/userService';
 import type { Task } from '../types/models';
 import { todayKey } from '../lib/dateKey';
 
@@ -13,7 +13,7 @@ interface UseOverdueCheckinsReturn {
   pendingTasks: Task[];
   currentTask: Task | null;
   isAnswering: boolean;
-  answer: (isCompleted: boolean) => Promise<void>;
+  answer: (response: OverdueAnswer) => Promise<void>;
 }
 
 export function useOverdueCheckins(isEnabled: boolean): UseOverdueCheckinsReturn {
@@ -46,13 +46,13 @@ export function useOverdueCheckins(isEnabled: boolean): UseOverdueCheckinsReturn
   }, [isEnabled]);
 
   const answer = useCallback(
-    async (isCompleted: boolean) => {
+    async (response: OverdueAnswer) => {
       const current = pendingTasks[0];
       if (!current || isAnswering) return;
 
       setIsAnswering(true);
       try {
-        await confirmOverdueTask(current.id, isCompleted);
+        await confirmOverdueTask(current.id, response);
         setPendingTasks((prev) => prev.slice(1));
       } catch (error: unknown) {
         console.error('Failed to confirm overdue task:', error);

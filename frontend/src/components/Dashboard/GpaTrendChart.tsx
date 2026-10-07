@@ -10,7 +10,6 @@ import {
   ReferenceLine,
   Dot,
 } from 'recharts';
-import type { DotProps } from 'recharts';
 import type { PeriodComparisonEntry } from '../../types/models';
 
 interface GpaTrendChartProps {
@@ -67,7 +66,15 @@ function CustomTooltip({
 
 // Custom dot: hollow ring for archived periods, glowing solid violet for
 // the current (last, non-archived) one so it reads as "you are here".
-function TrendDot(props: DotProps & { payload?: PeriodComparisonEntry; isLast?: boolean }) {
+// O que o recharts entrega a cada ponto do grafico (so os campos que usamos).
+interface TrendDotRenderProps {
+  cx?: number;
+  cy?: number;
+  index?: number;
+  payload?: PeriodComparisonEntry;
+}
+
+function TrendDot(props: TrendDotRenderProps & { isLast?: boolean }) {
   const { cx, cy, payload, isLast } = props;
   if (cx === undefined || cy === undefined) return null;
   const archived = payload?.isArchived;
@@ -202,7 +209,7 @@ export default function GpaTrendChart({ entries, scale, cumulativeAverage }: Gpa
             strokeWidth={3}
             fill="url(#gpaTrendFill)"
             filter="url(#gpaTrendGlow)"
-            dot={(props: any) => (
+            dot={(props: TrendDotRenderProps) => (
               <TrendDot key={props.payload?.periodId} {...props} isLast={props.index === lastIndex} />
             )}
             activeDot={{ r: 6, fill: '#c4b5fd', stroke: '#171717', strokeWidth: 2 }}

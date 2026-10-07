@@ -135,7 +135,7 @@ export class TasksController {
     @Param('id') id: string,
     @Body() dto: ConfirmOverdueDto,
   ) {
-    return this.tasksService.confirmOverdue(user.id, id, dto.isCompleted);
+    return this.tasksService.confirmOverdue(user.id, id, dto);
   }
 
   @Delete(':id')

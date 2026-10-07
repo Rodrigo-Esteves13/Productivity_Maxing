@@ -18,6 +18,7 @@ import type { Scaler } from './prediction-math.util';
 import { trainMlp } from './prediction-mlp.util';
 import {
   hasStudyTimeWhere,
+  resolveFocusedStudyMinutes,
   resolveStudyMinutes,
   sumSessionMinutes,
 } from '../common/session-minutes.util';
@@ -86,7 +87,7 @@ const TRAINING_SELECT = {
   recalledStudyMinutes: true,
   studySessions: {
     where: { endedAt: { not: null } },
-    select: { startedAt: true, endedAt: true },
+    select: { startedAt: true, endedAt: true, focusRating: true },
   },
 } satisfies Prisma.TaskSelect;
 
@@ -219,7 +220,7 @@ export class PredictionService {
         recalledStudyMinutes: true,
         studySessions: {
           where: { endedAt: { not: null } },
-          select: { startedAt: true, endedAt: true },
+          select: { startedAt: true, endedAt: true, focusRating: true },
         },
       },
     });
@@ -572,7 +573,10 @@ export class PredictionService {
 
     const rows: TrainingRow[] = [];
     for (const task of tasks) {
-      const actualMinutes = resolveStudyMinutes(
+      // Alvo de treino = estudo EFETIVO (minutos dispersos pesam menos, ver
+      // FOCUS_WEIGHT_BY_RATING). A calibracao e a precisao das estimativas
+      // continuam em tempo de relogio, mais abaixo.
+      const actualMinutes = resolveFocusedStudyMinutes(
         task.studySessions,
         task.recalledStudyMinutes,
       );
@@ -612,7 +616,7 @@ export class PredictionService {
         recalledStudyMinutes: true,
         studySessions: {
           where: { endedAt: { not: null } },
-          select: { startedAt: true, endedAt: true },
+          select: { startedAt: true, endedAt: true, focusRating: true },
         },
       },
     });
@@ -683,7 +687,7 @@ export class PredictionService {
     // refletir isso de imediato.
     const sessions = await this.prisma.studySession.findMany({
       where: { userId, taskId, endedAt: { not: null } },
-      select: { startedAt: true, endedAt: true },
+      select: { startedAt: true, endedAt: true, focusRating: true },
     });
     if (sessions.length === 0) return null;
     return sumSessionMinutes(sessions);

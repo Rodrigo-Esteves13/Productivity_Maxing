@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   hasStudyTimeWhere,
-  resolveStudyMinutes,
+  resolveFocusedStudyMinutes,
 } from '../common/session-minutes.util';
 import { toDateKey } from '../common/date-key.util';
 import { parseGradeScale } from '../academic-programs/grade-average.util';
@@ -65,7 +65,7 @@ export class GradeProjectionService {
           period: PERIOD_SCALE_SELECT,
           studySessions: {
             where: { endedAt: { not: null } },
-            select: { startedAt: true, endedAt: true },
+            select: { startedAt: true, endedAt: true, focusRating: true },
           },
         },
       }),
@@ -112,7 +112,7 @@ export class GradeProjectionService {
         task.period?.program.gradeScale ?? DEFAULT_SCALE_TEXT,
       );
       const sample: GradeSample = {
-        minutes: resolveStudyMinutes(
+        minutes: resolveFocusedStudyMinutes(
           task.studySessions,
           task.recalledStudyMinutes,
         ),

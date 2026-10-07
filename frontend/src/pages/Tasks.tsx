@@ -18,6 +18,7 @@ import { useTaskShortcuts } from '../hooks/useTaskShortcuts';
 import { useShowArchivedTasks } from '../hooks/useShowArchivedTasks';
 import { useTaskSortMode } from '../hooks/useTaskSortMode';
 import { isTaskArchived } from '../utils/taskArchive';
+import { sortTasks } from '../utils/taskSorting';
 
 export default function Tasks() {
   useDocumentTitle('Tasks');
@@ -53,7 +54,7 @@ export default function Tasks() {
   } = useTasksPage();
 
   const { showArchived, toggleShowArchived } = useShowArchivedTasks();
-  const { sortMode, setSortMode } = useTaskSortMode();
+  const { sortMode, setSortMode, direction, toggleDirection } = useTaskSortMode();
 
   const archivedCount = useMemo(
     () => tasks.filter((task) => isTaskArchived(task)).length,
@@ -66,27 +67,16 @@ export default function Tasks() {
   );
 
   // Pinned flutua sempre para o topo, em qualquer modo. Dentro de cada
-  // grupo (pinned / não-pinned): 'manual' é um sort estável que preserva a
-  // ordem que já veio do backend (sortOrder, ver reorderTasksInState);
-  // 'date' ordena por data mais próxima primeiro; 'priority' por
-  // priorityOrder ascendente (menor = mais prioritário, mesma convenção de
-  // /admin/priorities), tasks sem prioridade sempre no fim do grupo.
+  // grupo (pinned / não-pinned): 'manual' preserva a ordem que já veio do
+  // backend (sortOrder, ver reorderTasksInState); 'date' e 'priority'
+  // ordenam por esse campo na direção escolhida (asc: data mais próxima /
+  // prioridade mais alta primeiro). Sem prioridade fica sempre no fim.
   const sortedTasks = useMemo(() => {
-    return [...visibleTasks].sort((a, b) => {
-      const pinnedDiff = Number(b.isPinned) - Number(a.isPinned);
-      if (pinnedDiff !== 0) return pinnedDiff;
-
-      if (sortMode === 'date') {
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
-      }
-      if (sortMode === 'priority') {
-        const aOrder = a.priorityOrder ?? Number.POSITIVE_INFINITY;
-        const bOrder = b.priorityOrder ?? Number.POSITIVE_INFINITY;
-        return aOrder - bOrder;
-      }
-      return 0;
-    });
-  }, [visibleTasks, sortMode]);
+    const pinned = visibleTasks.filter((task) => task.isPinned);
+    const rest = visibleTasks.filter((task) => !task.isPinned);
+    if (sortMode === 'manual') return [...pinned, ...rest];
+    return [...sortTasks(pinned, sortMode, direction), ...sortTasks(rest, sortMode, direction)];
+  }, [visibleTasks, sortMode, direction]);
 
   // 'n' anywhere on the page (unless a detail view is already open, to
   // avoid stacking a second modal on top of it); 'c'/'e'/Delete only while
@@ -115,7 +105,12 @@ export default function Tasks() {
         description="Manage, filter, and track the progress of all your tasks."
         action={
           <div className="flex items-center gap-4">
-            <TaskSortControl sortMode={sortMode} onChange={setSortMode} />
+            <TaskSortControl
+              sortMode={sortMode}
+              onChange={setSortMode}
+              direction={direction}
+              onToggleDirection={toggleDirection}
+            />
             {archivedCount > 0 && (
               <label className="flex items-center gap-1.5 text-sm text-neutral-400 select-none cursor-pointer">
                 <input
@@ -173,6 +168,7 @@ export default function Tasks() {
           academicTaskTypes={academicTaskTypes}
           difficulties={difficulties}
           priorities={priorities}
+          progressStatuses={progressStatuses}
         />
       </Modal>
 

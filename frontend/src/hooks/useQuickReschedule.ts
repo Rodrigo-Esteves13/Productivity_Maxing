@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { updateTask } from '../api/userService';
 import { syncTaskToCalendar } from '../api/calendarService';
 import type { Task } from '../types/models';
+import { useFeedback } from '../context/useFeedback';
 
 interface UseQuickRescheduleReturn {
   reschedulingId: string | null;
@@ -11,6 +12,7 @@ interface UseQuickRescheduleReturn {
 export function useQuickReschedule(
   onSuccess: (updatedTask: Task) => void
 ): UseQuickRescheduleReturn {
+  const { notify } = useFeedback();
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
 
   const rescheduleToTomorrow = useCallback(
@@ -54,12 +56,12 @@ export function useQuickReschedule(
       } catch (error: unknown) {
         console.error('Error rescheduling task:', error);
         // Num cenário ideal, ligarias isto ao teu sistema de Toast notifications
-        alert('Could not reschedule the task.');
+        notify('Could not reschedule the task.', 'error');
       } finally {
         setReschedulingId(null);
       }
     },
-    [reschedulingId, onSuccess]
+    [reschedulingId, onSuccess, notify]
   );
 
   return { rescheduleToTomorrow, reschedulingId };

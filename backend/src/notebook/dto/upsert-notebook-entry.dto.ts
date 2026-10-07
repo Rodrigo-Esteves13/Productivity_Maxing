@@ -20,6 +20,7 @@ import {
 import { Type } from 'class-transformer';
 import { NotebookEntryType } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsStringMatrix } from './is-string-matrix.validator';
 
 // Um ponto de um traço. `pressure` é opcional (nem todo o rato/touchpad
 // reporta pressão - só canetas/ecrãs sensíveis a isso) e nunca é usado
@@ -63,28 +64,19 @@ export class StrokeDto {
   width: number;
 }
 
-// Uma linha de uma tabela estruturada - lista de células de texto livre.
-// Sem limite de largura de coluna imposto aqui (MaxLength por célula
-// chega para o caso de DoS), o número de colunas é o que o array `cells`
-// tiver.
-export class NotebookTableRowDto {
-  @ApiProperty({
-    type: [String],
-    example: ['Router', 'GigabitEthernet0/0', '192.168.1.1'],
-  })
-  @IsArray()
-  // Uma tabela realista de apontamentos não passa disto - acima é mais
-  // provável ser um erro de cliente (ou abuso) do que uma tabela real.
-  @ArrayMaxSize(12)
-  @IsString({ each: true })
-  @MaxLength(500, { each: true })
-  cells: string[];
-}
+// Limites de uma tabela do caderno. Tem de bater certo com MAX_TABLE_ROWS e
+// MAX_TABLE_COLS em notebookEntryConfig.ts (frontend).
+const TABLE_MAX_ROWS = 30;
+const TABLE_MAX_COLS = 12;
+const TABLE_MAX_CELL_LENGTH = 500;
 
-// Uma tabela estruturada dentro de uma entrada. `id` é gerado no
-// frontend (crypto.randomUUID()) só para servir de key/referência ao
-// editar - o backend não faz nada com ele além de o guardar tal como
-// veio, não é FK de nada.
+// Uma tabela estruturada dentro de uma entrada. `rows` e uma matriz de texto
+// (linhas x colunas), exatamente como o frontend a envia e a le (ver
+// NotebookTable em types/models.ts). Antes este DTO esperava
+// `rows: [{ cells: [...] }]`, um formato que o frontend nunca enviou, e por
+// isso qualquer entrada com uma tabela falhava a validacao ao gravar.
+// `id` e gerado no frontend (crypto.randomUUID()) so para servir de
+// key/referencia ao editar - o backend guarda-o tal como veio.
 export class NotebookTableDto {
   @ApiProperty({ example: 'a1b2c3d4-...' })
   @IsString()
@@ -92,15 +84,21 @@ export class NotebookTableDto {
   @MaxLength(64)
   id: string;
 
-  @ApiProperty({ type: [NotebookTableRowDto] })
-  @IsArray()
-  // Uma entrada de caderno é um apontamento, não uma folha de cálculo -
-  // 30 linhas por tabela dá margem larga sem deixar o JSONB crescer sem
-  // controlo.
-  @ArrayMaxSize(30)
-  @ValidateNested({ each: true })
-  @Type(() => NotebookTableRowDto)
-  rows: NotebookTableRowDto[];
+  @ApiProperty({
+    // Matriz de texto (linhas x colunas); o Swagger nao aceita [[String]].
+    type: 'array',
+    items: { type: 'array', items: { type: 'string' } },
+    example: [
+      ['Router', 'GigabitEthernet0/0', '192.168.1.1'],
+      ['Switch', 'FastEthernet0/1', ''],
+    ],
+  })
+  @IsStringMatrix({
+    maxRows: TABLE_MAX_ROWS,
+    maxCols: TABLE_MAX_COLS,
+    maxCellLength: TABLE_MAX_CELL_LENGTH,
+  })
+  rows: string[][];
 }
 
 // Sete tipos por agora - os pedidos mais comuns em apontamentos de redes

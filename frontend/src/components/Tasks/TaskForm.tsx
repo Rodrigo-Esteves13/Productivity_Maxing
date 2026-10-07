@@ -3,8 +3,11 @@ import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
 import { buildTaskPayload } from '../../utils/taskPayload';
-import type { TaskTypeOption, AcademicTaskTypeOption, PriorityOption } from '../../types/models';
+import { getApiMessage } from '../../lib/httpError';
+import type { TaskTypeOption, AcademicTaskTypeOption, PriorityOption, TaskFormSubmission } from '../../types/models';
 import { todayKey } from '../../lib/dateKey';
+
+const DEFAULT_PROGRESS_STATUS = 'ON_TRACK';
 
 interface AreaOption {
   id: string;
@@ -13,13 +16,14 @@ interface AreaOption {
 }
 
 interface TaskFormProps {
-  onSubmit: (data: any) => Promise<any>;
+  onSubmit: (data: TaskFormSubmission) => Promise<unknown>;
   onCancel: () => void;
   areas: AreaOption[];
   taskTypes: TaskTypeOption[];
   academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
   priorities: PriorityOption[];
+  progressStatuses: string[];
 }
 
 export default function TaskForm({
@@ -30,6 +34,7 @@ export default function TaskForm({
   academicTaskTypes,
   difficulties,
   priorities,
+  progressStatuses,
 }: TaskFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -59,6 +64,12 @@ export default function TaskForm({
     targetGrade: '',
     weightPercentage: '',
     estimatedMinutes: '',
+    recalledStudyMinutes: '',
+    isPinned: false,
+    // Task nova começa "On track" quando essa opção existe no catálogo.
+    progressStatus: progressStatuses.includes(DEFAULT_PROGRESS_STATUS)
+      ? DEFAULT_PROGRESS_STATUS
+      : (progressStatuses[0] ?? ''),
     // Task nova nunca tem evento ainda - fica ao critério do utilizador
     // marcar a checkbox, não vem pré-marcada.
     syncToCalendar: false,
@@ -91,8 +102,8 @@ export default function TaskForm({
       const payload = buildTaskPayload(formData);
 
       await onSubmit(payload);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error creating task.');
+    } catch (err: unknown) {
+      setError(getApiMessage(err, 'Error creating task.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -111,6 +122,8 @@ export default function TaskForm({
         academicTaskTypes={academicTaskTypes}
         difficulties={difficulties}
         priorities={priorities}
+        progressStatuses={progressStatuses}
+        showProgressStatus
       />
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800">

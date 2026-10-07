@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSchedule } from '../api/scheduleService';
+import { isRequestCanceled } from '../lib/abortable';
 import type { ClassOccurrence } from '../types/models';
 import { startOfWeek, todayUtcAnchored } from '../lib/weekDates';
 import { toDateKey } from '../lib/dateKey';
@@ -30,21 +31,28 @@ export function useSchedule(initialWeekStart: Date = todayUtcAnchored()) {
     return end;
   }, [weekStart]);
 
-  const fetchWeek = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError('');
-      const data = await getSchedule(toDateKey(weekStart), toDateKey(weekEnd));
-      setOccurrences(data);
-    } catch {
-      setError('Could not load the schedule.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [weekStart, weekEnd]);
+  const fetchWeek = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        setIsLoading(true);
+        setError('');
+        const data = await getSchedule(toDateKey(weekStart), toDateKey(weekEnd), signal);
+        setOccurrences(data);
+        setIsLoading(false);
+      } catch (caught) {
+        // Mudar de semana depressa cancela a anterior: nao e um erro.
+        if (isRequestCanceled(caught)) return;
+        setError('Could not load the schedule.');
+        setIsLoading(false);
+      }
+    },
+    [weekStart, weekEnd],
+  );
 
   useEffect(() => {
-    void fetchWeek();
+    const controller = new AbortController();
+    void fetchWeek(controller.signal);
+    return () => controller.abort();
   }, [fetchWeek]);
 
   const goToPreviousWeek = () => {
@@ -67,7 +75,7 @@ export function useSchedule(initialWeekStart: Date = todayUtcAnchored()) {
     occurrences,
     isLoading,
     error,
-    refetch: fetchWeek,
+    refetch: () => fetchWeek(),
     goToPreviousWeek,
     goToNextWeek,
     goToCurrentWeek,

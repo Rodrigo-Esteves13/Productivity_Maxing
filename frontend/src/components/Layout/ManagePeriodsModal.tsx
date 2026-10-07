@@ -15,7 +15,8 @@ import {
 import { useAcademic } from '../../context/useAcademic';
 import { PinIcon } from '../UI/Icons';
 import type { AcademicPeriod, AcademicProgram } from '../../types/models';
-import { getHttpStatus } from '../../lib/httpError';
+import { getApiMessage, getHttpStatus } from '../../lib/httpError';
+import { useFeedback } from '../../context/useFeedback';
 
 interface ManagePeriodsModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ function toDateInputValue(iso: string | null): string {
 }
 
 export default function ManagePeriodsModal({ isOpen, onClose, program }: ManagePeriodsModalProps) {
+  const { notify, confirm } = useFeedback();
   const { refresh: refreshContext } = useAcademic();
   const [periods, setPeriods] = useState<AcademicPeriod[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -87,7 +89,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
       await loadPeriods();
       await refreshContext();
     } catch {
-      alert('Could not save the changes to this period.');
+      notify('Could not save the changes to this period.', 'error');
     } finally {
       setBusyId(null);
     }
@@ -103,24 +105,27 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
       }
       await loadPeriods();
       await refreshContext();
-    } catch (err: any) {
+    } catch (err: unknown) {
       const status = getHttpStatus(err);
       if (status === 409 && !forceConfirm) {
         // Most recent period in the program, no successor yet - ask for
         // explicit extra confirmation (see PeriodsService.archive).
-        const message =
-          err.response?.data?.message ??
-          'This is the most recent period in this program, with no successor. Archive it anyway?';
-        if (window.confirm(message)) {
+        const message = getApiMessage(
+          err,
+          'This is the most recent period in this program, with no successor. Archive it anyway?',
+        );
+        const confirmed = await confirm({
+          title: 'Archive period',
+          message,
+          confirmLabel: 'Archive anyway',
+        });
+        if (confirmed) {
           setBusyId(null);
           await toggleArchived(period, true);
           return;
         }
       } else {
-        alert(
-          err?.response?.data?.message ??
-            "Could not change this period's archived status.",
-        );
+        notify(getApiMessage(err, "Could not change this period's archived status."), 'error');
       }
     } finally {
       setBusyId(null);
@@ -134,7 +139,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
       await loadPeriods();
       await refreshContext();
     } catch {
-      alert('Could not pin/unpin this period.');
+      notify('Could not pin/unpin this period.', 'error');
     } finally {
       setBusyId(null);
     }

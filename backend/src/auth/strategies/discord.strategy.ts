@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, Profile } from 'passport-discord';
 import { Request } from 'express';
-import { Provider } from '@prisma/client';
+import { Provider, type User } from '@prisma/client';
 import { AuthService } from '../auth.service';
 import { OAUTH_LOGIN_STATE_COOKIE } from '../cookie.config';
 import { isValidLoginState } from '../guards/oauth-guard.helpers';
@@ -26,7 +26,7 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
     accessToken: string,
     refreshToken: string,
     profile: Profile,
-    done: (err: Error | null, user?: any) => void,
+    done: (err: Error | null, user?: User) => void,
   ) {
     try {
       const email = profile.email ?? `${profile.id}@discord.com`;
@@ -54,7 +54,7 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
         photo,
       };
 
-      let user;
+      let user: User;
       if (state) {
         try {
           const userId = this.authService.consumeLinkState(

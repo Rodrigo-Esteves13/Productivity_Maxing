@@ -2,6 +2,36 @@
 export type Provider = 'GOOGLE' | 'DISCORD' | 'GITHUB';
 export type Role = 'USER' | 'ADMIN';
 export type ProgressStatus = 'AHEAD' | 'ON_TRACK' | 'BEHIND' | 'VERY_BEHIND' | 'COMPLETED';
+// Corpo aceite por POST/PATCH /tasks. Tudo opcional (o PATCH e parcial);
+// `null` limpa um campo opcional. Espelha create-task.dto.ts do backend.
+export interface TaskWriteInput {
+  areaId?: string;
+  periodId?: string;
+  title?: string;
+  date?: string;
+  type?: string;
+  academicType?: string | null;
+  topics?: string | null;
+  notes?: string | null;
+  referenceLink?: string | null;
+  isPinned?: boolean;
+  difficulty?: string;
+  priority?: string;
+  progressStatus?: string;
+  weightPercentage?: number | null;
+  estimatedMinutes?: number | null;
+  recalledStudyMinutes?: number | null;
+  targetGrade?: number | null;
+  realGrade?: number | null;
+  calendarDurationMinutes?: number | null;
+}
+
+// O que os formularios entregam: o corpo da task + a flag so de UI que
+// decide se se sincroniza com o Google Calendar a seguir (nunca vai para a API).
+export interface TaskFormSubmission extends TaskWriteInput {
+  syncToCalendar: boolean;
+}
+
 export type Difficulty = 'VERY_EASY' | 'EASY' | 'MEDIUM' | 'HARD' | 'VERY_HARD';
 // Priority stopped being a fixed union ('LOW'|'MEDIUM'|'HIGH') the moment
 // it became an admin-managed catalog (see AdminPriority/PriorityOption
@@ -24,6 +54,8 @@ export interface AcademicTaskTypeOption {
   key: string;
   label: string;
   taskTypeKey: string; // which TaskType it belongs to, e.g. "ACADEMIC"
+  // Fixed-date event (test, exam): finishing it late never counts as late.
+  isEvent?: boolean;
 }
 
 export interface TaskMeta {
@@ -320,6 +352,7 @@ export interface AdminAcademicTaskType {
   label: string;
   order: number;
   isActive: boolean;
+  isEvent: boolean;
   taskTypeId: string;
   taskType: { id: string; key: string; label: string; colorHex: string | null } | null;
 }
@@ -554,6 +587,8 @@ export interface Task {
   // Typology
   type: TaskType;
   academicType: AcademicTaskType | null;
+  // True when the academic type is a fixed-date event (test, exam).
+  academicTypeIsEvent?: boolean;
   topics: string | null;
   notes: string | null;
   isPinned: boolean;

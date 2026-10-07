@@ -87,13 +87,13 @@ export default function TaskTableRow({
     difficulty: (
       <>
         <DifficultyBadge difficulty={task.difficulty} />
-        {!isCompact && task.priority && (
-          <div className="mt-1">
-            <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
-          </div>
-        )}
         <PostponedIndicator count={task.postponedCount} className="mt-1" />
       </>
+    ),
+    priority: task.priority ? (
+      <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
+    ) : (
+      <span className="text-neutral-600">N/A</span>
     ),
     status: <StatusBadge status={task.progressStatus} />,
     grade: (

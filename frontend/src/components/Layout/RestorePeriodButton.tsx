@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useAcademic } from '../../context/useAcademic';
+import { useFeedback } from '../../context/useFeedback';
 
 // Counterpart to ArchivePeriodButton - only shows when the active period
 // IS archived. No confirmation needed and no restrictions on the backend:
 // restoring a period only ever adds an active dashboard back, never
 // removes one.
 export default function RestorePeriodButton() {
+  const { notify } = useFeedback();
   const { activePeriod, isViewingAllPeriods, restorePeriod } = useAcademic();
   const [isRestoring, setIsRestoring] = useState(false);
 
@@ -16,7 +18,7 @@ export default function RestorePeriodButton() {
     try {
       await restorePeriod(activePeriod.id);
     } catch {
-      alert('Could not restore the period. Try again.');
+      notify('Could not restore the period. Try again.', 'error');
     } finally {
       setIsRestoring(false);
     }

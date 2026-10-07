@@ -31,6 +31,9 @@ export interface TaskFormFieldValues {
   estimatedMinutes: string;
   realGrade?: string;
   progressStatus?: string;
+  // Minutos como string (input numérico). Vazio = não definido.
+  recalledStudyMinutes: string;
+  isPinned: boolean;
   // Flags só de UI - nunca são enviadas como estão para os endpoints de
   // Task (o backend não as conhece; forbidNonWhitelisted rejeitaria). São
   // extraídas/absorvidas em buildTaskPayload/useTasksPage.ts antes de
@@ -183,18 +186,20 @@ export default function TaskFormFields({
         onCalendarDurationMinutesChange={(v) => onChange('calendarDurationMinutes', v)}
       />
 
-      {(showProgressStatus || showRealGrade) && (
-        <ProgressAndGradeFields
-          idPrefix={idPrefix}
-          progressStatus={values.progressStatus ?? ''}
-          realGrade={values.realGrade ?? ''}
-          progressStatuses={progressStatuses}
-          showProgressStatus={showProgressStatus}
-          showRealGrade={showRealGrade}
-          onProgressStatusChange={(v) => onChange('progressStatus', v)}
-          onRealGradeChange={(v) => onChange('realGrade', v)}
-        />
-      )}
+      <ProgressAndGradeFields
+        idPrefix={idPrefix}
+        progressStatus={values.progressStatus ?? ''}
+        realGrade={values.realGrade ?? ''}
+        recalledStudyMinutes={values.recalledStudyMinutes}
+        isPinned={values.isPinned}
+        progressStatuses={progressStatuses}
+        showProgressStatus={showProgressStatus}
+        showRealGrade={showRealGrade}
+        onProgressStatusChange={(v) => onChange('progressStatus', v)}
+        onRealGradeChange={(v) => onChange('realGrade', v)}
+        onRecalledStudyMinutesChange={(v) => onChange('recalledStudyMinutes', v)}
+        onIsPinnedChange={(v) => onChange('isPinned', v)}
+      />
     </>
   );
 }

@@ -12,8 +12,10 @@ import {
   type AcademicTaskTypeFormPayload,
 } from '../api/taskTypesAdminService';
 import type { AdminTaskType, AdminAcademicTaskType } from '../types/models';
+import { useFeedback } from '../context/useFeedback';
 
 export function useTaskTypesPage() {
+  const { notify } = useFeedback();
   const [taskTypes, setTaskTypes] = useState<AdminTaskType[]>([]);
   const [academicTaskTypes, setAcademicTaskTypes] = useState<AdminAcademicTaskType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,7 +60,7 @@ export function useTaskTypesPage() {
       setTaskTypes((prev) => [...prev, created].sort((a, b) => a.order - b.order));
       setIsCreateTaskTypeOpen(false);
     } catch {
-      alert('Error creating task type. Check the backend.');
+      notify('Error creating task type. Check the backend.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -72,7 +74,7 @@ export function useTaskTypesPage() {
       setTaskTypes((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
       setEditingTaskType(null);
     } catch {
-      alert('Error saving changes. Check the backend.');
+      notify('Error saving changes. Check the backend.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -88,7 +90,7 @@ export function useTaskTypesPage() {
         : await updateAdminTaskType(taskType.id, { isActive: true });
       setTaskTypes((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
     } catch {
-      alert('Error updating task type status. Check the backend.');
+      notify('Error updating task type status. Check the backend.', 'error');
     }
   };
 
@@ -101,7 +103,7 @@ export function useTaskTypesPage() {
       setAcademicTaskTypes((prev) => [...prev, created].sort((a, b) => a.order - b.order));
       setIsCreateAcademicOpen(false);
     } catch {
-      alert('Error creating academic subcategory. Check the backend.');
+      notify('Error creating academic subcategory. Check the backend.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -117,7 +119,7 @@ export function useTaskTypesPage() {
       );
       setEditingAcademic(null);
     } catch {
-      alert('Error saving changes. Check the backend.');
+      notify('Error saving changes. Check the backend.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -132,7 +134,7 @@ export function useTaskTypesPage() {
         prev.map((a) => (a.id === updated.id ? { ...a, ...updated } : a)),
       );
     } catch {
-      alert('Error updating subcategory status. Check the backend.');
+      notify('Error updating subcategory status. Check the backend.', 'error');
     }
   };
 
