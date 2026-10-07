@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { getUserAreas, createArea, deleteArea, updateArea, getTaskMetadata } from '../api/userService';
 import type { Area, TaskTypeOption } from '../types/models';
 import type { AreaFormValues } from '../components/Areas/AreaForm';
+import { useFeedback } from '../context/useFeedback';
 
 export function useAreasPage() {
+  const { notify, confirm } = useFeedback();
   const [areas, setAreas] = useState<Area[]>([]);
   const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,7 +64,7 @@ export function useAreasPage() {
       setAreas((prev) => [...prev, created]);
       setIsCreateModalOpen(false);
     } catch {
-      alert('Error creating area. Check the backend.');
+      notify('Error creating area. Check the backend.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -79,16 +81,19 @@ export function useAreasPage() {
       setSelectedArea(updated);
       setIsEditing(false); // Volta ao modo "Ver"
     } catch {
-      alert('Error saving changes. Check the backend.');
+      notify('Error saving changes. Check the backend.', 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteArea = async (id: string) => {
-    const confirmed = window.confirm(
-      'Are you sure? Deleting this area will delete (or affect) the tasks associated with it!'
-    );
+    const confirmed = await confirm({
+      title: 'Delete area',
+      message: 'Are you sure? Deleting this area will delete (or affect) the tasks associated with it!',
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
     if (!confirmed) return;
 
     try {
@@ -99,7 +104,7 @@ export function useAreasPage() {
         closeDetailModal();
       }
     } catch {
-      alert('Error deleting area. It may be in use by existing tasks.');
+      notify('Error deleting area. It may be in use by existing tasks.', 'error');
     }
   };
 

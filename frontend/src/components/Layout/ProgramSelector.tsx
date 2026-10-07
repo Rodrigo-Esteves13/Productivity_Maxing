@@ -2,14 +2,17 @@ import { useState } from 'react';
 import Select from '../UI/Select';
 import { TrashIcon, PencilIcon } from '../UI/Icons';
 import { useAcademic } from '../../context/useAcademic';
+import { getApiMessage } from '../../lib/httpError';
 import CreateProgramModal from './CreateProgramModal';
 import RenameProgramModal from './RenameProgramModal';
 import ManagePeriodsModal from './ManagePeriodsModal';
+import { useFeedback } from '../../context/useFeedback';
 
 const CREATE_NEW_VALUE = '__create_new__';
 const NO_PROGRAM_VALUE = '__no_program__';
 
 export default function ProgramSelector() {
+  const { notify, confirm } = useFeedback();
   const {
     programs,
     activeProgram,
@@ -45,25 +48,23 @@ export default function ProgramSelector() {
 
   const handleDelete = async () => {
     if (!activeProgram) return;
-    if (
-      !window.confirm(
-        `Delete "${activeProgram.name}" permanently? This can't be undone.`,
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Delete program',
+      message: `Delete "${activeProgram.name}" permanently? This can't be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
 
     setIsDeleting(true);
     try {
       await removeProgram(activeProgram.id);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // 409 = the backend refused because this program still has tasks in
       // it (see ProgramsService.remove on the backend) - move or delete
       // those tasks first.
-      const message =
-        err?.response?.data?.message ??
-        'Could not delete the program. It may still have tasks in it.';
-      alert(message);
+      const message = getApiMessage(err, 'Could not delete the program. It may still have tasks in it.');
+      notify(message, 'error');
     } finally {
       setIsDeleting(false);
     }

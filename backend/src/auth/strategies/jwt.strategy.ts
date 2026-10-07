@@ -5,6 +5,8 @@ import type { Request } from 'express';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
 import { ACCESS_TOKEN_COOKIE } from '../cookie.config';
 import { AccountStatusService } from '../../account-status/account-status.service';
+import { SessionStateService } from '../../account-status/session-state.service';
+import { isSessionCurrent } from '../session-version.util';
 
 // Extrai o JWT do cookie HttpOnly em vez do header Authorization - o token
 // já não é acessível a JS no browser, o que é o ponto todo da migração.
@@ -14,7 +16,10 @@ function cookieExtractor(req: Request): string | null {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(private readonly accountStatus: AccountStatusService) {
+  constructor(
+    private readonly accountStatus: AccountStatusService,
+    private readonly sessionState: SessionStateService,
+  ) {
     // Sem fallback para '': assinar/verificar com uma secret vazia deixaria
     // qualquer atacante forjar tokens válidos (jwt.sign(payload, '')) se
     // JWT_SECRET não estivesse definida em produção por erro de config.
@@ -37,7 +42,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  validate(payload: JwtPayload) {
+  async validate(payload: JwtPayload) {
     // Efeito imediato de um ban/suspend mesmo com um JWT ainda válido -
     // sem isto, a conta continuava a funcionar até o token expirar (até
     // 7 dias, ver JwtModule.register em auth.module.ts). Consulta uma
@@ -50,7 +55,17 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException({ code, message });
     }
 
+    // O papel e a versao das sessoes vem da BD (via cache de 30s), NAO do
+    // JWT: uma despromocao tem efeito no pedido seguinte, e um logout ou
+    // troca de password invalida os tokens emitidos antes (um cookie
+    // roubado deixa de valer). Antes, o papel viajava no token e valia ate
+    // este expirar (7 dias).
+    const state = await this.sessionState.get(payload.sub);
+    if (!state || !isSessionCurrent(payload.tv, state.tokenVersion)) {
+      throw new UnauthorizedException('Session expired. Please log in again.');
+    }
+
     // fica disponível como req.user em qualquer rota protegida por JwtAuthGuard
-    return { id: payload.sub, email: payload.email, role: payload.role };
+    return { id: payload.sub, email: payload.email, role: state.role };
   }
 }

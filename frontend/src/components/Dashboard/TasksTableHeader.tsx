@@ -1,11 +1,16 @@
 import { useState, type DragEvent } from 'react';
 import { TASKS_TABLE_COLUMNS, type TasksTableColumnId } from '../../lib/tasksTableColumns';
+import { isSortableColumn } from '../../utils/taskSorting';
+import type { TableSortState } from '../../hooks/useTableSort';
+import { ArrowUpIcon, ArrowDownIcon } from '../UI/Icons';
 
 interface TasksTableHeaderProps {
   allSelected?: boolean;
   onToggleAll?: () => void;
   columnOrder: TasksTableColumnId[];
   onReorder: (draggedId: TasksTableColumnId, targetId: TasksTableColumnId) => void;
+  sort?: TableSortState<TasksTableColumnId> | null;
+  onSortColumn?: (id: TasksTableColumnId) => void;
 }
 
 const COLUMN_LABEL: Record<TasksTableColumnId, string> = Object.fromEntries(
@@ -22,6 +27,8 @@ export default function TasksTableHeader({
   onToggleAll,
   columnOrder,
   onReorder,
+  sort = null,
+  onSortColumn,
 }: TasksTableHeaderProps) {
   const [draggedId, setDraggedId] = useState<TasksTableColumnId | null>(null);
   const [dragOverId, setDragOverId] = useState<TasksTableColumnId | null>(null);
@@ -62,25 +69,44 @@ export default function TasksTableHeader({
             />
           </th>
         )}
-        {columnOrder.map((id) => (
-          <th
-            key={id}
-            draggable
-            onDragStart={handleDragStart(id)}
-            onDragOver={handleDragOver(id)}
-            onDrop={handleDrop(id)}
-            onDragEnd={() => {
-              setDraggedId(null);
-              setDragOverId(null);
-            }}
-            title="Drag to reorder columns"
-            className={`px-4 py-3 font-medium cursor-grab active:cursor-grabbing select-none transition-colors ${
-              CENTERED_COLUMNS.has(id) ? 'text-center' : ''
-            } ${dragOverId === id && draggedId !== id ? 'bg-violet-500/10 text-violet-300' : ''}`}
-          >
-            {COLUMN_LABEL[id]}
-          </th>
-        ))}
+        {columnOrder.map((id) => {
+          const canSort = !!onSortColumn && isSortableColumn(id);
+          const isSorted = sort?.key === id;
+          const SortIcon = sort?.direction === 'desc' ? ArrowDownIcon : ArrowUpIcon;
+          return (
+            <th
+              key={id}
+              draggable
+              onDragStart={handleDragStart(id)}
+              onDragOver={handleDragOver(id)}
+              onDrop={handleDrop(id)}
+              onDragEnd={() => {
+                setDraggedId(null);
+                setDragOverId(null);
+              }}
+              aria-sort={isSorted ? (sort?.direction === 'asc' ? 'ascending' : 'descending') : undefined}
+              title={canSort ? 'Click to sort, drag to reorder columns' : 'Drag to reorder columns'}
+              className={`px-4 py-3 font-medium cursor-grab active:cursor-grabbing select-none transition-colors ${
+                CENTERED_COLUMNS.has(id) ? 'text-center' : ''
+              } ${dragOverId === id && draggedId !== id ? 'bg-violet-500/10 text-violet-300' : ''}`}
+            >
+              {canSort ? (
+                <button
+                  type="button"
+                  onClick={() => onSortColumn(id)}
+                  className={`inline-flex items-center gap-1 uppercase hover:text-white ${
+                    isSorted ? 'text-violet-300' : ''
+                  }`}
+                >
+                  {COLUMN_LABEL[id]}
+                  {isSorted && <SortIcon className="h-3 w-3" />}
+                </button>
+              ) : (
+                COLUMN_LABEL[id]
+              )}
+            </th>
+          );
+        })}
       </tr>
     </thead>
   );

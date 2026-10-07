@@ -5,6 +5,7 @@ import type {
   Area,
   Task,
   TaskMeta,
+  TaskWriteInput,
   Role,
   ApiKeySummary,
   ApiKeyScope,
@@ -200,15 +201,16 @@ export async function updateArea(id: string, areaData: { name?: string; colorHex
 // periodId: omitido = período ativo do user (default no backend); 'all' =
 // todos os períodos agregados ("Ver todos os períodos" no seletor); um
 // UUID = esse período específico.
-export const getUserTasks = async (periodId?: string): Promise<Task[]> => {
+export const getUserTasks = async (periodId?: string, signal?: AbortSignal): Promise<Task[]> => {
   const response = await api.get<Task[]>('/tasks', {
     params: periodId ? { periodId } : undefined,
+    signal,
   });
   return response.data;
 };
 
-export async function createTask(taskData: any) {
-  const response = await api.post('/tasks', taskData);
+export async function createTask(taskData: TaskWriteInput): Promise<Task> {
+  const response = await api.post<Task>('/tasks', taskData);
   return response.data;
 }
 
@@ -222,7 +224,7 @@ export async function getTaskById(id: string): Promise<Task> {
   return response.data;
 }
 
-export async function updateTask(id: string, taskData: any): Promise<Task> {
+export async function updateTask(id: string, taskData: TaskWriteInput): Promise<Task> {
   const response = await api.patch<Task>(`/tasks/${id}`, taskData);
   return response.data;
 }
@@ -278,14 +280,19 @@ export const getOverdueCheckins = async (): Promise<Task[]> => {
 
 // Regista a resposta do user a "esta task já está feita?" para uma task
 // fora de prazo. isCompleted=true marca-a como COMPLETED de verdade;
-// isCompleted=false só evita repetir a pergunta hoje.
+// isCompleted=false só evita repetir a pergunta hoje (ou durante
+// `snoozeDays`). `realGrade` so conta quando isCompleted=true.
+export interface OverdueAnswer {
+  isCompleted: boolean;
+  realGrade?: number;
+  snoozeDays?: number;
+}
+
 export const confirmOverdueTask = async (
   id: string,
-  isCompleted: boolean,
+  answer: OverdueAnswer,
 ): Promise<Task> => {
-  const response = await api.patch<Task>(`/tasks/${id}/overdue-checkin`, {
-    isCompleted,
-  });
+  const response = await api.patch<Task>(`/tasks/${id}/overdue-checkin`, answer);
   return response.data;
 };
 

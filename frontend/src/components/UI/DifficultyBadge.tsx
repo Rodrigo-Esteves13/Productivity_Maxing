@@ -19,7 +19,7 @@ export default function DifficultyBadge({ difficulty }: DifficultyBadgeProps) {
   const currentStyle = styles[difficulty as string] || 'bg-neutral-800 text-neutral-300 border-neutral-700';
 
   return (
-    <span className={`px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase rounded-md border ${currentStyle}`}>
+    <span className={`inline-block whitespace-nowrap px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase rounded-md border ${currentStyle}`}>
       {formatEnumLabel(difficulty)}
     </span>
   );

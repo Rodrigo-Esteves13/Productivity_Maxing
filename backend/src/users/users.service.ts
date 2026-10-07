@@ -2,6 +2,7 @@ import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { AccountStatusService } from '../account-status/account-status.service';
+import { SessionStateService } from '../account-status/session-state.service';
 import { Prisma, Provider, UserStatus } from '@prisma/client';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SuspendUserDto, BanUserDto } from './dto/update-user-status.dto';
@@ -39,6 +40,8 @@ export class UsersService {
     // comentário em AccountStatusService sobre porque vive num módulo à
     // parte (evita um ciclo AuthModule <-> UsersModule).
     private accountStatus: AccountStatusService,
+    // Papel e versao das sessoes em cache: mudar o papel tem de valer logo.
+    private sessionState: SessionStateService,
   ) {}
 
   findAll() {
@@ -80,8 +83,8 @@ export class UsersService {
    * proteção contra auto-lockout). De propósito só aceita name/role - ver
    * o comentário no UpdateUserDto sobre o email ficar de fora.
    */
-  update(id: string, dto: UpdateUserDto) {
-    return this.prisma.user.update({
+  async update(id: string, dto: UpdateUserDto) {
+    const updated = await this.prisma.user.update({
       where: { id },
       data: {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
@@ -89,6 +92,10 @@ export class UsersService {
       },
       select: USER_ADMIN_SELECT,
     });
+    // Despromover (ou promover) tem efeito no pedido seguinte do
+    // utilizador, em vez de esperar que o token dele expire.
+    if (dto.role !== undefined) this.sessionState.invalidate(id);
+    return updated;
   }
 
   /**

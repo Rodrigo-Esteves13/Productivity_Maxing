@@ -3,6 +3,13 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AccountGuardService } from './services/account-guard.service';
+import { ApiKeyService } from './services/api-key.service';
+import { AvatarService } from './services/avatar.service';
+import { OAuthIdentityService } from './services/oauth-identity.service';
+import { PasswordAuthService } from './services/password-auth.service';
+import { SessionTokenService } from './services/session-token.service';
+import { SupabaseClientsService } from './services/supabase-clients.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MailModule } from '../mail/mail.module';
 import { GoogleStrategy } from './strategies/google.strategy';
@@ -28,6 +35,13 @@ import { AccountStatusModule } from '../account-status/account-status.module';
   controllers: [AuthController],
   providers: [
     AuthService,
+    SupabaseClientsService,
+    AccountGuardService,
+    OAuthIdentityService,
+    PasswordAuthService,
+    AvatarService,
+    SessionTokenService,
+    ApiKeyService,
     JwtStrategy,
     JwtBlockedAwareStrategy,
     GoogleStrategy,

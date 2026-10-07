@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getTaskMetadata, getUserAreas, getUserTasks } from '../api/userService';
 import type { AcademicTaskTypeOption, Area, Task } from '../types/models';
+import { isRequestCanceled } from '../lib/abortable';
 
 const LOAD_ERROR_MESSAGE = 'Could not load the dashboard data.';
 
@@ -44,18 +45,23 @@ export function useDashboardData(periodParam: string | undefined, isAcademicLoad
   useEffect(() => {
     if (isAcademicLoading) return;
 
+    // Mudar de periodo cancela o pedido anterior: uma resposta lenta do
+    // periodo antigo nunca pode pisar a do periodo novo.
+    const controller = new AbortController();
     async function fetchTasks() {
       try {
         setIsTasksLoading(true);
-        setTasks(await getUserTasks(periodParam));
+        setTasks(await getUserTasks(periodParam, controller.signal));
+        setIsTasksLoading(false);
       } catch (err) {
+        if (isRequestCanceled(err)) return;
         console.error('Failed to load dashboard tasks', err);
         setError(LOAD_ERROR_MESSAGE);
-      } finally {
         setIsTasksLoading(false);
       }
     }
     void fetchTasks();
+    return () => controller.abort();
   }, [periodParam, isAcademicLoading]);
 
   // Depois de um import: refaz so as tarefas, sem skeleton.

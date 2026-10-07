@@ -4,6 +4,10 @@ import Select from '../UI/Select';
 import Button from '../UI/Button';
 import { formatEnumLabel } from '../../utils/formatEnumLabel';
 import SavedFilterViews from './SavedFilterViews';
+import SortDirectionButton from '../UI/SortDirectionButton';
+import { TASKS_TABLE_COLUMNS, type TasksTableColumnId } from '../../lib/tasksTableColumns';
+import { isSortableColumn } from '../../utils/taskSorting';
+import type { TableSortState } from '../../hooks/useTableSort';
 import type { Area, AcademicTaskTypeOption } from '../../types/models';
 import type { DashboardFiltersState } from './dashboardFilters.types';
 import { ACADEMIC_TASK_TYPE_KEY } from '../../lib/constants';
@@ -16,6 +20,28 @@ interface DashboardFiltersProps {
   difficulties: string[];
   progressStatuses: string[];
   onClear: () => void;
+  sort: TableSortState<TasksTableColumnId> | null;
+  onSortKeyChange: (key: TasksTableColumnId | null) => void;
+  onToggleSortDirection: () => void;
+}
+
+const SORT_OPTIONS = TASKS_TABLE_COLUMNS.filter((column) => isSortableColumn(column.id));
+
+// Texto do botao de direcao: o que 'asc' significa depende da coluna.
+function directionLabels(key: TasksTableColumnId): { asc: string; desc: string } {
+  switch (key) {
+    case 'date':
+      return { asc: 'Nearest first', desc: 'Furthest first' };
+    case 'priority':
+      return { asc: 'Highest first', desc: 'Lowest first' };
+    case 'difficulty':
+    case 'status':
+      return { asc: 'Low to high', desc: 'High to low' };
+    case 'grade':
+      return { asc: 'Lowest first', desc: 'Highest first' };
+    default:
+      return { asc: 'A to Z', desc: 'Z to A' };
+  }
 }
 
 export default function DashboardFilters({
@@ -26,6 +52,9 @@ export default function DashboardFilters({
   difficulties,
   progressStatuses,
   onClear,
+  sort,
+  onSortKeyChange,
+  onToggleSortDirection,
 }: DashboardFiltersProps) {
   const update = (patch: Partial<DashboardFiltersState>) => onChange({ ...filters, ...patch });
   const hasActiveFilters = Object.values(filters).some((v) => v !== '');
@@ -113,6 +142,31 @@ export default function DashboardFilters({
               <option value="completed">Completed</option>
             </Select>
           </FormField>
+
+          <div className="flex items-end gap-2">
+            <FormField label="Sort by" htmlFor="filter-sort" className="w-44">
+              <Select
+                id="filter-sort"
+                value={sort?.key ?? ''}
+                onChange={(e) => onSortKeyChange(e.target.value === '' ? null : (e.target.value as TasksTableColumnId))}
+              >
+                <option value="">Default order</option>
+                {SORT_OPTIONS.map((column) => (
+                  <option key={column.id} value={column.id}>
+                    {column.label}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            {sort && (
+              <SortDirectionButton
+                direction={sort.direction}
+                onToggle={onToggleSortDirection}
+                ascLabel={directionLabels(sort.key).asc}
+                descLabel={directionLabels(sort.key).desc}
+              />
+            )}
+          </div>
 
           {hasActiveFilters && (
             <Button type="button" variant="secondary" onClick={onClear}>

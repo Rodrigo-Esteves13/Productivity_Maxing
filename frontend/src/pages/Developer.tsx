@@ -10,8 +10,10 @@ import TableSkeleton from '../components/UI/TableSkeleton';
 import ApiKeysTable from '../components/Developer/ApiKeysTable';
 import NewApiKeyModal from '../components/Developer/NewApiKeyModal';
 import type { ApiKeyScope } from '../types/models';
+import { useFeedback } from '../context/useFeedback';
 
 export default function Developer() {
+  const { confirm } = useFeedback();
   useDocumentTitle('Developer');
   const { user } = useAuth();
   const { keys, isLoading, isCreating, newlyCreatedKey, createKey, removeKey, clearNewKey } =
@@ -33,13 +35,17 @@ export default function Developer() {
     setScope('TASKS');
   };
 
-  const handleRevoke = (id: string) => {
+  const handleRevoke = async (id: string) => {
     // Revogar é imediato e irreversível (a raw key nunca mais existe em
-    // lado nenhum) - vale a pena um confirm nativo em vez de deixar um
-    // clique acidental partir uma integração a meio.
-    if (window.confirm('Revoke this API key? Any script using it will stop working immediately.')) {
-      removeKey(id);
-    }
+    // lado nenhum) - vale a pena confirmar em vez de deixar um clique
+    // acidental partir uma integração a meio.
+    const confirmed = await confirm({
+      title: 'Revoke API key',
+      message: 'Revoke this API key? Any script using it will stop working immediately.',
+      confirmLabel: 'Revoke',
+      tone: 'danger',
+    });
+    if (confirmed) removeKey(id);
   };
 
   return (

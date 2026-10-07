@@ -7,8 +7,11 @@ import {
   Body,
   Param,
   Query,
+  Res,
+  HttpStatus,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { StudySessionsService } from './study-sessions.service';
@@ -78,9 +81,20 @@ export class StudySessionsController {
     return this.studySessionsService.heartbeat(user.id, id);
   }
 
+  // Sem sessao ativa responde 204 (sem corpo) em vez de 200 com corpo vazio
+  // e sem Content-Type: o Firefox tentava ler esse corpo vazio como XML e
+  // escrevia "XML Parsing Error: no root element found" na consola.
   @Get('active')
-  getActive(@CurrentUser() user: AuthenticatedUser) {
-    return this.studySessionsService.getActive(user.id);
+  async getActive(
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const session = await this.studySessionsService.getActive(user.id);
+    if (!session) {
+      res.status(HttpStatus.NO_CONTENT);
+      return;
+    }
+    return session;
   }
 
   @Get('heatmap')

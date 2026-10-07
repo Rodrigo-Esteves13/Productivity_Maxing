@@ -2,9 +2,10 @@
 import api from './client';
 import type { CourseForecast, GradeProjection, StudyPlanResult } from '../types/models';
 
-export const getStudyPlan = async (days = 7): Promise<StudyPlanResult> => {
+export const getStudyPlan = async (days = 7, signal?: AbortSignal): Promise<StudyPlanResult> => {
   const response = await api.get<StudyPlanResult>('/study-plan', {
     params: { days },
+    signal,
   });
   return response.data;
 };

@@ -7,6 +7,7 @@ export const TASKS_TABLE_COLUMNS = [
   { id: 'title', label: 'Title / Topics' },
   { id: 'type', label: 'Type / Weight' },
   { id: 'difficulty', label: 'Difficulty' },
+  { id: 'priority', label: 'Priority' },
   { id: 'status', label: 'Status' },
   { id: 'grade', label: 'Target / Real' },
   { id: 'calendar', label: 'Calendar' },

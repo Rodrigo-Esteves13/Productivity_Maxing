@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { Task, TaskTypeOption, AcademicTaskTypeOption, PriorityOption } from '../../types/models';
+import type { Task, TaskTypeOption, AcademicTaskTypeOption, PriorityOption, TaskFormSubmission } from '../../types/models';
 import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
 import { buildTaskPayload } from '../../utils/taskPayload';
+import { getApiMessage } from '../../lib/httpError';
 
 interface AreaOption {
   id: string;
@@ -14,7 +15,7 @@ interface AreaOption {
 
 interface TaskEditFormProps {
   task: Task;
-  onSubmit: (data: any) => Promise<any>;
+  onSubmit: (data: TaskFormSubmission) => Promise<unknown>;
   onCancel: () => void;
   areas: AreaOption[];
   taskTypes: TaskTypeOption[];
@@ -59,6 +60,8 @@ function buildInitialValues(task: Task): TaskFormFieldValues {
     weightPercentage: task.weightPercentage != null ? String(task.weightPercentage) : '',
     estimatedMinutes: task.estimatedMinutes != null ? String(task.estimatedMinutes) : '',
     realGrade: task.realGrade != null ? String(task.realGrade) : '',
+    recalledStudyMinutes: task.recalledStudyMinutes != null ? String(task.recalledStudyMinutes) : '',
+    isPinned: task.isPinned,
     // Pré-marcada se a task já tem um evento - desmarcar e gravar remove-o
     // (ver handleUpdateTask em useTasksPage.ts).
     syncToCalendar: !!task.googleCalendarEventId,
@@ -102,8 +105,8 @@ export default function TaskEditForm({
         const payload = buildTaskPayload(formData, { includeRealGrade: true });
 
         await onSubmit(payload);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Error updating task.');
+      } catch (err: unknown) {
+        setError(getApiMessage(err, 'Error updating task.'));
       } finally {
         setIsSubmitting(false);
       }

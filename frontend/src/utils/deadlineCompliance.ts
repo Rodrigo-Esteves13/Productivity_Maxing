@@ -38,7 +38,12 @@ function effectiveDeadlineMs(task: Task): number {
 // has no completedAt, so callers can exclude it instead of counting it
 // as late.
 export function wasCompletedOnTime(task: Task): boolean | null {
-  if (task.progressStatus !== 'COMPLETED' || !task.completedAt) return null;
+  if (task.progressStatus !== 'COMPLETED') return null;
+  // Testes e exames (tipo "evento"): a data e o momento do evento, nao um
+  // prazo de entrega. Marcar como feito depois nunca e atraso, e como nao
+  // precisam de completedAt contam sempre como pontuais.
+  if (task.academicTypeIsEvent) return true;
+  if (!task.completedAt) return null;
   return new Date(task.completedAt).getTime() <= effectiveDeadlineMs(task);
 }
 

@@ -59,8 +59,8 @@ export const heartbeatStudySession = async (id: string): Promise<void> => {
   await api.post(`/study-sessions/${id}/heartbeat`);
 };
 
-export const getSessionHistory = async (days = 14): Promise<StudySession[]> => {
-  const response = await api.get<StudySession[]>('/study-sessions/history', { params: { days } });
+export const getSessionHistory = async (days = 14, signal?: AbortSignal): Promise<StudySession[]> => {
+  const response = await api.get<StudySession[]>('/study-sessions/history', { params: { days }, signal });
   return response.data;
 };
 
@@ -79,8 +79,9 @@ export const deleteStudySession = async (id: string): Promise<void> => {
 };
 
 export const getActiveStudySession = async (): Promise<StudySession | null> => {
-  const response = await api.get<StudySession | null>('/study-sessions/active');
-  return response.data;
+  const response = await api.get<StudySession | ''>('/study-sessions/active');
+  // 204 (sem sessao ativa) chega como corpo vazio.
+  return response.data || null;
 };
 
 // Fired from a `pagehide` listener (see StudySessionProvider.tsx) when the

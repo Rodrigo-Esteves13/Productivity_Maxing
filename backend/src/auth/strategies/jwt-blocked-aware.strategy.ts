@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import type { Request } from 'express';
@@ -7,6 +7,14 @@ import {
   AppealTokenPayload,
 } from '../interfaces/jwt-payload.interface';
 import { ACCESS_TOKEN_COOKIE } from '../cookie.config';
+import { SessionStateService } from '../../account-status/session-state.service';
+import { isSessionCurrent } from '../session-version.util';
+
+function isAppealToken(
+  payload: JwtPayload | AppealTokenPayload,
+): payload is AppealTokenPayload {
+  return 'purpose' in payload && payload.purpose === 'appeal';
+}
 
 function cookieExtractor(req: Request): string | null {
   return (req?.cookies?.[ACCESS_TOKEN_COOKIE] as string | undefined) ?? null;
@@ -40,7 +48,7 @@ export class JwtBlockedAwareStrategy extends PassportStrategy(
   Strategy,
   'jwt-blocked-aware',
 ) {
-  constructor() {
+  constructor(private readonly sessionState: SessionStateService) {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
       throw new Error('JWT_SECRET is not defined.');
@@ -57,7 +65,20 @@ export class JwtBlockedAwareStrategy extends PassportStrategy(
     });
   }
 
-  validate(payload: JwtPayload | AppealTokenPayload) {
-    return { id: payload.sub, email: payload.email, role: payload.role };
+  async validate(payload: JwtPayload | AppealTokenPayload) {
+    // O token de appeal (15 min, so de quem foi bloqueado no proprio login)
+    // nao tem versao de sessao: passa como antes.
+    if (isAppealToken(payload)) {
+      return { id: payload.sub, email: payload.email, role: payload.role };
+    }
+
+    // Mas um token de SESSAO revogado (logout, troca de password) nao pode
+    // continuar a abrir estas duas rotas. Aqui NAO se verifica ban/suspend
+    // (e esse o objetivo da estrategia), so a versao da sessao.
+    const state = await this.sessionState.get(payload.sub);
+    if (!state || !isSessionCurrent(payload.tv, state.tokenVersion)) {
+      throw new UnauthorizedException('Session expired. Please log in again.');
+    }
+    return { id: payload.sub, email: payload.email, role: state.role };
   }
 }

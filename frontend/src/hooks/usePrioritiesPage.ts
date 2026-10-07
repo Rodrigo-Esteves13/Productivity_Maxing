@@ -7,8 +7,10 @@ import {
   type PriorityFormPayload,
 } from '../api/prioritiesAdminService';
 import type { AdminPriority } from '../types/models';
+import { useFeedback } from '../context/useFeedback';
 
 export function usePrioritiesPage() {
+  const { notify } = useFeedback();
   const [priorities, setPriorities] = useState<AdminPriority[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -41,7 +43,7 @@ export function usePrioritiesPage() {
       setPriorities((prev) => [...prev, created].sort((a, b) => a.order - b.order));
       setIsCreateOpen(false);
     } catch {
-      alert('Error creating priority. Check the backend.');
+      notify('Error creating priority. Check the backend.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -55,7 +57,7 @@ export function usePrioritiesPage() {
       setPriorities((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
       setEditingPriority(null);
     } catch {
-      alert('Error saving changes. Check the backend.');
+      notify('Error saving changes. Check the backend.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -72,7 +74,7 @@ export function usePrioritiesPage() {
         : await updateAdminPriority(priority.id, { isActive: true });
       setPriorities((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
     } catch {
-      alert('Error updating priority status. Check the backend.');
+      notify('Error updating priority status. Check the backend.', 'error');
     }
   };
 

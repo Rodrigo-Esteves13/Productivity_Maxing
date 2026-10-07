@@ -6,6 +6,7 @@ import {
   type SecurityLogsQuery,
 } from '../api/securityLogsService';
 import type { SecurityLog, SecurityLogsStats } from '../types/models';
+import { useFeedback } from '../context/useFeedback';
 
 const PAGE_SIZE = 25;
 
@@ -18,6 +19,7 @@ export interface SecurityLogsFiltersState {
 const emptyFilters: SecurityLogsFiltersState = { ip: '', path: '', window: '' };
 
 export function useSecurityLogsPage() {
+  const { notify, confirm } = useFeedback();
   const [logs, setLogs] = useState<SecurityLog[]>([]);
   const [total, setTotal] = useState(0);
   const [skip, setSkip] = useState(0);
@@ -93,7 +95,12 @@ export function useSecurityLogsPage() {
     const message = olderThanDays
       ? `Delete all security logs older than ${olderThanDays} days?`
       : 'Delete ALL security logs? This cannot be undone.';
-    const confirmed = window.confirm(message);
+    const confirmed = await confirm({
+      title: 'Clear security logs',
+      message,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
     if (!confirmed) return;
 
     setIsPurging(true);
@@ -101,7 +108,7 @@ export function useSecurityLogsPage() {
       await purgeSecurityLogs(olderThanDays);
       await Promise.all([fetchLogs(0), fetchStats()]);
     } catch {
-      alert('Error clearing logs. Check the backend.');
+      notify('Error clearing logs. Check the backend.', 'error');
     } finally {
       setIsPurging(false);
     }

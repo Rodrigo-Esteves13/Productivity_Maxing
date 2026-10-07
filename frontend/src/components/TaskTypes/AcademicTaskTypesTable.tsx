@@ -36,7 +36,10 @@ export default function AcademicTaskTypesTable({
             ) : (
               academicTaskTypes.map((a) => (
                 <tr key={a.id} className="border-b border-neutral-800 last:border-0 hover:bg-neutral-800/30">
-                  <td className="px-4 py-3 font-medium text-neutral-200">{a.label}</td>
+                  <td className="px-4 py-3 font-medium text-neutral-200">
+                    {a.label}
+                    {a.isEvent && <span className="ml-2 text-[10px] uppercase text-violet-400">Event</span>}
+                  </td>
                   <td className="px-4 py-3 text-neutral-400">
                     {a.taskType?.label ?? <span className="text-neutral-600 italic">deleted</span>}
                   </td>

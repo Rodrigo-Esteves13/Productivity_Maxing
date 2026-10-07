@@ -11,8 +11,8 @@ import { PredictionService } from '../prediction/prediction.service';
 import { DIFFICULTY_WEIGHT } from '../common/difficulty-weight.util';
 import {
   hasStudyTimeWhere,
-  resolveStudyMinutes,
-  sumSessionMinutes,
+  resolveFocusedStudyMinutes,
+  sumFocusedSessionMinutes,
 } from '../common/session-minutes.util';
 import type { PredictionMethod } from '../prediction/prediction.types';
 import { addUtcDays, getLisbonNow, toDateKey } from '../common/date-key.util';
@@ -53,7 +53,11 @@ export interface EstimableTask {
   difficulty: Difficulty;
   weightPercentage: number | null;
   estimatedMinutes: number | null;
-  studySessions: { startedAt: Date; endedAt: Date | null }[];
+  studySessions: {
+    startedAt: Date;
+    endedAt: Date | null;
+    focusRating: number | null;
+  }[];
 }
 
 // Campos que qualquer consulta de tasks para estimativa tem de selecionar.
@@ -67,7 +71,7 @@ export const ESTIMABLE_TASK_SELECT = {
   areaId: true,
   studySessions: {
     where: { endedAt: { not: null } },
-    select: { startedAt: true, endedAt: true },
+    select: { startedAt: true, endedAt: true, focusRating: true },
   },
 } satisfies Prisma.TaskSelect;
 
@@ -161,7 +165,7 @@ export class StudyPlanService {
           area: { select: { name: true, colorHex: true } },
           studySessions: {
             where: { endedAt: { not: null } },
-            select: { startedAt: true, endedAt: true },
+            select: { startedAt: true, endedAt: true, focusRating: true },
           },
         },
         orderBy: { date: 'asc' },
@@ -431,7 +435,7 @@ export class StudyPlanService {
           },
           calibrationFactor,
         );
-        const logged = sumSessionMinutes(task.studySessions);
+        const logged = sumFocusedSessionMinutes(task.studySessions);
         return [
           task.id,
           {
@@ -463,14 +467,14 @@ export class StudyPlanService {
         recalledStudyMinutes: true,
         studySessions: {
           where: { endedAt: { not: null } },
-          select: { startedAt: true, endedAt: true },
+          select: { startedAt: true, endedAt: true, focusRating: true },
         },
       },
     });
 
     const history = new Map<string, CourseHistory>();
     for (const task of done) {
-      const minutes = resolveStudyMinutes(
+      const minutes = resolveFocusedStudyMinutes(
         task.studySessions,
         task.recalledStudyMinutes,
       );

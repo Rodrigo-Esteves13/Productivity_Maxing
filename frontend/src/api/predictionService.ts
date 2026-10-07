@@ -25,8 +25,9 @@ export interface DurationPrediction {
 
 export async function predictTaskDuration(
   payload: DurationPredictionRequest,
+  signal?: AbortSignal,
 ): Promise<DurationPrediction> {
-  const response = await api.post<DurationPrediction>('/predictions/duration', payload);
+  const response = await api.post<DurationPrediction>('/predictions/duration', payload, { signal });
   return response.data;
 }
 

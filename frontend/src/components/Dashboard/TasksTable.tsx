@@ -4,6 +4,8 @@ import TaskCard from './TaskCard';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
 import type { TableDensity } from '../../hooks/useTableDensity';
 import { useTasksTableColumnOrder } from '../../hooks/useTasksTableColumnOrder';
+import type { TableSortState } from '../../hooks/useTableSort';
+import type { TasksTableColumnId } from '../../lib/tasksTableColumns';
 
 interface TasksTableProps {
   tasks: Task[];
@@ -14,6 +16,8 @@ interface TasksTableProps {
   onToggleSelect?: (id: string) => void;
   onToggleSelectAll?: () => void;
   density?: TableDensity;
+  sort?: TableSortState<TasksTableColumnId> | null;
+  onSortColumn?: (id: TasksTableColumnId) => void;
 }
 
 export default function TasksTable({ 
@@ -25,6 +29,8 @@ export default function TasksTable({
   onToggleSelect,
   onToggleSelectAll,
   density = 'comfortable',
+  sort = null,
+  onSortColumn,
 }: TasksTableProps) {
   const { columnOrder, reorderColumns } = useTasksTableColumnOrder();
 
@@ -61,6 +67,8 @@ export default function TasksTable({
             onToggleAll={onToggleSelectAll}
             columnOrder={columnOrder}
             onReorder={reorderColumns}
+            sort={sort}
+            onSortColumn={onSortColumn}
           />
           <tbody>
             {tasks.map((task) => (

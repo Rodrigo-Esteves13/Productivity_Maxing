@@ -19,6 +19,7 @@ export interface AcademicTaskTypeFormPayload {
   taskTypeId: string;
   order?: number;
   isActive?: boolean;
+  isEvent?: boolean;
 }
 
 // TaskType

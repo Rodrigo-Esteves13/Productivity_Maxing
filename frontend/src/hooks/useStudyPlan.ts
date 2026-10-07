@@ -1,26 +1,33 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getStudyPlan, updateStudyPlanSettings } from '../api/studyPlanService';
 import type { StudyPlanResult } from '../types/models';
+import { isRequestCanceled } from '../lib/abortable';
 
 export function useStudyPlan(days = 7) {
   const [plan, setPlan] = useState<StudyPlanResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const fetchPlan = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError('');
-      setPlan(await getStudyPlan(days));
-    } catch {
-      setError('Could not generate the study plan.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [days]);
+  const fetchPlan = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        setIsLoading(true);
+        setError('');
+        setPlan(await getStudyPlan(days, signal));
+        setIsLoading(false);
+      } catch (caught) {
+        if (isRequestCanceled(caught)) return;
+        setError('Could not generate the study plan.');
+        setIsLoading(false);
+      }
+    },
+    [days],
+  );
 
   useEffect(() => {
-    void fetchPlan();
+    const controller = new AbortController();
+    void fetchPlan(controller.signal);
+    return () => controller.abort();
   }, [fetchPlan]);
 
   const setDailyLimit = useCallback(
@@ -35,5 +42,7 @@ export function useStudyPlan(days = 7) {
     [fetchPlan],
   );
 
-  return { plan, isLoading, error, refetch: fetchPlan, setDailyLimit };
+  const refetch = useCallback(() => fetchPlan(), [fetchPlan]);
+
+  return { plan, isLoading, error, refetch, setDailyLimit };
 }

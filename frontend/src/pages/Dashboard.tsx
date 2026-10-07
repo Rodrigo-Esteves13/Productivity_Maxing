@@ -8,6 +8,9 @@ import TasksTableSkeleton from '../components/Dashboard/TasksTableSkeleton';
 import DashboardFilters from '../components/Dashboard/DashboardFilters';
 import { EMPTY_DASHBOARD_FILTERS, type DashboardFiltersState } from '../components/Dashboard/dashboardFilters.types';
 import { getDateStatus } from '../utils/taskDateStatus';
+import { sortTasks } from '../utils/taskSorting';
+import { useTableSort } from '../hooks/useTableSort';
+import type { TasksTableColumnId } from '../lib/tasksTableColumns';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useQuickReschedule } from '../hooks/useQuickReschedule';
 import { useDashboardData } from '../hooks/useDashboardData';
@@ -37,6 +40,7 @@ export default function Dashboard() {
   useDocumentTitle('Dashboard');
   const [filters, setFilters] = useState<DashboardFiltersState>(EMPTY_DASHBOARD_FILTERS);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const { sort, toggleKey, setKey, toggleDirection } = useTableSort<TasksTableColumnId>();
 
   // O Dashboard segue sempre o periodo escolhido no topo da pagina
   // (PeriodSelector): mudar de periodo = novo fetch. "Sem programa" tambem
@@ -74,7 +78,7 @@ export default function Dashboard() {
 
   const filteredTasks = useMemo(() => {
     const search = filters.search.trim().toLowerCase();
-    return academicTasks.filter((task) => {
+    const matching = academicTasks.filter((task) => {
       if (!showArchived && isTaskArchived(task)) return false;
       if (search && !task.title.toLowerCase().includes(search)) return false;
       if (filters.areaId && task.areaId !== filters.areaId) return false;
@@ -84,7 +88,9 @@ export default function Dashboard() {
       if (filters.dateStatus && getDateStatus(task) !== filters.dateStatus) return false;
       return true;
     });
-  }, [academicTasks, filters, showArchived]);
+    // Sem coluna escolhida mantem a ordem original do servidor.
+    return sort ? sortTasks(matching, sort.key, sort.direction) : matching;
+  }, [academicTasks, filters, showArchived, sort]);
 
   const {
     selectedIds, toggleSelect, toggleSelectAll, markSelectedDone, deleteSelected, clearSelection,
@@ -198,6 +204,9 @@ export default function Dashboard() {
               difficulties={difficulties}
               progressStatuses={progressStatuses}
               onClear={() => setFilters(EMPTY_DASHBOARD_FILTERS)}
+              sort={sort}
+              onSortKeyChange={setKey}
+              onToggleSortDirection={toggleDirection}
             />
           </div>
 
@@ -226,6 +235,8 @@ export default function Dashboard() {
                 onToggleSelect={toggleSelect}
                 onToggleSelectAll={toggleSelectAll}
                 density={density}
+                sort={sort}
+                onSortColumn={toggleKey}
               />
             </>
           )}

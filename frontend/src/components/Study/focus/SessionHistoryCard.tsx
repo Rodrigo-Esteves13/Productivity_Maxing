@@ -2,18 +2,24 @@ import { useMemo, useState } from 'react';
 import { createManualSession, deleteStudySession, updateStudySession } from '../../../api/studySessionsService';
 import { useActiveStudySession } from '../../../context/useActiveStudySession';
 import { useSessionHistory } from '../../../hooks/useSessionHistory';
+import { useIncrementalReveal } from '../../../hooks/useIncrementalReveal';
 import { getApiMessage } from '../../../lib/httpError';
 import { toLocalParts } from '../../../lib/sessionWindow';
 import { formatDayLabel } from '../../../lib/timeFormat';
 import { PlusIcon } from '../../UI/Icons';
 import EmptyState from '../../UI/EmptyState';
+import Select from '../../UI/Select';
 import ErrorState from '../../UI/ErrorState';
 import LoadingState from '../../UI/LoadingState';
 import SessionForm, { type SessionFormValues } from './SessionForm';
 import SessionRow from './SessionRow';
 import type { StudySession } from '../../../types/models';
 
-const HISTORY_DAYS = 14;
+// Intervalos que o utilizador pode escolher (o backend limita a 90 dias).
+const HISTORY_RANGE_OPTIONS = [7, 14, 30, 90] as const;
+const DEFAULT_HISTORY_DAYS = 14;
+// Quantos dias aparecem de cada vez; o resto fica atras de "Show more".
+const DAYS_PER_PAGE = 5;
 
 function groupByDay(sessions: StudySession[]): [string, StudySession[]][] {
   const groups = new Map<string, StudySession[]>();
@@ -28,12 +34,19 @@ function groupByDay(sessions: StudySession[]): [string, StudySession[]][] {
 // esqueceste de ligar. Dados fiaveis aqui = previsoes melhores.
 export default function SessionHistoryCard() {
   const { activeSession } = useActiveStudySession();
-  const { sessions, isLoading, error, reload } = useSessionHistory(HISTORY_DAYS, activeSession?.id ?? null);
+  const [historyDays, setHistoryDays] = useState<number>(DEFAULT_HISTORY_DAYS);
+  const { sessions, isLoading, error, reload } = useSessionHistory(historyDays, activeSession?.id ?? null);
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [serverError, setServerError] = useState('');
 
   const groups = useMemo(() => groupByDay(sessions), [sessions]);
+  const { visibleCount, hasMore, canCollapse, showMore, collapse } = useIncrementalReveal(
+    groups.length,
+    DAYS_PER_PAGE,
+    historyDays,
+  );
+  const visibleGroups = groups.slice(0, visibleCount);
 
   // Corre uma mutacao, mostra a mensagem do servidor se falhar e recarrega se correr bem.
   const mutate = async (action: () => Promise<unknown>, failure: string): Promise<boolean> => {
@@ -63,19 +76,34 @@ export default function SessionHistoryCard() {
           <h2 className="text-lg font-semibold text-white">Session history</h2>
           <p className="text-xs text-neutral-500">Forgot to start the timer, or stopped too late? Fix it here.</p>
         </div>
-        {!isAdding && (
-          <button
-            type="button"
-            onClick={() => {
-              setServerError('');
-              setIsAdding(true);
-            }}
-            className="flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300"
-          >
-            <PlusIcon />
-            Add session
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <div className="w-40">
+            <Select
+              aria-label="History range"
+              value={String(historyDays)}
+              onChange={(e) => setHistoryDays(Number(e.target.value))}
+            >
+              {HISTORY_RANGE_OPTIONS.map((days) => (
+                <option key={days} value={days}>
+                  Last {days} days
+                </option>
+              ))}
+            </Select>
+          </div>
+          {!isAdding && (
+            <button
+              type="button"
+              onClick={() => {
+                setServerError('');
+                setIsAdding(true);
+              }}
+              className="flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300"
+            >
+              <PlusIcon />
+              Add session
+            </button>
+          )}
+        </div>
       </div>
 
       {isAdding && (
@@ -86,10 +114,10 @@ export default function SessionHistoryCard() {
 
       {isLoading && <LoadingState message="Loading sessions..." />}
       {!isLoading && error && <ErrorState message="Could not load your sessions." />}
-      {!isLoading && !error && groups.length === 0 && <EmptyState message="No sessions in the last 14 days." />}
+      {!isLoading && !error && groups.length === 0 && <EmptyState message={`No sessions in the last ${historyDays} days.`} />}
 
       <div className="space-y-4">
-        {groups.map(([day, daySessions]) => (
+        {visibleGroups.map(([day, daySessions]) => (
           <section key={day}>
             <h3 className="mb-1.5 text-xs font-medium uppercase tracking-wide text-neutral-500">{formatDayLabel(day)}</h3>
             <ul className="space-y-1.5">
@@ -107,6 +135,21 @@ export default function SessionHistoryCard() {
           </section>
         ))}
       </div>
+
+      {(hasMore || canCollapse) && (
+        <div className="mt-4 flex items-center justify-center gap-4 text-sm">
+          {hasMore && (
+            <button type="button" onClick={showMore} className="text-violet-400 hover:text-violet-300">
+              Show more days ({groups.length - visibleCount} left)
+            </button>
+          )}
+          {canCollapse && (
+            <button type="button" onClick={collapse} className="text-neutral-400 hover:text-neutral-200">
+              Show less
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

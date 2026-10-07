@@ -78,6 +78,21 @@ export default function AcademicTaskTypeForm({
         />
       </FormField>
 
+      <label className="flex items-start gap-2 text-sm text-neutral-300 select-none cursor-pointer">
+        <input
+          type="checkbox"
+          checked={formData.isEvent ?? false}
+          onChange={(e) => setFormData({ ...formData, isEvent: e.target.checked })}
+          className="mt-0.5 accent-violet-500"
+        />
+        <span>
+          Fixed-date event (test, exam)
+          <span className="block text-xs text-neutral-500">
+            Marking it done after the day never counts as late, and it never asks "is this done?".
+          </span>
+        </span>
+      </label>
+
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800 mt-6">
         <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel

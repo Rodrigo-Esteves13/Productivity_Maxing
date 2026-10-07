@@ -7,10 +7,12 @@ import AccessibilityEffects from './components/Accessibility/AccessibilityEffect
 import MaintenanceGate from './components/Maintenance/MaintenanceGate';
 import AccountBlockedGate from './components/AccountBlocked/AccountBlockedGate';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
+import { FeedbackProvider } from './context/FeedbackProvider';
 
 function App() {
   return (
     <ErrorBoundary>
+      <FeedbackProvider>
       <MaintenanceGate>
         <AccountBlockedGate>
           <AuthProvider>
@@ -30,6 +32,7 @@ function App() {
           </AuthProvider>
         </AccountBlockedGate>
       </MaintenanceGate>
+      </FeedbackProvider>
     </ErrorBoundary>
   );
 }

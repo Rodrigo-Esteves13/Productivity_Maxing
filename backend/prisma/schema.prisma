@@ -150,6 +150,11 @@ model AcademicTaskType {
   order    Int     @default(0)
   isActive Boolean @default(true)
 
+  /// Tipo de data fixa (teste, exame, apresentação): a "data" é o momento do
+  /// evento, não um prazo de entrega. Marcar como feito depois do dia NUNCA
+  /// conta como atraso, e a pergunta "isto já está feito?" não aparece.
+  isEvent Boolean @default(false)
+
   taskTypeId String
   taskType   TaskType @relation(fields: [taskTypeId], references: [id])
 
@@ -208,6 +213,11 @@ model User {
   // deleteAccount - sem isto, apagar o User "espelho" não apaga o login,
   // e a conta "ressuscita" sozinha na próxima vez que a pessoa fizer login.
   supabaseAuthId String? @unique
+
+  // Versao das sessoes do utilizador: o JWT leva este numero (claim `tv`) e
+  // deixa de valer assim que for incrementado (terminar sessao em todos os
+  // dispositivos, troca de password, merge OAuth). Ver SessionStateService.
+  tokenVersion Int @default(0)
 
   // Dashboard ativo (Programa + Período selecionados) - guardado aqui em vez
   // de só em localStorage para persistir entre sessões/dispositivos (ver

@@ -22,9 +22,11 @@ export const importSchedule = async (
 export const getSchedule = async (
   from: string,
   to: string,
+  signal?: AbortSignal,
 ): Promise<ClassOccurrence[]> => {
   const response = await api.get<ClassOccurrence[]>('/schedule', {
     params: { from, to },
+    signal,
   });
   return response.data;
 };

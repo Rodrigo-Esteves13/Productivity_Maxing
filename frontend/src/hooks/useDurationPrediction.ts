@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { predictTaskDuration } from '../api/predictionService';
 import type { DurationPrediction } from '../api/predictionService';
+import { isRequestCanceled } from '../lib/abortable';
 import type { Difficulty } from '../types/models';
 
 const DEBOUNCE_MS = 500;
@@ -16,7 +17,9 @@ interface UseDurationPredictionArgs {
 // Debounced para que trocar Type/Difficulty/Weight rapidamente enquanto se
 // preenche o formulário não dispare um pedido por tecla - mesma lógica de
 // qualquer campo "pesquisa enquanto escreves", só que feita à mão em vez
-// de puxar uma dependência só para isto.
+// de puxar uma dependência só para isto. Um pedido ainda em voo e
+// cancelado quando os valores mudam outra vez, por isso uma resposta
+// atrasada nunca pisa o resultado mais recente.
 export function useDurationPrediction({
   type,
   academicType,
@@ -26,7 +29,6 @@ export function useDurationPrediction({
 }: UseDurationPredictionArgs) {
   const [prediction, setPrediction] = useState<DurationPrediction | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const requestIdRef = useRef(0);
 
   useEffect(() => {
     if (!type || !difficulty) {
@@ -34,37 +36,34 @@ export function useDurationPrediction({
       return;
     }
 
-    const currentRequestId = ++requestIdRef.current;
+    const controller = new AbortController();
     const timer = setTimeout(() => {
       setIsLoading(true);
-      predictTaskDuration({
-        type,
-        academicType: academicType || undefined,
-        difficulty: difficulty as Difficulty,
-        weightPercentage: weightPercentage ? parseFloat(weightPercentage) : undefined,
-        taskId,
-      })
+      predictTaskDuration(
+        {
+          type,
+          academicType: academicType || undefined,
+          difficulty: difficulty as Difficulty,
+          weightPercentage: weightPercentage ? parseFloat(weightPercentage) : undefined,
+          taskId,
+        },
+        controller.signal,
+      )
         .then((result) => {
-          // Uma resposta atrasada de um pedido antigo (ex: o user mudou o
-          // Type outra vez antes desta voltar) nunca deve pisar o
-          // resultado mais recente.
-          if (currentRequestId === requestIdRef.current) {
-            setPrediction(result);
-          }
+          setPrediction(result);
+          setIsLoading(false);
         })
-        .catch(() => {
-          if (currentRequestId === requestIdRef.current) {
-            setPrediction(null);
-          }
-        })
-        .finally(() => {
-          if (currentRequestId === requestIdRef.current) {
-            setIsLoading(false);
-          }
+        .catch((caught: unknown) => {
+          if (isRequestCanceled(caught)) return;
+          setPrediction(null);
+          setIsLoading(false);
         });
     }, DEBOUNCE_MS);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [type, academicType, difficulty, weightPercentage, taskId]);
 
   return { prediction, isLoading };
