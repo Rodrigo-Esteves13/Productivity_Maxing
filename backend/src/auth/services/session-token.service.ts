@@ -3,7 +3,10 @@ import { JwtService } from '@nestjs/jwt';
 import { randomBytes } from 'crypto';
 import { Provider, User } from '@prisma/client';
 import { SessionStateService } from '../../account-status/session-state.service';
-import { JwtPayload, LinkStatePayload } from '../interfaces/jwt-payload.interface';
+import {
+  JwtPayload,
+  LinkStatePayload,
+} from '../interfaces/jwt-payload.interface';
 
 // Tudo o que e emitir/verificar tokens: JWT de sessao, token CSRF e o state
 // assinado do fluxo "ligar conta".

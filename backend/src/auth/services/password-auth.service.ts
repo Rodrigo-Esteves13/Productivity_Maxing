@@ -237,10 +237,10 @@ export class PasswordAuthService {
       );
     }
 
-    const { error: updateError } = await this.clients.admin.auth.admin.updateUserById(
-      linkData.user.id,
-      { password: newPassword },
-    );
+    const { error: updateError } =
+      await this.clients.admin.auth.admin.updateUserById(linkData.user.id, {
+        password: newPassword,
+      });
 
     if (updateError) {
       throw new BadRequestException(

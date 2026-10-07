@@ -10,14 +10,18 @@ interface StringMatrixLimits {
 // envia as linhas de uma tabela do caderno. O class-validator nao valida
 // arrays dentro de arrays com `each`, por isso a verificacao e feita aqui,
 // com limites explicitos para o JSONB nao crescer sem controlo.
-export function isStringMatrix(value: unknown, limits: StringMatrixLimits): boolean {
+export function isStringMatrix(
+  value: unknown,
+  limits: StringMatrixLimits,
+): boolean {
   if (!Array.isArray(value) || value.length > limits.maxRows) return false;
   return value.every(
     (row: unknown) =>
       Array.isArray(row) &&
       row.length <= limits.maxCols &&
       row.every(
-        (cell: unknown) => typeof cell === 'string' && cell.length <= limits.maxCellLength,
+        (cell: unknown) =>
+          typeof cell === 'string' && cell.length <= limits.maxCellLength,
       ),
   );
 }

@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomBytes, scrypt as scryptCallback } from 'crypto';
-import { promisify } from 'util';
 import { ApiKeyScope, Role, User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -10,11 +9,22 @@ import { PrismaService } from '../../prisma/prisma.service';
 // concorrentes de outros utilizadores ficam todos à espera atrás de um
 // único cálculo de hash. A versão assíncrona corre no thread pool do
 // libuv, sem bloquear o resto da app.
-const scrypt = promisify(scryptCallback) as (
-  password: string | Buffer,
-  salt: string | Buffer,
+// Wrapper manual em vez de promisify(): o promisify infere `unknown` a partir
+// do último overload de scrypt. Aqui o tipo de retorno é explícito (Buffer).
+const scrypt = (
+  password: string,
+  salt: string,
   keylen: number,
-) => Promise<Buffer>;
+): Promise<Buffer> =>
+  new Promise((resolve, reject) => {
+    scryptCallback(password, salt, keylen, (err, derivedKey) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(derivedKey);
+    });
+  });
 
 // Gestao de API Keys (para Postman/scripts externos) e a validacao feita em
 // cada pedido autenticado por x-api-key.
@@ -100,7 +110,10 @@ export class ApiKeyService {
           data: { lastUsed: new Date() },
         })
         .catch((e: unknown) =>
-          this.logger.error('Erro ao atualizar lastUsed da API Key', e instanceof Error ? e.message : String(e)),
+          this.logger.error(
+            'Erro ao atualizar lastUsed da API Key',
+            e instanceof Error ? e.message : String(e),
+          ),
         );
 
       return { user: apiKeyRecord.user, scope: apiKeyRecord.scope };

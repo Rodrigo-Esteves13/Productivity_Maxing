@@ -12,7 +12,15 @@ class TableProbe {
 
 describe('isStringMatrix', () => {
   it('aceita uma matriz de texto dentro dos limites', () => {
-    expect(isStringMatrix([['a', 'b'], ['', 'c']], LIMITS)).toBe(true);
+    expect(
+      isStringMatrix(
+        [
+          ['a', 'b'],
+          ['', 'c'],
+        ],
+        LIMITS,
+      ),
+    ).toBe(true);
   });
 
   it('aceita uma tabela sem linhas', () => {
@@ -41,9 +49,9 @@ describe('isStringMatrix', () => {
   });
 
   it('aceita exatamente os limites', () => {
-    expect(
-      isStringMatrix([['abcde', 'abcde'], ['a'], ['b']], LIMITS),
-    ).toBe(true);
+    expect(isStringMatrix([['abcde', 'abcde'], ['a'], ['b']], LIMITS)).toBe(
+      true,
+    );
   });
 });
 
@@ -57,6 +65,8 @@ describe('@IsStringMatrix (decorator)', () => {
     const probe = plainToInstance(TableProbe, { rows: [{ cells: ['x'] }] });
     const errors = await validate(probe);
     expect(errors).toHaveLength(1);
-    expect(Object.values(errors[0].constraints ?? {})[0]).toContain('at most 3 rows');
+    expect(Object.values(errors[0].constraints ?? {})[0]).toContain(
+      'at most 3 rows',
+    );
   });
 });

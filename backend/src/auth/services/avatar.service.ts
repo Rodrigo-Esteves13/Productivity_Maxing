@@ -88,7 +88,9 @@ export class AvatarService {
     // Best-effort: limpar o avatar anterior guardado no nosso bucket.
     // Não bloqueia a resposta nem falha o pedido se der erro.
     this.deleteAvatarFileIfOwned(previousUser.avatarUrl).catch((err: unknown) =>
-      this.logger.warn(`Could not delete the old avatar: ${err instanceof Error ? err.message : String(err)}`),
+      this.logger.warn(
+        `Could not delete the old avatar: ${err instanceof Error ? err.message : String(err)}`,
+      ),
     );
 
     return updatedUser;

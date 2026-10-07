@@ -1,11 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  ApiKeyScope,
-  CommuteMode,
-  Provider,
-  Role,
-  User,
-} from '@prisma/client';
+import { ApiKeyScope, CommuteMode, Provider, Role, User } from '@prisma/client';
 import 'multer';
 import { PrismaService } from '../prisma/prisma.service';
 import { SessionStateService } from '../account-status/session-state.service';
@@ -224,7 +218,12 @@ export class AuthService {
     requestedScope: ApiKeyScope,
     requesterRole: Role,
   ): ReturnType<ApiKeyService['generateApiKey']> {
-    return this.apiKeys.generateApiKey(userId, name, requestedScope, requesterRole);
+    return this.apiKeys.generateApiKey(
+      userId,
+      name,
+      requestedScope,
+      requesterRole,
+    );
   }
 
   validateApiKey(
@@ -233,7 +232,10 @@ export class AuthService {
     return this.apiKeys.validateApiKey(incomingToken);
   }
 
-  revokeApiKey(userId: string, keyId: string): ReturnType<ApiKeyService['revokeApiKey']> {
+  revokeApiKey(
+    userId: string,
+    keyId: string,
+  ): ReturnType<ApiKeyService['revokeApiKey']> {
     return this.apiKeys.revokeApiKey(userId, keyId);
   }
 }

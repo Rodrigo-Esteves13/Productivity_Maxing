@@ -159,10 +159,11 @@ export class OAuthIdentityService {
       user = await neutralizePreexistingCredential(
         {
           replacePassword: async (supabaseAuthId, newPassword) => {
-            const { error } = await this.clients.admin.auth.admin.updateUserById(
-              supabaseAuthId,
-              { password: newPassword },
-            );
+            const { error } =
+              await this.clients.admin.auth.admin.updateUserById(
+                supabaseAuthId,
+                { password: newPassword },
+              );
             return error
               ? {
                   message: error.message,

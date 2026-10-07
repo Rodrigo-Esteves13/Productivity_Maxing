@@ -67,7 +67,11 @@ describe('focusWeight', () => {
 });
 
 describe('sumFocusedSessionMinutes / resolveFocusedStudyMinutes', () => {
-  const rated = (start: string, end: string | null, focusRating: number | null) => ({
+  const rated = (
+    start: string,
+    end: string | null,
+    focusRating: number | null,
+  ) => ({
     startedAt: at(start),
     endedAt: end ? at(end) : null,
     focusRating,
@@ -112,7 +116,11 @@ describe('sumFocusedSessionMinutes / resolveFocusedStudyMinutes', () => {
   });
 
   it('sem nota em nenhuma sessão dá o mesmo que o tempo de relógio', () => {
-    const sessions = [rated('2026-10-01T10:00:00Z', '2026-10-01T11:30:00Z', null)];
-    expect(sumFocusedSessionMinutes(sessions)).toBe(sumSessionMinutes(sessions));
+    const sessions = [
+      rated('2026-10-01T10:00:00Z', '2026-10-01T11:30:00Z', null),
+    ];
+    expect(sumFocusedSessionMinutes(sessions)).toBe(
+      sumSessionMinutes(sessions),
+    );
   });
 });

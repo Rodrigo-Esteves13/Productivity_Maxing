@@ -43,7 +43,9 @@ export class AccountGuardService {
           })
           .then(() => this.accountStatus.clearBlocked(user.id))
           .catch((err: unknown) =>
-            this.logger.warn(`Could not auto-reactivate ${user.id}: ${err instanceof Error ? err.message : String(err)}`),
+            this.logger.warn(
+              `Could not auto-reactivate ${user.id}: ${err instanceof Error ? err.message : String(err)}`,
+            ),
           );
         return;
       }
