@@ -6,7 +6,7 @@ import LegalTable from '../components/Legal/LegalTable';
 import useSeo from '../hooks/useSeo';
 import { REPO_URL, CONTACT_EMAIL, APP_DOMAIN } from '../lib/constants';
 
-const LAST_UPDATED = '07/07/2026';
+const LAST_UPDATED = '08/10/2026';
 
 export default function PrivacyPolicy() {
   useSeo({
@@ -68,6 +68,11 @@ export default function PrivacyPolicy() {
             subjects/categories that I curate, and that all users select from
           </li>
           <li>Usage data needed to compute your progress and streaks</li>
+          <li>
+            If you connect Google Calendar: a record of each event the App created for you (Google's
+            event ID, the event title, and its date and time), so the App can later update or remove
+            exactly those events and nothing else
+          </li>
         </ul>
 
         <h3 className="text-lg font-medium mt-4 mb-1">2.4 Technical data</h3>
@@ -80,37 +85,63 @@ export default function PrivacyPolicy() {
 
       <LegalSection number={3} title="Google Calendar data: specific disclosure">
         <p className="mb-3">
-          If you connect your Google account and grant Calendar access, the App requests the scope{' '}
-          <code>https://www.googleapis.com/auth/calendar</code>.
+          Signing in with Google only requests your basic profile (email and name). Calendar access is
+          a separate, optional step. If you choose to connect Google Calendar, the App requests this
+          one additional scope:{' '}
+          <code>https://www.googleapis.com/auth/calendar.events</code> ("See and edit events on all
+          your calendars").
         </p>
         <ul className="list-disc list-inside space-y-2">
           <li>
-            <strong>What I access:</strong> I create, read, and update calendar events that correspond to
-            tasks/deadlines you create inside the App, so your academic deadlines appear on your Google
-            Calendar automatically.
+            <strong>What I do with it:</strong> I only <em>create</em>, <em>update</em>, and{' '}
+            <em>delete</em> events that the App itself created in your primary calendar. I never read,
+            list, or modify any other event in your calendar. The events I create come from:
+            <ul className="list-disc list-inside ml-5 mt-1 space-y-1">
+              <li>
+                <strong>Tasks you choose to sync</strong> (button on a task): title, due date and time,
+                and a description with the task's area, type, difficulty, status, topics, weight,
+                target and real grade, and reference link, if you filled them in.
+              </li>
+              <li>
+                <strong>Your schedule, after you confirm a preview</strong> (Schedule page): your classes
+                (subject, room, professor), your work shifts, travel-time blocks, and suggested study
+                blocks from your study plan. Nothing is written until you confirm.
+              </li>
+            </ul>
           </li>
           <li>
-            <strong>Why this scope is needed:</strong> a narrower read-only scope wouldn't let the App
-            create or update events on your calendar when you create or edit a task, which is the core
-            feature this permission enables.
+            <strong>Why this scope is needed:</strong> creating, updating, and removing events requires
+            write access to events. A read-only scope can't do that. I don't request the broader{' '}
+            <code>calendar</code> scope, which would also allow managing or deleting whole calendars,
+            because the App doesn't need it.
           </li>
           <li>
-            <strong>What I do with it:</strong> calendar data is used exclusively to keep your Google
-            Calendar in sync with your tasks inside the App. I don't read, store, or process any calendar
-            events that the App itself didn't create.
+            <strong>Limited Use:</strong> the App's use and transfer of information received from
+            Google APIs to any other app adheres to the{' '}
+            <LegalLink href="https://developers.google.com/terms/api-services-user-data-policy">
+              Google API Services User Data Policy
+            </LegalLink>
+            , including the Limited Use requirements. Google user data is used only to provide the
+            Calendar sync features described above.
           </li>
           <li>
-            <strong>What I don't do:</strong> sell, share, or disclose your Google user data to any third
-            party; use it for advertising of any kind; or use it to train generative AI/ML models.
+            <strong>What I don't do:</strong> sell, share, or disclose your Google user data to any
+            third party (other than the infrastructure providers in section 8, which process it only to
+            run the App); use it for advertising of any kind, including retargeting or personalized ads;
+            use it to develop, improve, or train generative AI or machine-learning models; or let
+            humans read it, except with your explicit consent (for example, when you send me a support
+            request), where necessary for security or to comply with the law.
           </li>
           <li>
-            <strong>Retention:</strong> the encrypted OAuth tokens tied to your Google account are kept only
-            as long as your account is active, or until you disconnect Google from your account settings or
-            delete your account (see section 6).
+            <strong>Retention and deletion:</strong> when you disconnect Google Calendar in your
+            profile, I revoke the Google refresh token with Google and delete it from my database; any
+            short-lived access token expires on its own within about an hour. Events already created in
+            your calendar stay there until you remove them (the App can remove them for you). The
+            records described in section 2.3 are deleted when the App removes those events or when you
+            delete your account.
           </li>
           <li>
-            <strong>Revoking access:</strong> you can revoke the App's access to your Google account at any
-            time from{' '}
+            <strong>Revoking access:</strong> you can also revoke the App's access at any time from{' '}
             <LegalLink href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</LegalLink>,
             independently of anything you do inside the App.
           </li>
@@ -132,7 +163,10 @@ export default function PrivacyPolicy() {
         <ul className="list-disc list-inside mb-3 space-y-1">
           <li>Authenticate you and maintain your session</li>
           <li>Store and display your tasks, their areas, and your progress</li>
-          <li>Sync your tasks to Google Calendar, if you've connected it</li>
+          <li>
+            Sync tasks and your schedule (classes, work, travel and study blocks) to Google Calendar, only
+            if you've connected it and, for the schedule, after you confirm
+          </li>
           <li>Operate the optional Windows companion agent that reads your task status via the API</li>
         </ul>
         <p>I don't sell your data, run ads, or share it with data brokers.</p>

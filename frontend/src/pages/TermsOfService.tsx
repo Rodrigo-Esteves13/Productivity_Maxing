@@ -5,7 +5,7 @@ import LegalLink from '../components/Legal/LegalLink';
 import useSeo from '../hooks/useSeo';
 import { REPO_URL, REPO_LICENSE_URL, CONTACT_EMAIL, APP_DOMAIN } from '../lib/constants';
 
-const LAST_UPDATED = '07/07/2026';
+const LAST_UPDATED = '08/10/2026';
 
 export default function TermsOfService() {
   useSeo({
@@ -69,7 +69,7 @@ export default function TermsOfService() {
         <p className="mb-3">
           You retain ownership of the task and grade data you create in the App ("Your Content"). You grant
           me only the limited right to store, process, and display Your Content back to you, and to sync it
-          to Google Calendar if you've connected it, solely for the purpose of operating the App for you.
+          to Google Calendar (tasks you choose to sync, and your schedule once you confirm it) if you've connected it, solely for the purpose of operating the App for you.
         </p>
         <p>
           Study areas are different: they're a shared catalog that I curate and keep consistent for

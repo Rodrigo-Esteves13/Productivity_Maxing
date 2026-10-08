@@ -12,7 +12,7 @@ const FAQ_ITEMS = [
   {
     question: 'What does the Google Calendar permission actually do?',
     answer:
-      'It lets the app create and update calendar events for the deadlines you set inside it, so they show up on your calendar automatically. It never reads or touches events it didn\'t create, and you can revoke access at any time from your Google account settings.',
+      'It\'s optional, and uses Google\'s "see and edit events" permission only to create, update, and delete events the app itself made: tasks you choose to sync, and your schedule (classes, work, travel and study blocks) after you confirm a preview. It never reads or changes any other event in your calendar, and you can disconnect it in your profile or revoke access any time from your Google account settings.',
   },
   {
     question: 'What\'s the Windows agent, and do I need it?',
