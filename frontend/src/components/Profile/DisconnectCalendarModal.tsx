@@ -16,8 +16,8 @@ export default function DisconnectCalendarModal({
       <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 max-w-md w-full">
         <h3 className="text-lg font-bold text-white mb-2">Disconnect Google Calendar?</h3>
         <p className="text-neutral-400 text-sm mb-4">
-          Tasks already synced will keep their events on your Google Calendar - they just
-          won't stay in sync anymore. You can reconnect anytime from here.
+          Events already added to your Google Calendar will stay there - they just won't
+          stay in sync anymore. The app's access is revoked with Google. You can reconnect anytime from here.
         </p>
         {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
         <div className="flex justify-end gap-3">
