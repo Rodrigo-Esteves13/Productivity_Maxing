@@ -22,7 +22,7 @@ export default function PrivacyPolicy() {
     <LegalPageLayout title="Privacy Policy for Productivity Maxing" lastUpdated={LAST_UPDATED}>
       <LegalSection number={1} title="Who I am">
         <p className="mb-3">
-          Productivity Maxing ("the App") is an open-source, single-developer academic project built and
+          Productivity Maxing, also known as PMaxing and available at pmaxing.pt ("the App"), is an open-source, single-developer academic project built and
           maintained by me, Rodrigo Esteves. The source code is public on{' '}
           <LegalLink href={REPO_URL}>GitHub</LegalLink>{' '}
           under the MIT License.
@@ -178,9 +178,8 @@ export default function PrivacyPolicy() {
           <li><strong>Access</strong> the data I hold about you</li>
           <li><strong>Correct</strong> inaccurate data via your profile settings</li>
           <li>
-            <strong>Delete</strong> your account and all associated data; contact{' '}
-            <LegalLink href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</LegalLink>, or use the in-app
-            deletion option if available
+            <strong>Delete</strong> your account and all associated data; use <strong>Delete account</strong> in your Profile, or contact{' '}
+            <LegalLink href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</LegalLink>
           </li>
           <li><strong>Export</strong> your data in a portable format, on request</li>
           <li>
