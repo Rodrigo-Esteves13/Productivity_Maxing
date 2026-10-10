@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CalendarIcon, CheckIcon } from '../UI/Icons';
 import DisconnectCalendarModal from './DisconnectCalendarModal';
 import { disconnectGoogleCalendar } from '../../api/calendarService';
@@ -78,6 +79,28 @@ export default function GoogleCalendarCard() {
           )}
         </div>
       </div>
+
+      {/* Aviso de privacidade in-product (a Google exige que seja visivel junto
+          ao pedido de acesso, e que o link seja o mesmo do ecra de consentimento). */}
+      <p className="mt-4 text-xs text-neutral-500 leading-relaxed">
+        Connecting asks Google for one permission, <code>calendar.events</code>. We only create,
+        update and delete the events this app itself creates in your primary calendar, and only
+        after you confirm a preview. We never read your other events, and you can disconnect or
+        remove the synced events at any time. See our{' '}
+        <Link to="/privacy" className="underline text-violet-400 hover:text-violet-300">
+          Privacy Policy
+        </Link>
+        . Use of information received from Google APIs adheres to the{' '}
+        <a
+          href="https://developers.google.com/terms/api-services-user-data-policy"
+          target="_blank"
+          rel="noreferrer"
+          className="underline text-violet-400 hover:text-violet-300"
+        >
+          Google API Services User Data Policy
+        </a>
+        , including the Limited Use requirements.
+      </p>
 
       {isConfirmOpen && (
         <DisconnectCalendarModal
