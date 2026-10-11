@@ -1,7 +1,7 @@
 import { useState, type SyntheticEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
-import { loginRequest } from '../api/userService';
+import { loginRequest, resendVerificationRequest } from '../api/userService';
 import { isSafeRedirectPath } from '../lib/safeRedirect';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
@@ -43,10 +43,26 @@ export default function Login() {
   // appealToken de curta duração devolvido no próprio erro (ver
   // AuthService.accountBlockedResponse no backend).
   const [blockedInfo, setBlockedInfo] = useState<BlockedLoginInfo | null>(null);
+  // Password certa mas email por verificar (so com a verificacao ligada no
+  // backend): mostra aviso + botao de reenviar em vez de "credenciais invalidas".
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+
+  const handleResend = async () => {
+    setResendMessage('');
+    try {
+      await resendVerificationRequest(email);
+      setResendMessage('If your email is waiting for verification, a new link was sent.');
+    } catch {
+      setResendMessage('Could not resend right now. Try again in a minute.');
+    }
+  };
 
   const handleLogin = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault(); // Impede o browser de recarregar a página ao dar Enter!
     setError('');
+    setNeedsVerification(false);
+    setResendMessage('');
 
     try {
       const { csrfToken } = await loginRequest(email, password);
@@ -63,6 +79,10 @@ export default function Login() {
           message: typeof data.message === 'string' ? data.message : 'Your account is restricted.',
           appealToken: data.appealToken,
         });
+        return;
+      }
+      if (data?.code === 'EMAIL_NOT_VERIFIED') {
+        setNeedsVerification(true);
         return;
       }
       setError('Invalid credentials or server error.');
@@ -83,6 +103,19 @@ export default function Login() {
       <AuthCard title="Login to Your Account">
         <form onSubmit={handleLogin} className="space-y-4">
           {error && <FormError message={error} />}
+          {needsVerification && (
+            <div className="rounded-lg border border-amber-800/50 bg-amber-900/10 p-3 text-sm text-amber-300">
+              Please confirm your email before logging in. Check your inbox for the link.
+              <button
+                type="button"
+                onClick={handleResend}
+                className="block mt-2 underline text-violet-400 hover:text-violet-300"
+              >
+                Resend confirmation email
+              </button>
+              {resendMessage && <span className="block mt-1 text-xs text-neutral-400">{resendMessage}</span>}
+            </div>
+          )}
 
           <Input
             label="Email"

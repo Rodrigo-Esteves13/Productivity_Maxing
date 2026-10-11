@@ -1,7 +1,9 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import Modal from '../UI/Modal';
 import { useScheduleImport } from '../../hooks/useScheduleImport';
-import { CheckIcon, AlertTriangleIcon } from '../UI/Icons';
+import { CheckIcon, AlertTriangleIcon, TrashIcon } from '../UI/Icons';
+import { deleteImportedClasses } from '../../api/scheduleService';
+import { useFeedback } from '../../context/useFeedback';
 
 interface ImportScheduleModalProps {
   isOpen: boolean;
@@ -23,6 +25,8 @@ export default function ImportScheduleModal({
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasNotifiedRef = useRef(false);
+  const { confirm, notify } = useFeedback();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleClose = () => {
     reset();
@@ -51,6 +55,31 @@ export default function ImportScheduleModal({
   }
 
   const isBusy = stage === 'reading' || stage === 'importing';
+
+  // Importaste o horario errado? Apaga tudo e importa de novo. Turnos,
+  // locais e apontamentos do caderno nao sao tocados.
+  const handleDeleteAll = async () => {
+    const ok = await confirm({
+      title: 'Delete imported classes',
+      message:
+        'This removes every class imported from .ics files. Work shifts and your notebook entries are kept. If Google Calendar is connected, you will be asked to confirm removing the matching events. This cannot be undone.',
+      confirmLabel: 'Delete classes',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    setIsDeleting(true);
+    try {
+      const { deleted } = await deleteImportedClasses();
+      notify(`${deleted} imported class${deleted === 1 ? '' : 'es'} deleted.`, 'success');
+      // Refaz a grelha/plano e propoe limpar o Google Calendar (se ligado).
+      onImported();
+      handleClose();
+    } catch {
+      notify('Could not delete the imported classes. Please try again.', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Import schedule from .ics">
@@ -124,6 +153,18 @@ export default function ImportScheduleModal({
             )}
           </div>
         )}
+
+        <div className="pt-4 mt-2 border-t border-neutral-800">
+          <button
+            type="button"
+            onClick={() => void handleDeleteAll()}
+            disabled={isBusy || isDeleting}
+            className="inline-flex items-center gap-2 text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
+          >
+            <TrashIcon width={14} height={14} />
+            {isDeleting ? 'Deleting...' : 'Delete all imported classes'}
+          </button>
+        </div>
       </div>
     </Modal>
   );

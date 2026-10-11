@@ -22,7 +22,10 @@ const TASK_INCLUDE = {
   taskType: true,
   academicType: true,
   priority: true,
-} as const;
+  // Checklist da task, sempre ordenada - o frontend mostra "2/5" nos
+  // cards/linhas sem pedir nada extra.
+  subtasks: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
+} satisfies Prisma.TaskInclude;
 
 // Automatically infer the type of a Task when it includes the relations above
 type TaskWithIncludes = Prisma.TaskGetPayload<{

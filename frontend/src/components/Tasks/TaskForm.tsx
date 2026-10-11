@@ -4,7 +4,8 @@ import FormError from '../UI/FormError';
 import Button from '../UI/Button';
 import { buildTaskPayload } from '../../utils/taskPayload';
 import { getApiMessage } from '../../lib/httpError';
-import type { TaskTypeOption, AcademicTaskTypeOption, PriorityOption, TaskFormSubmission } from '../../types/models';
+import type { Task, TaskTypeOption, AcademicTaskTypeOption, PriorityOption, TaskFormSubmission } from '../../types/models';
+import DayLoadHint from './DayLoadHint';
 import { todayKey } from '../../lib/dateKey';
 
 const DEFAULT_PROGRESS_STATUS = 'ON_TRACK';
@@ -24,6 +25,8 @@ interface TaskFormProps {
   difficulties: string[];
   priorities: PriorityOption[];
   progressStatuses: string[];
+  // Tasks ja existentes: so servem para o aviso de dia/semana carregada.
+  existingTasks?: Task[];
 }
 
 export default function TaskForm({
@@ -35,8 +38,11 @@ export default function TaskForm({
   difficulties,
   priorities,
   progressStatuses,
+  existingTasks = [],
 }: TaskFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Checklist inicial: um passo por linha (opcional).
+  const [checklistText, setChecklistText] = useState('');
   const [error, setError] = useState('');
 
   const [formData, setFormData] = useState<TaskFormFieldValues>({
@@ -100,8 +106,14 @@ export default function TaskForm({
     try {
       // Processamento dos dados para o backend
       const payload = buildTaskPayload(formData);
+      const subtasks = checklistText
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .slice(0, 100)
+        .map((line) => line.slice(0, 200));
 
-      await onSubmit(payload);
+      await onSubmit(subtasks.length > 0 ? { ...payload, subtasks } : payload);
     } catch (err: unknown) {
       setError(getApiMessage(err, 'Error creating task.'));
     } finally {
@@ -125,6 +137,22 @@ export default function TaskForm({
         progressStatuses={progressStatuses}
         showProgressStatus
       />
+
+      <DayLoadHint date={formData.date} tasks={existingTasks} />
+
+      <div>
+        <label htmlFor="create-task-checklist" className="block text-sm font-medium text-neutral-300 mb-1">
+          Checklist <span className="text-neutral-500 font-normal">(optional, one step per line)</span>
+        </label>
+        <textarea
+          id="create-task-checklist"
+          value={checklistText}
+          onChange={(e) => setChecklistText(e.target.value)}
+          rows={3}
+          placeholder={'Read chapter 1\nSolve worksheet 3'}
+          className="w-full rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-violet-600"
+        />
+      </div>
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800">
         <Button type="button" variant="secondary" onClick={onCancel}>

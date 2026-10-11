@@ -6,6 +6,8 @@ import PostponedIndicator from '../UI/PostponedIndicator';
 import DateStatusBadge from '../UI/DateStatusBadge';
 import ColorDot from '../UI/ColorDot';
 import RescheduleButton from '../UI/RescheduleButton';
+import ViewTaskButton from '../UI/ViewTaskButton';
+import SubtaskProgress from '../UI/SubtaskProgress';
 import CalendarSyncButton from './CalendarSyncButton';
 import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
@@ -72,7 +74,10 @@ export default function TaskTableRow({
     ),
     title: (
       <>
-        <div className="font-medium text-neutral-200">{task.title}</div>
+        <div className="font-medium text-neutral-200">
+          {task.title}
+          <SubtaskProgress subtasks={task.subtasks} className="ml-2 align-middle" />
+        </div>
         {!isCompact && task.topics && <div className="text-xs text-neutral-500 mt-0.5">{task.topics}</div>}
       </>
     ),
@@ -105,6 +110,7 @@ export default function TaskTableRow({
     ),
     calendar: (
       <div className="flex flex-col items-center gap-1">
+        <ViewTaskButton taskId={task.id} title={task.title} />
         <CalendarSyncButton task={task} />
         {status === 'overdue' && onReschedule && (
           <RescheduleButton isLoading={isRescheduling} onClick={(e) => onReschedule(e, task)} />

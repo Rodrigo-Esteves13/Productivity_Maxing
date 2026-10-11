@@ -10,6 +10,7 @@ import {
   reorderTasks,
 } from '../api/userService';
 import { syncTaskToCalendar, unsyncTaskFromCalendar } from '../api/calendarService';
+import { addSubtasksBulk } from '../api/subtasksService';
 import type {
   Task,
   Area,
@@ -18,6 +19,7 @@ import type {
   PriorityOption,
   TaskFormSubmission,
   TaskWriteInput,
+  Subtask,
 } from '../types/models';
 import { useQuickReschedule } from './useQuickReschedule';
 import { isRequestCanceled } from '../lib/abortable';
@@ -147,9 +149,22 @@ export function useTasksPage() {
     // syncToCalendar é só de UI - o backend (whitelist: true,
     // forbidNonWhitelisted: true) rejeitaria a criação se este campo fosse
     // enviado no payload de Task.
-    const { syncToCalendar, ...taskPayload } = taskData as TaskWriteInput & { syncToCalendar?: boolean };
+    // subtasks tambem e so de UI: vai a seguir por /subtasks/bulk.
+    const { syncToCalendar, subtasks: subtaskTitles, ...taskPayload } = taskData as TaskWriteInput & {
+      syncToCalendar?: boolean;
+      subtasks?: string[];
+    };
     const created = await createTask(taskPayload);
-    const finalTask = await applyCalendarSync(created, !!syncToCalendar);
+    let createdWithChecklist = created;
+    if (subtaskTitles && subtaskTitles.length > 0) {
+      try {
+        const subtasks = await addSubtasksBulk(created.id, subtaskTitles);
+        createdWithChecklist = { ...created, subtasks };
+      } catch {
+        notify('Task created, but the checklist could not be saved.', 'error');
+      }
+    }
+    const finalTask = await applyCalendarSync(createdWithChecklist, !!syncToCalendar);
     setTasks((prev) =>
       [...prev, finalTask].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
@@ -186,6 +201,13 @@ export function useTasksPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks]);
 
+  // Checklist alterada no detalhe: espalha pela lista e pelo detalhe aberto
+  // (o contador "2/5" dos cards atualiza sem recarregar).
+  const handleSubtasksChange = useCallback((taskId: string, subtasks: Subtask[]) => {
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, subtasks } : t)));
+    setSelectedTask((prev) => (prev?.id === taskId ? { ...prev, subtasks } : prev));
+  }, []);
+
   const closeDetailModal = useCallback(() => {
     setSelectedTask(null);
     setIsEditing(false);
@@ -197,7 +219,8 @@ export function useTasksPage() {
   const handleUpdateTask = useCallback(
     async (taskData: TaskFormSubmission): Promise<Task | undefined> => {
       if (!selectedTask) return;
-      const { syncToCalendar, ...taskPayload } = taskData;
+      const { syncToCalendar, subtasks: ignoredSubtasks, ...taskPayload } = taskData;
+      void ignoredSubtasks;
       const updated = await updateTask(selectedTask.id, taskPayload);
       const finalTask = await applyCalendarSync(updated, !!syncToCalendar);
       setTasks((prev) => prev.map((t) => (t.id === finalTask.id ? finalTask : t)));
@@ -281,6 +304,8 @@ export function useTasksPage() {
         notes: selectedTask.notes ?? undefined,
         estimatedMinutes: selectedTask.estimatedMinutes ?? undefined,
         calendarDurationMinutes: selectedTask.calendarDurationMinutes ?? undefined,
+        // Copia a checklist (todos os passos voltam a "por fazer").
+        subtasks: (selectedTask.subtasks ?? []).map((s) => s.title),
       };
 
       await handleCreateTask(newTaskData);
@@ -405,5 +430,6 @@ export function useTasksPage() {
     moveTaskToArea,
     toggleTaskPin,
     reorderTasksInState,
+    handleSubtasksChange,
   };
 }

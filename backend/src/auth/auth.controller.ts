@@ -39,6 +39,8 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResendVerificationDto, VerifyEmailDto } from './dto/verify-email.dto';
+import { SkipCsrf } from '../common/decorators/skip-csrf.decorator';
 import { SetPasswordDto } from './dto/set-password.dto';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -94,7 +96,39 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.authService.registerWithPassword(dto);
+    // Com REQUIRE_EMAIL_VERIFICATION ligada não há sessão até o email estar
+    // verificado: o link já foi enviado (ver PasswordAuthService). Com a
+    // flag desligada isto nunca é true e o fluxo é o de sempre.
+    if (this.authService.needsEmailVerification(user)) {
+      return { requiresEmailVerification: true as const, email: user.email };
+    }
     return this.establishSession(user, res);
+  }
+
+  // Link do email de verificação. Pública e SEM CSRF de propósito: o token
+  // assinado no corpo é a única credencial (não depende de nenhuma sessão por
+  // cookie, e quem clica no email pode nem ter sessão neste browser). Só
+  // marca o email do próprio token como verificado - nunca abre sessão.
+  @Post('verify-email')
+  @HttpCode(200)
+  @SkipCsrf()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    const { email } = await this.authService.verifyEmail(dto.token);
+    return { verified: true, email };
+  }
+
+  // Reenvio do link. Resposta sempre genérica, exista a conta ou não.
+  @Post('resend-verification')
+  @HttpCode(200)
+  @SkipCsrf()
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  async resendVerification(@Body() dto: ResendVerificationDto) {
+    await this.authService.resendVerificationEmail(dto.email);
+    return {
+      message:
+        'If an account with that email is waiting for verification, a new link has been sent.',
+    };
   }
 
   @Post('login')
@@ -293,6 +327,8 @@ export class AuthController {
         campusAddress: true,
         quietHoursStart: true,
         quietHoursEnd: true,
+        // Só usado para derivar emailVerified abaixo.
+        emailVerifiedAt: true,
         // Só usado para derivar hasPassword abaixo - nunca sai do backend.
         supabaseAuthId: true,
       },
@@ -302,11 +338,15 @@ export class AuthController {
       throw new UnauthorizedException('User not found');
     }
 
-    const { supabaseAuthId, ...rest } = profile;
+    const { supabaseAuthId, emailVerifiedAt, ...rest } = profile;
     // hasPassword informa o frontend se deve mostrar "Change password" ou
     // "Add password" no EditProfileModal - true só quando já existe uma
     // credencial real no Supabase Auth associada a este User.
-    return { ...rest, hasPassword: !!supabaseAuthId };
+    return {
+      ...rest,
+      hasPassword: !!supabaseAuthId,
+      emailVerified: emailVerifiedAt !== null,
+    };
   }
 
   // Atualiza campos de texto do perfil (por agora só o nome).

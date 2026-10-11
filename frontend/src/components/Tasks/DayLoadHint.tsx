@@ -1,0 +1,82 @@
+import { useMemo } from 'react';
+import type { Task } from '../../types/models';
+import { OVERLOAD_THRESHOLD, OVERLOAD_WINDOW_DAYS } from '../../utils/detectOverloadWeek';
+import { AlertTriangleIcon } from '../UI/Icons';
+
+interface DayLoadHintProps {
+  // "YYYY-MM-DD" escolhido no formulario.
+  date: string;
+  tasks: Task[];
+  // A propria task em edicao nao conta para a carga.
+  excludeTaskId?: string;
+}
+
+const MS_PER_DAY = 86_400_000;
+
+// Tasks sem hora ficam a meia-noite UTC (o dia e o do ISO); com hora usa-se o
+// dia local, igual ao TaskEditForm.
+function dayKeyOf(task: Task): string {
+  const d = new Date(task.date);
+  const isDateOnly = d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
+  if (isDateOnly) return task.date.split('T')[0];
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function dayIndex(key: string): number {
+  return Math.floor(new Date(`${key}T00:00:00Z`).getTime() / MS_PER_DAY);
+}
+
+function formatHours(minutes: number): string {
+  const hours = Math.round((minutes / 60) * 10) / 10;
+  return `${hours}h`;
+}
+
+// Aviso ao escolher a data: esse dia, ou os 7 dias a partir dele, ja estao
+// carregados? Mesmo criterio do OverloadAlertCard (contagem de tasks por
+// fazer), so frontend, sobre as tasks que a pagina ja tem.
+export default function DayLoadHint({ date, tasks, excludeTaskId }: DayLoadHintProps) {
+  const load = useMemo(() => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+    const start = dayIndex(date);
+    const pending = tasks.filter((t) => t.progressStatus !== 'COMPLETED' && t.id !== excludeTaskId);
+
+    const sameDay = pending.filter((t) => dayKeyOf(t) === date);
+    const inWindow = pending.filter((t) => {
+      const offset = dayIndex(dayKeyOf(t)) - start;
+      return offset >= 0 && offset < OVERLOAD_WINDOW_DAYS;
+    });
+    const estimated = sameDay.reduce((sum, t) => sum + (t.estimatedMinutes ?? 0), 0);
+    return { sameDay, inWindow, estimated };
+  }, [date, tasks, excludeTaskId]);
+
+  if (!load) return null;
+
+  // +1 porque a task que se esta a criar tambem entra na janela.
+  const heavyWeek = load.inWindow.length + 1 >= OVERLOAD_THRESHOLD;
+  const busyDay = load.sameDay.length >= 2;
+  if (!heavyWeek && !busyDay) return null;
+
+  return (
+    <div
+      className="flex items-start gap-2 rounded-lg border border-amber-800/50 bg-amber-900/10 px-3 py-2 text-xs text-amber-300"
+      role="status"
+    >
+      <AlertTriangleIcon className="shrink-0 mt-0.5" width={14} height={14} />
+      <div className="space-y-0.5">
+        {busyDay && (
+          <p>
+            {load.sameDay.length} other tasks are already due on this day
+            {load.estimated > 0 ? ` (about ${formatHours(load.estimated)} estimated)` : ''}.
+          </p>
+        )}
+        {heavyWeek && (
+          <p>
+            Heavy stretch: {load.inWindow.length} pending tasks fall in the 7 days from this date.
+            Consider another day.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}

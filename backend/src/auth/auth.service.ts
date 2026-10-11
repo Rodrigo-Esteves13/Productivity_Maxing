@@ -9,6 +9,7 @@ import { AvatarService } from './services/avatar.service';
 import { OAuthIdentityService } from './services/oauth-identity.service';
 import type { OAuthProfileData } from './services/oauth-profile.interface';
 import { PasswordAuthService } from './services/password-auth.service';
+import { EmailVerificationService } from './services/email-verification.service';
 import { SessionTokenService } from './services/session-token.service';
 import { SupabaseClientsService } from './services/supabase-clients.service';
 
@@ -38,6 +39,7 @@ export class AuthService {
     private avatars: AvatarService,
     private tokens: SessionTokenService,
     private apiKeys: ApiKeyService,
+    private emailVerification: EmailVerificationService,
   ) {}
 
   // PERFIL (nome + avatar)
@@ -160,6 +162,20 @@ export class AuthService {
 
   loginWithPassword(email: string, password: string): Promise<User> {
     return this.password.loginWithPassword(email, password);
+  }
+
+  // --- Verificação de email (ver services/email-verification.service.ts) ---
+
+  needsEmailVerification(user: Pick<User, 'emailVerifiedAt'>): boolean {
+    return this.emailVerification.needsVerification(user);
+  }
+
+  verifyEmail(token: string): Promise<{ email: string }> {
+    return this.emailVerification.verify(token);
+  }
+
+  resendVerificationEmail(email: string): Promise<void> {
+    return this.emailVerification.resend(email);
   }
 
   forgotPassword(email: string): Promise<void> {

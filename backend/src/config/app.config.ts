@@ -22,6 +22,18 @@ export function getGoogleMapsApiKey(): string | null {
   return process.env.GOOGLE_MAPS_API_KEY?.trim() || null;
 }
 
+// Verificação de email obrigatória para contas email+password. DESLIGADA por
+// omissão (variável em falta = false): com a flag a false o registo e o login
+// comportam-se exatamente como antes e nenhum email de verificação é enviado
+// automaticamente. Ligar = pôr REQUIRE_EMAIL_VERIFICATION=true no Render
+// (sem deploy de código). Contas OAuth nunca são afetadas (o provider já
+// verificou o email) e as contas que já existiam antes da migração ficam
+// verificadas por defeito (ver User.emailVerifiedAt no schema.prisma).
+export function isEmailVerificationRequired(): boolean {
+  const raw = process.env.REQUIRE_EMAIL_VERIFICATION?.trim().toLowerCase();
+  return raw === 'true' || raw === '1' || raw === 'yes' || raw === 'on';
+}
+
 // Buckets do Supabase Storage e nome do remetente dos emails. Todos tem
 // valor por omissao porque so mudam se o projeto Supabase usar outros nomes.
 const DEFAULT_AVATAR_BUCKET = 'avatars';

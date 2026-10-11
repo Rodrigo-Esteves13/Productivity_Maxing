@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { Task, TaskTypeOption, AcademicTaskTypeOption, PriorityOption, TaskFormSubmission } from '../../types/models';
 import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
+import DayLoadHint from './DayLoadHint';
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
 import { buildTaskPayload } from '../../utils/taskPayload';
@@ -23,6 +24,7 @@ interface TaskEditFormProps {
   difficulties: string[];
   priorities: PriorityOption[];
   progressStatuses: string[];
+  existingTasks?: Task[];
 }
 
 function buildInitialValues(task: Task): TaskFormFieldValues {
@@ -80,6 +82,7 @@ export default function TaskEditForm({
   difficulties,
   priorities,
   progressStatuses,
+  existingTasks = [],
 }: TaskEditFormProps) {
   const initialValues = useMemo(() => buildInitialValues(task), [task]);
   const [formData, setFormData] = useState<TaskFormFieldValues>(initialValues);
@@ -132,6 +135,8 @@ export default function TaskEditForm({
         showRealGrade
         showProgressStatus
       />
+
+      <DayLoadHint date={formData.date} tasks={existingTasks} excludeTaskId={task.id} />
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800">
         <Button type="button" variant="secondary" onClick={onCancel}>

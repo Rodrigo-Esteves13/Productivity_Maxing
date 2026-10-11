@@ -266,6 +266,23 @@ model User {
   // Estudo planeado acima disto conta como overtime.
   dailyStudyLimitMinutes Int?
 
+  // Verificação de email (Supabase Auth + email enviado pelo nosso MailService).
+  // `@default(now())` é DELIBERADO: ao correr `prisma migrate dev`, todas as
+  // contas que já existem ficam logo marcadas como verificadas (o Postgres
+  // preenche a coluna nova com o default) - ligar a verificação mais tarde
+  // nunca bloqueia utilizadores atuais. Quem se regista por email+password
+  // nasce com `emailVerifiedAt: null` explícito (ver PasswordAuthService),
+  // contas OAuth ficam com o default (o provider já verificou o email).
+  // Só é EXIGIDO quando REQUIRE_EMAIL_VERIFICATION=true no backend; com a
+  // flag a false isto é só informação e ninguém é bloqueado.
+  emailVerifiedAt DateTime? @default(now())
+
+  // Segredo do feed .ics subscrivível (GET /feed/:token.ics). null = feed
+  // desligado. Quem tiver este token lê o horário/tasks (só leitura), por
+  // isso é gerado com 32 bytes aleatórios e pode ser rodado/revogado a
+  // qualquer momento (POST/DELETE /schedule/feed).
+  calendarFeedToken String? @unique
+
   // Relações
   identities       Identity[]
   tasks            Task[]
@@ -630,6 +647,9 @@ model Task {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   area Area @relation(fields: [areaId], references: [id])
   studySessions StudySession[]
+  // Checklist leve da task (ver model Subtask) - sem peso, sem nota, não
+  // entra em nenhuma média nem previsão.
+  subtasks Subtask[]
 
   // Nenhuma destas é indexada automaticamente só por ser FK no Postgres:
   // - userId: TasksService.findAll/findOne/update/remove filtram sempre
@@ -650,6 +670,30 @@ model Task {
   // findAll() ordena por [sortOrder, date] dentro de userId+periodId - sem
   // isto, o mesmo raciocínio dos índices acima aplica-se ao ORDER BY.
   @@index([userId, sortOrder])
+}
+
+/// Item de checklist dentro de uma Task. Propositadamente MUITO mais simples
+/// que uma Task: só título + feito/não feito. Sem peso, sem nota, sem
+/// dificuldade, sem data - por isso não conta para médias, previsões nem
+/// plano de estudo. Serve para os passos pequenos que não justificam uma
+/// Task própria (nem entram bem num Area "secundária" sem peso).
+/// Apagar a Task apaga as subtasks (cascade).
+model Subtask {
+  id          String    @id @default(uuid())
+  taskId      String
+  title       String
+  isDone      Boolean   @default(false)
+  // Ordem manual dentro da task (menor primeiro); novas entram no fim.
+  sortOrder   Int       @default(0)
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  // Toda a leitura é "as subtasks desta task, por ordem".
+  @@index([taskId, sortOrder])
 }
 
 /// Registo persistente de eventos de segurança - hoje só bloqueios do

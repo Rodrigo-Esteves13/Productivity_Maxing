@@ -1,7 +1,7 @@
 import { useState, type SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
-import { registerRequest } from '../api/userService';
+import { registerRequest, resendVerificationRequest } from '../api/userService';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
@@ -26,6 +26,10 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Preenchido quando o backend exige verificacao de email: nao ha sessao,
+  // so "vai ao teu email". Com a flag desligada nunca acontece.
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
+  const [resendMessage, setResendMessage] = useState('');
 
   const handleRegister = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -38,7 +42,12 @@ export default function Register() {
 
     setIsSubmitting(true);
     try {
-      const { csrfToken } = await registerRequest({ name, email, password });
+      const result = await registerRequest({ name, email, password });
+      if (result.requiresEmailVerification) {
+        setPendingVerificationEmail(result.email);
+        return;
+      }
+      const { csrfToken } = result;
 
       // Mesmo comportamento do Login: guarda o csrf token e entra logo na conta
       login(csrfToken);
@@ -49,6 +58,35 @@ export default function Register() {
       setIsSubmitting(false);
     }
   };
+
+  const handleResend = async () => {
+    if (!pendingVerificationEmail) return;
+    setResendMessage('');
+    try {
+      await resendVerificationRequest(pendingVerificationEmail);
+      setResendMessage('If the email is still waiting for verification, a new link was sent.');
+    } catch {
+      setResendMessage('Could not resend right now. Try again in a minute.');
+    }
+  };
+
+  if (pendingVerificationEmail) {
+    return (
+      <PageLayout>
+        <AuthCard title="Check your email">
+          <p className="text-sm text-neutral-300">
+            We sent a confirmation link to <strong>{pendingVerificationEmail}</strong>. Open it to
+            activate your account, then log in.
+          </p>
+          <Button type="button" className="w-full mt-4" onClick={handleResend}>
+            Resend email
+          </Button>
+          {resendMessage && <p className="mt-3 text-xs text-neutral-400">{resendMessage}</p>}
+          <AuthSwitchLink question="Already confirmed?" linkText="Login" to="/login" />
+        </AuthCard>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>

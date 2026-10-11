@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
-import { createTask, getUserAreas, getUserTasks } from '../../api/userService';
+import { createTask, getTaskMetadata, getUserAreas, getUserTasks } from '../../api/userService';
 import { searchNotebook } from '../../api/notebookService';
 import { setPendingNotebookEntry } from '../../lib/pendingNotebookEntry';
-import { parseQuickAddTask, quickAddToIsoDate } from '../../lib/parseQuickAddTask';
+import {
+  matchAreaInText,
+  parseQuickAddTask,
+  quickAddToIsoDate,
+  type QuickAddPriority,
+} from '../../lib/parseQuickAddTask';
 import { getLastUsedAreaId, setLastUsedAreaId } from '../../lib/lastUsedArea';
 import type { Area, Task, NotebookSearchResult } from '../../types/models';
 import { PlusIcon, SearchIcon } from '../UI/Icons';
@@ -29,6 +34,7 @@ const NAV_COMMANDS: NavCommand[] = [
   { id: 'nav-schedule', label: 'Schedule', path: '/schedule' },
   { id: 'nav-notebook', label: 'Notebook', path: '/notebook' },
   { id: 'nav-profile', label: 'Profile', path: '/profile' },
+  { id: 'nav-changelog', label: "What's new", path: '/changelog' },
   { id: 'nav-developer', label: 'Developer', path: '/developer' },
   { id: 'nav-agent', label: 'Agent', path: '/agent' },
   { id: 'nav-areas', label: 'Areas', path: '/areas', adminOnly: true },
@@ -57,6 +63,13 @@ const QUICK_ADD_DIFFICULTY = 'MEDIUM';
 // so a stray Enter on a normal search can never create a task by accident.
 const QUICK_ADD_PREFIX = '+';
 
+// Palavras que identificam cada nivel no catalogo de prioridades.
+const PRIORITY_MATCH: Record<QuickAddPriority, string[]> = {
+  HIGH: ['high', 'alta', 'urgent'],
+  MEDIUM: ['medium', 'media', 'média'],
+  LOW: ['low', 'baixa'],
+};
+
 type PaletteItem =
   | { kind: 'nav'; id: string; label: string; path: string }
   | { kind: 'task'; id: string; label: string; task: Task }
@@ -70,6 +83,7 @@ type PaletteItem =
       dateKey: string;
       time: string | null;
       area: Area | null;
+      priority: QuickAddPriority | null;
     };
 
 export default function CommandPalette() {
@@ -203,6 +217,8 @@ export default function CommandPalette() {
     const quickAddItems: PaletteItem[] = [];
     if (quickText !== '') {
       const parsed = parseQuickAddTask(quickText);
+      // Area escrita no texto ("Exame SO ...") ganha a ultima usada.
+      const textArea = areas ? matchAreaInText(quickText, areas) : null;
       quickAddItems.push({
         kind: 'quick-add',
         id: 'quick-add',
@@ -211,7 +227,8 @@ export default function CommandPalette() {
         dateIso: quickAddToIsoDate(parsed.date, parsed.time),
         dateKey: parsed.date,
         time: parsed.time,
-        area: quickArea,
+        area: textArea ?? quickArea,
+        priority: parsed.priority,
       });
     }
 
@@ -253,12 +270,28 @@ export default function CommandPalette() {
     setIsCreating(true);
     setCreateError('');
     try {
+      // Prioridade escrita -> key real do catalogo (o admin pode ter
+      // renomeado as keys; compara-se com key ou label). Falhar aqui nunca
+      // impede criar a task: so fica sem prioridade.
+      let priorityKey: string | undefined;
+      if (item.priority) {
+        try {
+          const meta = await getTaskMetadata();
+          priorityKey = (meta.priorities ?? []).find((p) => {
+            const hints = PRIORITY_MATCH[item.priority as QuickAddPriority];
+            return hints.some((h) => p.key.toLowerCase().includes(h) || p.label.toLowerCase().includes(h));
+          })?.key;
+        } catch {
+          priorityKey = undefined;
+        }
+      }
       const created: unknown = await createTask({
         areaId: item.area.id,
         title: item.title,
         date: item.dateIso,
         type: QUICK_ADD_TASK_TYPE,
         difficulty: QUICK_ADD_DIFFICULTY,
+        ...(priorityKey ? { priority: priorityKey } : {}),
       });
       setLastUsedAreaId(item.area.id);
       // Keep the lazily-loaded task list in sync so a following search in
@@ -379,7 +412,7 @@ export default function CommandPalette() {
                   <span className="text-[10px] text-neutral-500 shrink-0 text-right">
                     {noArea
                       ? 'Create an Area first'
-                      : `${item.area?.name ?? '...'} - ${dateLabel} - ${QUICK_ADD_TASK_TYPE.toLowerCase()}, ${QUICK_ADD_DIFFICULTY.toLowerCase()}`}
+                      : `${item.area?.name ?? '...'} - ${dateLabel} - ${QUICK_ADD_TASK_TYPE.toLowerCase()}, ${QUICK_ADD_DIFFICULTY.toLowerCase()}${item.priority ? `, ${item.priority.toLowerCase()} priority` : ''}`}
                   </span>
                 </button>
               );

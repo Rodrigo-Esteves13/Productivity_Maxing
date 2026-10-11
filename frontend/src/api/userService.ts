@@ -38,12 +38,26 @@ export const registerRequest = async (data: {
   name?: string;
   email: string;
   password: string;
-}): Promise<{ csrfToken: string }> => {
-  const response = await api.post<{ csrfToken: string }>(
-    '/auth/register',
-    data,
-  );
+}): Promise<RegisterResult> => {
+  const response = await api.post<RegisterResult>('/auth/register', data);
   return response.data;
+};
+
+// Com a verificacao de email LIGADA no backend (REQUIRE_EMAIL_VERIFICATION)
+// o registo nao abre sessao: devolve este shape em vez de um csrfToken.
+export type RegisterResult =
+  | { csrfToken: string; requiresEmailVerification?: undefined }
+  | { requiresEmailVerification: true; email: string; csrfToken?: undefined };
+
+// Link do email de verificacao (pagina /verify-email).
+export const verifyEmailRequest = async (token: string): Promise<{ email: string }> => {
+  const response = await api.post<{ verified: true; email: string }>('/auth/verify-email', { token });
+  return { email: response.data.email };
+};
+
+// Resposta sempre generica (nunca diz se o email tem conta).
+export const resendVerificationRequest = async (email: string): Promise<void> => {
+  await api.post('/auth/resend-verification', { email });
 };
 
 export const logoutRequest = async (): Promise<void> => {

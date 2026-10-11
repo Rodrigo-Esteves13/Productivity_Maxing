@@ -35,10 +35,48 @@ const WEEKDAYS: Record<string, number> = {
 // Longest names first, so "segunda-feira" is matched before "segunda".
 const WEEKDAY_NAMES_LONGEST_FIRST = Object.keys(WEEKDAYS).sort((a, b) => b.length - a.length);
 
+export type QuickAddPriority = 'HIGH' | 'MEDIUM' | 'LOW';
+
 export interface QuickAddParseResult {
   title: string;
   date: string; // "YYYY-MM-DD", local calendar day
   time: string | null; // "HH:MM" (24h) or null when no time was typed
+  // Prioridade escrita ("alta"/"!high"...), ou null. Quem cria a task
+  // mapeia isto para a key real do catalogo de prioridades.
+  priority: QuickAddPriority | null;
+}
+
+const PRIORITY_WORDS: Record<string, QuickAddPriority> = {
+  alta: 'HIGH',
+  high: 'HIGH',
+  urgente: 'HIGH',
+  media: 'MEDIUM',
+  média: 'MEDIUM',
+  medium: 'MEDIUM',
+  baixa: 'LOW',
+  low: 'LOW',
+};
+
+function normalizeText(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+/**
+ * Area cujo nome aparece como palavra inteira no texto (sem acentos nem
+ * maiusculas); em caso de varias, a de nome mais longo. "Exame SO amanha" ->
+ * area "SO". null se nenhuma bater.
+ */
+export function matchAreaInText<T extends { name: string }>(text: string, areas: T[]): T | null {
+  const haystack = ` ${normalizeText(text).replace(/[^a-z0-9]+/g, ' ')} `;
+  let best: T | null = null;
+  for (const area of areas) {
+    const needle = normalizeText(area.name).replace(/[^a-z0-9]+/g, ' ').trim();
+    if (!needle) continue;
+    if (haystack.includes(` ${needle} `) && (!best || needle.length > normalizeText(best.name).length)) {
+      best = area;
+    }
+  }
+  return best;
 }
 
 function pad2(n: number): string {
@@ -120,12 +158,30 @@ export function parseQuickAddTask(raw: string, now: Date = new Date()): QuickAdd
     }
   }
 
+  // Prioridade: "!alta" em qualquer sitio, ou a palavra solta no FIM (depois
+  // de a data ter sido retirada) - assim "Exame SO 12/12 alta" funciona sem
+  // roubar palavras a meio de um titulo normal.
+  let priority: QuickAddPriority | null = null;
+  const bangMatch = text.match(/(?:^|\s)!([\p{L}]+)(?=\s|$)/u);
+  if (bangMatch && PRIORITY_WORDS[bangMatch[1].toLowerCase()]) {
+    priority = PRIORITY_WORDS[bangMatch[1].toLowerCase()];
+    text = text.replace(bangMatch[0], ' ');
+  } else {
+    const trailing = text.trim().match(/(?:^|\s)([\p{L}]+)$/u);
+    const word = trailing?.[1].toLowerCase();
+    // So se sobrar mais texto (o titulo nunca pode ficar so "alta").
+    if (word && PRIORITY_WORDS[word] && text.trim().split(/\s+/).length > 1) {
+      priority = PRIORITY_WORDS[word];
+      text = text.trim().slice(0, -trailing![1].length);
+    }
+  }
+
   // Connectors left dangling after the date phrase is removed
   // ("Entrega de X para" -> "Entrega de X").
   text = text.replace(/\s+(para|em|no|na|on|by|for)\s*$/i, '');
   text = text.replace(/\s{2,}/g, ' ').trim();
 
-  return { title: text || raw.trim(), date: dateKey, time };
+  return { title: text || raw.trim(), date: dateKey, time, priority };
 }
 
 // Same convention as buildTaskDate in utils/taskPayload.ts: date-only ->

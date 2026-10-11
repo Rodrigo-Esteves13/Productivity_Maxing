@@ -15,9 +15,10 @@ export interface OverloadWindow {
 // difficulty/weight: the point is raw volume ("how many things need
 // attention"), which is what actually causes the feeling of being
 // overloaded, independent of how much each one is worth.
-const OVERLOAD_THRESHOLD = 5;
+export const OVERLOAD_THRESHOLD = 5;
 
-const WINDOW_DAYS = 7;
+export const OVERLOAD_WINDOW_DAYS = 7;
+const WINDOW_DAYS = OVERLOAD_WINDOW_DAYS;
 
 function toMidnightUtc(date: Date): number {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());

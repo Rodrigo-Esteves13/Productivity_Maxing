@@ -5,6 +5,8 @@ import PostponedIndicator from '../UI/PostponedIndicator';
 import DateStatusBadge from '../UI/DateStatusBadge';
 import ColorDot from '../UI/ColorDot';
 import RescheduleButton from '../UI/RescheduleButton';
+import ViewTaskButton from '../UI/ViewTaskButton';
+import SubtaskProgress from '../UI/SubtaskProgress';
 import CalendarSyncButton from './CalendarSyncButton';
 import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
@@ -49,7 +51,10 @@ export default function TaskCard({
             {task.area?.colorHex && <ColorDot color={task.area.colorHex} />}
             <span className="truncate">{task.area?.name || 'N/A'}</span>
           </div>
-          <div className="font-medium text-neutral-100 mt-1 break-words">{task.title}</div>
+          <div className="font-medium text-neutral-100 mt-1 break-words">
+            {task.title}
+            <SubtaskProgress subtasks={task.subtasks} className="ml-2 align-middle" />
+          </div>
           {task.topics && <div className="text-xs text-neutral-500 mt-0.5 break-words">{task.topics}</div>}
           </div>
         </div>
@@ -76,6 +81,7 @@ export default function TaskCard({
           row that never mixes with the badges above, so "+1 Day" never ends up
           orphaned mid-wrap. */}
       <div className="flex items-center gap-2 mt-2">
+        <ViewTaskButton taskId={task.id} title={task.title} />
         <CalendarSyncButton task={task} />
         {status === 'overdue' && onReschedule && (
           <RescheduleButton
