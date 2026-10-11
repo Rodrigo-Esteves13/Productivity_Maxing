@@ -14,6 +14,7 @@ import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { SubtasksService } from './subtasks.service';
+import { TasksService } from './tasks.service';
 import {
   CreateSubtaskDto,
   CreateSubtasksBulkDto,
@@ -26,7 +27,10 @@ import {
 @UseGuards(JwtOrApiKeyAuthGuard)
 @Controller('tasks/:taskId/subtasks')
 export class SubtasksController {
-  constructor(private readonly subtasksService: SubtasksService) {}
+  constructor(
+    private readonly subtasksService: SubtasksService,
+    private readonly tasksService: TasksService,
+  ) {}
 
   @Get()
   list(
@@ -63,6 +67,16 @@ export class SubtasksController {
     @Body() dto: ReorderSubtasksDto,
   ) {
     return this.subtasksService.reorder(user.id, taskId, dto.subtaskIds);
+  }
+
+  // Passo -> task própria (ver TasksService.createFromSubtask).
+  @Post(':subtaskId/convert')
+  convertToTask(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('taskId') taskId: string,
+    @Param('subtaskId') subtaskId: string,
+  ) {
+    return this.tasksService.createFromSubtask(user.id, taskId, subtaskId);
   }
 
   @Patch(':subtaskId')

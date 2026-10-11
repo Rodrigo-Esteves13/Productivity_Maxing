@@ -24,6 +24,23 @@ export interface TaskWriteInput {
   targetGrade?: number | null;
   realGrade?: number | null;
   calendarDurationMinutes?: number | null;
+  recurrenceFrequency?: RecurrenceFrequency | null;
+  recurrenceInterval?: number;
+  recurrenceUntil?: string | null;
+}
+
+export type RecurrenceFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY';
+
+export interface WeeklyReview {
+  from: string;
+  to: string;
+  completed: { id: string; title: string; areaName: string | null; completedAt: string }[];
+  postponed: { id: string; title: string; areaName: string | null; postponedCount: number }[];
+  overdueCount: number;
+  studyMinutes: number;
+  studyByArea: { areaName: string; minutes: number }[];
+  focusAverage: number | null;
+  upcoming: { id: string; title: string; areaName: string | null; date: string }[];
 }
 
 // O que os formularios entregam: o corpo da task + a flag so de UI que
@@ -420,6 +437,12 @@ export interface User {
   // false so quando o backend exige verificacao de email e esta conta
   // (email+password) ainda nao confirmou. Opcional: respostas de admin nao o trazem.
   emailVerified?: boolean;
+  // Preferencias (Profile > Preferences).
+  deadlineEmailReminders?: boolean;
+  spacedReviewsEnabled?: boolean;
+  // 2FA: available = flag do backend (false => esconder tudo); enabled = esta conta tem 2FA.
+  twoFactorAvailable?: boolean;
+  twoFactorEnabled?: boolean;
 
   // Só vem preenchido nas respostas de admin (GET/PATCH /users, /users/:id)
   // - ver USER_ADMIN_SELECT em users.service.ts. Opcional aqui porque
@@ -662,6 +685,16 @@ export interface Task {
 
   // Checklist da task (vem ordenada do backend).
   subtasks?: Subtask[];
+
+  // Recorrencia: ao concluir cria-se a proxima ocorrencia.
+  recurrenceFrequency?: RecurrenceFrequency | null;
+  recurrenceInterval?: number;
+  recurrenceUntil?: string | null;
+  // Revisao espacada: id da task que a originou.
+  spacedReviewOfTaskId?: string | null;
+  // So na resposta de PATCH /tasks/:id quando concluir criou tasks novas
+  // (proxima ocorrencia / revisoes espacadas).
+  spawnedTasks?: Task[];
 
   // Optional relations
   area?: Area;

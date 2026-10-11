@@ -208,6 +208,12 @@ export function useTasksPage() {
     setSelectedTask((prev) => (prev?.id === taskId ? { ...prev, subtasks } : prev));
   }, []);
 
+  // Passo promovido a task: entra na lista (o passo ja saiu da checklist
+  // via onChange do SubtaskChecklist).
+  const handleSubtaskConverted = useCallback((created: Task) => {
+    setTasks((prev) => (prev.some((t) => t.id === created.id) ? prev : [...prev, created]));
+  }, []);
+
   const closeDetailModal = useCallback(() => {
     setSelectedTask(null);
     setIsEditing(false);
@@ -216,19 +222,42 @@ export function useTasksPage() {
   const toggleEditing = useCallback(() => setIsEditing((prev) => !prev), []);
   const stopEditing = useCallback(() => setIsEditing(false), []);
 
+  // Concluir uma task pode criar outras no backend (proxima ocorrencia de
+  // uma recorrente, revisoes espacadas): vem em `spawnedTasks`. Tira-as da
+  // task, junta-as a lista e avisa. Devolve a task limpa.
+  const absorbSpawnedTasks = useCallback(
+    (updated: Task): Task => {
+      const { spawnedTasks, ...task } = updated;
+      if (spawnedTasks && spawnedTasks.length > 0) {
+        setTasks((prev) => {
+          const known = new Set(prev.map((t) => t.id));
+          return [...prev, ...spawnedTasks.filter((s) => !known.has(s.id))];
+        });
+        notify(
+          spawnedTasks.length === 1
+            ? '1 new task was created (next repeat or review).'
+            : `${spawnedTasks.length} new tasks were created (repeat or reviews).`,
+          'info',
+        );
+      }
+      return task;
+    },
+    [notify],
+  );
+
   const handleUpdateTask = useCallback(
     async (taskData: TaskFormSubmission): Promise<Task | undefined> => {
       if (!selectedTask) return;
       const { syncToCalendar, subtasks: ignoredSubtasks, ...taskPayload } = taskData;
       void ignoredSubtasks;
-      const updated = await updateTask(selectedTask.id, taskPayload);
+      const updated = absorbSpawnedTasks(await updateTask(selectedTask.id, taskPayload));
       const finalTask = await applyCalendarSync(updated, !!syncToCalendar);
       setTasks((prev) => prev.map((t) => (t.id === finalTask.id ? finalTask : t)));
       setSelectedTask(finalTask);
       setIsEditing(false);
       return finalTask;
     },
-    [selectedTask]
+    [selectedTask, absorbSpawnedTasks]
   );
 
   const handleDeleteTask = useCallback(async () => {
@@ -331,13 +360,15 @@ export function useTasksPage() {
   const markSelectedTaskComplete = useCallback(async () => {
     if (!selectedTask || selectedTask.progressStatus === 'COMPLETED') return;
     try {
-      const updated = await updateTask(selectedTask.id, { progressStatus: 'COMPLETED' });
+      const updated = absorbSpawnedTasks(
+        await updateTask(selectedTask.id, { progressStatus: 'COMPLETED' }),
+      );
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setSelectedTask(updated);
     } catch {
       notify('Could not mark the task as completed. Please try again.', 'error');
     }
-  }, [selectedTask, notify]);
+  }, [selectedTask, notify, absorbSpawnedTasks]);
 
   // Same partial-PATCH pattern as markSelectedTaskComplete, but for any
   // task in the list (not just the one open in the detail modal) - this
@@ -431,5 +462,6 @@ export function useTasksPage() {
     toggleTaskPin,
     reorderTasksInState,
     handleSubtasksChange,
+    handleSubtaskConverted,
   };
 }

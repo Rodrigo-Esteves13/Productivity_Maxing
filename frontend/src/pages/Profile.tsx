@@ -7,6 +7,8 @@ import PageHeader from '../components/Layout/PageHeader';
 import ProfileHeaderCard from '../components/Profile/ProfileHeaderCard';
 import DeleteAccountSection from '../components/Profile/DeleteAccountSection';
 import GoogleCalendarCard from '../components/Profile/GoogleCalendarCard';
+import PreferencesCard from '../components/Profile/PreferencesCard';
+import TwoFactorCard from '../components/Profile/TwoFactorCard';
 import AccessibilitySettingsCard from '../components/Profile/AccessibilitySettingsCard';
 import CommuteSettingsCard from '../components/Schedule/CommuteSettingsCard';
 import DeleteAccountModal from '../components/Profile/DeleteAccountModal';
@@ -50,6 +52,10 @@ export default function Profile() {
       <ProfileHeaderCard user={user} initials={initials} stats={stats} isLoadingStats={stats.isLoading} />
 
       <GoogleCalendarCard />
+
+      <PreferencesCard user={user} onUserUpdate={updateUser} />
+
+      <TwoFactorCard user={user} onUserUpdate={updateUser} />
 
       <AccessibilitySettingsCard />
 

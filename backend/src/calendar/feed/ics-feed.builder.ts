@@ -93,8 +93,7 @@ function lisbonOffsetMinutes(at: Date): number {
     second: '2-digit',
     hourCycle: 'h23',
   }).formatToParts(at);
-  const get = (type: string) =>
-    Number(parts.find((p) => p.type === type)?.value);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
   const asUtc = Date.UTC(
     get('year'),
     get('month') - 1,
@@ -119,8 +118,7 @@ export function lisbonWallClockToUtc(
   minutesSinceMidnight: number,
 ): Date {
   const [year, month, day] = dateKey.split('-').map(Number);
-  const guess =
-    Date.UTC(year, month - 1, day, 0, 0, 0) + minutesSinceMidnight * 60000;
+  const guess = Date.UTC(year, month - 1, day, 0, 0, 0) + minutesSinceMidnight * 60000;
   const firstOffset = lisbonOffsetMinutes(new Date(guess));
   let utc = guess - firstOffset * 60000;
   const secondOffset = lisbonOffsetMinutes(new Date(utc));
@@ -129,17 +127,11 @@ export function lisbonWallClockToUtc(
 }
 
 function eventLines(event: FeedEvent, stamp: string): string[] {
-  const lines: string[] = [
-    'BEGIN:VEVENT',
-    `UID:${event.uid}`,
-    `DTSTAMP:${stamp}`,
-  ];
+  const lines: string[] = ['BEGIN:VEVENT', `UID:${event.uid}`, `DTSTAMP:${stamp}`];
 
   if (event.allDayDate) {
     lines.push(`DTSTART;VALUE=DATE:${formatIcsDate(event.allDayDate)}`);
-    lines.push(
-      `DTEND;VALUE=DATE:${formatIcsDate(nextDayKey(event.allDayDate))}`,
-    );
+    lines.push(`DTEND;VALUE=DATE:${formatIcsDate(nextDayKey(event.allDayDate))}`);
     // Dia inteiro "livre": não deve marcar o dia como ocupado.
     lines.push('TRANSP:TRANSPARENT');
   } else if (event.start && event.end) {

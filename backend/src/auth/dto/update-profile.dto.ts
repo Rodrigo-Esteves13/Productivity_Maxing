@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsOptional,
   IsString,
   IsInt,
@@ -83,4 +84,21 @@ export class UpdateProfileDto {
   @Min(0)
   @Max(1439)
   quietHoursEnd?: number;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Email me 24h before the deadline of pending tasks.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  deadlineEmailReminders?: boolean;
+
+  @ApiPropertyOptional({
+    example: true,
+    description:
+      'When an academic task is completed, create light review tasks at +1/+3/+7 days.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  spacedReviewsEnabled?: boolean;
 }

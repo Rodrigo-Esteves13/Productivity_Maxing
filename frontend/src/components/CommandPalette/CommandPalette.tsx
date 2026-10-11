@@ -32,6 +32,7 @@ const NAV_COMMANDS: NavCommand[] = [
   { id: 'nav-tasks', label: 'Tasks', path: '/tasks' },
   { id: 'nav-focus', label: 'Focus', path: '/focus' },
   { id: 'nav-schedule', label: 'Schedule', path: '/schedule' },
+  { id: 'nav-review', label: 'Weekly review', path: '/review' },
   { id: 'nav-notebook', label: 'Notebook', path: '/notebook' },
   { id: 'nav-profile', label: 'Profile', path: '/profile' },
   { id: 'nav-changelog', label: "What's new", path: '/changelog' },

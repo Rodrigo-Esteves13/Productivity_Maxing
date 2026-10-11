@@ -1,6 +1,6 @@
 // src/api/subtasksService.ts
 import api from './client';
-import type { Subtask } from '../types/models';
+import type { Subtask, Task } from '../types/models';
 
 const base = (taskId: string) => `/tasks/${taskId}/subtasks`;
 
@@ -20,6 +20,18 @@ export const updateSubtask = async (
   patch: { title?: string; isDone?: boolean },
 ): Promise<Subtask> => {
   const response = await api.patch<Subtask>(`${base(taskId)}/${subtaskId}`, patch);
+  return response.data;
+};
+
+// Nova ordem manual: todos os ids da task, pela ordem desejada.
+export const reorderSubtasks = async (taskId: string, subtaskIds: string[]): Promise<Subtask[]> => {
+  const response = await api.patch<Subtask[]>(`${base(taskId)}/reorder`, { subtaskIds });
+  return response.data;
+};
+
+// Promove o passo a task propria (herda Area, tipo, periodo e prazo).
+export const convertSubtaskToTask = async (taskId: string, subtaskId: string): Promise<Task> => {
+  const response = await api.post<Task>(`${base(taskId)}/${subtaskId}/convert`);
   return response.data;
 };
 

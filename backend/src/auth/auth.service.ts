@@ -10,6 +10,7 @@ import { OAuthIdentityService } from './services/oauth-identity.service';
 import type { OAuthProfileData } from './services/oauth-profile.interface';
 import { PasswordAuthService } from './services/password-auth.service';
 import { EmailVerificationService } from './services/email-verification.service';
+import { TwoFactorService } from './services/two-factor.service';
 import { SessionTokenService } from './services/session-token.service';
 import { SupabaseClientsService } from './services/supabase-clients.service';
 
@@ -40,6 +41,7 @@ export class AuthService {
     private tokens: SessionTokenService,
     private apiKeys: ApiKeyService,
     private emailVerification: EmailVerificationService,
+    private twoFactor: TwoFactorService,
   ) {}
 
   // PERFIL (nome + avatar)
@@ -54,6 +56,8 @@ export class AuthService {
       campusAddress?: string;
       quietHoursStart?: number;
       quietHoursEnd?: number;
+      deadlineEmailReminders?: boolean;
+      spacedReviewsEnabled?: boolean;
     },
   ): Promise<User> {
     // Cada campo só entra no `data` do Prisma se veio mesmo no pedido -
@@ -80,6 +84,12 @@ export class AuthService {
           : {}),
         ...(data.quietHoursEnd !== undefined
           ? { quietHoursEnd: data.quietHoursEnd }
+          : {}),
+        ...(data.deadlineEmailReminders !== undefined
+          ? { deadlineEmailReminders: data.deadlineEmailReminders }
+          : {}),
+        ...(data.spacedReviewsEnabled !== undefined
+          ? { spacedReviewsEnabled: data.spacedReviewsEnabled }
           : {}),
       },
     });
@@ -162,6 +172,36 @@ export class AuthService {
 
   loginWithPassword(email: string, password: string): Promise<User> {
     return this.password.loginWithPassword(email, password);
+  }
+
+  // --- 2FA (ver services/two-factor.service.ts) ---
+
+  requiresTwoFactor(user: Pick<User, 'twoFactorEnabledAt'>): boolean {
+    return this.twoFactor.requiresChallenge(user);
+  }
+
+  createTwoFactorChallenge(user: Pick<User, 'id'>): string {
+    return this.twoFactor.createChallengeToken(user);
+  }
+
+  completeTwoFactorLogin(token: string, code: string): Promise<User> {
+    return this.twoFactor.completeLogin(token, code);
+  }
+
+  twoFactorStatus(userId: string) {
+    return this.twoFactor.getStatus(userId);
+  }
+
+  beginTwoFactorSetup(userId: string) {
+    return this.twoFactor.beginSetup(userId);
+  }
+
+  confirmTwoFactorSetup(userId: string, code: string) {
+    return this.twoFactor.confirmSetup(userId, code);
+  }
+
+  disableTwoFactor(userId: string, code: string): Promise<void> {
+    return this.twoFactor.disable(userId, code);
   }
 
   // --- Verificação de email (ver services/email-verification.service.ts) ---

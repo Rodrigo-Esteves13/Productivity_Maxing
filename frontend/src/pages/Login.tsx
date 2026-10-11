@@ -2,6 +2,7 @@ import { useState, type SyntheticEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { loginRequest, resendVerificationRequest } from '../api/userService';
+import TwoFactorCodeForm from '../components/Auth/TwoFactorCodeForm';
 import { isSafeRedirectPath } from '../lib/safeRedirect';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
@@ -46,6 +47,8 @@ export default function Login() {
   // Password certa mas email por verificar (so com a verificacao ligada no
   // backend): mostra aviso + botao de reenviar em vez de "credenciais invalidas".
   const [needsVerification, setNeedsVerification] = useState(false);
+  // Conta com 2FA (so com TWO_FACTOR_ENABLED no backend): token do desafio.
+  const [twoFactorToken, setTwoFactorToken] = useState<string | null>(null);
   const [resendMessage, setResendMessage] = useState('');
 
   const handleResend = async () => {
@@ -65,7 +68,12 @@ export default function Login() {
     setResendMessage('');
 
     try {
-      const { csrfToken } = await loginRequest(email, password);
+      const result = await loginRequest(email, password);
+      if (result.requiresTwoFactor) {
+        setTwoFactorToken(result.twoFactorToken);
+        return;
+      }
+      const { csrfToken } = result;
 
       // Usa o hook para guardar o csrf token em memória e notificar a app
       login(csrfToken);
@@ -95,6 +103,24 @@ export default function Login() {
         bearerToken={blockedInfo.appealToken}
         initialMessage={blockedInfo.message}
       />
+    );
+  }
+
+  if (twoFactorToken) {
+    return (
+      <PageLayout>
+        <AuthCard title="Two-factor authentication">
+          <TwoFactorCodeForm
+            token={twoFactorToken}
+            onSuccess={(csrfToken) => {
+              login(csrfToken);
+              const destination =
+                redirectParam && isSafeRedirectPath(redirectParam) ? redirectParam : '/dashboard';
+              navigate(destination, { replace: true });
+            }}
+          />
+        </AuthCard>
+      </PageLayout>
     );
   }
 

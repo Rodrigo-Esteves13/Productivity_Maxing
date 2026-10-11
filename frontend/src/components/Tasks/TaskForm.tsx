@@ -6,6 +6,7 @@ import { buildTaskPayload } from '../../utils/taskPayload';
 import { getApiMessage } from '../../lib/httpError';
 import type { Task, TaskTypeOption, AcademicTaskTypeOption, PriorityOption, TaskFormSubmission } from '../../types/models';
 import DayLoadHint from './DayLoadHint';
+import RecurrenceFields, { EMPTY_RECURRENCE, recurrencePayload, type RecurrenceValue } from './RecurrenceFields';
 import { todayKey } from '../../lib/dateKey';
 
 const DEFAULT_PROGRESS_STATUS = 'ON_TRACK';
@@ -43,6 +44,7 @@ export default function TaskForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Checklist inicial: um passo por linha (opcional).
   const [checklistText, setChecklistText] = useState('');
+  const [recurrence, setRecurrence] = useState<RecurrenceValue>(EMPTY_RECURRENCE);
   const [error, setError] = useState('');
 
   const [formData, setFormData] = useState<TaskFormFieldValues>({
@@ -113,7 +115,8 @@ export default function TaskForm({
         .slice(0, 100)
         .map((line) => line.slice(0, 200));
 
-      await onSubmit(subtasks.length > 0 ? { ...payload, subtasks } : payload);
+      const withRecurrence = { ...payload, ...recurrencePayload(recurrence, false) };
+      await onSubmit(subtasks.length > 0 ? { ...withRecurrence, subtasks } : withRecurrence);
     } catch (err: unknown) {
       setError(getApiMessage(err, 'Error creating task.'));
     } finally {
@@ -139,6 +142,8 @@ export default function TaskForm({
       />
 
       <DayLoadHint date={formData.date} tasks={existingTasks} />
+
+      <RecurrenceFields idPrefix="create-task" value={recurrence} onChange={setRecurrence} />
 
       <div>
         <label htmlFor="create-task-checklist" className="block text-sm font-medium text-neutral-300 mb-1">

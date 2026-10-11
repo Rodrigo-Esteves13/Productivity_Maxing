@@ -7,6 +7,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-12',
+    title: 'Repeating tasks, weekly review and reminders',
+    items: [
+      'Repeat: set a task to repeat daily, weekly or monthly; completing it creates the next one (checklist included, reset).',
+      'Weekly review page: what you finished, study time by area, what keeps getting pushed back and what is next.',
+      'Preferences (Profile): deadline reminders by email and spaced reviews (review tasks 1, 3 and 7 days after you complete an academic task).',
+      'Subtasks: drag to reorder, and turn a step into its own task.',
+    ],
+  },
+  {
     date: '2026-10-11',
     title: 'Subtasks, calendar feed and quicker task entry',
     items: [

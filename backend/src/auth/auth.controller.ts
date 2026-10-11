@@ -40,6 +40,7 @@ import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResendVerificationDto, VerifyEmailDto } from './dto/verify-email.dto';
+import { TwoFactorCodeDto, TwoFactorLoginDto } from './dto/two-factor.dto';
 import { SkipCsrf } from '../common/decorators/skip-csrf.decorator';
 import { SetPasswordDto } from './dto/set-password.dto';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
@@ -55,7 +56,7 @@ import { OAuthConflictRedirectFilter } from './filters/oauth-conflict-redirect.f
 import { CurrentUser } from './decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthenticatedUser } from './interfaces/authenticated-user.interface';
-import { getFrontendUrl } from '../config/app.config';
+import { getFrontendUrl, isTwoFactorEnabled } from '../config/app.config';
 import {
   ACCESS_TOKEN_COOKIE,
   CSRF_COOKIE,
@@ -142,7 +143,69 @@ export class AuthController {
       dto.email,
       dto.password,
     );
+    // 2FA (só com TWO_FACTOR_ENABLED=true E a conta tê-lo ativado): em vez
+    // de sessão devolve um token curto; o código vai a POST /auth/2fa/login.
+    if (this.authService.requiresTwoFactor(user)) {
+      return {
+        requiresTwoFactor: true as const,
+        twoFactorToken: this.authService.createTwoFactorChallenge(user),
+      };
+    }
     return this.establishSession(user, res);
+  }
+
+  // Segundo passo do login com 2FA (email+password e OAuth). Pública e sem
+  // CSRF como o login: a credencial é o token do desafio + o código.
+  @Post('2fa/login')
+  @HttpCode(200)
+  @SkipCsrf()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async twoFactorLogin(
+    @Body() dto: TwoFactorLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const user = await this.authService.completeTwoFactorLogin(
+      dto.token,
+      dto.code,
+    );
+    return this.establishSession(user, res);
+  }
+
+  @Get('2fa/status')
+  @UseGuards(JwtAuthGuard)
+  twoFactorStatus(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.twoFactorStatus(user.id);
+  }
+
+  @Post('2fa/setup')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  beginTwoFactorSetup(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.beginTwoFactorSetup(user.id);
+  }
+
+  @Post('2fa/confirm')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  confirmTwoFactorSetup(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: TwoFactorCodeDto,
+  ) {
+    return this.authService.confirmTwoFactorSetup(user.id, dto.code);
+  }
+
+  @Post('2fa/disable')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async disableTwoFactor(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: TwoFactorCodeDto,
+  ) {
+    await this.authService.disableTwoFactor(user.id, dto.code);
+    return { enabled: false };
   }
 
   @Post('logout')
@@ -329,6 +392,10 @@ export class AuthController {
         quietHoursEnd: true,
         // Só usado para derivar emailVerified abaixo.
         emailVerifiedAt: true,
+        deadlineEmailReminders: true,
+        spacedReviewsEnabled: true,
+        // Só para twoFactorEnabled (o segredo nunca sai do backend).
+        twoFactorEnabledAt: true,
         // Só usado para derivar hasPassword abaixo - nunca sai do backend.
         supabaseAuthId: true,
       },
@@ -338,7 +405,8 @@ export class AuthController {
       throw new UnauthorizedException('User not found');
     }
 
-    const { supabaseAuthId, emailVerifiedAt, ...rest } = profile;
+    const { supabaseAuthId, emailVerifiedAt, twoFactorEnabledAt, ...rest } =
+      profile;
     // hasPassword informa o frontend se deve mostrar "Change password" ou
     // "Add password" no EditProfileModal - true só quando já existe uma
     // credencial real no Supabase Auth associada a este User.
@@ -346,6 +414,8 @@ export class AuthController {
       ...rest,
       hasPassword: !!supabaseAuthId,
       emailVerified: emailVerifiedAt !== null,
+      twoFactorAvailable: isTwoFactorEnabled(),
+      twoFactorEnabled: twoFactorEnabledAt !== null,
     };
   }
 
@@ -367,6 +437,8 @@ export class AuthController {
       campusAddress: dto.campusAddress,
       quietHoursStart: dto.quietHoursStart,
       quietHoursEnd: dto.quietHoursEnd,
+      deadlineEmailReminders: dto.deadlineEmailReminders,
+      spacedReviewsEnabled: dto.spacedReviewsEnabled,
     });
   }
 
@@ -486,6 +558,18 @@ export class AuthController {
   // pede-o à parte em GET /auth/csrf assim que aterra em /auth/callback.
   private issueSessionAndRedirect(req: Request, res: Response) {
     const user = req.user as User;
+
+    // Conta com 2FA: sem cookie de sessão ainda. O token do desafio vai no
+    // FRAGMENTO do URL (#), que o browser nunca envia a servidores nem fica
+    // em logs de pedidos; o frontend pede o código e conclui em /auth/2fa/login.
+    if (this.authService.requiresTwoFactor(user)) {
+      res.clearCookie(OAUTH_LOGIN_STATE_COOKIE, clearCookieOptions());
+      const challenge = this.authService.createTwoFactorChallenge(user);
+      return res.redirect(
+        `${FRONTEND_URL}/login/2fa#token=${encodeURIComponent(challenge)}`,
+      );
+    }
+
     const token = this.authService.issueJwt(user);
 
     res.cookie(ACCESS_TOKEN_COOKIE, token, accessTokenCookieOptions());

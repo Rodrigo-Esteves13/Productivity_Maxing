@@ -8,6 +8,7 @@ import Register from '../pages/Register';
 import ForgotPassword from '../pages/ForgotPassword';
 import ResetPassword from '../pages/ResetPassword';
 import VerifyEmail from '../pages/VerifyEmail';
+import LoginTwoFactor from '../pages/LoginTwoFactor';
 import AuthCallback from '../components/Auth/AuthCallback';
 import CookieNotice from '../components/Legal/CookieNotice';
 import CommandPalette from '../components/CommandPalette/CommandPalette';
@@ -45,6 +46,7 @@ const SharedNotebookEntry = lazy(() => import('../pages/SharedNotebookEntry'));
 const TermsOfService = lazy(() => import('../pages/TermsOfService'));
 const Eula = lazy(() => import('../pages/Eula'));
 const DmcaPolicy = lazy(() => import('../pages/DmcaPolicy'));
+const WeeklyReview = lazy(() => import('../pages/WeeklyReview'));
 const Changelog = lazy(() => import('../pages/Changelog'));
 const NotFound = lazy(() => import('../pages/NotFound'));
 
@@ -59,6 +61,8 @@ export default function AppRouter() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/login/2fa" element={<LoginTwoFactor />} />
+          <Route path="/review" element={<PrivateRoute><WeeklyReview /></PrivateRoute>} />
           <Route path="/changelog" element={<PrivateRoute><Changelog /></PrivateRoute>} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           {/* Públicas - o consent screen do Google OAuth aponta para estas */}

@@ -2,6 +2,7 @@
 import api from './client';
 import type {
   User,
+  WeeklyReview,
   Area,
   Task,
   TaskMeta,
@@ -23,14 +24,46 @@ import type {
 // cookie HttpOnly diretamente. O que volta aqui é só o csrfToken, que o
 // AuthContext guarda em memória (ver api/csrfStore.ts) para o reenviar no
 // header X-CSRF-Token dos pedidos seguintes.
+export type LoginResult =
+  | { csrfToken: string; requiresTwoFactor?: undefined }
+  | { requiresTwoFactor: true; twoFactorToken: string; csrfToken?: undefined };
+
 export const loginRequest = async (
   email: string,
   password: string,
-): Promise<{ csrfToken: string }> => {
-  const response = await api.post<{ csrfToken: string }>('/auth/login', {
+): Promise<LoginResult> => {
+  const response = await api.post<LoginResult>('/auth/login', {
     email,
     password,
   });
+  return response.data;
+};
+
+// 2FA (so existe com TWO_FACTOR_ENABLED no backend).
+export const twoFactorLoginRequest = async (
+  token: string,
+  code: string,
+): Promise<{ csrfToken: string }> => {
+  const response = await api.post<{ csrfToken: string }>('/auth/2fa/login', { token, code });
+  return response.data;
+};
+
+export const beginTwoFactorSetup = async (): Promise<{ secret: string; otpauthUri: string }> => {
+  const response = await api.post<{ secret: string; otpauthUri: string }>('/auth/2fa/setup');
+  return response.data;
+};
+
+export const confirmTwoFactorSetup = async (code: string): Promise<{ recoveryCodes: string[] }> => {
+  const response = await api.post<{ recoveryCodes: string[] }>('/auth/2fa/confirm', { code });
+  return response.data;
+};
+
+export const disableTwoFactor = async (code: string): Promise<void> => {
+  await api.post('/auth/2fa/disable', { code });
+};
+
+export const getWeeklyReview = async (): Promise<WeeklyReview> => {
+  const response = await api.get<WeeklyReview>('/tasks/weekly-review');
   return response.data;
 };
 
@@ -106,6 +139,8 @@ export const updateUserProfile = async (data: {
   campusAddress?: string;
   quietHoursStart?: number;
   quietHoursEnd?: number;
+  deadlineEmailReminders?: boolean;
+  spacedReviewsEnabled?: boolean;
 }): Promise<User> => {
   const response = await api.patch<User>('/auth/me', data);
   return response.data;

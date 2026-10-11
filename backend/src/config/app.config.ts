@@ -34,6 +34,16 @@ export function isEmailVerificationRequired(): boolean {
   return raw === 'true' || raw === '1' || raw === 'yes' || raw === 'on';
 }
 
+// 2FA por app autenticadora (TOTP). DESLIGADO por omissão: com a flag a false
+// nenhum endpoint de 2FA responde (404), ninguém pode ativar e o login não
+// pede código a ninguém. Ligar = TWO_FACTOR_ENABLED=true no Render. Quem
+// ativar o 2FA com a flag ligada passa a ter de dar o código em cada login
+// (email+password e OAuth).
+export function isTwoFactorEnabled(): boolean {
+  const raw = process.env.TWO_FACTOR_ENABLED?.trim().toLowerCase();
+  return raw === 'true' || raw === '1' || raw === 'yes' || raw === 'on';
+}
+
 // Buckets do Supabase Storage e nome do remetente dos emails. Todos tem
 // valor por omissao porque so mudam se o projeto Supabase usar outros nomes.
 const DEFAULT_AVATAR_BUCKET = 'avatars';

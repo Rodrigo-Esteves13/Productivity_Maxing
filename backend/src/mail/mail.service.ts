@@ -111,6 +111,64 @@ export class MailService {
       return false;
     }
   }
+
+  /**
+   * Lembrete de prazos (um email por utilizador por execução do cron, com
+   * todas as tasks). Devolve se o SMTP aceitou: o RemindersService só marca
+   * os lembretes como enviados quando isto é true (senão tenta de novo).
+   */
+  async sendDeadlineReminderEmail(
+    to: string,
+    items: { title: string; dueLabel: string; areaName: string | null }[],
+    tasksLink: string,
+  ): Promise<boolean> {
+    const transporter = this.getTransporter();
+    if (!transporter) return false;
+
+    const fromEmail = process.env.SMTP_FROM_EMAIL ?? process.env.SMTP_USER;
+    const fromName = getMailFromName();
+    const lines = items
+      .map(
+        (item) =>
+          `&bull; <strong>${escapeHtml(item.title)}</strong>${
+            item.areaName ? ` (${escapeHtml(item.areaName)})` : ''
+          } &mdash; ${escapeHtml(item.dueLabel)}`,
+      )
+      .join('<br />');
+
+    try {
+      await transporter.sendMail({
+        from: `"${fromName}" <${fromEmail}>`,
+        to,
+        subject:
+          items.length === 1
+            ? `Due soon: ${items[0].title}`
+            : `${items.length} tasks due soon`,
+        html: renderActionEmail({
+          title: items.length === 1 ? 'A task is due soon' : 'Tasks due soon',
+          intro: lines,
+          buttonLabel: 'Open my tasks',
+          link: tasksLink,
+          footer:
+            'You get this because deadline reminders are on. Turn them off any time in Profile > Preferences.',
+          frontendUrl: getFrontendUrl(),
+        }),
+      });
+      this.logger.log(`Lembrete de prazos enviado (${items.length} tasks)`);
+      return true;
+    } catch (err) {
+      this.logger.error('Erro ao enviar lembrete de prazos', err);
+      return false;
+    }
+  }
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 // Template genérico (botão + link de reserva) para emails de ação. O de

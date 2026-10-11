@@ -13,9 +13,11 @@ interface TaskDetailViewProps {
   academicTaskTypes?: AcademicTaskTypeOption[];
   // Sem isto a checklist nao aparece (usos so de leitura do detalhe).
   onSubtasksChange?: (taskId: string, subtasks: Subtask[]) => void;
+  // Chamado quando um passo e promovido a task propria.
+  onSubtaskConverted?: (task: Task) => void;
 }
 
-export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes = [], onSubtasksChange }: TaskDetailViewProps) {
+export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes = [], onSubtasksChange, onSubtaskConverted }: TaskDetailViewProps) {
   const typeLabel = resolveOptionLabel(task.type, taskTypes);
   const academicTypeLabel = resolveOptionLabel(task.academicType, academicTaskTypes);
   // Reutiliza o mesmo hook do formulário só para ir buscar actualMinutes
@@ -48,6 +50,7 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
             taskId={task.id}
             subtasks={task.subtasks ?? []}
             onChange={(next) => onSubtasksChange(task.id, next)}
+            onConverted={onSubtaskConverted}
           />
         </DetailRow>
       )}

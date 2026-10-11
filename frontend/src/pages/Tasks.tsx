@@ -50,6 +50,7 @@ export default function Tasks() {
     toggleTaskPin,
     reorderTasksInState,
     handleSubtasksChange,
+    handleSubtaskConverted,
     rescheduleToTomorrow,
     reschedulingId
   } = useTasksPage();
@@ -218,6 +219,7 @@ export default function Tasks() {
               taskTypes={taskTypes}
               academicTaskTypes={academicTaskTypes}
               onSubtasksChange={handleSubtasksChange}
+              onSubtaskConverted={handleSubtaskConverted}
             />
           ))}
       </Modal>
