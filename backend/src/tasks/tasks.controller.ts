@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
+import { WeeklyReviewService } from './weekly-review.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ConfirmOverdueDto } from './dto/confirm-overdue.dto';
@@ -29,13 +30,22 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 @UseGuards(JwtOrApiKeyAuthGuard)
 @Controller('tasks')
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) {}
+  constructor(
+    private readonly tasksService: TasksService,
+    private readonly weeklyReviewService: WeeklyReviewService,
+  ) {}
 
   // taskTypes e academicTaskTypes já não são enum fixo, vêm da BD e são
   // editáveis pelos admins em /admin/task-types e /admin/academic-task-types.
   @Get('meta')
   getMetadata() {
     return this.tasksService.getMeta();
+  }
+
+  // Rota literal antes de ":id" - senão "weekly-review" era lido como um id.
+  @Get('weekly-review')
+  weeklyReview(@CurrentUser() user: AuthenticatedUser) {
+    return this.weeklyReviewService.build(user.id);
   }
 
   @Post()

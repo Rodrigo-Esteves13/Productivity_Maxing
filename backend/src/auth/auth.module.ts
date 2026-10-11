@@ -8,6 +8,8 @@ import { ApiKeyService } from './services/api-key.service';
 import { AvatarService } from './services/avatar.service';
 import { OAuthIdentityService } from './services/oauth-identity.service';
 import { PasswordAuthService } from './services/password-auth.service';
+import { EmailVerificationService } from './services/email-verification.service';
+import { TwoFactorService } from './services/two-factor.service';
 import { SessionTokenService } from './services/session-token.service';
 import { SupabaseClientsService } from './services/supabase-clients.service';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -39,6 +41,8 @@ import { AccountStatusModule } from '../account-status/account-status.module';
     AccountGuardService,
     OAuthIdentityService,
     PasswordAuthService,
+    EmailVerificationService,
+    TwoFactorService,
     AvatarService,
     SessionTokenService,
     ApiKeyService,

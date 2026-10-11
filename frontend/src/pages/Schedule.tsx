@@ -7,6 +7,7 @@ import ImportScheduleModal from '../components/Schedule/ImportScheduleModal';
 import StudyPlanCard from '../components/Study/StudyPlanCard';
 import CommitmentsCard from '../components/Schedule/CommitmentsCard';
 import ScheduleSyncCard from '../components/Schedule/ScheduleSyncCard';
+import CalendarFeedCard from '../components/Schedule/CalendarFeedCard';
 import { UploadIcon } from '../components/UI/Icons';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { requestCalendarSyncReview } from '../lib/calendarSyncEvents';
@@ -50,6 +51,7 @@ export default function Schedule() {
           <WeekGrid refreshKey={scheduleVersion} />
           <CommitmentsCard onChanged={handleScheduleChanged} />
           <ScheduleSyncCard />
+          <CalendarFeedCard />
         </div>
         <div key={scheduleVersion}>
           <StudyPlanCard />

@@ -10,7 +10,7 @@ export const TASKS_TABLE_COLUMNS = [
   { id: 'priority', label: 'Priority' },
   { id: 'status', label: 'Status' },
   { id: 'grade', label: 'Target / Real' },
-  { id: 'calendar', label: 'Calendar' },
+  { id: 'calendar', label: 'Actions' },
 ] as const;
 
 export type TasksTableColumnId = (typeof TASKS_TABLE_COLUMNS)[number]['id'];

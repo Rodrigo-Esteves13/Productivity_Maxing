@@ -49,6 +49,8 @@ export default function Tasks() {
     moveTaskToArea,
     toggleTaskPin,
     reorderTasksInState,
+    handleSubtasksChange,
+    handleSubtaskConverted,
     rescheduleToTomorrow,
     reschedulingId
   } = useTasksPage();
@@ -169,6 +171,7 @@ export default function Tasks() {
           difficulties={difficulties}
           priorities={priorities}
           progressStatuses={progressStatuses}
+          existingTasks={tasks}
         />
       </Modal>
 
@@ -208,9 +211,16 @@ export default function Tasks() {
               difficulties={difficulties}
               priorities={priorities}
               progressStatuses={progressStatuses}
+              existingTasks={tasks}
             />
           ) : (
-            <TaskDetailView task={selectedTask} taskTypes={taskTypes} academicTaskTypes={academicTaskTypes} />
+            <TaskDetailView
+              task={selectedTask}
+              taskTypes={taskTypes}
+              academicTaskTypes={academicTaskTypes}
+              onSubtasksChange={handleSubtasksChange}
+              onSubtaskConverted={handleSubtaskConverted}
+            />
           ))}
       </Modal>
     </PageLayout>

@@ -8,6 +8,7 @@ import {
 import type { Request } from 'express';
 import { Observable } from 'rxjs';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
+import { redactSecretPath } from '../redact-secret-path.util';
 
 /**
  * Interceptor global: para cada pedido HTTP, escreve no terminal do backend
@@ -46,7 +47,9 @@ export class RequestUserLoggerInterceptor implements NestInterceptor {
       ? `${user.email} (id=${user.id}, role=${user.role})`
       : 'anonymous';
 
-    this.logger.log(`${req.method} ${req.originalUrl} - user: ${who}`);
+    this.logger.log(
+      `${req.method} ${redactSecretPath(req.originalUrl)} - user: ${who}`,
+    );
 
     return next.handle();
   }

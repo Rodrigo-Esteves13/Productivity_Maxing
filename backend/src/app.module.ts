@@ -19,6 +19,7 @@ import { AcademicProgramsModule } from './academic-programs/academic-programs.mo
 import { TelemetryModule } from './telemetry/telemetry.module';
 import { PredictionModule } from './prediction/prediction.module';
 import { ScheduleModule } from './schedule/schedule.module';
+import { RemindersModule } from './reminders/reminders.module';
 import { StudyPlanModule } from './study-plan/study-plan.module';
 import { WorkShiftsModule } from './work-shifts/work-shifts.module';
 import { NotebookModule } from './notebook/notebook.module';
@@ -55,6 +56,7 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     TelemetryModule,
     PredictionModule,
     ScheduleModule,
+    RemindersModule,
     StudyPlanModule,
     WorkShiftsModule,
     NotebookModule,

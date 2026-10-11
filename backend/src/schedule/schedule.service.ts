@@ -120,6 +120,38 @@ export class ScheduleService {
   }
 
   /**
+   * Apaga aulas importadas do .ics do próprio utilizador. Sem `range`
+   * apaga TODAS; com `range` só as que caem entre as duas datas (inclusive).
+   * `where: { userId }` é sempre a primeira condição - nunca se apaga
+   * nada de outra pessoa.
+   *
+   * Não toca em turnos/locais (WorkShift/Commitment), nem em ligações
+   * disciplina->cadeira (AreaScheduleLink). Entradas do caderno criadas
+   * numa aula NÃO são apagadas: NotebookEntry.classOccurrenceId é SetNull,
+   * só perdem a ligação à aula.
+   */
+  async deleteOccurrences(
+    userId: string,
+    range?: { from: Date; to: Date },
+  ): Promise<{ deleted: number }> {
+    const where: {
+      userId: string;
+      date?: { gte: Date; lte: Date };
+    } = { userId };
+
+    if (range) {
+      // Mesmo cuidado do findRange: `to` é o fim do dia.
+      const endOfTo = new Date(range.to);
+      endOfTo.setUTCHours(23, 59, 59, 999);
+      where.date = { gte: range.from, lte: endOfTo };
+    }
+
+    const result = await this.prisma.classOccurrence.deleteMany({ where });
+    this.logger.log(`Aulas apagadas (user ${userId}): ${result.count}`);
+    return { deleted: result.count };
+  }
+
+  /**
    * Calcula o tempo de viagem casa-campus via Google Maps Distance Matrix
    * (modo "driving" - é o único trajeto que interessa aqui, sempre o
    * mesmo par de moradas) e grava homeAddress/campusAddress/

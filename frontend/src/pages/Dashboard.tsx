@@ -19,6 +19,7 @@ import { useAcademic } from '../context/useAcademic';
 import GpaSummary from '../components/Dashboard/GpaSummary';
 import PeriodProgressBar from '../components/Dashboard/PeriodProgressBar';
 import OverloadAlertCard from '../components/Dashboard/OverloadAlertCard';
+import OnboardingChecklist from '../components/Dashboard/OnboardingChecklist';
 import DashboardCardGrid from '../components/Dashboard/DashboardCardGrid';
 import {
   GradeNeededCalculator,
@@ -154,6 +155,8 @@ export default function Dashboard() {
       {visibility.periodProgress && !isLoading && !error && !isViewingAllPeriods && activePeriod && (
         <PeriodProgressBar period={activePeriod} tasks={academicTasks} />
       )}
+
+      {!isLoading && !error && <OnboardingChecklist taskCount={tasks.length} />}
 
       {visibility.overloadAlert && !isLoading && !error && academicTasks.length > 0 && (
         <OverloadAlertCard tasks={academicTasks} areas={academicAreas} />

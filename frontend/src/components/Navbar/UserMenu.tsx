@@ -77,6 +77,20 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
           >
             Agent
           </Link>
+          <Link
+            to="/review"
+            onClick={() => setIsOpen(false)}
+            className="block px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
+          >
+            Weekly review
+          </Link>
+          <Link
+            to="/changelog"
+            onClick={() => setIsOpen(false)}
+            className="block px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
+          >
+            What's new
+          </Link>
           <button
             onClick={() => {
               setIsOpen(false);

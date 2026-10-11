@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -12,6 +21,8 @@ import { EstimateCommuteDto } from './dto/estimate-commute.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+
+const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
 @ApiTags('Schedule')
 @ApiBearerAuth()
@@ -54,6 +65,40 @@ export class ScheduleController {
       new Date(from),
       new Date(to),
     );
+  }
+
+  // Sem `from`/`to` apaga TODO o horário importado; com os dois só esse
+  // intervalo. Recomeçar de zero é o caso principal (importaste o .ics
+  // errado) - ver botão "Delete imported classes" no ImportScheduleModal.
+  @Delete()
+  @ApiOperation({
+    summary:
+      'Deletes imported class occurrences (all of them, or only between from/to). Does not touch work shifts or notebook entries.',
+  })
+  @ApiQuery({ name: 'from', required: false, example: '2026-09-14' })
+  @ApiQuery({ name: 'to', required: false, example: '2026-09-20' })
+  deleteOccurrences(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    if (!from && !to) {
+      return this.scheduleService.deleteOccurrences(user.id);
+    }
+    if (!from || !to || !DATE_KEY.test(from) || !DATE_KEY.test(to)) {
+      throw new BadRequestException(
+        'Send both "from" and "to" as YYYY-MM-DD, or neither to delete everything.',
+      );
+    }
+    const fromDate = new Date(`${from}T00:00:00.000Z`);
+    const toDate = new Date(`${to}T00:00:00.000Z`);
+    if (fromDate.getTime() > toDate.getTime()) {
+      throw new BadRequestException('"from" must not be after "to".');
+    }
+    return this.scheduleService.deleteOccurrences(user.id, {
+      from: fromDate,
+      to: toDate,
+    });
   }
 
   // Rate-limitado à parte (bem mais apertado que o default de 100/min):

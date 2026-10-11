@@ -1,0 +1,229 @@
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
+import { UserStatus } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
+import { ScheduleService } from '../../schedule/schedule.service';
+import { WorkShiftsService } from '../../work-shifts/work-shifts.service';
+import { StudyPlanService } from '../../study-plan/study-plan.service';
+import {
+  addUtcDays,
+  getLisbonNow,
+  toDateKey,
+} from '../../common/date-key.util';
+import { buildDesiredEvents } from '../schedule-sync.builder';
+import {
+  buildIcsFeed,
+  lisbonWallClockToUtc,
+  type FeedEvent,
+} from './ics-feed.builder';
+
+// Janela do feed: um pouco do passado (para a semana atual ficar completa) e
+// ~2 meses para a frente. 7 + 55 = 62 dias, o máximo que o expandRange dos
+// turnos aceita (MAX_RANGE_DAYS).
+const PAST_DAYS = 7;
+const FUTURE_DAYS = 54;
+// O plano de estudo só se calcula para poucos dias (mais é ruído e caro).
+const STUDY_PLAN_DAYS = 14;
+// Tasks sem hora: a app guarda "dia" como meia-noite UTC.
+const DEFAULT_TASK_MINUTES = 60;
+// Clientes de calendário repetem o pedido de hora a hora ou mais; esta cache
+// em memória evita refazer ~6 queries se o mesmo link for pedido em rajada.
+const FEED_CACHE_TTL_MS = 60_000;
+
+interface CachedFeed {
+  expiresAt: number;
+  body: string;
+}
+
+export interface CalendarFeedStatus {
+  enabled: boolean;
+  token: string | null;
+}
+
+@Injectable()
+export class CalendarFeedService {
+  private readonly logger = new Logger(CalendarFeedService.name);
+  private readonly cache = new Map<string, CachedFeed>();
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scheduleService: ScheduleService,
+    private readonly workShiftsService: WorkShiftsService,
+    private readonly studyPlanService: StudyPlanService,
+  ) {}
+
+  // ---------------------------------------------------------------- gestão
+
+  async getStatus(userId: string): Promise<CalendarFeedStatus> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { calendarFeedToken: true },
+    });
+    return {
+      enabled: user.calendarFeedToken !== null,
+      token: user.calendarFeedToken,
+    };
+  }
+
+  /** Cria o link, ou RODA-O (o antigo deixa de funcionar de imediato). */
+  async enableOrRotate(userId: string): Promise<CalendarFeedStatus> {
+    const previous = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { calendarFeedToken: true },
+    });
+    const token = randomBytes(32).toString('hex');
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { calendarFeedToken: token },
+    });
+    if (previous.calendarFeedToken) {
+      this.cache.delete(previous.calendarFeedToken);
+    }
+    return { enabled: true, token };
+  }
+
+  async disable(userId: string): Promise<CalendarFeedStatus> {
+    const previous = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { calendarFeedToken: true },
+    });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { calendarFeedToken: null },
+    });
+    if (previous.calendarFeedToken) {
+      this.cache.delete(previous.calendarFeedToken);
+    }
+    return { enabled: false, token: null };
+  }
+
+  // ---------------------------------------------------------- feed público
+
+  /**
+   * Texto .ics para um token. 404 (nunca 401/403) para token desconhecido,
+   * revogado ou de uma conta bloqueada: não confirma a ninguém que um token
+   * "quase certo" existiu.
+   */
+  async buildFeedForToken(token: string): Promise<string> {
+    // Tokens válidos são sempre 64 hex - rejeita lixo sem tocar na BD.
+    if (!/^[0-9a-f]{64}$/.test(token)) throw new NotFoundException();
+
+    const cached = this.cache.get(token);
+    if (cached && cached.expiresAt > Date.now()) return cached.body;
+
+    const user = await this.prisma.user.findUnique({
+      where: { calendarFeedToken: token },
+      select: { id: true, status: true, commuteMinutes: true },
+    });
+    if (!user || user.status === UserStatus.BANNED) {
+      throw new NotFoundException();
+    }
+
+    const { today } = getLisbonNow();
+    const rangeStart = addUtcDays(today, -PAST_DAYS);
+    const rangeEnd = addUtcDays(today, FUTURE_DAYS);
+
+    const [classes, shifts, plan, tasks] = await Promise.all([
+      this.scheduleService.findRange(user.id, rangeStart, rangeEnd),
+      this.workShiftsService.expandRange(
+        user.id,
+        toDateKey(rangeStart),
+        toDateKey(rangeEnd),
+      ),
+      this.studyPlanService.generate(user.id, STUDY_PLAN_DAYS),
+      this.prisma.task.findMany({
+        where: {
+          userId: user.id,
+          progressStatus: { not: 'COMPLETED' },
+          date: { gte: rangeStart, lte: rangeEnd },
+        },
+        select: {
+          id: true,
+          title: true,
+          date: true,
+          topics: true,
+          calendarDurationMinutes: true,
+          area: { select: { name: true } },
+        },
+        orderBy: { date: 'asc' },
+      }),
+    ]);
+
+    // Reaproveita o MESMO construtor do sync com o Google Calendar: aulas,
+    // viagens, turnos e blocos de estudo ficam iguais nos dois sítios.
+    const desired = buildDesiredEvents({
+      classes: classes.map((c) => ({
+        id: c.id,
+        date: toDateKey(c.date),
+        startMinutes: c.startMinutes,
+        endMinutes: c.endMinutes,
+        subject: c.subject,
+        location: c.location,
+        professor: c.professor,
+      })),
+      shifts,
+      study: plan.suggestions,
+      commuteMinutes: user.commuteMinutes,
+    });
+
+    const events: FeedEvent[] = desired.map((d) => ({
+      // O sourceKey tem ":" - válido num UID; o domínio evita colisões com
+      // outros calendários subscritos.
+      uid: `${d.sourceKey}@productivitymaxing`,
+      title: d.title,
+      description: d.description,
+      location: d.location,
+      category: d.kind,
+      start: lisbonWallClockToUtc(d.date, d.startMinutes),
+      end: lisbonWallClockToUtc(d.date, d.endMinutes),
+    }));
+
+    for (const task of tasks) {
+      const description = [
+        task.area?.name ? `Area: ${task.area.name}` : null,
+        task.topics ? `Topics: ${task.topics}` : null,
+      ]
+        .filter((line): line is string => line !== null)
+        .join('\n');
+
+      const isDateOnly =
+        task.date.getUTCHours() === 0 &&
+        task.date.getUTCMinutes() === 0 &&
+        task.date.getUTCSeconds() === 0;
+
+      const base = {
+        uid: `task:${task.id}@productivitymaxing`,
+        title: task.title,
+        description: description || null,
+        category: 'task',
+      };
+
+      if (isDateOnly) {
+        events.push({ ...base, allDayDate: toDateKey(task.date) });
+      } else {
+        const minutes = task.calendarDurationMinutes ?? DEFAULT_TASK_MINUTES;
+        events.push({
+          ...base,
+          start: task.date,
+          end: new Date(task.date.getTime() + minutes * 60_000),
+        });
+      }
+    }
+
+    const body = buildIcsFeed(events, { calendarName: 'Productivity Maxing' });
+    this.cache.set(token, {
+      body,
+      expiresAt: Date.now() + FEED_CACHE_TTL_MS,
+    });
+    this.pruneCache();
+    return body;
+  }
+
+  private pruneCache(): void {
+    if (this.cache.size < 200) return;
+    const now = Date.now();
+    for (const [key, entry] of this.cache) {
+      if (entry.expiresAt <= now) this.cache.delete(key);
+    }
+  }
+}

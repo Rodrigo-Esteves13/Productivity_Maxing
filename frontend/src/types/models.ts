@@ -24,12 +24,49 @@ export interface TaskWriteInput {
   targetGrade?: number | null;
   realGrade?: number | null;
   calendarDurationMinutes?: number | null;
+  recurrenceFrequency?: RecurrenceFrequency | null;
+  recurrenceInterval?: number;
+  recurrenceUntil?: string | null;
+}
+
+export type RecurrenceFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY';
+
+export interface WeeklyReview {
+  from: string;
+  to: string;
+  completed: { id: string; title: string; areaName: string | null; completedAt: string }[];
+  postponed: { id: string; title: string; areaName: string | null; postponedCount: number }[];
+  overdueCount: number;
+  studyMinutes: number;
+  studyByArea: { areaName: string; minutes: number }[];
+  focusAverage: number | null;
+  upcoming: { id: string; title: string; areaName: string | null; date: string }[];
 }
 
 // O que os formularios entregam: o corpo da task + a flag so de UI que
 // decide se se sincroniza com o Google Calendar a seguir (nunca vai para a API).
 export interface TaskFormSubmission extends TaskWriteInput {
   syncToCalendar: boolean;
+  // So de UI (nunca vai no corpo de POST /tasks): titulos da checklist
+  // escritos no formulario de criacao, enviados a seguir via /subtasks/bulk.
+  subtasks?: string[];
+}
+
+// Item de checklist dentro de uma task: so titulo + feito. Sem peso/nota.
+export interface Subtask {
+  id: string;
+  taskId: string;
+  title: string;
+  isDone: boolean;
+  sortOrder: number;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CalendarFeedStatus {
+  enabled: boolean;
+  token: string | null;
 }
 
 export type Difficulty = 'VERY_EASY' | 'EASY' | 'MEDIUM' | 'HARD' | 'VERY_HARD';
@@ -397,6 +434,15 @@ export interface User {
   // Auth) - false for accounts that only ever signed in via OAuth. Never
   // exposes supabaseAuthId itself, only this boolean.
   hasPassword: boolean;
+  // false so quando o backend exige verificacao de email e esta conta
+  // (email+password) ainda nao confirmou. Opcional: respostas de admin nao o trazem.
+  emailVerified?: boolean;
+  // Preferencias (Profile > Preferences).
+  deadlineEmailReminders?: boolean;
+  spacedReviewsEnabled?: boolean;
+  // 2FA: available = flag do backend (false => esconder tudo); enabled = esta conta tem 2FA.
+  twoFactorAvailable?: boolean;
+  twoFactorEnabled?: boolean;
 
   // Só vem preenchido nas respostas de admin (GET/PATCH /users, /users/:id)
   // - ver USER_ADMIN_SELECT em users.service.ts. Opcional aqui porque
@@ -636,6 +682,19 @@ export interface Task {
   updatedAt: string;
   completedAt: string | null; // Actual moment it moved to COMPLETED
   lastOverdueCheckAt: string | null; // Last time the overdue check-in asked about this task
+
+  // Checklist da task (vem ordenada do backend).
+  subtasks?: Subtask[];
+
+  // Recorrencia: ao concluir cria-se a proxima ocorrencia.
+  recurrenceFrequency?: RecurrenceFrequency | null;
+  recurrenceInterval?: number;
+  recurrenceUntil?: string | null;
+  // Revisao espacada: id da task que a originou.
+  spacedReviewOfTaskId?: string | null;
+  // So na resposta de PATCH /tasks/:id quando concluir criou tasks novas
+  // (proxima ocorrencia / revisoes espacadas).
+  spawnedTasks?: Task[];
 
   // Optional relations
   area?: Area;

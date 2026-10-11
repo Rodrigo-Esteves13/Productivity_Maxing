@@ -214,7 +214,11 @@ export class UsersService {
       studySessions,
       notebookEntries,
     ] = await Promise.all([
-      this.prisma.task.findMany({ where: { userId: id } }),
+      // subtasks vão dentro de cada task no export (checklist da task).
+      this.prisma.task.findMany({
+        where: { userId: id },
+        include: { subtasks: true },
+      }),
       this.prisma.identity.findMany({
         where: { userId: id },
         select: { provider: true, createdAt: true },

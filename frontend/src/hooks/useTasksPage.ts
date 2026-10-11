@@ -10,6 +10,7 @@ import {
   reorderTasks,
 } from '../api/userService';
 import { syncTaskToCalendar, unsyncTaskFromCalendar } from '../api/calendarService';
+import { addSubtasksBulk } from '../api/subtasksService';
 import type {
   Task,
   Area,
@@ -18,6 +19,7 @@ import type {
   PriorityOption,
   TaskFormSubmission,
   TaskWriteInput,
+  Subtask,
 } from '../types/models';
 import { useQuickReschedule } from './useQuickReschedule';
 import { isRequestCanceled } from '../lib/abortable';
@@ -147,9 +149,22 @@ export function useTasksPage() {
     // syncToCalendar é só de UI - o backend (whitelist: true,
     // forbidNonWhitelisted: true) rejeitaria a criação se este campo fosse
     // enviado no payload de Task.
-    const { syncToCalendar, ...taskPayload } = taskData as TaskWriteInput & { syncToCalendar?: boolean };
+    // subtasks tambem e so de UI: vai a seguir por /subtasks/bulk.
+    const { syncToCalendar, subtasks: subtaskTitles, ...taskPayload } = taskData as TaskWriteInput & {
+      syncToCalendar?: boolean;
+      subtasks?: string[];
+    };
     const created = await createTask(taskPayload);
-    const finalTask = await applyCalendarSync(created, !!syncToCalendar);
+    let createdWithChecklist = created;
+    if (subtaskTitles && subtaskTitles.length > 0) {
+      try {
+        const subtasks = await addSubtasksBulk(created.id, subtaskTitles);
+        createdWithChecklist = { ...created, subtasks };
+      } catch {
+        notify('Task created, but the checklist could not be saved.', 'error');
+      }
+    }
+    const finalTask = await applyCalendarSync(createdWithChecklist, !!syncToCalendar);
     setTasks((prev) =>
       [...prev, finalTask].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
@@ -186,6 +201,19 @@ export function useTasksPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks]);
 
+  // Checklist alterada no detalhe: espalha pela lista e pelo detalhe aberto
+  // (o contador "2/5" dos cards atualiza sem recarregar).
+  const handleSubtasksChange = useCallback((taskId: string, subtasks: Subtask[]) => {
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, subtasks } : t)));
+    setSelectedTask((prev) => (prev?.id === taskId ? { ...prev, subtasks } : prev));
+  }, []);
+
+  // Passo promovido a task: entra na lista (o passo ja saiu da checklist
+  // via onChange do SubtaskChecklist).
+  const handleSubtaskConverted = useCallback((created: Task) => {
+    setTasks((prev) => (prev.some((t) => t.id === created.id) ? prev : [...prev, created]));
+  }, []);
+
   const closeDetailModal = useCallback(() => {
     setSelectedTask(null);
     setIsEditing(false);
@@ -194,18 +222,42 @@ export function useTasksPage() {
   const toggleEditing = useCallback(() => setIsEditing((prev) => !prev), []);
   const stopEditing = useCallback(() => setIsEditing(false), []);
 
+  // Concluir uma task pode criar outras no backend (proxima ocorrencia de
+  // uma recorrente, revisoes espacadas): vem em `spawnedTasks`. Tira-as da
+  // task, junta-as a lista e avisa. Devolve a task limpa.
+  const absorbSpawnedTasks = useCallback(
+    (updated: Task): Task => {
+      const { spawnedTasks, ...task } = updated;
+      if (spawnedTasks && spawnedTasks.length > 0) {
+        setTasks((prev) => {
+          const known = new Set(prev.map((t) => t.id));
+          return [...prev, ...spawnedTasks.filter((s) => !known.has(s.id))];
+        });
+        notify(
+          spawnedTasks.length === 1
+            ? '1 new task was created (next repeat or review).'
+            : `${spawnedTasks.length} new tasks were created (repeat or reviews).`,
+          'info',
+        );
+      }
+      return task;
+    },
+    [notify],
+  );
+
   const handleUpdateTask = useCallback(
     async (taskData: TaskFormSubmission): Promise<Task | undefined> => {
       if (!selectedTask) return;
-      const { syncToCalendar, ...taskPayload } = taskData;
-      const updated = await updateTask(selectedTask.id, taskPayload);
+      const { syncToCalendar, subtasks: ignoredSubtasks, ...taskPayload } = taskData;
+      void ignoredSubtasks;
+      const updated = absorbSpawnedTasks(await updateTask(selectedTask.id, taskPayload));
       const finalTask = await applyCalendarSync(updated, !!syncToCalendar);
       setTasks((prev) => prev.map((t) => (t.id === finalTask.id ? finalTask : t)));
       setSelectedTask(finalTask);
       setIsEditing(false);
       return finalTask;
     },
-    [selectedTask]
+    [selectedTask, absorbSpawnedTasks]
   );
 
   const handleDeleteTask = useCallback(async () => {
@@ -281,6 +333,8 @@ export function useTasksPage() {
         notes: selectedTask.notes ?? undefined,
         estimatedMinutes: selectedTask.estimatedMinutes ?? undefined,
         calendarDurationMinutes: selectedTask.calendarDurationMinutes ?? undefined,
+        // Copia a checklist (todos os passos voltam a "por fazer").
+        subtasks: (selectedTask.subtasks ?? []).map((s) => s.title),
       };
 
       await handleCreateTask(newTaskData);
@@ -306,13 +360,15 @@ export function useTasksPage() {
   const markSelectedTaskComplete = useCallback(async () => {
     if (!selectedTask || selectedTask.progressStatus === 'COMPLETED') return;
     try {
-      const updated = await updateTask(selectedTask.id, { progressStatus: 'COMPLETED' });
+      const updated = absorbSpawnedTasks(
+        await updateTask(selectedTask.id, { progressStatus: 'COMPLETED' }),
+      );
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setSelectedTask(updated);
     } catch {
       notify('Could not mark the task as completed. Please try again.', 'error');
     }
-  }, [selectedTask, notify]);
+  }, [selectedTask, notify, absorbSpawnedTasks]);
 
   // Same partial-PATCH pattern as markSelectedTaskComplete, but for any
   // task in the list (not just the one open in the detail modal) - this
@@ -405,5 +461,7 @@ export function useTasksPage() {
     moveTaskToArea,
     toggleTaskPin,
     reorderTasksInState,
+    handleSubtasksChange,
+    handleSubtaskConverted,
   };
 }

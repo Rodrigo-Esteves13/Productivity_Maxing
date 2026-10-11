@@ -31,6 +31,17 @@ export const getSchedule = async (
   return response.data;
 };
 
+// Apaga o horario importado (tudo, ou so entre from/to "YYYY-MM-DD").
+// Nao toca em turnos nem em apontamentos do caderno.
+export const deleteImportedClasses = async (
+  range?: { from: string; to: string },
+): Promise<{ deleted: number }> => {
+  const response = await api.delete<{ deleted: number }>('/schedule', {
+    params: range,
+  });
+  return response.data;
+};
+
 export const estimateCommute = async (
   homeAddress: string,
   campusAddress: string,

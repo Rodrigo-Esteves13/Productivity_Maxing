@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -12,6 +13,10 @@ import { MailService } from '../../mail/mail.service';
 import { getFrontendUrl } from '../../config/app.config';
 import { AccountGuardService } from './account-guard.service';
 import { SupabaseClientsService } from './supabase-clients.service';
+import {
+  EMAIL_NOT_VERIFIED_CODE,
+  EmailVerificationService,
+} from './email-verification.service';
 
 // Mesmo URL usado no AuthController para os redirects de OAuth - usado aqui
 // só para o `redirectTo` do email de recuperação de password do Supabase,
@@ -28,6 +33,7 @@ export class PasswordAuthService {
     private clients: SupabaseClientsService,
     private mailService: MailService,
     private accountGuard: AccountGuardService,
+    private emailVerification: EmailVerificationService,
   ) {}
 
   // LOGIN/REGISTO POR EMAIL+PASSWORD (via Supabase Auth)
@@ -44,6 +50,24 @@ export class PasswordAuthService {
     password: string;
     name?: string;
   }): Promise<User> {
+    // Só com a verificação de email LIGADA (REQUIRE_EMAIL_VERIFICATION):
+    // recusa registar por password um email que já tem conta (ex: criada
+    // por Google/GitHub/Discord). Sem isto, syncLocalUser() devolvia essa
+    // conta existente e o registo abria uma sessão nela, ou seja, qualquer
+    // pessoa podia entrar na conta de outra só por "se registar" com o
+    // email dela. Com a flag desligada o comportamento é o de sempre.
+    if (this.emailVerification.isRequired()) {
+      const existingLocal = await this.prisma.user.findFirst({
+        where: { email: { equals: data.email, mode: 'insensitive' } },
+        select: { id: true },
+      });
+      if (existingLocal) {
+        throw new ConflictException(
+          'An account with this email already exists.',
+        );
+      }
+    }
+
     const { data: signUpData, error } = await this.clients.anon.auth.signUp({
       email: data.email,
       password: data.password,
@@ -70,7 +94,18 @@ export class PasswordAuthService {
     this.logger.log(
       `Novo utilizador registado via Supabase: ${signUpData.user.id}`,
     );
-    return this.syncLocalUser(data.email, data.name, signUpData.user.id);
+    const user = await this.syncLocalUser(
+      data.email,
+      data.name,
+      signUpData.user.id,
+    );
+
+    // Verificação LIGADA: envia o link já agora. O controller não abre
+    // sessão enquanto o email não estiver verificado (needsEmailVerification).
+    if (this.emailVerification.needsVerification(user)) {
+      await this.emailVerification.sendVerificationEmail(user);
+    }
+    return user;
   }
 
   async loginWithPassword(email: string, password: string): Promise<User> {
@@ -85,7 +120,20 @@ export class PasswordAuthService {
 
     const name =
       (data.user.user_metadata?.name as string | undefined) ?? undefined;
-    return this.syncLocalUser(email, name, data.user.id);
+    const user = await this.syncLocalUser(email, name, data.user.id);
+
+    // Password certa mas email por verificar (só acontece com a flag
+    // REQUIRE_EMAIL_VERIFICATION ligada). Código estável para o frontend
+    // mostrar "verifica o teu email" + botão de reenviar, em vez de um
+    // "credenciais inválidas" enganador. Não reenvia sozinho a cada login
+    // falhado (isso permitia encher a caixa de correio).
+    if (this.emailVerification.needsVerification(user)) {
+      throw new ForbiddenException({
+        code: EMAIL_NOT_VERIFIED_CODE,
+        message: 'Please verify your email before signing in.',
+      });
+    }
+    return user;
   }
 
   /**
@@ -121,8 +169,19 @@ export class PasswordAuthService {
       return existing;
     }
 
+    // Só os registos por password passam por aqui: nascem com
+    // emailVerifiedAt = null EXPLÍCITO (o default do schema é `now()`, que
+    // só serve para as contas antigas e para OAuth) - ninguém provou ainda
+    // que o email é seu. Sem a flag REQUIRE_EMAIL_VERIFICATION isto não
+    // bloqueia nada.
     return this.prisma.user.create({
-      data: { id: randomUUID(), email, name, supabaseAuthId },
+      data: {
+        id: randomUUID(),
+        email,
+        name,
+        supabaseAuthId,
+        emailVerifiedAt: null,
+      },
     });
   }
 

@@ -4,6 +4,7 @@ import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
 import PostponedIndicator from '../UI/PostponedIndicator';
+import SubtaskProgress from '../UI/SubtaskProgress';
 import RescheduleButton from '../UI/RescheduleButton';
 import { PinIcon } from '../UI/Icons';
 import { getDateStatus } from '../../utils/taskDateStatus';
@@ -66,7 +67,10 @@ export default function TaskCard({
           quebravam de forma inconsistente entre cards. Com só 1 badge,
           o título tem sempre a largura que precisa. */}
       <div className="flex justify-between items-start mb-3 gap-3">
-        <h3 className="text-lg font-medium text-white line-clamp-2 min-w-0">{task.title}</h3>
+        <h3 className="text-lg font-medium text-white line-clamp-2 min-w-0">
+          {task.title}
+          <SubtaskProgress subtasks={task.subtasks} className="ml-2 align-middle" />
+        </h3>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {onTogglePin && (
             <button

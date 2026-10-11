@@ -12,7 +12,7 @@ import {
   Max,
   MaxLength,
 } from 'class-validator';
-import { Difficulty, ProgressStatus } from '@prisma/client';
+import { Difficulty, ProgressStatus, RecurrenceFrequency } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTaskDto {
@@ -193,4 +193,31 @@ export class CreateTaskDto {
   @Min(5)
   @Max(30 * 24 * 60)
   calendarDurationMinutes?: number;
+
+  // Recorrência: ao CONCLUIR a task cria-se a próxima ocorrência. `null`
+  // (no PATCH) desliga. Ver TasksService.spawnFollowUps.
+  @ApiPropertyOptional({
+    enum: RecurrenceFrequency,
+    nullable: true,
+    description: 'Repeat when completed: DAILY, WEEKLY or MONTHLY. null = no repeat.',
+  })
+  @IsOptional()
+  @IsEnum(RecurrenceFrequency)
+  recurrenceFrequency?: RecurrenceFrequency | null;
+
+  @ApiPropertyOptional({ example: 1, description: 'Every N days/weeks/months.' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  recurrenceInterval?: number;
+
+  @ApiPropertyOptional({
+    example: '2026-12-31T00:00:00Z',
+    nullable: true,
+    description: 'Last date (inclusive) that still creates an occurrence. null = no end.',
+  })
+  @IsOptional()
+  @IsDateString()
+  recurrenceUntil?: string | null;
 }

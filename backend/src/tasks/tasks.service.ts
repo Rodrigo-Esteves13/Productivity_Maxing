@@ -16,13 +16,17 @@ import { computeCheckedAt, computeOverdueWindow } from './overdue-window.util';
 import { DIFFICULTY_WEIGHT } from '../common/difficulty-weight.util';
 import { runWithConcurrencyLimit } from '../common/concurrency.util';
 import { TaskMetaCacheService } from '../common/task-meta-cache.service';
+import { nextOccurrence } from './recurrence.util';
 
 const TASK_INCLUDE = {
   area: true,
   taskType: true,
   academicType: true,
   priority: true,
-} as const;
+  // Checklist da task, sempre ordenada - o frontend mostra "2/5" nos
+  // cards/linhas sem pedir nada extra.
+  subtasks: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
+} satisfies Prisma.TaskInclude;
 
 // Automatically infer the type of a Task when it includes the relations above
 type TaskWithIncludes = Prisma.TaskGetPayload<{
@@ -36,6 +40,10 @@ type TaskWithIncludes = Prisma.TaskGetPayload<{
 // import at the same time.
 const IMPORT_CREATE_CONCURRENCY = 10;
 
+// Revisões espaçadas: quantos dias depois de concluir, e duração estimada.
+const SPACED_REVIEW_OFFSETS_DAYS = [1, 3, 7];
+const SPACED_REVIEW_MINUTES = 20;
+
 @Injectable()
 export class TasksService {
   private readonly logger = new Logger(TasksService.name);
@@ -47,7 +55,15 @@ export class TasksService {
   ) {}
 
   async create(userId: string, dto: CreateTaskDto) {
-    const { date, type, academicType, periodId, priority, ...rest } = dto;
+    const {
+      date,
+      type,
+      academicType,
+      periodId,
+      priority,
+      recurrenceUntil,
+      ...rest
+    } = dto;
     const typeIds = await this.resolveTypes(type, academicType);
     const priorityId = await this.resolvePriorityId(priority);
 
@@ -85,6 +101,9 @@ export class TasksService {
           priorityId,
           sortOrder,
           ...typeIds,
+          ...(recurrenceUntil
+            ? { recurrenceUntil: new Date(recurrenceUntil) }
+            : {}),
         },
         include: TASK_INCLUDE,
       });
@@ -219,7 +238,15 @@ export class TasksService {
     if (!existing)
       throw new NotFoundException(`Task not found or you don't have access.`);
 
-    const { date, type, academicType, periodId, priority, ...rest } = dto;
+    const {
+      date,
+      type,
+      academicType,
+      periodId,
+      priority,
+      recurrenceUntil,
+      ...rest
+    } = dto;
 
     // Mesmo padrão condicional que periodIdUpdate/typeIds acima: só mexe
     // em priorityId se `priority` vier explicitamente no PATCH. Sem isto,
@@ -264,11 +291,13 @@ export class TasksService {
     // guardamos o momento exato da conclusão em vez de usar a "date" (prazo)
     // como proxy.
     let completedAtUpdate: { completedAt?: Date | null } = {};
+    let justCompleted = false;
     if (rest.progressStatus !== undefined) {
       const wasCompleted = existing.progressStatus === 'COMPLETED';
       const willBeCompleted = rest.progressStatus === 'COMPLETED';
       if (!wasCompleted && willBeCompleted) {
         completedAtUpdate = { completedAt: new Date() };
+        justCompleted = true;
       } else if (wasCompleted && !willBeCompleted) {
         completedAtUpdate = { completedAt: null };
       }
@@ -306,10 +335,207 @@ export class TasksService {
         ...periodIdUpdate,
         ...priorityIdUpdate,
         ...postponedCountUpdate,
+        // undefined = não mexe; null = tira o fim da série.
+        ...(recurrenceUntil !== undefined
+          ? {
+              recurrenceUntil: recurrenceUntil
+                ? new Date(recurrenceUntil)
+                : null,
+            }
+          : {}),
       },
       include: TASK_INCLUDE,
     });
-    return this.toResponse(task);
+
+    // Acabou de passar a COMPLETED: próxima ocorrência (se repete) e
+    // revisões espaçadas (se o user ativou). As tasks novas vão na resposta
+    // para o frontend as mostrar sem recarregar.
+    const spawnedTasks = justCompleted
+      ? await this.spawnFollowUps(userId, task)
+      : [];
+    return {
+      ...this.toResponse(task),
+      ...(spawnedTasks.length > 0 ? { spawnedTasks } : {}),
+    };
+  }
+
+  /**
+   * Promove um passo da checklist a task própria: herda Area, tipo, período
+   * e prazo da task-mãe (fica sem peso, para o user ajustar), e o passo é
+   * removido da checklist. Tudo numa transação.
+   */
+  async createFromSubtask(userId: string, taskId: string, subtaskId: string) {
+    const parent = await this.prisma.task.findFirst({
+      where: { id: taskId, userId },
+    });
+    if (!parent) throw new NotFoundException('Task not found.');
+    const subtask = await this.prisma.subtask.findFirst({
+      where: { id: subtaskId, taskId },
+    });
+    if (!subtask) throw new NotFoundException('Subtask not found.');
+
+    const maxSortOrder = await this.prisma.task.aggregate({
+      where: { userId },
+      _max: { sortOrder: true },
+    });
+
+    const [created] = await this.prisma.$transaction([
+      this.prisma.task.create({
+        data: {
+          userId,
+          areaId: parent.areaId,
+          title: subtask.title.slice(0, 200),
+          date: parent.date,
+          sortOrder: (maxSortOrder._max.sortOrder ?? 0) + 1,
+          taskTypeId: parent.taskTypeId,
+          academicTypeId: parent.academicTypeId,
+          periodId: parent.periodId,
+          difficulty: parent.difficulty,
+          priorityId: parent.priorityId,
+          // Se o passo já estava feito, a task nasce concluída.
+          ...(subtask.isDone
+            ? { progressStatus: 'COMPLETED' as const, completedAt: new Date() }
+            : {}),
+        },
+        include: TASK_INCLUDE,
+      }),
+      this.prisma.subtask.delete({ where: { id: subtask.id } }),
+    ]);
+    return this.toResponse(created);
+  }
+
+  /**
+   * Tasks criadas automaticamente quando uma task é concluída. Nunca lança:
+   * a conclusão já foi gravada e não deve falhar por causa disto.
+   */
+  private async spawnFollowUps(userId: string, task: TaskWithIncludes) {
+    const spawned: ReturnType<TasksService['toResponse']>[] = [];
+    try {
+      const next = await this.spawnNextRecurrence(userId, task);
+      if (next) spawned.push(next);
+      spawned.push(...(await this.spawnSpacedReviews(userId, task)));
+    } catch (error) {
+      this.logger.error('Erro ao criar tasks automáticas', error as Error);
+    }
+    return spawned;
+  }
+
+  private async spawnNextRecurrence(userId: string, task: TaskWithIncludes) {
+    if (!task.recurrenceFrequency) return null;
+
+    const startOfToday = new Date();
+    startOfToday.setUTCHours(0, 0, 0, 0);
+    const nextDate = nextOccurrence(
+      task.date,
+      task.recurrenceFrequency,
+      task.recurrenceInterval,
+      startOfToday,
+      task.recurrenceUntil,
+    );
+    if (!nextDate) return null;
+
+    // Concluir -> reabrir -> concluir outra vez não pode duplicar a próxima.
+    const duplicate = await this.prisma.task.findFirst({
+      where: {
+        userId,
+        title: task.title,
+        date: nextDate,
+        areaId: task.areaId,
+        recurrenceFrequency: { not: null },
+      },
+      select: { id: true },
+    });
+    if (duplicate) return null;
+
+    const maxSortOrder = await this.prisma.task.aggregate({
+      where: { userId },
+      _max: { sortOrder: true },
+    });
+
+    const created = await this.prisma.task.create({
+      data: {
+        userId,
+        areaId: task.areaId,
+        title: task.title,
+        date: nextDate,
+        isPinned: task.isPinned,
+        sortOrder: (maxSortOrder._max.sortOrder ?? 0) + 1,
+        taskTypeId: task.taskTypeId,
+        academicTypeId: task.academicTypeId,
+        topics: task.topics,
+        periodId: task.periodId,
+        weightPercentage: task.weightPercentage,
+        difficulty: task.difficulty,
+        priorityId: task.priorityId,
+        referenceLink: task.referenceLink,
+        estimatedMinutes: task.estimatedMinutes,
+        calendarDurationMinutes: task.calendarDurationMinutes,
+        recurrenceFrequency: task.recurrenceFrequency,
+        recurrenceInterval: task.recurrenceInterval,
+        recurrenceUntil: task.recurrenceUntil,
+        // notas e notas finais são desta ocorrência; a checklist volta
+        // toda por fazer.
+        subtasks: {
+          create: task.subtasks.map((s, index) => ({
+            title: s.title,
+            sortOrder: index,
+          })),
+        },
+      },
+      include: TASK_INCLUDE,
+    });
+    return this.toResponse(created);
+  }
+
+  // Revisões leves a +1/+3/+7 dias depois de concluir uma task académica
+  // que NÃO é evento (testes/exames não se "revêem" depois de feitos).
+  private async spawnSpacedReviews(userId: string, task: TaskWithIncludes) {
+    if (task.spacedReviewOfTaskId) return [];
+    if (!task.academicTypeId || task.academicType?.isEvent) return [];
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { spacedReviewsEnabled: true },
+    });
+    if (!user?.spacedReviewsEnabled) return [];
+
+    const already = await this.prisma.task.count({
+      where: { userId, spacedReviewOfTaskId: task.id },
+    });
+    if (already > 0) return [];
+
+    const maxSortOrder = await this.prisma.task.aggregate({
+      where: { userId },
+      _max: { sortOrder: true },
+    });
+    const baseOrder = (maxSortOrder._max.sortOrder ?? 0) + 1;
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const created = await this.prisma.$transaction(
+      SPACED_REVIEW_OFFSETS_DAYS.map((offset, index) => {
+        const date = new Date(today);
+        date.setUTCDate(date.getUTCDate() + offset);
+        return this.prisma.task.create({
+          data: {
+            userId,
+            areaId: task.areaId,
+            title: `Review: ${task.title}`.slice(0, 200),
+            date,
+            sortOrder: baseOrder + index,
+            taskTypeId: task.taskTypeId,
+            academicTypeId: task.academicTypeId,
+            topics: task.topics,
+            periodId: task.periodId,
+            difficulty: Difficulty.VERY_EASY,
+            estimatedMinutes: SPACED_REVIEW_MINUTES,
+            spacedReviewOfTaskId: task.id,
+          },
+          include: TASK_INCLUDE,
+        });
+      }),
+    );
+    return created.map((t) => this.toResponse(t));
   }
 
   /**

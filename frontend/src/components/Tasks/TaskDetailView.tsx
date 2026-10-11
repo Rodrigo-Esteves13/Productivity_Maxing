@@ -1,4 +1,5 @@
-import type { Task, TaskTypeOption, AcademicTaskTypeOption } from '../../types/models';
+import type { Task, TaskTypeOption, AcademicTaskTypeOption, Subtask } from '../../types/models';
+import SubtaskChecklist from './SubtaskChecklist';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
@@ -10,9 +11,13 @@ interface TaskDetailViewProps {
   task: Task;
   taskTypes?: TaskTypeOption[];
   academicTaskTypes?: AcademicTaskTypeOption[];
+  // Sem isto a checklist nao aparece (usos so de leitura do detalhe).
+  onSubtasksChange?: (taskId: string, subtasks: Subtask[]) => void;
+  // Chamado quando um passo e promovido a task propria.
+  onSubtaskConverted?: (task: Task) => void;
 }
 
-export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes = [] }: TaskDetailViewProps) {
+export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes = [], onSubtasksChange, onSubtaskConverted }: TaskDetailViewProps) {
   const typeLabel = resolveOptionLabel(task.type, taskTypes);
   const academicTypeLabel = resolveOptionLabel(task.academicType, academicTaskTypes);
   // Reutiliza o mesmo hook do formulário só para ir buscar actualMinutes
@@ -39,6 +44,16 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
           )}
         </div>
       </DetailRow>
+      {onSubtasksChange && (
+        <DetailRow label="Checklist">
+          <SubtaskChecklist
+            taskId={task.id}
+            subtasks={task.subtasks ?? []}
+            onChange={(next) => onSubtasksChange(task.id, next)}
+            onConverted={onSubtaskConverted}
+          />
+        </DetailRow>
+      )}
       <DetailRow label="Area">{task.area?.name ?? 'No Area'}</DetailRow>
 
       <DetailRow label="Status">

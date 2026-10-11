@@ -11,6 +11,7 @@ import {
 } from '@nestjs/throttler';
 import { SecurityLogsService } from '../../security-logs/security-logs.service';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
+import { redactSecretPath } from '../redact-secret-path.util';
 
 interface PendingBucket {
   count: number;
@@ -68,7 +69,8 @@ export class LoggingThrottlerGuard extends ThrottlerGuard {
   ): Promise<void> {
     const req = context.switchToHttp().getRequest<Request>();
     const ip = this.extractIp(req, throttlerLimitDetail.tracker);
-    const path = req.originalUrl;
+    // Sem tokens secretos (ex: link do feed .ics) nos SecurityLogs.
+    const path = redactSecretPath(req.originalUrl);
     const key = `${ip}:${path}`;
     const user = req.user as AuthenticatedUser | undefined;
 

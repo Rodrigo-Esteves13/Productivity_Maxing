@@ -130,6 +130,9 @@ export class OAuthIdentityService {
             email: data.email,
             name: data.name,
             avatarUrl: data.photo,
+            // Explícito (mesmo igual ao default do schema): o provider OAuth
+            // já tratou do email, ver User.emailVerifiedAt.
+            emailVerifiedAt: new Date(),
           },
         });
       } catch (err: unknown) {
@@ -179,6 +182,17 @@ export class OAuthIdentityService {
         user,
         await this.prisma.identity.count({ where: { userId: user.id } }),
       );
+
+      // O provider confirmou que o email é desta pessoa (só chegamos aqui
+      // com emailVerified === true): uma conta por password ainda por
+      // verificar passa a verificada. A credencial antiga (possivelmente
+      // criada por um terceiro) acabou de ser neutralizada acima.
+      if (user.emailVerifiedAt === null) {
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: { emailVerifiedAt: new Date() },
+        });
+      }
     }
 
     await this.prisma.identity.create({

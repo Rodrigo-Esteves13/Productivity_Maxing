@@ -8,6 +8,11 @@ import { AuthModule } from '../auth/auth.module';
 import { ScheduleModule } from '../schedule/schedule.module';
 import { WorkShiftsModule } from '../work-shifts/work-shifts.module';
 import { StudyPlanModule } from '../study-plan/study-plan.module';
+import { CalendarFeedService } from './feed/calendar-feed.service';
+import {
+  CalendarFeedManageController,
+  CalendarFeedPublicController,
+} from './feed/calendar-feed.controller';
 
 @Module({
   imports: [
@@ -17,7 +22,12 @@ import { StudyPlanModule } from '../study-plan/study-plan.module';
     WorkShiftsModule,
     StudyPlanModule,
   ],
-  controllers: [CalendarController, ScheduleSyncController],
-  providers: [CalendarService, ScheduleSyncService],
+  controllers: [
+    CalendarController,
+    ScheduleSyncController,
+    CalendarFeedManageController,
+    CalendarFeedPublicController,
+  ],
+  providers: [CalendarService, ScheduleSyncService, CalendarFeedService],
 })
 export class CalendarModule {}
