@@ -103,6 +103,7 @@ export default function CommitmentSection({
         isSaving={isSaving}
         onEdit={onEditShift}
         onDelete={onDeleteShift}
+        onReplicate={onAddShifts}
       />
 
       {mode === 'add-shift' ? (

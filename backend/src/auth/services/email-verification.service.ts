@@ -64,7 +64,9 @@ export class EmailVerificationService {
   private signingSecret(): string {
     const base = process.env.JWT_SECRET;
     if (!base) throw new Error('JWT_SECRET is not defined.');
-    return createHmac('sha256', base).update('email-verification-v1').digest('hex');
+    return createHmac('sha256', base)
+      .update('email-verification-v1')
+      .digest('hex');
   }
 
   private createToken(user: Pick<User, 'id' | 'email'>): string {

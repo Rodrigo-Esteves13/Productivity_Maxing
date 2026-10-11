@@ -5,6 +5,7 @@ import { CheckIcon, XIcon } from '../UI/Icons';
 import { getSchedule } from '../../api/scheduleService';
 import { getSessionHistory } from '../../api/studySessionsService';
 import { useCalendarStatus } from '../../hooks/useCalendarStatus';
+import { useI18n } from '../../i18n/useI18n';
 
 const DISMISSED_KEY = 'pmaxing:onboarding-dismissed';
 const MS_PER_DAY = 86_400_000;
@@ -37,6 +38,7 @@ interface Step {
 // Primeiros passos, deduzidos dos dados que ja existem (sem schema novo).
 // Desaparece sozinho quando tudo esta feito, ou ao ser dispensado.
 export default function OnboardingChecklist({ taskCount }: OnboardingChecklistProps) {
+  const { t } = useI18n();
   const [dismissed, setDismissed] = useState(readDismissed);
   const calendarConnected = useCalendarStatus();
   // null = ainda a carregar (nao mostra nada para nao piscar passos "por fazer").
@@ -62,29 +64,29 @@ export default function OnboardingChecklist({ taskCount }: OnboardingChecklistPr
   const steps: Step[] = [
     {
       id: 'task',
-      label: 'Add your first task',
-      hint: 'Deadlines, exams and assignments live here.',
+      label: t('onboarding.task'),
+      hint: t('onboarding.taskHint'),
       to: '/tasks',
       done: taskCount > 0,
     },
     {
       id: 'schedule',
-      label: 'Import your timetable',
-      hint: 'Upload the .ics from the student portal.',
+      label: t('onboarding.schedule'),
+      hint: t('onboarding.scheduleHint'),
       to: '/schedule',
       done: hasSchedule,
     },
     {
       id: 'calendar',
-      label: 'See it in your calendar',
-      hint: 'Connect Google Calendar, or subscribe with the .ics feed on the Schedule page.',
+      label: t('onboarding.calendar'),
+      hint: t('onboarding.calendarHint'),
       to: '/schedule',
       done: calendarConnected,
     },
     {
       id: 'focus',
-      label: 'Run a focus session',
-      hint: 'Track study time to get better estimates.',
+      label: t('onboarding.focus'),
+      hint: t('onboarding.focusHint'),
       to: '/focus',
       done: hasSession,
     },
@@ -106,14 +108,14 @@ export default function OnboardingChecklist({ taskCount }: OnboardingChecklistPr
     <DashboardCard className="mb-6">
       <div className="flex items-start justify-between gap-3">
         <CardHeading className="mb-3">
-          Getting started ({doneCount}/{steps.length})
+          {t('onboarding.title', { done: doneCount, total: steps.length })}
         </CardHeading>
         <button
           type="button"
           onClick={dismiss}
           className="text-neutral-500 hover:text-neutral-200"
-          aria-label="Dismiss getting started checklist"
-          title="Dismiss"
+          aria-label={t('onboarding.dismiss')}
+          title={t('onboarding.dismiss')}
         >
           <XIcon width={14} height={14} />
         </button>

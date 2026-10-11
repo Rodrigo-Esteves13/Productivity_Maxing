@@ -171,6 +171,8 @@ export interface ImportScheduleRowResult {
 export interface ImportScheduleResult {
   imported: number;
   failed: number;
+  // Aulas antigas substituidas (apagadas) por este import.
+  removed?: number;
   results: ImportScheduleRowResult[];
 }
 
@@ -179,8 +181,14 @@ export interface StudyPlanSuggestion {
   date: string;
   startMinutes: number;
   endMinutes: number;
+  // 'review': revisao leve de consolidacao de uma cadeira (taskId sintetico,
+  // nao e uma task real).
+  kind?: 'task' | 'review';
   taskId: string;
   taskTitle: string;
+  areaId?: string;
+  areaName?: string;
+  areaColorHex?: string;
   isOvertime: boolean;
 }
 
@@ -211,6 +219,8 @@ export interface StudyPlanDay {
   classMinutes: number;
   workMinutes: number;
   studyMinutes: number;
+  // Parte de studyMinutes que e revisao de consolidacao.
+  reviewMinutes?: number;
   overtimeMinutes: number;
   freeMinutes: number;
 }

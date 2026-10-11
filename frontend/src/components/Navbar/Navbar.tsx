@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n/useI18n';
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import NavLinks from './NavLinks';
@@ -9,6 +10,7 @@ import { useAuth } from '../../context/useAuth';
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -53,7 +55,7 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent('pmaxing:open-command-palette'))}
-                aria-label="Open command palette"
+                aria-label={t('nav.palette')}
                 title="Search / go to (Ctrl+K)"
                 className="hidden sm:flex items-center gap-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors rounded-md px-2.5 py-1.5"
               >

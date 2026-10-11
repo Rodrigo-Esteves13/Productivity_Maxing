@@ -2,6 +2,24 @@ import { Difficulty } from '@prisma/client';
 
 export const MINUTES_PER_DAY = 1440;
 
+// Quantos dias para a frente o plano olha de verdade (slots, aulas, turnos).
+// 4 semanas: chega para o ritmo de estudo e para avisar cedo que um prazo
+// não vai caber, em vez de só ver os próximos 7-14 dias.
+export const PLANNING_HORIZON_DAYS = 28;
+
+// Tasks com prazo até aqui entram no ritmo de hoje (a de uma frequência
+// daqui a 6 semanas já pede uns minutos por dia, não só quando se aproxima).
+export const TASK_LOOKAHEAD_DAYS = 90;
+
+// Janela de "cadeira ativa" para a consolidação: tasks académicas desta
+// janela (passado e futuro) mostram que a cadeira está em curso.
+export const REVIEW_COURSE_PAST_DAYS = 45;
+export const REVIEW_COURSE_FUTURE_DAYS = 90;
+// Avaliação "à vista" = dentro destes dias.
+export const NEAR_DEADLINE_DAYS = 21;
+// Olhar para trás para saber há quantos dias se estudou uma cadeira.
+export const LAST_STUDIED_LOOKBACK_DAYS = 30;
+
 // Limite de estudo por dia quando o utilizador ainda não escolheu um
 // (User.dailyStudyLimitMinutes null). É uma escolha de produto: o
 // algoritmo greedy sozinho encheria cada minuto livre do dia, que é

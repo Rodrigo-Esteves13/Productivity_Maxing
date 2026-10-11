@@ -2,6 +2,7 @@ import { useState, type SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { registerRequest, resendVerificationRequest } from '../api/userService';
+import { useI18n } from '../i18n/useI18n';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
@@ -28,6 +29,7 @@ export default function Register() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Preenchido quando o backend exige verificacao de email: nao ha sessao,
   // so "vai ao teu email". Com a flag desligada nunca acontece.
+  const { t } = useI18n();
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
   const [resendMessage, setResendMessage] = useState('');
 
@@ -36,7 +38,7 @@ export default function Register() {
     setError('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('auth.passwordsMismatch'));
       return;
     }
 
@@ -73,13 +75,13 @@ export default function Register() {
   if (pendingVerificationEmail) {
     return (
       <PageLayout>
-        <AuthCard title="Check your email">
+        <AuthCard title={t('auth.checkEmail')}>
           <p className="text-sm text-neutral-300">
             We sent a confirmation link to <strong>{pendingVerificationEmail}</strong>. Open it to
             activate your account, then log in.
           </p>
           <Button type="button" className="w-full mt-4" onClick={handleResend}>
-            Resend email
+            {t('auth.resendEmail')}
           </Button>
           {resendMessage && <p className="mt-3 text-xs text-neutral-400">{resendMessage}</p>}
           <AuthSwitchLink question="Already confirmed?" linkText="Login" to="/login" />
@@ -90,33 +92,33 @@ export default function Register() {
 
   return (
     <PageLayout>
-      <AuthCard title="Create Account">
+      <AuthCard title={t('auth.registerTitle')}>
         <form onSubmit={handleRegister} className="space-y-4">
           {error && <FormError message={error} />}
 
           <Input
-            label="Name"
+            label={t('auth.name')}
             type="text"
-            placeholder="Your name"
+            placeholder={t('auth.namePlaceholder')}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <Input
-            label="Email"
+            label={t('auth.email')}
             type="email"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <Input
-            label="Password"
+            label={t('auth.password')}
             type="password"
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
           <Input
-            label="Confirm Password"
+            label={t('auth.confirmPassword')}
             type="password"
             placeholder="••••••••"
             value={confirmPassword}

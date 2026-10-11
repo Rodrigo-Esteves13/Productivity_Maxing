@@ -25,7 +25,9 @@ export class CalendarFeedManageController {
   constructor(private readonly feedService: CalendarFeedService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Whether the .ics feed is on, and its secret token.' })
+  @ApiOperation({
+    summary: 'Whether the .ics feed is on, and its secret token.',
+  })
   getStatus(@CurrentUser() user: AuthenticatedUser) {
     return this.feedService.getStatus(user.id);
   }
@@ -59,7 +61,8 @@ export class CalendarFeedPublicController {
   @Get(':file')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({
-    summary: 'Read-only .ics feed for calendar subscriptions. :file = <token>.ics',
+    summary:
+      'Read-only .ics feed for calendar subscriptions. :file = <token>.ics',
   })
   async getFeed(@Param('file') file: string, @Res() res: Response) {
     const token = file.endsWith('.ics') ? file.slice(0, -4) : file;

@@ -126,7 +126,9 @@ export default function ImportScheduleModal({
                 <span className="text-neutral-200">
                   {outcome.backendResult.imported} class
                   {outcome.backendResult.imported === 1 ? '' : 'es'} imported
-                  {outcome.backendResult.failed > 0 && `, ${outcome.backendResult.failed} failed`}.
+                  {outcome.backendResult.failed > 0 && `, ${outcome.backendResult.failed} failed`}
+                  {(outcome.backendResult.removed ?? 0) > 0 &&
+                    `, ${outcome.backendResult.removed} outdated replaced`}.
                 </span>
               </div>
             )}

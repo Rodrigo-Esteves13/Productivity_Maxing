@@ -22,6 +22,12 @@ import {
   MIN_BLOCK_MINUTES,
   MIN_HISTORY_SAMPLES,
   OVERTIME_EXTRA_MINUTES_PER_DAY,
+  PLANNING_HORIZON_DAYS,
+  TASK_LOOKAHEAD_DAYS,
+  REVIEW_COURSE_PAST_DAYS,
+  REVIEW_COURSE_FUTURE_DAYS,
+  NEAR_DEADLINE_DAYS,
+  LAST_STUDIED_LOOKBACK_DAYS,
 } from './study-plan.constants';
 import {
   buildFreeSlots,
@@ -29,6 +35,7 @@ import {
   planStudyBlocks,
   sumSlots,
   type Interval,
+  type ReviewCourse,
   type SchedulerDay,
   type SchedulerTask,
 } from './study-plan.scheduler';
@@ -132,9 +139,14 @@ export class StudyPlanService {
       user.dailyStudyLimitMinutes ?? DEFAULT_DAILY_STUDY_LIMIT_MINUTES;
 
     const { today, nowMinutes } = getLisbonNow();
-    const rangeEnd = addUtcDays(today, days - 1);
+    // O plano olha sempre para ~4 semanas (para o ritmo e para avisar cedo),
+    // mas só devolve `days` dias de blocos.
+    const horizonDays = Math.max(days, PLANNING_HORIZON_DAYS);
+    const rangeEnd = addUtcDays(today, horizonDays - 1);
+    const returnEndKey = toDateKey(addUtcDays(today, days - 1));
+    const lookaheadEnd = addUtcDays(today, TASK_LOOKAHEAD_DAYS);
 
-    const [classes, shifts, heatmap, tasks] = await Promise.all([
+    const [classes, shifts, heatmap, tasks, reviewCourses] = await Promise.all([
       this.scheduleService.findRange(userId, today, rangeEnd),
       this.workShiftsService.expandRange(
         userId,
@@ -150,13 +162,15 @@ export class StudyPlanService {
         where: {
           userId,
           progressStatus: { not: 'COMPLETED' },
-          date: { lte: rangeEnd },
+          // Também prazos longe: entram no ritmo de hoje (ver scheduler).
+          date: { lte: lookaheadEnd },
           OR: [{ periodId: null }, { period: { isArchived: false } }],
         },
         select: {
           id: true,
           title: true,
           date: true,
+          academicType: { select: { isEvent: true } },
           difficulty: true,
           weightPercentage: true,
           estimatedMinutes: true,
@@ -170,6 +184,7 @@ export class StudyPlanService {
         },
         orderBy: { date: 'asc' },
       }),
+      this.loadReviewCourses(userId, today),
     ]);
 
     const estimates = await this.resolveEstimates(userId, tasks);
@@ -186,7 +201,7 @@ export class StudyPlanService {
 
     const commuteBuffer = user.commuteMinutes ?? 0;
     const schedulerDays: SchedulerDay[] = [];
-    for (let i = 0; i < days; i++) {
+    for (let i = 0; i < horizonDays; i++) {
       const day = addUtcDays(today, i);
       const key = toDateKey(day);
       const dayClasses = classes.filter((c) => toDateKey(c.date) === key);
@@ -229,6 +244,8 @@ export class StudyPlanService {
 
     const schedulerTasks: SchedulerTask[] = tasks.map((task) => ({
       taskId: task.id,
+      areaId: task.areaId,
+      isEvent: task.academicType?.isEvent ?? false,
       deadlineKey: toDateKey(task.date),
       weightPercentage: task.weightPercentage,
       difficultyRank: DIFFICULTY_WEIGHT[task.difficulty],
@@ -244,9 +261,18 @@ export class StudyPlanService {
         minBlockMinutes: MIN_BLOCK_MINUTES,
       },
       (dayOfWeek, slot) => this.scoreSlot(dayOfWeek, slot, heatmapScore),
+      reviewCourses.courses,
     );
 
     const titleById = new Map(tasks.map((t) => [t.id, t.title]));
+    const areaById = new Map(
+      tasks.map((t) => [
+        t.areaId,
+        { name: t.area.name, colorHex: t.area.colorHex },
+      ]),
+    );
+    for (const [areaId, area] of reviewCourses.areas)
+      areaById.set(areaId, area);
     const planTasks: StudyPlanTask[] = tasks.map((task) => {
       const resolved = resolvedByTaskId.get(task.id);
       const result = output.byTask.get(task.id);
@@ -266,30 +292,58 @@ export class StudyPlanService {
       };
     });
 
-    const planDays: StudyPlanDay[] = schedulerDays.map((day, index) => {
+    // Só os dias pedidos vão na resposta (o resto do horizonte serviu para
+    // calcular o ritmo e a capacidade).
+    const returnedDays = schedulerDays.filter((d) => d.key <= returnEndKey);
+    const planDays: StudyPlanDay[] = returnedDays.map((day, index) => {
       const dayResult = output.byDay[index];
       return {
         date: day.key,
         classMinutes: day.classMinutes,
         workMinutes: day.workMinutes,
         studyMinutes: dayResult?.studyMinutes ?? 0,
+        reviewMinutes: dayResult?.reviewMinutes ?? 0,
         overtimeMinutes: dayResult?.overtimeMinutes ?? 0,
         freeMinutes: dayResult?.freeMinutes ?? 0,
       };
     });
 
+    // O estado da capacidade só olha para o que tem de caber no horizonte:
+    // prazos mais longe ainda têm dias para estudar.
+    const horizonEndKey = toDateKey(rangeEnd);
+    const inHorizon = planTasks.filter((t) => t.deadline <= horizonEndKey);
     const totals = {
-      neededMinutes: planTasks.reduce((s, t) => s + t.neededMinutes, 0),
-      plannedMinutes: planTasks.reduce((s, t) => s + t.plannedMinutes, 0),
-      overtimeMinutes: planTasks.reduce((s, t) => s + t.overtimeMinutes, 0),
-      shortfallMinutes: planTasks.reduce((s, t) => s + t.shortfallMinutes, 0),
+      neededMinutes: inHorizon.reduce((s, t) => s + t.neededMinutes, 0),
+      plannedMinutes: inHorizon.reduce((s, t) => s + t.plannedMinutes, 0),
+      overtimeMinutes: inHorizon.reduce((s, t) => s + t.overtimeMinutes, 0),
+      shortfallMinutes: inHorizon.reduce((s, t) => s + t.shortfallMinutes, 0),
     };
 
     return {
-      suggestions: output.blocks.map((block) => ({
-        ...block,
-        taskTitle: titleById.get(block.taskId) ?? '',
-      })),
+      horizonDays: days,
+      suggestions: output.blocks
+        .filter((block) => block.date <= returnEndKey)
+        .map((block) => {
+          const area = areaById.get(block.areaId);
+          const areaName = area?.name ?? '';
+          const isReview = block.kind === 'review' || block.taskId === null;
+          return {
+            date: block.date,
+            startMinutes: block.startMinutes,
+            endMinutes: block.endMinutes,
+            isOvertime: block.isOvertime,
+            kind: isReview ? ('review' as const) : ('task' as const),
+            taskId: isReview
+              ? `review:${block.areaId}`
+              : (block.taskId as string),
+            taskTitle: isReview
+              ? `Review: ${areaName}`
+              : (titleById.get(block.taskId as string) ?? ''),
+            areaId: block.areaId,
+            areaName,
+            areaColorHex: area?.colorHex ?? '#8b5cf6',
+          };
+        }),
       tasks: planTasks.sort(
         (a, b) =>
           a.deadline.localeCompare(b.deadline) ||
@@ -317,6 +371,95 @@ export class StudyPlanService {
    * tasks que já concluíste (com e sem peso na nota) e quanto ainda falta
    * nas pendentes, com as mesmas estimativas do plano.
    */
+  /**
+   * Cadeiras "ativas" para a consolidação: as que têm tasks académicas
+   * recentes ou próximas (períodos não arquivados). Para cada uma, se há
+   * avaliação à vista e há quantos dias foi estudada pela última vez.
+   */
+  private async loadReviewCourses(
+    userId: string,
+    today: Date,
+  ): Promise<{
+    courses: ReviewCourse[];
+    areas: Map<string, { name: string; colorHex: string }>;
+  }> {
+    const todayKey = toDateKey(today);
+    const nearKey = toDateKey(addUtcDays(today, NEAR_DEADLINE_DAYS));
+    const lookback = addUtcDays(today, -LAST_STUDIED_LOOKBACK_DAYS);
+
+    const [academicTasks, sessions] = await Promise.all([
+      this.prisma.task.findMany({
+        where: {
+          userId,
+          academicTypeId: { not: null },
+          date: {
+            gte: addUtcDays(today, -REVIEW_COURSE_PAST_DAYS),
+            lte: addUtcDays(today, REVIEW_COURSE_FUTURE_DAYS),
+          },
+          OR: [{ periodId: null }, { period: { isArchived: false } }],
+        },
+        select: {
+          areaId: true,
+          date: true,
+          progressStatus: true,
+          weightPercentage: true,
+          academicType: { select: { isEvent: true } },
+          area: { select: { name: true, colorHex: true } },
+        },
+      }),
+      this.prisma.studySession.findMany({
+        where: { userId, endedAt: { not: null }, startedAt: { gte: lookback } },
+        select: {
+          startedAt: true,
+          areaId: true,
+          task: { select: { areaId: true } },
+        },
+      }),
+    ]);
+
+    const areas = new Map<string, { name: string; colorHex: string }>();
+    const near = new Set<string>();
+    for (const task of academicTasks) {
+      areas.set(task.areaId, task.area);
+      const key = toDateKey(task.date);
+      const graded =
+        (task.weightPercentage ?? 0) > 0 || task.academicType?.isEvent === true;
+      if (
+        graded &&
+        task.progressStatus !== 'COMPLETED' &&
+        key >= todayKey &&
+        key <= nearKey
+      ) {
+        near.add(task.areaId);
+      }
+    }
+
+    const lastStudiedKey = new Map<string, string>();
+    for (const session of sessions) {
+      const areaId = session.areaId ?? session.task?.areaId;
+      if (!areaId) continue;
+      const key = toDateKey(session.startedAt);
+      const previous = lastStudiedKey.get(areaId);
+      if (!previous || key > previous) lastStudiedKey.set(areaId, key);
+    }
+
+    const msPerDay = 86_400_000;
+    const courses: ReviewCourse[] = [...areas.keys()].map((areaId) => {
+      const last = lastStudiedKey.get(areaId);
+      return {
+        areaId,
+        hasNearGradedDeadline: near.has(areaId),
+        daysSinceStudied: last
+          ? Math.max(
+              0,
+              Math.round((Date.parse(todayKey) - Date.parse(last)) / msPerDay),
+            )
+          : null,
+      };
+    });
+    return { courses, areas };
+  }
+
   async courses(userId: string): Promise<CourseForecast[]> {
     const pending = await this.prisma.task.findMany({
       where: {

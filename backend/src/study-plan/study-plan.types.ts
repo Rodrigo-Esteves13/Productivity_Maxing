@@ -4,8 +4,14 @@ export interface StudyPlanBlock {
   date: string; // YYYY-MM-DD, hora de Lisboa
   startMinutes: number;
   endMinutes: number;
+  // 'task': estudo de uma task. 'review': revisão leve de consolidação de
+  // uma cadeira (sem task; taskId é sintético, "review:<areaId>").
+  kind: 'task' | 'review';
   taskId: string;
   taskTitle: string;
+  areaId: string;
+  areaName: string;
+  areaColorHex: string;
   // true quando este bloco empurra o dia acima do limite diário.
   isOvertime: boolean;
 }
@@ -39,6 +45,8 @@ export interface StudyPlanDay {
   classMinutes: number;
   workMinutes: number;
   studyMinutes: number;
+  // Parte de studyMinutes que é revisão de consolidação.
+  reviewMinutes: number;
   overtimeMinutes: number;
   freeMinutes: number;
 }
@@ -59,6 +67,8 @@ export interface StudyPlanSummary {
 }
 
 export interface StudyPlanResult {
+  // Dias que o plano cobre nos blocos/dias devolvidos.
+  horizonDays: number;
   suggestions: StudyPlanBlock[];
   tasks: StudyPlanTask[];
   days: StudyPlanDay[];

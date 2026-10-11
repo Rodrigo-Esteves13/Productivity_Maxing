@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useI18n } from '../../i18n/useI18n';
 
 interface MobileMenuProps {
   currentPath: string;
@@ -12,6 +13,7 @@ interface MobileMenuProps {
 // barra transbordar horizontalmente. Isto junta tudo num único painel
 // que abre por baixo da navbar.
 export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileMenuProps) {
+  const { t } = useI18n();
   const getLinkClass = (path: string) => {
     const base = 'block px-3 py-2 rounded-md text-sm font-medium transition-colors';
     return currentPath.startsWith(path)
@@ -29,28 +31,28 @@ export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileM
   return (
     <div className="md:hidden border-t border-neutral-800 bg-neutral-950 px-2 py-3 space-y-1">
       <Link to="/dashboard" onClick={onNavigate} className={getLinkClass('/dashboard')}>
-        Dashboard
+        {t('nav.dashboard')}
       </Link>
       <Link to="/tasks" onClick={onNavigate} className={getLinkClass('/tasks')}>
-        Tasks
+        {t('nav.tasks')}
       </Link>
       <Link to="/focus" onClick={onNavigate} className={getLinkClass('/focus')}>
-        Focus
+        {t('nav.focus')}
       </Link>
       <Link to="/schedule" onClick={onNavigate} className={getLinkClass('/schedule')}>
-        Schedule
+        {t('nav.schedule')}
       </Link>
       <Link to="/notebook" onClick={onNavigate} className={getLinkClass('/notebook')}>
-        Notebook
+        {t('nav.notebook')}
       </Link>
       <Link to="/profile" onClick={onNavigate} className={getLinkClass('/profile')}>
-        Profile
+        {t('nav.profile')}
       </Link>
       <Link to="/developer" onClick={onNavigate} className={getLinkClass('/developer')}>
-        Developer
+        {t('nav.developer')}
       </Link>
       <Link to="/agent" onClick={onNavigate} className={getLinkClass('/agent')}>
-        Agent
+        {t('nav.agent')}
       </Link>
 
       {isAdmin && (

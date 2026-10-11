@@ -30,6 +30,7 @@ export default function EventsSection({ shifts, commitments, isSaving, onAdd, on
         isSaving={isSaving}
         onEdit={onEdit}
         onDelete={onDelete}
+        onReplicate={onAdd}
         moveTargets={commitments}
         showTitle
       />

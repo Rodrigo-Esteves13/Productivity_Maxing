@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { PencilIcon, TrashIcon } from '../../UI/Icons';
+import ReplicateShiftPanel from './ReplicateShiftPanel';
 import ShiftForm from './ShiftForm';
 import type { ShiftFormValues } from './ShiftForm';
 import { describeShift } from './shiftText';
-import type { Commitment, UpdateWorkShiftInput, WorkShift } from '../../../types/models';
+import type { Commitment, CreateWorkShiftInput, UpdateWorkShiftInput, WorkShift } from '../../../types/models';
 import IconButton from '../../UI/IconButton';
 
 interface ShiftRowProps {
@@ -11,14 +12,17 @@ interface ShiftRowProps {
   isSaving: boolean;
   onEdit: (id: string, changes: UpdateWorkShiftInput) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
+  // Copiar o turno para outros dias (mesmas horas).
+  onReplicate?: (shifts: CreateWorkShiftInput[]) => Promise<boolean>;
   // Só para turnos soltos: permite movê-los para um local.
   moveTargets?: Commitment[];
   // Mostra o titulo do turno (eventos soltos) acima da data e hora.
   showTitle?: boolean;
 }
 
-export default function ShiftRow({ shift, isSaving, onEdit, onDelete, moveTargets, showTitle = false }: ShiftRowProps) {
+export default function ShiftRow({ shift, isSaving, onEdit, onDelete, onReplicate, moveTargets, showTitle = false }: ShiftRowProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isReplicating, setIsReplicating] = useState(false);
 
   const handleSubmit = async (values: ShiftFormValues): Promise<boolean> => {
     // Enviar dayOfWeek OU date troca a recorrência (o servidor anula o outro).
@@ -48,7 +52,8 @@ export default function ShiftRow({ shift, isSaving, onEdit, onDelete, moveTarget
   }
 
   return (
-    <li className="flex items-center justify-between gap-2 rounded-lg bg-neutral-800/60 px-3 py-2">
+    <li className="rounded-lg bg-neutral-800/60 px-3 py-2">
+     <div className="flex items-center justify-between gap-2">
       <div className="min-w-0">
         {showTitle && shift.label && (
           <p className="truncate text-sm font-medium text-white">{shift.label}</p>
@@ -73,6 +78,17 @@ export default function ShiftRow({ shift, isSaving, onEdit, onDelete, moveTarget
         )}
       </div>
       <div className="flex items-center gap-1 shrink-0">
+        {onReplicate && (
+          <button
+            type="button"
+            onClick={() => setIsReplicating((open) => !open)}
+            aria-expanded={isReplicating}
+            className="px-2 py-1 text-xs text-violet-300 hover:text-violet-200 rounded"
+            title="Copy this shift to other days"
+          >
+            Replicate
+          </button>
+        )}
         <IconButton label="Edit shift" onClick={() => setIsEditing(true)}>
           <PencilIcon />
         </IconButton>
@@ -80,6 +96,15 @@ export default function ShiftRow({ shift, isSaving, onEdit, onDelete, moveTarget
           <TrashIcon />
         </IconButton>
       </div>
+     </div>
+     {isReplicating && onReplicate && (
+       <ReplicateShiftPanel
+         shift={shift}
+         isSaving={isSaving}
+         onReplicate={onReplicate}
+         onClose={() => setIsReplicating(false)}
+       />
+     )}
     </li>
   );
 }

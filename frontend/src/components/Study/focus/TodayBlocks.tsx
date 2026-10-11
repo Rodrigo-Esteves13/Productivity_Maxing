@@ -38,7 +38,9 @@ export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps
   const handleStart = async (block: StudyPlanSuggestion) => {
     requestNotifyPermission();
     const minutes = Math.min(Math.max(blockMinutes(block), MIN_FOCUS_MINUTES), MAX_FOCUS_MINUTES);
-    await start({ taskId: block.taskId }, normalizePlan(minutes, DEFAULT_BREAK_MINUTES));
+    // Bloco de revisao: sessao ligada a cadeira (nao ha task).
+    const target = block.kind === 'review' && block.areaId ? { areaId: block.areaId } : { taskId: block.taskId };
+    await start(target, normalizePlan(minutes, DEFAULT_BREAK_MINUTES));
   };
 
   return (
@@ -56,7 +58,10 @@ export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps
         <ol className="flex flex-col gap-2">
           {blocks.map((block) => {
             const isPast = block.endMinutes <= nowMinutes && block.endMinutes < MINUTES_PER_DAY;
-            const isRunning = activeSession?.taskId === block.taskId;
+            const isRunning =
+              block.kind === 'review'
+                ? activeSession?.areaId === block.areaId && !activeSession?.taskId
+                : activeSession?.taskId === block.taskId;
             return (
               <li
                 key={`${block.taskId}-${block.startMinutes}`}
@@ -64,6 +69,9 @@ export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps
               >
                 <div className="min-w-0 flex-1 basis-40">
                   <p className="truncate text-sm font-medium text-white">{block.taskTitle}</p>
+                  {block.kind === 'review' && (
+                    <p className="text-[11px] text-violet-300">Light review to keep it fresh</p>
+                  )}
                   <p className="text-xs text-neutral-500">
                     {formatClock(block.startMinutes)}-{formatClock(block.endMinutes)} ({blockMinutes(block)} min)
                     {block.isOvertime && <span className="ml-2 text-amber-400">overtime</span>}
