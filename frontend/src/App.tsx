@@ -8,10 +8,12 @@ import MaintenanceGate from './components/Maintenance/MaintenanceGate';
 import AccountBlockedGate from './components/AccountBlocked/AccountBlockedGate';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 import { FeedbackProvider } from './context/FeedbackProvider';
+import I18nProvider from './i18n/I18nProvider';
 
 function App() {
   return (
     <ErrorBoundary>
+      <I18nProvider>
       <FeedbackProvider>
       <MaintenanceGate>
         <AccountBlockedGate>
@@ -33,6 +35,7 @@ function App() {
         </AccountBlockedGate>
       </MaintenanceGate>
       </FeedbackProvider>
+      </I18nProvider>
     </ErrorBoundary>
   );
 }

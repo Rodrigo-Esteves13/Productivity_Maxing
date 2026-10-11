@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import ShiftRow from './ShiftRow';
 import { orderShiftsByOccurrence } from '../../../lib/shiftOrder';
 import { todayUtcAnchored } from '../../../lib/weekDates';
-import type { Commitment, UpdateWorkShiftInput, WorkShift } from '../../../types/models';
+import type { Commitment, CreateWorkShiftInput, UpdateWorkShiftInput, WorkShift } from '../../../types/models';
 
 interface ShiftListProps {
   shifts: WorkShift[];
   isSaving: boolean;
   onEdit: (id: string, changes: UpdateWorkShiftInput) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
+  onReplicate?: (shifts: CreateWorkShiftInput[]) => Promise<boolean>;
   moveTargets?: Commitment[];
   // Mostra o titulo (label) de cada turno; usado nos eventos, onde o titulo e o que importa.
   showTitle?: boolean;
@@ -23,6 +24,7 @@ export default function ShiftList({
   isSaving,
   onEdit,
   onDelete,
+  onReplicate,
   moveTargets,
   showTitle = false,
   className = '',
@@ -37,6 +39,7 @@ export default function ShiftList({
       isSaving={isSaving}
       onEdit={onEdit}
       onDelete={onDelete}
+      onReplicate={onReplicate}
       moveTargets={moveTargets}
       showTitle={showTitle}
     />

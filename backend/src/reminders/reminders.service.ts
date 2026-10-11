@@ -115,7 +115,10 @@ export class RemindersService {
   private remindAt(date: Date): Date {
     if (!this.isDateOnly(date)) return new Date(date.getTime() - TIMED_LEAD_MS);
     const dayBefore = new Date(date.getTime() - 24 * HOUR_MS);
-    return lisbonWallClockToUtc(toDateKey(dayBefore), DATE_ONLY_REMINDER_MINUTES);
+    return lisbonWallClockToUtc(
+      toDateKey(dayBefore),
+      DATE_ONLY_REMINDER_MINUTES,
+    );
   }
 
   private dueLabel(date: Date, now: Date): string {
@@ -127,7 +130,10 @@ export class RemindersService {
         month: 'short',
       }).format(date)}`;
     }
-    const hours = Math.max(1, Math.round((date.getTime() - now.getTime()) / HOUR_MS));
+    const hours = Math.max(
+      1,
+      Math.round((date.getTime() - now.getTime()) / HOUR_MS),
+    );
     return `due in about ${hours}h`;
   }
 

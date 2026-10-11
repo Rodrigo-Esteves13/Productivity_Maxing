@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { User } from '../../types/models';
 import { updateUserProfile } from '../../api/userService';
 import { useFeedback } from '../../context/useFeedback';
+import { useI18n } from '../../i18n/useI18n';
 
 interface PreferencesCardProps {
   user: User;
@@ -18,7 +19,7 @@ interface ToggleRowProps {
 
 function ToggleRow({ label, description, checked, disabled, onChange }: ToggleRowProps) {
   return (
-    <label className="flex items-start justify-between gap-4 py-3 border-b border-neutral-800 last:border-b-0 cursor-pointer">
+    <label className="flex items-start justify-between gap-4 py-2.5 border-b border-neutral-800 last:border-b-0 cursor-pointer">
       <span className="min-w-0">
         <span className="block text-sm font-medium text-neutral-200">{label}</span>
         <span className="block text-xs text-neutral-500 mt-0.5">{description}</span>
@@ -36,6 +37,7 @@ function ToggleRow({ label, description, checked, disabled, onChange }: ToggleRo
 
 export default function PreferencesCard({ user, onUserUpdate }: PreferencesCardProps) {
   const { notify } = useFeedback();
+  const { t } = useI18n();
   const [isSaving, setIsSaving] = useState(false);
 
   const save = async (patch: { deadlineEmailReminders?: boolean; spacedReviewsEnabled?: boolean }) => {
@@ -50,18 +52,19 @@ export default function PreferencesCard({ user, onUserUpdate }: PreferencesCardP
   };
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 mt-6">
-      <h2 className="text-lg font-semibold text-white mb-1">Preferences</h2>
+    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 max-w-3xl mt-8">
+      <h2 className="text-lg font-semibold text-white">{t('prefs.notificationsTitle')}</h2>
+      <p className="mt-1 mb-2 text-sm text-neutral-400">{t('prefs.savedToAccount')}</p>
       <ToggleRow
-        label="Deadline reminders by email"
-        description="One email when a pending task is due within about 24 hours. Respects your quiet hours."
+        label={t('prefs.reminders')}
+        description={t('prefs.remindersHelp')}
         checked={user.deadlineEmailReminders ?? false}
         disabled={isSaving}
         onChange={(value) => void save({ deadlineEmailReminders: value })}
       />
       <ToggleRow
-        label="Spaced reviews"
-        description="When you complete an academic task (not a test or exam), add short review tasks 1, 3 and 7 days later."
+        label={t('prefs.spacedReviews')}
+        description={t('prefs.spacedReviewsHelp')}
         checked={user.spacedReviewsEnabled ?? false}
         disabled={isSaving}
         onChange={(value) => void save({ spacedReviewsEnabled: value })}

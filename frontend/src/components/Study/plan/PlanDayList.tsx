@@ -61,7 +61,10 @@ export default function PlanDayList({ suggestions, days, dailyLimitMinutes }: Pl
                         : 'bg-neutral-800/60'
                     }`}
                   >
-                    <span className="text-neutral-200 truncate">{s.taskTitle}</span>
+                    <span className="text-neutral-200 truncate">
+                      {s.taskTitle}
+                      {s.kind === 'review' && <span className="ml-2 text-[11px] text-violet-300">review</span>}
+                    </span>
                     <span className="text-neutral-500 shrink-0 ml-3">
                       {s.isOvertime && <span className="text-amber-400 mr-2">Overtime</span>}
                       {formatClock(s.startMinutes)}-{formatClock(s.endMinutes)}

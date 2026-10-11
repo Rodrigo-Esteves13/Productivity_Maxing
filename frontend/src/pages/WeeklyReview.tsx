@@ -7,6 +7,7 @@ import DashboardCard, { CardHeading } from '../components/UI/DashboardCard';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { getWeeklyReview } from '../api/userService';
 import type { WeeklyReview as WeeklyReviewData } from '../types/models';
+import { useI18n } from '../i18n/useI18n';
 
 function formatMinutes(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
@@ -35,7 +36,8 @@ function TaskLink({ id, title, areaName }: { id: string; title: string; areaName
 
 // Revisao dos ultimos 7 dias + o que vem nos proximos 7. So leitura.
 export default function WeeklyReview() {
-  useDocumentTitle('Weekly review');
+  const { t } = useI18n();
+  useDocumentTitle(t('review.title'));
   const [data, setData] = useState<WeeklyReviewData | null>(null);
   const [error, setError] = useState(false);
 
@@ -55,22 +57,22 @@ export default function WeeklyReview() {
 
   return (
     <PageLayout>
-      <PageHeader title="Weekly review" description="Your last 7 days and what is coming next." />
-      {error && <ErrorState message="Could not load the weekly review." />}
-      {!data && !error && <p className="text-sm text-neutral-400">Loading...</p>}
+      <PageHeader title={t('review.title')} description={t('review.description')} />
+      {error && <ErrorState message={t('review.error')} />}
+      {!data && !error && <p className="text-sm text-neutral-400">{t('review.loading')}</p>}
       {data && (
         <div className="space-y-6 max-w-4xl">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Stat label="Completed" value={String(data.completed.length)} />
-            <Stat label="Studied" value={formatMinutes(data.studyMinutes)} />
-            <Stat label="Overdue now" value={String(data.overdueCount)} />
-            <Stat label="Avg focus" value={data.focusAverage === null ? '-' : `${data.focusAverage}/5`} />
+            <Stat label={t('review.completed')} value={String(data.completed.length)} />
+            <Stat label={t('review.studied')} value={formatMinutes(data.studyMinutes)} />
+            <Stat label={t('review.overdue')} value={String(data.overdueCount)} />
+            <Stat label={t('review.focus')} value={data.focusAverage === null ? '-' : `${data.focusAverage}/5`} />
           </div>
 
           <DashboardCard>
-            <CardHeading className="mb-3">Completed this week</CardHeading>
+            <CardHeading className="mb-3">{t('review.completedThisWeek')}</CardHeading>
             {data.completed.length === 0 ? (
-              <p className="text-sm text-neutral-500">Nothing completed in the last 7 days.</p>
+              <p className="text-sm text-neutral-500">{t('review.nothingCompleted')}</p>
             ) : (
               <ul className="space-y-1.5">
                 {data.completed.map((t) => (
@@ -83,9 +85,9 @@ export default function WeeklyReview() {
           </DashboardCard>
 
           <DashboardCard>
-            <CardHeading className="mb-3">Study time by area</CardHeading>
+            <CardHeading className="mb-3">{t('review.studyByArea')}</CardHeading>
             {data.studyByArea.length === 0 ? (
-              <p className="text-sm text-neutral-500">No study sessions this week.</p>
+              <p className="text-sm text-neutral-500">{t('review.noStudy')}</p>
             ) : (
               <ul className="space-y-2">
                 {data.studyByArea.map((row) => (
@@ -108,7 +110,7 @@ export default function WeeklyReview() {
 
           {data.postponed.length > 0 && (
             <DashboardCard tone="warning">
-              <CardHeading tone="warning" className="mb-3">Pushed back more than once</CardHeading>
+              <CardHeading tone="warning" className="mb-3">{t('review.pushedBack')}</CardHeading>
               <ul className="space-y-1.5">
                 {data.postponed.map((t) => (
                   <li key={t.id} className="flex items-baseline justify-between gap-3">
@@ -121,9 +123,9 @@ export default function WeeklyReview() {
           )}
 
           <DashboardCard>
-            <CardHeading className="mb-3">Coming up (next 7 days)</CardHeading>
+            <CardHeading className="mb-3">{t('review.comingUp')}</CardHeading>
             {data.upcoming.length === 0 ? (
-              <p className="text-sm text-neutral-500">Nothing due in the next 7 days.</p>
+              <p className="text-sm text-neutral-500">{t('review.nothingDue')}</p>
             ) : (
               <ul className="space-y-1.5">
                 {data.upcoming.map((t) => (

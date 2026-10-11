@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { loginRequest, resendVerificationRequest } from '../api/userService';
 import TwoFactorCodeForm from '../components/Auth/TwoFactorCodeForm';
+import { useI18n } from '../i18n/useI18n';
 import { isSafeRedirectPath } from '../lib/safeRedirect';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
@@ -46,6 +47,7 @@ export default function Login() {
   const [blockedInfo, setBlockedInfo] = useState<BlockedLoginInfo | null>(null);
   // Password certa mas email por verificar (so com a verificacao ligada no
   // backend): mostra aviso + botao de reenviar em vez de "credenciais invalidas".
+  const { t } = useI18n();
   const [needsVerification, setNeedsVerification] = useState(false);
   // Conta com 2FA (so com TWO_FACTOR_ENABLED no backend): token do desafio.
   const [twoFactorToken, setTwoFactorToken] = useState<string | null>(null);
@@ -93,7 +95,7 @@ export default function Login() {
         setNeedsVerification(true);
         return;
       }
-      setError('Invalid credentials or server error.');
+      setError(t('auth.invalidCredentials'));
     }
   };
 
@@ -109,7 +111,7 @@ export default function Login() {
   if (twoFactorToken) {
     return (
       <PageLayout>
-        <AuthCard title="Two-factor authentication">
+        <AuthCard title={t('auth.twoFactorTitle')}>
           <TwoFactorCodeForm
             token={twoFactorToken}
             onSuccess={(csrfToken) => {
@@ -126,32 +128,32 @@ export default function Login() {
 
   return (
     <PageLayout>
-      <AuthCard title="Login to Your Account">
+      <AuthCard title={t('auth.loginTitle')}>
         <form onSubmit={handleLogin} className="space-y-4">
           {error && <FormError message={error} />}
           {needsVerification && (
             <div className="rounded-lg border border-amber-800/50 bg-amber-900/10 p-3 text-sm text-amber-300">
-              Please confirm your email before logging in. Check your inbox for the link.
+              {t('auth.verifyPrompt')}
               <button
                 type="button"
                 onClick={handleResend}
                 className="block mt-2 underline text-violet-400 hover:text-violet-300"
               >
-                Resend confirmation email
+                {t('auth.resendConfirmation')}
               </button>
               {resendMessage && <span className="block mt-1 text-xs text-neutral-400">{resendMessage}</span>}
             </div>
           )}
 
           <Input
-            label="Email"
+            label={t('auth.email')}
             type="email"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <Input
-            label="Password"
+            label={t('auth.password')}
             type="password"
             placeholder="••••••••"
             value={password}

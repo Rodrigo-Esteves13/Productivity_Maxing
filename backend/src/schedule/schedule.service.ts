@@ -27,6 +27,9 @@ export interface ImportScheduleRowResult {
 export interface ImportScheduleResult {
   imported: number;
   failed: number;
+  // Aulas antigas no mesmo intervalo de datas que já não estão no ficheiro
+  // (substituídas) e foram apagadas.
+  removed: number;
   results: ImportScheduleRowResult[];
 }
 
@@ -96,11 +99,56 @@ export class ScheduleService {
       },
     );
 
+    const removed = await this.removeStaleOccurrences(userId, rows);
+
     return {
       imported: results.filter((r) => r.success).length,
       failed: results.filter((r) => !r.success).length,
+      removed,
       results,
     };
+  }
+
+  /**
+   * Importar SUBSTITUI: dentro do intervalo de datas do ficheiro, apaga as
+   * aulas que já lá estavam e que o ficheiro novo já não traz. Sem isto,
+   * uma aula que muda de 3h para 4h (a faculdade muda o UID/horas do
+   * evento) ficava duplicada: a antiga + a nova.
+   *
+   * Só apaga as que NÃO estão no ficheiro (por externalUid) - as que
+   * continuam são atualizadas pelo upsert, mantendo o mesmo id (e assim a
+   * ligação aos apontamentos do caderno, que é SetNull ao apagar).
+   * Fora do intervalo do ficheiro nada é tocado: importar só novembro não
+   * mexe em outubro.
+   */
+  private async removeStaleOccurrences(
+    userId: string,
+    rows: ImportScheduleDto['occurrences'],
+  ): Promise<number> {
+    if (rows.length === 0) return 0;
+
+    const times = rows
+      .map((row) => new Date(row.date).getTime())
+      .filter((t) => Number.isFinite(t));
+    if (times.length === 0) return 0;
+
+    const from = new Date(Math.min(...times));
+    const to = new Date(Math.max(...times));
+    to.setUTCHours(23, 59, 59, 999);
+
+    const result = await this.prisma.classOccurrence.deleteMany({
+      where: {
+        userId,
+        date: { gte: from, lte: to },
+        externalUid: { notIn: rows.map((row) => row.externalUid) },
+      },
+    });
+    if (result.count > 0) {
+      this.logger.log(
+        `Import substituiu o horário (user ${userId}): ${result.count} aulas antigas removidas`,
+      );
+    }
+    return result.count;
   }
 
   /**

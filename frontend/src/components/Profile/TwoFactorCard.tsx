@@ -69,7 +69,7 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
     'w-full max-w-xs rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:border-violet-600';
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 mt-6">
+    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 max-w-3xl mt-8">
       <h2 className="text-lg font-semibold text-white mb-1">Two-factor authentication</h2>
       <p className="text-sm text-neutral-400 mb-3">
         Ask for a code from an authenticator app (Google Authenticator, Authy, 1Password) at every login,

@@ -1,4 +1,5 @@
 import { LogoutIcon } from '../UI/Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AuthStatusProps {
   isAuthenticated: boolean;
@@ -6,6 +7,7 @@ interface AuthStatusProps {
 }
 
 export default function AuthStatus({ isAuthenticated, onLogout }: AuthStatusProps) {
+  const { t } = useI18n();
   return (
     <div className="flex items-center ml-4">
       {isAuthenticated ? (
@@ -14,7 +16,7 @@ export default function AuthStatus({ isAuthenticated, onLogout }: AuthStatusProp
           className="flex items-center gap-2 px-4 py-2 border border-red-900/50 rounded-md text-sm font-medium text-red-400 bg-red-950/30 hover:bg-red-900/50 hover:text-red-300 focus:outline-none transition-colors"
         >
           <LogoutIcon />
-          Logout
+          {t('nav.logout')}
         </button>
       ) : (
         <span className="text-sm font-medium text-neutral-500 italic">

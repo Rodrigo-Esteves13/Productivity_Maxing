@@ -7,6 +7,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-13',
+    title: 'Smarter study plan, themes, languages and shift copy',
+    items: [
+      'Study plan now paces each task across the days until its deadline (a little every day, a bit more as it gets close) instead of waiting for the last week.',
+      'Light review sessions keep your active courses fresh even when nothing is due soon.',
+      'Importing a timetable now replaces the old classes in that date range, so a class that changed from 3h to 4h no longer shows twice.',
+      'Replicate a shift to other days with one click.',
+      'Themes: Nightshade, Midnight, Light, Ocean, Forest, Sunset, or match your system.',
+      'Languages: English, Portugues and Espanol (navigation, login, settings and new pages).',
+      'Accessibility: color-blind friendly colors, reduce motion, bigger text sizes.',
+    ],
+  },
+  {
     date: '2026-10-12',
     title: 'Repeating tasks, weekly review and reminders',
     items: [

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { User } from '../../types/models';
 import { LogoutIcon } from '../UI/Icons';
 import Avatar from '../Profile/Avatar';
+import { useI18n } from '../../i18n/useI18n';
 
 interface UserMenuProps {
   user: User | null;
@@ -20,6 +21,7 @@ function getFirstName(user: User): string {
 }
 
 export default function UserMenu({ user, onLogout }: UserMenuProps) {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -46,50 +48,53 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
     <div className="relative ml-4" ref={containerRef}>
       <button
         onClick={() => setIsOpen((prev) => !prev)}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-label={t('nav.menu')}
         className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-neutral-800 transition-colors focus:outline-none"
       >
         <Avatar initials={initials} avatarUrl={user.avatarUrl} alt={firstName} size="sm" />
         <span className="hidden sm:inline text-sm font-medium text-neutral-200">
-          Hello, {firstName}
+          {t('nav.hello', { name: firstName })}
         </span>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl py-1 z-50">
+        <div role="menu" className="absolute right-0 mt-2 w-48 bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl py-1 z-50">
           <Link
             to="/profile"
             onClick={() => setIsOpen(false)}
             className="block px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
           >
-            Profile
+            {t('nav.profile')}
           </Link>
           <Link
             to="/developer"
             onClick={() => setIsOpen(false)}
             className="block px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
           >
-            Developer
+            {t('nav.developer')}
           </Link>
           <Link
             to="/agent"
             onClick={() => setIsOpen(false)}
             className="block px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
           >
-            Agent
+            {t('nav.agent')}
           </Link>
           <Link
             to="/review"
             onClick={() => setIsOpen(false)}
             className="block px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
           >
-            Weekly review
+            {t('nav.review')}
           </Link>
           <Link
             to="/changelog"
             onClick={() => setIsOpen(false)}
             className="block px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
           >
-            What's new
+            {t('nav.changelog')}
           </Link>
           <button
             onClick={() => {
@@ -99,7 +104,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
             className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-950/40 hover:text-red-300 transition-colors"
           >
             <LogoutIcon />
-            Logout
+            {t('nav.logout')}
           </button>
         </div>
       )}
