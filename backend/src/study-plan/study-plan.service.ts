@@ -271,8 +271,7 @@ export class StudyPlanService {
         { name: t.area.name, colorHex: t.area.colorHex },
       ]),
     );
-    for (const [areaId, area] of reviewCourses.areas)
-      areaById.set(areaId, area);
+    for (const [areaId, area] of reviewCourses.areas) areaById.set(areaId, area);
     const planTasks: StudyPlanTask[] = tasks.map((task) => {
       const resolved = resolvedByTaskId.get(task.id);
       const result = output.byTask.get(task.id);
@@ -333,9 +332,7 @@ export class StudyPlanService {
             endMinutes: block.endMinutes,
             isOvertime: block.isOvertime,
             kind: isReview ? ('review' as const) : ('task' as const),
-            taskId: isReview
-              ? `review:${block.areaId}`
-              : (block.taskId as string),
+            taskId: isReview ? `review:${block.areaId}` : (block.taskId as string),
             taskTitle: isReview
               ? `Review: ${areaName}`
               : (titleById.get(block.taskId as string) ?? ''),

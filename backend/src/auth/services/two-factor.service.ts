@@ -14,7 +14,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { decryptToken, encryptToken } from '../../crypto/token-cipher';
 import { isTwoFactorEnabled } from '../../config/app.config';
 import { AccountGuardService } from './account-guard.service';
-import { buildOtpauthUri, generateTotpSecret, verifyTotp } from './totp.util';
+import {
+  buildOtpauthUri,
+  generateTotpSecret,
+  verifyTotp,
+} from './totp.util';
 
 const ISSUER = 'Productivity Maxing';
 const CHALLENGE_TTL = '5m';
@@ -72,9 +76,7 @@ export class TwoFactorService {
   private challengeSecret(): string {
     const base = process.env.JWT_SECRET;
     if (!base) throw new Error('JWT_SECRET is not defined.');
-    return createHmac('sha256', base)
-      .update('two-factor-login-v1')
-      .digest('hex');
+    return createHmac('sha256', base).update('two-factor-login-v1').digest('hex');
   }
 
   createChallengeToken(user: Pick<User, 'id'>): string {
@@ -173,9 +175,7 @@ export class TwoFactorService {
     const step = verifyTotp(decryptToken(user.twoFactorSecret), code.trim());
     if (step === null) {
       this.registerFailure(userId);
-      throw new BadRequestException(
-        'Invalid code. Check the app and try again.',
-      );
+      throw new BadRequestException('Invalid code. Check the app and try again.');
     }
     this.failures.delete(userId);
 
@@ -236,9 +236,7 @@ export class TwoFactorService {
       if (user.twoFactorRecoveryHashes.includes(hash)) {
         // Gasta o código; updateMany com a condição evita usar o mesmo
         // código em dois pedidos em paralelo.
-        const remaining = user.twoFactorRecoveryHashes.filter(
-          (h) => h !== hash,
-        );
+        const remaining = user.twoFactorRecoveryHashes.filter((h) => h !== hash);
         const result = await this.prisma.user.updateMany({
           where: { id: user.id, twoFactorRecoveryHashes: { has: hash } },
           data: { twoFactorRecoveryHashes: remaining },
