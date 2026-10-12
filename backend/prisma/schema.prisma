@@ -495,6 +495,7 @@ model AgentConfig {
 
 model Identity {
   id                String    @id @default(uuid())
+  calendarId String?
   userId            String
   provider          Provider
   providerAccountId String

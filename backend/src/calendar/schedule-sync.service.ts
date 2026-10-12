@@ -34,8 +34,13 @@ import type {
   SyncResult,
 } from './schedule-sync.types';
 
-const EVENTS_URL =
-  'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+// Calendario da app para o sync em curso. E mutavel de proposito: se a pessoa
+// apagou o calendario, a primeira criacao a falhar com 404 substitui-o e os
+// restantes pedidos paralelos passam a usar o novo.
+interface CalendarContext {
+  accessToken: string;
+  calendarId: string;
+}
 
 interface SyncPlan {
   diff: SyncDiff;
@@ -71,6 +76,13 @@ export class ScheduleSyncService {
 
     try {
       const accessToken = await this.calendarService.getAccessToken(userId);
+      const ctx: CalendarContext = {
+        accessToken,
+        calendarId: await this.calendarService.getCalendarId(
+          userId,
+          accessToken,
+        ),
+      };
       const { diff } = await this.computePlan(userId, days);
 
       const operations =
@@ -91,15 +103,15 @@ export class ScheduleSyncService {
 
       const tasks: (() => Promise<void>)[] = [
         ...diff.toCreate.map((d) => async () => {
-          await this.createEvent(userId, accessToken, d);
+          await this.createEvent(userId, ctx, d);
           result.created += 1;
         }),
         ...diff.toUpdate.map(({ desired, existing }) => async () => {
-          await this.updateEvent(userId, accessToken, desired, existing);
+          await this.updateEvent(userId, ctx, desired, existing);
           result.updated += 1;
         }),
         ...diff.toDelete.map((existing) => async () => {
-          await this.deleteEvent(userId, accessToken, existing);
+          await this.deleteEvent(userId, ctx, existing);
           result.deleted += 1;
         }),
       ];
@@ -129,6 +141,13 @@ export class ScheduleSyncService {
 
     try {
       const accessToken = await this.calendarService.getAccessToken(userId);
+      const ctx: CalendarContext = {
+        accessToken,
+        calendarId: await this.calendarService.getCalendarId(
+          userId,
+          accessToken,
+        ),
+      };
       const rows = await this.prisma.calendarSyncedEvent.findMany({
         where: { userId },
         select: { id: true, googleEventId: true },
@@ -139,7 +158,7 @@ export class ScheduleSyncService {
       let failed = 0;
       await this.runWithConcurrency(
         rows.map((row) => async () => {
-          await this.deleteFromGoogle(accessToken, row.googleEventId);
+          await this.deleteFromGoogle(ctx, row.googleEventId);
           await this.prisma.calendarSyncedEvent.deleteMany({
             where: { id: row.id, userId },
           });
@@ -295,15 +314,16 @@ export class ScheduleSyncService {
   }
 
   private async googleRequest(
-    accessToken: string,
+    ctx: CalendarContext,
     method: 'POST' | 'PATCH' | 'DELETE',
     eventId: string | null,
     body?: unknown,
   ): Promise<Response> {
-    return fetch(eventId ? `${EVENTS_URL}/${eventId}` : EVENTS_URL, {
+    const eventsUrl = this.calendarService.eventsUrl(ctx.calendarId);
+    return fetch(eventId ? `${eventsUrl}/${eventId}` : eventsUrl, {
       method,
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${ctx.accessToken}`,
         'Content-Type': 'application/json',
       },
       body: body ? JSON.stringify(body) : undefined,
@@ -312,15 +332,32 @@ export class ScheduleSyncService {
 
   private async createEvent(
     userId: string,
-    accessToken: string,
+    ctx: CalendarContext,
     desired: DesiredEvent,
   ): Promise<void> {
-    const res = await this.googleRequest(
-      accessToken,
+    let res = await this.googleRequest(
+      ctx,
       'POST',
       null,
       this.toGoogleEvent(desired),
     );
+
+    // 404 na criacao: a pessoa apagou o calendario "Productivity Maxing".
+    // Recria-o (ou reaproveita o que outro pedido paralelo ja recriou) e
+    // tenta uma unica vez.
+    if (res.status === 404) {
+      ctx.calendarId = await this.calendarService.replaceCalendar(
+        userId,
+        ctx.accessToken,
+        ctx.calendarId,
+      );
+      res = await this.googleRequest(
+        ctx,
+        'POST',
+        null,
+        this.toGoogleEvent(desired),
+      );
+    }
     if (!res.ok) throw new Error(`Google create failed: ${await res.text()}`);
 
     const { id } = (await res.json()) as { id: string };
@@ -335,20 +372,22 @@ export class ScheduleSyncService {
 
   private async updateEvent(
     userId: string,
-    accessToken: string,
+    ctx: CalendarContext,
     desired: DesiredEvent,
     existing: ExistingSyncedEvent,
   ): Promise<void> {
     const res = await this.googleRequest(
-      accessToken,
+      ctx,
       'PATCH',
       existing.googleEventId,
       this.toGoogleEvent(desired),
     );
 
-    // 404/410: apagaste-o à mão no Google Calendar. Volta a criar.
+    // 404/410: apagaste-o à mão no Google Calendar, ou o evento vive no
+    // calendário primário (scope antigo) e já não lhe conseguimos tocar.
+    // Volta a criar no calendário da app.
     if (res.status === 404 || res.status === 410) {
-      await this.createEvent(userId, accessToken, desired);
+      await this.createEvent(userId, ctx, desired);
       return;
     }
     if (!res.ok) throw new Error(`Google update failed: ${await res.text()}`);
@@ -367,20 +406,20 @@ export class ScheduleSyncService {
 
   private async deleteEvent(
     userId: string,
-    accessToken: string,
+    ctx: CalendarContext,
     existing: ExistingSyncedEvent,
   ): Promise<void> {
-    await this.deleteFromGoogle(accessToken, existing.googleEventId);
+    await this.deleteFromGoogle(ctx, existing.googleEventId);
     await this.prisma.calendarSyncedEvent.deleteMany({
       where: { id: existing.id, userId },
     });
   }
 
   private async deleteFromGoogle(
-    accessToken: string,
+    ctx: CalendarContext,
     googleEventId: string,
   ): Promise<void> {
-    const res = await this.googleRequest(accessToken, 'DELETE', googleEventId);
+    const res = await this.googleRequest(ctx, 'DELETE', googleEventId);
     // 404/410 = já não existe do lado da Google: é o resultado que queríamos.
     if (!res.ok && res.status !== 404 && res.status !== 410) {
       throw new Error(`Google delete failed: ${await res.text()}`);

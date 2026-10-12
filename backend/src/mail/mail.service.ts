@@ -132,7 +132,7 @@ export class MailService {
         (item) =>
           `&bull; <strong>${escapeHtml(item.title)}</strong>${
             item.areaName ? ` (${escapeHtml(item.areaName)})` : ''
-          } &mdash; ${escapeHtml(item.dueLabel)}`,
+          }: ${escapeHtml(item.dueLabel)}`,
       )
       .join('<br />');
 

@@ -367,8 +367,18 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async me(@CurrentUser() user: AuthenticatedUser) {
+    return this.buildProfile(user.id);
+  }
+
+  // Forma ÚNICA do perfil devolvido ao frontend (GET /auth/me, PATCH /auth/me,
+  // upload/remoção de avatar). Lista explícita de campos: devolver a linha
+  // inteira do User expunha supabaseAuthId, tokenVersion, o segredo TOTP
+  // cifrado, os hashes dos códigos de recuperação e o token do feed .ics.
+  // Tem de ser igual em todas as rotas porque o frontend substitui o user em
+  // memória pela resposta (derivados como hasPassword/emailVerified incluídos).
+  private async buildProfile(userId: string) {
     const profile = await this.prisma.user.findUnique({
-      where: { id: user.id },
+      where: { id: userId },
       select: {
         id: true,
         email: true,
@@ -429,7 +439,7 @@ export class AuthController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateProfileDto,
   ) {
-    return this.authService.updateProfile(user.id, {
+    await this.authService.updateProfile(user.id, {
       name: dto.name,
       commuteMinutes: dto.commuteMinutes,
       commuteMode: dto.commuteMode,
@@ -440,6 +450,7 @@ export class AuthController {
       deadlineEmailReminders: dto.deadlineEmailReminders,
       spacedReviewsEnabled: dto.spacedReviewsEnabled,
     });
+    return this.buildProfile(user.id);
   }
 
   // Define ou muda a password da conta autenticada. Não pede a password
@@ -508,14 +519,16 @@ export class AuthController {
     if (!file.mimetype.startsWith('image/')) {
       throw new BadRequestException('File must be an image.');
     }
-    return this.authService.uploadAvatar(user.id, file);
+    await this.authService.uploadAvatar(user.id, file);
+    return this.buildProfile(user.id);
   }
 
   // Remove a foto de perfil atual (volta a mostrar as iniciais no frontend).
   @Delete('me/avatar')
   @UseGuards(JwtAuthGuard)
   async deleteAvatar(@CurrentUser() user: AuthenticatedUser) {
-    return this.authService.removeAvatar(user.id);
+    await this.authService.removeAvatar(user.id);
+    return this.buildProfile(user.id);
   }
 
   // Apaga a conta em definitivo (irreversível): remove o avatar do Storage,

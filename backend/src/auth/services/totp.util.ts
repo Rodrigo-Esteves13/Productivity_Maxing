@@ -46,11 +46,7 @@ export function generateTotpSecret(): string {
   return base32Encode(randomBytes(20));
 }
 
-export function hotp(
-  secret: Buffer,
-  counter: number,
-  digits = TOTP_DIGITS,
-): string {
+export function hotp(secret: Buffer, counter: number, digits = TOTP_DIGITS): string {
   const counterBuffer = Buffer.alloc(8);
   counterBuffer.writeBigUInt64BE(BigInt(counter));
   const hmac = createHmac('sha1', secret).update(counterBuffer).digest();
