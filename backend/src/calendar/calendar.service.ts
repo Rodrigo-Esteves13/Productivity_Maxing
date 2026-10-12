@@ -2,11 +2,15 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { Provider } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
-import { GOOGLE_TOKEN_URL } from '../auth/google-oauth.constants';
+import {
+  GOOGLE_CALENDAR_API_URL,
+  GOOGLE_CALENDAR_APP_SCOPE,
+  GOOGLE_CALENDAR_NAME,
+  GOOGLE_TOKEN_URL,
+} from '../auth/google-oauth.constants';
+import { CALENDAR_TIME_ZONE } from './schedule-sync.constants';
 
-const CALENDAR_EVENTS_URL =
-  'https://www.googleapis.com/calendar/v3/calendars/primary/events';
-const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+const CALENDAR_SCOPE = GOOGLE_CALENDAR_APP_SCOPE;
 // Fallback quando a Task não tem calendarDurationMinutes definido (tasks
 // criadas antes deste campo existir, ou que nunca passaram pelo form com o
 // seletor de duração). O form só recolhe uma hora de início, nunca uma de
@@ -46,10 +50,99 @@ function formatEnumLabel(value: string): string {
 export class CalendarService {
   private readonly logger = new Logger(CalendarService.name);
 
+  // Criacao do calendario em curso, por utilizador: o sync corre pedidos em
+  // paralelo e, sem isto, dois pedidos a falhar ao mesmo tempo criariam dois
+  // calendarios.
+  private readonly calendarCreations = new Map<string, Promise<string>>();
+
   constructor(
     private prisma: PrismaService,
     private authService: AuthService,
   ) {}
+
+  /** URL da coleção de eventos do calendário da app. */
+  eventsUrl(calendarId: string): string {
+    return `${GOOGLE_CALENDAR_API_URL}/calendars/${encodeURIComponent(calendarId)}/events`;
+  }
+
+  /**
+   * Devolve o id do calendário secundário da app para este utilizador,
+   * criando-o (POST /calendars) na primeira utilização. O id fica guardado
+   * na Identity Google. Nunca lista nem lê calendários existentes.
+   */
+  async getCalendarId(userId: string, accessToken: string): Promise<string> {
+    const identity = await this.prisma.identity.findFirst({
+      where: { userId, provider: Provider.GOOGLE },
+      select: { calendarId: true },
+    });
+    if (identity?.calendarId) return identity.calendarId;
+    return this.createCalendar(userId, accessToken);
+  }
+
+  /**
+   * Chamado quando a Google responde 404 a uma criação de evento: o
+   * calendário foi apagado pela pessoa. Se outro pedido paralelo já o
+   * substituiu (id guardado diferente do que falhou), reaproveita-o.
+   */
+  async replaceCalendar(
+    userId: string,
+    accessToken: string,
+    staleCalendarId: string,
+  ): Promise<string> {
+    const identity = await this.prisma.identity.findFirst({
+      where: { userId, provider: Provider.GOOGLE },
+      select: { calendarId: true },
+    });
+    if (identity?.calendarId && identity.calendarId !== staleCalendarId) {
+      return identity.calendarId;
+    }
+    return this.createCalendar(userId, accessToken);
+  }
+
+  private createCalendar(userId: string, accessToken: string): Promise<string> {
+    const inFlight = this.calendarCreations.get(userId);
+    if (inFlight) return inFlight;
+
+    const creation = this.requestNewCalendar(userId, accessToken).finally(
+      () => {
+        this.calendarCreations.delete(userId);
+      },
+    );
+    this.calendarCreations.set(userId, creation);
+    return creation;
+  }
+
+  private async requestNewCalendar(
+    userId: string,
+    accessToken: string,
+  ): Promise<string> {
+    const res = await fetch(`${GOOGLE_CALENDAR_API_URL}/calendars`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        summary: GOOGLE_CALENDAR_NAME,
+        timeZone: CALENDAR_TIME_ZONE,
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      this.logger.error(`Google Calendar API (POST /calendars) falhou: ${body}`);
+      throw new BadRequestException(
+        'Failed to create the Productivity Maxing calendar in Google Calendar.',
+      );
+    }
+
+    const { id } = (await res.json()) as { id: string };
+    await this.prisma.identity.updateMany({
+      where: { userId, provider: Provider.GOOGLE },
+      data: { calendarId: id },
+    });
+    return id;
+  }
 
   /**
    * Issue #34: usado pelo frontend para decidir se mostra o botão de sync
@@ -207,13 +300,56 @@ export class CalendarService {
   async upsertEventForTask(userId: string, task: TaskForSync): Promise<string> {
     const accessToken = await this.getValidAccessToken(userId);
     const payload = this.toGoogleEvent(task);
+    let calendarId = await this.getCalendarId(userId, accessToken);
 
-    const url = task.googleCalendarEventId
-      ? `${CALENDAR_EVENTS_URL}/${task.googleCalendarEventId}`
-      : CALENDAR_EVENTS_URL;
-    const method = task.googleCalendarEventId ? 'PATCH' : 'POST';
+    // Atualização: PATCH ao evento existente. 404/410 = o evento (ou o
+    // calendário inteiro) já não existe, ou é um evento antigo criado no
+    // calendário primário com o scope anterior, que já não conseguimos
+    // tocar. Em qualquer destes casos, segue-se para criar um novo.
+    if (task.googleCalendarEventId) {
+      const res = await this.sendEvent(
+        'PATCH',
+        `${this.eventsUrl(calendarId)}/${task.googleCalendarEventId}`,
+        accessToken,
+        payload,
+      );
+      if (res.ok) return ((await res.json()) as { id: string }).id;
+      if (res.status !== 404 && res.status !== 410) {
+        await this.failSync('PATCH', res);
+      }
+    }
 
-    const res = await fetch(url, {
+    let res = await this.sendEvent(
+      'POST',
+      this.eventsUrl(calendarId),
+      accessToken,
+      payload,
+    );
+
+    // 404 na criação = a pessoa apagou o calendário "Productivity Maxing".
+    if (res.status === 404) {
+      calendarId = await this.replaceCalendar(userId, accessToken, calendarId);
+      res = await this.sendEvent(
+        'POST',
+        this.eventsUrl(calendarId),
+        accessToken,
+        payload,
+      );
+    }
+
+    if (!res.ok) await this.failSync('POST', res);
+
+    const data = (await res.json()) as { id: string };
+    return data.id;
+  }
+
+  private sendEvent(
+    method: 'POST' | 'PATCH',
+    url: string,
+    accessToken: string,
+    payload: unknown,
+  ): Promise<Response> {
+    return fetch(url, {
       method,
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -221,19 +357,12 @@ export class CalendarService {
       },
       body: JSON.stringify(payload),
     });
+  }
 
-    if (!res.ok) {
-      const body = await res.text();
-      this.logger.error(
-        `Google Calendar API (${method} ${url}) falhou: ${body}`,
-      );
-      throw new BadRequestException(
-        'Failed to sync task with Google Calendar.',
-      );
-    }
-
-    const data = (await res.json()) as { id: string };
-    return data.id;
+  private async failSync(method: string, res: Response): Promise<never> {
+    const body = await res.text();
+    this.logger.error(`Google Calendar API (${method}) falhou: ${body}`);
+    throw new BadRequestException('Failed to sync task with Google Calendar.');
   }
 
   /** Remove o evento do Google Calendar (botão de "unsync" no Dashboard). */
@@ -242,14 +371,19 @@ export class CalendarService {
     googleCalendarEventId: string,
   ): Promise<void> {
     const accessToken = await this.getValidAccessToken(userId);
+    const calendarId = await this.getCalendarId(userId, accessToken);
 
-    const res = await fetch(`${CALENDAR_EVENTS_URL}/${googleCalendarEventId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const res = await fetch(
+      `${this.eventsUrl(calendarId)}/${googleCalendarEventId}`,
+      {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
 
     // 404/410 = o evento já não existe do lado da Google (ex: apagado à
-    // mão pela pessoa) - não é um erro, só confirma o que já queríamos.
+    // mão pela pessoa, ou criado no calendário primário com o scope
+    // anterior) - não é um erro, só confirma o que já queríamos.
     if (!res.ok && res.status !== 404 && res.status !== 410) {
       const body = await res.text();
       this.logger.error(`Google Calendar API (DELETE) falhou: ${body}`);

@@ -88,14 +88,18 @@ export default function PrivacyPolicy() {
           Signing in with Google only requests your basic profile (email and name). Calendar access is
           a separate, optional step. If you choose to connect Google Calendar, the App requests this
           one additional scope:{' '}
-          <code>https://www.googleapis.com/auth/calendar.events</code> ("See and edit events on all
-          your calendars").
+          <code>https://www.googleapis.com/auth/calendar.app.created</code> (Google describes it as
+          making secondary calendars and seeing, creating, changing and deleting events on them).
+          It is the narrowest Calendar scope available: it does not give the App access to your
+          primary calendar or to any calendar the App did not create.
         </p>
         <ul className="list-disc list-inside space-y-2">
           <li>
             <strong>What I do with it:</strong> I only <em>create</em>, <em>update</em>, and{' '}
-            <em>delete</em> events that the App itself created in your primary calendar. I never read,
-            list, or modify any other event in your calendar. The events I create come from:
+            <em>delete</em> events inside a separate calendar named "Productivity Maxing", which the App
+            creates in your Google account the first time you connect. I cannot see, read, or modify
+            your primary calendar, your other calendars, or any event I did not create. The events I
+            create come from:
             <ul className="list-disc list-inside ml-5 mt-1 space-y-1">
               <li>
                 <strong>Tasks you choose to sync</strong> (button on a task): title, due date and time,
@@ -111,9 +115,11 @@ export default function PrivacyPolicy() {
           </li>
           <li>
             <strong>Why this scope is needed:</strong> creating, updating, and removing events requires
-            write access to events. A read-only scope can't do that. I don't request the broader{' '}
-            <code>calendar</code> scope, which would also allow managing or deleting whole calendars,
-            because the App doesn't need it.
+            write access to events, which a read-only scope can't do. Using a dedicated calendar means
+            the permission is limited to that calendar by Google itself, instead of relying on the App
+            promising to stay away from your other events. I don't request the broader{' '}
+            <code>calendar.events</code> or <code>calendar</code> scopes, which would also cover your
+            primary calendar, because the App doesn't need them.
           </li>
           <li>
             <strong>Limited Use:</strong> the App's use and transfer of information received from
@@ -136,7 +142,8 @@ export default function PrivacyPolicy() {
             <strong>Retention and deletion:</strong> when you disconnect Google Calendar in your
             profile, I revoke the Google refresh token with Google and delete it from my database; any
             short-lived access token expires on its own within about an hour. Events already created in
-            your calendar stay there until you remove them (the App can remove them for you). The
+            the Productivity Maxing calendar stay there until you remove them (the App can remove them
+            for you); you can also hide or delete that calendar yourself in Google Calendar. The
             records described in section 2.3 are deleted when the App removes those events or when you
             delete your account.
           </li>

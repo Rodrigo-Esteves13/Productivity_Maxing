@@ -92,10 +92,11 @@ export default function GoogleCalendarCard() {
       {/* Aviso de privacidade in-product (a Google exige que seja visivel junto
           ao pedido de acesso, e que o link seja o mesmo do ecra de consentimento). */}
       <p className="mt-4 text-xs text-neutral-500 leading-relaxed">
-        Connecting asks Google for one permission, <code>calendar.events</code>. We only create,
-        update and delete the events this app itself creates in your primary calendar, and only
-        after you confirm a preview. We never read your other events, and you can disconnect or
-        remove the synced events at any time. See our{' '}
+        Connecting asks Google for one permission, <code>calendar.app.created</code>. The app
+        creates its own separate calendar called "Productivity Maxing" and only creates, updates
+        and deletes events inside it, and only after you confirm a preview. It cannot see or
+        change your primary calendar or any other calendar. You can hide or delete that calendar,
+        disconnect, or remove the synced events at any time. See our{' '}
         <Link to="/privacy" className="underline text-violet-400 hover:text-violet-300">
           Privacy Policy
         </Link>
