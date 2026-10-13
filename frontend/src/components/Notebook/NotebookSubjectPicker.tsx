@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Area } from '../../types/models';
 import { SearchIcon, ChevronDownIcon } from '../UI/Icons';
+import ToggleChip from '../UI/ToggleChip';
 
 interface NotebookSubjectPickerProps {
   areas: Area[];
@@ -22,22 +23,16 @@ function Chip({
   onSelect: (area: Area) => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(area)}
+    <ToggleChip
+      size="sm"
+      pressed={isSelected}
       title={area.name}
-      className={`flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-left text-xs transition-colors ${
-        isSelected
-          ? 'border-violet-500 bg-violet-600/20 text-violet-200'
-          : 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:border-neutral-700 hover:text-white'
-      }`}
+      onClick={() => onSelect(area)}
+      className="flex max-w-full items-center gap-1.5 text-left"
     >
-      <span
-        className="h-2 w-2 shrink-0 rounded-full"
-        style={{ backgroundColor: area.colorHex }}
-      />
+      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: area.colorHex }} />
       <span className="truncate">{area.name}</span>
-    </button>
+    </ToggleChip>
   );
 }
 
