@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { NotebookEntry } from '../../types/models';
 import { useDrawingCanvas } from '../../hooks/useDrawingCanvas';
 import { useCanvasShapes } from '../../hooks/useCanvasShapes';
@@ -131,6 +131,25 @@ function NotebookEntryEditorForm({
       date: new Date(`${draft.dateValue}T12:00:00`).toISOString(),
     });
   };
+
+  // Ctrl/Cmd+S grava enquanto se edita (sem largar o teclado). A ref evita
+  // re-registar o listener a cada tecla - guarda sempre o handleSave mais
+  // recente.
+  const saveRef = useRef(handleSave);
+  saveRef.current = handleSave;
+  const canSaveRef = useRef(true);
+  canSaveRef.current = !isSaving && draft.textContent.length <= MAX_TEXT_CONTENT_LENGTH;
+  useEffect(() => {
+    if (!isEditing) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (canSaveRef.current) void saveRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isEditing]);
 
   return (
     <>

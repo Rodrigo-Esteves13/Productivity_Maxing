@@ -239,7 +239,7 @@ export default function Notebook() {
               </div>
 
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                <div className="md:col-span-1">
+                <div className="md:sticky md:top-4 md:col-span-1 md:max-h-[calc(100vh-2rem)] md:self-start md:overflow-y-auto md:pr-1">
                   {entriesLoading ? (
                     <LoadingState message="Loading entries..." />
                   ) : (
