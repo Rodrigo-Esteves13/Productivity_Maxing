@@ -61,7 +61,7 @@
       <li>Tasks and their metadata (due dates, weight, difficulty, target/actual grades, completion status, and the study area you assign each task to)</li>
       <li>The catalog of study areas itself is not personal data you create; it's a shared list of subjects/categories that I curate, and that all users select from</li>
       <li>Usage data needed to compute your progress and streaks</li>
-      <li>If you connect Google Calendar: a record of each event the App created for you (Google's event ID, the event title, and its date and time), so the App can later update or remove exactly those events and nothing else</li>
+      <li>If you connect Google Calendar: a record of each event the App created for you in its own calendar (Google's event ID, the event title, and its date and time), so the App can later update or remove exactly those events and nothing else</li>
     </ul>
 
     <h3>2.4 Technical data</h3>
@@ -70,16 +70,16 @@
 
   <section id="google-calendar">
     <h2>3. Google Calendar data: specific disclosure</h2>
-    <p>Signing in with Google only requests your basic profile (email and name). Calendar access is a separate, optional step. If you choose to connect Google Calendar, the App requests this one additional scope: <code>https://www.googleapis.com/auth/calendar.events</code> ("See and edit events on all your calendars").</p>
+    <p>Signing in with Google only requests your basic profile (email and name). Calendar access is a separate, optional step. If you choose to connect Google Calendar, the App requests this one additional scope: <code>https://www.googleapis.com/auth/calendar.app.created</code> (Google describes it as making secondary calendars and seeing, creating, changing and deleting events on them). It is the narrowest Calendar scope available: it does not give the App access to your primary calendar or to any calendar the App did not create.</p>
     <ul>
       <li>
-        <strong>What I do with it:</strong> I only <em>create</em>, <em>update</em>, and <em>delete</em> events that the App itself created in your primary calendar. I never read, list, or modify any other event in your calendar. The events I create come from:
+        <strong>What I do with it:</strong> I only <em>create</em>, <em>update</em>, and <em>delete</em> events inside a separate calendar named "Productivity Maxing", which the App creates in your Google account the first time you connect. I cannot see, read, or modify your primary calendar, your other calendars, or any event I did not create. The events I create come from:
         <ul>
           <li><strong>Tasks you choose to sync</strong> (button on a task): title, due date and time, and a description with the task's area, type, difficulty, status, topics, weight, target and real grade, and reference link, if you filled them in.</li>
           <li><strong>Your schedule, after you confirm a preview</strong> (Schedule page): your classes (subject, room, professor), your work shifts, travel-time blocks, and suggested study blocks from your study plan. Nothing is written until you confirm.</li>
         </ul>
       </li>
-      <li><strong>Why this scope is needed:</strong> creating, updating, and removing events requires write access to events. A read-only scope can't do that. I don't request the broader <code>calendar</code> scope, which would also allow managing or deleting whole calendars, because the App doesn't need it.</li>
+      <li><strong>Why this scope is needed:</strong> creating, updating, and removing events requires write access to events, which a read-only scope can't do. Using a dedicated calendar means the permission is limited to that calendar by Google itself, instead of relying on the App promising to stay away from your other events. I don't request the broader <code>calendar.events</code> or <code>calendar</code> scopes, which would also cover your primary calendar, because the App doesn't need them.</li>
       <li><strong>Limited Use:</strong> the App's use and transfer of information received from Google APIs to any other app adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noreferrer">Google API Services User Data Policy</a>, including the Limited Use requirements. Google user data is used only to provide the Calendar sync features described above.</li>
       <li><strong>What I don't do:</strong> sell, share, or disclose your Google user data to any third party (other than the infrastructure providers in section 8, which process it only to run the App); use it for advertising of any kind, including retargeting or personalized ads; use it to develop, improve, or train generative AI or machine-learning models; or let humans read it, except with your explicit consent (for example, when you send me a support request), where necessary for security or to comply with the law.</li>
       <li><strong>Retention and deletion:</strong> when you disconnect Google Calendar in your profile, I revoke the Google refresh token with Google and delete it from my database; any short-lived access token expires on its own within about an hour. Events already created in your calendar stay there until you remove them (the App can remove them for you). The records described in section 2.3 are deleted when the App removes those events or when you delete your account.</li>

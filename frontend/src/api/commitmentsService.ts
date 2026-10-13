@@ -10,6 +10,7 @@ export const getCommitments = async (): Promise<CommitmentsOverview> => {
 export const createCommitment = async (input: {
   name: string;
   commuteMinutes: number;
+  daysOff?: number[];
 }): Promise<Commitment> => {
   const response = await api.post<Commitment>('/commitments', input);
   return response.data;
@@ -17,7 +18,7 @@ export const createCommitment = async (input: {
 
 export const updateCommitment = async (
   id: string,
-  changes: { name?: string; commuteMinutes?: number },
+  changes: { name?: string; commuteMinutes?: number; daysOff?: number[] },
 ): Promise<Commitment> => {
   const response = await api.patch<Commitment>(`/commitments/${id}`, changes);
   return response.data;

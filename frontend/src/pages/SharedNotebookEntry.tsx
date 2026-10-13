@@ -9,6 +9,8 @@ import { useCanvasShapes } from '../hooks/useCanvasShapes';
 import { useCanvasLinks } from '../hooks/useCanvasLinks';
 import { useCanvasTexts } from '../hooks/useCanvasTexts';
 import NotebookCanvas from '../components/Notebook/NotebookCanvas';
+import NotebookPhotoGrid from '../components/Notebook/entry/NotebookPhotoGrid';
+import PageLayout from '../components/Layout/PageLayout';
 import NotebookTableEditor from '../components/Notebook/NotebookTableEditor';
 import { LinkIcon, FileIcon, BookOpenIcon, ShieldIcon } from '../components/UI/Icons';
 import LoadingState from '../components/UI/LoadingState';
@@ -16,8 +18,9 @@ import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const noop = () => {};
 
-// Sem AuthContext, sem Navbar, sem Notebook.tsx à volta - de propósito, é
-// a única página desta app pensada para alguém sem conta nenhuma.
+// Usa o mesmo PageLayout (header + footer) das restantes páginas, para quem
+// abre um link partilhado - mesmo sem conta - ver a app inteira à volta e
+// não um ecrã solto. É a única página pensada para alguém sem conta.
 type ShareGateStatus = 'login_required' | 'not_requested' | 'pending' | 'denied';
 
 export default function SharedNotebookEntry() {
@@ -86,32 +89,44 @@ export default function SharedNotebookEntry() {
   };
 
   if (isLoading) {
-    return <LoadingState message="Loading shared lesson..." className="min-h-screen" />;
+    return (
+      <PageLayout>
+        <LoadingState message="Loading shared lesson..." className="min-h-[50vh]" />
+      </PageLayout>
+    );
   }
 
   if (gateStatus) {
     return (
-      <ShareAccessGate
-        status={gateStatus}
-        token={token ?? ''}
-        hasSession={hasSession}
-        isRequesting={isRequesting}
-        error={error}
-        onRequestAccess={handleRequestAccess}
-      />
+      <PageLayout>
+        <ShareAccessGate
+          status={gateStatus}
+          token={token ?? ''}
+          hasSession={hasSession}
+          isRequesting={isRequesting}
+          error={error}
+          onRequestAccess={handleRequestAccess}
+        />
+      </PageLayout>
     );
   }
 
   if (error || !entry) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-neutral-950 px-4 text-center">
-        <BookOpenIcon className="h-8 w-8 text-neutral-700" />
-        <p className="text-sm text-neutral-400">{error || 'This share link is invalid or was removed.'}</p>
-      </div>
+      <PageLayout>
+        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-2 px-4 text-center">
+          <BookOpenIcon className="h-8 w-8 text-neutral-700" />
+          <p className="text-sm text-neutral-400">{error || 'This share link is invalid or was removed.'}</p>
+        </div>
+      </PageLayout>
     );
   }
 
-  return <SharedNotebookEntryView entry={entry} />;
+  return (
+    <PageLayout>
+      <SharedNotebookEntryView entry={entry} />
+    </PageLayout>
+  );
 }
 
 // One screen for all 4 non-'ok' outcomes of an AUTHORIZED share - the
@@ -156,7 +171,7 @@ function ShareAccessGate({
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-neutral-950 px-4 text-center">
+    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 text-center">
       <ShieldIcon className="h-8 w-8 text-neutral-700" />
       <h1 className="text-base font-semibold text-white">{copy[status].title}</h1>
       <p className="max-w-sm text-sm text-neutral-400">{copy[status].body}</p>
@@ -205,7 +220,7 @@ function SharedNotebookEntryView({ entry }: { entry: SharedNotebookEntryData }) 
     (entry.canvasTexts?.length ?? 0) > 0;
 
   return (
-    <div className="min-h-screen bg-neutral-950 px-4 py-8">
+    <div>
       <div className="mx-auto max-w-3xl space-y-4">
         <div className="rounded-md border border-violet-900/50 bg-violet-950/30 px-3 py-1.5 text-center text-xs text-violet-300">
           Shared read-only view - Productivity Maxing
@@ -269,21 +284,7 @@ function SharedNotebookEntryView({ entry }: { entry: SharedNotebookEntryData }) 
           </div>
         )}
 
-        {entry.photos.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {entry.photos.map(
-              (photo) =>
-                photo.url && (
-                  <img
-                    key={photo.id}
-                    src={photo.url}
-                    alt=""
-                    className="aspect-square w-full rounded-lg border border-neutral-800 object-cover"
-                  />
-                ),
-            )}
-          </div>
-        )}
+        <NotebookPhotoGrid photos={entry.photos} className="grid grid-cols-2 gap-2 sm:grid-cols-3" />
 
         {entry.attachments.length > 0 && (
           <div className="space-y-1.5">

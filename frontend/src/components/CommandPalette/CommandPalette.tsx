@@ -25,16 +25,45 @@ interface NavCommand {
   label: string;
   path: string;
   adminOnly?: boolean;
+  // Palavras extra que tambem encontram este comando (funcionalidades que
+  // vivem dentro da pagina, em EN e PT). Minusculas.
+  keywords?: string[];
 }
 
 const NAV_COMMANDS: NavCommand[] = [
   { id: 'nav-dashboard', label: 'Dashboard', path: '/dashboard' },
   { id: 'nav-tasks', label: 'Tasks', path: '/tasks' },
-  { id: 'nav-focus', label: 'Focus', path: '/focus' },
-  { id: 'nav-schedule', label: 'Schedule', path: '/schedule' },
+  {
+    id: 'nav-focus',
+    label: 'Focus',
+    path: '/focus',
+    keywords: ['study blocks', 'pomodoro', 'timer', 'estudo', 'blocos'],
+  },
+  {
+    id: 'nav-schedule',
+    label: 'Schedule',
+    path: '/schedule',
+    keywords: ['timetable', 'classes', 'calendar feed', 'import', 'horario'],
+  },
+  {
+    id: 'nav-work-shifts',
+    label: 'Work shifts and fixed days off',
+    path: '/schedule',
+    keywords: ['folga', 'folgas', 'days off', 'day off', 'trabalho', 'work', 'turnos', 'shifts', 'commitments', 'replicate'],
+  },
   { id: 'nav-review', label: 'Weekly review', path: '/review' },
-  { id: 'nav-notebook', label: 'Notebook', path: '/notebook' },
-  { id: 'nav-profile', label: 'Profile', path: '/profile' },
+  {
+    id: 'nav-notebook',
+    label: 'Notebook',
+    path: '/notebook',
+    keywords: ['whiteboard', 'quadro', 'photos', 'fotos', 'share', 'shared lesson', 'caderno'],
+  },
+  {
+    id: 'nav-profile',
+    label: 'Profile',
+    path: '/profile',
+    keywords: ['avatar', 'photo', 'google calendar', 'theme', 'language', '2fa', 'password', 'notifications'],
+  },
   { id: 'nav-changelog', label: "What's new", path: '/changelog' },
   { id: 'nav-developer', label: 'Developer', path: '/developer' },
   { id: 'nav-agent', label: 'Agent', path: '/agent' },
@@ -236,7 +265,7 @@ export default function CommandPalette() {
     if (isQuickAddMode) return quickAddItems;
 
     const navMatches: PaletteItem[] = NAV_COMMANDS.filter((c) => !c.adminOnly || isAdmin)
-      .filter((c) => q === '' || c.label.toLowerCase().includes(q))
+      .filter((c) => q === '' || c.label.toLowerCase().includes(q) || c.keywords?.some((k) => k.includes(q)))
       .map((c) => ({ kind: 'nav', id: c.id, label: c.label, path: c.path }));
 
     // Task titles only searched once there's a query - with no query,

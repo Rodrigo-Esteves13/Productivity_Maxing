@@ -1,5 +1,6 @@
 import type { StudyPlanDay, StudyPlanSuggestion } from '../../../types/models';
 import { formatClock, formatDayLabel, formatDuration } from '../../../lib/timeFormat';
+import StudyBlockTitle from '../StudyBlockTitle';
 
 interface PlanDayListProps {
   suggestions: StudyPlanSuggestion[];
@@ -61,9 +62,9 @@ export default function PlanDayList({ suggestions, days, dailyLimitMinutes }: Pl
                         : 'bg-neutral-800/60'
                     }`}
                   >
-                    <span className="text-neutral-200 truncate">
-                      {s.taskTitle}
-                      {s.kind === 'review' && <span className="ml-2 text-[11px] text-violet-300">review</span>}
+                    <span className="flex min-w-0 items-center gap-2 text-neutral-200">
+                      <StudyBlockTitle block={s} />
+                      {s.kind === 'review' && <span className="shrink-0 text-[11px] text-violet-300">review</span>}
                     </span>
                     <span className="text-neutral-500 shrink-0 ml-3">
                       {s.isOvertime && <span className="text-amber-400 mr-2">Overtime</span>}

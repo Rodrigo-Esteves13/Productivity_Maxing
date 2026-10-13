@@ -7,6 +7,9 @@ interface ConfirmDialogProps {
   confirmLabel: string;
   cancelLabel: string;
   tone: 'default' | 'danger';
+  // A acao em curso: desativa os botoes (e o Esc/clique fora nao cancelam).
+  isBusy?: boolean;
+  error?: string | null;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -19,14 +22,19 @@ export default function ConfirmDialog({
   confirmLabel,
   cancelLabel,
   tone,
+  isBusy = false,
+  error = null,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const cancel = () => {
+    if (!isBusy) onCancel();
+  };
   const initialFocusRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel();
+      if (e.key === 'Escape' && !isBusy) onCancel();
     };
     window.addEventListener('keydown', handleKey);
     const target = initialFocusRef.current?.querySelector<HTMLButtonElement>(
@@ -34,12 +42,12 @@ export default function ConfirmDialog({
     );
     target?.focus();
     return () => window.removeEventListener('keydown', handleKey);
-  }, [onCancel, tone]);
+  }, [onCancel, tone, isBusy]);
 
   return (
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-      onClick={onCancel}
+      onClick={cancel}
     >
       <div
         role="alertdialog"
@@ -55,14 +63,20 @@ export default function ConfirmDialog({
         <p id="confirm-dialog-message" className="mt-2 text-sm text-neutral-300 whitespace-pre-line">
           {message}
         </p>
+        {error && (
+          <p role="alert" className="mt-3 text-sm text-red-400">
+            {error}
+          </p>
+        )}
         <div ref={initialFocusRef} className="mt-5 flex justify-end gap-3">
-          <Button type="button" variant="secondary" data-role="cancel" onClick={onCancel}>
+          <Button type="button" variant="secondary" data-role="cancel" disabled={isBusy} onClick={onCancel}>
             {cancelLabel}
           </Button>
           <Button
             type="button"
             variant={tone === 'danger' ? 'danger' : 'primary'}
             data-role="confirm"
+            disabled={isBusy}
             onClick={onConfirm}
           >
             {confirmLabel}

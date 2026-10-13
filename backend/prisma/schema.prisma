@@ -1217,6 +1217,11 @@ model Commitment {
   name           String
   // Minutos de viagem de cada lado de cada turno deste local.
   commuteMinutes Int    @default(0)
+  // Folgas fixas: dias da semana (0=Domingo..6=Sábado) em que NUNCA se
+  // trabalha aqui. Turnos semanais nesses dias não se criam nem se expandem;
+  // turnos pontuais (troca de folga) continuam a valer. Validado em
+  // CreateCommitmentDto/UpdateCommitmentDto (valores únicos, máx. 6).
+  daysOff        Int[]  @default([])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

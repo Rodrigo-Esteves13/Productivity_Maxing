@@ -8,6 +8,20 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-10-13',
+    title: 'Fixed days off, notebook polish and a lighter Google permission',
+    items: [
+      'Fixed days off: set the weekdays you never work at a place (Schedule > Work and other commitments > edit). Weekly shifts are skipped on those days when you add, replicate or copy, and they no longer appear in the plan, the week view or Google Calendar. One-off shifts still work for swaps.',
+      'Study blocks now show the Area name in front, in Focus and in the study plan.',
+      'Notebook: the Share panel stays open when you edit, cancel or save a lesson.',
+      'Notebook: the whiteboard only shows up when you add it ("Add whiteboard"), so text and photo notes no longer carry an empty board.',
+      'Notebook: click a photo to enlarge it (arrow keys to move, Esc to close), also on shared lessons.',
+      'Shared lesson links now open inside the normal app layout, with the header and footer.',
+      'Profile photo from Google, GitHub or Discord follows the change you make there on your next login. A photo you uploaded yourself is never replaced.',
+      'Google Calendar: connecting now asks for a single, narrower permission and uses its own "Productivity Maxing" calendar. Nothing in your other calendars is read or changed.',
+    ],
+  },
+  {
+    date: '2026-10-13',
     title: 'Smarter study plan, themes, languages and shift copy',
     items: [
       'Study plan now paces each task across the days until its deadline (a little every day, a bit more as it gets close) instead of waiting for the last week.',

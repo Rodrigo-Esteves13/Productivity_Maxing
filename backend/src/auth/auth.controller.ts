@@ -308,7 +308,7 @@ export class AuthController {
 
   // Ligar (ou re-autorizar com scope extra) o acesso ao Google Calendar.
   // Distinto de /auth/google/link: este pede também o scope
-  // calendar.events. Ver GoogleCalendarLinkGuard. (Issue #34)
+  // calendar.app.created. Ver GoogleCalendarLinkGuard. (Issue #34)
   @Get('google/link-calendar')
   @UseGuards(JwtAuthGuard, GoogleCalendarLinkGuard)
   googleLinkCalendar() {

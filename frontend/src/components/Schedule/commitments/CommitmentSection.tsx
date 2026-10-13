@@ -4,6 +4,7 @@ import CommitmentForm from './CommitmentForm';
 import ShiftForm from './ShiftForm';
 import type { ShiftFormValues } from './ShiftForm';
 import ShiftList from './ShiftList';
+import { describeDaysOff } from './shiftText';
 import type {
   CommitmentWithShifts,
   CreateWorkShiftInput,
@@ -17,7 +18,10 @@ type Mode = 'view' | 'edit' | 'add-shift' | 'confirm-delete';
 interface CommitmentSectionProps {
   commitment: CommitmentWithShifts;
   isSaving: boolean;
-  onEditCommitment: (id: string, changes: { name?: string; commuteMinutes?: number }) => Promise<boolean>;
+  onEditCommitment: (
+    id: string,
+    changes: { name?: string; commuteMinutes?: number; daysOff?: number[] },
+  ) => Promise<boolean>;
   onDeleteCommitment: (id: string) => Promise<boolean>;
   onAddShifts: (shifts: CreateWorkShiftInput[]) => Promise<boolean>;
   onEditShift: (id: string, changes: UpdateWorkShiftInput) => Promise<boolean>;
@@ -56,10 +60,11 @@ export default function CommitmentSection({
         <CommitmentForm
           initialName={commitment.name}
           initialCommute={commitment.commuteMinutes}
+          initialDaysOff={commitment.daysOff}
           submitLabel="Save"
           isSaving={isSaving}
-          onSubmit={async (name, commuteMinutes) => {
-            const ok = await onEditCommitment(commitment.id, { name, commuteMinutes });
+          onSubmit={async (name, commuteMinutes, daysOff) => {
+            const ok = await onEditCommitment(commitment.id, { name, commuteMinutes, daysOff });
             if (ok) setMode('view');
             return ok;
           }}
@@ -73,6 +78,7 @@ export default function CommitmentSection({
               {commitment.commuteMinutes > 0
                 ? `${commitment.commuteMinutes} min travel each way`
                 : 'No travel time'}
+              {commitment.daysOff.length > 0 && ` · Days off: ${describeDaysOff(commitment.daysOff)}`}
             </p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
@@ -100,6 +106,7 @@ export default function CommitmentSection({
       <ShiftList
         className="mt-3"
         shifts={commitment.shifts}
+        daysOff={commitment.daysOff}
         isSaving={isSaving}
         onEdit={onEditShift}
         onDelete={onDeleteShift}
@@ -110,6 +117,7 @@ export default function CommitmentSection({
         <div className="mt-3">
           <ShiftForm
             submitLabel="Add shift"
+            disabledDays={commitment.daysOff}
             isSaving={isSaving}
             onSubmit={handleAddShift}
             onCancel={() => setMode('view')}

@@ -8,10 +8,12 @@ import { useTextareaInsertion } from '../../hooks/useTextareaInsertion';
 import { useEntryDraft } from '../../hooks/useEntryDraft';
 import { useEntrySave } from '../../hooks/useEntrySave';
 import { useConfirmDelete } from '../../hooks/useConfirmDelete';
-import NotebookCanvas from './NotebookCanvas';
+import { useEntryShare } from '../../hooks/useEntryShare';
+import type { UseEntryShareResult } from '../../hooks/useEntryShare';
 import DeleteEntryModal from './DeleteEntryModal';
 import NotebookEntryShare from './NotebookEntryShare';
 import EntryHeader from './entry/EntryHeader';
+import WhiteboardSection from './entry/WhiteboardSection';
 import EntryMetaBar from './entry/EntryMetaBar';
 import EntryNotesSection from './entry/EntryNotesSection';
 import UsefulLinksSection from './entry/UsefulLinksSection';
@@ -55,11 +57,15 @@ export default function NotebookEntryEditor({
 }: NotebookEntryEditorProps) {
   const [isEditing, setIsEditing] = useState(startInEditMode);
   const [resetToken, setResetToken] = useState(0);
+  // Fora do formulario de proposito: o "Cancel" remonta o formulario (key),
+  // e o painel Share nao pode fechar nem perder o link por causa disso.
+  const share = useEntryShare(entry.id);
 
   return (
     <NotebookEntryEditorForm
       key={resetToken}
       entry={entry}
+      share={share}
       suggestedClassNumber={suggestedClassNumber}
       isEditing={isEditing}
       onRequestEdit={() => setIsEditing(true)}
@@ -77,6 +83,7 @@ export default function NotebookEntryEditor({
 }
 
 interface NotebookEntryEditorFormProps extends Omit<NotebookEntryEditorProps, 'startInEditMode'> {
+  share: UseEntryShareResult;
   isEditing: boolean;
   onRequestEdit: () => void;
   onCancelEdit: () => void;
@@ -84,6 +91,7 @@ interface NotebookEntryEditorFormProps extends Omit<NotebookEntryEditorProps, 's
 
 function NotebookEntryEditorForm({
   entry,
+  share,
   suggestedClassNumber,
   isEditing,
   onRequestEdit,
@@ -136,7 +144,7 @@ function NotebookEntryEditorForm({
           onRequestDelete={deletion.request}
         />
 
-        <NotebookEntryShare entryId={entry.id} />
+        <NotebookEntryShare share={share} />
 
         <EntryMetaBar
           isEditing={isEditing}
@@ -162,14 +170,14 @@ function NotebookEntryEditorForm({
 
         <UsefulLinksSection isEditing={isEditing} links={draft.usefulLinks} onChange={draft.setUsefulLinks} />
 
-        <NotebookCanvas
+        <WhiteboardSection
           canvas={canvas}
           shapes={shapeLayer}
           links={linkLayer}
           texts={textLayer}
-          readOnly={!isEditing}
+          isEditing={isEditing}
           canvasHeight={draft.canvasHeight}
-          onGrowCanvas={isEditing ? draft.growCanvas : undefined}
+          onGrowCanvas={draft.growCanvas}
         />
 
         <AttachmentsSection

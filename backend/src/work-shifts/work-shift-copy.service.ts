@@ -22,6 +22,8 @@ export interface CopyWeekResult {
   created: WorkShiftView[];
   // Já existiam no destino com o mesmo local, dia e horas.
   skipped: number;
+  // Saltados por cairem numa folga fixa do local.
+  dayOffSkipped: number;
   // Quantos turnos pontuais a semana de origem tinha.
   sourceCount: number;
 }
@@ -67,10 +69,14 @@ export class WorkShiftCopyService {
     );
 
     const existing = await this.loadExisting(userId, dto, toWeekStart);
-    const plan = planWeekCopy(dto.mode, sources, existing, {
-      fromWeekStart,
-      toWeekStart,
-    });
+    const daysOffByCommitment = await this.loadDaysOff(userId, sources);
+    const plan = planWeekCopy(
+      dto.mode,
+      sources,
+      existing,
+      { fromWeekStart, toWeekStart },
+      daysOffByCommitment,
+    );
 
     await this.assertRoomFor(userId, plan.toCreate.length);
 
@@ -96,6 +102,7 @@ export class WorkShiftCopyService {
     return {
       created: created.map(toShiftView),
       skipped: plan.skipped,
+      dayOffSkipped: plan.dayOffSkipped,
       sourceCount: sources.length,
     };
   }
@@ -151,6 +158,24 @@ export class WorkShiftCopyService {
       startMinutes: row.startMinutes,
       endMinutes: row.endMinutes,
     }));
+  }
+
+  // Folgas fixas dos locais usados pelos turnos de origem (so do dono).
+  private async loadDaysOff(
+    userId: string,
+    sources: ShiftSource[],
+  ): Promise<Map<string, number[]>> {
+    const ids = [
+      ...new Set(
+        sources.flatMap((s) => (s.commitmentId ? [s.commitmentId] : [])),
+      ),
+    ];
+    if (ids.length === 0) return new Map();
+    const rows = await this.prisma.commitment.findMany({
+      where: { userId, id: { in: ids } },
+      select: { id: true, daysOff: true },
+    });
+    return new Map(rows.map((row) => [row.id, row.daysOff]));
   }
 
   private async assertRoomFor(userId: string, toAdd: number): Promise<void> {

@@ -15,12 +15,14 @@ const COMMITMENT_SELECT = {
   id: true,
   name: true,
   commuteMinutes: true,
+  daysOff: true,
 } satisfies Prisma.CommitmentSelect;
 
 export interface CommitmentView {
   id: string;
   name: string;
   commuteMinutes: number;
+  daysOff: number[];
 }
 
 export interface CommitmentWithShifts extends CommitmentView {
@@ -35,6 +37,10 @@ export interface CommitmentsOverview {
 }
 
 const PRISMA_UNIQUE_VIOLATION = 'P2002';
+
+function sortedDaysOff(daysOff: number[] | null): number[] {
+  return [...(daysOff ?? [])].sort((a, b) => a - b);
+}
 
 @Injectable()
 export class CommitmentsService {
@@ -73,6 +79,7 @@ export class CommitmentsService {
         id: c.id,
         name: c.name,
         commuteMinutes: c.commuteMinutes,
+        daysOff: sortedDaysOff(c.daysOff),
         shifts: c.shifts.map(toShiftView),
       })),
       ungroupedShifts: ungrouped.map(toShiftView),
@@ -92,7 +99,12 @@ export class CommitmentsService {
 
     try {
       return await this.prisma.commitment.create({
-        data: { userId, name: dto.name, commuteMinutes: dto.commuteMinutes },
+        data: {
+          userId,
+          name: dto.name,
+          commuteMinutes: dto.commuteMinutes,
+          daysOff: dto.daysOff ?? [],
+        },
         select: COMMITMENT_SELECT,
       });
     } catch (error) {
@@ -113,6 +125,7 @@ export class CommitmentsService {
           ...(dto.commuteMinutes !== undefined && {
             commuteMinutes: dto.commuteMinutes,
           }),
+          ...(dto.daysOff !== undefined && { daysOff: dto.daysOff }),
         },
       });
       if (count === 0) throw this.notFound();

@@ -1,4 +1,10 @@
-import { addUtcDays, diffUtcDays, toDateKey } from '../common/date-key.util';
+import {
+  addUtcDays,
+  diffUtcDays,
+  parseDateKey,
+  toDateKey,
+} from '../common/date-key.util';
+import { isDayOff } from './days-off.util';
 import type { CopyWeekMode } from './work-shifts.constants';
 
 // Campos de um turno que interessam para copiar (sem ids nem donos).
@@ -69,24 +75,43 @@ export function shiftIdentity(draft: ShiftDraft): string {
 export interface CopyPlan {
   toCreate: ShiftDraft[];
   skipped: number;
+  // Saltados por cairem numa folga fixa do local.
+  dayOffSkipped: number;
+}
+
+// Dia da semana (0=Domingo..6=Sábado) em que um rascunho cai.
+function weekdayOf(draft: ShiftDraft): number | null {
+  if (draft.dayOfWeek !== null) return draft.dayOfWeek;
+  return draft.dateKey ? parseDateKey(draft.dateKey).getUTCDay() : null;
 }
 
 /**
  * Calcula o que criar ao copiar uma semana. Pura (sem BD): `existing` são
  * os turnos que já lá estão no destino, para saltar duplicados.
+ * `daysOffByCommitment` (id do local -> folgas fixas) faz saltar os turnos
+ * que cairiam num dia de folga do seu local.
  */
 export function planWeekCopy(
   mode: CopyWeekMode,
   sources: ShiftSource[],
   existing: ShiftDraft[],
   context: CopyContext,
+  daysOffByCommitment: ReadonlyMap<string, readonly number[]> = new Map(),
 ): CopyPlan {
   const seen = new Set(existing.map(shiftIdentity));
   const toCreate: ShiftDraft[] = [];
   let skipped = 0;
+  let dayOffSkipped = 0;
 
   for (const source of sources) {
     const draft = DRAFT_BUILDERS[mode](source, context);
+    if (
+      draft.commitmentId &&
+      isDayOff(daysOffByCommitment.get(draft.commitmentId), weekdayOf(draft))
+    ) {
+      dayOffSkipped += 1;
+      continue;
+    }
     const identity = shiftIdentity(draft);
     if (seen.has(identity)) {
       skipped += 1;
@@ -96,5 +121,5 @@ export function planWeekCopy(
     toCreate.push(draft);
   }
 
-  return { toCreate, skipped };
+  return { toCreate, skipped, dayOffSkipped };
 }

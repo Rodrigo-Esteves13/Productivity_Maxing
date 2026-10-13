@@ -22,6 +22,8 @@ export interface ShiftFormValues {
 interface ShiftFormProps {
   // Presente = a editar esse turno (um só dia); ausente = a criar (vários dias).
   shift?: WorkShift;
+  // Folgas fixas do local: esses dias da semana nao se podem escolher.
+  disabledDays?: number[];
   submitLabel: string;
   isSaving: boolean;
   onSubmit: (values: ShiftFormValues) => Promise<boolean>;
@@ -31,7 +33,14 @@ interface ShiftFormProps {
 const DEFAULT_START = '09:00';
 const DEFAULT_END = '17:00';
 
-export default function ShiftForm({ shift, submitLabel, isSaving, onSubmit, onCancel }: ShiftFormProps) {
+export default function ShiftForm({
+  shift,
+  disabledDays = [],
+  submitLabel,
+  isSaving,
+  onSubmit,
+  onCancel,
+}: ShiftFormProps) {
   const isEditing = shift !== undefined;
   const [repeat, setRepeat] = useState<Repeat>(shift && shift.dayOfWeek === null ? 'once' : 'weekly');
   const [days, setDays] = useState<number[]>(shift?.dayOfWeek != null ? [shift.dayOfWeek] : []);
@@ -58,6 +67,10 @@ export default function ShiftForm({ shift, submitLabel, isSaving, onSubmit, onCa
     }
     if (repeat === 'weekly' && days.length === 0) {
       setFormError('Pick at least one weekday.');
+      return;
+    }
+    if (repeat === 'weekly' && days.some((d) => disabledDays.includes(d))) {
+      setFormError('That weekday is a fixed day off here. Pick another day.');
       return;
     }
     if (repeat === 'once' && !date) {
@@ -87,7 +100,14 @@ export default function ShiftForm({ shift, submitLabel, isSaving, onSubmit, onCa
           </legend>
           <div className="flex flex-wrap gap-1.5">
             {WEEKDAYS.map((d) => (
-              <ToggleChip key={d.value} size="sm" pressed={days.includes(d.value)} onClick={() => toggleDay(d.value)}>
+              <ToggleChip
+                key={d.value}
+                size="sm"
+                pressed={days.includes(d.value)}
+                disabled={disabledDays.includes(d.value) && !days.includes(d.value)}
+                title={disabledDays.includes(d.value) ? 'Fixed day off' : undefined}
+                onClick={() => toggleDay(d.value)}
+              >
                 {d.label}
               </ToggleChip>
             ))}

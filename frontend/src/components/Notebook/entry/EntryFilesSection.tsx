@@ -1,10 +1,10 @@
 import type { ChangeEvent, ReactNode } from 'react';
-import { FileIcon, ImageIcon, XIcon } from '../../UI/Icons';
+import { FileIcon, ImageIcon } from '../../UI/Icons';
 import SectionLabel from '../../UI/SectionLabel';
 import { useFileUpload } from '../../../hooks/useFileUpload';
 import type { NotebookAttachment, NotebookPhoto } from '../../../types/models';
-import IconButton from '../../UI/IconButton';
 import EntryListRow from './EntryListRow';
+import NotebookPhotoGrid from './NotebookPhotoGrid';
 import {
   ACCEPTED_ATTACHMENT_EXTENSIONS,
   ACCEPTED_PHOTO_TYPES,
@@ -119,32 +119,7 @@ export function PhotosSection({ isEditing, photos, onUpload, onDelete }: PhotosS
       error={error}
       onFileChange={handleChange}
     >
-      {photos.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {photos.map((photo) => (
-            <div key={photo.id} className="group relative aspect-square overflow-hidden rounded-lg bg-neutral-900">
-              {photo.url ? (
-                <img src={photo.url} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-neutral-600">
-                  <ImageIcon className="h-6 w-6" />
-                </div>
-              )}
-              {isEditing && (
-                // Em ecras tateis nao ha hover: o botao fica sempre visivel
-                // ate sm, e so aparece ao passar o rato a partir de sm.
-                <IconButton
-                  label="Remove photo"
-                  className="absolute right-1 top-1 rounded-full bg-black/60 text-white sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 hover:text-white"
-                  onClick={() => void onDelete(photo.id)}
-                >
-                  <XIcon className="h-3 w-3" />
-                </IconButton>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      <NotebookPhotoGrid photos={photos} onRemove={isEditing ? (photoId) => void onDelete(photoId) : undefined} />
     </FileSectionShell>
   );
 }

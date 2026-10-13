@@ -96,3 +96,47 @@ describe('planWeekCopy', () => {
     expect(shiftIdentity(a)).not.toBe(shiftIdentity(b));
   });
 });
+
+describe('planWeekCopy com folgas fixas', () => {
+  const OFF_FRIDAY = new Map([['job', [5]]]);
+
+  it('fixed: salta o dia que é folga do local e conta-o à parte', () => {
+    const plan = planWeekCopy(
+      'fixed',
+      [source('2026-10-02'), source('2026-09-30')],
+      [],
+      CONTEXT,
+      OFF_FRIDAY,
+    );
+    expect(plan.toCreate.map((d) => d.dayOfWeek)).toEqual([3]);
+    expect(plan.dayOffSkipped).toBe(1);
+    expect(plan.skipped).toBe(0);
+  });
+
+  it('one-off: salta a data destino que cai numa folga', () => {
+    const plan = planWeekCopy(
+      'one-off',
+      [source('2026-10-02')],
+      [],
+      CONTEXT,
+      OFF_FRIDAY,
+    );
+    expect(plan.toCreate).toHaveLength(0);
+    expect(plan.dayOffSkipped).toBe(1);
+  });
+
+  it('turnos de outro local ou soltos não são afetados', () => {
+    const plan = planWeekCopy(
+      'fixed',
+      [
+        source('2026-10-02', { commitmentId: 'gym' }),
+        source('2026-10-02', { commitmentId: null, label: 'extra' }),
+      ],
+      [],
+      CONTEXT,
+      OFF_FRIDAY,
+    );
+    expect(plan.toCreate).toHaveLength(2);
+    expect(plan.dayOffSkipped).toBe(0);
+  });
+});

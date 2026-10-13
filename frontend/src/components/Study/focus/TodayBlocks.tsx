@@ -5,6 +5,7 @@ import { toDateKey } from '../../../lib/dateKey';
 import { formatClock } from '../../../lib/timeFormat';
 import { todayUtcAnchored } from '../../../lib/weekDates';
 import type { StudyPlanResult, StudyPlanSuggestion } from '../../../types/models';
+import StudyBlockTitle from '../StudyBlockTitle';
 import Button from '../../UI/Button';
 import EmptyState from '../../UI/EmptyState';
 import ErrorState from '../../UI/ErrorState';
@@ -68,7 +69,7 @@ export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps
                 className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-neutral-800 p-3 ${isPast ? 'opacity-60' : ''}`}
               >
                 <div className="min-w-0 flex-1 basis-40">
-                  <p className="truncate text-sm font-medium text-white">{block.taskTitle}</p>
+                  <StudyBlockTitle block={block} className="text-sm font-medium text-white" />
                   {block.kind === 'review' && (
                     <p className="text-[11px] text-violet-300">Light review to keep it fresh</p>
                   )}
