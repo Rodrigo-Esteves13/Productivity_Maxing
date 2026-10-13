@@ -12,7 +12,7 @@ import { GOOGLE_CALENDAR_APP_SCOPE } from '../google-oauth.constants';
 // do utilizador). Fica separado do GoogleLinkGuard
 // normal (email/profile) de propósito: ligar conta e autorizar o Calendar
 // são ações distintas na UI (Fase 4 / issue #34), e mantemos o link
-// genérico sem o scope sensitive para quem só quer SSO.
+// genérico só com email/profile para quem só quer SSO.
 @Injectable()
 export class GoogleCalendarLinkGuard extends AuthGuard('google') {
   constructor(private authService: AuthService) {

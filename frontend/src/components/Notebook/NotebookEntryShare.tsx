@@ -1,146 +1,35 @@
-import { useEffect, useState } from 'react';
-import {
-  getShareStatus,
-  createShare,
-  revokeShare,
-  updateShareVisibility,
-  getShareAccessRequests,
-  decideShareAccessRequest,
-} from '../../api/notebookService';
-import type { NotebookShareVisibility, ShareAccessRequest } from '../../types/models';
-import { LinkIcon, CopyIcon, CheckIcon, XIcon } from '../UI/Icons';
+import type { UseEntryShareResult } from '../../hooks/useEntryShare';
+import type { NotebookShareVisibility } from '../../types/models';
+import { LinkIcon, CheckIcon, XIcon } from '../UI/Icons';
+import CopyButton from '../UI/CopyButton';
+import IconButton from '../UI/IconButton';
+import SegmentedControl from '../UI/SegmentedControl';
+import type { SegmentedOption } from '../UI/SegmentedControl';
 
 interface NotebookEntryShareProps {
-  entryId: string;
+  share: UseEntryShareResult;
 }
 
-// Autónomo de propósito (estado próprio, não passa pelo form de
-// draft/save do NotebookEntryEditor) - partilhar não depende de estar em
-// modo edição nem de gravar nada, é uma ação à parte sobre a entrada já
-// guardada.
-export default function NotebookEntryShare({ entryId }: NotebookEntryShareProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
-  const [visibility, setVisibility] = useState<NotebookShareVisibility>('PUBLIC');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
+const VISIBILITY_OPTIONS: SegmentedOption<NotebookShareVisibility>[] = [
+  { value: 'PUBLIC', label: 'Public link' },
+  { value: 'AUTHORIZED', label: 'Authorized only' },
+];
 
-  const [requests, setRequests] = useState<ShareAccessRequest[]>([]);
-  const [isRequestsLoading, setIsRequestsLoading] = useState(false);
-  const [decidingId, setDecidingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Repõe tudo ao trocar de entrada - o token de uma não pode "vazar"
-    // para o painel de outra enquanto o estado carrega.
-    setIsOpen(false);
-    setToken(null);
-    setVisibility('PUBLIC');
-    setError('');
-    setCopied(false);
-    setRequests([]);
-  }, [entryId]);
-
-  const shareUrl = token ? `${window.location.origin}/shared/${token}` : '';
-  const pendingCount = requests.filter((r) => r.status === 'PENDING').length;
-
-  const loadRequests = async () => {
-    setIsRequestsLoading(true);
-    try {
-      setRequests(await getShareAccessRequests(entryId));
-    } catch {
-      // Painel secundário - um erro aqui não deve esconder o link em si.
-    } finally {
-      setIsRequestsLoading(false);
-    }
-  };
-
-  const openPanel = async () => {
-    setIsOpen(true);
-    setIsLoading(true);
-    setError('');
-    try {
-      const status = await getShareStatus(entryId);
-      setToken(status.token);
-      setVisibility(status.visibility);
-      if (status.token && status.visibility === 'AUTHORIZED') await loadRequests();
-    } catch {
-      setError('Could not check the share status.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleShare = async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const status = await createShare(entryId);
-      setToken(status.token);
-      setVisibility(status.visibility);
-    } catch {
-      setError('Could not create the share link.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRevoke = async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      await revokeShare(entryId);
-      setToken(null);
-      setRequests([]);
-    } catch {
-      setError('Could not stop sharing.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVisibilityChange = async (next: NotebookShareVisibility) => {
-    if (next === visibility) return;
-    setIsLoading(true);
-    setError('');
-    try {
-      const status = await updateShareVisibility(entryId, next);
-      setVisibility(status.visibility);
-      if (status.visibility === 'AUTHORIZED') await loadRequests();
-    } catch {
-      setError('Could not change who can access this link.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDecide = async (requestId: string, decision: 'APPROVED' | 'DENIED') => {
-    setDecidingId(requestId);
-    try {
-      const updated = await decideShareAccessRequest(entryId, requestId, decision);
-      setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, status: updated.status } : r)));
-    } catch {
-      setError('Could not update that request. Please try again.');
-    } finally {
-      setDecidingId(null);
-    }
-  };
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setError('Could not copy - select and copy the link manually.');
-    }
-  };
+// Apresentacional: o estado vive em useEntryShare (chamado no wrapper do
+// editor) para o painel sobreviver ao "Cancel"/gravar da edicao. Partilhar
+// nao depende de estar em modo edicao nem de gravar nada, e uma acao a parte
+// sobre a entrada ja guardada.
+export default function NotebookEntryShare({ share }: NotebookEntryShareProps) {
+  const {
+    isOpen, token, visibility, isLoading, error, shareUrl, requests, pendingCount,
+    isRequestsLoading, decidingId, open, close, create, revoke, changeVisibility, decide,
+  } = share;
 
   if (!isOpen) {
     return (
       <button
         type="button"
-        onClick={openPanel}
+        onClick={() => void open()}
         className="flex items-center gap-1 rounded-md bg-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-200 hover:bg-neutral-700"
       >
         <LinkIcon className="h-3.5 w-3.5" />
@@ -159,45 +48,22 @@ export default function NotebookEntryShare({ entryId }: NotebookEntryShareProps)
               : 'Only people you approve can view this lesson - they need to log in and request access first.'
             : 'Share a read-only link to this lesson.'}
         </p>
-        <button
-          type="button"
-          onClick={() => setIsOpen(false)}
-          aria-label="Close"
-          className="rounded-md p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
-        >
+        <IconButton label="Close" className="p-1 hover:bg-neutral-800" onClick={close}>
           <XIcon className="h-3.5 w-3.5" />
-        </button>
+        </IconButton>
       </div>
 
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
 
       {token && (
-        <div className="mt-2 flex gap-1 rounded-md bg-neutral-950 p-0.5 text-xs">
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={() => handleVisibilityChange('PUBLIC')}
-            className={`flex-1 rounded px-2 py-1 font-medium disabled:opacity-50 ${
-              visibility === 'PUBLIC'
-                ? 'bg-neutral-800 text-neutral-100'
-                : 'text-neutral-500 hover:text-neutral-300'
-            }`}
-          >
-            Public link
-          </button>
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={() => handleVisibilityChange('AUTHORIZED')}
-            className={`flex-1 rounded px-2 py-1 font-medium disabled:opacity-50 ${
-              visibility === 'AUTHORIZED'
-                ? 'bg-neutral-800 text-neutral-100'
-                : 'text-neutral-500 hover:text-neutral-300'
-            }`}
-          >
-            Authorized only
-          </button>
-        </div>
+        <SegmentedControl
+          className={`mt-2 w-full [&>button]:flex-1 [&>button]:justify-center ${isLoading ? 'pointer-events-none opacity-60' : ''}`}
+          size="sm"
+          surface="sunken"
+          options={VISIBILITY_OPTIONS}
+          value={visibility}
+          onChange={(next) => void changeVisibility(next)}
+        />
       )}
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -206,21 +72,15 @@ export default function NotebookEntryShare({ entryId }: NotebookEntryShareProps)
             <input
               readOnly
               value={shareUrl}
+              aria-label="Share link"
               onFocus={(e) => e.currentTarget.select()}
               className="min-w-0 flex-1 rounded-md border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-300 focus:border-violet-500 focus:outline-none"
             />
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="flex items-center gap-1 rounded-md bg-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-200 hover:bg-neutral-700"
-            >
-              {copied ? <CheckIcon className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
-              {copied ? 'Copied' : 'Copy'}
-            </button>
+            <CopyButton text={shareUrl} className="px-2.5 py-1.5" />
             <button
               type="button"
               disabled={isLoading}
-              onClick={handleRevoke}
+              onClick={() => void revoke()}
               className="rounded-md px-2.5 py-1.5 text-xs font-medium text-red-400 hover:bg-neutral-800 disabled:opacity-50"
             >
               Stop sharing
@@ -230,7 +90,7 @@ export default function NotebookEntryShare({ entryId }: NotebookEntryShareProps)
           <button
             type="button"
             disabled={isLoading}
-            onClick={handleShare}
+            onClick={() => void create()}
             className="flex items-center gap-1 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
           >
             <LinkIcon className="h-3.5 w-3.5" />
@@ -265,7 +125,7 @@ export default function NotebookEntryShare({ entryId }: NotebookEntryShareProps)
                     <button
                       type="button"
                       disabled={decidingId === req.id}
-                      onClick={() => handleDecide(req.id, 'APPROVED')}
+                      onClick={() => void decide(req.id, 'APPROVED')}
                       aria-label="Approve"
                       className="rounded-md bg-emerald-500/15 p-1 text-emerald-400 hover:bg-emerald-500/25 disabled:opacity-50"
                     >
@@ -274,7 +134,7 @@ export default function NotebookEntryShare({ entryId }: NotebookEntryShareProps)
                     <button
                       type="button"
                       disabled={decidingId === req.id}
-                      onClick={() => handleDecide(req.id, 'DENIED')}
+                      onClick={() => void decide(req.id, 'DENIED')}
                       aria-label="Deny"
                       className="rounded-md bg-red-500/15 p-1 text-red-400 hover:bg-red-500/25 disabled:opacity-50"
                     >

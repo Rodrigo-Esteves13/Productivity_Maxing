@@ -11,6 +11,10 @@ import { SessionStateService } from '../../account-status/session-state.service'
 import { OAuthAccountConflictException } from '../exceptions/oauth-account-conflict.exception';
 import { GOOGLE_REVOKE_URL } from '../google-oauth.constants';
 import { neutralizePreexistingCredential } from '../oauth-merge.policy';
+import {
+  shouldSyncProviderAvatar,
+  trustedProviderAvatar,
+} from '../provider-avatar.util';
 import { AccountGuardService } from './account-guard.service';
 import type { OAuthProfileData } from './oauth-profile.interface';
 import { SupabaseClientsService } from './supabase-clients.service';
@@ -80,12 +84,14 @@ export class OAuthIdentityService {
         },
       });
 
-      // Só preenche o avatarUrl se o utilizador ainda não tiver nenhum -
-      // nunca sobrescreve um avatar carregado manualmente (uploadAvatar em
-      // auth.service.ts) nem um já preenchido por um provider anterior.
+      // Avatar: preenche se o utilizador ainda não tem nenhum, e acompanha a
+      // mudança de foto no MESMO provider (mudaste a foto do Google -> muda
+      // aqui no próximo login). Nunca sobrescreve uma foto carregada
+      // manualmente (uploadAvatar em auth.service.ts) nem a de outro
+      // provider; só aceita URLs https de hosts de providers conhecidos.
       this.accountGuard.assertAccountIsUsable(existingIdentity.user);
 
-      if (!existingIdentity.user.avatarUrl && data.photo) {
+      if (shouldSyncProviderAvatar(existingIdentity.user.avatarUrl, data.photo)) {
         return this.prisma.user.update({
           where: { id: existingIdentity.user.id },
           data: { avatarUrl: data.photo },
@@ -129,7 +135,7 @@ export class OAuthIdentityService {
             id: randomUUID(),
             email: data.email,
             name: data.name,
-            avatarUrl: data.photo,
+            avatarUrl: trustedProviderAvatar(data.photo),
             // Explícito (mesmo igual ao default do schema): o provider OAuth
             // já tratou do email, ver User.emailVerifiedAt.
             emailVerifiedAt: new Date(),

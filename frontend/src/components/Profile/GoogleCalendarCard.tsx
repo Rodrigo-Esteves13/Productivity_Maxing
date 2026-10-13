@@ -80,12 +80,13 @@ export default function GoogleCalendarCard() {
         </div>
       </div>
 
-      {/* Enquanto a Google nao verifica a app, o consent mostra "app nao verificada". */}
+      {/* Se a Google mostrar "app nao verificada" no consent (app ainda sem
+          verificacao/branding), o utilizador sabe o que fazer. */}
       {connected === false && (
         <p className="mt-4 text-xs text-amber-300/90 leading-relaxed rounded-lg border border-amber-800/40 bg-amber-900/10 p-3">
-          Google may show a "Google hasn't verified this app" warning while our review is in progress.
-          It is expected: click <strong>Advanced</strong>, then <strong>Go to Productivity Maxing
-          (unsafe)</strong> to continue. Only the one permission described below is requested.
+          Google may show a "Google hasn't verified this app" warning. It is expected: click{' '}
+          <strong>Advanced</strong>, then <strong>Go to Productivity Maxing (unsafe)</strong> to
+          continue. Only the one permission described below is requested.
         </p>
       )}
 

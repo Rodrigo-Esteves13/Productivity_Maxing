@@ -6,6 +6,8 @@ import type { Commitment, CreateWorkShiftInput, UpdateWorkShiftInput, WorkShift 
 
 interface ShiftListProps {
   shifts: WorkShift[];
+  // Folgas fixas do local a que estes turnos pertencem (vazio nos eventos soltos).
+  daysOff?: number[];
   isSaving: boolean;
   onEdit: (id: string, changes: UpdateWorkShiftInput) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
@@ -21,6 +23,7 @@ interface ShiftListProps {
 // encher de coisas que ja aconteceram.
 export default function ShiftList({
   shifts,
+  daysOff = [],
   isSaving,
   onEdit,
   onDelete,
@@ -36,6 +39,7 @@ export default function ShiftList({
     <ShiftRow
       key={shift.id}
       shift={shift}
+      daysOff={daysOff}
       isSaving={isSaving}
       onEdit={onEdit}
       onDelete={onDelete}

@@ -17,6 +17,7 @@ import {
 } from './dto/create-work-shifts.dto';
 import { UpdateWorkShiftDto } from './dto/update-work-shift.dto';
 import { MAX_RANGE_DAYS, MAX_SHIFTS_PER_USER } from './work-shifts.constants';
+import { isDayOff } from './days-off.util';
 
 export const SHIFT_SELECT = {
   id: true,
@@ -27,7 +28,9 @@ export const SHIFT_SELECT = {
   bufferMinutes: true,
   label: true,
   commitmentId: true,
-  commitment: { select: { name: true, commuteMinutes: true } },
+  commitment: {
+    select: { name: true, commuteMinutes: true, daysOff: true },
+  },
 } satisfies Prisma.WorkShiftSelect;
 
 type ShiftRow = Prisma.WorkShiftGetPayload<{ select: typeof SHIFT_SELECT }>;
@@ -91,13 +94,28 @@ export class WorkShiftsService {
     dto.shifts.forEach((shift, index) =>
       this.assertValidNewShift(shift, index),
     );
-    await this.assertCommitmentsOwned(
+    const daysOffByCommitment = await this.assertCommitmentsOwned(
       userId,
       dto.shifts.map((s) => s.commitmentId),
     );
 
+    // Folga fixa: um turno SEMANAL num dia de folga do local é saltado (nunca
+    // criado). Pontuais ficam sempre: escolher uma data concreta é uma troca
+    // de folga deliberada.
+    const shifts = dto.shifts.filter(
+      (shift) =>
+        !(
+          shift.commitmentId &&
+          isDayOff(
+            daysOffByCommitment.get(shift.commitmentId),
+            shift.dayOfWeek ?? null,
+          )
+        ),
+    );
+    if (shifts.length === 0) return [];
+
     const existing = await this.prisma.workShift.count({ where: { userId } });
-    if (existing + dto.shifts.length > MAX_SHIFTS_PER_USER) {
+    if (existing + shifts.length > MAX_SHIFTS_PER_USER) {
       throw new BadRequestException(
         `You can store at most ${MAX_SHIFTS_PER_USER} work shifts. Delete old ones first.`,
       );
@@ -106,7 +124,7 @@ export class WorkShiftsService {
     // Transação: ou entram todos ou nenhum, para um pedido com um turno
     // inválido a meio nunca deixar metade da semana gravada.
     const rows = await this.prisma.$transaction(
-      dto.shifts.map((shift) =>
+      shifts.map((shift) =>
         this.prisma.workShift.create({
           data: {
             userId,
@@ -138,7 +156,12 @@ export class WorkShiftsService {
 
     const current = await this.prisma.workShift.findFirst({
       where: { id, userId },
-      select: { startMinutes: true, endMinutes: true },
+      select: {
+        startMinutes: true,
+        endMinutes: true,
+        dayOfWeek: true,
+        commitment: { select: { daysOff: true } },
+      },
     });
     if (!current) throw this.notFound();
 
@@ -151,8 +174,22 @@ export class WorkShiftsService {
         'Start time must be before end time. Split overnight shifts into two entries.',
       );
     }
-    if (dto.commitmentId) {
-      await this.assertCommitmentsOwned(userId, [dto.commitmentId]);
+    // Folgas do local FINAL (o novo, se mudou; null = solto, sem folgas) e
+    // dia da semana FINAL (trocar para data pontual anula o semanal).
+    const targetDaysOff =
+      dto.commitmentId === undefined
+        ? current.commitment?.daysOff
+        : dto.commitmentId === null
+          ? undefined
+          : (await this.assertCommitmentsOwned(userId, [dto.commitmentId])).get(
+              dto.commitmentId,
+            );
+    const finalWeekday =
+      dto.date !== undefined ? null : (dto.dayOfWeek ?? current.dayOfWeek);
+    if (isDayOff(targetDaysOff, finalWeekday)) {
+      throw new BadRequestException(
+        'That weekday is a fixed day off at this place. Remove it from the days off first.',
+      );
     }
 
     const { count } = await this.prisma.workShift.updateMany({
@@ -232,7 +269,11 @@ export class WorkShiftsService {
       const weekday = day.getUTCDay();
 
       for (const { row, view } of shifts) {
-        const matchesRecurring = row.dayOfWeek === weekday;
+        // Folga fixa do local: o turno semanal não vale nesse dia (fica
+        // guardado, volta a valer se a folga for retirada).
+        const matchesRecurring =
+          row.dayOfWeek === weekday &&
+          !isDayOff(row.commitment?.daysOff, weekday);
         const matchesOneOff = row.date !== null && toDateKey(row.date) === key;
         if (!matchesRecurring && !matchesOneOff) continue;
 
@@ -261,23 +302,26 @@ export class WorkShiftsService {
   }
 
   // Um commitmentId de outro utilizador tem de falhar como "não existe".
+  // Devolve as folgas fixas de cada local (id -> dias), para quem as precisa.
   private async assertCommitmentsOwned(
     userId: string,
     commitmentIds: (string | undefined)[],
-  ): Promise<void> {
+  ): Promise<Map<string, number[]>> {
     const unique = [
       ...new Set(commitmentIds.filter((id): id is string => !!id)),
     ];
-    if (unique.length === 0) return;
+    if (unique.length === 0) return new Map();
 
-    const owned = await this.prisma.commitment.count({
+    const owned = await this.prisma.commitment.findMany({
       where: { userId, id: { in: unique } },
+      select: { id: true, daysOff: true },
     });
-    if (owned !== unique.length) {
+    if (owned.length !== unique.length) {
       throw new NotFoundException(
         `Commitment not found or you don't have access.`,
       );
     }
+    return new Map(owned.map((c) => [c.id, c.daysOff]));
   }
 
   // O Prisma não expressa "exatamente um de dois campos" no schema, por

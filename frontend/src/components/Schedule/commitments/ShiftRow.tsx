@@ -9,6 +9,8 @@ import IconButton from '../../UI/IconButton';
 
 interface ShiftRowProps {
   shift: WorkShift;
+  // Folgas fixas do local deste turno.
+  daysOff?: number[];
   isSaving: boolean;
   onEdit: (id: string, changes: UpdateWorkShiftInput) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
@@ -20,9 +22,23 @@ interface ShiftRowProps {
   showTitle?: boolean;
 }
 
-export default function ShiftRow({ shift, isSaving, onEdit, onDelete, onReplicate, moveTargets, showTitle = false }: ShiftRowProps) {
+export default function ShiftRow({
+  shift,
+  daysOff = [],
+  isSaving,
+  onEdit,
+  onDelete,
+  onReplicate,
+  moveTargets,
+  showTitle = false,
+}: ShiftRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isReplicating, setIsReplicating] = useState(false);
+  const isSkippedByDayOff = shift.dayOfWeek !== null && daysOff.includes(shift.dayOfWeek);
+  // Mover para um local em que este dia e folga deixaria o turno escondido.
+  const availableTargets = (moveTargets ?? []).filter(
+    (c) => shift.dayOfWeek === null || !c.daysOff.includes(shift.dayOfWeek),
+  );
 
   const handleSubmit = async (values: ShiftFormValues): Promise<boolean> => {
     // Enviar dayOfWeek OU date troca a recorrência (o servidor anula o outro).
@@ -42,6 +58,7 @@ export default function ShiftRow({ shift, isSaving, onEdit, onDelete, onReplicat
       <li>
         <ShiftForm
           shift={shift}
+          disabledDays={daysOff}
           submitLabel="Save"
           isSaving={isSaving}
           onSubmit={handleSubmit}
@@ -61,7 +78,10 @@ export default function ShiftRow({ shift, isSaving, onEdit, onDelete, onReplicat
         <p className={showTitle && shift.label ? 'text-xs text-neutral-400' : 'text-sm text-neutral-200'}>
           {describeShift(shift)}
         </p>
-        {moveTargets && moveTargets.length > 0 && shift.dayOfWeek !== null && (
+        {isSkippedByDayOff && (
+          <p className="text-[11px] text-amber-400">Fixed day off: skipped (kept in case you change the days off)</p>
+        )}
+        {availableTargets.length > 0 && shift.dayOfWeek !== null && (
           <label className="text-xs text-neutral-500 flex items-center gap-1.5 mt-1">
             Move to
             <select
@@ -70,7 +90,7 @@ export default function ShiftRow({ shift, isSaving, onEdit, onDelete, onReplicat
               className="bg-neutral-900 border border-neutral-700 rounded px-1.5 py-0.5 text-neutral-300"
             >
               <option value="">Choose...</option>
-              {moveTargets.map((c) => (
+              {availableTargets.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
@@ -100,6 +120,7 @@ export default function ShiftRow({ shift, isSaving, onEdit, onDelete, onReplicat
      {isReplicating && onReplicate && (
        <ReplicateShiftPanel
          shift={shift}
+         disabledDays={daysOff}
          isSaving={isSaving}
          onReplicate={onReplicate}
          onClose={() => setIsReplicating(false)}

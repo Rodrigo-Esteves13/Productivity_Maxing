@@ -15,6 +15,10 @@ export const MAX_COMMITMENTS_PER_USER = 30;
 // pelo cliente.
 export const MAX_RANGE_DAYS = 62;
 
+// Folgas fixas por local: no máximo 6 dos 7 dias (senão o local nunca
+// teria turnos possíveis).
+export const MAX_DAYS_OFF = 6;
+
 export const MAX_BUFFER_MINUTES = 240;
 export const MAX_LABEL_LENGTH = 80;
 

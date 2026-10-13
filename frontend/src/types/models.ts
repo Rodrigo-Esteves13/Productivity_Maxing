@@ -266,6 +266,8 @@ export interface Commitment {
   id: string;
   name: string;
   commuteMinutes: number;
+  // Folgas fixas: dias da semana (0=Dom..6=Sab) em que nunca se trabalha aqui.
+  daysOff: number[];
 }
 
 export interface CommitmentWithShifts extends Commitment {
@@ -296,6 +298,8 @@ export interface CopyWeekInput {
 export interface CopyWeekResult {
   created: WorkShift[];
   skipped: number;
+  // Saltados por cairem numa folga fixa do local.
+  dayOffSkipped?: number;
   sourceCount: number;
 }
 

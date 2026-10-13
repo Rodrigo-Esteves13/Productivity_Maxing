@@ -67,8 +67,8 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
           <CommitmentForm
             submitLabel="Create"
             isSaving={isSaving}
-            onSubmit={async (name, commuteMinutes) => {
-              const ok = await addCommitment(name, commuteMinutes);
+            onSubmit={async (name, commuteMinutes, daysOff) => {
+              const ok = await addCommitment(name, commuteMinutes, daysOff);
               if (ok) setIsCreating(false);
               return ok;
             }}

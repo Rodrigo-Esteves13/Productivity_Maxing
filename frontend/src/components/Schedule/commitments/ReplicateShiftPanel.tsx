@@ -7,12 +7,15 @@ import type { CreateWorkShiftInput, WorkShift } from '../../../types/models';
 
 interface ReplicateShiftPanelProps {
   shift: WorkShift;
+  // Folgas fixas do local: nao se pode replicar para esses dias.
+  disabledDays?: number[];
   isSaving: boolean;
   onReplicate: (inputs: CreateWorkShiftInput[]) => Promise<boolean>;
   onClose: () => void;
 }
 
 const FOLLOWING_DAYS = 7;
+const NO_DAYS_OFF: number[] = [];
 const MS_PER_DAY = 86_400_000;
 
 function addDaysKey(dateKey: string, days: number): string {
@@ -22,7 +25,13 @@ function addDaysKey(dateKey: string, days: number): string {
 // Copia este turno (mesmas horas, mesmo local/titulo) para outros dias, sem
 // reescrever tudo: semanal -> escolhe os outros dias da semana; pontual ->
 // escolhe entre os 7 dias seguintes.
-export default function ReplicateShiftPanel({ shift, isSaving, onReplicate, onClose }: ReplicateShiftPanelProps) {
+export default function ReplicateShiftPanel({
+  shift,
+  disabledDays = NO_DAYS_OFF,
+  isSaving,
+  onReplicate,
+  onClose,
+}: ReplicateShiftPanelProps) {
   const isWeekly = shift.dayOfWeek !== null;
   const baseDate = shift.date ? shift.date.slice(0, 10) : null;
   const [weekdays, setWeekdays] = useState<number[]>([]);
@@ -33,10 +42,12 @@ export default function ReplicateShiftPanel({ shift, isSaving, onReplicate, onCl
       baseDate
         ? Array.from({ length: FOLLOWING_DAYS }, (_, i) => {
             const key = addDaysKey(baseDate, i + 1);
-            return { offset: i + 1, key, label: formatDayLabel(key) };
+            // Dia da semana da data (UTC, como o resto das datas-chave).
+            const isDayOff = disabledDays.includes(new Date(Date.parse(key)).getUTCDay());
+            return { offset: i + 1, key, label: formatDayLabel(key), isDayOff };
           })
         : [],
-    [baseDate],
+    [baseDate, disabledDays],
   );
 
   const toggle = (list: number[], value: number, set: (next: number[]) => void) =>
@@ -73,6 +84,8 @@ export default function ReplicateShiftPanel({ shift, isSaving, onReplicate, onCl
                 key={d.value}
                 size="sm"
                 pressed={weekdays.includes(d.value)}
+                disabled={disabledDays.includes(d.value)}
+                title={disabledDays.includes(d.value) ? 'Fixed day off' : undefined}
                 onClick={() => toggle(weekdays, d.value, setWeekdays)}
               >
                 {d.label}
@@ -83,6 +96,8 @@ export default function ReplicateShiftPanel({ shift, isSaving, onReplicate, onCl
                 key={d.offset}
                 size="sm"
                 pressed={offsets.includes(d.offset)}
+                disabled={d.isDayOff}
+                title={d.isDayOff ? 'Fixed day off' : undefined}
                 onClick={() => toggle(offsets, d.offset, setOffsets)}
               >
                 {d.label}

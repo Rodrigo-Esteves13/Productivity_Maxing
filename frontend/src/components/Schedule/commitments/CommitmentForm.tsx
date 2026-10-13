@@ -3,23 +3,29 @@ import type { FormEvent } from 'react';
 import Input from '../../UI/Input';
 import ActionButton from '../../UI/ActionButton';
 import ErrorState from '../../UI/ErrorState';
+import ToggleChip from '../../UI/ToggleChip';
+import { WEEKDAYS } from './shiftText';
 
 const MAX_NAME_LENGTH = 80;
 const MAX_COMMUTE_MINUTES = 240;
 const DEFAULT_COMMUTE = '20';
+// Tem de haver pelo menos um dia de trabalho possivel (igual ao backend).
+const MAX_DAYS_OFF = 6;
 
 interface CommitmentFormProps {
   initialName?: string;
   initialCommute?: number;
+  initialDaysOff?: number[];
   submitLabel: string;
   isSaving: boolean;
-  onSubmit: (name: string, commuteMinutes: number) => Promise<boolean>;
+  onSubmit: (name: string, commuteMinutes: number, daysOff: number[]) => Promise<boolean>;
   onCancel: () => void;
 }
 
 export default function CommitmentForm({
   initialName = '',
   initialCommute,
+  initialDaysOff = [],
   submitLabel,
   isSaving,
   onSubmit,
@@ -29,7 +35,11 @@ export default function CommitmentForm({
   const [commute, setCommute] = useState(
     initialCommute === undefined ? DEFAULT_COMMUTE : String(initialCommute),
   );
+  const [daysOff, setDaysOff] = useState<number[]>(initialDaysOff);
   const [formError, setFormError] = useState('');
+
+  const toggleDayOff = (value: number) =>
+    setDaysOff((prev) => (prev.includes(value) ? prev.filter((d) => d !== value) : [...prev, value]));
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -44,8 +54,13 @@ export default function CommitmentForm({
       return;
     }
 
+    if (daysOff.length > MAX_DAYS_OFF) {
+      setFormError('Keep at least one working day.');
+      return;
+    }
+
     setFormError('');
-    await onSubmit(name.trim(), commuteMinutes);
+    await onSubmit(name.trim(), commuteMinutes, daysOff);
   };
 
   return (
@@ -65,6 +80,25 @@ export default function CommitmentForm({
         value={commute}
         onChange={(e) => setCommute(e.target.value)}
       />
+      <fieldset>
+        <legend className="block text-sm font-medium text-neutral-300 mb-1">Fixed days off</legend>
+        <div className="flex flex-wrap gap-1.5">
+          {WEEKDAYS.map((d) => (
+            <ToggleChip
+              key={d.value}
+              size="sm"
+              pressed={daysOff.includes(d.value)}
+              disabled={!daysOff.includes(d.value) && daysOff.length >= MAX_DAYS_OFF}
+              onClick={() => toggleDayOff(d.value)}
+            >
+              {d.label}
+            </ToggleChip>
+          ))}
+        </div>
+        <p className="mt-1 text-xs text-neutral-500">
+          Weekly shifts are skipped on these days, here and when you replicate or copy.
+        </p>
+      </fieldset>
       {formError && <ErrorState message={formError} />}
       <div className="flex gap-2">
         <ActionButton type="submit" disabled={isSaving}>

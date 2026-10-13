@@ -16,6 +16,13 @@ const WEEKDAY_LABEL: Record<number, string> = Object.fromEntries(
   WEEKDAYS.map((d) => [d.value, d.label]),
 );
 
+// "Sat, Sun" a partir dos valores 0-6, na ordem Seg..Dom.
+export function describeDaysOff(daysOff: readonly number[]): string {
+  return WEEKDAYS.filter((d) => daysOff.includes(d.value))
+    .map((d) => d.label)
+    .join(', ');
+}
+
 export function describeShift(shift: WorkShift): string {
   const when =
     shift.dayOfWeek !== null

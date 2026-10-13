@@ -40,10 +40,12 @@ export function describeCopyResult(result: CopyWeekResult): string {
     return 'That week has no one-day shifts to copy. Fixed shifts already apply to every week.';
   }
   const created = result.created.length;
+  const dayOff = result.dayOffSkipped ?? 0;
+  const dayOffNote = dayOff > 0 ? ` ${dayOff} on a fixed day off, skipped.` : '';
   if (created === 0) {
-    return 'Everything from that week is already there. Nothing was added.';
+    return `Nothing was added: everything from that week is already there or falls on a day off.${dayOffNote}`;
   }
   const skipped =
     result.skipped > 0 ? ` (${result.skipped} already there, skipped)` : '';
-  return `Added ${created} ${plural(created)}${skipped}.`;
+  return `Added ${created} ${plural(created)}${skipped}.${dayOffNote}`;
 }
