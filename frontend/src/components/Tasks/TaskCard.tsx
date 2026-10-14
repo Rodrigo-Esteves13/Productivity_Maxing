@@ -6,7 +6,8 @@ import PriorityBadge from '../UI/PriorityBadge';
 import PostponedIndicator from '../UI/PostponedIndicator';
 import SubtaskProgress from '../UI/SubtaskProgress';
 import RescheduleButton from '../UI/RescheduleButton';
-import { PinIcon } from '../UI/Icons';
+import { PinIcon, RepeatIcon } from '../UI/Icons';
+import { recurrenceLabel } from '../../lib/recurrence';
 import { getDateStatus } from '../../utils/taskDateStatus';
 
 interface TaskCardProps {
@@ -137,6 +138,15 @@ export default function TaskCard({
               <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
             )}
             <PostponedIndicator count={task.postponedCount} />
+            {recurrenceLabel(task) && (
+              <span
+                title={`${recurrenceLabel(task)}. The next one is created when you complete this task.`}
+                className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[11px] font-medium text-violet-300"
+              >
+                <RepeatIcon className="h-3 w-3" />
+                {recurrenceLabel(task)?.replace('Repeats ', '')}
+              </span>
+            )}
           </div>
           {status === 'overdue' && onReschedule && (
             <RescheduleButton

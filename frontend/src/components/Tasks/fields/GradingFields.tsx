@@ -1,10 +1,13 @@
 import FormField from '../../UI/FormField';
 import Input from '../../UI/Input';
 import { ClockIcon } from '../../UI/Icons';
+import WeightBudgetHint from './WeightBudgetHint';
 import type { DurationPrediction } from '../../../api/predictionService';
 
 interface GradingFieldsProps {
   idPrefix: string;
+  areaId: string;
+  taskId?: string;
   targetGrade: string;
   weightPercentage: string;
   estimatedMinutes: string;
@@ -32,6 +35,8 @@ function formatMethodLabel(method: DurationPrediction['method']): string {
 // Academic Type em AcademicFields.tsx, que é mesmo só para esse contexto.
 export default function GradingFields({
   idPrefix,
+  areaId,
+  taskId,
   targetGrade,
   weightPercentage,
   estimatedMinutes,
@@ -72,6 +77,7 @@ export default function GradingFields({
           />
         </FormField>
       </div>
+      <WeightBudgetHint areaId={areaId} taskId={taskId} weightPercentage={weightPercentage} />
 
       <FormField label="Estimated Duration (minutes)" htmlFor={`${idPrefix}-estimated-minutes`}>
         <div className="flex flex-wrap items-center gap-2">

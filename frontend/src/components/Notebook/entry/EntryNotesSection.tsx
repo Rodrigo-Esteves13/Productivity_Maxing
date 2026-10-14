@@ -75,7 +75,7 @@ export default function EntryNotesSection({
               onChange={(e) => onTextChange(e.target.value)}
               placeholder={t('notebook.notes.placeholder')}
               rows={8}
-              className="w-full resize-y rounded-lg border border-neutral-800 bg-neutral-950/50 p-3 font-serif text-base leading-7 text-neutral-100 placeholder-neutral-700 focus:border-violet-500 focus:outline-none"
+              className="notebook-ruled w-full resize-y rounded-lg border border-neutral-800 bg-neutral-950/50 p-3 font-serif text-base text-neutral-100 placeholder-neutral-700 focus:border-violet-500 focus:outline-none"
             />
             <p className={`mt-1 text-right text-[11px] ${isOverLimit ? 'text-red-400' : 'text-neutral-600'}`}>
               {textContent.length.toLocaleString()} / {MAX_TEXT_CONTENT_LENGTH.toLocaleString()}
@@ -93,7 +93,7 @@ export default function EntryNotesSection({
           )}
         </div>
       ) : (
-        <div className="max-w-prose whitespace-pre-wrap break-words font-serif text-base leading-7 text-neutral-200">
+        <div className="notebook-ruled max-w-prose whitespace-pre-wrap break-words font-serif text-base text-neutral-200">
           {textContent || <span className="font-sans text-sm text-neutral-600">{t('notebook.notes.empty')}</span>}
         </div>
       )}

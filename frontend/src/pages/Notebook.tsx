@@ -16,6 +16,7 @@ import { useNotebookAreas } from '../hooks/useNotebookAreas';
 import { useNotebookEntries } from '../hooks/useNotebookEntries';
 import {
   detectClassNow,
+  upsertScheduleLink,
   uploadNotebookPhoto,
   deleteNotebookPhoto,
   uploadNotebookAttachment,
@@ -120,6 +121,12 @@ export default function Notebook() {
         occurrence: null,
       }));
       const isClassNow = Boolean(detection.occurrence);
+
+      // Aula achada pelo nome: liga a cadeira ao horario para a proxima vez
+      // ser automatica. Falha silenciosa (a lição cria-se na mesma).
+      if (detection.occurrence && detection.matchedByName) {
+        void upsertScheduleLink(selectedAreaId, detection.occurrence.subject).catch(() => undefined);
+      }
 
       await createEntry({
         areaId: selectedAreaId,

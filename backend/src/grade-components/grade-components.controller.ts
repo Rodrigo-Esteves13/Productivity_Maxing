@@ -38,6 +38,18 @@ class ListGradeComponentsQuery {
   areaId?: string;
 }
 
+class WeightBudgetQuery {
+  @IsUUID()
+  areaId!: string;
+
+  @IsUUID()
+  periodId!: string;
+
+  @IsOptional()
+  @IsUUID()
+  excludeTaskId?: string;
+}
+
 @ApiTags('Grade components')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -55,6 +67,14 @@ export class GradeComponentsController {
     @Query() query: ListGradeComponentsQuery,
   ) {
     return this.service.list(user.id, query);
+  }
+
+  @Get('weight-budget')
+  @ApiOperation({
+    summary: 'How much of a course final grade is already assigned (tasks + components).',
+  })
+  weightBudget(@CurrentUser() user: AuthenticatedUser, @Query() query: WeightBudgetQuery) {
+    return this.service.weightBudget(user.id, query);
   }
 
   @Post()

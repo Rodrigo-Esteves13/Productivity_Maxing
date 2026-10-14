@@ -4,6 +4,7 @@ import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
 import DetailRow from '../UI/DetailRow';
+import { recurrenceLabel } from '../../lib/recurrence';
 import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
 import { useDurationPrediction } from '../../hooks/useDurationPrediction';
 
@@ -52,6 +53,12 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
             onChange={(next) => onSubtasksChange(task.id, next)}
             onConverted={onSubtaskConverted}
           />
+        </DetailRow>
+      )}
+      {recurrenceLabel(task) && (
+        <DetailRow label="Repeat">
+          {recurrenceLabel(task)}
+          {task.recurrenceUntil ? ` until ${new Date(task.recurrenceUntil).toLocaleDateString()}` : ''}. The next one is created when you complete this task.
         </DetailRow>
       )}
       <DetailRow label="Area">{task.area?.name ?? 'No Area'}</DetailRow>

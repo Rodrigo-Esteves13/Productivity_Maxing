@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import Button from '../UI/Button';
 import Input from '../UI/Input';
-import { CheckIcon, XIcon } from '../UI/Icons';
+import { CheckIcon, XIcon, PencilIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
 import { getApiMessage } from '../../lib/httpError';
 import { editSharedEntry } from '../../api/notebookService';
+import CaseTransformBar from './CaseTransformBar';
+import EntrySectionHeader from './entry/EntrySectionHeader';
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_TEXT_LENGTH = 50000;
@@ -38,6 +40,7 @@ export default function SharedEntryEditForm({
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -60,30 +63,31 @@ export default function SharedEntryEditForm({
   };
 
   return (
-    <form
-      onSubmit={(e) => void handleSubmit(e)}
-      className="space-y-3 rounded-lg border border-neutral-800 bg-neutral-900/60 p-3"
-    >
-      <Input
-        label={t('sharedEdit.title')}
+    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-6">
+      <input
         value={title}
         maxLength={MAX_TITLE_LENGTH}
         onChange={(e) => setTitle(e.target.value)}
+        placeholder={t('notebook.titlePlaceholder')}
+        aria-label={t('sharedEdit.title')}
+        className="min-w-0 w-full border-b border-transparent bg-transparent pb-1 font-serif text-2xl font-semibold leading-tight text-white placeholder-neutral-700 transition-colors focus:border-violet-500 focus:outline-none sm:text-3xl"
       />
 
-      <div className="space-y-1.5">
-        <label htmlFor="shared-edit-notes" className="text-sm text-neutral-400">
-          {t('sharedEdit.notes')}
-        </label>
+      <section>
+        <EntrySectionHeader icon={PencilIcon} title={t('sharedEdit.notes')} />
+        <div className="mb-3">
+          <CaseTransformBar textareaRef={textareaRef} textContent={text} onTextChange={setText} />
+        </div>
         <textarea
           id="shared-edit-notes"
+          ref={textareaRef}
           value={text}
           maxLength={MAX_TEXT_LENGTH}
           rows={10}
           onChange={(e) => setText(e.target.value)}
-          className="w-full resize-y rounded-lg border border-neutral-700 bg-neutral-950/50 p-3 font-serif text-base leading-7 text-neutral-100 focus:border-violet-500 focus:outline-none"
+          className="notebook-ruled w-full resize-y rounded-lg border border-neutral-800 bg-neutral-950/50 p-3 font-serif text-base text-neutral-100 placeholder-neutral-700 focus:border-violet-500 focus:outline-none"
         />
-      </div>
+      </section>
 
       {isProposal && (
         <Input

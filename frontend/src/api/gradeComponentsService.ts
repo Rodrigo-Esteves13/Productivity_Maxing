@@ -3,9 +3,9 @@ import api from './client';
 import type { GradeComponent, GradeComponentInput } from '../types/models';
 
 export const getGradeComponents = async (params: {
-  areaId: string;
-  periodId: string;
-}): Promise<GradeComponent[]> => {
+  areaId?: string;
+  periodId?: string;
+} = {}): Promise<GradeComponent[]> => {
   const response = await api.get<GradeComponent[]>('/grade-components', { params });
   return response.data;
 };
@@ -54,5 +54,20 @@ export const updateGradeEntry = async (
 
 export const removeGradeEntry = async (componentId: string, entryId: string): Promise<GradeComponent> => {
   const response = await api.delete<GradeComponent>(`/grade-components/${componentId}/entries/${entryId}`);
+  return response.data;
+};
+
+export interface WeightBudget {
+  used: number;
+  remaining: number;
+  max: number;
+}
+
+export const getWeightBudget = async (params: {
+  areaId: string;
+  periodId: string;
+  excludeTaskId?: string;
+}): Promise<WeightBudget> => {
+  const response = await api.get<WeightBudget>('/grade-components/weight-budget', { params });
   return response.data;
 };

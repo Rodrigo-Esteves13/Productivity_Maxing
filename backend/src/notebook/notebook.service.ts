@@ -101,6 +101,25 @@ function looksLikeBinary(buffer: Buffer): boolean {
 // sugestão desaparecer.
 const CLASS_MATCH_MARGIN_MINUTES = 15;
 
+// Normaliza para comparar nomes: sem acentos, minusculas, sem pontuacao.
+function normalizeName(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/** "Comunicacao de Dados e Redes III" casa com "Comunicação de Dados e Redes III - TP". */
+function matchesAreaName(subject: string, areaName: string): boolean {
+  const a = normalizeName(subject);
+  const b = normalizeName(areaName);
+  if (!a || !b) return false;
+  return a === b || a.includes(b) || b.includes(a);
+}
+
+
 // Uma pessoa a abrir /shared/:token pode estar em 5 estados diferentes -
 // ver NotebookService.getSharedEntry. O controller devolve isto tal e
 // qual (200 OK sempre que o token existe); só um token inexistente ou
@@ -881,7 +900,6 @@ export class NotebookService {
    */
   async detectClassNow(userId: string, areaId: string) {
     const { scheduleSubject } = await this.findScheduleLink(userId, areaId);
-    if (!scheduleSubject) return { occurrence: null };
 
     const now = new Date();
     const startOfDay = new Date(now);
@@ -893,18 +911,37 @@ export class NotebookService {
     const todaysOccurrences = await this.prisma.classOccurrence.findMany({
       where: {
         userId,
-        subject: scheduleSubject,
+        // Sem ligacao ainda: olha para todas as aulas de hoje e tenta
+        // casar pelo nome da cadeira (ver matchesAreaName).
+        ...(scheduleSubject ? { subject: scheduleSubject } : {}),
         date: { gte: startOfDay, lte: endOfDay },
       },
     });
 
-    const match = todaysOccurrences.find(
-      (occ) =>
-        nowMinutes >= occ.startMinutes - CLASS_MATCH_MARGIN_MINUTES &&
-        nowMinutes <= occ.endMinutes + CLASS_MATCH_MARGIN_MINUTES,
-    );
+    const isRunningNow = (occ: { startMinutes: number; endMinutes: number }) =>
+      nowMinutes >= occ.startMinutes - CLASS_MATCH_MARGIN_MINUTES &&
+      nowMinutes <= occ.endMinutes + CLASS_MATCH_MARGIN_MINUTES;
 
-    return { occurrence: match ?? null };
+    if (scheduleSubject) {
+      return { occurrence: todaysOccurrences.find(isRunningNow) ?? null };
+    }
+
+    const area = await this.prisma.area.findUnique({
+      where: { id: areaId },
+      select: { name: true },
+    });
+    const match = area
+      ? todaysOccurrences.find(
+          (occ) => isRunningNow(occ) && matchesAreaName(occ.subject, area.name),
+        )
+      : undefined;
+    if (!match) return { occurrence: null };
+
+    // Aula encontrada pelo nome. NAO se grava a ligacao aqui: isto corre num
+    // GET (sem CSRF, e o cookie SameSite=Lax segue navegacoes de topo), por
+    // isso um GET nunca muda estado. `matchedByName` diz ao frontend para
+    // pedir a ligacao por POST (upsertScheduleLink).
+    return { occurrence: match, matchedByName: true };
   }
 
   // --- Pesquisa -----------------------------------------------------

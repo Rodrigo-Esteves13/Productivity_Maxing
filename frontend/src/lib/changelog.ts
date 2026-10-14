@@ -7,6 +7,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-15',
+    title: 'Weight limits, repeat badges and readable notebook tables',
+    items: [
+      'A course can no longer go over 100% of the final grade: tasks and grade components share the same budget, and the server rejects anything above it.',
+      'The task form now shows how much of the course is already assigned and warns when it is still missing a few percent (for example "10% still missing") or when your weight is over the limit.',
+      'Repeat is now visible: tasks that repeat show a badge on the card and a Repeat line in their details, and the form explains that the next one is created when you complete the task.',
+      'Notebook tables wrap long text instead of cutting it off, in the editor and on shared lessons.',
+      'Notebook: when you create a lesson and your schedule has a class running now whose name matches the course, it is marked as a class automatically and the course is linked to the schedule for next time.',
+      'Notebook notes sit on faint ruled lines, and shared lessons now use the same sheet as the editor. Editors and co-owners edit in place, with the case tool.',
+      'The Dashboard course breakdown now counts grade components (seminars, participation) in each average and in the "% of grade so far" badge.',
+    ],
+  },
+  {
     date: '2026-10-14',
     title: 'Grade components, a new notebook and shared editing',
     items: [

@@ -1,36 +1,4 @@
-import type { RecurrenceFrequency, Task } from '../../types/models';
-
-export interface RecurrenceValue {
-  frequency: '' | RecurrenceFrequency;
-  interval: string; // numero como texto (input)
-  until: string; // "YYYY-MM-DD" ou ''
-}
-
-export const EMPTY_RECURRENCE: RecurrenceValue = { frequency: '', interval: '1', until: '' };
-
-export function recurrenceFromTask(task: Task): RecurrenceValue {
-  return {
-    frequency: task.recurrenceFrequency ?? '',
-    interval: String(task.recurrenceInterval ?? 1),
-    until: task.recurrenceUntil ? task.recurrenceUntil.split('T')[0] : '',
-  };
-}
-
-// Campos para o corpo de POST/PATCH. `forEdit`: no PATCH tem de ir null
-// para DESLIGAR a repeticao; na criacao sem repeticao nao se manda nada.
-export function recurrencePayload(value: RecurrenceValue, forEdit: boolean) {
-  if (!value.frequency) {
-    return forEdit ? { recurrenceFrequency: null, recurrenceUntil: null } : {};
-  }
-  const interval = Math.min(365, Math.max(1, Math.floor(Number(value.interval)) || 1));
-  return {
-    recurrenceFrequency: value.frequency,
-    recurrenceInterval: interval,
-    recurrenceUntil: value.until ? `${value.until}T00:00:00.000Z` : forEdit ? null : undefined,
-  };
-}
-
-const UNIT: Record<RecurrenceFrequency, string> = { DAILY: 'day(s)', WEEKLY: 'week(s)', MONTHLY: 'month(s)' };
+import { RECURRENCE_UNIT, type RecurrenceValue } from '../../lib/recurrence';
 
 interface RecurrenceFieldsProps {
   idPrefix: string;
@@ -46,7 +14,7 @@ export default function RecurrenceFields({ idPrefix, value, onChange }: Recurren
   return (
     <div className="space-y-2">
       <label htmlFor={`${idPrefix}-repeat`} className="block text-sm font-medium text-neutral-300">
-        Repeat <span className="text-neutral-500 font-normal">(next one is created when you complete this)</span>
+        Repeat <span className="text-neutral-500 font-normal">(the next one is created when you mark this as completed)</span>
       </label>
       <div className="flex flex-wrap items-center gap-2">
         <select
@@ -72,7 +40,7 @@ export default function RecurrenceFields({ idPrefix, value, onChange }: Recurren
               aria-label="Repeat interval"
               className={`${inputClass} w-20`}
             />
-            <span className="text-sm text-neutral-400">{UNIT[value.frequency]}, until</span>
+            <span className="text-sm text-neutral-400">{RECURRENCE_UNIT[value.frequency]}, until</span>
             <input
               type="date"
               value={value.until}

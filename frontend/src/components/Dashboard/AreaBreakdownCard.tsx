@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import type { Task, Area } from '../../types/models';
 import { ChartPieIcon } from '../UI/Icons';
 import { computeWeightCoverage } from '../../utils/weightCoverage';
+import { usePeriodGradeComponents } from '../../hooks/usePeriodGradeComponents';
+import type { GradeComponent } from '../../types/models';
 import Sparkline from '../UI/Sparkline';
 import ProgressBar from '../UI/ProgressBar';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
@@ -39,15 +41,35 @@ interface AreaRow {
 // (grade-average.util.ts), run client-side over the tasks the Dashboard
 // already has loaded - avoids yet another endpoint for what's really just
 // a different view of data already on the page.
-function computeAreaAverage(tasks: Task[]): { average: number | null; gradedCount: number } {
-  const graded = tasks.filter((t) => t.realGrade !== null);
-  if (graded.length === 0) return { average: null, gradedCount: 0 };
-  const weightedSum = graded.reduce((sum, t) => sum + t.realGrade! * (t.weightPercentage ?? 1), 0);
-  const totalWeight = graded.reduce((sum, t) => sum + (t.weightPercentage ?? 1), 0);
+function computeAreaAverage(
+  tasks: Task[],
+  components: GradeComponent[],
+): { average: number | null; gradedCount: number } {
+  // Componentes (seminarios, participacao...) entram como uma task com a
+  // nota agregada e o peso do componente - igual ao backend.
+  const items = [
+    ...tasks
+      .filter((t) => t.realGrade !== null)
+      .map((t) => ({ grade: t.realGrade!, weight: t.weightPercentage ?? 1 })),
+    ...components
+      .filter((c) => c.grade !== null)
+      .map((c) => ({ grade: c.grade!, weight: c.weightPercentage })),
+  ];
+  if (items.length === 0) return { average: null, gradedCount: 0 };
+  const weightedSum = items.reduce((sum, i) => sum + i.grade * i.weight, 0);
+  const totalWeight = items.reduce((sum, i) => sum + i.weight, 0);
   return {
     average: totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 100) / 100 : null,
-    gradedCount: graded.length,
+    gradedCount: items.length,
   };
+}
+
+// Peso da cadeira ja atribuido: tasks (se todas tiverem peso) + componentes.
+function computeAreaCoverage(tasks: Task[], components: GradeComponent[]): number | null {
+  const componentWeight = components.reduce((sum, c) => sum + c.weightPercentage, 0);
+  if (tasks.length === 0) return components.length > 0 ? componentWeight : null;
+  const coverage = computeWeightCoverage(tasks);
+  return coverage.allWeighted ? coverage.totalWeight + componentWeight : null;
 }
 
 function computeGradeHistory(tasks: Task[]): number[] {
@@ -59,24 +81,25 @@ function computeGradeHistory(tasks: Task[]): number[] {
 
 export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdownCardProps) {
   const max = scaleMax(scale);
+  const components = usePeriodGradeComponents();
 
   const rows = useMemo<AreaRow[]>(() => {
     return areas
       .map((area) => {
         const areaTasks = tasks.filter((t) => t.areaId === area.id);
-        const { average, gradedCount } = computeAreaAverage(areaTasks);
-        const coverage = computeWeightCoverage(areaTasks);
+        const areaComponents = components.filter((c) => c.areaId === area.id);
+        const { average, gradedCount } = computeAreaAverage(areaTasks, areaComponents);
         return {
           area,
           average,
           gradedCount,
-          weightCoveredPct: coverage.allWeighted ? coverage.totalWeight : null,
+          weightCoveredPct: computeAreaCoverage(areaTasks, areaComponents),
           gradeHistory: computeGradeHistory(areaTasks),
         };
       })
       .filter((row) => row.gradedCount > 0)
       .sort((a, b) => (b.average ?? 0) - (a.average ?? 0));
-  }, [tasks, areas]);
+  }, [tasks, areas, components]);
 
   if (rows.length === 0) return null;
 
