@@ -99,7 +99,7 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
         type="button"
         onClick={handleSave}
         disabled={isSaving}
-        className="rounded-md p-1 text-emerald-400 hover:bg-neutral-800 disabled:opacity-50"
+        className="rounded-md p-1 text-violet-400 hover:bg-neutral-800 disabled:opacity-50"
         aria-label="Save link"
       >
         <CheckIcon className="h-3.5 w-3.5" />

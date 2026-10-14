@@ -1,6 +1,7 @@
-import type { ChangeEvent, ReactNode } from 'react';
-import { FileIcon, ImageIcon } from '../../UI/Icons';
-import SectionLabel from '../../UI/SectionLabel';
+import type { ChangeEvent, ComponentType, ReactNode } from 'react';
+import { FileIcon, ImageIcon, UploadIcon } from '../../UI/Icons';
+import EntrySectionHeader from './EntrySectionHeader';
+import { useI18n } from '../../../i18n/useI18n';
 import { useFileUpload } from '../../../hooks/useFileUpload';
 import type { NotebookAttachment, NotebookPhoto } from '../../../types/models';
 import EntryListRow from './EntryListRow';
@@ -14,6 +15,7 @@ import {
 } from './notebookEntryConfig';
 
 interface FileSectionShellProps {
+  icon: ComponentType<{ className?: string }>;
   label: string;
   addLabel: string;
   addIcon: ReactNode;
@@ -25,22 +27,25 @@ interface FileSectionShellProps {
 }
 
 // Cabecalho (titulo + "Add ...") e erro comuns a anexos e fotos.
-function FileSectionShell({ label, addLabel, addIcon, accept, isEditing, error, onFileChange, children }: FileSectionShellProps) {
+function FileSectionShell({ icon, label, addLabel, addIcon, accept, isEditing, error, onFileChange, children }: FileSectionShellProps) {
   return (
-    <div>
-      <div className="mb-2 flex items-center justify-between">
-        <SectionLabel>{label}</SectionLabel>
-        {isEditing && (
-          <label className="flex cursor-pointer items-center gap-1.5 rounded-md bg-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-200 hover:bg-neutral-700">
-            {addIcon}
-            {addLabel}
-            <input type="file" accept={accept} onChange={onFileChange} className="hidden" />
-          </label>
-        )}
-      </div>
+    <section>
+      <EntrySectionHeader
+        icon={icon}
+        title={label}
+        action={
+          isEditing && (
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-md bg-neutral-800 px-2.5 py-1.5 text-xs font-medium text-neutral-200 transition-colors hover:bg-neutral-700 focus-within:outline focus-within:outline-2 focus-within:outline-violet-400">
+              {addIcon}
+              {addLabel}
+              <input type="file" accept={accept} onChange={onFileChange} className="sr-only" />
+            </label>
+          )
+        }
+      />
       {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
       {children}
-    </div>
+    </section>
   );
 }
 
@@ -52,6 +57,7 @@ interface AttachmentsSectionProps {
 }
 
 export function AttachmentsSection({ isEditing, attachments, onUpload, onDelete }: AttachmentsSectionProps) {
+  const { t } = useI18n();
   const { error, handleChange } = useFileUpload({
     validate: (file) => validateAttachment(file, attachments.length),
     onUpload,
@@ -60,16 +66,17 @@ export function AttachmentsSection({ isEditing, attachments, onUpload, onDelete 
 
   return (
     <FileSectionShell
-      label="Attachments"
-      addLabel="Add file"
-      addIcon={<FileIcon className="h-4 w-4" />}
+      icon={FileIcon}
+      label={t('notebook.section.files')}
+      addLabel={t('notebook.files.add')}
+      addIcon={<UploadIcon className="h-3.5 w-3.5" />}
       accept={ACCEPTED_ATTACHMENT_EXTENSIONS.join(',')}
       isEditing={isEditing}
       error={error}
       onFileChange={handleChange}
     >
       {attachments.length === 0 ? (
-        !isEditing && <p className="text-xs text-neutral-600">No files yet.</p>
+        !isEditing && <p className="text-xs text-neutral-600">{t('notebook.files.none')}</p>
       ) : (
         <div className="space-y-1.5">
           {attachments.map((attachment) => (
@@ -77,7 +84,7 @@ export function AttachmentsSection({ isEditing, attachments, onUpload, onDelete 
               key={attachment.id}
               icon={<FileIcon className="h-3.5 w-3.5" />}
               trailing={<span className="shrink-0 text-xs text-neutral-600">{formatFileSize(attachment.sizeBytes)}</span>}
-              removeLabel={isEditing ? 'Remove file' : undefined}
+              removeLabel={isEditing ? t('notebook.files.remove') : undefined}
               onRemove={isEditing ? () => void onDelete(attachment.id) : undefined}
             >
               {attachment.url ? (
@@ -103,6 +110,7 @@ interface PhotosSectionProps {
 }
 
 export function PhotosSection({ isEditing, photos, onUpload, onDelete }: PhotosSectionProps) {
+  const { t } = useI18n();
   const { error, handleChange } = useFileUpload({
     validate: validatePhoto,
     onUpload,
@@ -111,9 +119,10 @@ export function PhotosSection({ isEditing, photos, onUpload, onDelete }: PhotosS
 
   return (
     <FileSectionShell
-      label="Photos"
-      addLabel="Add photo"
-      addIcon={<ImageIcon className="h-4 w-4" />}
+      icon={ImageIcon}
+      label={t('notebook.section.photos')}
+      addLabel={t('notebook.photos.add')}
+      addIcon={<ImageIcon className="h-3.5 w-3.5" />}
       accept={ACCEPTED_PHOTO_TYPES.join(',')}
       isEditing={isEditing}
       error={error}

@@ -990,9 +990,15 @@ export type NotebookShareVisibility = 'PUBLIC' | 'AUTHORIZED';
 // Mirrors ShareAccessRequestStatus in the backend schema.
 export type ShareAccessRequestStatus = 'PENDING' | 'APPROVED' | 'DENIED';
 
+// Papel dado pelo dono ao aprovar: VIEWER le, EDITOR propoe alteracoes que o
+// dono aprova/recusa, CO_OWNER edita direto. OWNER so aparece em SharedRole.
+export type ShareAccessRole = 'VIEWER' | 'EDITOR' | 'CO_OWNER';
+export type SharedRole = ShareAccessRole | 'OWNER';
+
 export interface ShareAccessRequest {
   id: string;
   status: ShareAccessRequestStatus;
+  accessRole: ShareAccessRole;
   createdAt: string;
   decidedAt: string | null;
   requestingUser: { id: string; name: string | null; email: string; avatarUrl: string | null };
@@ -1002,7 +1008,7 @@ export interface ShareAccessRequest {
 // visitor to /shared/:token can be in one of 5 states, not just
 // "here's the content or a 404". Only 'ok' carries the actual entry.
 export type SharedEntryResult =
-  | { status: 'ok'; entry: SharedNotebookEntry }
+  | { status: 'ok'; entry: SharedNotebookEntry; role: SharedRole; hasPendingProposal: boolean }
   | { status: 'login_required' }
   | { status: 'not_requested' }
   | { status: 'pending' }
@@ -1014,4 +1020,52 @@ export interface ScheduleLinkResult {
 
 export interface DetectClassResult {
   occurrence: ClassOccurrence | null;
+}
+
+// Componentes de nota que nao sao tasks (seminarios semanais, participacao,
+// comportamento...). A `grade` ja vem agregada do servidor.
+export type GradeAggregation = 'AVERAGE' | 'BEST_OF' | 'DROP_LOWEST';
+
+export interface GradeEntry {
+  id: string;
+  label: string | null;
+  grade: number;
+  date: string | null;
+}
+
+export interface GradeComponent {
+  id: string;
+  areaId: string;
+  periodId: string;
+  name: string;
+  weightPercentage: number;
+  aggregation: GradeAggregation;
+  bestOfCount: number | null;
+  expectedEntries: number | null;
+  grade: number | null;
+  entries: GradeEntry[];
+}
+
+export interface GradeComponentInput {
+  name: string;
+  weightPercentage: number;
+  aggregation: GradeAggregation;
+  bestOfCount?: number;
+  expectedEntries?: number;
+}
+
+// Alteracao proposta por um EDITOR a uma entrada partilhada (so texto).
+export interface ChangeProposalFields {
+  title?: string;
+  textContent?: string;
+  usefulLinks?: UsefulLink[];
+}
+
+export interface ChangeProposal {
+  id: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  note: string | null;
+  payload: ChangeProposalFields;
+  createdAt: string;
+  proposedBy: { id: string; name: string | null; email: string; avatarUrl: string | null };
 }

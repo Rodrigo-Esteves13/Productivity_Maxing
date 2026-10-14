@@ -91,7 +91,9 @@ export class OAuthIdentityService {
       // provider; só aceita URLs https de hosts de providers conhecidos.
       this.accountGuard.assertAccountIsUsable(existingIdentity.user);
 
-      if (shouldSyncProviderAvatar(existingIdentity.user.avatarUrl, data.photo)) {
+      if (
+        shouldSyncProviderAvatar(existingIdentity.user.avatarUrl, data.photo)
+      ) {
         return this.prisma.user.update({
           where: { id: existingIdentity.user.id },
           data: { avatarUrl: data.photo },

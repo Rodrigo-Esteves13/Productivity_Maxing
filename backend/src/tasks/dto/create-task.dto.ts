@@ -12,7 +12,11 @@ import {
   Max,
   MaxLength,
 } from 'class-validator';
-import { Difficulty, ProgressStatus, RecurrenceFrequency } from '@prisma/client';
+import {
+  Difficulty,
+  ProgressStatus,
+  RecurrenceFrequency,
+} from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTaskDto {
@@ -199,13 +203,17 @@ export class CreateTaskDto {
   @ApiPropertyOptional({
     enum: RecurrenceFrequency,
     nullable: true,
-    description: 'Repeat when completed: DAILY, WEEKLY or MONTHLY. null = no repeat.',
+    description:
+      'Repeat when completed: DAILY, WEEKLY or MONTHLY. null = no repeat.',
   })
   @IsOptional()
   @IsEnum(RecurrenceFrequency)
   recurrenceFrequency?: RecurrenceFrequency | null;
 
-  @ApiPropertyOptional({ example: 1, description: 'Every N days/weeks/months.' })
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'Every N days/weeks/months.',
+  })
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -215,7 +223,8 @@ export class CreateTaskDto {
   @ApiPropertyOptional({
     example: '2026-12-31T00:00:00Z',
     nullable: true,
-    description: 'Last date (inclusive) that still creates an occurrence. null = no end.',
+    description:
+      'Last date (inclusive) that still creates an occurrence. null = no end.',
   })
   @IsOptional()
   @IsDateString()

@@ -6,8 +6,16 @@ import {
   updateShareVisibility,
   getShareAccessRequests,
   decideShareAccessRequest,
+  getChangeProposals,
+  decideChangeProposal,
 } from '../api/notebookService';
-import type { NotebookShareVisibility, ShareAccessRequest } from '../types/models';
+import type {
+  ChangeProposal,
+  ChangeProposalFields,
+  NotebookShareVisibility,
+  ShareAccessRequest,
+  ShareAccessRole,
+} from '../types/models';
 
 export interface UseEntryShareResult {
   isOpen: boolean;
@@ -20,19 +28,29 @@ export interface UseEntryShareResult {
   pendingCount: number;
   isRequestsLoading: boolean;
   decidingId: string | null;
+  proposals: ChangeProposal[];
+  decidingProposalId: string | null;
   open: () => Promise<void>;
   close: () => void;
   create: () => Promise<void>;
   revoke: () => Promise<void>;
   changeVisibility: (next: NotebookShareVisibility) => Promise<void>;
-  decide: (requestId: string, decision: 'APPROVED' | 'DENIED') => Promise<void>;
+  decide: (requestId: string, decision: 'APPROVED' | 'DENIED', role?: ShareAccessRole) => Promise<void>;
+  decideProposal: (proposalId: string, decision: 'APPROVED' | 'REJECTED') => Promise<void>;
 }
 
 // Estado do painel "Share" de uma entrada. Vive NUM HOOK chamado pelo
 // wrapper do editor (NotebookEntryEditor), fora do formulario que remonta no
 // "Cancel" - antes o estado vivia dentro do painel, por isso cancelar uma
 // edicao (ou gravar) fechava o painel e perdia o link/pedidos carregados.
-export function useEntryShare(entryId: string): UseEntryShareResult {
+//
+// `onProposalApplied` avisa o editor quando uma proposta e aprovada: o
+// servidor mudou o titulo/notas, e o rascunho local tem de os receber - senao
+// o proximo auto save repunha o texto antigo por cima.
+export function useEntryShare(
+  entryId: string,
+  onProposalApplied?: (fields: ChangeProposalFields) => void,
+): UseEntryShareResult {
   const [isOpen, setIsOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [visibility, setVisibility] = useState<NotebookShareVisibility>('PUBLIC');
@@ -41,6 +59,8 @@ export function useEntryShare(entryId: string): UseEntryShareResult {
   const [requests, setRequests] = useState<ShareAccessRequest[]>([]);
   const [isRequestsLoading, setIsRequestsLoading] = useState(false);
   const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [proposals, setProposals] = useState<ChangeProposal[]>([]);
+  const [decidingProposalId, setDecidingProposalId] = useState<string | null>(null);
 
   // Repoe tudo ao trocar de entrada - o token de uma nao pode "vazar" para o
   // painel de outra enquanto o estado carrega.
@@ -50,6 +70,7 @@ export function useEntryShare(entryId: string): UseEntryShareResult {
     setVisibility('PUBLIC');
     setError('');
     setRequests([]);
+    setProposals([]);
   }, [entryId]);
 
   const shareUrl = token ? `${window.location.origin}/shared/${token}` : '';
@@ -58,7 +79,12 @@ export function useEntryShare(entryId: string): UseEntryShareResult {
   const loadRequests = useCallback(async () => {
     setIsRequestsLoading(true);
     try {
-      setRequests(await getShareAccessRequests(entryId));
+      const [requestList, proposalList] = await Promise.all([
+        getShareAccessRequests(entryId),
+        getChangeProposals(entryId),
+      ]);
+      setRequests(requestList);
+      setProposals(proposalList);
     } catch {
       // Painel secundario - um erro aqui nao deve esconder o link em si.
     } finally {
@@ -105,6 +131,7 @@ export function useEntryShare(entryId: string): UseEntryShareResult {
       await revokeShare(entryId);
       setToken(null);
       setRequests([]);
+      setProposals([]);
     } catch {
       setError('Could not stop sharing.');
     } finally {
@@ -131,11 +158,13 @@ export function useEntryShare(entryId: string): UseEntryShareResult {
   );
 
   const decide = useCallback(
-    async (requestId: string, decision: 'APPROVED' | 'DENIED') => {
+    async (requestId: string, decision: 'APPROVED' | 'DENIED', role?: ShareAccessRole) => {
       setDecidingId(requestId);
       try {
-        const updated = await decideShareAccessRequest(entryId, requestId, decision);
-        setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, status: updated.status } : r)));
+        const updated = await decideShareAccessRequest(entryId, requestId, decision, role);
+        setRequests((prev) =>
+          prev.map((r) => (r.id === requestId ? { ...r, status: updated.status, accessRole: updated.accessRole } : r)),
+        );
       } catch {
         setError('Could not update that request. Please try again.');
       } finally {
@@ -143,6 +172,23 @@ export function useEntryShare(entryId: string): UseEntryShareResult {
       }
     },
     [entryId],
+  );
+
+  const decideProposal = useCallback(
+    async (proposalId: string, decision: 'APPROVED' | 'REJECTED') => {
+      const proposal = proposals.find((p) => p.id === proposalId);
+      setDecidingProposalId(proposalId);
+      try {
+        await decideChangeProposal(entryId, proposalId, decision);
+        setProposals((prev) => prev.filter((p) => p.id !== proposalId));
+        if (decision === 'APPROVED' && proposal) onProposalApplied?.(proposal.payload);
+      } catch {
+        setError('Could not update that suggestion. Please try again.');
+      } finally {
+        setDecidingProposalId(null);
+      }
+    },
+    [entryId, proposals, onProposalApplied],
   );
 
   return {
@@ -156,11 +202,14 @@ export function useEntryShare(entryId: string): UseEntryShareResult {
     pendingCount,
     isRequestsLoading,
     decidingId,
+    proposals,
+    decidingProposalId,
     open,
     close,
     create,
     revoke,
     changeVisibility,
     decide,
+    decideProposal,
   };
 }

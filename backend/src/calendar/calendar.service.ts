@@ -130,7 +130,9 @@ export class CalendarService {
 
     if (!res.ok) {
       const body = await res.text();
-      this.logger.error(`Google Calendar API (POST /calendars) falhou: ${body}`);
+      this.logger.error(
+        `Google Calendar API (POST /calendars) falhou: ${body}`,
+      );
       throw new BadRequestException(
         'Failed to create the Productivity Maxing calendar in Google Calendar.',
       );

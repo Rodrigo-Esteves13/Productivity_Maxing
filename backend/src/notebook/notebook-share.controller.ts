@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Param, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -7,6 +7,8 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { NotebookService } from './notebook.service';
+import { NotebookCollabService } from './notebook-collab.service';
+import { SharedEditDto } from './dto/shared-edit.dto';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -21,7 +23,10 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 @ApiTags('Notebook')
 @Controller('notebook/shared')
 export class NotebookShareController {
-  constructor(private readonly notebookService: NotebookService) {}
+  constructor(
+    private readonly notebookService: NotebookService,
+    private readonly collabService: NotebookCollabService,
+  ) {}
 
   // OptionalJwtAuthGuard, não JwtAuthGuard: uma partilha PUBLIC continua a
   // abrir sem sessão nenhuma (o guard devolve user = null e o service
@@ -66,5 +71,25 @@ export class NotebookShareController {
     @Param('token') token: string,
   ) {
     return this.notebookService.requestAccess(user.id, token);
+  }
+
+  // Edicao por uma partilha: CO_OWNER aplica logo, EDITOR cria uma proposta
+  // para o dono aprovar, VIEWER recebe 403. Exige sessao (o papel e de uma
+  // pessoa concreta).
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Post(':token/edit')
+  @ApiOperation({
+    summary:
+      'Edit a shared entry (co-owner) or propose changes for the owner to approve (editor).',
+  })
+  @ApiParam({ name: 'token', example: 'a1b2c3d4-...' })
+  editShared(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('token') token: string,
+    @Body() dto: SharedEditDto,
+  ) {
+    return this.collabService.editShared(user.id, token, dto);
   }
 }

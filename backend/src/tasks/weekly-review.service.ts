@@ -9,15 +9,30 @@ const MAX_SESSION_MINUTES = 12 * 60;
 export interface WeeklyReview {
   from: string;
   to: string;
-  completed: { id: string; title: string; areaName: string | null; completedAt: string }[];
+  completed: {
+    id: string;
+    title: string;
+    areaName: string | null;
+    completedAt: string;
+  }[];
   // Pendentes que foram empurradas para mais tarde alguma vez (histórico) e
   // tocadas esta semana.
-  postponed: { id: string; title: string; areaName: string | null; postponedCount: number }[];
+  postponed: {
+    id: string;
+    title: string;
+    areaName: string | null;
+    postponedCount: number;
+  }[];
   overdueCount: number;
   studyMinutes: number;
   studyByArea: { areaName: string; minutes: number }[];
   focusAverage: number | null;
-  upcoming: { id: string; title: string; areaName: string | null; date: string }[];
+  upcoming: {
+    id: string;
+    title: string;
+    areaName: string | null;
+    date: string;
+  }[];
 }
 
 // Revisão dos últimos 7 dias (janela deslizante) + o que vem nos próximos 7.
@@ -87,7 +102,11 @@ export class WeeklyReviewService {
     for (const session of sessions) {
       const minutes = Math.min(
         MAX_SESSION_MINUTES,
-        Math.max(0, ((session.endedAt as Date).getTime() - session.startedAt.getTime()) / 60_000),
+        Math.max(
+          0,
+          ((session.endedAt as Date).getTime() - session.startedAt.getTime()) /
+            60_000,
+        ),
       );
       studyMinutes += minutes;
       const name = session.area?.name ?? 'No area';
@@ -113,11 +132,16 @@ export class WeeklyReviewService {
       overdueCount,
       studyMinutes: Math.round(studyMinutes),
       studyByArea: [...byArea.entries()]
-        .map(([areaName, minutes]) => ({ areaName, minutes: Math.round(minutes) }))
+        .map(([areaName, minutes]) => ({
+          areaName,
+          minutes: Math.round(minutes),
+        }))
         .sort((a, b) => b.minutes - a.minutes),
       focusAverage:
         ratings.length > 0
-          ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
+          ? Math.round(
+              (ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10,
+            ) / 10
           : null,
       upcoming: upcoming.map((t) => ({
         id: t.id,

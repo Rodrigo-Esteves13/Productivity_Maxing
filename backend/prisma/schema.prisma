@@ -321,6 +321,8 @@ model User {
   notebookEntries   NotebookEntry[]
   notebookShares    NotebookShare[]
   notebookShareAccessRequests NotebookShareAccessRequest[]
+  gradeComponents GradeComponent[]
+  notebookChangeProposals NotebookChangeProposal[]
 }
 
 /// Recurso submetido pelo próprio utilizador contra a sua suspensão/ban
@@ -417,6 +419,7 @@ model AcademicPeriod {
 
   program        AcademicProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
   tasks          Task[]
+  gradeComponents GradeComponent[]
   activeForUsers User[]          @relation("UserActivePeriod")
 
   // programId: PeriodsService.findAllForProgram() always filters by
@@ -547,6 +550,7 @@ model Area {
   // AreaScheduleLink) e as entradas do caderno desta cadeira.
   scheduleLinks   AreaScheduleLink[]
   notebookEntries NotebookEntry[]
+  gradeComponents GradeComponent[]
 }
 
 /// Representa uma ação executável dentro de uma Área (Area).
@@ -1034,6 +1038,7 @@ model NotebookEntry {
   share           NotebookShare?
 
   @@index([userId, areaId, date])
+  changeProposals NotebookChangeProposal[]
 }
 
 // Link de partilha "só de leitura" para uma lesson (NotebookEntry) - uma
@@ -1079,6 +1084,10 @@ model NotebookShareAccessRequest {
   notebookShareId  String
   requestingUserId String
   status           ShareAccessRequestStatus  @default(PENDING)
+  // Papel dado quando o dono aprova: VIEWER so le, EDITOR propoe alteracoes
+  // que o dono aprova/recusa, CO_OWNER edita direto. So faz sentido em
+  // partilhas AUTHORIZED (e preciso saber QUEM e a pessoa).
+  accessRole       ShareAccessRole           @default(VIEWER)
   createdAt        DateTime                  @default(now())
   // Preenchido quando o dono aprova/nega - fica null enquanto PENDING.
   decidedAt        DateTime?
@@ -1231,4 +1240,97 @@ model Commitment {
 
   @@unique([userId, name])
   @@index([userId])
+}
+
+/// Como as entradas de um componente de nota se juntam numa so nota.
+enum GradeAggregation {
+  AVERAGE
+  BEST_OF
+  DROP_LOWEST
+}
+
+/// Parte da nota de uma cadeira que NAO e uma task: seminarios semanais
+/// (mini-avaliacoes), participacao, comportamento, trabalho de aula...
+/// Existe por user + cadeira + periodo. Ter isto fora das Tasks e de
+/// proposito: um seminario por semana criaria dezenas de tasks que
+/// poluiriam a lista e o dashboard. A nota do componente (agregada das
+/// entradas) entra nas medias como se fosse uma task com realGrade e
+/// weightPercentage (ver grade-component-items.ts).
+model GradeComponent {
+  id       String @id @default(uuid())
+  userId   String
+  areaId   String
+  periodId String
+
+  name             String
+  /// Peso na nota final da cadeira, em % (mesma unidade que Task.weightPercentage).
+  weightPercentage Float
+  aggregation      GradeAggregation @default(AVERAGE)
+  /// So usado com BEST_OF: quantas das melhores notas contam.
+  bestOfCount      Int?
+  /// Quantas entradas se esperam no total (ex: 12 seminarios). So informativo.
+  expectedEntries  Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area    Area           @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  period  AcademicPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  entries GradeEntry[]
+
+  @@unique([userId, areaId, periodId, name])
+  @@index([userId, periodId])
+  @@index([areaId])
+}
+
+/// Uma nota dentro de um GradeComponent (ex: o seminario da semana 3).
+model GradeEntry {
+  id          String   @id @default(uuid())
+  componentId String
+  label       String?
+  grade       Float
+  date        DateTime?
+  createdAt   DateTime @default(now())
+
+  component GradeComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@index([componentId])
+}
+
+/// Papel de quem tem acesso aprovado a uma partilha AUTHORIZED.
+enum ShareAccessRole {
+  VIEWER
+  EDITOR
+  CO_OWNER
+}
+
+enum ChangeProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Alteracao proposta por um EDITOR a uma entrada partilhada. Fica em
+/// PENDING ate o dono aprovar (aplica `payload` a entrada) ou recusar. Um
+/// editor so tem uma proposta PENDING por entrada: propor de novo substitui
+/// a anterior, para o dono nao ficar com uma fila de rascunhos.
+model NotebookChangeProposal {
+  id               String               @id @default(uuid())
+  notebookEntryId  String
+  proposedByUserId String
+  status           ChangeProposalStatus @default(PENDING)
+  /// Campos propostos: { title?, textContent?, usefulLinks? }.
+  payload          Json
+  /// Mensagem opcional do editor para o dono.
+  note             String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  decidedAt        DateTime?
+
+  notebookEntry NotebookEntry @relation(fields: [notebookEntryId], references: [id], onDelete: Cascade)
+  proposedBy    User          @relation(fields: [proposedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([notebookEntryId, status])
+  @@index([proposedByUserId])
 }

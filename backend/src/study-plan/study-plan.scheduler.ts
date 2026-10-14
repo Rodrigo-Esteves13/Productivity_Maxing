@@ -341,13 +341,15 @@ export function planStudyBlocks(
   // forma saudável aperta o ritmo perto da avaliação, o último dia pesa o
   // dobro do primeiro). Dias fora do horizonte contam com a capacidade média.
   const dayWeight = (j: number, lastIndex: number): number => {
-    const capacity = j < dailyCapacity.length ? dailyCapacity[j] : averageCapacity;
+    const capacity =
+      j < dailyCapacity.length ? dailyCapacity[j] : averageCapacity;
     const progress = lastIndex <= 0 ? 1 : j / lastIndex;
     return capacity * (1 + DEADLINE_RAMP * progress);
   };
   const weightUntil = (fromIndex: number, lastIndex: number): number => {
     let total = 0;
-    for (let j = fromIndex; j <= lastIndex; j++) total += dayWeight(j, lastIndex);
+    for (let j = fromIndex; j <= lastIndex; j++)
+      total += dayWeight(j, lastIndex);
     return total;
   };
 
@@ -375,7 +377,8 @@ export function planStudyBlocks(
         target = needed; // último dia: o que falta
       } else {
         const totalWeight = weightUntil(i, lastIndex);
-        const share = totalWeight > 0 ? dayWeight(i, lastIndex) / totalWeight : 0;
+        const share =
+          totalWeight > 0 ? dayWeight(i, lastIndex) / totalWeight : 0;
         target = Math.ceil(needed * share);
       }
       if (target <= 0) continue;
@@ -534,7 +537,9 @@ function planReviewBlocks(
         : REVIEW_GAP_DAYS;
       if (i - (lastTouch.get(course.areaId) ?? -30) < gap) continue;
 
-      const minutes = course.hasNearGradedDeadline ? nearMinutes : normalMinutes;
+      const minutes = course.hasNearGradedDeadline
+        ? nearMinutes
+        : normalMinutes;
       if (state.reviewMinutes + minutes > dailyCap) continue;
       // Só com folga real: nunca overtime, e sobra margem no dia.
       const capacity = config.dailyLimitMinutes - REVIEW_KEEP_FREE_MINUTES;

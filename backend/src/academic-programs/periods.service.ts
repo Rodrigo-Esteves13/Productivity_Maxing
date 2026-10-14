@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { loadComponentGradedItems } from '../grade-components/grade-component-items';
 import { ProgramsService } from './programs.service';
 import { CreatePeriodDto } from './dto/create-period.dto';
 import { UpdatePeriodDto } from './dto/update-period.dto';
@@ -216,7 +217,15 @@ export class PeriodsService {
       program.roundFinalGrade,
       period.roundFinalGrade,
     );
-    const result = computeCreditWeightedAverage(tasks, areas, shouldRound);
+    // Seminarios/participacao (GradeComponent) contam como tasks avaliadas.
+    const componentItems = await loadComponentGradedItems(this.prisma, {
+      periodId: id,
+    });
+    const result = computeCreditWeightedAverage(
+      [...tasks, ...componentItems],
+      areas,
+      shouldRound,
+    );
     return {
       periodId: period.id,
       periodName: period.name,

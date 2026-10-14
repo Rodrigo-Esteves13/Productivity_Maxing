@@ -1,6 +1,7 @@
 import DetailRow from '../UI/DetailRow';
 import ColorDot from '../UI/ColorDot';
 import type { Area, TaskTypeOption } from '../../types/models';
+import GradeComponentsPanel from './GradeComponentsPanel';
 
 interface AreaDetailViewProps {
   area: Area;
@@ -27,6 +28,7 @@ export default function AreaDetailView({ area, taskTypes }: AreaDetailViewProps)
       <DetailRow label="Credits">
         {area.credits ?? <span className="text-neutral-500 italic">Not set</span>}
       </DetailRow>
+      <GradeComponentsPanel area={area} />
     </div>
   );
 }

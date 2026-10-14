@@ -20,7 +20,9 @@ describe('providerAvatarOrigin', () => {
   });
 
   it('rejeita http, hosts desconhecidos, lookalikes e lixo', () => {
-    expect(providerAvatarOrigin('http://lh3.googleusercontent.com/a')).toBeNull();
+    expect(
+      providerAvatarOrigin('http://lh3.googleusercontent.com/a'),
+    ).toBeNull();
     expect(providerAvatarOrigin(UPLOADED)).toBeNull();
     expect(
       providerAvatarOrigin('https://googleusercontent.com.evil.test/a'),

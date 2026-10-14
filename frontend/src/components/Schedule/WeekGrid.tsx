@@ -8,6 +8,7 @@ import { toDateKey } from '../../lib/dateKey';
 import { mergeAgenda } from '../../lib/agenda';
 import { todayUtcAnchored } from '../../lib/weekDates';
 import WeekDayCell from './WeekDayCell';
+import AgendaLegend from './AgendaLegend';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -120,6 +121,8 @@ export default function WeekGrid({ refreshKey }: WeekGridProps) {
           })}
         </div>
       )}
+
+      {!isLoading && !error && <AgendaLegend />}
     </div>
   );
 }

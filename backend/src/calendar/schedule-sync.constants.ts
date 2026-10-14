@@ -19,8 +19,9 @@ export const PMAXING_EVENT_MARKER = 'schedule';
 
 // IDs de cor do Google Calendar (1 a 11).
 export const COLOR_ID_BY_KIND = {
-  class: '9', // blueberry
-  work: '6', // tangerine
+  class: '9', // blueberry (azul: escola)
+  work: '5', // banana (amarelo: trabalho)
+  event: '4', // flamingo (rosa: eventos pontuais, nao confundir com trabalho)
   travel: '8', // graphite
   study: '3', // grape
   study_overtime: '11', // tomato

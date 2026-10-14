@@ -7,6 +7,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-14',
+    title: 'Grade components, a new notebook and shared editing',
+    items: [
+      'Grade components: split a course grade into parts (exam, project, weekly seminars, participation, behaviour) with a weight each. Seminars and class grades are logged as small chips inside the Area, so they never clutter Tasks or the Dashboard.',
+      'Each component combines its grades by average, best K of N, or dropping the lowest. The grade projection uses them like any other graded item.',
+      'Notebook redesigned: lessons grouped by month with type filter and search, icons on the buttons, and a cleaner editor.',
+      'Notebook now saves automatically as you type (Ctrl/Cmd+S still works), and a case tool converts selected text to lowercase, UPPERCASE, Title Case and more.',
+      'Sharing with roles: give someone viewer, editor or co-owner access. Editors propose changes and the owner approves or rejects them.',
+      'Delete and disconnect dialogs now behave like every other dialog (Esc to close, focus handled, clearer errors).',
+    ],
+  },
+  {
     date: '2026-10-13',
     title: 'Fixed days off, notebook polish and a lighter Google permission',
     items: [

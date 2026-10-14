@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import type { NotebookEntry, NotebookEntryType } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
-import { PencilIcon, BookOpenIcon, GraduationCapIcon, SearchIcon } from '../UI/Icons';
+import { SearchIcon } from '../UI/Icons';
+import { ENTRY_TYPE_ICON, useEntryTypeOptions } from '../../hooks/useEntryTypeOptions';
 import SegmentedControl, { type SegmentedOption } from '../UI/SegmentedControl';
-import SectionLabel from '../UI/SectionLabel';
 import EmptyState from '../UI/EmptyState';
 
 interface NotebookEntryListProps {
@@ -14,12 +14,6 @@ interface NotebookEntryListProps {
 
 type TypeFilter = 'ALL' | NotebookEntryType;
 
-const TYPE_ICON = {
-  NOTE: PencilIcon,
-  STUDY: BookOpenIcon,
-  CLASS: GraduationCapIcon,
-} as const;
-
 // Só mostra filtros/pesquisa a partir de alguns itens - com 3 entradas
 // seria ruído.
 const FILTER_MIN_ENTRIES = 6;
@@ -29,11 +23,10 @@ export default function NotebookEntryList({ entries, selectedId, onSelect }: Not
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
   const [query, setQuery] = useState('');
 
+  const typeOptions = useEntryTypeOptions();
   const filterOptions: SegmentedOption<TypeFilter>[] = [
     { value: 'ALL', label: t('notebook.filter.all') },
-    { value: 'NOTE', label: t('notebook.type.note') },
-    { value: 'STUDY', label: t('notebook.type.study') },
-    { value: 'CLASS', label: t('notebook.type.class') },
+    ...typeOptions,
   ];
 
   // Mantém a ordem vinda da API e agrupa por mês (secções contíguas).
@@ -87,19 +80,21 @@ export default function NotebookEntryList({ entries, selectedId, onSelect }: Not
       ) : (
         groups.map((group) => (
           <section key={group.key} className="space-y-1">
-            <SectionLabel>{group.label}</SectionLabel>
+            <h3 className="px-3 text-xs font-medium text-neutral-500">{group.label}</h3>
             <ul className="space-y-1">
               {group.items.map((entry) => {
                 const isSelected = entry.id === selectedId;
-                const Icon = TYPE_ICON[entry.entryType];
+                const Icon = ENTRY_TYPE_ICON[entry.entryType];
                 return (
                   <li key={entry.id}>
                     <button
                       type="button"
                       onClick={() => onSelect(entry)}
                       aria-current={isSelected ? 'true' : undefined}
-                      className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                        isSelected ? 'bg-violet-600/20 text-violet-200' : 'text-neutral-300 hover:bg-neutral-800'
+                      className={`flex w-full items-center gap-2 rounded-md border-l-2 px-3 py-2 text-left text-sm transition-colors ${
+                        isSelected
+                          ? 'border-violet-500 bg-violet-600/15 text-white'
+                          : 'border-transparent text-neutral-300 hover:bg-neutral-800'
                       }`}
                     >
                       <Icon className="h-3.5 w-3.5 shrink-0 opacity-60" />
@@ -109,7 +104,7 @@ export default function NotebookEntryList({ entries, selectedId, onSelect }: Not
                         )}
                         {entry.title || t('notebook.untitled')}
                       </span>
-                      <span className="shrink-0 text-xs text-neutral-500">
+                      <span className="shrink-0 text-xs tabular-nums text-neutral-500">
                         {new Date(entry.date).toLocaleDateString(lang, { day: '2-digit', month: '2-digit' })}
                       </span>
                     </button>

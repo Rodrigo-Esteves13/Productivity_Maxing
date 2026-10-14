@@ -4,6 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { loadComponentGradedItems } from '../grade-components/grade-component-items';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { UpdateProgramDto } from './dto/update-program.dto';
 import {
@@ -107,8 +108,12 @@ export class ProgramsService {
     const areas = await this.prisma.area.findMany({
       select: { id: true, credits: true },
     });
+    // Seminarios/participacao (GradeComponent) contam como tasks avaliadas.
+    const componentItems = await loadComponentGradedItems(this.prisma, {
+      period: { programId: id },
+    });
     const result = computeCreditWeightedAverage(
-      tasks,
+      [...tasks, ...componentItems],
       areas,
       program.roundFinalGrade,
     );
@@ -137,11 +142,14 @@ export class ProgramsService {
     const areas = await this.prisma.area.findMany({
       select: { id: true, name: true, credits: true },
     });
+    const componentItems = await loadComponentGradedItems(this.prisma, {
+      period: { programId: id },
+    });
     return computeCreditsSummary(
       program.id,
       program.name,
       program.gradeScale,
-      tasks,
+      [...tasks, ...componentItems],
       areas,
       program.roundFinalGrade,
     );
@@ -168,13 +176,20 @@ export class ProgramsService {
       select: { id: true, credits: true },
     });
 
+    const componentItems = await loadComponentGradedItems(this.prisma, {
+      period: { programId: id },
+    });
+
     return periods.map((period) => {
       const shouldRound = resolveRoundFinalGrade(
         program.roundFinalGrade,
         period.roundFinalGrade,
       );
       const result = computeCreditWeightedAverage(
-        period.tasks,
+        [
+          ...period.tasks,
+          ...componentItems.filter((item) => item.periodId === period.id),
+        ],
         areas,
         shouldRound,
       );
