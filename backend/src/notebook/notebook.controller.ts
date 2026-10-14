@@ -31,6 +31,8 @@ import {
 import { UpsertScheduleLinkDto } from './dto/upsert-schedule-link.dto';
 import { UpdateShareVisibilityDto } from './dto/update-share-visibility.dto';
 import { DecideAccessRequestDto } from './dto/decide-access-request.dto';
+import { DecideProposalDto } from './dto/decide-proposal.dto';
+import { NotebookCollabService } from './notebook-collab.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
@@ -49,7 +51,10 @@ type MulterLimitsWithFieldNestingDepth = NonNullable<
 @UseGuards(JwtAuthGuard)
 @Controller('notebook')
 export class NotebookController {
-  constructor(private readonly notebookService: NotebookService) {}
+  constructor(
+    private readonly notebookService: NotebookService,
+    private readonly collabService: NotebookCollabService,
+  ) {}
 
   @Get('entries')
   @ApiOperation({
@@ -179,6 +184,36 @@ export class NotebookController {
       user.id,
       id,
       requestId,
+      dto.decision,
+      dto.role,
+    );
+  }
+
+  @Get('entries/:id/share/proposals')
+  @ApiOperation({
+    summary: 'Changes proposed by editors, waiting for your approval.',
+  })
+  listProposals(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.collabService.listProposals(user.id, id);
+  }
+
+  @Patch('entries/:id/share/proposals/:proposalId')
+  @ApiOperation({
+    summary: 'Approve (applies the changes) or reject an editor proposal.',
+  })
+  decideProposal(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('proposalId', ParseUUIDPipe) proposalId: string,
+    @Body() dto: DecideProposalDto,
+  ) {
+    return this.collabService.decideProposal(
+      user.id,
+      id,
+      proposalId,
       dto.decision,
     );
   }

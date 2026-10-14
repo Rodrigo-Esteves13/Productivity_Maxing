@@ -14,8 +14,10 @@ import type {
   NotebookShareVisibility,
   NotebookTable,
   ScheduleLinkResult,
+  ChangeProposal,
   ShareAccessRequest,
   ShareAccessRequestStatus,
+  ShareAccessRole,
   SharedEntryResult,
   Stroke,
   UsefulLink,
@@ -206,10 +208,40 @@ export const decideShareAccessRequest = async (
   entryId: string,
   requestId: string,
   decision: 'APPROVED' | 'DENIED',
-): Promise<ShareAccessRequest> => {
-  const response = await api.patch<ShareAccessRequest>(
+  role?: ShareAccessRole,
+): Promise<{ id: string; status: ShareAccessRequestStatus; accessRole: ShareAccessRole }> => {
+  const response = await api.patch<{ id: string; status: ShareAccessRequestStatus; accessRole: ShareAccessRole }>(
     `/notebook/entries/${entryId}/share/requests/${requestId}`,
+    { decision, role },
+  );
+  return response.data;
+};
+
+export const getChangeProposals = async (entryId: string): Promise<ChangeProposal[]> => {
+  const response = await api.get<ChangeProposal[]>(`/notebook/entries/${entryId}/share/proposals`);
+  return response.data;
+};
+
+export const decideChangeProposal = async (
+  entryId: string,
+  proposalId: string,
+  decision: 'APPROVED' | 'REJECTED',
+): Promise<{ id: string; status: 'APPROVED' | 'REJECTED' }> => {
+  const response = await api.patch<{ id: string; status: 'APPROVED' | 'REJECTED' }>(
+    `/notebook/entries/${entryId}/share/proposals/${proposalId}`,
     { decision },
+  );
+  return response.data;
+};
+
+// CO_OWNER aplica logo; EDITOR cria/substitui a sua proposta pendente.
+export const editSharedEntry = async (
+  token: string,
+  payload: { title?: string; textContent?: string; note?: string },
+): Promise<{ applied: boolean; proposalId?: string }> => {
+  const response = await api.post<{ applied: boolean; proposalId?: string }>(
+    `/notebook/shared/${token}/edit`,
+    payload,
   );
   return response.data;
 };

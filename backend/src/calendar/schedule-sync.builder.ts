@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { MINUTES_PER_DAY } from '../study-plan/study-plan.constants';
+import { COLOR_ID_BY_KIND } from './schedule-sync.constants';
 import type {
   DesiredEvent,
   ExistingSyncedEvent,
@@ -22,6 +23,9 @@ export interface SyncClassInput {
 
 export interface SyncShiftInput {
   shiftId: string;
+  // Sem local e nao recorrente = evento pontual (medico, entrevista...).
+  commitmentId: string | null;
+  isRecurring: boolean;
   date: string;
   startMinutes: number;
   endMinutes: number;
@@ -64,6 +68,9 @@ function makeEvent(
     endMinutes: end,
     contentHash: hashOf([
       fields.kind,
+      // A cor entra no hash: mudar a cor de um tipo atualiza os eventos ja
+      // criados no Google Calendar no proximo sync.
+      COLOR_ID_BY_KIND[fields.kind],
       fields.title,
       fields.date,
       start,
@@ -166,15 +173,16 @@ export function buildDesiredEvents(input: BuildInput): DesiredEvent[] {
   }
 
   for (const s of input.shifts) {
+    const isOneTimeEvent = s.commitmentId === null && !s.isRecurring;
     pushIfValid(
       events,
       makeEvent({
         sourceKey: `shift:${s.shiftId}:${s.date}`,
-        kind: 'work',
+        kind: isOneTimeEvent ? 'event' : 'work',
         date: s.date,
         startMinutes: s.startMinutes,
         endMinutes: s.endMinutes,
-        title: s.label ?? 'Work',
+        title: s.label ?? (isOneTimeEvent ? 'Event' : 'Work'),
         description: null,
         location: null,
       }),

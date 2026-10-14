@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { getSharedNotebookEntry, requestShareAccess } from '../api/notebookService';
 import { fetchCsrfToken } from '../api/userService';
 import { setCsrfToken } from '../api/csrfStore';
-import type { SharedNotebookEntry as SharedNotebookEntryData } from '../types/models';
+import type { SharedNotebookEntry as SharedNotebookEntryData, SharedRole } from '../types/models';
 import { useDrawingCanvas } from '../hooks/useDrawingCanvas';
 import { useCanvasShapes } from '../hooks/useCanvasShapes';
 import { useCanvasLinks } from '../hooks/useCanvasLinks';
@@ -12,7 +12,10 @@ import NotebookCanvas from '../components/Notebook/NotebookCanvas';
 import NotebookPhotoGrid from '../components/Notebook/entry/NotebookPhotoGrid';
 import PageLayout from '../components/Layout/PageLayout';
 import NotebookTableEditor from '../components/Notebook/NotebookTableEditor';
-import { LinkIcon, FileIcon, BookOpenIcon, ShieldIcon } from '../components/UI/Icons';
+import { LinkIcon, FileIcon, BookOpenIcon, PencilIcon, ShieldIcon } from '../components/UI/Icons';
+import Button from '../components/UI/Button';
+import SharedEntryEditForm from '../components/Notebook/SharedEntryEditForm';
+import { useI18n } from '../i18n/useI18n';
 import LoadingState from '../components/UI/LoadingState';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 
@@ -26,6 +29,8 @@ type ShareGateStatus = 'login_required' | 'not_requested' | 'pending' | 'denied'
 export default function SharedNotebookEntry() {
   const { token } = useParams<{ token: string }>();
   const [entry, setEntry] = useState<SharedNotebookEntryData | null>(null);
+  const [role, setRole] = useState<SharedRole>('VIEWER');
+  const [hasPendingProposal, setHasPendingProposal] = useState(false);
   const [gateStatus, setGateStatus] = useState<ShareGateStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -46,6 +51,8 @@ export default function SharedNotebookEntry() {
       .then((result) => {
         if (result.status === 'ok') {
           setEntry(result.entry);
+          setRole(result.role);
+          setHasPendingProposal(result.hasPendingProposal);
           setGateStatus(null);
         } else {
           setEntry(null);
@@ -124,7 +131,13 @@ export default function SharedNotebookEntry() {
 
   return (
     <PageLayout>
-      <SharedNotebookEntryView entry={entry} />
+      <SharedNotebookEntryView
+        entry={entry}
+        token={token ?? ''}
+        role={role}
+        hasPendingProposal={hasPendingProposal}
+        onChanged={load}
+      />
     </PageLayout>
   );
 }
@@ -208,7 +221,27 @@ function ShareAccessGate({
 // null, o canvas ficava preso a vazio mesmo depois dos dados chegarem.
 // Este componente só monta quando `entry` já existe, por isso o valor
 // inicial que os hooks veem já é o correto.
-function SharedNotebookEntryView({ entry }: { entry: SharedNotebookEntryData }) {
+function SharedNotebookEntryView({
+  entry,
+  token,
+  role,
+  hasPendingProposal,
+  onChanged,
+}: {
+  entry: SharedNotebookEntryData;
+  token: string;
+  role: SharedRole;
+  hasPendingProposal: boolean;
+  onChanged: () => void;
+}) {
+  const { t } = useI18n();
+  const [isEditing, setIsEditing] = useState(false);
+  const [justProposed, setJustProposed] = useState(false);
+  // O dono edita no proprio Notebook; aqui so editor e co-owner editam.
+  const canEdit = role === 'EDITOR' || role === 'CO_OWNER';
+  const isProposal = role === 'EDITOR';
+  const bannerKey =
+    role === 'CO_OWNER' ? 'sharedEdit.banner.coOwner' : role === 'EDITOR' ? 'sharedEdit.banner.editor' : null;
   const canvas = useDrawingCanvas(entry.drawingStrokes ?? []);
   const shapeLayer = useCanvasShapes(entry.canvasShapes ?? []);
   const linkLayer = useCanvasLinks(entry.canvasLinks ?? []);
@@ -223,8 +256,43 @@ function SharedNotebookEntryView({ entry }: { entry: SharedNotebookEntryData }) 
     <div>
       <div className="mx-auto max-w-3xl space-y-4">
         <div className="rounded-md border border-violet-900/50 bg-violet-950/30 px-3 py-1.5 text-center text-xs text-violet-300">
-          Shared read-only view - Productivity Maxing
+          {bannerKey ? t(bannerKey) : 'Shared read-only view - Productivity Maxing'}
         </div>
+
+        {isProposal && (hasPendingProposal || justProposed) && (
+          <p role="status" className="rounded-md border border-amber-900/40 bg-amber-950/20 px-3 py-1.5 text-center text-xs text-amber-300">
+            {t('sharedEdit.pending')}
+          </p>
+        )}
+
+        {canEdit && !isEditing && (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium"
+              onClick={() => setIsEditing(true)}
+            >
+              <PencilIcon className="h-3.5 w-3.5" />
+              {isProposal ? t('sharedEdit.suggest') : t('sharedEdit.edit')}
+            </Button>
+          </div>
+        )}
+
+        {canEdit && isEditing && (
+          <SharedEntryEditForm
+            token={token}
+            isProposal={isProposal}
+            initialTitle={entry.title}
+            initialText={entry.textContent ?? ''}
+            onCancel={() => setIsEditing(false)}
+            onDone={(applied) => {
+              setIsEditing(false);
+              if (applied) onChanged();
+              else setJustProposed(true);
+            }}
+          />
+        )}
 
         <div className="space-y-1">
           <span

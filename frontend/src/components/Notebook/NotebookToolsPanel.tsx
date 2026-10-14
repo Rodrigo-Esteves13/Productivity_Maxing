@@ -197,7 +197,7 @@ function SnippetButton({ label, title, mode, showCopied, onClick }: SnippetButto
       title={title ?? label}
       className="flex min-w-[2rem] items-center justify-center gap-1 rounded-md border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-neutral-200 transition-colors hover:border-violet-500 hover:text-white"
     >
-      {showCopied && <CheckIcon className="h-3 w-3 text-emerald-400" />}
+      {showCopied && <CheckIcon className="h-3 w-3 text-violet-400" />}
       {!showCopied && mode === 'copy' && <CopyIcon className="h-3 w-3 text-neutral-600" />}
       {label}
     </button>

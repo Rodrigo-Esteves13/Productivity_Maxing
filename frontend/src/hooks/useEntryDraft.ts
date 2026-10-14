@@ -17,8 +17,10 @@ export function useEntryDraft(entry: NotebookEntry) {
   const [canvasHeight, setCanvasHeight] = useState<number>(entry.canvasHeight ?? DEFAULT_VIEW_HEIGHT);
 
   // Trocar de entrada (outro item da lista) tem de repor o editor inteiro -
-  // sem isto os campos da entrada anterior "vazavam" para a seguinte até
-  // o utilizador tocar em cada um.
+  // sem isto os campos da entrada anterior "vazavam" para a seguinte.
+  // Depende SO do id: com auto save o servidor devolve a entrada gravada, e
+  // repor o rascunho a partir dela apagaria o que o utilizador escreveu
+  // entretanto.
   useEffect(() => {
     setTitle(entry.title);
     setEntryType(entry.entryType);
@@ -28,17 +30,8 @@ export function useEntryDraft(entry: NotebookEntry) {
     setTables(entry.tables ?? []);
     setUsefulLinks(entry.usefulLinks ?? []);
     setCanvasHeight(entry.canvasHeight ?? DEFAULT_VIEW_HEIGHT);
-  }, [
-    entry.id,
-    entry.title,
-    entry.entryType,
-    entry.classNumber,
-    entry.date,
-    entry.textContent,
-    entry.tables,
-    entry.usefulLinks,
-    entry.canvasHeight,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entry.id]);
 
   const addTable = useCallback((rows: number, cols: number) => {
     setTables((prev) => [...prev, createEmptyTable(rows, cols)]);

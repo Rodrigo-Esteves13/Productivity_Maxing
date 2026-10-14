@@ -1,19 +1,22 @@
 import { useMemo, useState } from 'react';
 import type { Area } from '../../types/models';
 import { SearchIcon, ChevronDownIcon } from '../UI/Icons';
-import ToggleChip from '../UI/ToggleChip';
+import { useI18n } from '../../i18n/useI18n';
 
 interface NotebookSubjectPickerProps {
   areas: Area[];
   selectedAreaId: string | null;
   onSelect: (area: Area) => void;
   // true só quando o backend anotou usedInPeriod (periodo concreto
-  // selecionado, não "todos os períodos") - nesse caso agrupamos; senão
-  // mostramos tudo junto, sem secções, porque a distinção não faz sentido.
+  // selecionado, não "todos os períodos") - nesse caso separamos as
+  // cadeiras do período das restantes; senão mostramos tudo junto.
   groupByPeriod: boolean;
 }
 
-function Chip({
+// Separador de cadeira: ponto na cor da cadeira + nome; o ativo ganha um
+// traco por baixo na cor da propria cadeira (como os separadores de um
+// caderno de argolas).
+function SubjectTab({
   area,
   isSelected,
   onSelect,
@@ -23,32 +26,33 @@ function Chip({
   onSelect: (area: Area) => void;
 }) {
   return (
-    <ToggleChip
-      size="sm"
-      pressed={isSelected}
+    <button
+      type="button"
+      role="tab"
+      aria-selected={isSelected}
       title={area.name}
       onClick={() => onSelect(area)}
-      className="flex max-w-full items-center gap-1.5 text-left"
+      style={isSelected ? { borderBottomColor: area.colorHex } : undefined}
+      className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-2 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 ${
+        isSelected ? 'font-medium text-white' : 'border-transparent text-neutral-400 hover:text-neutral-100'
+      }`}
     >
       <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: area.colorHex }} />
-      <span className="truncate">{area.name}</span>
-    </ToggleChip>
+      <span className="max-w-[12rem] truncate">{area.name}</span>
+    </button>
   );
 }
 
-// Grelha que envolve (wrap) em vez de uma coluna vertical única - o mesmo
-// número de cadeiras ocupa uma fração da altura, e o max-h + overflow-y
-// garante que NUNCA cresce sem fim, seja um semestre com 5 ou com 50
-// cadeiras (a barra de scroll fica interna a este bloco, nunca empurra o
-// resto da página para baixo). Nunca esconde uma cadeira por período -
-// só agrupa "Este período" das restantes, que ficam recolhidas por
-// default mas continuam pesquisáveis.
+// Uma linha de separadores com scroll horizontal (nunca cresce em altura,
+// seja um semestre com 5 ou com 50 cadeiras). As cadeiras que não são do
+// período ficam recolhidas atrás de um botão mas continuam pesquisáveis.
 export default function NotebookSubjectPicker({
   areas,
   selectedAreaId,
   onSelect,
   groupByPeriod,
 }: NotebookSubjectPickerProps) {
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [showOthers, setShowOthers] = useState(!groupByPeriod);
 
@@ -60,39 +64,33 @@ export default function NotebookSubjectPicker({
 
   const periodAreas = groupByPeriod ? filtered.filter((a) => a.usedInPeriod) : filtered;
   const otherAreas = groupByPeriod ? filtered.filter((a) => !a.usedInPeriod) : [];
-  // Pesquisar revela sempre os "outros" que fizerem match, mesmo
-  // recolhidos - não faz sentido esconder um resultado de busca.
+  // Pesquisar revela sempre os "outros" que fizerem match, mesmo recolhidos.
   const isSearching = query.trim().length > 0;
   const otherAreasVisible = showOthers || isSearching;
 
   return (
     <div className="space-y-2">
       {areas.length > 8 && (
-        <div className="relative">
+        <div className="relative max-w-xs">
           <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filter subjects..."
+            placeholder={t('notebook.subjects.filter')}
+            aria-label={t('notebook.subjects.filter')}
             className="w-full rounded-md border border-neutral-800 bg-neutral-900 py-1.5 pl-8 pr-2 text-xs text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none"
           />
         </div>
       )}
 
       {filtered.length === 0 ? (
-        <p className="text-xs text-neutral-500">No subjects match "{query}".</p>
-      ) : !groupByPeriod ? (
-        <div className="flex max-h-[60vh] flex-wrap content-start gap-1.5 overflow-y-auto pr-1">
-          {filtered.map((area) => (
-            <Chip key={area.id} area={area} isSelected={area.id === selectedAreaId} onSelect={onSelect} />
-          ))}
-        </div>
+        <p className="text-xs text-neutral-500">{t('notebook.subjects.noMatch', { query })}</p>
       ) : (
-        <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+        <>
           {periodAreas.length > 0 && (
-            <div className="flex flex-wrap content-start gap-1.5">
+            <div role="tablist" className="flex overflow-x-auto border-b border-neutral-800">
               {periodAreas.map((area) => (
-                <Chip key={area.id} area={area} isSelected={area.id === selectedAreaId} onSelect={onSelect} />
+                <SubjectTab key={area.id} area={area} isSelected={area.id === selectedAreaId} onSelect={onSelect} />
               ))}
             </div>
           )}
@@ -103,24 +101,27 @@ export default function NotebookSubjectPicker({
                 <button
                   type="button"
                   onClick={() => setShowOthers((v) => !v)}
-                  className="mb-1.5 flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-300"
+                  aria-expanded={otherAreasVisible}
+                  className="mb-1 flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-300"
                 >
                   <ChevronDownIcon
                     className={`h-3.5 w-3.5 transition-transform ${otherAreasVisible ? '' : '-rotate-90'}`}
                   />
-                  {otherAreasVisible ? 'Other subjects' : `${otherAreas.length} other subjects`}
+                  {otherAreasVisible
+                    ? t('notebook.subjects.other')
+                    : t('notebook.subjects.otherCount', { count: otherAreas.length })}
                 </button>
               )}
               {otherAreasVisible && (
-                <div className="flex flex-wrap content-start gap-1.5">
+                <div role="tablist" className="flex max-h-40 flex-wrap overflow-y-auto">
                   {otherAreas.map((area) => (
-                    <Chip key={area.id} area={area} isSelected={area.id === selectedAreaId} onSelect={onSelect} />
+                    <SubjectTab key={area.id} area={area} isSelected={area.id === selectedAreaId} onSelect={onSelect} />
                   ))}
                 </div>
               )}
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

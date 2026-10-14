@@ -1,24 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
-import type { NotebookEntry } from '../../types/models';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ChangeProposalFields, NotebookEntry } from '../../types/models';
 import { useDrawingCanvas } from '../../hooks/useDrawingCanvas';
 import { useCanvasShapes } from '../../hooks/useCanvasShapes';
 import { useCanvasLinks } from '../../hooks/useCanvasLinks';
 import { useCanvasTexts } from '../../hooks/useCanvasTexts';
 import { useTextareaInsertion } from '../../hooks/useTextareaInsertion';
 import { useEntryDraft } from '../../hooks/useEntryDraft';
-import { useEntrySave } from '../../hooks/useEntrySave';
+import { useEntryAutosave } from '../../hooks/useEntryAutosave';
 import { useConfirmDelete } from '../../hooks/useConfirmDelete';
 import { useEntryShare } from '../../hooks/useEntryShare';
 import type { UseEntryShareResult } from '../../hooks/useEntryShare';
 import DeleteEntryModal from './DeleteEntryModal';
 import NotebookEntryShare from './NotebookEntryShare';
-import EntryHeader from './entry/EntryHeader';
+import EntrySheet from './entry/EntrySheet';
+import EntryToolbar from './entry/EntryToolbar';
+import EntryTitle from './entry/EntryTitle';
 import WhiteboardSection from './entry/WhiteboardSection';
-import EntryMetaBar from './entry/EntryMetaBar';
 import EntryNotesSection from './entry/EntryNotesSection';
 import UsefulLinksSection from './entry/UsefulLinksSection';
 import { AttachmentsSection, PhotosSection } from './entry/EntryFilesSection';
-import EntrySaveBar from './entry/EntrySaveBar';
 import { MAX_TEXT_CONTENT_LENGTH } from './entry/notebookEntryConfig';
 import type { NotebookEntrySavePayload } from './entry/entryTypes';
 
@@ -29,10 +29,10 @@ interface NotebookEntryEditorProps {
   // usado como placeholder/sugestão quando o campo está vazio, nunca
   // força o valor.
   suggestedClassNumber: number;
-  // True só na entrada acabada de criar (Notebook.tsx compara o id com o
-  // que guardou no momento da criação) - nada para estragar, por isso
+  // True só na entrada acabada de criar - nada para estragar, por isso
   // abre logo em edição em vez do modo leitura por omissão.
   startInEditMode?: boolean;
+  // Chamado pelo auto save (e por "Done"/Ctrl+S). Nunca fecha a edição.
   onSave: (payload: NotebookEntrySavePayload) => Promise<void>;
   onDelete: () => Promise<void>;
   onUploadPhoto: (file: File) => Promise<void>;
@@ -41,13 +41,10 @@ interface NotebookEntryEditorProps {
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
 }
 
-// Wrapper fino: só gere se estamos em modo leitura ou edição. Abre
-// sempre em leitura (medo de mexer sem querer numa entrada só ao
-// consultá-la) - "Edit" muda para edição; "Cancel" volta a leitura E
-// força o formulário a remontar (key={resetToken}), o que reinicia TODO
-// o estado interno (título, texto, tabelas, canvas, formas, ligações) a
-// partir de `entry` outra vez - descarta mesmo tudo o que não foi
-// guardado, não só os campos simples.
+// Wrapper fino: só gere leitura vs edição. Abre sempre em leitura (medo de
+// mexer sem querer numa entrada só ao consultá-la). Em edição tudo é
+// gravado sozinho (useEntryAutosave); "Done" grava o que falta e volta à
+// leitura.
 export default function NotebookEntryEditor({
   entry,
   suggestedClassNumber,
@@ -56,27 +53,23 @@ export default function NotebookEntryEditor({
   ...handlers
 }: NotebookEntryEditorProps) {
   const [isEditing, setIsEditing] = useState(startInEditMode);
-  const [resetToken, setResetToken] = useState(0);
-  // Fora do formulario de proposito: o "Cancel" remonta o formulario (key),
-  // e o painel Share nao pode fechar nem perder o link por causa disso.
-  const share = useEntryShare(entry.id);
+  // Uma proposta de um editor aprovada muda titulo/notas no servidor: o
+  // formulario recebe-as aqui para o rascunho (e o auto save) as manter.
+  const [applied, setApplied] = useState<{ seq: number; fields: ChangeProposalFields } | null>(null);
+  const share = useEntryShare(entry.id, (fields) =>
+    setApplied((prev) => ({ seq: (prev?.seq ?? 0) + 1, fields })),
+  );
 
   return (
     <NotebookEntryEditorForm
-      key={resetToken}
       entry={entry}
       share={share}
+      appliedChanges={applied}
       suggestedClassNumber={suggestedClassNumber}
       isEditing={isEditing}
       onRequestEdit={() => setIsEditing(true)}
-      onCancelEdit={() => {
-        setIsEditing(false);
-        setResetToken((t) => t + 1);
-      }}
-      onSave={async (payload) => {
-        await onSave(payload);
-        setIsEditing(false);
-      }}
+      onFinishEdit={() => setIsEditing(false)}
+      onSave={onSave}
       {...handlers}
     />
   );
@@ -84,18 +77,20 @@ export default function NotebookEntryEditor({
 
 interface NotebookEntryEditorFormProps extends Omit<NotebookEntryEditorProps, 'startInEditMode'> {
   share: UseEntryShareResult;
+  appliedChanges: { seq: number; fields: ChangeProposalFields } | null;
   isEditing: boolean;
   onRequestEdit: () => void;
-  onCancelEdit: () => void;
+  onFinishEdit: () => void;
 }
 
 function NotebookEntryEditorForm({
   entry,
   share,
+  appliedChanges,
   suggestedClassNumber,
   isEditing,
   onRequestEdit,
-  onCancelEdit,
+  onFinishEdit,
   onSave,
   onDelete,
   onUploadPhoto,
@@ -109,12 +104,28 @@ function NotebookEntryEditorForm({
   const linkLayer = useCanvasLinks(entry.canvasLinks ?? []);
   const textLayer = useCanvasTexts(entry.canvasTexts ?? []);
   const { textareaRef, insertAtCursor } = useTextareaInsertion(draft.textContent, draft.setTextContent);
-  const { isSaving, saveError, save } = useEntrySave(onSave, draft.textContent.length);
   const deletion = useConfirmDelete(onDelete);
 
-  const handleSave = () => {
+  // Aplica ao rascunho o que uma proposta aprovada mudou no servidor.
+  useEffect(() => {
+    if (!appliedChanges) return;
+    const { title, textContent, usefulLinks } = appliedChanges.fields;
+    if (title !== undefined) draft.setTitle(title);
+    if (textContent !== undefined) draft.setTextContent(textContent);
+    if (usefulLinks !== undefined) draft.setUsefulLinks(usefulLinks);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- so reage a uma nova proposta aplicada (seq)
+  }, [appliedChanges?.seq]);
+
+  // Data original so serve de fallback se o campo da data ficar invalido;
+  // em ref para a resposta do servidor nao refazer o payload.
+  const fallbackDateRef = useRef(entry.date);
+
+  const payload = useMemo<NotebookEntrySavePayload>(() => {
     const parsedClassNumber = draft.classNumber.trim() ? Number(draft.classNumber) : undefined;
-    return save({
+    // Meio-dia local evita a data saltar um dia por causa do arredondamento
+    // UTC - o utilizador escolheu um DIA, não uma hora.
+    const parsedDate = new Date(`${draft.dateValue}T12:00:00`);
+    return {
       title: draft.title,
       entryType: draft.entryType,
       classNumber: draft.entryType === 'CLASS' ? parsedClassNumber : undefined,
@@ -126,25 +137,46 @@ function NotebookEntryEditorForm({
       canvasTexts: textLayer.texts,
       usefulLinks: draft.usefulLinks,
       canvasHeight: draft.canvasHeight,
-      // Meio-dia local evita a data saltar um dia por causa do
-      // arredondamento UTC - o utilizador escolheu um DIA, não uma hora.
-      date: new Date(`${draft.dateValue}T12:00:00`).toISOString(),
-    });
+      date: Number.isNaN(parsedDate.getTime()) ? fallbackDateRef.current : parsedDate.toISOString(),
+    };
+  }, [
+    draft.title,
+    draft.entryType,
+    draft.classNumber,
+    draft.textContent,
+    draft.tables,
+    draft.usefulLinks,
+    draft.canvasHeight,
+    draft.dateValue,
+    canvas.strokes,
+    shapeLayer.shapes,
+    linkLayer.links,
+    textLayer.texts,
+  ]);
+
+  const autosave = useEntryAutosave({
+    enabled: isEditing,
+    payload,
+    blocked: draft.textContent.length > MAX_TEXT_CONTENT_LENGTH,
+    textLength: draft.textContent.length,
+    onSave,
+  });
+
+  const handleDone = async () => {
+    const ok = await autosave.flush();
+    if (ok) onFinishEdit();
   };
 
-  // Ctrl/Cmd+S grava enquanto se edita (sem largar o teclado). A ref evita
-  // re-registar o listener a cada tecla - guarda sempre o handleSave mais
-  // recente.
-  const saveRef = useRef(handleSave);
-  saveRef.current = handleSave;
-  const canSaveRef = useRef(true);
-  canSaveRef.current = !isSaving && draft.textContent.length <= MAX_TEXT_CONTENT_LENGTH;
+  // Ctrl/Cmd+S grava já (sem esperar pelo auto save). A ref evita
+  // re-registar o listener a cada render.
+  const flushRef = useRef(autosave.flush);
+  flushRef.current = autosave.flush;
   useEffect(() => {
     if (!isEditing) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        if (canSaveRef.current) void saveRef.current();
+        void flushRef.current();
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -153,28 +185,32 @@ function NotebookEntryEditorForm({
 
   return (
     <>
-      <div className="space-y-4">
-        <EntryHeader
-          title={draft.title}
-          isEditing={isEditing}
-          onTitleChange={draft.setTitle}
-          onRequestEdit={onRequestEdit}
-          onCancelEdit={onCancelEdit}
-          onRequestDelete={deletion.request}
-        />
-
-        <NotebookEntryShare share={share} />
-
-        <EntryMetaBar
-          isEditing={isEditing}
-          entryType={draft.entryType}
-          classNumber={draft.classNumber}
-          dateValue={draft.dateValue}
-          suggestedClassNumber={suggestedClassNumber}
-          onEntryTypeChange={draft.setEntryType}
-          onClassNumberChange={draft.setClassNumber}
-          onDateChange={draft.setDateValue}
-        />
+      <EntrySheet
+        toolbar={
+          <EntryToolbar
+            isEditing={isEditing}
+            entryType={draft.entryType}
+            classNumber={draft.classNumber}
+            dateValue={draft.dateValue}
+            suggestedClassNumber={suggestedClassNumber}
+            autosaveStatus={autosave.status}
+            autosaveSavedAt={autosave.savedAt}
+            autosaveError={autosave.error}
+            isDoneDisabled={autosave.status === 'saving'}
+            onEntryTypeChange={draft.setEntryType}
+            onClassNumberChange={draft.setClassNumber}
+            onDateChange={draft.setDateValue}
+            onRequestEdit={onRequestEdit}
+            onDone={() => void handleDone()}
+            onRetry={() => void autosave.flush()}
+            onRequestDelete={deletion.request}
+          />
+        }
+      >
+        <div className="space-y-3">
+          <EntryTitle title={draft.title} isEditing={isEditing} onTitleChange={draft.setTitle} />
+          <NotebookEntryShare share={share} currentTitle={draft.title} currentText={draft.textContent} />
+        </div>
 
         <EntryNotesSection
           isEditing={isEditing}
@@ -207,16 +243,7 @@ function NotebookEntryEditorForm({
         />
 
         <PhotosSection isEditing={isEditing} photos={entry.photos} onUpload={onUploadPhoto} onDelete={onDeletePhoto} />
-
-        {isEditing && (
-          <EntrySaveBar
-            error={saveError}
-            isSaving={isSaving}
-            isDisabled={draft.textContent.length > MAX_TEXT_CONTENT_LENGTH}
-            onSave={() => void handleSave()}
-          />
-        )}
-      </div>
+      </EntrySheet>
 
       {deletion.isConfirming && (
         <DeleteEntryModal

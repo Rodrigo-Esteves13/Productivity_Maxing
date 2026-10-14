@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
-import ActionButton from '../components/UI/ActionButton';
+import Button from '../components/UI/Button';
+import EmptyState from '../components/UI/EmptyState';
+import { useI18n } from '../i18n/useI18n';
 import LoadingState from '../components/UI/LoadingState';
 import ErrorState from '../components/UI/ErrorState';
 import NotebookSubjectPicker from '../components/Notebook/NotebookSubjectPicker';
@@ -21,14 +23,14 @@ import {
   searchNotebook,
 } from '../api/notebookService';
 import useDocumentTitle from '../hooks/useDocumentTitle';
-import { BookOpenIcon, SearchIcon, XIcon } from '../components/UI/Icons';
+import { PlusIcon, SearchIcon, XIcon } from '../components/UI/Icons';
 import { consumePendingNotebookEntry } from '../lib/pendingNotebookEntry';
 import type { NotebookSearchResult } from '../types/models';
 
 // Título nunca pode ficar vazio (o backend exige @IsNotEmpty) - sem aula
 // detetada, usa a data por extenso em vez de deixar em branco.
-function buildFallbackTitle(): string {
-  const label = new Date().toLocaleDateString('pt-PT', {
+function buildFallbackTitle(locale: string): string {
+  const label = new Date().toLocaleDateString(locale, {
     weekday: 'long',
     day: '2-digit',
     month: '2-digit',
@@ -36,11 +38,30 @@ function buildFallbackTitle(): string {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
+const LAST_AREA_KEY = 'pmaxing-notebook-area';
+
+function readLastAreaId(): string | null {
+  try {
+    return window.localStorage.getItem(LAST_AREA_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeLastAreaId(id: string): void {
+  try {
+    window.localStorage.setItem(LAST_AREA_KEY, id);
+  } catch {
+    /* sem storage (modo privado): so perde o atalho */
+  }
+}
+
 // Debounce simples da pesquisa - evita um pedido por tecla premida.
 const SEARCH_DEBOUNCE_MS = 300;
 
 export default function Notebook() {
-  useDocumentTitle('Notebook');
+  const { t, lang } = useI18n();
+  useDocumentTitle(t('notebook.title'));
   const { activePeriod, isViewingAllPeriods, isViewingAllPrograms } = useAcademic();
   // Mesma regra que useTasksPage.ts usa para as tasks: 'all' quando o
   // utilizador está deliberadamente a ver tudo, senão o período ativo.
@@ -49,9 +70,13 @@ export default function Notebook() {
 
   const { areas, isLoading: areasLoading, error: areasError } = useNotebookAreas(periodParam);
   // ?area=<id> abre logo o caderno dessa cadeira (atalho do Focus).
+  // Sem ?area, abre a ultima cadeira que o utilizador estava a ver.
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(
-    () => new URLSearchParams(window.location.search).get('area'),
+    () => new URLSearchParams(window.location.search).get('area') ?? readLastAreaId(),
   );
+  useEffect(() => {
+    if (selectedAreaId) writeLastAreaId(selectedAreaId);
+  }, [selectedAreaId]);
   const {
     entries,
     isLoading: entriesLoading,
@@ -101,11 +126,11 @@ export default function Notebook() {
         classOccurrenceId: detection.occurrence?.id,
         entryType: isClassNow ? 'CLASS' : 'NOTE',
         classNumber: isClassNow ? nextClassNumber : undefined,
-        title: buildFallbackTitle(),
+        title: buildFallbackTitle(lang),
         date: new Date().toISOString(),
       }).then((created) => setJustCreatedEntryId(created.id));
     } catch {
-      setCreateError('Could not create the entry. Please try again.');
+      setCreateError(t('notebook.createError'));
     } finally {
       setIsCreating(false);
     }
@@ -162,17 +187,15 @@ export default function Notebook() {
 
   return (
     <PageLayout>
-      <PageHeader
-        title="Notebook"
-        description="Notes, hand-drawn sketches and photos for each subject, in one place."
-      />
+      <PageHeader title={t('notebook.title')} description={t('notebook.description')} />
 
       <div className="relative mb-6">
         <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
         <input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by subject, date, or content..."
+          placeholder={t('notebook.search.placeholder')}
+          aria-label={t('notebook.search.placeholder')}
           className="w-full rounded-lg border border-neutral-800 bg-neutral-900 py-2.5 pl-10 pr-9 text-sm text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none"
         />
         {isSearchActive && (
@@ -180,7 +203,7 @@ export default function Notebook() {
             type="button"
             onClick={() => setSearchQuery('')}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300"
-            aria-label="Clear search"
+            aria-label={t('notebook.search.clear')}
           >
             <XIcon className="h-4 w-4" />
           </button>
@@ -196,52 +219,63 @@ export default function Notebook() {
         />
       ) : (
         <>
-          <div className="space-y-2">
-            <span className="block text-xs font-medium uppercase tracking-wide text-neutral-500">
-              Subjects
-            </span>
-            {areasLoading ? (
-              <LoadingState message="Loading subjects..." />
-            ) : areasError ? (
-              <ErrorState message={areasError} />
-            ) : areas.length === 0 ? (
-              <p className="text-sm text-neutral-500">No areas yet. Create one first in Areas.</p>
-            ) : (
-              <NotebookSubjectPicker
-                areas={areas}
-                selectedAreaId={selectedAreaId}
-                groupByPeriod={groupByPeriod}
-                onSelect={(area) => {
-                  setSelectedAreaId(area.id);
-                  selectEntry(null);
-                }}
-              />
-            )}
-          </div>
-
-          <div className="my-6 border-t border-neutral-900" />
+          {areasLoading ? (
+            <LoadingState message={t('notebook.subjects.loading')} />
+          ) : areasError ? (
+            <ErrorState message={areasError} />
+          ) : areas.length === 0 ? (
+            <p className="text-sm text-neutral-500">{t('notebook.subjects.none')}</p>
+          ) : (
+            <NotebookSubjectPicker
+              areas={areas}
+              selectedAreaId={selectedAreaId}
+              groupByPeriod={groupByPeriod}
+              onSelect={(area) => {
+                setSelectedAreaId(area.id);
+                selectEntry(null);
+              }}
+            />
+          )}
 
           {!selectedArea ? (
-            <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-neutral-800 text-neutral-500">
-              <BookOpenIcon className="h-8 w-8 opacity-50" />
-              <p className="text-sm">Pick a subject above to open its notebook.</p>
+            <div className="mt-6">
+              <EmptyState message={t('notebook.pick')} />
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <NotebookScheduleLink areaId={selectedArea.id} />
+            <div className="mt-6 space-y-5">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                  <h2 className="flex items-center gap-2.5 font-serif text-2xl font-semibold text-white">
+                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: selectedArea.colorHex }} />
+                    <span className="truncate">{selectedArea.name}</span>
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    {!entriesLoading && (
+                      <span className="text-xs text-neutral-500">
+                        {t('notebook.entries.count', { count: entries.length })}
+                      </span>
+                    )}
+                    <NotebookScheduleLink areaId={selectedArea.id} />
+                  </div>
+                </div>
                 <div className="flex items-center gap-3">
                   {createError && <span className="text-xs text-red-400">{createError}</span>}
-                  <ActionButton onClick={handleNewEntry} disabled={isCreating}>
-                    {isCreating ? 'Checking schedule...' : 'New entry'}
-                  </ActionButton>
+                  <Button
+                    type="button"
+                    onClick={handleNewEntry}
+                    disabled={isCreating}
+                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium disabled:opacity-50"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    {isCreating ? t('notebook.checkingSchedule') : t('notebook.newEntry')}
+                  </Button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                <div className="md:sticky md:top-4 md:col-span-1 md:max-h-[calc(100vh-2rem)] md:self-start md:overflow-y-auto md:pr-1">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-[16rem_minmax(0,1fr)] lg:grid-cols-[18rem_minmax(0,1fr)]">
+                <div className="md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:self-start md:overflow-y-auto md:pr-1">
                   {entriesLoading ? (
-                    <LoadingState message="Loading entries..." />
+                    <LoadingState message={t('notebook.entries.loading')} />
                   ) : (
                     <NotebookEntryList
                       entries={entries}
@@ -254,7 +288,7 @@ export default function Notebook() {
                   )}
                 </div>
 
-                <div className="md:col-span-2">
+                <div className="min-w-0">
                   {selectedEntry ? (
                     <NotebookEntryEditor
                       key={selectedEntry.id}
@@ -308,9 +342,7 @@ export default function Notebook() {
                       }}
                     />
                   ) : (
-                    <p className="rounded-lg border border-dashed border-neutral-800 p-6 text-center text-sm text-neutral-500">
-                      Select an entry on the left, or start a new one.
-                    </p>
+                    <EmptyState message={t('notebook.entries.select')} />
                   )}
                 </div>
               </div>

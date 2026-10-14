@@ -4,10 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  MAX_SUBTASKS_PER_TASK,
-  UpdateSubtaskDto,
-} from './dto/subtask.dto';
+import { MAX_SUBTASKS_PER_TASK, UpdateSubtaskDto } from './dto/subtask.dto';
 
 // Checklist leve dentro de uma Task (ver model Subtask no schema). Todas as
 // operações validam primeiro que a task é do utilizador (defesa contra
@@ -82,11 +79,15 @@ export class SubtasksService {
     });
     if (!existing) throw new NotFoundException('Subtask not found.');
 
-    const data: { title?: string; isDone?: boolean; completedAt?: Date | null } =
-      {};
+    const data: {
+      title?: string;
+      isDone?: boolean;
+      completedAt?: Date | null;
+    } = {};
     if (dto.title !== undefined) {
       const title = dto.title.trim();
-      if (!title) throw new BadRequestException('Subtask title cannot be empty.');
+      if (!title)
+        throw new BadRequestException('Subtask title cannot be empty.');
       data.title = title;
     }
     if (dto.isDone !== undefined && dto.isDone !== existing.isDone) {

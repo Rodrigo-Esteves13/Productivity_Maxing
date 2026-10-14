@@ -40,7 +40,10 @@ describe('ics-feed.builder', () => {
         },
         { uid: 'task:2@pmaxing', title: 'Exame SO', allDayDate: '2026-12-12' },
       ],
-      { calendarName: 'Productivity Maxing', now: new Date('2026-10-10T10:00:00Z') },
+      {
+        calendarName: 'Productivity Maxing',
+        now: new Date('2026-10-10T10:00:00Z'),
+      },
     );
     expect(ics.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);
     expect(ics.endsWith('END:VCALENDAR\r\n')).toBe(true);

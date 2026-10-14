@@ -108,7 +108,14 @@ const CLASS_MATCH_MARGIN_MINUTES = 15;
 // isso é um erro genuíno de "este link não existe", não um dos estados
 // normais de uma partilha AUTHORIZED.
 export type SharedEntryResult =
-  | { status: 'ok'; entry: Record<string, unknown> }
+  | {
+      status: 'ok';
+      entry: Record<string, unknown>;
+      // Papel de quem abre: so o OWNER/CO_OWNER edita direto, o EDITOR
+      // propoe alteracoes (ver NotebookCollabService).
+      role: 'OWNER' | 'CO_OWNER' | 'EDITOR' | 'VIEWER';
+      hasPendingProposal: boolean;
+    }
   | { status: 'login_required' }
   | { status: 'not_requested' }
   | { status: 'pending' }
@@ -472,6 +479,7 @@ export class NotebookService {
       select: {
         id: true,
         status: true,
+        accessRole: true,
         createdAt: true,
         decidedAt: true,
         requestingUser: {
@@ -492,6 +500,7 @@ export class NotebookService {
     entryId: string,
     requestId: string,
     decision: 'APPROVED' | 'DENIED',
+    role?: 'VIEWER' | 'EDITOR' | 'CO_OWNER',
   ) {
     await this.findOwnedEntryOrThrow(userId, entryId);
     const request = await this.prisma.notebookShareAccessRequest.findFirst({
@@ -503,9 +512,19 @@ export class NotebookService {
 
     const updated = await this.prisma.notebookShareAccessRequest.update({
       where: { id: requestId },
-      data: { status: decision, decidedAt: new Date() },
+      data: {
+        status: decision,
+        decidedAt: new Date(),
+        // Sem `role` mantem o papel atual (por omissao VIEWER); negar nunca
+        // muda o papel.
+        ...(decision === 'APPROVED' && role ? { accessRole: role } : {}),
+      },
     });
-    return { id: updated.id, status: updated.status };
+    return {
+      id: updated.id,
+      status: updated.status,
+      accessRole: updated.accessRole,
+    };
   }
 
   // Público - SEM JwtAuthGuard de classe (ver NotebookShareController),
@@ -534,6 +553,9 @@ export class NotebookService {
     if (!share)
       throw new NotFoundException('This share link is invalid or was removed.');
 
+    let role: 'OWNER' | 'CO_OWNER' | 'EDITOR' | 'VIEWER' =
+      share.createdByUserId === requestingUserId ? 'OWNER' : 'VIEWER';
+
     if (
       share.visibility === 'AUTHORIZED' &&
       share.createdByUserId !== requestingUserId
@@ -552,13 +574,27 @@ export class NotebookService {
       if (request.status === 'PENDING') return { status: 'pending' };
       if (request.status === 'DENIED') return { status: 'denied' };
       // status === 'APPROVED' falls through to the same rendering as a
-      // PUBLIC share, below.
+      // PUBLIC share, below - mas com o papel que o dono deu.
+      role = request.accessRole;
     }
+
+    const hasPendingProposal =
+      role === 'EDITOR' && requestingUserId
+        ? (await this.prisma.notebookChangeProposal.count({
+            where: {
+              notebookEntryId: share.notebookEntryId,
+              proposedByUserId: requestingUserId,
+              status: 'PENDING',
+            },
+          })) > 0
+        : false;
 
     const { notebookEntry: entry } = share;
     const withUrls = await this.attachSignedUrls(entry);
     return {
       status: 'ok',
+      role,
+      hasPendingProposal,
       entry: {
         title: withUrls.title,
         entryType: withUrls.entryType,

@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import type { RefObject } from 'react';
 import type { NotebookTable } from '../../../types/models';
-import { TableIcon } from '../../UI/Icons';
-import SectionLabel from '../../UI/SectionLabel';
+import { TableIcon, TypeIcon, PencilIcon } from '../../UI/Icons';
+import ToggleChip from '../../UI/ToggleChip';
+import { useI18n } from '../../../i18n/useI18n';
 import NotebookToolsPanel from '../NotebookToolsPanel';
 import NotebookTableEditor from '../NotebookTableEditor';
+import CaseTransformBar from '../CaseTransformBar';
+import EntrySectionHeader from './EntrySectionHeader';
 import { MAX_TEXT_CONTENT_LENGTH } from './notebookEntryConfig';
 
 interface EntryNotesSectionProps {
@@ -18,7 +21,9 @@ interface EntryNotesSectionProps {
   onAddTable: (rows: number, cols: number) => void;
 }
 
-// Notas em texto + painel de tabelas/simbolos + tabelas da entrada.
+// Notas em texto + ferramentas (tabelas/simbolos, maiusculas/minusculas) +
+// tabelas da entrada. O texto lido e escrito na mesma serifa, para a folha
+// parecer papel e nao um formulario.
 export default function EntryNotesSection({
   isEditing,
   textContent,
@@ -29,41 +34,53 @@ export default function EntryNotesSection({
   onTablesChange,
   onAddTable,
 }: EntryNotesSectionProps) {
+  const { t } = useI18n();
   const [isToolsPanelOpen, setIsToolsPanelOpen] = useState(false);
+  const [isCaseBarOpen, setIsCaseBarOpen] = useState(false);
   const isOverLimit = textContent.length > MAX_TEXT_CONTENT_LENGTH;
 
   return (
-    <div>
-      <div className="mb-1.5 flex items-center justify-between">
-        <SectionLabel>Notes</SectionLabel>
-        {isEditing && (
-          <button
-            type="button"
-            onClick={() => setIsToolsPanelOpen((prev) => !prev)}
-            aria-pressed={isToolsPanelOpen}
-            className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
-              isToolsPanelOpen ? 'bg-violet-600 text-white' : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-            }`}
-          >
-            <TableIcon className="h-3.5 w-3.5" />
-            Tables &amp; Symbols
-          </button>
-        )}
-      </div>
+    <section>
+      <EntrySectionHeader
+        icon={PencilIcon}
+        title={t('notebook.section.notes')}
+        action={
+          isEditing && (
+            <div className="flex items-center gap-1.5">
+              <ToggleChip size="sm" pressed={isCaseBarOpen} onClick={() => setIsCaseBarOpen((prev) => !prev)} className="flex items-center gap-1.5 text-xs">
+                <TypeIcon className="h-3.5 w-3.5" />
+                {t('notebook.case.button')}
+              </ToggleChip>
+              <ToggleChip size="sm" pressed={isToolsPanelOpen} onClick={() => setIsToolsPanelOpen((prev) => !prev)} className="flex items-center gap-1.5 text-xs">
+                <TableIcon className="h-3.5 w-3.5" />
+                {t('notebook.tools.tablesSymbols')}
+              </ToggleChip>
+            </div>
+          )
+        }
+      />
+
+      {isEditing && isCaseBarOpen && (
+        <div className="mb-3">
+          <CaseTransformBar textareaRef={textareaRef} textContent={textContent} onTextChange={onTextChange} />
+        </div>
+      )}
 
       {isEditing ? (
         <div className={`grid gap-3 ${isToolsPanelOpen ? 'md:grid-cols-[1fr_18rem]' : 'grid-cols-1'}`}>
-          <textarea
-            ref={textareaRef}
-            value={textContent}
-            onChange={(e) => onTextChange(e.target.value)}
-            placeholder="Write your notes here..."
-            rows={5}
-            className="w-full resize-y rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none"
-          />
-          <p className={`-mt-1 text-right text-[11px] ${isOverLimit ? 'text-red-400' : 'text-neutral-600'}`}>
-            {textContent.length.toLocaleString()} / {MAX_TEXT_CONTENT_LENGTH.toLocaleString()}
-          </p>
+          <div>
+            <textarea
+              ref={textareaRef}
+              value={textContent}
+              onChange={(e) => onTextChange(e.target.value)}
+              placeholder={t('notebook.notes.placeholder')}
+              rows={8}
+              className="w-full resize-y rounded-lg border border-neutral-800 bg-neutral-950/50 p-3 font-serif text-base leading-7 text-neutral-100 placeholder-neutral-700 focus:border-violet-500 focus:outline-none"
+            />
+            <p className={`mt-1 text-right text-[11px] ${isOverLimit ? 'text-red-400' : 'text-neutral-600'}`}>
+              {textContent.length.toLocaleString()} / {MAX_TEXT_CONTENT_LENGTH.toLocaleString()}
+            </p>
+          </div>
 
           {isToolsPanelOpen && (
             <div className="h-64 md:h-auto">
@@ -76,24 +93,24 @@ export default function EntryNotesSection({
           )}
         </div>
       ) : (
-        <div className="whitespace-pre-wrap break-words rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-200">
-          {textContent || <span className="text-neutral-600">No notes.</span>}
+        <div className="max-w-prose whitespace-pre-wrap break-words font-serif text-base leading-7 text-neutral-200">
+          {textContent || <span className="font-sans text-sm text-neutral-600">{t('notebook.notes.empty')}</span>}
         </div>
       )}
 
       {tables.length > 0 && (
-        <div className="mt-3 space-y-3">
+        <div className="mt-4 space-y-3">
           {tables.map((table) => (
             <NotebookTableEditor
               key={table.id}
               table={table}
               readOnly={!isEditing}
-              onChange={(next) => onTablesChange((prev) => prev.map((t) => (t.id === next.id ? next : t)))}
-              onDelete={() => onTablesChange((prev) => prev.filter((t) => t.id !== table.id))}
+              onChange={(next) => onTablesChange((prev) => prev.map((tb) => (tb.id === next.id ? next : tb)))}
+              onDelete={() => onTablesChange((prev) => prev.filter((tb) => tb.id !== table.id))}
             />
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }

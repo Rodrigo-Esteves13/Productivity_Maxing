@@ -14,8 +14,7 @@ export const GOOGLE_CALENDAR_APP_SCOPE =
   'https://www.googleapis.com/auth/calendar.app.created';
 
 // Base da Calendar API v3 (calendarios e eventos).
-export const GOOGLE_CALENDAR_API_URL =
-  'https://www.googleapis.com/calendar/v3';
+export const GOOGLE_CALENDAR_API_URL = 'https://www.googleapis.com/calendar/v3';
 
 // Nome do calendario secundario que a app cria na conta Google do utilizador.
 export const GOOGLE_CALENDAR_NAME = 'Productivity Maxing';

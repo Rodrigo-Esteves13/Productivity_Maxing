@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { UsefulLink } from '../../../types/models';
 import { LinkIcon, PlusIcon } from '../../UI/Icons';
-import SectionLabel from '../../UI/SectionLabel';
+import { useI18n } from '../../../i18n/useI18n';
+import EntrySectionHeader from './EntrySectionHeader';
 import EntryListRow from './EntryListRow';
 import { SMALL_INPUT_CLASS, withProtocol } from './notebookEntryConfig';
 
@@ -14,6 +15,7 @@ interface UsefulLinksSectionProps {
 }
 
 export default function UsefulLinksSection({ isEditing, links, onChange }: UsefulLinksSectionProps) {
+  const { t } = useI18n();
   const [newLabel, setNewLabel] = useState('');
   const [newUrl, setNewUrl] = useState('');
 
@@ -27,18 +29,18 @@ export default function UsefulLinksSection({ isEditing, links, onChange }: Usefu
   };
 
   return (
-    <div>
-      <SectionLabel className="mb-1.5 block">Useful Links</SectionLabel>
+    <section>
+      <EntrySectionHeader icon={LinkIcon} title={t('notebook.section.links')} />
 
       {links.length === 0 && !isEditing ? (
-        <p className="text-xs text-neutral-600">No links yet.</p>
+        <p className="text-xs text-neutral-600">{t('notebook.links.none')}</p>
       ) : (
         <div className="space-y-1.5">
           {links.map((link) => (
             <EntryListRow
               key={link.id}
               icon={<LinkIcon className="h-3.5 w-3.5" />}
-              removeLabel={isEditing ? 'Remove link' : undefined}
+              removeLabel={isEditing ? t('notebook.links.remove') : undefined}
               onRemove={isEditing ? () => onChange((prev) => prev.filter((l) => l.id !== link.id)) : undefined}
             >
               <a
@@ -60,7 +62,7 @@ export default function UsefulLinksSection({ isEditing, links, onChange }: Usefu
           <input
             value={newLabel}
             onChange={(e) => setNewLabel(e.target.value)}
-            placeholder="Label (optional)"
+            placeholder={t('notebook.links.label')}
             maxLength={LABEL_MAX_LENGTH}
             className={`w-full sm:w-36 ${SMALL_INPUT_CLASS}`}
           />
@@ -82,10 +84,10 @@ export default function UsefulLinksSection({ isEditing, links, onChange }: Usefu
             className="flex items-center gap-1 rounded-md bg-neutral-800 px-2 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700"
           >
             <PlusIcon className="h-3 w-3" />
-            Add
+            {t('notebook.links.add')}
           </button>
         </div>
       )}
-    </div>
+    </section>
   );
 }
