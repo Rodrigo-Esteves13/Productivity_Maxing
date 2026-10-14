@@ -12,6 +12,7 @@ import {
   Calendar,
   Check,
   Pin,
+  Repeat,
   ChevronDown,
   Undo2,
   GraduationCap,
@@ -147,6 +148,10 @@ export function CalendarIcon(props: SVGProps<SVGSVGElement>) {
 
 export function CheckIcon(props: SVGProps<SVGSVGElement>) {
   return <Check size={16} {...props} />;
+}
+
+export function RepeatIcon(props: SVGProps<SVGSVGElement>) {
+  return <Repeat size={16} {...props} />;
 }
 
 export function PinIcon(props: SVGProps<SVGSVGElement>) {

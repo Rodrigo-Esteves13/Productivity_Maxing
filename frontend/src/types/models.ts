@@ -1020,6 +1020,9 @@ export interface ScheduleLinkResult {
 
 export interface DetectClassResult {
   occurrence: ClassOccurrence | null;
+  // true quando a aula foi encontrada pelo nome da cadeira (ainda sem
+  // ligacao ao horario): o cliente deve gravar a ligacao por POST.
+  matchedByName?: boolean;
 }
 
 // Componentes de nota que nao sao tasks (seminarios semanais, participacao,

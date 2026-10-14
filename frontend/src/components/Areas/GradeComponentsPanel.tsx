@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Area, GradeComponent } from '../../types/models';
 import { useAcademic } from '../../context/useAcademic';
 import { useGradeComponents } from '../../hooks/useGradeComponents';
+import { useWeightBudget } from '../../hooks/useWeightBudget';
 import { useI18n } from '../../i18n/useI18n';
 import { getApiMessage } from '../../lib/httpError';
 import { ChartPieIcon, PlusIcon } from '../UI/Icons';
@@ -30,6 +31,8 @@ export default function GradeComponentsPanel({ area }: GradeComponentsPanelProps
   const [deleteError, setDeleteError] = useState('');
 
   const totalWeight = components.reduce((sum, c) => sum + c.weightPercentage, 0);
+  // Refaz o pedido quando os componentes mudam (peso novo, apagado...).
+  const budget = useWeightBudget(area.id, periodId, undefined, totalWeight);
 
   const confirmDelete = async () => {
     if (!toDelete) return;
@@ -111,6 +114,14 @@ export default function GradeComponentsPanel({ area }: GradeComponentsPanelProps
 
           {components.length > 0 && (
             <p className="text-xs text-neutral-500">{t('grades.weightTotal', { weight: totalWeight })}</p>
+          )}
+
+          {budget && (
+            <p className={`text-xs ${budget.remaining > 0 ? 'text-amber-400' : 'text-neutral-500'}`}>
+              {budget.remaining > 0
+                ? t('grades.budgetMissing', { assigned: Math.round(budget.used * 10) / 10, missing: Math.round(budget.remaining * 10) / 10 })
+                : t('grades.budgetFull')}
+            </p>
           )}
         </>
       )}

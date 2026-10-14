@@ -12,6 +12,11 @@ import {
 import type { GradeAggregationKind } from './grade-components.constants';
 import { computeComponentGrade } from './grade-component.util';
 import {
+  MAX_COURSE_WEIGHT_PERCENT,
+  assertWeightFits,
+  loadUsedWeight,
+} from './weight-budget';
+import {
   CreateGradeComponentDto,
   UpdateGradeComponentDto,
 } from './dto/grade-component.dto';
@@ -111,6 +116,23 @@ export class GradeComponentsService {
     return rows.map((row) => this.toView(row as ComponentRow));
   }
 
+  async weightBudget(
+    userId: string,
+    query: { areaId: string; periodId: string; excludeTaskId?: string },
+  ) {
+    const used = await loadUsedWeight(this.prisma, {
+      userId,
+      areaId: query.areaId,
+      periodId: query.periodId,
+      excludeTaskId: query.excludeTaskId,
+    });
+    return {
+      used,
+      remaining: Math.max(0, MAX_COURSE_WEIGHT_PERCENT - used),
+      max: MAX_COURSE_WEIGHT_PERCENT,
+    };
+  }
+
   async create(userId: string, dto: CreateGradeComponentDto) {
     const [period, area] = await Promise.all([
       this.prisma.academicPeriod.findFirst({
@@ -136,6 +158,12 @@ export class GradeComponentsService {
         `At most ${MAX_COMPONENTS_PER_AREA} grade components per course and period.`,
       );
     }
+
+    await assertWeightFits(
+      this.prisma,
+      { userId, areaId: dto.areaId, periodId: dto.periodId },
+      dto.weightPercentage,
+    );
 
     try {
       const created = await this.prisma.gradeComponent.create({
@@ -168,6 +196,23 @@ export class GradeComponentsService {
     const bestOfCount =
       dto.bestOfCount !== undefined ? dto.bestOfCount : current.bestOfCount;
     this.assertBestOf(aggregation, bestOfCount);
+
+    // So valida quando o peso sobe (mexer so no nome nao pode falhar).
+    if (
+      dto.weightPercentage !== undefined &&
+      dto.weightPercentage > current.weightPercentage
+    ) {
+      await assertWeightFits(
+        this.prisma,
+        {
+          userId,
+          areaId: current.areaId,
+          periodId: current.periodId,
+          excludeComponentId: id,
+        },
+        dto.weightPercentage,
+      );
+    }
 
     try {
       const updated = await this.prisma.gradeComponent.update({

@@ -6,7 +6,8 @@ import { buildTaskPayload } from '../../utils/taskPayload';
 import { getApiMessage } from '../../lib/httpError';
 import type { Task, TaskTypeOption, AcademicTaskTypeOption, PriorityOption, TaskFormSubmission } from '../../types/models';
 import DayLoadHint from './DayLoadHint';
-import RecurrenceFields, { EMPTY_RECURRENCE, recurrencePayload, type RecurrenceValue } from './RecurrenceFields';
+import RecurrenceFields from './RecurrenceFields';
+import { EMPTY_RECURRENCE, recurrencePayload, type RecurrenceValue } from '../../lib/recurrence';
 import { todayKey } from '../../lib/dateKey';
 
 const DEFAULT_PROGRESS_STATUS = 'ON_TRACK';

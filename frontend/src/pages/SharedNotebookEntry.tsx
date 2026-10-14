@@ -12,6 +12,8 @@ import NotebookCanvas from '../components/Notebook/NotebookCanvas';
 import NotebookPhotoGrid from '../components/Notebook/entry/NotebookPhotoGrid';
 import PageLayout from '../components/Layout/PageLayout';
 import NotebookTableEditor from '../components/Notebook/NotebookTableEditor';
+import EntrySheet from '../components/Notebook/entry/EntrySheet';
+import EntrySectionHeader from '../components/Notebook/entry/EntrySectionHeader';
 import { LinkIcon, FileIcon, BookOpenIcon, PencilIcon, ShieldIcon } from '../components/UI/Icons';
 import Button from '../components/UI/Button';
 import SharedEntryEditForm from '../components/Notebook/SharedEntryEditForm';
@@ -253,8 +255,7 @@ function SharedNotebookEntryView({
     (entry.canvasTexts?.length ?? 0) > 0;
 
   return (
-    <div>
-      <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
         <div className="rounded-md border border-violet-900/50 bg-violet-950/30 px-3 py-1.5 text-center text-xs text-violet-300">
           {bannerKey ? t(bannerKey) : 'Shared read-only view - Productivity Maxing'}
         </div>
@@ -279,7 +280,8 @@ function SharedNotebookEntryView({
           </div>
         )}
 
-        {canEdit && isEditing && (
+        <EntrySheet toolbar={null}>
+        {canEdit && isEditing ? (
           <SharedEntryEditForm
             token={token}
             isProposal={isProposal}
@@ -292,8 +294,8 @@ function SharedNotebookEntryView({
               else setJustProposed(true);
             }}
           />
-        )}
-
+        ) : (
+        <>
         <div className="space-y-1">
           <span
             className="inline-block rounded-full px-2 py-0.5 text-[11px] font-medium"
@@ -301,14 +303,19 @@ function SharedNotebookEntryView({
           >
             {entry.area.name}
           </span>
-          <h1 className="text-xl font-semibold text-white">{entry.title}</h1>
+          <h1 className="break-words font-serif text-2xl font-semibold leading-tight text-white sm:text-3xl">{entry.title}</h1>
           <p className="text-xs text-neutral-500">{new Date(entry.date).toLocaleDateString()}</p>
         </div>
 
         {entry.textContent && (
-          <div className="whitespace-pre-wrap break-words rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-200">
-            {entry.textContent}
-          </div>
+          <section>
+            <EntrySectionHeader icon={PencilIcon} title={t('notebook.section.notes')} />
+            <div className="notebook-ruled max-w-prose whitespace-pre-wrap break-words font-serif text-base text-neutral-100">
+              {entry.textContent}
+            </div>
+          </section>
+        )}
+        </>
         )}
 
         {(entry.tables?.length ?? 0) > 0 && (
@@ -331,10 +338,8 @@ function SharedNotebookEntryView({
         )}
 
         {(entry.usefulLinks?.length ?? 0) > 0 && (
-          <div>
-            <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-neutral-500">
-              Useful Links
-            </span>
+          <section>
+            <EntrySectionHeader icon={LinkIcon} title="Useful links" />
             <div className="space-y-1.5">
               {entry.usefulLinks!.map((link) => (
                 <a
@@ -349,7 +354,7 @@ function SharedNotebookEntryView({
                 </a>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         <NotebookPhotoGrid photos={entry.photos} className="grid grid-cols-2 gap-2 sm:grid-cols-3" />
@@ -371,7 +376,7 @@ function SharedNotebookEntryView({
             )}
           </div>
         )}
-      </div>
+        </EntrySheet>
     </div>
   );
 }

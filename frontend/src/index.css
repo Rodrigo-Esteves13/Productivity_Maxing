@@ -129,3 +129,28 @@ html {
     display: none !important;
   }
 }
+
+/*
+ * Notebook "ruled paper": faint violet rules that sit exactly under each
+ * line of text (line-height 1.75rem = leading-7). The one signature detail
+ * of the notebook sheet; everything around it stays quiet. Rules scroll
+ * with the text inside textareas (background-attachment: local).
+ */
+.notebook-ruled {
+  line-height: 1.75rem;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(1.75rem - 1px),
+    color-mix(in srgb, var(--color-violet-500) 14%, transparent) calc(1.75rem - 1px),
+    color-mix(in srgb, var(--color-violet-500) 14%, transparent) 1.75rem
+  );
+  background-origin: content-box;
+  background-attachment: local;
+}
+
+@media print {
+  .notebook-ruled {
+    background-image: none;
+  }
+}

@@ -17,6 +17,11 @@ import { DIFFICULTY_WEIGHT } from '../common/difficulty-weight.util';
 import { runWithConcurrencyLimit } from '../common/concurrency.util';
 import { TaskMetaCacheService } from '../common/task-meta-cache.service';
 import { nextOccurrence } from './recurrence.util';
+import {
+  MAX_COURSE_WEIGHT_PERCENT,
+  assertWeightFits,
+  loadUsedWeight,
+} from '../grade-components/weight-budget';
 
 const TASK_INCLUDE = {
   area: true,
@@ -75,6 +80,13 @@ export class TasksService {
     const resolvedPeriodId = periodId
       ? (await this.periodsService.findOwnedOrThrow(userId, periodId)).id
       : await this.periodsService.resolveActivePeriodId(userId);
+
+    // Cadeira nunca passa dos 100% (tasks + componentes de nota).
+    await assertWeightFits(
+      this.prisma,
+      { userId, areaId: dto.areaId, periodId: resolvedPeriodId },
+      dto.weightPercentage,
+    );
 
     // Se a task já nasce como COMPLETED (ex: registo retroativo), o streak
     // precisa de um completedAt real  não podemos depender só da "date"
@@ -272,6 +284,31 @@ export class TasksService {
             ).id,
           }
         : {};
+
+    // Peso: so se valida quando sobe, ou quando a task muda de cadeira/
+    // periodo - editar o titulo de uma task numa cadeira ja cheia nao pode
+    // falhar por causa de pesos antigos.
+    const effectiveWeight = rest.weightPercentage ?? existing.weightPercentage;
+    const newPeriodId =
+      'periodId' in periodIdUpdate ? periodIdUpdate.periodId : undefined;
+    const movedScope =
+      (rest.areaId !== undefined && rest.areaId !== existing.areaId) ||
+      (newPeriodId !== undefined && newPeriodId !== existing.periodId);
+    const weightIncreased =
+      rest.weightPercentage !== undefined &&
+      rest.weightPercentage > (existing.weightPercentage ?? 0);
+    if (weightIncreased || (movedScope && effectiveWeight)) {
+      await assertWeightFits(
+        this.prisma,
+        {
+          userId,
+          areaId: rest.areaId ?? existing.areaId,
+          periodId: newPeriodId ?? existing.periodId,
+          excludeTaskId: id,
+        },
+        effectiveWeight,
+      );
+    }
 
     // Só mexemos em taskType/academicType se um dos dois vier no PATCH.
     // Se só vier um dos dois, usamos o valor atual da task para o outro,
@@ -753,6 +790,26 @@ export class TasksService {
     const areaById = new Map(areas.map((a) => [a.id, a]));
     const ownedPeriodById = new Map(ownedPeriods.map((p) => [p.id, p]));
 
+    // Orcamento de peso (100% por cadeira+periodo) ja usado, carregado uma
+    // vez por par; cada linha aceite desconta do que sobra.
+    const budgetKey = (areaId: string, periodId: string | null) =>
+      `${areaId}|${periodId ?? ''}`;
+    const budgetPairs = new Map<string, { areaId: string; periodId: string | null }>();
+    for (const row of rows) {
+      const periodId = row.periodId ?? activePeriodId ?? null;
+      budgetPairs.set(budgetKey(row.areaId, periodId), {
+        areaId: row.areaId,
+        periodId,
+      });
+    }
+    const remainingWeight = new Map<string, number>();
+    await Promise.all(
+      [...budgetPairs.entries()].map(async ([key, pair]) => {
+        const used = await loadUsedWeight(this.prisma, { userId, ...pair });
+        remainingWeight.set(key, MAX_COURSE_WEIGHT_PERCENT - used);
+      }),
+    );
+
     // --- Validate every row against the Maps above - no DB calls here. ---
     type PreparedRow = {
       rowNumber: number;
@@ -786,6 +843,17 @@ export class TasksService {
             );
           }
           resolvedPeriodId = row.periodId;
+        }
+
+        if (row.weightPercentage) {
+          const key = budgetKey(area.id, resolvedPeriodId ?? null);
+          const left = remainingWeight.get(key) ?? MAX_COURSE_WEIGHT_PERCENT;
+          if (row.weightPercentage > left + 0.001) {
+            throw new BadRequestException(
+              `This course only has ${Math.max(0, Math.round(left * 10) / 10)}% of the final grade left.`,
+            );
+          }
+          remainingWeight.set(key, left - row.weightPercentage);
         }
 
         const progressStatus = row.progressStatus ?? 'ON_TRACK';

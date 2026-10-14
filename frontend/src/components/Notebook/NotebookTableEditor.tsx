@@ -1,5 +1,6 @@
 import type { NotebookTable } from '../../types/models';
 import { TrashIcon, PlusIcon } from '../UI/Icons';
+import NotebookTableCell from './NotebookTableCell';
 
 interface NotebookTableEditorProps {
   table: NotebookTable;
@@ -81,12 +82,11 @@ export default function NotebookTableEditor({ table, readOnly = false, onChange,
             {table.rows.map((row, rowIndex) => (
               <tr key={rowIndex}>
                 {row.map((cell, colIndex) => (
-                  <td key={colIndex} className="border border-neutral-800 p-0">
-                    <input
+                  <td key={colIndex} className="border border-neutral-800 p-0 align-top">
+                    <NotebookTableCell
                       value={cell}
                       readOnly={readOnly}
-                      onChange={(e) => updateCell(rowIndex, colIndex, e.target.value)}
-                      className="w-24 min-w-full bg-transparent px-2 py-1.5 text-neutral-100 focus:bg-neutral-800 focus:outline-none"
+                      onChange={(value) => updateCell(rowIndex, colIndex, value)}
                     />
                   </td>
                 ))}

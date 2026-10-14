@@ -160,6 +160,8 @@ export default function TaskFormFields({
 
       <GradingFields
         idPrefix={idPrefix}
+        areaId={values.areaId}
+        taskId={taskId}
         targetGrade={values.targetGrade}
         weightPercentage={values.weightPercentage}
         estimatedMinutes={values.estimatedMinutes}
