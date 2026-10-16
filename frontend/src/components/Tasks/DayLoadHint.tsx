@@ -1,3 +1,5 @@
+import { MINUTES_PER_HOUR, MS_PER_DAY } from '../../lib/timeConstants';
+import { roundTo } from '../../utils/roundTo';
 import { useMemo } from 'react';
 import type { Task } from '../../types/models';
 import { OVERLOAD_THRESHOLD, OVERLOAD_WINDOW_DAYS } from '../../utils/detectOverloadWeek';
@@ -10,8 +12,6 @@ interface DayLoadHintProps {
   // A propria task em edicao nao conta para a carga.
   excludeTaskId?: string;
 }
-
-const MS_PER_DAY = 86_400_000;
 
 // Tasks sem hora ficam a meia-noite UTC (o dia e o do ISO); com hora usa-se o
 // dia local, igual ao TaskEditForm.
@@ -28,7 +28,7 @@ function dayIndex(key: string): number {
 }
 
 function formatHours(minutes: number): string {
-  const hours = Math.round((minutes / 60) * 10) / 10;
+  const hours = roundTo(minutes / MINUTES_PER_HOUR);
   return `${hours}h`;
 }
 

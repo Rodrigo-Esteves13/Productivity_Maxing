@@ -34,7 +34,7 @@ export default function Schedule() {
     <PageLayout>
       <PageHeader
         title="Schedule"
-        description="Your class timetable, imported from the UMaia student portal, and a study plan built around it."
+        description="Your class timetable, imported from your school's calendar (.ics), and a study plan built around it."
         action={
           <ActionButton
             onClick={() => setIsImportOpen(true)}

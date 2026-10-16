@@ -7,9 +7,11 @@ import {
   getShareAccessRequests,
   decideShareAccessRequest,
   getChangeProposals,
+  getShareVisits,
   decideChangeProposal,
 } from '../api/notebookService';
 import type {
+  ShareVisits,
   ChangeProposal,
   ChangeProposalFields,
   NotebookShareVisibility,
@@ -30,6 +32,8 @@ export interface UseEntryShareResult {
   decidingId: string | null;
   proposals: ChangeProposal[];
   decidingProposalId: string | null;
+  visits: ShareVisits | null;
+  visitsError: boolean;
   open: () => Promise<void>;
   close: () => void;
   create: () => Promise<void>;
@@ -37,6 +41,26 @@ export interface UseEntryShareResult {
   changeVisibility: (next: NotebookShareVisibility) => Promise<void>;
   decide: (requestId: string, decision: 'APPROVED' | 'DENIED', role?: ShareAccessRole) => Promise<void>;
   decideProposal: (proposalId: string, decision: 'APPROVED' | 'REJECTED') => Promise<void>;
+}
+
+// O painel Share lembra-se de como o deixaste: depois de o abrires pela
+// primeira vez fica aberto em todas as entradas, até o fechares no X.
+const PANEL_OPEN_KEY = 'pmaxing.sharePanelOpen';
+
+function readPanelPreference(): boolean {
+  try {
+    return localStorage.getItem(PANEL_OPEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writePanelPreference(open: boolean): void {
+  try {
+    localStorage.setItem(PANEL_OPEN_KEY, open ? '1' : '0');
+  } catch {
+    // sem storage: o painel só lembra-se durante a sessão
+  }
 }
 
 // Estado do painel "Share" de uma entrada. Vive NUM HOOK chamado pelo
@@ -61,6 +85,8 @@ export function useEntryShare(
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [proposals, setProposals] = useState<ChangeProposal[]>([]);
   const [decidingProposalId, setDecidingProposalId] = useState<string | null>(null);
+  const [visits, setVisits] = useState<ShareVisits | null>(null);
+  const [visitsError, setVisitsError] = useState(false);
 
   // Repoe tudo ao trocar de entrada - o token de uma nao pode "vazar" para o
   // painel de outra enquanto o estado carrega.
@@ -71,6 +97,8 @@ export function useEntryShare(
     setError('');
     setRequests([]);
     setProposals([]);
+    setVisits(null);
+    setVisitsError(false);
   }, [entryId]);
 
   const shareUrl = token ? `${window.location.origin}/shared/${token}` : '';
@@ -92,7 +120,17 @@ export function useEntryShare(
     }
   }, [entryId]);
 
+  const loadVisits = useCallback(async () => {
+    try {
+      setVisits(await getShareVisits(entryId));
+      setVisitsError(false);
+    } catch {
+      setVisitsError(true);
+    }
+  }, [entryId]);
+
   const open = useCallback(async () => {
+    writePanelPreference(true);
     setIsOpen(true);
     setIsLoading(true);
     setError('');
@@ -100,15 +138,25 @@ export function useEntryShare(
       const status = await getShareStatus(entryId);
       setToken(status.token);
       setVisibility(status.visibility);
+      if (status.token) void loadVisits();
       if (status.token && status.visibility === 'AUTHORIZED') await loadRequests();
     } catch {
       setError('Could not check the share status.');
     } finally {
       setIsLoading(false);
     }
-  }, [entryId, loadRequests]);
+  }, [entryId, loadRequests, loadVisits]);
 
-  const close = useCallback(() => setIsOpen(false), []);
+  const close = useCallback(() => {
+    writePanelPreference(false);
+    setIsOpen(false);
+  }, []);
+
+  // Abre sozinho nas entradas seguintes se foi assim que o deixaste.
+  useEffect(() => {
+    if (readPanelPreference()) void open();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entryId]);
 
   const create = useCallback(async () => {
     setIsLoading(true);
@@ -117,12 +165,13 @@ export function useEntryShare(
       const status = await createShare(entryId);
       setToken(status.token);
       setVisibility(status.visibility);
+      void loadVisits();
     } catch {
       setError('Could not create the share link.');
     } finally {
       setIsLoading(false);
     }
-  }, [entryId]);
+  }, [entryId, loadVisits]);
 
   const revoke = useCallback(async () => {
     setIsLoading(true);
@@ -132,6 +181,7 @@ export function useEntryShare(
       setToken(null);
       setRequests([]);
       setProposals([]);
+      setVisits(null);
     } catch {
       setError('Could not stop sharing.');
     } finally {
@@ -204,6 +254,8 @@ export function useEntryShare(
     decidingId,
     proposals,
     decidingProposalId,
+    visits,
+    visitsError,
     open,
     close,
     create,

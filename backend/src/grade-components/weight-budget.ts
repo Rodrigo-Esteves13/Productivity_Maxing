@@ -1,3 +1,4 @@
+import { roundTo } from '../common/round.util';
 import { BadRequestException } from '@nestjs/common';
 import type { PrismaService } from '../prisma/prisma.service';
 
@@ -7,7 +8,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 export const MAX_COURSE_WEIGHT_PERCENT = 100;
 
 // Margem para erros de virgula flutuante (33.3 + 33.3 + 33.4).
-const WEIGHT_EPSILON = 0.001;
+export const WEIGHT_EPSILON = 0.001;
 
 export interface WeightScope {
   userId: string;
@@ -83,11 +84,7 @@ export async function assertWeightFits(
   const remaining = Math.max(0, MAX_COURSE_WEIGHT_PERCENT - used);
   if (weight > remaining + WEIGHT_EPSILON) {
     throw new BadRequestException(
-      `This course already has ${round1(used)}% of the final grade assigned. Only ${round1(remaining)}% is left.`,
+      `This course already has ${roundTo(used)}% of the final grade assigned. Only ${roundTo(remaining)}% is left.`,
     );
   }
-}
-
-function round1(value: number): number {
-  return Math.round(value * 10) / 10;
 }

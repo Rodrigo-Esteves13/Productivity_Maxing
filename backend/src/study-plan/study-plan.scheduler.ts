@@ -1,3 +1,4 @@
+import { MS_PER_DAY } from '../common/time.constants';
 import { MINUTES_PER_DAY } from './study-plan.constants';
 
 // Lógica pura do planeamento: sem Prisma, sem relógio, sem I/O. O
@@ -178,8 +179,6 @@ function sumSlots(slots: Interval[]): number {
 
 // 1 = o último dia pesa o dobro do primeiro.
 const DEADLINE_RAMP = 1;
-
-const MS_PER_DAY = 86_400_000;
 
 function dayDiff(laterKey: string, earlierKey: string): number {
   return Math.round(

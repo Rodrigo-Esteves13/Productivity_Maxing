@@ -4,6 +4,7 @@ import type { User } from '../../types/models';
 import { LogoutIcon } from '../UI/Icons';
 import Avatar from '../Profile/Avatar';
 import { useI18n } from '../../i18n/useI18n';
+import FeedbackModal from '../Feedback/FeedbackModal';
 
 interface UserMenuProps {
   user: User | null;
@@ -23,6 +24,7 @@ function getFirstName(user: User): string {
 export default function UserMenu({ user, onLogout }: UserMenuProps) {
   const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Fecha o menu ao clicar fora dele
@@ -99,6 +101,15 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
           <button
             onClick={() => {
               setIsOpen(false);
+              setIsFeedbackOpen(true);
+            }}
+            className="block w-full text-left px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
+          >
+            {t('feedback.open')}
+          </button>
+          <button
+            onClick={() => {
+              setIsOpen(false);
               onLogout();
             }}
             className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-950/40 hover:text-red-300 transition-colors"
@@ -108,6 +119,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
           </button>
         </div>
       )}
+      <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
     </div>
   );
 }

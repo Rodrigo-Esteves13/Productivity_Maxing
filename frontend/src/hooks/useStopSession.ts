@@ -10,9 +10,9 @@ export function useStopSession() {
   const { activeSession, stop } = useActiveStudySession();
 
   const stopSession = useCallback(
-    async (options: StopStudySessionInput = {}, markTaskDone = false): Promise<boolean> => {
+    async (options: StopStudySessionInput = {}, markTaskDone = false, skipFocusPrompt = false): Promise<boolean> => {
       const taskId = activeSession?.taskId ?? null;
-      const stopped = await stop(options);
+      const stopped = await stop(options, skipFocusPrompt);
       if (!stopped) return false;
       if (markTaskDone && taskId) {
         try {

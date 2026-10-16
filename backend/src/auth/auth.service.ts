@@ -131,7 +131,13 @@ export class AuthService {
 
     await this.avatars.deleteAvatarFileIfOwned(user.avatarUrl);
 
-    await this.prisma.user.delete({ where: { id: userId } });
+    // Task.area é Restrict e o user pode ter Areas privadas (Area.ownerId é
+    // Cascade): apaga primeiro as tasks, senão o cascade das Areas pode
+    // chocar com o Restrict. Tudo na mesma transação - ou apaga tudo ou nada.
+    await this.prisma.$transaction([
+      this.prisma.task.deleteMany({ where: { userId } }),
+      this.prisma.user.delete({ where: { id: userId } }),
+    ]);
     // Sem isto, o JWT da conta apagada ainda passava ate a cache expirar.
     this.sessionState.invalidate(userId);
   }

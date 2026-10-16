@@ -17,11 +17,11 @@ interface AdminLink {
 // deixa de comer largura fixa na barra principal e passa a ser um único
 // trigger, tal como o resto do menu (mesma altura, mesmo espaçamento).
 const ADMIN_LINKS: AdminLink[] = [
-  { to: '/areas', label: 'Areas' },
   { to: '/users', label: 'Users' },
   { to: '/task-types', label: 'Task Types' },
   { to: '/security', label: 'Security' },
   { to: '/appeals', label: 'Appeals' },
+  { to: '/feedback', label: 'Feedback' },
 ];
 
 export default function AdminMenu({ currentPath }: AdminMenuProps) {

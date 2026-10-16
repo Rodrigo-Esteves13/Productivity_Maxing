@@ -1,3 +1,4 @@
+import { AVATAR_MAX_SIZE_BYTES } from '../common/upload-limits';
 import {
   Controller,
   Get,
@@ -15,6 +16,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   HttpCode,
+  HttpStatus,
   Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -90,7 +92,7 @@ export class AuthController {
   // testar wordlists pequenas. Estes limites mais apertados aplicam-se
   // especificamente a estas rotas, por cima do guard global.
   @Post('register')
-  @HttpCode(201)
+  @HttpCode(HttpStatus.CREATED)
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   async register(
     @Body() dto: RegisterDto,
@@ -111,7 +113,7 @@ export class AuthController {
   // cookie, e quem clica no email pode nem ter sessão neste browser). Só
   // marca o email do próprio token como verificado - nunca abre sessão.
   @Post('verify-email')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @SkipCsrf()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async verifyEmail(@Body() dto: VerifyEmailDto) {
@@ -121,7 +123,7 @@ export class AuthController {
 
   // Reenvio do link. Resposta sempre genérica, exista a conta ou não.
   @Post('resend-verification')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @SkipCsrf()
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   async resendVerification(@Body() dto: ResendVerificationDto) {
@@ -133,7 +135,7 @@ export class AuthController {
   }
 
   @Post('login')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async login(
     @Body() dto: LoginDto,
@@ -157,7 +159,7 @@ export class AuthController {
   // Segundo passo do login com 2FA (email+password e OAuth). Pública e sem
   // CSRF como o login: a credencial é o token do desafio + o código.
   @Post('2fa/login')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @SkipCsrf()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async twoFactorLogin(
@@ -178,7 +180,7 @@ export class AuthController {
   }
 
   @Post('2fa/setup')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   beginTwoFactorSetup(@CurrentUser() user: AuthenticatedUser) {
@@ -186,7 +188,7 @@ export class AuthController {
   }
 
   @Post('2fa/confirm')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   confirmTwoFactorSetup(
@@ -197,7 +199,7 @@ export class AuthController {
   }
 
   @Post('2fa/disable')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async disableTwoFactor(
@@ -209,7 +211,7 @@ export class AuthController {
   }
 
   @Post('logout')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     // Terminar sessao invalida o token no servidor (nao so apaga o cookie
     // do browser): um cookie copiado antes deixa de funcionar. Vale para
@@ -233,7 +235,7 @@ export class AuthController {
   // email exista ou não, para não dar pistas a quem esteja a tentar
   // enumerar contas.
   @Post('forgot-password')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     await this.authService.forgotPassword(dto.email);
@@ -319,7 +321,7 @@ export class AuthController {
   // intacto, só remove o refreshToken/scope da Identity).
   @Delete('google/calendar')
   @UseGuards(JwtAuthGuard)
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   async disconnectGoogleCalendar(@CurrentUser() user: AuthenticatedUser) {
     await this.authService.disconnectGoogleCalendar(user.id);
     return { message: 'Google Calendar disconnected.' };
@@ -458,7 +460,7 @@ export class AuthController {
   // exatamente o mesmo nível de confiança que o resto das rotas /auth/me/*.
   @Patch('me/password')
   @UseGuards(JwtAuthGuard)
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async setPassword(
     @CurrentUser() user: AuthenticatedUser,
@@ -482,7 +484,7 @@ export class AuthController {
   // resultante no User. Limite de 5MB para não abusarmos do storage.
   @Post('me/avatar')
   @UseGuards(JwtAuthGuard)
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @UseInterceptors(
     FileInterceptor('avatar', {
       // fileSize: já existia. fields/files/fieldNestingDepth: mitigação para
@@ -500,7 +502,7 @@ export class AuthController {
       // @types/multer apanhar o tipo (confirmar com `npm ls @types/multer`
       // e o changelog do pacote).
       limits: {
-        fileSize: 5 * 1024 * 1024,
+        fileSize: AVATAR_MAX_SIZE_BYTES,
         files: 1,
         fields: 1,
         fieldNestingDepth: 1,

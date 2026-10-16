@@ -1,3 +1,9 @@
+import { assertAreaAccessible } from '../areas/area-access';
+import {
+  ISO_DATE_KEY_LENGTH,
+  MS_PER_DAY,
+  MS_PER_SECOND,
+} from '../common/time.constants';
 import {
   BadRequestException,
   Injectable,
@@ -44,7 +50,6 @@ const AUTO_CLOSE_NOTE =
 const HISTORY_DEFAULT_DAYS = 14;
 const HISTORY_MAX_DAYS = 90;
 const HISTORY_MAX_ROWS = 300;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const SESSION_SELECT = {
   id: true,
@@ -158,7 +163,7 @@ export class StudySessionsService {
       ? await this.assertTaskOwnership(userId, dto.taskId)
       : null;
     if (dto.areaId) {
-      await this.assertAreaExists(dto.areaId);
+      await this.assertAreaExists(userId, dto.areaId);
     }
 
     const session = await this.prisma.studySession.create({
@@ -249,7 +254,7 @@ export class StudySessionsService {
     const task = dto.taskId
       ? await this.assertTaskOwnership(userId, dto.taskId)
       : null;
-    if (dto.areaId) await this.assertAreaExists(dto.areaId);
+    if (dto.areaId) await this.assertAreaExists(userId, dto.areaId);
     await this.assertNoOverlap(userId, start, end);
 
     const session = await this.prisma.studySession.create({
@@ -449,7 +454,9 @@ export class StudySessionsService {
     const totalsByDay = new Map<string, number>();
     for (const session of sessions) {
       if (!session.endedAt) continue; // already filtered by the where, just for TS
-      const dayKey = session.startedAt.toISOString().slice(0, 10);
+      const dayKey = session.startedAt
+        .toISOString()
+        .slice(0, ISO_DATE_KEY_LENGTH);
       const minutes =
         (session.endedAt.getTime() - session.startedAt.getTime()) / 60_000;
       totalsByDay.set(
@@ -462,7 +469,7 @@ export class StudySessionsService {
     for (let i = 0; i < days; i++) {
       const day = new Date(since);
       day.setDate(day.getDate() + i);
-      const dayKey = day.toISOString().slice(0, 10);
+      const dayKey = day.toISOString().slice(0, ISO_DATE_KEY_LENGTH);
       result.push({
         date: dayKey,
         totalMinutes: Math.round(totalsByDay.get(dayKey) ?? 0),
@@ -559,7 +566,9 @@ export class StudySessionsService {
     });
 
     const activeDays = new Set(
-      sessions.map((s) => s.startedAt.toISOString().slice(0, 10)),
+      sessions.map((s) =>
+        s.startedAt.toISOString().slice(0, ISO_DATE_KEY_LENGTH),
+      ),
     );
 
     if (activeDays.size === 0) {
@@ -573,8 +582,10 @@ export class StudySessionsService {
       };
     }
 
-    const todayKey = new Date().toISOString().slice(0, 10);
-    const firstDayKey = sessions[0].startedAt.toISOString().slice(0, 10);
+    const todayKey = new Date().toISOString().slice(0, ISO_DATE_KEY_LENGTH);
+    const firstDayKey = sessions[0].startedAt
+      .toISOString()
+      .slice(0, ISO_DATE_KEY_LENGTH);
     const firstDay = new Date(`${firstDayKey}T00:00:00.000Z`);
     const today = new Date(`${todayKey}T00:00:00.000Z`);
     const totalDays =
@@ -588,7 +599,7 @@ export class StudySessionsService {
     for (let i = 0; i < totalDays; i++) {
       const day = new Date(firstDay);
       day.setUTCDate(day.getUTCDate() + i);
-      const dayKey = day.toISOString().slice(0, 10);
+      const dayKey = day.toISOString().slice(0, ISO_DATE_KEY_LENGTH);
       const isToday = dayKey === todayKey;
 
       if (activeDays.has(dayKey)) {
@@ -692,16 +703,9 @@ export class StudySessionsService {
     return task;
   }
 
-  private async assertAreaExists(areaId: string) {
-    // Areas são partilhadas (não têm userId no schema), por isso só
-    // confirmamos que existe - não é uma questão de posse.
-    const area = await this.prisma.area.findUnique({
-      where: { id: areaId },
-      select: { id: true },
-    });
-    if (!area) {
-      throw new NotFoundException(`Area not found.`);
-    }
+  // Area oficial OU privada deste user (ver areas/area-access.ts).
+  private assertAreaExists(userId: string, areaId: string) {
+    return assertAreaAccessible(this.prisma, userId, areaId);
   }
 
   private toResponse(session: SessionWithRelations) {
@@ -709,7 +713,8 @@ export class StudySessionsService {
       ? Math.max(
           0,
           Math.round(
-            (session.endedAt.getTime() - session.startedAt.getTime()) / 1000,
+            (session.endedAt.getTime() - session.startedAt.getTime()) /
+              MS_PER_SECOND,
           ),
         )
       : null;

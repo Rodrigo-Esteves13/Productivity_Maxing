@@ -154,3 +154,40 @@ html {
     background-image: none;
   }
 }
+
+/* --- Idiomas CJK ---------------------------------------------------------
+   Sem webfont (500 KB+ por peso): usa as fontes de sistema de cada
+   plataforma, escolhidas pelo <html lang> que o I18nProvider define.
+   Sem isto, o browser pode escolher a variante errada dos caracteres Han
+   (chinês vs japonês) para o mesmo texto. */
+html:lang(zh) {
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', sans-serif;
+}
+html:lang(ja) {
+  font-family: system-ui, -apple-system, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif;
+}
+html:lang(ko) {
+  font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans CJK KR', 'Noto Sans KR', sans-serif;
+  /* coreano usa espaços entre palavras: não partir a meio de uma palavra */
+  word-break: keep-all;
+}
+html:lang(zh) body,
+html:lang(ja) body {
+  /* chinês/japonês não têm espaços: deixa quebrar linha em qualquer caractere */
+  overflow-wrap: anywhere;
+  line-break: strict;
+}
+/* Letras maiúsculas forçadas e tracking largo não fazem sentido em CJK */
+html:lang(zh) .uppercase,
+html:lang(ja) .uppercase,
+html:lang(ko) .uppercase {
+  text-transform: none;
+}
+html:lang(zh) .tracking-wide,
+html:lang(ja) .tracking-wide,
+html:lang(ko) .tracking-wide,
+html:lang(zh) .tracking-widest,
+html:lang(ja) .tracking-widest,
+html:lang(ko) .tracking-widest {
+  letter-spacing: normal;
+}

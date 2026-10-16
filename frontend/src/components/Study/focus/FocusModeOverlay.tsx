@@ -74,7 +74,7 @@ export default function FocusModeOverlay({ onClose }: FocusModeOverlayProps) {
               isSubmitting={isSubmitting}
               onCancel={() => setIsStopping(false)}
               onConfirm={async ({ markTaskDone, ...options }) => {
-                if (await stopSession(options, markTaskDone)) close();
+                if (await stopSession(options, markTaskDone, true)) close();
               }}
             />
           </div>

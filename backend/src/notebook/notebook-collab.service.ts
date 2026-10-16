@@ -8,6 +8,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SharedEditDto } from './dto/shared-edit.dto';
+import { PushService } from '../push/push.service';
 
 export type SharedRole = 'OWNER' | 'CO_OWNER' | 'EDITOR' | 'VIEWER';
 
@@ -60,7 +61,10 @@ function toEntryData(fields: EditableFields) {
 
 @Injectable()
 export class NotebookCollabService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly push: PushService,
+  ) {}
 
   // Papel de quem abre /shared/:token. Papeis acima de VIEWER so existem
   // em partilhas AUTHORIZED com pedido APPROVED - num link PUBLIC toda a
@@ -147,6 +151,30 @@ export class NotebookCollabService {
               proposedByUserId: userId,
             },
           });
+
+      // Só avisa o dono quando a proposta é NOVA (substituir a própria
+      // proposta não volta a apitar).
+      if (!existing) {
+        const [proposer, entry] = await Promise.all([
+          this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true, email: true },
+          }),
+          this.prisma.notebookEntry.findUnique({
+            where: { id: share.notebookEntryId },
+            select: { title: true },
+          }),
+        ]);
+        void this.push.notifyUser(
+          share.createdByUserId,
+          'shareProposalReceived',
+          {
+            name: proposer?.name ?? proposer?.email?.split('@')[0] ?? '',
+            title: entry?.title ?? '',
+            url: '/notebook',
+          },
+        );
+      }
       return { applied: false as const, proposalId: proposal.id };
     }
 
@@ -197,11 +225,28 @@ export class NotebookCollabService {
     }
 
     const decided = { status: decision, decidedAt: new Date() };
+    const notifyProposer = async () => {
+      const info = await this.prisma.notebookEntry.findUnique({
+        where: { id: entryId },
+        select: { title: true, share: { select: { token: true } } },
+      });
+      void this.push.notifyUser(
+        proposal.proposedByUserId,
+        decision === 'APPROVED'
+          ? 'shareProposalApproved'
+          : 'shareProposalRejected',
+        {
+          title: info?.title ?? '',
+          url: info?.share ? `/shared/${info.share.token}` : '/notebook',
+        },
+      );
+    };
     if (decision === 'REJECTED') {
       const updated = await this.prisma.notebookChangeProposal.update({
         where: { id: proposalId },
         data: decided,
       });
+      await notifyProposer();
       return { id: updated.id, status: updated.status };
     }
 
@@ -215,6 +260,7 @@ export class NotebookCollabService {
         data: decided,
       }),
     ]);
+    await notifyProposer();
     return { id: updated.id, status: updated.status };
   }
 }

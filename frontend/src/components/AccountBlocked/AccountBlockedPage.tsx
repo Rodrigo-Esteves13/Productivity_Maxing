@@ -1,3 +1,4 @@
+import { MINUTES_PER_DAY, MINUTES_PER_HOUR, MS_PER_MINUTE } from '../../lib/timeConstants';
 import { useCallback, useEffect, useState } from 'react';
 import Button from '../UI/Button';
 import Textarea from '../UI/Textarea';
@@ -36,16 +37,19 @@ function formatDate(value: string | null): string {
   return new Date(value).toLocaleString();
 }
 
+// Minimo de caracteres para um appeal ser enviado.
+const APPEAL_MIN_LENGTH = 20;
+
 // "3d 4h", "6h 12m", "12m" - usado tanto para o tempo até ao fim da
 // suspensão como para o cooldown até ao 3º appeal. Arredondado para
 // minutos: não vale a pena um timer a marcar segundos aqui.
 function formatRemaining(targetIso: string): string {
   const ms = new Date(targetIso).getTime() - Date.now();
   if (ms <= 0) return 'any moment now';
-  const minutes = Math.floor(ms / 60000);
-  const days = Math.floor(minutes / (60 * 24));
-  const hours = Math.floor((minutes % (60 * 24)) / 60);
-  const mins = minutes % 60;
+  const minutes = Math.floor(ms / MS_PER_MINUTE);
+  const days = Math.floor(minutes / MINUTES_PER_DAY);
+  const hours = Math.floor((minutes % MINUTES_PER_DAY) / MINUTES_PER_HOUR);
+  const mins = minutes % MINUTES_PER_HOUR;
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${mins}m`;
   return `${mins}m`;
@@ -112,8 +116,8 @@ export default function AccountBlockedPage({
   };
 
   const handleSubmit = async () => {
-    if (message.trim().length < 20) {
-      setSubmitError('Please write at least 20 characters explaining your appeal.');
+    if (message.trim().length < APPEAL_MIN_LENGTH) {
+      setSubmitError(`Please write at least ${APPEAL_MIN_LENGTH} characters explaining your appeal.`);
       return;
     }
     setSubmitting(true);

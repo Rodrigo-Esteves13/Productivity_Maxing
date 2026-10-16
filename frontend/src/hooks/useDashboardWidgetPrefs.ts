@@ -4,6 +4,7 @@ export type DashboardWidgetKey =
   | 'programsOverview'
   | 'periodProgress'
   | 'overloadAlert'
+  | 'missingGrade'
   | 'upcoming'
   | 'atRisk'
   | 'deadlineOverlap'
@@ -12,6 +13,7 @@ export type DashboardWidgetKey =
   | 'studyCapacity'
   | 'courseForecast'
   | 'gradeProjection'
+  | 'focusEffect'
   | 'gradeCalculator'
   | 'creditSimulator'
   | 'creditsAccumulated'
@@ -28,6 +30,7 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   programsOverview: 'All programs overview',
   periodProgress: 'Period pace',
   overloadAlert: 'Heavy week alert',
+  missingGrade: 'Missing grade weight',
   upcoming: 'Next 7 days',
   atRisk: 'At risk',
   deadlineOverlap: 'Deadline overlaps',
@@ -36,6 +39,7 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   studyCapacity: 'Study capacity',
   courseForecast: 'Study time per course',
   gradeProjection: 'Grade projection',
+  focusEffect: 'Focus and grades',
   gradeCalculator: 'Grade needed calculator',
   creditSimulator: '"What if" GPA simulator',
   creditsAccumulated: 'ECTS credits accumulated',
@@ -58,6 +62,7 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   programsOverview: true,
   periodProgress: true,
   overloadAlert: true,
+  missingGrade: true,
   upcoming: true,
   atRisk: true,
   deadlineOverlap: true,
@@ -66,6 +71,7 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   studyCapacity: true,
   courseForecast: true,
   gradeProjection: true,
+  focusEffect: true,
   gradeCalculator: true,
   creditSimulator: true,
   creditsAccumulated: true,

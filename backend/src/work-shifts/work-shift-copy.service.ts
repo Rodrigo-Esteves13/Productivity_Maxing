@@ -1,3 +1,4 @@
+import { toDateKey } from '../common/date-key.util';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { addUtcDays, parseDateKey } from '../common/date-key.util';
@@ -154,7 +155,7 @@ export class WorkShiftCopyService {
       label: row.label,
       bufferMinutes: row.bufferMinutes,
       dayOfWeek: row.dayOfWeek,
-      dateKey: row.date ? row.date.toISOString().slice(0, 10) : null,
+      dateKey: row.date ? toDateKey(row.date) : null,
       startMinutes: row.startMinutes,
       endMinutes: row.endMinutes,
     }));

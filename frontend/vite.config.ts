@@ -41,6 +41,7 @@ export default defineConfig({
       }]
     },
     workbox: {
+      importScripts: ['push-sw.js'],
       // Só JS/CSS/fontes/ícones do build entram no precache (imutáveis,
       // têm hash no nome). NUNCA HTML aqui - o index.html é sempre
       // pedido à rede para apanhar deploys novos.

@@ -1,3 +1,4 @@
+import { MS_PER_MINUTE } from './timeConstants';
 import type { HeatmapCell } from '../types/models';
 
 // "Agora e uma boa hora para estudar?", a partir do heatmap. O heatmap
@@ -53,8 +54,6 @@ export interface SessionSpan {
   startedAt: string;
   endedAt: string | null;
 }
-
-const MS_PER_MINUTE = 60_000;
 
 /**
  * Minutos estudados desde `dayStart` ate `now`, cortando as sessoes ao

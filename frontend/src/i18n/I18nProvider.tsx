@@ -5,8 +5,13 @@ import { applyLanguage, detectLanguage, saveLanguage } from './storage';
 import { en } from './messages/en';
 import { pt } from './messages/pt';
 import { es } from './messages/es';
+import { zh } from './messages/zh';
+import { ja } from './messages/ja';
+import { ko } from './messages/ko';
+import { fr } from './messages/fr';
+import { de } from './messages/de';
 
-const DICTIONARIES: Record<LanguageCode, Record<string, string>> = { en, pt, es };
+const DICTIONARIES: Record<LanguageCode, Record<string, string>> = { en, pt, es, zh, ja, ko, fr, de };
 
 export default function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<LanguageCode>(detectLanguage);

@@ -1,3 +1,5 @@
+import { FULL_PERCENT } from '../../lib/percent';
+import { formatDuration } from '../../lib/timeFormat';
 import { useEffect, useState } from 'react';
 import {
   getDailyStudyTotals,
@@ -12,13 +14,18 @@ import { todayKey } from '../../lib/dateKey';
 
 const WINDOW_DAYS = 84; // ~12 weeks, GitHub-contributions-style grid
 const DEFAULT_GOAL_MINUTES = 60;
+// Fracao do dia mais estudado a partir da qual o quadrado do heatmap sobe de
+// intensidade.
+const INTENSITY_STEPS = { low: 0.25, medium: 0.5, high: 0.75 };
+// Dias que contam como uma semana na comparacao com a anterior.
+const DAYS_PER_WEEK = 7;
 
 function intensityClass(minutes: number, maxMinutes: number): string {
   if (minutes === 0 || maxMinutes === 0) return 'bg-neutral-900 border-neutral-800';
   const ratio = minutes / maxMinutes;
-  if (ratio > 0.75) return 'bg-violet-500 border-violet-400';
-  if (ratio > 0.5) return 'bg-violet-600/70 border-violet-600/60';
-  if (ratio > 0.25) return 'bg-violet-700/50 border-violet-700/40';
+  if (ratio > INTENSITY_STEPS.high) return 'bg-violet-500 border-violet-400';
+  if (ratio > INTENSITY_STEPS.medium) return 'bg-violet-600/70 border-violet-600/60';
+  if (ratio > INTENSITY_STEPS.low) return 'bg-violet-700/50 border-violet-700/40';
   return 'bg-violet-800/30 border-violet-800/30';
 }
 
@@ -46,13 +53,6 @@ function sumLastNDays(days: DailyStudyTotal[], n: number, offsetFromEnd: number)
   const end = days.length - offsetFromEnd;
   const start = Math.max(0, end - n);
   return days.slice(start, end).reduce((sum, d) => sum + d.totalMinutes, 0);
-}
-
-function formatWeekMinutes(totalMinutes: number): string {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours === 0) return `${minutes}m`;
-  return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
 }
 
 export default function StudyActivityCard() {
@@ -92,7 +92,7 @@ export default function StudyActivityCard() {
   const maxMinutes = Math.max(0, ...days.map((d) => d.totalMinutes));
   const today = todayKey();
   const todayMinutes = days.find((d) => d.date === today)?.totalMinutes ?? 0;
-  const goalPct = Math.min((todayMinutes / goalMinutes) * 100, 100);
+  const goalPct = Math.min((todayMinutes / goalMinutes) * FULL_PERCENT, FULL_PERCENT);
 
   // Groups the flat day list into weeks (columns), Sunday-first, so it
   // reads left-to-right like a GitHub contributions graph.
@@ -178,23 +178,23 @@ export default function StudyActivityCard() {
         <ProgressBar
           thickness="md"
           percent={goalPct}
-          fillClassName={goalPct >= 100 ? 'bg-sky-500' : 'bg-violet-500'}
+          fillClassName={goalPct >= FULL_PERCENT ? 'bg-sky-500' : 'bg-violet-500'}
         />
       </div>
 
       {(() => {
-        const thisWeek = sumLastNDays(days, 7, 0);
-        const lastWeek = sumLastNDays(days, 7, 7);
+        const thisWeek = sumLastNDays(days, DAYS_PER_WEEK, 0);
+        const lastWeek = sumLastNDays(days, DAYS_PER_WEEK, DAYS_PER_WEEK);
         if (thisWeek === 0 && lastWeek === 0) return null;
         const deltaPct =
-          lastWeek > 0 ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : null;
+          lastWeek > 0 ? Math.round(((thisWeek - lastWeek) / lastWeek) * FULL_PERCENT) : null;
         return (
           <div className="mt-3 pt-3 border-t border-neutral-800 flex items-center justify-between text-xs text-neutral-500">
             <span>
-              This week: <span className="text-neutral-300">{formatWeekMinutes(thisWeek)}</span>
+              This week: <span className="text-neutral-300">{formatDuration(thisWeek)}</span>
             </span>
             <span>
-              vs last week: <span className="text-neutral-300">{formatWeekMinutes(lastWeek)}</span>
+              vs last week: <span className="text-neutral-300">{formatDuration(lastWeek)}</span>
               {deltaPct !== null && (
                 <span className={deltaPct >= 0 ? 'text-emerald-400' : 'text-neutral-400'}>
                   {' '}

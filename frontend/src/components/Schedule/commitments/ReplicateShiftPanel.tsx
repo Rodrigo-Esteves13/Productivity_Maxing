@@ -1,3 +1,4 @@
+import { MS_PER_DAY } from '../../../lib/timeConstants';
 import { useMemo, useState } from 'react';
 import ActionButton from '../../UI/ActionButton';
 import ToggleChip from '../../UI/ToggleChip';
@@ -16,7 +17,6 @@ interface ReplicateShiftPanelProps {
 
 const FOLLOWING_DAYS = 7;
 const NO_DAYS_OFF: number[] = [];
-const MS_PER_DAY = 86_400_000;
 
 function addDaysKey(dateKey: string, days: number): string {
   return new Date(Date.parse(dateKey) + days * MS_PER_DAY).toISOString().slice(0, 10);

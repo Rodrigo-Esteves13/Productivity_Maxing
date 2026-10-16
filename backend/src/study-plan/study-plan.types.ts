@@ -148,3 +148,63 @@ export interface GradeProjectionResult {
   tasks: GradeProjectionTask[];
   backfillCandidates: BackfillCandidate[];
 }
+
+export type FocusEffectStatus =
+  'not_enough_data' | 'no_variation' | 'inconclusive' | 'clear';
+
+// Efeito de um fator (foco ou interesse) na nota, em pontos da escala por
+// cada ponto do fator a mais.
+export interface FactorEffect {
+  status: FocusEffectStatus;
+  // Tasks avaliadas que entraram no calculo.
+  sampleSize: number;
+  gradePointsPerPoint: number | null;
+  // So em 'clear'.
+  rangeGradePoints: { low: number; high: number } | null;
+}
+
+// Efeito do foco (1 a 5) e do interesse na cadeira (1 a 5) na nota,
+// medidos nos dados da propria pessoa.
+export interface FocusEffectResult {
+  focus: FactorEffect & {
+    minSamplesNeeded: number;
+    // Tasks avaliadas deixadas de fora por as sessoes nao terem foco.
+    excludedUnrated: number;
+  };
+  interest: FactorEffect & {
+    minSamplesNeeded: number;
+    minAreasNeeded: number;
+    // Cadeiras com tasks avaliadas em que ainda nao deste interesse.
+    areasMissingInterest: number;
+  };
+  // Escala usada nos pontos (a da task avaliada mais recente).
+  scale: { min: number; max: number };
+}
+
+// Foco medio (1 a 5) e nota media (% da escala) por semana.
+export interface FocusTrendWeek {
+  weekStart: string;
+  avgFocus: number | null;
+  ratedMinutes: number;
+  avgGradePercent: number | null;
+  gradedTasks: number;
+}
+
+export interface FocusTrendResult {
+  weeks: FocusTrendWeek[];
+}
+
+// Uma bolinha por task avaliada: foco medio antes do prazo contra a nota.
+export interface FocusScatterPoint {
+  taskId: string;
+  title: string;
+  areaName: string;
+  date: string;
+  avgFocus: number;
+  ratedMinutes: number;
+  gradePercent: number;
+}
+
+export interface FocusScatterResult {
+  points: FocusScatterPoint[];
+}

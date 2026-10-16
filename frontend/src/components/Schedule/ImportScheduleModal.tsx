@@ -4,6 +4,7 @@ import { useScheduleImport } from '../../hooks/useScheduleImport';
 import { CheckIcon, AlertTriangleIcon, TrashIcon } from '../UI/Icons';
 import { deleteImportedClasses } from '../../api/scheduleService';
 import { useFeedback } from '../../context/useFeedback';
+import ImportOptionsPanel from './ImportOptionsPanel';
 
 interface ImportScheduleModalProps {
   isOpen: boolean;
@@ -21,7 +22,7 @@ export default function ImportScheduleModal({
   onClose,
   onImported,
 }: ImportScheduleModalProps) {
-  const { stage, outcome, errorMessage, runImport, reset } = useScheduleImport();
+  const { stage, outcome, errorMessage, runImport, reset, options, setOptions } = useScheduleImport();
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasNotifiedRef = useRef(false);
@@ -86,7 +87,7 @@ export default function ImportScheduleModal({
       <div className="space-y-4">
         <div className="text-sm text-neutral-400 space-y-1">
           <p>
-            Export your timetable as .ics from the UMaia student portal and upload it here. Each
+            Export your timetable as .ics from your school's student portal or calendar app and upload it here. Each
             class is matched by its own event ID, so re-importing (e.g. a new export a few weeks
             later) updates existing classes and adds new ones - it never creates duplicates.
           </p>
@@ -95,6 +96,8 @@ export default function ImportScheduleModal({
             to keep the schedule filled in further ahead.
           </p>
         </div>
+
+        <ImportOptionsPanel options={options} onChange={setOptions} disabled={isBusy} />
 
         <input
           ref={fileInputRef}

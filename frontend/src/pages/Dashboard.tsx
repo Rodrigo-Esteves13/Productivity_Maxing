@@ -19,6 +19,7 @@ import { useAcademic } from '../context/useAcademic';
 import GpaSummary from '../components/Dashboard/GpaSummary';
 import PeriodProgressBar from '../components/Dashboard/PeriodProgressBar';
 import OverloadAlertCard from '../components/Dashboard/OverloadAlertCard';
+import MissingGradeCard from '../components/Dashboard/MissingGradeCard';
 import OnboardingChecklist from '../components/Dashboard/OnboardingChecklist';
 import DashboardCardGrid from '../components/Dashboard/DashboardCardGrid';
 import {
@@ -157,6 +158,10 @@ export default function Dashboard() {
       )}
 
       {!isLoading && !error && <OnboardingChecklist taskCount={tasks.length} />}
+
+      {visibility.missingGrade && !isLoading && !error && academicAreas.length > 0 && (
+        <MissingGradeCard areas={academicAreas} refreshKey={tasks.reduce((sum, task) => sum + (task.weightPercentage ?? 0), tasks.length)} />
+      )}
 
       {visibility.overloadAlert && !isLoading && !error && academicTasks.length > 0 && (
         <OverloadAlertCard tasks={academicTasks} areas={academicAreas} />

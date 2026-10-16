@@ -71,3 +71,21 @@ export const getWeightBudget = async (params: {
   const response = await api.get<WeightBudget>('/grade-components/weight-budget', { params });
   return response.data;
 };
+
+export interface CourseWeightBudget {
+  areaId: string;
+  used: number;
+  remaining: number;
+}
+
+export interface WeightBudgets {
+  max: number;
+  budgets: CourseWeightBudget[];
+}
+
+export const getWeightBudgets = async (periodId: string): Promise<WeightBudgets> => {
+  const response = await api.get<WeightBudgets>('/grade-components/weight-budgets', {
+    params: { periodId },
+  });
+  return response.data;
+};

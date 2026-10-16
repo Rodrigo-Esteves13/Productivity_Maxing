@@ -5,9 +5,10 @@ import { NotebookController } from './notebook.controller';
 import { NotebookShareController } from './notebook-share.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
+import { PushModule } from '../push/push.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule],
+  imports: [PrismaModule, AuthModule, PushModule],
   controllers: [NotebookController, NotebookShareController],
   providers: [NotebookService, NotebookCollabService],
 })

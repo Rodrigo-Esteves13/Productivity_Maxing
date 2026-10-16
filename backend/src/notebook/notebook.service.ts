@@ -1,4 +1,9 @@
 import {
+  accessibleAreaWhere,
+  assertAreaAccessible,
+} from '../areas/area-access';
+import { getLisbonNow } from '../common/date-key.util';
+import {
   BadRequestException,
   ConflictException,
   Injectable,
@@ -8,7 +13,8 @@ import {
 import { createClient } from '@supabase/supabase-js';
 import { Prisma } from '@prisma/client';
 import { fileTypeFromBuffer } from 'file-type';
-import { randomUUID } from 'crypto';
+import { createHmac, randomUUID } from 'crypto';
+import { PushService } from '../push/push.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateNotebookEntryDto,
@@ -119,7 +125,6 @@ function matchesAreaName(subject: string, areaName: string): boolean {
   return a === b || a.includes(b) || b.includes(a);
 }
 
-
 // Uma pessoa a abrir /shared/:token pode estar em 5 estados diferentes -
 // ver NotebookService.getSharedEntry. O controller devolve isto tal e
 // qual (200 OK sempre que o token existe); só um token inexistente ou
@@ -145,18 +150,19 @@ export class NotebookService {
   private readonly logger = new Logger(NotebookService.name);
   private readonly storage: ReturnType<typeof createClient>;
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly push: PushService,
+  ) {
     this.storage = createClient(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
   }
 
-  // Area é catálogo global (ver schema.prisma) - aqui só confirmamos que
-  // existe, nunca posse por user, tal como o resto da app trata Area.
-  private async assertAreaExists(areaId: string): Promise<void> {
-    const area = await this.prisma.area.findUnique({ where: { id: areaId } });
-    if (!area) throw new NotFoundException('Area not found.');
+  // Area oficial OU privada deste user (ver areas/area-access.ts).
+  private assertAreaExists(userId: string, areaId: string): Promise<void> {
+    return assertAreaAccessible(this.prisma, userId, areaId);
   }
 
   private async findOwnedEntryOrThrow(userId: string, id: string) {
@@ -233,7 +239,7 @@ export class NotebookService {
   }
 
   async findAllForArea(userId: string, areaId: string) {
-    await this.assertAreaExists(areaId);
+    await this.assertAreaExists(userId, areaId);
     const entries = await this.prisma.notebookEntry.findMany({
       where: { userId, areaId },
       include: {
@@ -251,7 +257,7 @@ export class NotebookService {
   }
 
   async create(userId: string, dto: CreateNotebookEntryDto) {
-    await this.assertAreaExists(dto.areaId);
+    await this.assertAreaExists(userId, dto.areaId);
 
     if (dto.classOccurrenceId) {
       // Mesma lógica de posse do periodId em tasks.service.ts: nunca
@@ -477,6 +483,24 @@ export class NotebookService {
       },
       update: { status: 'PENDING', decidedAt: null },
     });
+
+    // Avisa o dono (push) de que há um pedido novo - só aqui, não nos
+    // pedidos repetidos já PENDING (devolvem acima, sem spam).
+    const [requester, entry] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: requestingUserId },
+        select: { name: true, email: true },
+      }),
+      this.prisma.notebookEntry.findUnique({
+        where: { id: share.notebookEntryId },
+        select: { title: true },
+      }),
+    ]);
+    void this.push.notifyUser(share.createdByUserId, 'shareAccessRequested', {
+      name: requester?.name ?? requester?.email?.split('@')[0] ?? '',
+      title: entry?.title ?? '',
+      url: '/notebook',
+    });
     return { status: request.status };
   }
 
@@ -539,10 +563,126 @@ export class NotebookService {
         ...(decision === 'APPROVED' && role ? { accessRole: role } : {}),
       },
     });
+
+    // Avisa quem pediu (push) da resposta, com link direto para a lição.
+    const shareInfo = await this.prisma.notebookShare.findUnique({
+      where: { id: request.notebookShareId },
+      select: { token: true, notebookEntry: { select: { title: true } } },
+    });
+    if (shareInfo) {
+      void this.push.notifyUser(
+        request.requestingUserId,
+        decision === 'APPROVED' ? 'shareAccessApproved' : 'shareAccessDenied',
+        {
+          title: shareInfo.notebookEntry.title,
+          url: `/shared/${shareInfo.token}`,
+        },
+      );
+    }
     return {
       id: updated.id,
       status: updated.status,
       accessRole: updated.accessRole,
+    };
+  }
+
+  // --- Telemetria de visitas ao link ---------------------------------------
+  // Uma linha por visitante. Conta uma "visita" nova só se a última foi há
+  // mais de 30 min (recarregar a página não infla o número). As visitas do
+  // próprio dono não contam. Visitantes sem conta: HMAC do IP+user-agent com
+  // um segredo do servidor - nunca se guarda o IP.
+  private static readonly VISIT_WINDOW_MS = 30 * 60 * 1000;
+
+  private visitorKey(
+    userId: string | null,
+    meta: { ip?: string; userAgent?: string } | null,
+  ): string | null {
+    if (userId) return `u:${userId}`;
+    const secret = process.env.JWT_SECRET;
+    if (!secret || !meta?.ip) return null;
+    const hash = createHmac('sha256', secret)
+      .update(`${meta.ip}|${meta.userAgent ?? ''}`)
+      .digest('hex')
+      .slice(0, 32);
+    return `a:${hash}`;
+  }
+
+  private async recordVisit(
+    shareId: string,
+    ownerId: string,
+    userId: string | null,
+    meta: { ip?: string; userAgent?: string } | null,
+  ): Promise<void> {
+    if (userId === ownerId) return;
+    const viewerKey = this.visitorKey(userId, meta);
+    if (!viewerKey) return;
+    try {
+      const now = new Date();
+      const existing = await this.prisma.shareVisit.findUnique({
+        where: {
+          notebookShareId_viewerKey: { notebookShareId: shareId, viewerKey },
+        },
+      });
+      if (!existing) {
+        await this.prisma.shareVisit.create({
+          data: {
+            notebookShareId: shareId,
+            viewerKey,
+            viewerUserId: userId,
+          },
+        });
+        return;
+      }
+      const isNewVisit =
+        now.getTime() - existing.lastVisitAt.getTime() >
+        NotebookService.VISIT_WINDOW_MS;
+      await this.prisma.shareVisit.update({
+        where: { id: existing.id },
+        data: {
+          lastVisitAt: now,
+          ...(isNewVisit ? { count: { increment: 1 } } : {}),
+          // Quem abriu sem sessão e depois fez login passa a ter nome.
+          ...(userId && !existing.viewerUserId ? { viewerUserId: userId } : {}),
+        },
+      });
+    } catch (error) {
+      // Telemetria nunca pode partir a abertura da lição.
+      this.logger.warn(`recordVisit falhou: ${(error as Error).message}`);
+    }
+  }
+
+  /** Lado do dono: quem abriu o link e quantas vezes. */
+  async getShareVisits(userId: string, entryId: string) {
+    await this.findOwnedEntryOrThrow(userId, entryId);
+    const share = await this.prisma.notebookShare.findUnique({
+      where: { notebookEntryId: entryId },
+      select: { id: true },
+    });
+    if (!share) return { totalVisits: 0, uniqueVisitors: 0, viewers: [] };
+
+    const rows = await this.prisma.shareVisit.findMany({
+      where: { notebookShareId: share.id },
+      orderBy: { lastVisitAt: 'desc' },
+      take: 200,
+      select: {
+        count: true,
+        firstVisitAt: true,
+        lastVisitAt: true,
+        viewerUser: { select: { name: true, avatarUrl: true } },
+      },
+    });
+    return {
+      totalVisits: rows.reduce((sum, r) => sum + r.count, 0),
+      uniqueVisitors: rows.length,
+      viewers: rows.map((r) => ({
+        // null = visitante sem conta (anónimo).
+        name: r.viewerUser?.name ?? null,
+        avatarUrl: r.viewerUser?.avatarUrl ?? null,
+        isAnonymous: !r.viewerUser,
+        count: r.count,
+        firstVisitAt: r.firstVisitAt,
+        lastVisitAt: r.lastVisitAt,
+      })),
     };
   }
 
@@ -556,6 +696,7 @@ export class NotebookService {
   async getSharedEntry(
     token: string,
     requestingUserId: string | null,
+    visitor: { ip?: string; userAgent?: string } | null = null,
   ): Promise<SharedEntryResult> {
     const share = await this.prisma.notebookShare.findUnique({
       where: { token },
@@ -571,6 +712,13 @@ export class NotebookService {
     });
     if (!share)
       throw new NotFoundException('This share link is invalid or was removed.');
+
+    void this.recordVisit(
+      share.id,
+      share.createdByUserId,
+      requestingUserId,
+      visitor,
+    );
 
     let role: 'OWNER' | 'CO_OWNER' | 'EDITOR' | 'VIEWER' =
       share.createdByUserId === requestingUserId ? 'OWNER' : 'VIEWER';
@@ -839,7 +987,7 @@ export class NotebookService {
   }
 
   async upsertScheduleLink(userId: string, dto: UpsertScheduleLinkDto) {
-    await this.assertAreaExists(dto.areaId);
+    await this.assertAreaExists(userId, dto.areaId);
 
     const existingForSubject = await this.prisma.areaScheduleLink.findUnique({
       where: {
@@ -901,12 +1049,9 @@ export class NotebookService {
   async detectClassNow(userId: string, areaId: string) {
     const { scheduleSubject } = await this.findScheduleLink(userId, areaId);
 
-    const now = new Date();
-    const startOfDay = new Date(now);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(now);
-    endOfDay.setHours(23, 59, 59, 999);
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    // Hora de Lisboa (o processo corre em UTC): as aulas guardam o dia como
+    // meia-noite UTC do dia de calendario de Lisboa.
+    const { today, nowMinutes } = getLisbonNow();
 
     const todaysOccurrences = await this.prisma.classOccurrence.findMany({
       where: {
@@ -914,7 +1059,7 @@ export class NotebookService {
         // Sem ligacao ainda: olha para todas as aulas de hoje e tenta
         // casar pelo nome da cadeira (ver matchesAreaName).
         ...(scheduleSubject ? { subject: scheduleSubject } : {}),
-        date: { gte: startOfDay, lte: endOfDay },
+        date: today,
       },
     });
 
@@ -926,8 +1071,8 @@ export class NotebookService {
       return { occurrence: todaysOccurrences.find(isRunningNow) ?? null };
     }
 
-    const area = await this.prisma.area.findUnique({
-      where: { id: areaId },
+    const area = await this.prisma.area.findFirst({
+      where: { id: areaId, ...accessibleAreaWhere(userId) },
       select: { name: true },
     });
     const match = area

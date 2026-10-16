@@ -45,6 +45,9 @@ export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileM
       <Link to="/notebook" onClick={onNavigate} className={getLinkClass('/notebook')}>
         {t('nav.notebook')}
       </Link>
+      <Link to="/areas" onClick={onNavigate} className={getLinkClass('/areas')}>
+        {t('nav.areas')}
+      </Link>
       <Link to="/profile" onClick={onNavigate} className={getLinkClass('/profile')}>
         {t('nav.profile')}
       </Link>
@@ -58,9 +61,6 @@ export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileM
       {isAdmin && (
         <>
           <div className="my-2 border-t border-neutral-800" />
-          <Link to="/areas" onClick={onNavigate} className={getAdminLinkClass('/areas')}>
-            Areas
-          </Link>
           <Link to="/users" onClick={onNavigate} className={getAdminLinkClass('/users')}>
             Users
           </Link>
@@ -72,6 +72,9 @@ export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileM
           </Link>
           <Link to="/appeals" onClick={onNavigate} className={getAdminLinkClass('/appeals')}>
             Appeals
+          </Link>
+          <Link to="/feedback" onClick={onNavigate} className={getAdminLinkClass('/feedback')}>
+            Feedback
           </Link>
         </>
       )}

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { StudyPlanService } from './study-plan.service';
 import { StudyPlanController } from './study-plan.controller';
 import { GradeProjectionService } from './grade-projection.service';
+import { FocusEffectService } from './focus-effect.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { ScheduleModule } from '../schedule/schedule.module';
@@ -19,7 +20,7 @@ import { PredictionModule } from '../prediction/prediction.module';
     PredictionModule,
   ],
   controllers: [StudyPlanController],
-  providers: [StudyPlanService, GradeProjectionService],
+  providers: [StudyPlanService, GradeProjectionService, FocusEffectService],
   // CalendarModule reutiliza o plano para enviar os blocos ao Google Calendar.
   exports: [StudyPlanService],
 })

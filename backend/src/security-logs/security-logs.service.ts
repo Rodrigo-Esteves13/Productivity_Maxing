@@ -1,3 +1,4 @@
+import { MS_PER_DAY, MS_PER_HOUR } from '../common/time.constants';
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma, SecurityEventType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -21,10 +22,14 @@ const WINDOW_TO_MS: Record<
   NonNullable<QuerySecurityLogsDto['window']>,
   number
 > = {
-  '1h': 60 * 60 * 1000,
-  '24h': 24 * 60 * 60 * 1000,
-  '7d': 7 * 24 * 60 * 60 * 1000,
+  '1h': MS_PER_HOUR,
+  '24h': MS_PER_DAY,
+  '7d': 7 * MS_PER_DAY,
 };
+
+const DEFAULT_LOG_PAGE_SIZE = 25;
+// Quantos IPs aparecem no ranking das ultimas 24h.
+const TOP_IPS_LIMIT = 10;
 
 @Injectable()
 export class SecurityLogsService {
@@ -77,14 +82,19 @@ export class SecurityLogsService {
         where,
         orderBy: { createdAt: 'desc' },
         skip: query.skip ?? 0,
-        take: query.take ?? 25,
+        take: query.take ?? DEFAULT_LOG_PAGE_SIZE,
         include: {
           user: { select: { id: true, email: true, name: true } },
         },
       }),
     ]);
 
-    return { total, skip: query.skip ?? 0, take: query.take ?? 25, logs };
+    return {
+      total,
+      skip: query.skip ?? 0,
+      take: query.take ?? DEFAULT_LOG_PAGE_SIZE,
+      logs,
+    };
   }
 
   /**
@@ -105,7 +115,7 @@ export class SecurityLogsService {
         where: { createdAt: { gte: last24h } },
         _count: { ip: true },
         orderBy: { _count: { ip: 'desc' } },
-        take: 10,
+        take: TOP_IPS_LIMIT,
       }),
     ]);
 
@@ -127,7 +137,7 @@ export class SecurityLogsService {
     const where: Prisma.SecurityLogWhereInput = olderThanDays
       ? {
           createdAt: {
-            lt: new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000),
+            lt: new Date(Date.now() - olderThanDays * MS_PER_DAY),
           },
         }
       : {};

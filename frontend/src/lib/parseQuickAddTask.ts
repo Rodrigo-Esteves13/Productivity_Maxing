@@ -7,6 +7,12 @@
 // Anything it doesn't recognize stays in the title and the date defaults
 // to today; it never silently drops text.
 
+const MAX_HOUR = 23;
+const MAX_MINUTE = 59;
+// "05/10/26" -> 2026: anos com 2 digitos assumem-se neste seculo.
+const TWO_DIGIT_YEAR_BASE = 2000;
+const TWO_DIGIT_YEAR_LENGTH = 2;
+
 const WEEKDAYS: Record<string, number> = {
   domingo: 0,
   sunday: 0,
@@ -113,8 +119,8 @@ export function parseQuickAddTask(raw: string, now: Date = new Date()): QuickAdd
     text.match(/(?:^|\s)[aà]s?\s+(\d{1,2})(?:h|:)(\d{2})?(?=\s|$)/i) ??
     text.match(/(?:^|\s)(\d{1,2}):(\d{2})(?=\s|$)/);
   if (timeMatch) {
-    const hours = Math.min(23, parseInt(timeMatch[1], 10));
-    const minutes = Math.min(59, parseInt(timeMatch[2] ?? '0', 10) || 0);
+    const hours = Math.min(MAX_HOUR, parseInt(timeMatch[1], 10));
+    const minutes = Math.min(MAX_MINUTE, parseInt(timeMatch[2] ?? '0', 10) || 0);
     time = `${pad2(hours)}:${pad2(minutes)}`;
     text = text.replace(timeMatch[0], ' ');
   }
@@ -136,8 +142,8 @@ export function parseQuickAddTask(raw: string, now: Date = new Date()): QuickAdd
       const month = parseInt(dmyMatch[2], 10);
       const yearPart = dmyMatch[3];
       const year = yearPart
-        ? yearPart.length === 2
-          ? 2000 + parseInt(yearPart, 10)
+        ? yearPart.length === TWO_DIGIT_YEAR_LENGTH
+          ? TWO_DIGIT_YEAR_BASE + parseInt(yearPart, 10)
           : parseInt(yearPart, 10)
         : now.getFullYear();
       const candidate = new Date(year, month - 1, day);

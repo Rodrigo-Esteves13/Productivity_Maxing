@@ -1,6 +1,5 @@
 import ToggleChip from './ToggleChip';
-
-const LEVELS = [1, 2, 3, 4, 5] as const;
+import { RATING_MAX, RATING_MIN, RATING_VALUES } from '../../lib/rating';
 
 interface RatingInputProps {
   value: number | null;
@@ -14,8 +13,8 @@ interface RatingInputProps {
 export default function RatingInput({ value, onChange, hint }: RatingInputProps) {
   return (
     <div>
-      <div role="group" aria-label="Rating from 1 to 5" className="flex gap-1.5">
-        {LEVELS.map((level) => (
+      <div role="group" aria-label={`Rating from ${RATING_MIN} to ${RATING_MAX}`} className="flex gap-1.5">
+        {RATING_VALUES.map((level) => (
           <ToggleChip key={level} size="sm" pressed={value === level} onClick={() => onChange(value === level ? null : level)}>
             {level}
           </ToggleChip>

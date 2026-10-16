@@ -30,6 +30,16 @@ enum Role {
   ADMIN
 }
 
+/// Estado do pedido para uma Area privada passar a oficial.
+/// NONE = nunca pedida (ou retirada); PENDING = à espera do admin;
+/// REJECTED = o admin recusou (a Area continua privada do dono, que pode
+/// voltar a propor depois de a corrigir).
+enum AreaProposalStatus {
+  NONE
+  PENDING
+  REJECTED
+}
+
 // ACTIVE: normal. SUSPENDED: temporário, sempre com suspendedUntil
 // definido (auto-reativa sozinho quando essa data passa - ver
 // JwtStrategy.validate() e UsersService.isBlocked()). BANNED:
@@ -182,6 +192,13 @@ model Priority {
 /// Representa um utilizador da plataforma.
 model User {
   id        String   @id @default(uuid())
+  // Areas privadas criadas por este user (ver Area.ownerId).
+  ownedAreas Area[] @relation("UserOwnedAreas")
+  // Areas oficiais que este user desligou (ver AreaHidden).
+  hiddenAreas AreaHidden[]
+  pushSubscriptions PushSubscription[]
+  shareVisits       ShareVisit[]
+  feedbackEntries   Feedback[]
   email     String   @unique
   role      Role     @default(USER)
   name      String?
@@ -318,6 +335,7 @@ model User {
   calendarSyncedEvents CalendarSyncedEvent[]
   bannedIps        BannedIp[]
   areaScheduleLinks AreaScheduleLink[]
+  areaInterests     AreaInterest[]
   notebookEntries   NotebookEntry[]
   notebookShares    NotebookShare[]
   notebookShareAccessRequests NotebookShareAccessRequest[]
@@ -543,12 +561,33 @@ model Area {
   // note on AcademicProgram above).
   credits Int?
 
+  // Oficial vs privada. ownerId = null -> Area OFICIAL (catálogo global,
+  // gerido só por admins, visível a todos). ownerId != null -> Area PRIVADA
+  // desse user: só ele a vê, usa e edita. Uma privada pode ser proposta
+  // (proposalStatus) e, se um admin aprovar, passa a ownerId = null.
+  // onDelete: Cascade - apagar a conta apaga as Areas privadas (as tasks
+  // do user são apagadas antes, ver AuthService.deleteAccount, porque
+  // Task.area é Restrict).
+  ownerId String?
+  owner   User?   @relation("UserOwnedAreas", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  proposalStatus     AreaProposalStatus @default(NONE)
+  proposedAt         DateTime?
+  // Motivo da recusa, escrito pelo admin e visível só ao dono.
+  proposalReviewNote String?
+
+  @@index([ownerId])
+  @@index([proposalStatus])
+
+  hiddenBy AreaHidden[]
+
   // Relações
   tasks         Task[]
   studySessions StudySession[]
   // Ligação por user a um texto de disciplina do horário (ver
   // AreaScheduleLink) e as entradas do caderno desta cadeira.
   scheduleLinks   AreaScheduleLink[]
+  interests       AreaInterest[]
   notebookEntries NotebookEntry[]
   gradeComponents GradeComponent[]
 }
@@ -951,6 +990,27 @@ model AreaScheduleLink {
   @@index([userId, areaId])
 }
 
+/// Quanto interesse o user tem numa cadeira (1 a 5). Por user e nao uma
+/// coluna em Area porque Area e global/partilhada: o interesse e pessoal.
+/// Usado so para medir, nos dados da propria pessoa, quanto o (des)interesse
+/// pesa na nota (ver FocusEffectService).
+model AreaInterest {
+  id     String @id @default(uuid())
+  userId String
+  areaId String
+  rating Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area Area @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  // Um interesse por cadeira por user.
+  @@unique([userId, areaId])
+  @@index([areaId])
+}
+
 /// Uma entrada do "caderno" de uma cadeira: texto, desenho à mão
 /// (drawingStrokes, vetorial - ver NotebookService/NotebookCanvas no
 /// frontend) e fotos (NotebookPhoto), tudo na mesma página, como um
@@ -1065,6 +1125,7 @@ model NotebookShare {
   notebookEntry  NotebookEntry                @relation(fields: [notebookEntryId], references: [id], onDelete: Cascade)
   createdBy      User                         @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
   accessRequests NotebookShareAccessRequest[]
+  visits         ShareVisit[]
 
   @@index([token])
 }
@@ -1333,4 +1394,86 @@ model NotebookChangeProposal {
 
   @@index([notebookEntryId, status])
   @@index([proposedByUserId])
+}
+
+/// Area oficial que um user desligou: deixa de aparecer nos seletores dele
+/// (dropdown de tasks, caderno, paleta). Não apaga nada - as tasks/notas que
+/// já usam a Area continuam a funcionar e a Area continua visível na página
+/// Áreas (com o interruptor) para a poder voltar a ligar.
+model AreaHidden {
+  userId    String
+  areaId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area Area @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  @@id([userId, areaId])
+  @@index([areaId])
+}
+
+/// Subscrição Web Push de UM browser/dispositivo de um user (avisos de
+/// pedidos de acesso/propostas no caderno partilhado). `endpoint` é único:
+/// o mesmo browser nunca fica duplicado. `lang` é a língua da app nesse
+/// dispositivo, para o servidor escrever o aviso na língua certa.
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  lang      String   @default("en")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Contador de visitas a um link de partilha, UMA linha por visitante.
+/// viewerKey = "u:<userId>" (com sessão) ou "a:<hash>" (anónimo: HMAC do
+/// IP + user-agent com um segredo do servidor - nunca o IP em claro).
+/// O dono da entrada vê só: quem (nome, se tiver conta), quantas vezes e
+/// a última vez. As visitas do próprio dono não contam.
+model ShareVisit {
+  id              String   @id @default(uuid())
+  notebookShareId String
+  viewerKey       String
+  viewerUserId    String?
+  count           Int      @default(1)
+  firstVisitAt    DateTime @default(now())
+  lastVisitAt     DateTime @default(now())
+
+  notebookShare NotebookShare @relation(fields: [notebookShareId], references: [id], onDelete: Cascade)
+  viewerUser    User?         @relation(fields: [viewerUserId], references: [id], onDelete: SetNull)
+
+  @@unique([notebookShareId, viewerKey])
+  @@index([notebookShareId, lastVisitAt])
+}
+
+enum FeedbackCategory {
+  BUG
+  IDEA
+  TRANSLATION
+  CONFUSING
+  OTHER
+}
+
+/// Feedback escrito pelos users (qualquer língua). `language` = língua da
+/// app quando foi enviado, para o admin saber o que está a ler/traduzir.
+model Feedback {
+  id        String           @id @default(uuid())
+  userId    String?
+  category  FeedbackCategory @default(OTHER)
+  rating    Int?
+  message   String
+  language  String           @default("en")
+  page      String?
+  createdAt DateTime         @default(now())
+  isResolved Boolean         @default(false)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([isResolved, createdAt])
 }
