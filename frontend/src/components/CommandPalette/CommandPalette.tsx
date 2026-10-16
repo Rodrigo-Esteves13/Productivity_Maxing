@@ -67,7 +67,7 @@ const NAV_COMMANDS: NavCommand[] = [
   { id: 'nav-changelog', label: "What's new", path: '/changelog' },
   { id: 'nav-developer', label: 'Developer', path: '/developer' },
   { id: 'nav-agent', label: 'Agent', path: '/agent' },
-  { id: 'nav-areas', label: 'Areas', path: '/areas', adminOnly: true },
+  { id: 'nav-areas', label: 'Areas', path: '/areas', keywords: ['courses', 'subjects', 'propose'] },
   { id: 'nav-users', label: 'Users', path: '/users', adminOnly: true },
   { id: 'nav-task-types', label: 'Task Types', path: '/task-types', adminOnly: true },
   { id: 'nav-security', label: 'Security', path: '/security', adminOnly: true },

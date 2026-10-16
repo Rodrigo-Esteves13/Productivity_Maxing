@@ -8,6 +8,7 @@ import {
   StudyCapacityCard,
   CourseForecastCard,
   GradeProjectionCard,
+  FocusEffectCard,
   ExamCountdownCard,
   StaleTasksCard,
   TimeByAreaCard,
@@ -68,6 +69,7 @@ export default function DashboardCardGrid({
       {visibility.timeByArea && <TimeByAreaCard />}
       {visibility.courseForecast && <CourseForecastCard />}
       {visibility.gradeProjection && <GradeProjectionCard />}
+      {visibility.focusEffect && <FocusEffectCard />}
       {visibility.estimationAccuracy && <EstimationAccuracyCard />}
       {visibility.deadlineCompliance && academicTasks.length > 0 && (
         <DeadlineComplianceCard tasks={academicTasks} />

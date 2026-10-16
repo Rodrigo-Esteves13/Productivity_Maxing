@@ -157,7 +157,7 @@ export default function StudySessionWidget() {
               isSubmitting={isSubmitting}
               onCancel={() => setIsStopping(false)}
               onConfirm={async ({ markTaskDone, ...options }) => {
-                if (await stopSession(options, markTaskDone)) setIsStopping(false);
+                if (await stopSession(options, markTaskDone, true)) setIsStopping(false);
               }}
             />
           ) : (

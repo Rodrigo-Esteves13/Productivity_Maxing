@@ -3,6 +3,7 @@ import type { Area, GradeComponent } from '../../types/models';
 import { useAcademic } from '../../context/useAcademic';
 import { useGradeComponents } from '../../hooks/useGradeComponents';
 import { useWeightBudget } from '../../hooks/useWeightBudget';
+import { roundTo } from '../../utils/roundTo';
 import { useI18n } from '../../i18n/useI18n';
 import { getApiMessage } from '../../lib/httpError';
 import { ChartPieIcon, PlusIcon } from '../UI/Icons';
@@ -119,7 +120,7 @@ export default function GradeComponentsPanel({ area }: GradeComponentsPanelProps
           {budget && (
             <p className={`text-xs ${budget.remaining > 0 ? 'text-amber-400' : 'text-neutral-500'}`}>
               {budget.remaining > 0
-                ? t('grades.budgetMissing', { assigned: Math.round(budget.used * 10) / 10, missing: Math.round(budget.remaining * 10) / 10 })
+                ? t('grades.budgetMissing', { assigned: roundTo(budget.used), missing: roundTo(budget.remaining) })
                 : t('grades.budgetFull')}
             </p>
           )}

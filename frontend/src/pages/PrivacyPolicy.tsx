@@ -64,8 +64,26 @@ export default function PrivacyPolicy() {
             status, and the study area you assign each task to)
           </li>
           <li>
-            The catalog of study areas itself is not personal data you create; it's a shared list of
-            subjects/categories that I curate, and that all users select from
+            Study areas: a shared list of official subjects/categories that I curate, plus any personal
+            areas you create yourself (visible only to you). If you propose a personal area as official,
+            only its name, color, credits and default type are shown to an administrator for review
+          </li>
+          <li>
+            Shared notebook links: for each link you create, I count how many times it was opened and
+            by whom. Visitors who are signed in are shown to you by name; visitors who are not signed in
+            are only counted, using a one-way hash of their network address and browser (the address
+            itself is never stored). Only you, the owner of the link, can see this; your own visits are
+            not counted
+          </li>
+          <li>
+            Push notifications (optional, off by default): if you turn them on, I store your browser's
+            push subscription (an address provided by your browser's push service, and its encryption
+            keys) and the app language of that device, only to notify you about access requests,
+            suggested changes and their answers on shared lessons. You can turn them off at any time
+          </li>
+          <li>
+            Feedback you choose to send: your message, category, optional rating, the app language and
+            the page you were on (without query parameters), together with your account
           </li>
           <li>Usage data needed to compute your progress and streaks</li>
           <li>

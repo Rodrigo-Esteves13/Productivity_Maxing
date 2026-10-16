@@ -1,4 +1,6 @@
+import { MS_PER_DAY, MS_PER_MINUTE } from '../common/time.constants';
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { HTTP_GONE, HTTP_NOT_FOUND } from '../common/http-status.constants';
 import { Provider } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
@@ -260,7 +262,7 @@ export class CalendarService {
     if (hasTime) {
       const durationMinutes =
         task.calendarDurationMinutes ?? DEFAULT_TIMED_EVENT_DURATION_MINUTES;
-      const end = new Date(date.getTime() + durationMinutes * 60 * 1000);
+      const end = new Date(date.getTime() + durationMinutes * MS_PER_MINUTE);
       return {
         summary: task.title,
         description,
@@ -274,7 +276,7 @@ export class CalendarService {
     // sempre start + 1 dia, mesmo para um evento de um dia só.
     const startDate = this.toDateOnlyString(date);
     const endDate = this.toDateOnlyString(
-      new Date(date.getTime() + 24 * 60 * 60 * 1000),
+      new Date(date.getTime() + MS_PER_DAY),
     );
 
     return {
@@ -316,7 +318,7 @@ export class CalendarService {
         payload,
       );
       if (res.ok) return ((await res.json()) as { id: string }).id;
-      if (res.status !== 404 && res.status !== 410) {
+      if (res.status !== HTTP_NOT_FOUND && res.status !== HTTP_GONE) {
         await this.failSync('PATCH', res);
       }
     }
@@ -329,7 +331,7 @@ export class CalendarService {
     );
 
     // 404 na criação = a pessoa apagou o calendário "Productivity Maxing".
-    if (res.status === 404) {
+    if (res.status === HTTP_NOT_FOUND) {
       calendarId = await this.replaceCalendar(userId, accessToken, calendarId);
       res = await this.sendEvent(
         'POST',
@@ -386,7 +388,7 @@ export class CalendarService {
     // 404/410 = o evento já não existe do lado da Google (ex: apagado à
     // mão pela pessoa, ou criado no calendário primário com o scope
     // anterior) - não é um erro, só confirma o que já queríamos.
-    if (!res.ok && res.status !== 404 && res.status !== 410) {
+    if (!res.ok && res.status !== HTTP_NOT_FOUND && res.status !== HTTP_GONE) {
       const body = await res.text();
       this.logger.error(`Google Calendar API (DELETE) falhou: ${body}`);
       throw new BadRequestException(

@@ -1,9 +1,11 @@
+import { MINUTES_PER_DAY, MINUTES_PER_HOUR } from '../common/time.constants';
 import {
   BadRequestException,
   ConflictException,
   Injectable,
   Logger,
 } from '@nestjs/common';
+import { HTTP_GONE, HTTP_NOT_FOUND } from '../common/http-status.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import { WorkShiftsService } from '../work-shifts/work-shifts.service';
@@ -284,11 +286,11 @@ export class ScheduleSyncService {
 
   private toGoogleDateTime(date: string, minutes: number): string {
     // 24:00 não existe em RFC3339: meia-noite é 00:00 do dia seguinte.
-    const dayOffset = Math.floor(minutes / 1440);
+    const dayOffset = Math.floor(minutes / MINUTES_PER_DAY);
     const dayKey = toDateKey(addUtcDays(parseDateKey(date), dayOffset));
-    const inDay = minutes % 1440;
-    const hh = String(Math.floor(inDay / 60)).padStart(2, '0');
-    const mm = String(inDay % 60).padStart(2, '0');
+    const inDay = minutes % MINUTES_PER_DAY;
+    const hh = String(Math.floor(inDay / MINUTES_PER_HOUR)).padStart(2, '0');
+    const mm = String(inDay % MINUTES_PER_HOUR).padStart(2, '0');
     return `${dayKey}T${hh}:${mm}:00`;
   }
 
@@ -345,7 +347,7 @@ export class ScheduleSyncService {
     // 404 na criacao: a pessoa apagou o calendario "Productivity Maxing".
     // Recria-o (ou reaproveita o que outro pedido paralelo ja recriou) e
     // tenta uma unica vez.
-    if (res.status === 404) {
+    if (res.status === HTTP_NOT_FOUND) {
       ctx.calendarId = await this.calendarService.replaceCalendar(
         userId,
         ctx.accessToken,
@@ -386,7 +388,7 @@ export class ScheduleSyncService {
     // 404/410: apagaste-o à mão no Google Calendar, ou o evento vive no
     // calendário primário (scope antigo) e já não lhe conseguimos tocar.
     // Volta a criar no calendário da app.
-    if (res.status === 404 || res.status === 410) {
+    if (res.status === HTTP_NOT_FOUND || res.status === HTTP_GONE) {
       await this.createEvent(userId, ctx, desired);
       return;
     }
@@ -421,7 +423,7 @@ export class ScheduleSyncService {
   ): Promise<void> {
     const res = await this.googleRequest(ctx, 'DELETE', googleEventId);
     // 404/410 = já não existe do lado da Google: é o resultado que queríamos.
-    if (!res.ok && res.status !== 404 && res.status !== 410) {
+    if (!res.ok && res.status !== HTTP_NOT_FOUND && res.status !== HTTP_GONE) {
       throw new Error(`Google delete failed: ${await res.text()}`);
     }
   }

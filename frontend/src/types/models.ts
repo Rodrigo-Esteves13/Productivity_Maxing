@@ -632,6 +632,29 @@ export interface Area {
   // concreto - nunca usado para esconder a Area, só para agrupar/ordenar
   // no seletor do Notebook (ver NotebookSubjectPicker).
   usedInPeriod?: boolean;
+  // Oficial (catálogo do admin) vs pessoal (só tua). isMine = pessoal e tua.
+  isOfficial: boolean;
+  isMine: boolean;
+  // Área oficial que o utilizador desligou (só relevante para oficiais).
+  isHidden?: boolean;
+  // Pedido para a área pessoal passar a oficial.
+  proposalStatus: AreaProposalStatus;
+  proposedAt?: string | null;
+  // Motivo da recusa dado pelo admin (só vem preenchido ao dono).
+  proposalReviewNote?: string | null;
+}
+
+export type AreaProposalStatus = 'NONE' | 'PENDING' | 'REJECTED';
+
+// GET /areas/proposals (admin).
+export interface AreaProposal {
+  id: string;
+  name: string;
+  colorHex: string;
+  credits: number | null;
+  defaultTaskType: string | null;
+  proposedAt: string;
+  proposedBy: string | null;
 }
 
 export interface Task {
@@ -1004,6 +1027,35 @@ export interface ShareAccessRequest {
   requestingUser: { id: string; name: string | null; email: string; avatarUrl: string | null };
 }
 
+// GET /notebook/entries/:id/share/visits (só o dono).
+export interface ShareVisitViewer {
+  name: string | null;
+  avatarUrl: string | null;
+  isAnonymous: boolean;
+  count: number;
+  firstVisitAt: string;
+  lastVisitAt: string;
+}
+export interface ShareVisits {
+  totalVisits: number;
+  uniqueVisitors: number;
+  viewers: ShareVisitViewer[];
+}
+
+export type FeedbackCategory = 'BUG' | 'IDEA' | 'TRANSLATION' | 'CONFUSING' | 'OTHER';
+
+export interface FeedbackItem {
+  id: string;
+  category: FeedbackCategory;
+  rating: number | null;
+  message: string;
+  language: string;
+  page: string | null;
+  createdAt: string;
+  isResolved: boolean;
+  user: { name: string | null } | null;
+}
+
 // Mirrors SharedEntryResult in the backend's notebook.service.ts - a
 // visitor to /shared/:token can be in one of 5 states, not just
 // "here's the content or a 404". Only 'ok' carries the actual entry.
@@ -1071,4 +1123,41 @@ export interface ChangeProposal {
   payload: ChangeProposalFields;
   createdAt: string;
   proposedBy: { id: string; name: string | null; email: string; avatarUrl: string | null };
+}
+
+export type FocusEffectStatus = 'not_enough_data' | 'no_variation' | 'inconclusive' | 'clear';
+
+// Efeito de um fator (foco ou interesse) na nota, em pontos da escala por
+// cada ponto do fator a mais.
+export interface FactorEffect {
+  status: FocusEffectStatus;
+  sampleSize: number;
+  gradePointsPerPoint: number | null;
+  rangeGradePoints: { low: number; high: number } | null;
+}
+
+export interface FocusEffect {
+  focus: FactorEffect & { minSamplesNeeded: number; excludedUnrated: number };
+  interest: FactorEffect & { minSamplesNeeded: number; minAreasNeeded: number; areasMissingInterest: number };
+  scale: { min: number; max: number };
+}
+
+// Foco medio (1 a 5) e nota media (% da escala) de uma semana.
+export interface FocusTrendWeek {
+  weekStart: string;
+  avgFocus: number | null;
+  ratedMinutes: number;
+  avgGradePercent: number | null;
+  gradedTasks: number;
+}
+
+// Uma bolinha por task avaliada: foco medio antes do prazo contra a nota.
+export interface FocusScatterPoint {
+  taskId: string;
+  title: string;
+  areaName: string;
+  date: string;
+  avgFocus: number;
+  ratedMinutes: number;
+  gradePercent: number;
 }

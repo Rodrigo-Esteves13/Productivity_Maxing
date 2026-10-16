@@ -6,6 +6,7 @@ import { ClockIcon, XIcon } from '../UI/Icons';
 import BreakBanner from './focus/BreakBanner';
 import IdleSessionPrompt from './focus/IdleSessionPrompt';
 import TimerEndPrompt from './focus/TimerEndPrompt';
+import RateFocusPrompt from './focus/RateFocusPrompt';
 
 // Mounted once, app-wide (see AppRouter.tsx, next to CommandPalette) - not
 // just on the Focus page. That's the actual point of this component: a
@@ -37,6 +38,7 @@ export default function GlobalStudyTimer() {
       <div className="print-hide fixed bottom-24 left-6 z-50 flex w-[min(24rem,calc(100vw-3rem))] flex-col gap-3">
         <IdleSessionPrompt />
         <TimerEndPrompt />
+        <RateFocusPrompt />
         <BreakBanner />
       </div>
 

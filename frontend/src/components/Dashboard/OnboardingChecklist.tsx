@@ -1,3 +1,4 @@
+import { MS_PER_DAY } from '../../lib/timeConstants';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
@@ -8,7 +9,6 @@ import { useCalendarStatus } from '../../hooks/useCalendarStatus';
 import { useI18n } from '../../i18n/useI18n';
 
 const DISMISSED_KEY = 'pmaxing:onboarding-dismissed';
-const MS_PER_DAY = 86_400_000;
 
 function readDismissed(): boolean {
   try {

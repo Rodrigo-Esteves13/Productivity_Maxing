@@ -1,3 +1,4 @@
+import { NOTEBOOK_PHOTO_MAX_SIZE_BYTES } from '../common/upload-limits';
 import {
   Controller,
   Get,
@@ -158,6 +159,17 @@ export class NotebookController {
     );
   }
 
+  @Get('entries/:id/share/visits')
+  @ApiOperation({
+    summary: 'Who opened your share link and how many times (owner only).',
+  })
+  getShareVisits(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.notebookService.getShareVisits(user.id, id);
+  }
+
   // Só faz sentido quando visibility = AUTHORIZED, mas devolve lista vazia
   // (não 400) noutros casos - o painel em NotebookEntryShare.tsx pode
   // pedir isto despreocupadamente sempre que está aberto.
@@ -230,7 +242,7 @@ export class NotebookController {
   @UseInterceptors(
     FileInterceptor('photo', {
       limits: {
-        fileSize: 8 * 1024 * 1024,
+        fileSize: NOTEBOOK_PHOTO_MAX_SIZE_BYTES,
         files: 1,
         fields: 0,
         fieldNestingDepth: 1,

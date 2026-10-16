@@ -40,6 +40,7 @@ const Areas = lazy(() => import('../pages/Areas'));
 const Users = lazy(() => import('../pages/Users'));
 const Security = lazy(() => import('../pages/Security'));
 const Appeals = lazy(() => import('../pages/Appeals'));
+const FeedbackAdmin = lazy(() => import('../pages/FeedbackAdmin'));
 const TaskTypes = lazy(() => import('../pages/TaskTypes'));
 const PrivacyPolicy = lazy(() => import('../pages/PrivacyPolicy'));
 const SharedNotebookEntry = lazy(() => import('../pages/SharedNotebookEntry'));
@@ -96,6 +97,10 @@ export default function AppRouter() {
             element={<PrivateRoute><Notebook /></PrivateRoute>}
           />
           <Route
+            path="/areas"
+            element={<PrivateRoute><Areas /></PrivateRoute>}
+          />
+          <Route
             path="/profile"
             element={<PrivateRoute><Profile /></PrivateRoute>}
           />
@@ -108,12 +113,12 @@ export default function AppRouter() {
             element={<PrivateRoute><Agent /></PrivateRoute>}
           />
 
-          {/* O <AdminRoute /> envolve as páginas. Se tentarem entrar na página de áreas, o AdminRoute barra. */}
+          {/* /areas é para todos (oficiais + pessoais); só as páginas abaixo são admin. */}
           <Route element={<AdminRoute />}>
-            <Route path="/areas" element={<Areas />} />
             <Route path="/users" element={<Users />} />
             <Route path="/security" element={<Security />} />
             <Route path="/appeals" element={<Appeals />} />
+            <Route path="/feedback" element={<FeedbackAdmin />} />
             <Route path="/task-types" element={<TaskTypes />} />
           </Route>
 

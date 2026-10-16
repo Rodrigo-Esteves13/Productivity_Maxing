@@ -125,10 +125,10 @@ function ProposalRow({
 // Partilhar nao depende de estar em modo edicao nem de gravar nada, e uma
 // acao a parte sobre a entrada ja guardada.
 export default function NotebookEntryShare({ share, currentTitle, currentText }: NotebookEntryShareProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const {
     isOpen, token, visibility, isLoading, error, shareUrl, requests, pendingCount,
-    isRequestsLoading, decidingId, proposals, decidingProposalId,
+    isRequestsLoading, decidingId, proposals, decidingProposalId, visits, visitsError,
     open, close, create, revoke, changeVisibility, decide, decideProposal,
   } = share;
   // Papel escolhido para cada pedido pendente, antes de aprovar.
@@ -212,6 +212,44 @@ export default function NotebookEntryShare({ share, currentTitle, currentText }:
           </button>
         )}
       </div>
+
+      {token && (
+        <div className="mt-3 border-t border-neutral-800 pt-2">
+          <p className="mb-1 text-xs font-medium text-neutral-300">{t('share.visits.title')}</p>
+          {visitsError && <p className="text-xs text-red-400">{t('share.visits.error')}</p>}
+          {!visitsError && visits && visits.viewers.length === 0 && (
+            <p className="text-xs text-neutral-600">{t('share.visits.empty')}</p>
+          )}
+          {visits && visits.viewers.length > 0 && (
+            <>
+              <p className="mb-1.5 text-xs text-neutral-400">
+                {t('share.visits.summary', { total: visits.totalVisits, people: visits.uniqueVisitors })}
+              </p>
+              <ul className="max-h-40 space-y-1 overflow-y-auto">
+                {visits.viewers.map((viewer, i) => (
+                  <li key={i} className="flex items-center justify-between gap-2 text-xs">
+                    <span className="min-w-0 truncate text-neutral-200">
+                      {viewer.name ?? t('share.visits.anonymous')}
+                    </span>
+                    <span className="shrink-0 text-neutral-500">
+                      {t('share.visits.row', {
+                        count: viewer.count,
+                        when: new Date(viewer.lastVisitAt).toLocaleDateString(lang, {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        }),
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <p className="mt-1.5 text-[11px] text-neutral-600">{t('share.visits.hint')}</p>
+        </div>
+      )}
 
       {token && visibility === 'AUTHORIZED' && (
         <>

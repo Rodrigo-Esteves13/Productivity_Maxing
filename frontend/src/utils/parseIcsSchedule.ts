@@ -1,13 +1,51 @@
 import type { ImportScheduleRow } from '../types/models';
 
-// Fuso horário fixo: o .ics da Maiêutica publica tudo em UTC (sufixo "Z"
-// em DTSTART/DTEND, ver X-WR-TIMEZONE:Europe/Lisbon no cabeçalho do
-// ficheiro) e o resto da feature (ClassOccurrence.startMinutes,
+// Fuso horário da app: muitos portais publicam em UTC (sufixo "Z") ou com
+// TZID; o resto da feature (ClassOccurrence.startMinutes,
 // User.quietHoursStart, o StudyPlanService) trabalha sempre em hora local
 // de Lisboa. Esta conversão é o único sítio onde isso acontece - depois
 // disto, "minutos desde a meia-noite" já não precisa de saber que fusos
 // horários existem.
 const SCHEDULE_TIMEZONE = 'Europe/Lisbon';
+
+/**
+ * Opções de import, para qualquer instituição (nada aqui é específico de
+ * uma universidade). Tudo opcional - sem opções, o comportamento é o
+ * "automático" de sempre.
+ */
+export interface IcsImportOptions {
+  // Como tirar o nome da disciplina do SUMMARY:
+  // 'auto' = separa por `subjectSeparator`; com 3+ partes usa a 3ª (formato
+  //          "curso | ano | disciplina | turma"), senão o título inteiro;
+  // 'whole' = título inteiro; número (1-based) = essa parte.
+  subjectSegment: 'auto' | 'whole' | number;
+  subjectSeparator: string;
+  // Palavras que introduzem o docente na DESCRIPTION ("Docente:",
+  // "Professor:", "Teacher:"...). Case-insensitive, sem os ":".
+  professorKeywords: string[];
+  // Só importa eventos cujo SUMMARY contenha PELO MENOS uma (vazio = todos).
+  includeKeywords: string[];
+  // Ignora eventos cujo SUMMARY contenha alguma (ex: "Feriado", "Exame").
+  excludeKeywords: string[];
+}
+
+export const DEFAULT_PROFESSOR_KEYWORDS = [
+  'docente',
+  'professor',
+  'professora',
+  'teacher',
+  'lecturer',
+  'instructor',
+  'profesor',
+];
+
+export const DEFAULT_ICS_IMPORT_OPTIONS: IcsImportOptions = {
+  subjectSegment: 'auto',
+  subjectSeparator: '|',
+  professorKeywords: DEFAULT_PROFESSOR_KEYWORDS,
+  includeKeywords: [],
+  excludeKeywords: [],
+};
 
 export interface ParseIcsScheduleResult {
   rows: ImportScheduleRow[];
@@ -15,8 +53,8 @@ export interface ParseIcsScheduleResult {
 }
 
 /**
- * Faz parse de um .ics de horário letivo (testado contra o export real da
- * Maiêutica/UMaia). DELIBERADAMENTE não interpreta RRULE/EXDATE: o
+ * Faz parse de um .ics de horário letivo de qualquer instituição (formato
+ * ajustável com IcsImportOptions). DELIBERADAMENTE não interpreta RRULE/EXDATE: o
  * ficheiro real não usa nenhum dos dois, é uma lista plana de um VEVENT
  * por aula por semana (ver comentário em ClassOccurrence no
  * schema.prisma) - se um dia a instituição passar a publicar eventos
@@ -25,7 +63,11 @@ export interface ParseIcsScheduleResult {
  * mais seguro (nunca inventa ocorrências que não vêm explícitas no
  * ficheiro).
  */
-export function parseIcsSchedule(icsText: string): ParseIcsScheduleResult {
+export function parseIcsSchedule(
+  icsText: string,
+  options: Partial<IcsImportOptions> = {},
+): ParseIcsScheduleResult {
+  const opts: IcsImportOptions = { ...DEFAULT_ICS_IMPORT_OPTIONS, ...options };
   const lines = unfoldLines(icsText);
   const events = splitIntoVEvents(lines);
 
@@ -34,7 +76,8 @@ export function parseIcsSchedule(icsText: string): ParseIcsScheduleResult {
 
   events.forEach((eventLines, index) => {
     try {
-      rows.push(parseVEvent(eventLines));
+      const row = parseVEvent(eventLines, opts);
+      if (row) rows.push(row);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error.';
       errors.push(`Event ${index + 1}: ${message}`);
@@ -82,8 +125,13 @@ function splitIntoVEvents(lines: string[]): string[][] {
   return events;
 }
 
-function parseVEvent(lines: string[]): ImportScheduleRow {
+function parseVEvent(
+  lines: string[],
+  opts: IcsImportOptions,
+): ImportScheduleRow | null {
   const props = new Map<string, string>();
+  // Parâmetros (ex: TZID) por propriedade.
+  const params = new Map<string, string>();
 
   for (const line of lines) {
     const colonIndex = line.indexOf(':');
@@ -92,8 +140,11 @@ function parseVEvent(lines: string[]): ImportScheduleRow {
     // resto antes do ':' são parâmetros que não precisamos de interpretar
     // aqui (não olhamos para TZID, por exemplo - ver nota no cabeçalho
     // do ficheiro sobre isto assumir sempre UTC/Z).
-    const name = line.slice(0, colonIndex).split(';')[0].toUpperCase();
+    const [rawName, ...rawParams] = line.slice(0, colonIndex).split(';');
+    const name = rawName.toUpperCase();
     const value = line.slice(colonIndex + 1);
+    const tzid = rawParams.find((p) => p.toUpperCase().startsWith('TZID='));
+    if (tzid) params.set(name, tzid.slice(5).replace(/^"|"$/g, ''));
     // Se a mesma propriedade aparecer duas vezes (não deveria, mas por
     // segurança), fica a última - não vale a pena rebentar o import
     // inteiro por causa disso.
@@ -110,8 +161,10 @@ function parseVEvent(lines: string[]): ImportScheduleRow {
   if (!dtendRaw) throw new Error('Missing DTEND.');
   if (!summaryRaw) throw new Error('Missing SUMMARY.');
 
-  const start = toLisbonWallClock(dtstartRaw);
-  const end = toLisbonWallClock(dtendRaw);
+  if (!passesKeywordFilters(summaryRaw, opts)) return null;
+
+  const start = toLisbonWallClock(dtstartRaw, params.get('DTSTART'));
+  const end = toLisbonWallClock(dtendRaw, params.get('DTEND') ?? params.get('DTSTART'));
 
   if (end.dateKey !== start.dateKey) {
     // Uma aula que atravessa a meia-noite local não é algo que se espere
@@ -133,36 +186,63 @@ function parseVEvent(lines: string[]): ImportScheduleRow {
     date: `${start.dateKey}T00:00:00.000Z`,
     startMinutes: start.minutes,
     endMinutes: end.minutes,
-    subject: extractSubject(summaryRaw),
+    subject: extractSubject(summaryRaw, opts),
     location,
-    professor: description ? extractProfessor(description) : undefined,
+    professor: description ? extractProfessor(description, opts) : undefined,
     externalUid: uid.trim(),
   };
 }
 
-// "1-INF | 3º Ano | Computação Móvel | Turma A" -> "Computação Móvel".
-// Formato observado no export real: sempre 4 segmentos separados por "|"
-// (curso | ano | disciplina | turma) - se vier com um número diferente de
-// segmentos (export de outra instituição, ou o formato mudar), cai para o
-// SUMMARY inteiro em vez de rebentar o import.
-function extractSubject(summary: string): string {
-  const parts = unescapeIcsText(summary)
-    .split('|')
-    .map((p) => p.trim())
-    .filter(Boolean);
-  return parts.length >= 3 ? parts[2] : unescapeIcsText(summary).trim();
+function normalize(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 }
 
-// DESCRIPTION vem com "\n" escapado (texto ICS, não quebras de linha
-// reais) e uma linha "Docente: Nome Completo" no meio - ver exemplo no
-// cabeçalho deste ficheiro.
-function extractProfessor(description: string): string | undefined {
-  const unescaped = unescapeIcsText(description);
-  const match = unescaped
-    .split('\n')
-    .map((line) => line.trim())
-    .find((line) => /^docente:/i.test(line));
-  return match ? match.replace(/^docente:/i, '').trim() : undefined;
+// Include/exclude por palavra-chave (sem acentos, sem maiúsculas).
+function passesKeywordFilters(summary: string, opts: IcsImportOptions): boolean {
+  const text = normalize(unescapeIcsText(summary));
+  const has = (kw: string) => kw.trim() !== '' && text.includes(normalize(kw.trim()));
+  if (opts.excludeKeywords.some(has)) return false;
+  if (opts.includeKeywords.some((k) => k.trim() !== '')) {
+    return opts.includeKeywords.some(has);
+  }
+  return true;
+}
+
+// "1-INF | 3º Ano | Computação Móvel | Turma A" -> "Computação Móvel" (auto).
+// Se o formato for outro, escolhe-se a parte (ou o título inteiro) nas
+// opções do import; nunca rebenta - cai sempre para o SUMMARY inteiro.
+function extractSubject(summary: string, opts: IcsImportOptions): string {
+  const whole = unescapeIcsText(summary).trim();
+  if (opts.subjectSegment === 'whole' || !opts.subjectSeparator) return whole;
+
+  const parts = whole
+    .split(opts.subjectSeparator)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  if (opts.subjectSegment === 'auto') {
+    return parts.length >= 3 ? parts[2] : whole;
+  }
+  return parts[opts.subjectSegment - 1] ?? whole;
+}
+
+// DESCRIPTION vem com "\n" escapado e uma linha "<keyword>: Nome" (Docente,
+// Professor, Teacher...). As keywords são configuráveis.
+function extractProfessor(description: string, opts: IcsImportOptions): string | undefined {
+  const keywords = opts.professorKeywords.map((k) => normalize(k.trim()).replace(/:$/, '')).filter(Boolean);
+  if (keywords.length === 0) return undefined;
+  for (const rawLine of unescapeIcsText(description).split('\n')) {
+    const line = rawLine.trim();
+    const colon = line.indexOf(':');
+    if (colon === -1) continue;
+    if (keywords.includes(normalize(line.slice(0, colon).trim()))) {
+      return line.slice(colon + 1).trim() || undefined;
+    }
+  }
+  return undefined;
 }
 
 // Escaping de texto ICS (RFC 5545 §3.3.11): \\ -> \, \; -> ;, \, -> ,,
@@ -184,31 +264,46 @@ function unescapeIcsText(value: string): string {
     .replace(/\uE000/g, '\\');
 }
 
-// "20260914T171500Z" -> dia local (YYYY-MM-DD) e minutos desde a meia-
-// noite, em Europe/Lisbon. Assume sempre UTC (sufixo "Z", ou a ausência
-// de "Z"/TZID tratada como UTC na mesma) - suficiente para o único
-// export que este parser precisa de suportar; não interpreta um TZID
-// explícito diferente de Europe/Lisbon caso apareça um dia.
-function toLisbonWallClock(value: string): {
+// Converte "20260914T171500Z" (UTC), "20260914T171500" com TZID, ou sem
+// fuso (hora local "flutuante") para o dia e minutos na hora da app
+// (Europe/Lisbon). Um TZID desconhecido cai para hora local sem converter
+// em vez de rebentar o import.
+function toLisbonWallClock(
+  value: string,
+  tzid?: string,
+): {
   dateKey: string;
   minutes: number;
 } {
-  const match = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?$/.exec(value);
+  const match = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z?)$/.exec(value);
   if (!match) {
     throw new Error(`Unrecognized date/time format: "${value}".`);
   }
 
-  const [, year, month, day, hour, minute, second] = match;
-  const utcDate = new Date(
-    Date.UTC(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hour),
-      Number(minute),
-      Number(second),
-    ),
+  const [, year, month, day, hour, minute, second, zulu] = match;
+  const asUtcMs = Date.UTC(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+    Number(second),
   );
+
+  let instantMs: number | null = null;
+  if (zulu) {
+    instantMs = asUtcMs;
+  } else if (tzid && isValidTimeZone(tzid)) {
+    instantMs = wallClockToInstant(asUtcMs, tzid);
+  }
+
+  // Hora flutuante (sem Z, sem TZID válido): já é hora local, não converter.
+  if (instantMs === null) {
+    return {
+      dateKey: `${year}-${month}-${day}`,
+      minutes: Number(hour) * 60 + Number(minute),
+    };
+  }
 
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: SCHEDULE_TIMEZONE,
@@ -218,11 +313,42 @@ function toLisbonWallClock(value: string): {
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
-  }).formatToParts(utcDate);
+  }).formatToParts(new Date(instantMs));
 
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '0';
-  const dateKey = `${get('year')}-${get('month')}-${get('day')}`;
-  const minutes = Number(get('hour')) * 60 + Number(get('minute'));
+  return {
+    dateKey: `${get('year')}-${get('month')}-${get('day')}`,
+    minutes: Number(get('hour')) * 60 + Number(get('minute')),
+  };
+}
 
-  return { dateKey, minutes };
+function isValidTimeZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-GB', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Instante UTC cuja hora de parede em `tz` é a pedida (duas passagens
+// chegam para corrigir o offset, incl. mudanças de hora).
+function wallClockToInstant(wallAsUtcMs: number, tz: string): number {
+  const offsetAt = (ms: number) => {
+    const p = new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(new Date(ms));
+    const g = (t: string) => Number(p.find((x) => x.type === t)?.value ?? 0);
+    return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second')) - ms;
+  };
+  let guess = wallAsUtcMs - offsetAt(wallAsUtcMs);
+  guess = wallAsUtcMs - offsetAt(guess);
+  return guess;
 }

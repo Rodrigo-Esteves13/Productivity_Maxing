@@ -8,6 +8,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { StudyPlanService } from './study-plan.service';
 import { GradeProjectionService } from './grade-projection.service';
+import { FocusEffectService } from './focus-effect.service';
 import { UpdateStudyPlanSettingsDto } from './dto/update-study-plan-settings.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -25,6 +26,7 @@ export class StudyPlanController {
   constructor(
     private readonly studyPlanService: StudyPlanService,
     private readonly gradeProjectionService: GradeProjectionService,
+    private readonly focusEffectService: FocusEffectService,
   ) {}
 
   // Mais pesado do que antes (pode treinar o modelo de previsão), por
@@ -67,6 +69,36 @@ export class StudyPlanController {
   })
   gradeProjection(@CurrentUser() user: AuthenticatedUser) {
     return this.gradeProjectionService.project(user.id);
+  }
+
+  @Get('focus-effect')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @ApiOperation({
+    summary:
+      'Measures, from your own graded tasks, how much study focus (1 to 5) moves your grade at equal study time. Reports "not enough data" or "inconclusive" instead of guessing.',
+  })
+  focusEffect(@CurrentUser() user: AuthenticatedUser) {
+    return this.focusEffectService.compute(user.id);
+  }
+
+  @Get('focus-trend')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @ApiOperation({
+    summary:
+      'Average study focus (1 to 5) and average grade (% of scale) per week, for the last weeks.',
+  })
+  focusTrend(@CurrentUser() user: AuthenticatedUser) {
+    return this.focusEffectService.trend(user.id);
+  }
+
+  @Get('focus-scatter')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @ApiOperation({
+    summary:
+      'One point per graded task: average study focus in the days before the deadline vs the grade.',
+  })
+  focusScatter(@CurrentUser() user: AuthenticatedUser) {
+    return this.focusEffectService.scatter(user.id);
   }
 
   @Patch('settings')

@@ -23,7 +23,10 @@ import { RemindersModule } from './reminders/reminders.module';
 import { StudyPlanModule } from './study-plan/study-plan.module';
 import { WorkShiftsModule } from './work-shifts/work-shifts.module';
 import { NotebookModule } from './notebook/notebook.module';
+import { PushModule } from './push/push.module';
+import { FeedbackModule } from './feedback/feedback.module';
 import { GradeComponentsModule } from './grade-components/grade-components.module';
+import { AreaInterestsModule } from './area-interests/area-interests.module';
 import { BannedIpsModule } from './banned-ips/banned-ips.module';
 import { AppealsModule } from './appeals/appeals.module';
 import { BannedIpGuard } from './common/guards/banned-ip.guard';
@@ -61,7 +64,10 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     StudyPlanModule,
     WorkShiftsModule,
     NotebookModule,
+    PushModule,
+    FeedbackModule,
     GradeComponentsModule,
+    AreaInterestsModule,
     BannedIpsModule,
     AppealsModule,
   ],

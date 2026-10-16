@@ -5,9 +5,9 @@
 // perguntar. Com 0 perguntava logo no dia seguinte; com 1 (default) uma
 // frequência de ontem só gera a pergunta amanhã. Existe porque avaliações
 // (testes, exames) raramente são marcadas como feitas no próprio dia.
-export const OVERDUE_CHECKIN_GRACE_DAYS = 1;
+import { MS_PER_DAY } from '../common/time.constants';
 
-const MS_PER_DAY = 86_400_000;
+export const OVERDUE_CHECKIN_GRACE_DAYS = 1;
 
 export interface OverdueWindow {
   /** Meia-noite UTC de hoje: só se volta a perguntar se a última pergunta for anterior. */

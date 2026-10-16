@@ -22,6 +22,7 @@ export default function NavLinks({ currentPath }: NavLinksProps) {
         <Link to="/focus" className={getLinkClass('/focus')}>{t('nav.focus')}</Link>
         <Link to="/schedule" className={getLinkClass('/schedule')}>{t('nav.schedule')}</Link>
         <Link to="/notebook" className={getLinkClass('/notebook')}>{t('nav.notebook')}</Link>
+        <Link to="/areas" className={getLinkClass('/areas')}>{t('nav.areas')}</Link>
         <Link to="/profile" className={getLinkClass('/profile')}>{t('nav.profile')}</Link>
       </div>
     </div>

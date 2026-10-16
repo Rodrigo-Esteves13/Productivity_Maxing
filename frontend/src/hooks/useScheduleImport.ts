@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { importSchedule } from '../api/scheduleService';
-import { parseIcsSchedule } from '../utils/parseIcsSchedule';
+import {
+  parseIcsSchedule,
+  DEFAULT_ICS_IMPORT_OPTIONS,
+  type IcsImportOptions,
+} from '../utils/parseIcsSchedule';
 import type { ImportScheduleResult } from '../types/models';
 
 export type ScheduleImportStage = 'idle' | 'reading' | 'importing' | 'done' | 'error';
@@ -14,7 +18,42 @@ export interface ScheduleImportOutcome {
 // ficheiro -> parseIcsSchedule (client-side, ver utils/parseIcsSchedule.ts)
 // -> POST /schedule/import -> juntar erros de parsing e de backend num só
 // sítio para o modal renderizar.
+const OPTIONS_STORAGE_KEY = 'pmaxing.scheduleImportOptions';
+
+function loadOptions(): IcsImportOptions {
+  try {
+    const raw = localStorage.getItem(OPTIONS_STORAGE_KEY);
+    if (!raw) return DEFAULT_ICS_IMPORT_OPTIONS;
+    const parsed = JSON.parse(raw) as Partial<IcsImportOptions>;
+    const list = (v: unknown, fallback: string[]) =>
+      Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, 30) : fallback;
+    const seg = parsed.subjectSegment;
+    return {
+      subjectSegment:
+        seg === 'whole' || seg === 'auto' || (typeof seg === 'number' && seg >= 1 && seg <= 10)
+          ? seg
+          : 'auto',
+      subjectSeparator:
+        typeof parsed.subjectSeparator === 'string' ? parsed.subjectSeparator.slice(0, 5) : '|',
+      professorKeywords: list(parsed.professorKeywords, DEFAULT_ICS_IMPORT_OPTIONS.professorKeywords),
+      includeKeywords: list(parsed.includeKeywords, []),
+      excludeKeywords: list(parsed.excludeKeywords, []),
+    };
+  } catch {
+    return DEFAULT_ICS_IMPORT_OPTIONS;
+  }
+}
+
 export function useScheduleImport() {
+  const [options, setOptionsState] = useState<IcsImportOptions>(loadOptions);
+  const setOptions = (next: IcsImportOptions) => {
+    setOptionsState(next);
+    try {
+      localStorage.setItem(OPTIONS_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // sem storage (modo privado): as opções valem só nesta sessão.
+    }
+  };
   const [stage, setStage] = useState<ScheduleImportStage>('idle');
   const [outcome, setOutcome] = useState<ScheduleImportOutcome | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -32,7 +71,7 @@ export function useScheduleImport() {
 
     try {
       const text = await file.text();
-      const { rows, errors: parseErrors } = parseIcsSchedule(text);
+      const { rows, errors: parseErrors } = parseIcsSchedule(text, options);
 
       if (rows.length === 0) {
         setOutcome({ parseErrors, backendResult: null });
@@ -51,5 +90,5 @@ export function useScheduleImport() {
     }
   };
 
-  return { stage, outcome, errorMessage, runImport, reset };
+  return { stage, outcome, errorMessage, runImport, reset, options, setOptions };
 }

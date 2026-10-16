@@ -1,3 +1,4 @@
+import { roundTo } from './roundTo';
 import type { Task, AcademicTaskTypeOption } from '../types/models';
 import { wasCompletedOnTime } from './deadlineCompliance';
 
@@ -15,7 +16,6 @@ export interface TypeProductivityRow {
 }
 
 const OTHER_KEY = '__none__';
-const round1 = (n: number) => Math.round(n * 10) / 10;
 
 // Per academic task type (Test, Project, Assignment... whatever the admin
 // catalog defines): how many exist, how many got finished, how many of
@@ -50,7 +50,7 @@ export function computeProductivityByType(
       completedPct: Math.round((completed / group.length) * 100),
       onTimeEligible: punctuality.length,
       onTimePct: punctuality.length > 0 ? Math.round((onTimeCount / punctuality.length) * 100) : null,
-      avgGrade: grades.length > 0 ? round1(grades.reduce((s, g) => s + g, 0) / grades.length) : null,
+      avgGrade: grades.length > 0 ? roundTo(grades.reduce((s, g) => s + g, 0) / grades.length) : null,
     });
   }
   return rows.sort((a, b) => b.total - a.total);

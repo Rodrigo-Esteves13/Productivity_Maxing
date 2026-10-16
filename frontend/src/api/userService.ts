@@ -4,6 +4,7 @@ import type {
   User,
   WeeklyReview,
   Area,
+  AreaProposal,
   Task,
   TaskMeta,
   TaskWriteInput,
@@ -229,13 +230,53 @@ export const exportUserData = async (id: string): Promise<Record<string, unknown
 };
 
 // AREA ENDPOINTS
-export const getUserAreas = async (periodId?: string): Promise<Area[]> => {
-  const response = await api.get<Area[]>('/areas', { params: periodId ? { periodId } : undefined });
+// includeHidden: só a página Áreas o usa, para poder voltar a ligar as oficiais
+// desligadas. Os seletores (tasks, caderno...) não o passam e não as veem.
+export const getUserAreas = async (periodId?: string, includeHidden = false): Promise<Area[]> => {
+  const params: Record<string, string> = {};
+  if (periodId) params.periodId = periodId;
+  if (includeHidden) params.includeHidden = 'true';
+  const response = await api.get<Area[]>('/areas', { params });
   return response.data;
 };
+export async function setAreaHidden(id: string, hidden: boolean): Promise<void> {
+  await api.put(`/areas/${id}/visibility`, { hidden });
+}
+export async function setAllOfficialAreasHidden(hidden: boolean): Promise<void> {
+  await api.put('/areas/visibility', { hidden });
+}
 export async function createArea(areaData: { name: string; colorHex: string; defaultTaskType?: string | null; credits?: number | null }): Promise<Area> {
   const response = await api.post<Area>('/areas', areaData);
   return response.data;
+}
+
+// Só admin: área OFICIAL (visível a todos).
+export async function createOfficialArea(areaData: { name: string; colorHex: string; defaultTaskType?: string | null; credits?: number | null }): Promise<Area> {
+  const response = await api.post<Area>('/areas/official', areaData);
+  return response.data;
+}
+
+export async function proposeArea(id: string): Promise<Area> {
+  const response = await api.post<Area>(`/areas/${id}/propose`);
+  return response.data;
+}
+
+export async function withdrawAreaProposal(id: string): Promise<Area> {
+  const response = await api.post<Area>(`/areas/${id}/withdraw`);
+  return response.data;
+}
+
+export async function getAreaProposals(): Promise<AreaProposal[]> {
+  const response = await api.get<AreaProposal[]>('/areas/proposals');
+  return response.data;
+}
+
+export async function approveAreaProposal(id: string): Promise<void> {
+  await api.post(`/areas/${id}/approve`);
+}
+
+export async function rejectAreaProposal(id: string, note?: string): Promise<void> {
+  await api.post(`/areas/${id}/reject`, { note: note?.trim() || undefined });
 }
 
 export async function deleteArea(id: string): Promise<void> {

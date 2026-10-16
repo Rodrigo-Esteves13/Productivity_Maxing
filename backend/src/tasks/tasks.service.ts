@@ -1,3 +1,4 @@
+import { roundTo } from '../common/round.util';
 import {
   Injectable,
   Logger,
@@ -7,6 +8,10 @@ import {
 } from '@nestjs/common';
 import { Difficulty, ProgressStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  accessibleAreaWhere,
+  assertAreaAccessible,
+} from '../areas/area-access';
 import { PeriodsService } from '../academic-programs/periods.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -19,9 +24,16 @@ import { TaskMetaCacheService } from '../common/task-meta-cache.service';
 import { nextOccurrence } from './recurrence.util';
 import {
   MAX_COURSE_WEIGHT_PERCENT,
+  WEIGHT_EPSILON,
   assertWeightFits,
   loadUsedWeight,
 } from '../grade-components/weight-budget';
+
+// Limite de caracteres do titulo de uma task (subtasks e revisoes criadas
+// pelo servidor cortam aqui para nunca falhar a validacao ao gravar).
+const TASK_TITLE_MAX_LENGTH = 200;
+// Peso estimado (em %) por ponto de dificuldade quando a task nao tem peso.
+const DIFFICULTY_TO_WEIGHT_PERCENT = 10;
 
 const TASK_INCLUDE = {
   area: true,
@@ -69,6 +81,9 @@ export class TasksService {
       recurrenceUntil,
       ...rest
     } = dto;
+    // A Area tem de ser oficial ou privada DESTE user: o FK sozinho aceita
+    // qualquer UUID existente, incluindo o de uma Area privada de outro.
+    await assertAreaAccessible(this.prisma, userId, dto.areaId);
     const typeIds = await this.resolveTypes(type, academicType);
     const priorityId = await this.resolvePriorityId(priority);
 
@@ -223,7 +238,8 @@ export class TasksService {
     });
 
     const priorityScore = (t: TaskWithIncludes) =>
-      t.weightPercentage ?? DIFFICULTY_WEIGHT[t.difficulty] * 10;
+      t.weightPercentage ??
+      DIFFICULTY_WEIGHT[t.difficulty] * DIFFICULTY_TO_WEIGHT_PERCENT;
 
     const sorted = [...tasks].sort(
       (a, b) => priorityScore(b) - priorityScore(a),
@@ -284,6 +300,11 @@ export class TasksService {
             ).id,
           }
         : {};
+
+    // Mudar de Area: mesma regra do create() (oficial ou minha).
+    if (rest.areaId !== undefined && rest.areaId !== existing.areaId) {
+      await assertAreaAccessible(this.prisma, userId, rest.areaId);
+    }
 
     // Peso: so se valida quando sobe, ou quando a task muda de cadeira/
     // periodo - editar o titulo de uma task numa cadeira ja cheia nao pode
@@ -421,7 +442,7 @@ export class TasksService {
         data: {
           userId,
           areaId: parent.areaId,
-          title: subtask.title.slice(0, 200),
+          title: subtask.title.slice(0, TASK_TITLE_MAX_LENGTH),
           date: parent.date,
           sortOrder: (maxSortOrder._max.sortOrder ?? 0) + 1,
           taskTypeId: parent.taskTypeId,
@@ -557,7 +578,7 @@ export class TasksService {
           data: {
             userId,
             areaId: task.areaId,
-            title: `Review: ${task.title}`.slice(0, 200),
+            title: `Review: ${task.title}`.slice(0, TASK_TITLE_MAX_LENGTH),
             date,
             sortOrder: baseOrder + index,
             taskTypeId: task.taskTypeId,
@@ -763,8 +784,13 @@ export class TasksService {
       await Promise.all([
         this.prisma.taskType.findMany({ where: { isActive: true } }),
         this.prisma.academicTaskType.findMany({ where: { isActive: true } }),
+        // Só Areas acessíveis a este user: uma Area privada de outro user
+        // fica fora do Map e a linha falha com "not found" (ver abaixo).
         this.prisma.area.findMany({
-          where: { id: { in: distinctAreaIds } },
+          where: {
+            id: { in: distinctAreaIds },
+            ...accessibleAreaWhere(userId),
+          },
         }),
         // Sempre chamado, mesmo com distinctPeriodIds vazio (`in: []`
         // devolve zero linhas, comportamento normal do Prisma - não é um
@@ -794,7 +820,10 @@ export class TasksService {
     // vez por par; cada linha aceite desconta do que sobra.
     const budgetKey = (areaId: string, periodId: string | null) =>
       `${areaId}|${periodId ?? ''}`;
-    const budgetPairs = new Map<string, { areaId: string; periodId: string | null }>();
+    const budgetPairs = new Map<
+      string,
+      { areaId: string; periodId: string | null }
+    >();
     for (const row of rows) {
       const periodId = row.periodId ?? activePeriodId ?? null;
       budgetPairs.set(budgetKey(row.areaId, periodId), {
@@ -848,9 +877,9 @@ export class TasksService {
         if (row.weightPercentage) {
           const key = budgetKey(area.id, resolvedPeriodId ?? null);
           const left = remainingWeight.get(key) ?? MAX_COURSE_WEIGHT_PERCENT;
-          if (row.weightPercentage > left + 0.001) {
+          if (row.weightPercentage > left + WEIGHT_EPSILON) {
             throw new BadRequestException(
-              `This course only has ${Math.max(0, Math.round(left * 10) / 10)}% of the final grade left.`,
+              `This course only has ${Math.max(0, roundTo(left))}% of the final grade left.`,
             );
           }
           remainingWeight.set(key, left - row.weightPercentage);

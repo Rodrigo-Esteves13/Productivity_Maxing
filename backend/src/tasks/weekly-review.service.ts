@@ -1,3 +1,4 @@
+import { roundTo } from '../common/round.util';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -37,6 +38,11 @@ export interface WeeklyReview {
 
 // Revisão dos últimos 7 dias (janela deslizante) + o que vem nos próximos 7.
 // Só leitura sobre dados que já existem - sem schema novo.
+// Quantas linhas cada lista da revisao semanal devolve no maximo.
+const WEEKLY_REVIEW_MAX_COMPLETED = 100;
+const WEEKLY_REVIEW_MAX_POSTPONED = 20;
+const WEEKLY_REVIEW_MAX_UPCOMING = 30;
+
 @Injectable()
 export class WeeklyReviewService {
   constructor(private readonly prisma: PrismaService) {}
@@ -55,7 +61,7 @@ export class WeeklyReviewService {
           where: { userId, completedAt: { gte: from, lte: now } },
           select: { id: true, title: true, completedAt: true, area },
           orderBy: { completedAt: 'desc' },
-          take: 100,
+          take: WEEKLY_REVIEW_MAX_COMPLETED,
         }),
         this.prisma.task.findMany({
           where: {
@@ -66,7 +72,7 @@ export class WeeklyReviewService {
           },
           select: { id: true, title: true, postponedCount: true, area },
           orderBy: { postponedCount: 'desc' },
-          take: 20,
+          take: WEEKLY_REVIEW_MAX_POSTPONED,
         }),
         this.prisma.task.count({
           where: {
@@ -92,7 +98,7 @@ export class WeeklyReviewService {
           },
           select: { id: true, title: true, date: true, area },
           orderBy: { date: 'asc' },
-          take: 30,
+          take: WEEKLY_REVIEW_MAX_UPCOMING,
         }),
       ]);
 
@@ -139,9 +145,7 @@ export class WeeklyReviewService {
         .sort((a, b) => b.minutes - a.minutes),
       focusAverage:
         ratings.length > 0
-          ? Math.round(
-              (ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10,
-            ) / 10
+          ? roundTo(ratings.reduce((a, b) => a + b, 0) / ratings.length)
           : null,
       upcoming: upcoming.map((t) => ({
         id: t.id,

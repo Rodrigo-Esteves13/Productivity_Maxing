@@ -2,6 +2,12 @@
 // eventos já calculados e devolve o texto iCalendar (RFC 5545). O
 // CalendarFeedService carrega os dados; isto só os formata.
 
+import {
+  ISO_DATE_KEY_LENGTH,
+  MS_PER_MINUTE,
+  MS_PER_SECOND,
+} from '../../common/time.constants';
+
 export interface FeedEvent {
   // Estável entre pedidos (nunca muda para o mesmo evento) - é o que deixa o
   // cliente de calendário atualizar um evento em vez de o duplicar.
@@ -77,7 +83,7 @@ function formatIcsDate(dateKey: string): string {
 function nextDayKey(dateKey: string): string {
   const d = new Date(`${dateKey}T00:00:00.000Z`);
   d.setUTCDate(d.getUTCDate() + 1);
-  return d.toISOString().slice(0, 10);
+  return d.toISOString().slice(0, ISO_DATE_KEY_LENGTH);
 }
 
 // Diferença Lisboa - UTC (em minutos) num instante concreto. O processo
@@ -104,8 +110,8 @@ function lisbonOffsetMinutes(at: Date): number {
     get('second'),
   );
   // `at` sem milissegundos para a diferença ser um número redondo de minutos.
-  const atSeconds = Math.floor(at.getTime() / 1000) * 1000;
-  return Math.round((asUtc - atSeconds) / 60000);
+  const atSeconds = Math.floor(at.getTime() / MS_PER_SECOND) * MS_PER_SECOND;
+  return Math.round((asUtc - atSeconds) / MS_PER_MINUTE);
 }
 
 /**
@@ -120,11 +126,12 @@ export function lisbonWallClockToUtc(
 ): Date {
   const [year, month, day] = dateKey.split('-').map(Number);
   const guess =
-    Date.UTC(year, month - 1, day, 0, 0, 0) + minutesSinceMidnight * 60000;
+    Date.UTC(year, month - 1, day, 0, 0, 0) +
+    minutesSinceMidnight * MS_PER_MINUTE;
   const firstOffset = lisbonOffsetMinutes(new Date(guess));
-  let utc = guess - firstOffset * 60000;
+  let utc = guess - firstOffset * MS_PER_MINUTE;
   const secondOffset = lisbonOffsetMinutes(new Date(utc));
-  if (secondOffset !== firstOffset) utc = guess - secondOffset * 60000;
+  if (secondOffset !== firstOffset) utc = guess - secondOffset * MS_PER_MINUTE;
   return new Date(utc);
 }
 

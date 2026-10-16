@@ -2,13 +2,13 @@
 // a mao. Puras (sem BD) para se testarem a parte. Existem porque o tempo de
 // estudo alimenta as previsoes: um intervalo absurdo estraga-as.
 
+import { MS_PER_DAY, MS_PER_MINUTE } from '../common/time.constants';
+
 export const MAX_SESSION_MINUTES = 16 * 60;
 // Quanto para tras se pode registar uma sessao.
 export const MAX_BACKDATE_DAYS = 400;
 // Tolerancia a relogios ligeiramente desfasados entre browser e servidor.
 const FUTURE_TOLERANCE_MS = 60_000;
-const MS_PER_MINUTE = 60_000;
-const MS_PER_DAY = 24 * 60 * MS_PER_MINUTE;
 
 /** Mensagem de erro, ou null se o intervalo e aceitavel. */
 export function validateSessionWindow(

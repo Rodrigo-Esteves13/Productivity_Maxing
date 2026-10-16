@@ -1,3 +1,4 @@
+import { accessibleAreaWhere } from '../areas/area-access';
 import {
   BadRequestException,
   ConflictException,
@@ -133,14 +134,49 @@ export class GradeComponentsService {
     };
   }
 
+  // Orcamento de peso de todas as cadeiras com algum peso atribuido no
+  // periodo (tasks ou componentes). Mesma regra do limite de 100%.
+  async weightBudgets(userId: string, periodId: string) {
+    const [taskAreas, componentAreas] = await Promise.all([
+      this.prisma.task.findMany({
+        where: { userId, periodId, weightPercentage: { not: null } },
+        select: { areaId: true },
+        distinct: ['areaId'],
+      }),
+      this.prisma.gradeComponent.findMany({
+        where: { userId, periodId },
+        select: { areaId: true },
+        distinct: ['areaId'],
+      }),
+    ]);
+    const areaIds = [
+      ...new Set([...taskAreas, ...componentAreas].map((row) => row.areaId)),
+    ];
+    const budgets = await Promise.all(
+      areaIds.map(async (areaId) => {
+        const used = await loadUsedWeight(this.prisma, {
+          userId,
+          areaId,
+          periodId,
+        });
+        return {
+          areaId,
+          used,
+          remaining: Math.max(0, MAX_COURSE_WEIGHT_PERCENT - used),
+        };
+      }),
+    );
+    return { max: MAX_COURSE_WEIGHT_PERCENT, budgets };
+  }
+
   async create(userId: string, dto: CreateGradeComponentDto) {
     const [period, area] = await Promise.all([
       this.prisma.academicPeriod.findFirst({
         where: { id: dto.periodId, program: { userId } },
         select: { id: true },
       }),
-      this.prisma.area.findUnique({
-        where: { id: dto.areaId },
+      this.prisma.area.findFirst({
+        where: { id: dto.areaId, ...accessibleAreaWhere(userId) },
         select: { id: true },
       }),
     ]);

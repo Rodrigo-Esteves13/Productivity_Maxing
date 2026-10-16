@@ -129,6 +129,9 @@ export default function SessionHistoryCard() {
                   serverError={serverError}
                   onEdit={(id, values) => mutate(() => updateStudySession(id, values), 'Could not save the changes.')}
                   onDelete={(id) => mutate(() => deleteStudySession(id), 'Could not delete the session.')}
+                  onRateFocus={(id, rating) =>
+                    mutate(() => updateStudySession(id, { focusRating: rating }), 'Could not save the focus rating.')
+                  }
                 />
               ))}
             </ul>

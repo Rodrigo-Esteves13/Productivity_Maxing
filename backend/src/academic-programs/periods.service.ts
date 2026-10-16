@@ -1,3 +1,4 @@
+import { accessibleAreaWhere } from '../areas/area-access';
 import {
   Injectable,
   NotFoundException,
@@ -211,6 +212,7 @@ export class PeriodsService {
       select: { realGrade: true, weightPercentage: true, areaId: true },
     });
     const areas = await this.prisma.area.findMany({
+      where: accessibleAreaWhere(userId),
       select: { id: true, credits: true },
     });
     const shouldRound = resolveRoundFinalGrade(

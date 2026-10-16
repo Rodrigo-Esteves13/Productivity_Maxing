@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Param, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Param,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import type { Request } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -50,8 +59,12 @@ export class NotebookShareController {
   getSharedEntry(
     @CurrentUser() user: AuthenticatedUser | null,
     @Param('token') token: string,
+    @Req() req: Request,
   ) {
-    return this.notebookService.getSharedEntry(token, user?.id ?? null);
+    return this.notebookService.getSharedEntry(token, user?.id ?? null, {
+      ip: req.ip,
+      userAgent: req.get('user-agent') ?? undefined,
+    });
   }
 
   // Ao contrário da rota acima, esta exige mesmo sessão - pedir acesso a

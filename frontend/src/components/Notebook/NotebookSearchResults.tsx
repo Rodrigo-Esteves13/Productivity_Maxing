@@ -1,4 +1,5 @@
 import type { NotebookSearchResult } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 import { PencilIcon, BookOpenIcon, GraduationCapIcon } from '../UI/Icons';
 
 interface NotebookSearchResultsProps {
@@ -20,6 +21,7 @@ export default function NotebookSearchResults({
   query,
   onSelect,
 }: NotebookSearchResultsProps) {
+  const { lang } = useI18n();
   if (isLoading) {
     return <p className="text-sm text-neutral-500">Searching...</p>;
   }
@@ -54,7 +56,7 @@ export default function NotebookSearchResults({
                 <p className="truncate text-xs text-neutral-500">{result.area.name}</p>
               </div>
               <span className="shrink-0 text-xs text-neutral-500">
-                {new Date(result.date).toLocaleDateString('pt-PT', {
+                {new Date(result.date).toLocaleDateString(lang, {
                   day: '2-digit',
                   month: '2-digit',
                   year: 'numeric',

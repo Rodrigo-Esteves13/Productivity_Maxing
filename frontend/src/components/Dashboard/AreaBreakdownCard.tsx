@@ -1,3 +1,4 @@
+import { FULL_PERCENT } from '../../lib/percent';
 import { useMemo } from 'react';
 import type { Task, Area } from '../../types/models';
 import { ChartPieIcon } from '../UI/Icons';
@@ -59,7 +60,7 @@ function computeAreaAverage(
   const weightedSum = items.reduce((sum, i) => sum + i.grade * i.weight, 0);
   const totalWeight = items.reduce((sum, i) => sum + i.weight, 0);
   return {
-    average: totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 100) / 100 : null,
+    average: totalWeight > 0 ? Math.round((weightedSum / totalWeight) * FULL_PERCENT) / FULL_PERCENT : null,
     gradedCount: items.length,
   };
 }
@@ -119,7 +120,7 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
                 <span className="text-xs text-neutral-500 shrink-0">
                   {area.credits ? `${area.credits} credits` : 'no credits set'}
                 </span>
-                {weightCoveredPct !== null && weightCoveredPct < 100 && (
+                {weightCoveredPct !== null && weightCoveredPct < FULL_PERCENT && (
                   <span
                     className="text-xs text-amber-400 shrink-0"
                     title="Percent of this course's weight covered by tasks on file - the rest isn't graded yet, so this average is preliminary"
@@ -139,7 +140,7 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
                 </span>
               </div>
             </div>
-            <ProgressBar percent={average !== null ? (average / max) * 100 : 0} />
+            <ProgressBar percent={average !== null ? (average / max) * FULL_PERCENT : 0} />
           </li>
         ))}
       </ul>

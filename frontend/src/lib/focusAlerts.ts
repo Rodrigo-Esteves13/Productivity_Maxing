@@ -15,6 +15,18 @@ export function notify(title: string, body: string): void {
   }
 }
 
+// Som do aviso: dois toques de 880 Hz (A5), o segundo 0,25 s depois.
+const CHIME_OFFSETS_S = [0, 0.25];
+const CHIME_FREQUENCY_HZ = 880;
+// Ganho minimo > 0 porque o exponentialRamp nao aceita zero.
+const CHIME_SILENT_GAIN = 0.0001;
+const CHIME_PEAK_GAIN = 0.2;
+const CHIME_ATTACK_S = 0.02;
+const CHIME_DECAY_S = 0.2;
+const CHIME_STOP_S = 0.22;
+// Fecha o AudioContext depois de o ultimo toque acabar.
+const CHIME_CLOSE_DELAY_MS = 800;
+
 // Dois toques curtos. O AudioContext so toca depois de um gesto da pessoa
 // (ela clicou em "Start" para chegar aqui); se for bloqueado, falha em silencio.
 export function playChime(): void {
@@ -22,18 +34,18 @@ export function playChime(): void {
     const AudioCtx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
-    [0, 0.25].forEach((offset) => {
+    CHIME_OFFSETS_S.forEach((offset) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0.0001, ctx.currentTime + offset);
-      gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + offset + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + offset + 0.2);
+      osc.frequency.value = CHIME_FREQUENCY_HZ;
+      gain.gain.setValueAtTime(CHIME_SILENT_GAIN, ctx.currentTime + offset);
+      gain.gain.exponentialRampToValueAtTime(CHIME_PEAK_GAIN, ctx.currentTime + offset + CHIME_ATTACK_S);
+      gain.gain.exponentialRampToValueAtTime(CHIME_SILENT_GAIN, ctx.currentTime + offset + CHIME_DECAY_S);
       osc.connect(gain).connect(ctx.destination);
       osc.start(ctx.currentTime + offset);
-      osc.stop(ctx.currentTime + offset + 0.22);
+      osc.stop(ctx.currentTime + offset + CHIME_STOP_S);
     });
-    setTimeout(() => void ctx.close(), 800);
+    setTimeout(() => void ctx.close(), CHIME_CLOSE_DELAY_MS);
   } catch {
     // Sem audio: o aviso visual e a notificacao continuam.
   }

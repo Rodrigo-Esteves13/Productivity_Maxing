@@ -16,6 +16,7 @@ import type {
   ScheduleLinkResult,
   ChangeProposal,
   ShareAccessRequest,
+  ShareVisits,
   ShareAccessRequestStatus,
   ShareAccessRole,
   SharedEntryResult,
@@ -168,6 +169,11 @@ export interface ShareStatus {
 
 export const getShareStatus = async (entryId: string): Promise<ShareStatus> => {
   const response = await api.get<ShareStatus>(`/notebook/entries/${entryId}/share`);
+  return response.data;
+};
+
+export const getShareVisits = async (entryId: string): Promise<ShareVisits> => {
+  const response = await api.get<ShareVisits>(`/notebook/entries/${entryId}/share/visits`);
   return response.data;
 };
 

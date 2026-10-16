@@ -1,3 +1,4 @@
+import { accessibleAreaWhere } from '../areas/area-access';
 import {
   Injectable,
   NotFoundException,
@@ -106,6 +107,7 @@ export class ProgramsService {
       select: { realGrade: true, weightPercentage: true, areaId: true },
     });
     const areas = await this.prisma.area.findMany({
+      where: accessibleAreaWhere(userId),
       select: { id: true, credits: true },
     });
     // Seminarios/participacao (GradeComponent) contam como tasks avaliadas.
@@ -140,6 +142,7 @@ export class ProgramsService {
       select: { realGrade: true, weightPercentage: true, areaId: true },
     });
     const areas = await this.prisma.area.findMany({
+      where: accessibleAreaWhere(userId),
       select: { id: true, name: true, credits: true },
     });
     const componentItems = await loadComponentGradedItems(this.prisma, {
@@ -173,6 +176,7 @@ export class ProgramsService {
       },
     });
     const areas = await this.prisma.area.findMany({
+      where: accessibleAreaWhere(userId),
       select: { id: true, credits: true },
     });
 

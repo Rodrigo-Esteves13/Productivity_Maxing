@@ -3,12 +3,16 @@
 // (hora de Lisboa), por isso misturar getters locais aqui reintroduz o
 // bug do dia errado já documentado em useSchedule.ts (frontend).
 
+import {
+  ISO_DATE_KEY_LENGTH,
+  MINUTES_PER_HOUR,
+  MS_PER_DAY,
+} from './time.constants';
+
 export const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-const MS_PER_DAY = 86_400_000;
-
 export function toDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return date.toISOString().slice(0, ISO_DATE_KEY_LENGTH);
 }
 
 export function parseDateKey(key: string): Date {
@@ -48,6 +52,6 @@ export function getLisbonNow(): { today: Date; nowMinutes: number } {
   );
   return {
     today,
-    nowMinutes: Number(get('hour')) * 60 + Number(get('minute')),
+    nowMinutes: Number(get('hour')) * MINUTES_PER_HOUR + Number(get('minute')),
   };
 }

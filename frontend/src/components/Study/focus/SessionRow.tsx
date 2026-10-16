@@ -6,6 +6,8 @@ import { formatDuration } from '../../../lib/timeFormat';
 import { toLocalParts } from '../../../lib/sessionWindow';
 import type { StudySession } from '../../../types/models';
 import SessionForm, { type SessionFormValues } from './SessionForm';
+import RatingInput from '../../UI/RatingInput';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface SessionRowProps {
   session: StudySession;
@@ -13,11 +15,13 @@ interface SessionRowProps {
   serverError: string;
   onEdit: (id: string, values: SessionFormValues) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
+  onRateFocus: (id: string, rating: number) => Promise<boolean>;
 }
 
 type RowMode = 'view' | 'edit' | 'confirm-delete';
 
-export default function SessionRow({ session, isSaving, serverError, onEdit, onDelete }: SessionRowProps) {
+export default function SessionRow({ session, isSaving, serverError, onEdit, onDelete, onRateFocus }: SessionRowProps) {
+  const { t } = useI18n();
   const [mode, setMode] = useState<RowMode>('view');
 
   if (mode === 'edit') {
@@ -62,6 +66,12 @@ export default function SessionRow({ session, isSaving, serverError, onEdit, onD
           </IconButton>
         </div>
       </div>
+      {session.endedAt && session.focusRating === null && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-neutral-500">{t('rateFocus.rowLabel')}</span>
+          <RatingInput value={null} onChange={(value) => value !== null && void onRateFocus(session.id, value)} />
+        </div>
+      )}
       {mode === 'confirm-delete' && (
         <InlineConfirm
           className="mt-2"

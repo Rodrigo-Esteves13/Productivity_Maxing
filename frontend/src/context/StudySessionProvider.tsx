@@ -58,6 +58,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState('');
   const [timerPlan, setTimerPlan] = useState<TimerPlan | null>(null);
   const [restBreak, setRestBreak] = useState<RestBreak | null>(() => loadBreak());
+  const [justStopped, setJustStopped] = useState<StudySession | null>(null);
 
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -239,13 +240,14 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
   );
 
   const stop = useCallback(
-    async (options: StopStudySessionInput = {}) => {
+    async (options: StopStudySessionInput = {}, skipFocusPrompt = false) => {
       if (!activeSession) return false;
       try {
         setIsSubmitting(true);
         setError('');
-        await stopStudySession(activeSession.id, options);
+        const stopped = await stopStudySession(activeSession.id, options);
         clearPlan(activeSession.id);
+        setJustStopped(!skipFocusPrompt && stopped.focusRating === null ? stopped : null);
         setActiveSession(null);
         announceSessionChanged();
         return true;
@@ -258,6 +260,8 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     },
     [activeSession],
   );
+
+  const dismissJustStopped = useCallback(() => setJustStopped(null), []);
 
   const startBreak = useCallback((minutes: number, resume: ResumeSpec | null) => {
     const rest: RestBreak = { endsAt: Date.now() + minutes * 60_000, resume };
@@ -285,6 +289,8 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
         restBreak,
         startBreak,
         endBreak,
+        justStopped,
+        dismissJustStopped,
       }}
     >
       {children}
