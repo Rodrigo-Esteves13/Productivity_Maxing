@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
 import useSeo from '../hooks/useSeo';
+import { useI18n } from '../i18n/useI18n';
 
 // Was previously a silent <Navigate to="/" replace /> in AppRouter - any
 // mistyped or dead link just bounced straight to the homepage with no
@@ -14,8 +15,9 @@ import useSeo from '../hooks/useSeo';
 // mitigation search engines expect from JS-rendered sites (a documented
 // "soft 404" pattern), not a limitation specific to this fix.
 export default function NotFound() {
+  const { t } = useI18n();
   useSeo({
-    title: 'Page not found',
+    title: t('common.notFound.title'),
     description: 'This page doesn\'t exist or may have moved.',
     path: '/404',
     noindex: true,
@@ -27,17 +29,17 @@ export default function NotFound() {
       <div className="flex flex-col items-center text-center py-20 sm:py-28">
         <p className="text-sm font-semibold text-violet-400 tracking-wide">404</p>
         <h1 className="mt-2 text-3xl sm:text-4xl font-bold text-white tracking-tight">
-          Page not found
+          {t('common.notFound.title')}
         </h1>
         <p className="mt-4 max-w-md text-neutral-400">
-          The page you're looking for doesn't exist, or may have moved.
+          {t('common.notFound.body')}
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <Button className="px-6 py-3 text-base" onClick={() => navigate('/')}>
-            Back to homepage
+            {t('common.notFound.home')}
           </Button>
           <Button variant="secondary" className="px-6 py-3 text-base" onClick={() => navigate(-1)}>
-            Go back
+            {t('common.notFound.back')}
           </Button>
         </div>
       </div>

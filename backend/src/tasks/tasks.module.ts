@@ -13,5 +13,7 @@ import { CommonModule } from '../common/common.module';
   imports: [PrismaModule, AuthModule, AcademicProgramsModule, CommonModule],
   controllers: [TasksController, SubtasksController],
   providers: [TasksService, SubtasksService, WeeklyReviewService],
+  // TaskPacksModule cria tasks pela mesma TasksService.create (regras iguais).
+  exports: [TasksService],
 })
 export class TasksModule {}

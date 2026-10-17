@@ -4,17 +4,27 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type CommuteMode } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SHIFT_SELECT, toShiftView } from './work-shifts.service';
 import type { WorkShiftView } from './work-shifts.service';
-import { MAX_COMMITMENTS_PER_USER } from './work-shifts.constants';
-import { CreateCommitmentDto, UpdateCommitmentDto } from './dto/commitment.dto';
+import {
+  MAX_BUFFER_MINUTES,
+  MAX_COMMITMENTS_PER_USER,
+} from './work-shifts.constants';
+import {
+  CreateCommitmentDto,
+  EstimateCommitmentCommuteDto,
+  UpdateCommitmentDto,
+} from './dto/commitment.dto';
+import { DistanceMatrixService } from '../maps/distance-matrix.service';
 
 const COMMITMENT_SELECT = {
   id: true,
   name: true,
   commuteMinutes: true,
+  address: true,
+  commuteMode: true,
   daysOff: true,
 } satisfies Prisma.CommitmentSelect;
 
@@ -22,6 +32,8 @@ export interface CommitmentView {
   id: string;
   name: string;
   commuteMinutes: number;
+  address: string | null;
+  commuteMode: CommuteMode;
   daysOff: number[];
 }
 
@@ -44,7 +56,10 @@ function sortedDaysOff(daysOff: number[] | null): number[] {
 
 @Injectable()
 export class CommitmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly distanceMatrix: DistanceMatrixService,
+  ) {}
 
   async overview(userId: string): Promise<CommitmentsOverview> {
     const [commitments, ungrouped] = await Promise.all([
@@ -79,6 +94,8 @@ export class CommitmentsService {
         id: c.id,
         name: c.name,
         commuteMinutes: c.commuteMinutes,
+        address: c.address,
+        commuteMode: c.commuteMode,
         daysOff: sortedDaysOff(c.daysOff),
         shifts: c.shifts.map(toShiftView),
       })),
@@ -103,6 +120,10 @@ export class CommitmentsService {
           userId,
           name: dto.name,
           commuteMinutes: dto.commuteMinutes,
+          address: dto.address || null,
+          ...(dto.commuteMode !== undefined && {
+            commuteMode: dto.commuteMode,
+          }),
           daysOff: dto.daysOff ?? [],
         },
         select: COMMITMENT_SELECT,
@@ -125,6 +146,10 @@ export class CommitmentsService {
           ...(dto.commuteMinutes !== undefined && {
             commuteMinutes: dto.commuteMinutes,
           }),
+          ...(dto.address !== undefined && { address: dto.address || null }),
+          ...(dto.commuteMode !== undefined && {
+            commuteMode: dto.commuteMode,
+          }),
           ...(dto.daysOff !== undefined && { daysOff: dto.daysOff }),
         },
       });
@@ -140,6 +165,34 @@ export class CommitmentsService {
     });
     if (!updated) throw this.notFound();
     return updated;
+  }
+
+  /**
+   * Pré-visualização do trajeto casa -> morada (Google Distance Matrix).
+   * NÃO grava nada: o formulário preenche o campo de minutos e a morada/modo
+   * só ficam guardados quando o utilizador grava o local. A origem é sempre a
+   * homeAddress do perfil (nunca vem do cliente), por isso o endpoint não serve
+   * para consultar rotas arbitrárias entre duas moradas.
+   */
+  async estimateCommute(
+    userId: string,
+    dto: EstimateCommitmentCommuteDto,
+  ): Promise<{ commuteMinutes: number }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { homeAddress: true },
+    });
+    if (!user?.homeAddress) {
+      throw new BadRequestException(
+        'Set your home address first (Schedule > Commute settings).',
+      );
+    }
+    const minutes = await this.distanceMatrix.getTravelMinutes(
+      user.homeAddress,
+      dto.address,
+      dto.mode,
+    );
+    return { commuteMinutes: Math.min(minutes, MAX_BUFFER_MINUTES) };
   }
 
   // Apagar um local apaga também os seus turnos (cascade na BD): é o

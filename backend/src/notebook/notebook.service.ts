@@ -756,29 +756,56 @@ export class NotebookService {
           })) > 0
         : false;
 
-    const { notebookEntry: entry } = share;
-    const withUrls = await this.attachSignedUrls(entry);
     return {
       status: 'ok',
       role,
       hasPendingProposal,
-      entry: {
-        title: withUrls.title,
-        entryType: withUrls.entryType,
-        classNumber: withUrls.classNumber,
-        textContent: withUrls.textContent,
-        drawingStrokes: withUrls.drawingStrokes,
-        tables: withUrls.tables,
-        canvasShapes: withUrls.canvasShapes,
-        canvasLinks: withUrls.canvasLinks,
-        canvasTexts: withUrls.canvasTexts,
-        canvasHeight: withUrls.canvasHeight,
-        usefulLinks: withUrls.usefulLinks,
-        date: withUrls.date,
-        area: entry.area,
-        photos: withUrls.photos,
-        attachments: withUrls.attachments,
-      },
+      entry: await this.buildSharedEntryView(share.notebookEntry),
+    };
+  }
+
+  /**
+   * Campos de uma entrada que quem a le por partilha pode ver (nunca ids
+   * internos nem o dono). Usado pelos links e pelo acesso entre amigos.
+   */
+  async buildSharedEntryView(entry: {
+    title: string;
+    entryType: string;
+    classNumber: number | null;
+    textContent: string | null;
+    drawingStrokes: unknown;
+    tables: unknown;
+    canvasShapes: unknown;
+    canvasLinks: unknown;
+    canvasTexts: unknown;
+    canvasHeight: number | null;
+    usefulLinks: unknown;
+    date: Date;
+    area: { name: string; colorHex: string | null };
+    photos: { id: string; storagePath: string }[];
+    attachments: {
+      id: string;
+      storagePath: string;
+      originalFileName: string;
+    }[];
+  }): Promise<Record<string, unknown>> {
+    const withUrls = await this.attachSignedUrls(entry);
+    return {
+      title: withUrls.title,
+      entryType: withUrls.entryType,
+      classNumber: withUrls.classNumber,
+      textContent: withUrls.textContent,
+      drawingStrokes: withUrls.drawingStrokes,
+      tables: withUrls.tables,
+      canvasShapes: withUrls.canvasShapes,
+      canvasLinks: withUrls.canvasLinks,
+      canvasTexts: withUrls.canvasTexts,
+      canvasHeight: withUrls.canvasHeight,
+      usefulLinks: withUrls.usefulLinks,
+      date: withUrls.date,
+      area: entry.area,
+      photos: withUrls.photos,
+      attachments: withUrls.attachments,
     };
   }
 

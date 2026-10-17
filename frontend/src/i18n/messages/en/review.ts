@@ -1,0 +1,17 @@
+export const review: Record<string, string> = {
+  'review.title': "Weekly review",
+  'review.description': "Your last 7 days and what is coming next.",
+  'review.completed': "Completed",
+  'review.studied': "Studied",
+  'review.overdue': "Overdue now",
+  'review.focus': "Avg focus",
+  'review.completedThisWeek': "Completed this week",
+  'review.nothingCompleted': "Nothing completed in the last 7 days.",
+  'review.studyByArea': "Study time by area",
+  'review.noStudy': "No study sessions this week.",
+  'review.pushedBack': "Pushed back more than once",
+  'review.comingUp': "Coming up (next 7 days)",
+  'review.nothingDue': "Nothing due in the next 7 days.",
+  'review.loading': "Loading...",
+  'review.error': "Could not load the weekly review.",
+};

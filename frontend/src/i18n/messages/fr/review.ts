@@ -1,0 +1,17 @@
+export const review: Record<string, string> = {
+  'review.title': "Bilan hebdomadaire",
+  'review.description': "Vos 7 derniers jours et ce qui arrive.",
+  'review.completed': "Terminées",
+  'review.studied': "Étudié",
+  'review.overdue': "En retard actuellement",
+  'review.focus': "Concentration moy.",
+  'review.completedThisWeek': "Terminées cette semaine",
+  'review.nothingCompleted': "Rien de terminé ces 7 derniers jours.",
+  'review.studyByArea': "Temps d'étude par matière",
+  'review.noStudy': "Aucune session d'étude cette semaine.",
+  'review.pushedBack': "Reportées plus d'une fois",
+  'review.comingUp': "À venir (7 prochains jours)",
+  'review.nothingDue': "Rien à rendre dans les 7 prochains jours.",
+  'review.loading': "Chargement...",
+  'review.error': "Impossible de charger le bilan hebdomadaire.",
+};

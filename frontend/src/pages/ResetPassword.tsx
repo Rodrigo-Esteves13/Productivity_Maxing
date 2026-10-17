@@ -7,6 +7,7 @@ import Input from '../components/UI/Input';
 import FormError from '../components/UI/FormError';
 import AuthCard from '../components/Auth/AuthCard';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { useI18n } from '../i18n/useI18n';
 
 // Página pública para onde o link do email de recuperação do Supabase
 // redireciona (ver redirectTo em AuthService.forgotPassword). O Supabase
@@ -15,7 +16,8 @@ import useDocumentTitle from '../hooks/useDocumentTitle';
 // isso esperamos por onAuthStateChange/getSession antes de mostrar o
 // formulário, em vez de assumir logo que a sessão já está pronta.
 export default function ResetPassword() {
-  useDocumentTitle('Reset Password');
+  const { t } = useI18n();
+  useDocumentTitle(t('auth.reset.docTitle'));
   const navigate = useNavigate();
 
   const [ready, setReady] = useState(false);
@@ -65,11 +67,11 @@ export default function ResetPassword() {
     setError('');
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+      setError(t('auth.reset.tooShort'));
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('auth.passwordsMismatch'));
       return;
     }
 
@@ -87,7 +89,7 @@ export default function ResetPassword() {
       setSuccess(true);
       setTimeout(() => navigate('/login', { replace: true }), 2500);
     } catch {
-      setError('Something went wrong. Please request a new reset link.');
+      setError(t('auth.reset.error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -96,9 +98,9 @@ export default function ResetPassword() {
   if (success) {
     return (
       <PageLayout>
-        <AuthCard title="Password Updated">
+        <AuthCard title={t('auth.reset.updatedTitle')}>
           <p className="text-center text-neutral-300 text-sm">
-            Your password has been updated. Redirecting to login...
+            {t('auth.reset.updated')}
           </p>
         </AuthCard>
       </PageLayout>
@@ -108,15 +110,15 @@ export default function ResetPassword() {
   if (linkInvalid) {
     return (
       <PageLayout>
-        <AuthCard title="Link Expired">
+        <AuthCard title={t('auth.reset.expiredTitle')}>
           <p className="text-center text-neutral-300 text-sm mb-4">
-            This password reset link is invalid or has expired.
+            {t('auth.reset.expired')}
           </p>
           <Link
             to="/forgot-password"
             className="block text-center text-violet-400 hover:text-violet-300 font-medium transition-colors"
           >
-            Request a new link
+            {t('auth.reset.requestNew')}
           </Link>
         </AuthCard>
       </PageLayout>
@@ -126,8 +128,8 @@ export default function ResetPassword() {
   if (!ready) {
     return (
       <PageLayout>
-        <AuthCard title="Reset Your Password">
-          <p className="text-center text-neutral-400 text-sm animate-pulse">Verifying link...</p>
+        <AuthCard title={t('auth.forgot.title')}>
+          <p className="text-center text-neutral-400 text-sm animate-pulse">{t('auth.reset.verifying')}</p>
         </AuthCard>
       </PageLayout>
     );
@@ -135,12 +137,12 @@ export default function ResetPassword() {
 
   return (
     <PageLayout>
-      <AuthCard title="Set a New Password">
+      <AuthCard title={t('auth.reset.setTitle')}>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <FormError message={error} />}
 
           <Input
-            label="New Password"
+            label={t('auth.reset.newPassword')}
             type="password"
             placeholder="••••••••"
             value={password}
@@ -148,7 +150,7 @@ export default function ResetPassword() {
             required
           />
           <Input
-            label="Confirm Password"
+            label={t('auth.reset.confirm')}
             type="password"
             placeholder="••••••••"
             value={confirmPassword}
@@ -157,7 +159,7 @@ export default function ResetPassword() {
           />
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Updating...' : 'Update Password'}
+            {isSubmitting ? t('auth.reset.updating') : t('auth.reset.update')}
           </Button>
         </form>
       </AuthCard>

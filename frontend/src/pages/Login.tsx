@@ -21,8 +21,9 @@ interface BlockedLoginInfo {
 }
 
 export default function Login() {
+  const { t } = useI18n();
   useSeo({
-    title: 'Login',
+    title: t('auth.seo.login'),
     description: 'Log in to Productivity Maxing to manage your academic tasks, deadlines, and grades.',
     path: '/login',
   });
@@ -47,7 +48,6 @@ export default function Login() {
   const [blockedInfo, setBlockedInfo] = useState<BlockedLoginInfo | null>(null);
   // Password certa mas email por verificar (so com a verificacao ligada no
   // backend): mostra aviso + botao de reenviar em vez de "credenciais invalidas".
-  const { t } = useI18n();
   const [needsVerification, setNeedsVerification] = useState(false);
   // Conta com 2FA (so com TWO_FACTOR_ENABLED no backend): token do desafio.
   const [twoFactorToken, setTwoFactorToken] = useState<string | null>(null);
@@ -57,9 +57,9 @@ export default function Login() {
     setResendMessage('');
     try {
       await resendVerificationRequest(email);
-      setResendMessage('If your email is waiting for verification, a new link was sent.');
+      setResendMessage(t('auth.resendOk'));
     } catch {
-      setResendMessage('Could not resend right now. Try again in a minute.');
+      setResendMessage(t('auth.resendFailed'));
     }
   };
 
@@ -86,7 +86,7 @@ export default function Login() {
       const data = (err as { response?: { data?: Record<string, unknown> } })?.response?.data;
       if (data?.code === 'ACCOUNT_BLOCKED' && typeof data.appealToken === 'string') {
         setBlockedInfo({
-          message: typeof data.message === 'string' ? data.message : 'Your account is restricted.',
+          message: typeof data.message === 'string' ? data.message : t('auth.blockedDefault'),
           appealToken: data.appealToken,
         });
         return;
@@ -161,18 +161,18 @@ export default function Login() {
           />
           <div className="text-right -mt-2">
             <Link to="/forgot-password" className="text-sm text-violet-400 hover:text-violet-300">
-              Forgot password?
+              {t('auth.forgotLink')}
             </Link>
           </div>
 
           <Button type="submit" className="w-full">
-            Login
+            {t('auth.login')}
           </Button>
         </form>
 
-        <AuthSwitchLink question="Don't have an account yet?" linkText="Sign up" to="/register" />
+        <AuthSwitchLink question={t('auth.noAccount')} linkText={t('auth.signUp')} to="/register" />
 
-        <OAuthProviderList message="Or sign in with your accounts" />
+        <OAuthProviderList message={t('auth.oauthLogin')} />
       </AuthCard>
     </PageLayout>
   );

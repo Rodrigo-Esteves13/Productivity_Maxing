@@ -46,4 +46,14 @@ export class PushController {
   ) {
     return this.push.unsubscribe(user.id, dto.endpoint);
   }
+
+  @Post('test')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @ApiOperation({
+    summary: "Send a test notification to the current user's own devices.",
+  })
+  test(@CurrentUser() user: AuthenticatedUser) {
+    return this.push.sendTest(user.id);
+  }
 }

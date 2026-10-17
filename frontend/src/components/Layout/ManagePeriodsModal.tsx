@@ -17,6 +17,7 @@ import { PinIcon } from '../UI/Icons';
 import type { AcademicPeriod, AcademicProgram } from '../../types/models';
 import { getApiMessage, getHttpStatus } from '../../lib/httpError';
 import { useFeedback } from '../../context/useFeedback';
+import { useI18n } from '../../i18n/useI18n';
 
 interface ManagePeriodsModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ function toDateInputValue(iso: string | null): string {
 }
 
 export default function ManagePeriodsModal({ isOpen, onClose, program }: ManagePeriodsModalProps) {
+  const { t, lang } = useI18n();
   const { notify, confirm } = useFeedback();
   const { refresh: refreshContext } = useAcademic();
   const [periods, setPeriods] = useState<AcademicPeriod[]>([]);
@@ -56,7 +58,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
       const data = await getProgramPeriods(program.id);
       setPeriods(data);
     } catch {
-      setError('Could not load periods.');
+      setError(t('periods.loadError'));
     } finally {
       setIsLoading(false);
     }
@@ -89,7 +91,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
       await loadPeriods();
       await refreshContext();
     } catch {
-      notify('Could not save the changes to this period.', 'error');
+      notify(t('periods.saveError'), 'error');
     } finally {
       setBusyId(null);
     }
@@ -112,12 +114,12 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
         // explicit extra confirmation (see PeriodsService.archive).
         const message = getApiMessage(
           err,
-          'This is the most recent period in this program, with no successor. Archive it anyway?',
+          t('period.archive.mostRecent'),
         );
         const confirmed = await confirm({
-          title: 'Archive period',
+          title: t('period.archive.title'),
           message,
-          confirmLabel: 'Archive anyway',
+          confirmLabel: t('period.archive.anyway'),
         });
         if (confirmed) {
           setBusyId(null);
@@ -125,7 +127,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
           return;
         }
       } else {
-        notify(getApiMessage(err, "Could not change this period's archived status."), 'error');
+        notify(getApiMessage(err, t('periods.archiveStatusError')), 'error');
       }
     } finally {
       setBusyId(null);
@@ -139,7 +141,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
       await loadPeriods();
       await refreshContext();
     } catch {
-      notify('Could not pin/unpin this period.', 'error');
+      notify(t('periods.pinError'), 'error');
     } finally {
       setBusyId(null);
     }
@@ -164,23 +166,21 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
       await loadPeriods();
       await refreshContext();
     } catch {
-      setError('Could not create the period.');
+      setError(t('periods.createError'));
     } finally {
       setIsCreating(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Periods - ${program.name}`}>
+    <Modal isOpen={isOpen} onClose={onClose} title={t('periods.modalTitle', { name: program.name })}>
       <div className="space-y-4">
         <p className="text-sm text-neutral-400">
-          Organize "{program.name}" into semesters, years, or whatever periods make sense for it.
-          Archived periods are still listed here, greyed out, with a Restore option. Pin one to
-          make it the period this program opens by default, instead of always the most recent one.
+          {t('periods.intro', { name: program.name })}
         </p>
 
         {isLoading ? (
-          <p className="text-sm text-neutral-500">Loading...</p>
+          <p className="text-sm text-neutral-500">{t('common.loading')}</p>
         ) : (
           <ul className="space-y-2 max-h-80 overflow-y-auto">
             {periods.map((period) => (
@@ -193,7 +193,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
                     <Input
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      placeholder="Period name"
+                      placeholder={t('periods.namePlaceholder')}
                       autoFocus
                     />
                     <div className="flex gap-2">
@@ -212,14 +212,14 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
                     </div>
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="secondary" onClick={cancelEditing}>
-                        Cancel
+                        {t('common.cancel')}
                       </Button>
                       <Button
                         type="button"
                         onClick={() => saveEditing(period)}
                         disabled={busyId === period.id || !editName.trim() || !editStart}
                       >
-                        Save
+                        {t('common.save')}
                       </Button>
                     </div>
                   </div>
@@ -228,19 +228,19 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
                     <div>
                       <p className="text-sm font-medium text-neutral-100">
                         {period.isPinned && (
-                          <span className="mr-1 inline-flex align-middle text-violet-400" title="Pinned">
+                          <span className="mr-1 inline-flex align-middle text-violet-400" title={t('periods.pinned')}>
                             <PinIcon />
                           </span>
                         )}
                         {period.name}
                         {period.isArchived && (
-                          <span className="ml-2 text-xs text-neutral-500">(archived)</span>
+                          <span className="ml-2 text-xs text-neutral-500">{t('period.archivedTag')}</span>
                         )}
                       </p>
                       <p className="text-xs text-neutral-500">
-                        {new Date(period.startDate).toLocaleDateString()}
+                        {new Date(period.startDate).toLocaleDateString(lang)}
                         {period.endDate
-                          ? ` - ${new Date(period.endDate).toLocaleDateString()}`
+                          ? ` - ${new Date(period.endDate).toLocaleDateString(lang)}`
                           : ''}
                       </p>
                     </div>
@@ -250,7 +250,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
                         onClick={() => startEditing(period)}
                         className="text-xs text-neutral-400 hover:text-neutral-200 underline decoration-dotted"
                       >
-                        Rename
+                        {t('periods.rename')}
                       </button>
                       {!period.isArchived && (
                         <button
@@ -259,7 +259,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
                           disabled={busyId === period.id}
                           className="text-xs text-neutral-400 hover:text-neutral-200 underline decoration-dotted disabled:opacity-50"
                         >
-                          {period.isPinned ? 'Unpin' : 'Pin'}
+                          {period.isPinned ? t('periods.unpin') : t('periods.pin')}
                         </button>
                       )}
                       <button
@@ -268,7 +268,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
                         disabled={busyId === period.id}
                         className="text-xs text-neutral-400 hover:text-neutral-200 underline decoration-dotted disabled:opacity-50"
                       >
-                        {period.isArchived ? 'Restore' : 'Archive'}
+                        {period.isArchived ? t('periods.restore') : t('periods.archive')}
                       </button>
                     </div>
                   </div>
@@ -276,23 +276,23 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
               </li>
             ))}
             {periods.length === 0 && (
-              <p className="text-sm text-neutral-500">No periods yet.</p>
+              <p className="text-sm text-neutral-500">{t('periods.empty')}</p>
             )}
           </ul>
         )}
 
         <form onSubmit={handleCreate} className="space-y-3 pt-3 border-t border-neutral-800">
-          <p className="text-sm font-medium text-neutral-200">Add a new period</p>
-          <FormField label="Name" htmlFor="new-period-name">
+          <p className="text-sm font-medium text-neutral-200">{t('periods.addTitle')}</p>
+          <FormField label={t('periods.name')} htmlFor="new-period-name">
             <Input
               id="new-period-name"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="1st Semester 2025/26"
+              placeholder={t('periods.newPlaceholder')}
             />
           </FormField>
           <div className="flex gap-2">
-            <FormField label="Start date" htmlFor="new-period-start" className="flex-1">
+            <FormField label={t('periods.start')} htmlFor="new-period-start" className="flex-1">
               <Input
                 id="new-period-start"
                 type="date"
@@ -300,7 +300,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
                 onChange={(e) => setNewStart(e.target.value)}
               />
             </FormField>
-            <FormField label="End date (optional)" htmlFor="new-period-end" className="flex-1">
+            <FormField label={t('periods.end')} htmlFor="new-period-end" className="flex-1">
               <Input
                 id="new-period-end"
                 type="date"
@@ -314,7 +314,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
 
           <div className="flex justify-end">
             <Button type="submit" disabled={isCreating || !newName.trim() || !newStart}>
-              {isCreating ? 'Adding...' : 'Add period'}
+              {isCreating ? t('periods.adding') : t('periods.add')}
             </Button>
           </div>
         </form>

@@ -283,3 +283,24 @@ export const requestShareAccess = async (
   );
   return response.data;
 };
+
+export type SharedWithMeStatus = 'APPROVED' | 'PENDING' | 'DENIED' | 'PUBLIC';
+export type SharedWithMeRole = 'VIEWER' | 'EDITOR' | 'CO_OWNER';
+
+export interface SharedWithMeItem {
+  token: string;
+  status: SharedWithMeStatus;
+  role: SharedWithMeRole;
+  title: string | null;
+  areaName: string | null;
+  areaColor: string | null;
+  ownerName: string | null;
+  lastActivityAt: string;
+}
+
+// Aulas que outras pessoas partilharam comigo (pedidos meus + links publicos
+// que abri com sessao). Titulo/dono so vem preenchido com acesso aprovado.
+export const getSharedWithMe = async (): Promise<SharedWithMeItem[]> => {
+  const response = await api.get<SharedWithMeItem[]>('/notebook/shared/with-me');
+  return response.data;
+};

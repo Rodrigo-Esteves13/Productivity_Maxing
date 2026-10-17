@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, XIcon } from './Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 export interface LightboxImage {
   id: string;
@@ -28,6 +29,7 @@ function isSafeImageUrl(url: string): boolean {
 // Ecra inteiro para ampliar fotos: Esc fecha, setas navegam, clicar fora
 // fecha. Bloqueia o scroll da pagina enquanto esta aberto.
 export default function ImageLightbox({ images, index, onIndexChange }: ImageLightboxProps) {
+  const { t } = useI18n();
   const closeRef = useRef<HTMLButtonElement>(null);
   const isOpen = index !== null && index >= 0 && index < images.length;
   const total = images.length;
@@ -66,14 +68,14 @@ export default function ImageLightbox({ images, index, onIndexChange }: ImageLig
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`Photo ${index + 1} of ${total}`}
+      aria-label={t('common.photoOf', { n: index + 1, total })}
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
       onClick={close}
     >
       <button
         ref={closeRef}
         type="button"
-        aria-label="Close photo"
+        aria-label={t('common.closePhoto')}
         onClick={close}
         className="absolute right-4 top-4 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
       >
@@ -83,7 +85,7 @@ export default function ImageLightbox({ images, index, onIndexChange }: ImageLig
       {total > 1 && (
         <button
           type="button"
-          aria-label="Previous photo"
+          aria-label={t('common.previousPhoto')}
           onClick={(e) => {
             e.stopPropagation();
             go(-1);
@@ -106,7 +108,7 @@ export default function ImageLightbox({ images, index, onIndexChange }: ImageLig
       {total > 1 && (
         <button
           type="button"
-          aria-label="Next photo"
+          aria-label={t('common.nextPhoto')}
           onClick={(e) => {
             e.stopPropagation();
             go(1);

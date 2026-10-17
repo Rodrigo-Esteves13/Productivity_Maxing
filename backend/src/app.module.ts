@@ -25,6 +25,8 @@ import { WorkShiftsModule } from './work-shifts/work-shifts.module';
 import { NotebookModule } from './notebook/notebook.module';
 import { PushModule } from './push/push.module';
 import { FeedbackModule } from './feedback/feedback.module';
+import { TaskPacksModule } from './task-packs/task-packs.module';
+import { SocialModule } from './social/social.module';
 import { GradeComponentsModule } from './grade-components/grade-components.module';
 import { AreaInterestsModule } from './area-interests/area-interests.module';
 import { BannedIpsModule } from './banned-ips/banned-ips.module';
@@ -66,6 +68,8 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     NotebookModule,
     PushModule,
     FeedbackModule,
+    TaskPacksModule,
+    SocialModule,
     GradeComponentsModule,
     AreaInterestsModule,
     BannedIpsModule,

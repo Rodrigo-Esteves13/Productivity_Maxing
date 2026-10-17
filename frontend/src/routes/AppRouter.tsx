@@ -37,6 +37,12 @@ const Profile = lazy(() => import('../pages/Profile'));
 const Developer = lazy(() => import('../pages/Developer'));
 const Agent = lazy(() => import('../pages/Agent'));
 const Areas = lazy(() => import('../pages/Areas'));
+const SharedWithMe = lazy(() => import('../pages/SharedWithMe'));
+const Social = lazy(() => import('../pages/Social'));
+const FriendNotes = lazy(() => import('../pages/FriendNotes'));
+const FriendNoteEntry = lazy(() => import('../pages/FriendNoteEntry'));
+const TaskPacks = lazy(() => import('../pages/TaskPacks'));
+const ImportTaskPack = lazy(() => import('../pages/ImportTaskPack'));
 const Users = lazy(() => import('../pages/Users'));
 const Security = lazy(() => import('../pages/Security'));
 const Appeals = lazy(() => import('../pages/Appeals'));
@@ -99,6 +105,30 @@ export default function AppRouter() {
           <Route
             path="/areas"
             element={<PrivateRoute><Areas /></PrivateRoute>}
+          />
+          <Route
+            path="/social/notes/:ownerId"
+            element={<PrivateRoute><FriendNotes /></PrivateRoute>}
+          />
+          <Route
+            path="/social/notes/:ownerId/:entryId"
+            element={<PrivateRoute><FriendNoteEntry /></PrivateRoute>}
+          />
+          <Route
+            path="/social"
+            element={<PrivateRoute><Social /></PrivateRoute>}
+          />
+          <Route
+            path="/task-packs"
+            element={<PrivateRoute><TaskPacks /></PrivateRoute>}
+          />
+          <Route
+            path="/packs/:code"
+            element={<PrivateRoute><ImportTaskPack /></PrivateRoute>}
+          />
+          <Route
+            path="/shared-with-me"
+            element={<PrivateRoute><SharedWithMe /></PrivateRoute>}
           />
           <Route
             path="/profile"

@@ -199,6 +199,15 @@ model User {
   pushSubscriptions PushSubscription[]
   shareVisits       ShareVisit[]
   feedbackEntries   Feedback[]
+  taskPacks         TaskPack[]
+  // Social: codigo de amigo aleatorio (criado a pedido), amizades e bloqueios.
+  friendCode        String?  @unique
+  friendshipsSent     Friendship[] @relation("FriendshipRequester")
+  friendshipsReceived Friendship[] @relation("FriendshipAddressee")
+  blocksMade          UserBlock[]  @relation("BlockMaker")
+  blocksReceived      UserBlock[]  @relation("BlockTarget")
+  notesGrantsGiven    NotebookViewGrant[] @relation("ViewGrantOwner")
+  notesGrantsReceived NotebookViewGrant[] @relation("ViewGrantViewer")
   email     String   @unique
   role      Role     @default(USER)
   name      String?
@@ -1287,6 +1296,12 @@ model Commitment {
   name           String
   // Minutos de viagem de cada lado de cada turno deste local.
   commuteMinutes Int    @default(0)
+  // Morada do local (trabalho, evento, ginasio...) e meio de transporte
+  // usados para CALCULAR commuteMinutes a partir de User.homeAddress via
+  // Distance Matrix. Opcionais: o valor manual continua a ser o caminho
+  // principal; a morada so existe para lembrar de onde veio o numero.
+  address        String?
+  commuteMode    CommuteMode @default(TRANSIT)
   // Folgas fixas: dias da semana (0=Domingo..6=Sábado) em que NUNCA se
   // trabalha aqui. Turnos semanais nesses dias não se criam nem se expandem;
   // turnos pontuais (troca de folga) continuam a valer. Validado em
@@ -1476,4 +1491,102 @@ model Feedback {
 
   @@index([createdAt])
   @@index([isResolved, createdAt])
+}
+
+/// Conjunto de tarefas pre-definidas que um aluno partilha com colegas de turma
+/// (ex.: as entregas e testes de uma cadeira). Cada colega IMPORTA o pacote e
+/// recebe as tarefas na sua conta, com data, peso e cadeira iguais para todos.
+/// O acesso e por `code` (aleatorio, nao adivinhavel); apagar o pacote revoga-o.
+model TaskPack {
+  id          String   @id @default(uuid())
+  ownerId     String
+  name        String
+  code        String   @unique
+  importCount Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  owner User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items TaskPackItem[]
+
+  @@index([ownerId])
+}
+
+/// Uma tarefa dentro de um pacote. Guarda so os parametros que sao iguais para
+/// toda a turma: titulo, data, peso, cadeira e tipo. `areaId` so e preenchido
+/// para Areas OFICIAIS (iguais para todos); numa Area pessoal fica null e quem
+/// importa escolhe a sua (areaName serve de sugestao).
+model TaskPackItem {
+  id               String   @id @default(uuid())
+  packId           String
+  position         Int
+  title            String
+  dueDate          DateTime
+  weightPercentage Float?
+  areaId           String?
+  areaName         String
+  taskType         String
+  academicType     String?
+
+  pack TaskPack @relation(fields: [packId], references: [id], onDelete: Cascade)
+
+  @@index([packId, position])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+// Amizade entre duas pessoas. Uma linha por par (o service impede a direcao
+// inversa duplicada). So PENDING/ACCEPTED: recusar/cancelar/remover apaga a
+// linha. Amizade NAO da acesso a nada por si so - ver pedidos de acesso.
+model Friendship {
+  id          String           @id @default(uuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  decidedAt   DateTime?
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+}
+
+// Bloqueio: quem bloqueia deixa de ser encontrado/contactado pelo bloqueado.
+model UserBlock {
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("BlockMaker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlockTarget", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+// Pedido/permissao de LEITURA das notas de uma pessoa a outra (so entre amigos).
+// Uma linha por par. O dono escolhe, ao aprovar, QUAIS cadeiras (areaIds) a
+// pessoa pode ler - nunca "tudo" por omissao. Editor/co-owner nao passam por
+// aqui: so existem por item (NotebookShareAccessRequest).
+model NotebookViewGrant {
+  id        String                   @id @default(uuid())
+  ownerId   String
+  viewerId  String
+  status    ShareAccessRequestStatus @default(PENDING)
+  areaIds   String[]
+  createdAt DateTime                 @default(now())
+  decidedAt DateTime?
+
+  owner  User @relation("ViewGrantOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  viewer User @relation("ViewGrantViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, viewerId])
+  @@index([viewerId, status])
+  @@index([ownerId, status])
 }

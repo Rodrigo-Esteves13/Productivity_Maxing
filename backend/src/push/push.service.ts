@@ -119,42 +119,80 @@ export class PushService implements OnModuleInit {
   ): Promise<void> {
     if (!this.enabled) return;
     try {
-      const subs = await this.prisma.pushSubscription.findMany({
-        where: { userId },
-      });
-      await Promise.all(
-        subs.map(async (sub) => {
-          const text = buildPushText(sub.lang, key, options);
-          const payload = JSON.stringify({
-            title: text.title,
-            body: text.body,
-            url: options.url.startsWith('/') ? options.url : '/',
-            tag: key,
-          });
-          try {
-            await webpush.sendNotification(
-              {
-                endpoint: sub.endpoint,
-                keys: { p256dh: sub.p256dh, auth: sub.auth },
-              },
-              payload,
-              { TTL: 60 * 60 * 24 },
-            );
-          } catch (error) {
-            const status = (error as { statusCode?: number }).statusCode;
-            // 404/410 = subscrição morta (browser desinstalado/permissão retirada).
-            if (status === 404 || status === 410) {
-              await this.prisma.pushSubscription
-                .deleteMany({ where: { id: sub.id } })
-                .catch(() => undefined);
-            } else {
-              this.logger.warn(`Push falhou (${status ?? 'sem estado'}).`);
-            }
-          }
-        }),
-      );
+      await this.deliverToUser(userId, key, options);
     } catch (error) {
       this.logger.warn(`notifyUser falhou: ${(error as Error).message}`);
     }
   }
+
+  /**
+   * Aviso de teste para diagnosticar "não recebi nada": diz quantos
+   * dispositivos o user tem registados e em quantos o envio foi aceite.
+   */
+  async sendTest(userId: string): Promise<PushTestResult> {
+    if (!this.enabled) return { configured: false, devices: 0, delivered: 0 };
+    const { devices, delivered } = await this.deliverToUser(
+      userId,
+      'pushTest',
+      {
+        url: '/profile',
+      },
+    );
+    return { configured: true, devices, delivered };
+  }
+
+  private async deliverToUser(
+    userId: string,
+    key: PushMessageKey,
+    options: PushNotifyOptions,
+  ): Promise<{ devices: number; delivered: number }> {
+    const subs = await this.prisma.pushSubscription.findMany({
+      where: { userId },
+    });
+    if (subs.length === 0) {
+      this.logger.log(
+        `Push "${key}": o utilizador não tem dispositivos registados.`,
+      );
+    }
+    const results = await Promise.all(
+      subs.map(async (sub) => {
+        const text = buildPushText(sub.lang, key, options);
+        const payload = JSON.stringify({
+          title: text.title,
+          body: text.body,
+          url: options.url.startsWith('/') ? options.url : '/',
+          tag: key,
+        });
+        try {
+          await webpush.sendNotification(
+            {
+              endpoint: sub.endpoint,
+              keys: { p256dh: sub.p256dh, auth: sub.auth },
+            },
+            payload,
+            { TTL: 60 * 60 * 24, urgency: 'high' },
+          );
+          return true;
+        } catch (error) {
+          const status = (error as { statusCode?: number }).statusCode;
+          // 404/410 = subscrição morta (browser desinstalado/permissão retirada).
+          if (status === 404 || status === 410) {
+            await this.prisma.pushSubscription
+              .deleteMany({ where: { id: sub.id } })
+              .catch(() => undefined);
+          } else {
+            this.logger.warn(`Push falhou (${status ?? 'sem estado'}).`);
+          }
+          return false;
+        }
+      }),
+    );
+    return { devices: subs.length, delivered: results.filter(Boolean).length };
+  }
+}
+
+export interface PushTestResult {
+  configured: boolean;
+  devices: number;
+  delivered: number;
 }

@@ -6,7 +6,7 @@ export type TranslateVars = Record<string, string | number>;
 export interface I18nContextValue {
   lang: LanguageCode;
   setLang: (code: LanguageCode) => void;
-  // t('nav.tasks'), t('login.hello', { name }) -> "Hello, {name}"
+  // t('nav.tasks'), t('nav.hello', { name }) -> "Hello, {name}"
   t: (key: string, vars?: TranslateVars) => string;
 }
 

@@ -1,0 +1,17 @@
+export const review: Record<string, string> = {
+  'review.title': "每周回顾",
+  'review.description': "你过去 7 天的情况以及接下来的安排。",
+  'review.completed': "已完成",
+  'review.studied': "学习时长",
+  'review.overdue': "当前逾期",
+  'review.focus': "平均专注度",
+  'review.completedThisWeek': "本周已完成",
+  'review.nothingCompleted': "过去 7 天没有完成任何任务。",
+  'review.studyByArea': "各科目学习时间",
+  'review.noStudy': "本周没有学习记录。",
+  'review.pushedBack': "被推迟多次",
+  'review.comingUp': "即将到来（未来 7 天）",
+  'review.nothingDue': "未来 7 天没有到期的任务。",
+  'review.loading': "加载中...",
+  'review.error': "无法加载每周回顾。",
+};
