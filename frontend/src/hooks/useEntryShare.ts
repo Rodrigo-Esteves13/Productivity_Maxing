@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useLiveRefresh } from './useLiveRefresh';
 import {
   getShareStatus,
   createShare,
@@ -104,8 +105,8 @@ export function useEntryShare(
   const shareUrl = token ? `${window.location.origin}/shared/${token}` : '';
   const pendingCount = requests.filter((r) => r.status === 'PENDING').length;
 
-  const loadRequests = useCallback(async () => {
-    setIsRequestsLoading(true);
+  const loadRequests = useCallback(async (silent = false) => {
+    if (!silent) setIsRequestsLoading(true);
     try {
       const [requestList, proposalList] = await Promise.all([
         getShareAccessRequests(entryId),
@@ -116,7 +117,7 @@ export function useEntryShare(
     } catch {
       // Painel secundario - um erro aqui nao deve esconder o link em si.
     } finally {
-      setIsRequestsLoading(false);
+      if (!silent) setIsRequestsLoading(false);
     }
   }, [entryId]);
 
@@ -157,6 +158,12 @@ export function useEntryShare(
     if (readPanelPreference()) void open();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entryId]);
+
+  // Novos pedidos/propostas aparecem sem F5 (push + polling de seguranca).
+  useLiveRefresh(() => void loadRequests(true), {
+    enabled: isOpen && visibility === 'AUTHORIZED' && token !== null,
+    intervalMs: 15000,
+  });
 
   const create = useCallback(async () => {
     setIsLoading(true);

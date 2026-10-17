@@ -2,6 +2,7 @@ import {
   ArrayMaxSize,
   ArrayUnique,
   IsArray,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -11,10 +12,12 @@ import {
   Min,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { CommuteMode } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   MAX_BUFFER_MINUTES,
   MAX_DAYS_OFF,
+  MAX_ADDRESS_LENGTH,
   MAX_LABEL_LENGTH,
 } from '../work-shifts.constants';
 
@@ -34,6 +37,18 @@ export class CreateCommitmentDto {
   @Min(0)
   @Max(MAX_BUFFER_MINUTES)
   commuteMinutes: number;
+
+  @ApiPropertyOptional({ example: 'Rua Exemplo 5, Porto', nullable: true })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(MAX_ADDRESS_LENGTH)
+  address?: string;
+
+  @ApiPropertyOptional({ enum: CommuteMode })
+  @IsOptional()
+  @IsEnum(CommuteMode)
+  commuteMode?: CommuteMode;
 
   @ApiPropertyOptional({
     example: [0, 6],
@@ -66,6 +81,18 @@ export class UpdateCommitmentDto {
   @Max(MAX_BUFFER_MINUTES)
   commuteMinutes?: number;
 
+  @ApiPropertyOptional({ example: 'Rua Exemplo 5, Porto', nullable: true })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(MAX_ADDRESS_LENGTH)
+  address?: string;
+
+  @ApiPropertyOptional({ enum: CommuteMode })
+  @IsOptional()
+  @IsEnum(CommuteMode)
+  commuteMode?: CommuteMode;
+
   @ApiPropertyOptional({
     example: [0, 6],
     description:
@@ -79,4 +106,20 @@ export class UpdateCommitmentDto {
   @Min(0, { each: true })
   @Max(6, { each: true })
   daysOff?: number[];
+}
+
+// Calcula (e guarda) o trajeto casa -> morada deste local. A origem e SEMPRE
+// a homeAddress do proprio utilizador (nunca vem no pedido), por isso nao ha
+// forma de usar o endpoint para consultar rotas arbitrarias entre moradas.
+export class EstimateCommitmentCommuteDto {
+  @ApiProperty({ example: 'Rua Exemplo 5, Porto' })
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(MAX_ADDRESS_LENGTH)
+  address: string;
+
+  @ApiProperty({ enum: CommuteMode })
+  @IsEnum(CommuteMode)
+  mode: CommuteMode;
 }

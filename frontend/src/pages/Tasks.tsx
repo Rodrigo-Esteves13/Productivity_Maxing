@@ -19,8 +19,11 @@ import { useShowArchivedTasks } from '../hooks/useShowArchivedTasks';
 import { useTaskSortMode } from '../hooks/useTaskSortMode';
 import { isTaskArchived } from '../utils/taskArchive';
 import { sortTasks } from '../utils/taskSorting';
+import { Link } from 'react-router-dom';
+import { useI18n } from '../i18n/useI18n';
 
 export default function Tasks() {
+  const { t } = useI18n();
   useDocumentTitle('Tasks');
   const {
     tasks,
@@ -107,6 +110,9 @@ export default function Tasks() {
         description="Manage, filter, and track the progress of all your tasks."
         action={
           <div className="flex items-center gap-4">
+            <Link to="/task-packs" className="text-sm text-violet-400 hover:text-violet-300">
+              {t('packs.openLink')}
+            </Link>
             <TaskSortControl
               sortMode={sortMode}
               onChange={setSortMode}

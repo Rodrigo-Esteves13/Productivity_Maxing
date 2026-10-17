@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useParams } from 'react-router-dom';
 import { getSharedNotebookEntry, requestShareAccess } from '../api/notebookService';
 import { fetchCsrfToken } from '../api/userService';
@@ -45,10 +47,14 @@ export default function SharedNotebookEntry() {
   const [hasSession, setHasSession] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
 
-  const load = () => {
+  // silent = refresh em segundo plano (polling/push): sem spinner e sem
+  // mostrar erro por uma falha de rede passageira.
+  const load = (silent = false) => {
     if (!token) return;
-    setIsLoading(true);
-    setError('');
+    if (!silent) {
+      setIsLoading(true);
+      setError('');
+    }
     getSharedNotebookEntry(token)
       .then((result) => {
         if (result.status === 'ok') {
@@ -61,11 +67,20 @@ export default function SharedNotebookEntry() {
           setGateStatus(result.status);
         }
       })
-      .catch(() => setError('This share link is invalid or was removed.'))
-      .finally(() => setIsLoading(false));
+      .catch(() => {
+        if (!silent) setError('This share link is invalid or was removed.');
+      })
+      .finally(() => {
+        if (!silent) setIsLoading(false);
+      });
   };
 
-  useEffect(load, [token]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- load() so depende de `token`
+  useEffect(() => load(), [token]);
+
+  // Pedido pendente/negado: atualiza sozinho quando o dono decide (antes era
+  // preciso F5 para ver a aprovacao).
+  useLiveRefresh(() => load(true), { enabled: gateStatus === 'pending', intervalMs: 8000 });
 
   useEffect(() => {
     // This page has no AuthProvider around it (see comment below) so
@@ -138,7 +153,7 @@ export default function SharedNotebookEntry() {
         token={token ?? ''}
         role={role}
         hasPendingProposal={hasPendingProposal}
-        onChanged={load}
+        onChanged={() => load()}
       />
     </PageLayout>
   );
@@ -201,6 +216,8 @@ function ShareAccessGate({
         </a>
       )}
 
+      {status === 'pending' && hasSession && <GateNotifyButton />}
+
       {(status === 'not_requested' || status === 'denied') && hasSession && (
         <button
           type="button"
@@ -215,6 +232,27 @@ function ShareAccessGate({
   );
 }
 
+// Pedido pendente: oferece ligar os avisos push neste dispositivo para o
+// requerente saber logo que o dono decide (so aparece se ainda estao desligados).
+function GateNotifyButton() {
+  const { t } = useI18n();
+  const { state, isBusy, enable } = usePushNotifications();
+  if (state !== 'off') return null;
+  return (
+    <div className="mt-1 flex flex-col items-center gap-2">
+      <p className="max-w-sm text-xs text-neutral-500">{t('share.gate.notifyMe')}</p>
+      <button
+        type="button"
+        disabled={isBusy}
+        onClick={() => void enable()}
+        className="rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+      >
+        {t('push.enable')}
+      </button>
+    </div>
+  );
+}
+
 // À parte de propósito: useDrawingCanvas/useCanvasShapes/useCanvasLinks/
 // useCanvasTexts só aplicam o valor inicial no primeiro render (são
 // useState por baixo, ver comentário "trocar de entrada" em
@@ -223,7 +261,7 @@ function ShareAccessGate({
 // null, o canvas ficava preso a vazio mesmo depois dos dados chegarem.
 // Este componente só monta quando `entry` já existe, por isso o valor
 // inicial que os hooks veem já é o correto.
-function SharedNotebookEntryView({
+export function SharedNotebookEntryView({
   entry,
   token,
   role,

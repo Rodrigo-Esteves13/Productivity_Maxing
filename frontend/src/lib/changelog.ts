@@ -7,33 +7,6 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    date: '2026-10-16',
-    title: 'Shared lessons: visit counts and access notifications',
-    items: [
-      'Visit counter on shared lessons: in the Share panel you see the total visits, how many different people opened the link, and for each one who it was (name, if they have an account), how many times and when they last came.',
-      'A visit only counts again after 30 minutes away, so reloading the page does not inflate the number. Your own visits do not count, and visitors without an account are counted without storing their IP.',
-      'Private links: set a shared lesson to \"Authorized\" and only people who are logged in and approved by you can open it. Anyone else can request access.',
-      'You get a notification when someone asks to open your lesson, and you can approve or decline from the Share panel, choosing if they can only view, suggest changes or co-edit.',
-      'The person who asked is notified too, when the request is approved or declined, with a direct link to the lesson.',
-      'Suggested changes are notified as well: you are told when an editor suggests changes to your lesson, and the editor is told when you approve or reject them.',
-    ],
-  },
-  {
-    date: '2026-10-16',
-    title: 'Personal areas, official areas and area proposals',
-    items: [
-      'Areas are now split in two: official areas, managed by admins and visible to everyone, and your own personal areas, which only you can see and use.',
-      'The Areas page is now open to everyone, with \"My areas\" and \"Official areas\" sections, and there is a link to it in the navbar. You can create up to 50 personal areas.',
-      'Propose a personal area as official: you can have up to 5 proposals pending at a time. An admin approves or declines them, and if one is approved it becomes official for everyone.',
-      'If a proposal is declined, the area stays personal, you see the reason and can fix it and propose again. An area under review cannot be edited, so what gets approved is exactly what was reviewed.',
-      'Only the name, color, credits and type are shared when you propose an area. Your tasks, notes and interests stay private.',
-      'Admins get a queue to review proposals. They manage official areas and proposals only, never other people\'s personal areas.',
-      'Security: tasks (create, edit and import), study sessions, notebook lessons, grade components and interests only accept official areas or your own, and averages only count areas you can access.',
-      'Deleting an area that still has tasks now shows a clear message instead of a generic error, and deleting your account also removes your personal areas.',
-      'Changing areas now needs a normal login session instead of an API key, and it is rate limited.',
-    ],
-  },
-  {
     date: '2026-10-15',
     title: 'Weight limits, repeat badges and readable notebook tables',
     items: [

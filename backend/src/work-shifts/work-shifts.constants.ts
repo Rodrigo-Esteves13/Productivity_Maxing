@@ -21,6 +21,7 @@ export const MAX_DAYS_OFF = 6;
 
 export const MAX_BUFFER_MINUTES = 240;
 export const MAX_LABEL_LENGTH = 80;
+export const MAX_ADDRESS_LENGTH = 300;
 
 // Modos de "copiar semana": 'one-off' repete os turnos pontuais de uma
 // semana noutra semana concreta; 'fixed' transforma-os em turnos semanais

@@ -1,4 +1,5 @@
 import { ClockIcon } from '../UI/Icons';
+import { translateNow } from '../../i18n/translate';
 
 interface MaintenancePageProps {
   message?: string;
@@ -11,16 +12,16 @@ export default function MaintenancePage({ message }: MaintenancePageProps) {
         <div className="mx-auto mb-6 w-14 h-14 rounded-full bg-violet-500/10 flex items-center justify-center text-violet-400">
           <ClockIcon width={28} height={28} />
         </div>
-        <h1 className="text-2xl font-semibold text-white mb-2">Down for maintenance</h1>
+        <h1 className="text-2xl font-semibold text-white mb-2">{translateNow('common.maintenance.title')}</h1>
         <p className="text-neutral-400 mb-6">
-          {message ?? "We're doing some quick upkeep. This shouldn't take long - check back in a few minutes."}
+          {message ?? translateNow('common.maintenance.body')}
         </p>
         <button
           type="button"
           onClick={() => window.location.reload()}
           className="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors"
         >
-          Try again
+          {translateNow('common.tryAgain')}
         </button>
       </div>
     </div>

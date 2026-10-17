@@ -18,7 +18,11 @@ export type PushMessageKey =
   | 'shareAccessDenied'
   | 'shareProposalReceived'
   | 'shareProposalApproved'
-  | 'shareProposalRejected';
+  | 'shareProposalRejected'
+  | 'pushTest'
+  | 'friendRequest'
+  | 'notesRequested'
+  | 'notesGranted';
 
 interface Template {
   title: string;
@@ -52,6 +56,22 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Suggestion declined',
       body: 'Your changes to "{title}" were not accepted.',
     },
+    pushTest: {
+      title: 'Test notification',
+      body: 'Notifications are working on this device.',
+    },
+    friendRequest: {
+      title: 'Friend request',
+      body: '{name} sent you a friend request.',
+    },
+    notesRequested: {
+      title: 'Notes request',
+      body: '{name} asked to read your notes.',
+    },
+    notesGranted: {
+      title: 'Notes shared',
+      body: '{name} let you read their notes.',
+    },
   },
   pt: {
     shareAccessRequested: {
@@ -77,6 +97,22 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     shareProposalRejected: {
       title: 'Sugestão recusada',
       body: 'As tuas alterações a "{title}" não foram aceites.',
+    },
+    pushTest: {
+      title: 'Notificação de teste',
+      body: 'As notificações estão a funcionar neste dispositivo.',
+    },
+    friendRequest: {
+      title: 'Pedido de amizade',
+      body: '{name} enviou-te um pedido de amizade.',
+    },
+    notesRequested: {
+      title: 'Pedido de notas',
+      body: '{name} pediu para ler as tuas notas.',
+    },
+    notesGranted: {
+      title: 'Notas partilhadas',
+      body: '{name} deixou-te ler as notas.',
     },
   },
   es: {
@@ -104,6 +140,22 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Sugerencia rechazada',
       body: 'Tus cambios en "{title}" no fueron aceptados.',
     },
+    pushTest: {
+      title: 'Notificación de prueba',
+      body: 'Las notificaciones funcionan en este dispositivo.',
+    },
+    friendRequest: {
+      title: 'Solicitud de amistad',
+      body: '{name} te envió una solicitud de amistad.',
+    },
+    notesRequested: {
+      title: 'Solicitud de apuntes',
+      body: '{name} pidió leer tus apuntes.',
+    },
+    notesGranted: {
+      title: 'Apuntes compartidos',
+      body: '{name} te permitió leer sus apuntes.',
+    },
   },
   zh: {
     shareAccessRequested: {
@@ -130,6 +182,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '建议未被采纳',
       body: '你对“{title}”的修改未被采纳。',
     },
+    pushTest: { title: '测试通知', body: '此设备上的通知工作正常。' },
+    friendRequest: { title: '好友请求', body: '{name} 向你发送了好友请求。' },
+    notesRequested: { title: '笔记请求', body: '{name} 想阅读你的笔记。' },
+    notesGranted: { title: '笔记已共享', body: '{name} 允许你阅读其笔记。' },
   },
   ja: {
     shareAccessRequested: {
@@ -155,6 +211,22 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     shareProposalRejected: {
       title: '提案は採用されませんでした',
       body: '「{title}」への変更は採用されませんでした。',
+    },
+    pushTest: {
+      title: 'テスト通知',
+      body: 'このデバイスで通知は正常に動作しています。',
+    },
+    friendRequest: {
+      title: '友達リクエスト',
+      body: '{name} さんから友達リクエストが届きました。',
+    },
+    notesRequested: {
+      title: 'ノートのリクエスト',
+      body: '{name} さんがあなたのノートを読みたがっています。',
+    },
+    notesGranted: {
+      title: 'ノートが共有されました',
+      body: '{name} さんがノートを読めるようにしました。',
     },
   },
   ko: {
@@ -182,6 +254,22 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '제안 거절됨',
       body: '"{title}"에 대한 수정이 수락되지 않았습니다.',
     },
+    pushTest: {
+      title: '테스트 알림',
+      body: '이 기기에서 알림이 정상적으로 작동합니다.',
+    },
+    friendRequest: {
+      title: '친구 요청',
+      body: '{name}님이 친구 요청을 보냈습니다.',
+    },
+    notesRequested: {
+      title: '노트 요청',
+      body: '{name}님이 내 노트를 보고 싶어 합니다.',
+    },
+    notesGranted: {
+      title: '노트 공유됨',
+      body: '{name}님이 노트를 볼 수 있게 했습니다.',
+    },
   },
   fr: {
     shareAccessRequested: {
@@ -208,6 +296,22 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Suggestion refusée',
       body: 'Vos modifications de "{title}" n\'ont pas été acceptées.',
     },
+    pushTest: {
+      title: 'Notification de test',
+      body: 'Les notifications fonctionnent sur cet appareil.',
+    },
+    friendRequest: {
+      title: "Demande d'ami",
+      body: "{name} vous a envoyé une demande d'ami.",
+    },
+    notesRequested: {
+      title: 'Demande de notes',
+      body: '{name} souhaite lire vos notes.',
+    },
+    notesGranted: {
+      title: 'Notes partagées',
+      body: '{name} vous a donné accès à ses notes.',
+    },
   },
   de: {
     shareAccessRequested: {
@@ -233,6 +337,22 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     shareProposalRejected: {
       title: 'Vorschlag abgelehnt',
       body: 'Deine Änderungen an "{title}" wurden nicht angenommen.',
+    },
+    pushTest: {
+      title: 'Testbenachrichtigung',
+      body: 'Benachrichtigungen funktionieren auf diesem Gerät.',
+    },
+    friendRequest: {
+      title: 'Freundschaftsanfrage',
+      body: '{name} hat dir eine Freundschaftsanfrage geschickt.',
+    },
+    notesRequested: {
+      title: 'Notizen-Anfrage',
+      body: '{name} möchte deine Notizen lesen.',
+    },
+    notesGranted: {
+      title: 'Notizen geteilt',
+      body: '{name} lässt dich seine Notizen lesen.',
     },
   },
 };

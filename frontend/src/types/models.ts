@@ -266,6 +266,9 @@ export interface Commitment {
   id: string;
   name: string;
   commuteMinutes: number;
+  // Morada do local e meio de transporte usados para calcular o trajeto a partir de casa.
+  address: string | null;
+  commuteMode: CommuteMode;
   // Folgas fixas: dias da semana (0=Dom..6=Sab) em que nunca se trabalha aqui.
   daysOff: number[];
 }

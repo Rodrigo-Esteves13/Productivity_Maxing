@@ -1,6 +1,5 @@
 import { MS_PER_DAY, MS_PER_MINUTE } from '../common/time.constants';
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
-import { HTTP_GONE, HTTP_NOT_FOUND } from '../common/http-status.constants';
 import { Provider } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
@@ -11,6 +10,7 @@ import {
   GOOGLE_TOKEN_URL,
 } from '../auth/google-oauth.constants';
 import { CALENDAR_TIME_ZONE } from './schedule-sync.constants';
+import { HTTP_GONE, HTTP_NOT_FOUND } from './http-codes';
 
 const CALENDAR_SCOPE = GOOGLE_CALENDAR_APP_SCOPE;
 // Fallback quando a Task não tem calendarDurationMinutes definido (tasks

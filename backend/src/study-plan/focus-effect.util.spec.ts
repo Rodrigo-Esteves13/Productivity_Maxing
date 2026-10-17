@@ -106,10 +106,11 @@ describe('fitInterestEffect', () => {
   });
 
   it('ignora tasks sem interesse classificado', () => {
-    const samples = buildByArea(() => 0.5).map((s) => ({
-      ...s,
-      interest: undefined,
-    }));
+    const samples = buildByArea(() => 0.5).map((s) => {
+      const rest: Partial<FocusSample> = { ...s };
+      delete rest.interest;
+      return rest;
+    });
     expect(fitInterestEffect(samples).kind).toBe('not_enough_data');
   });
 

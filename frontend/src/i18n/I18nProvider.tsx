@@ -2,16 +2,7 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { I18nContext, type TranslateVars } from './i18n-context';
 import { type LanguageCode } from './languages';
 import { applyLanguage, detectLanguage, saveLanguage } from './storage';
-import { en } from './messages/en';
-import { pt } from './messages/pt';
-import { es } from './messages/es';
-import { zh } from './messages/zh';
-import { ja } from './messages/ja';
-import { ko } from './messages/ko';
-import { fr } from './messages/fr';
-import { de } from './messages/de';
-
-const DICTIONARIES: Record<LanguageCode, Record<string, string>> = { en, pt, es, zh, ja, ko, fr, de };
+import { translateIn } from './dictionaries';
 
 export default function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<LanguageCode>(detectLanguage);
@@ -22,16 +13,8 @@ export default function I18nProvider({ children }: { children: ReactNode }) {
     setLangState(code);
   }, []);
 
-  // Falta de chave na lingua escolhida -> ingles -> a propria chave (nunca
-  // fica um texto vazio na UI).
   const t = useCallback(
-    (key: string, vars?: TranslateVars) => {
-      const template = DICTIONARIES[lang][key] ?? en[key] ?? key;
-      if (!vars) return template;
-      return template.replace(/\{(\w+)\}/g, (_, name: string) =>
-        vars[name] !== undefined ? String(vars[name]) : `{${name}}`,
-      );
-    },
+    (key: string, vars?: TranslateVars) => translateIn(lang, key, vars),
     [lang],
   );
 

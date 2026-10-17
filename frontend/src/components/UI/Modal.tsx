@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect } from 'react';
 import { XIcon } from './Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 interface ModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface ModalProps {
 }
 
 export default function Modal({ isOpen, onClose, title, children, action }: ModalProps) {
+  const { t } = useI18n();
   
   // Só ativa o listener se o Modal estiver aberto
   useEffect(() => {
@@ -44,7 +46,7 @@ export default function Modal({ isOpen, onClose, title, children, action }: Moda
             <button 
               onClick={onClose}
               className="text-neutral-400 hover:text-white transition-colors p-1"
-              title="Close"
+              title={t('common.close')}
             >
               <XIcon />
             </button>

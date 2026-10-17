@@ -7,11 +7,13 @@ import CreateProgramModal from './CreateProgramModal';
 import RenameProgramModal from './RenameProgramModal';
 import ManagePeriodsModal from './ManagePeriodsModal';
 import { useFeedback } from '../../context/useFeedback';
+import { useI18n } from '../../i18n/useI18n';
 
 const CREATE_NEW_VALUE = '__create_new__';
 const NO_PROGRAM_VALUE = '__no_program__';
 
 export default function ProgramSelector() {
+  const { t } = useI18n();
   const { notify, confirm } = useFeedback();
   const {
     programs,
@@ -49,9 +51,9 @@ export default function ProgramSelector() {
   const handleDelete = async () => {
     if (!activeProgram) return;
     const confirmed = await confirm({
-      title: 'Delete program',
-      message: `Delete "${activeProgram.name}" permanently? This can't be undone.`,
-      confirmLabel: 'Delete',
+      title: t('program.delete.title'),
+      message: t('program.delete.message', { name: activeProgram.name }),
+      confirmLabel: t('common.delete'),
       tone: 'danger',
     });
     if (!confirmed) return;
@@ -63,7 +65,7 @@ export default function ProgramSelector() {
       // 409 = the backend refused because this program still has tasks in
       // it (see ProgramsService.remove on the backend) - move or delete
       // those tasks first.
-      const message = getApiMessage(err, 'Could not delete the program. It may still have tasks in it.');
+      const message = getApiMessage(err, t('program.delete.error'));
       notify(message, 'error');
     } finally {
       setIsDeleting(false);
@@ -73,7 +75,7 @@ export default function ProgramSelector() {
   return (
     <>
       <Select
-        aria-label="Active program"
+        aria-label={t('program.active')}
         className="w-auto min-w-[220px]"
         value={isViewingAllPrograms ? NO_PROGRAM_VALUE : (activeProgram?.id ?? '')}
         onChange={(e) => handleChange(e.target.value)}
@@ -85,8 +87,8 @@ export default function ProgramSelector() {
               {program.name}
             </option>
           ))}
-        <option value={NO_PROGRAM_VALUE}>No program (all tasks)</option>
-        <option value={CREATE_NEW_VALUE}>+ Create new program</option>
+        <option value={NO_PROGRAM_VALUE}>{t('program.none')}</option>
+        <option value={CREATE_NEW_VALUE}>{t('program.createNew')}</option>
       </Select>
 
       {activeProgram && (
@@ -94,7 +96,7 @@ export default function ProgramSelector() {
           <button
             type="button"
             onClick={() => setIsRenameModalOpen(true)}
-            title="Rename program"
+            title={t('program.rename')}
             className="text-neutral-500 hover:text-neutral-200 transition-colors p-1.5"
           >
             <PencilIcon />
@@ -105,14 +107,14 @@ export default function ProgramSelector() {
             onClick={() => setIsPeriodsModalOpen(true)}
             className="text-sm text-neutral-400 hover:text-neutral-200 underline decoration-dotted"
           >
-            Manage periods
+            {t('program.managePeriods')}
           </button>
 
           <button
             type="button"
             onClick={handleDelete}
             disabled={isDeleting}
-            title="Delete program"
+            title={t('program.delete.title')}
             className="text-neutral-500 hover:text-red-500 transition-colors p-1.5 disabled:opacity-50"
           >
             <TrashIcon />
