@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
-import LoadingState from '../components/UI/LoadingState';
+import DocumentSkeleton from '../components/UI/DocumentSkeleton';
 import ErrorState from '../components/UI/ErrorState';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { getFriendNoteEntry } from '../api/socialNotesService';
@@ -46,7 +46,7 @@ export default function FriendNoteEntry() {
         </Link>
       </div>
       {isLoading ? (
-        <LoadingState message={t('common.loading')} />
+        <DocumentSkeleton />
       ) : hasError || !entry ? (
         <ErrorState message={t('social.notes.noAccess')} />
       ) : (

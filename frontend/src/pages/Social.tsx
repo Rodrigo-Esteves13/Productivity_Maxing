@@ -2,7 +2,8 @@ import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
-import LoadingState from '../components/UI/LoadingState';
+import CardGridSkeleton from '../components/UI/CardGridSkeleton';
+import LinesSkeleton from '../components/UI/LinesSkeleton';
 import FriendCodeCard from '../components/Social/FriendCodeCard';
 import AddFriendForm from '../components/Social/AddFriendForm';
 import NotesAccessPanel from '../components/Social/NotesAccessPanel';
@@ -31,7 +32,7 @@ export default function Social() {
     <PageLayout>
       <PageHeader title={t('nav.social')} description={t('social.description')} />
       {isLoading ? (
-        <LoadingState message={t('common.loading')} />
+        <CardGridSkeleton cards={3} />
       ) : hasError || !data ? (
         <ErrorState message={t('social.loadError')} />
       ) : (
@@ -73,7 +74,7 @@ export default function Social() {
               <p className="text-xs text-neutral-500">{t('sharedWithMe.description')}</p>
             </div>
             {shared.isLoading ? (
-              <LoadingState message={t('common.loading')} />
+              <LinesSkeleton lines={3} />
             ) : shared.hasError ? (
               <ErrorState message={t('sharedWithMe.error')} />
             ) : rest.length === 0 ? (

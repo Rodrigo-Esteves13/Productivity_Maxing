@@ -1,5 +1,5 @@
 import { useBestTimesHeatmap } from '../../hooks/useBestTimesHeatmap';
-import LoadingState from '../UI/LoadingState';
+import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
 import EmptyState from '../UI/EmptyState';
 import type { HeatmapCell } from '../../types/models';
@@ -34,7 +34,7 @@ export default function BestTimesHeatmap() {
         Total study time logged, by day of week and 4-hour block.
       </p>
 
-      {isLoading && <LoadingState message="Loading heatmap..." />}
+      {isLoading && <LinesSkeleton lines={5} />}
       {!isLoading && error && <ErrorState message={error} />}
       {!isLoading && !error && !hasAnyData && (
         <EmptyState message="No completed study sessions yet. Start one in the widget on the side." />

@@ -9,7 +9,7 @@ import { getApiMessage } from '../../lib/httpError';
 import { ChartPieIcon, PlusIcon } from '../UI/Icons';
 import Button from '../UI/Button';
 import ConfirmDialog from '../UI/ConfirmDialog';
-import LoadingState from '../UI/LoadingState';
+import LinesSkeleton from '../UI/LinesSkeleton';
 import GradeComponentCard from './GradeComponentCard';
 import GradeComponentForm from './GradeComponentForm';
 
@@ -74,7 +74,7 @@ export default function GradeComponentsPanel({ area }: GradeComponentsPanelProps
       {!periodId ? (
         <p className="text-sm text-neutral-500">{t('grades.needPeriod')}</p>
       ) : isLoading ? (
-        <LoadingState message={t('grades.loading')} />
+        <LinesSkeleton lines={3} />
       ) : (
         <>
           {error && (

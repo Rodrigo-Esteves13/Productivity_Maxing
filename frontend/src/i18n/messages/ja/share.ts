@@ -74,4 +74,5 @@ export const share: Record<string, string> = {
   'share.invite.needsAuthorized': "役割付きで友だちを招待するには、リンクを「承認制」に切り替えてください。",
   'share.gate.invited.title': "招待されました",
   'share.gate.invited.body': "友だちがこの授業に招待しました。承認すると開けます。",
+  'push.noWorker': "通知にはインストール済みのアプリか、サイトの本番版が必要です。ページを再読み込みしてもう一度お試しください。",
 };

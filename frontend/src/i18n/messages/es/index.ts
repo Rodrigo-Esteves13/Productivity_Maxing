@@ -14,6 +14,7 @@ import { prefs } from './prefs';
 import { review } from './review';
 import { schedule } from './schedule';
 import { share } from './share';
+import { tasks } from './tasks';
 
 export const es: Record<string, string> = {
   ...packs,
@@ -32,4 +33,5 @@ export const es: Record<string, string> = {
   ...review,
   ...schedule,
   ...share,
+  ...tasks,
 };

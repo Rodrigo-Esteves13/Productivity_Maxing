@@ -16,6 +16,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Your friends\' emails are never shown to you in the sharing panel, only their names.',
       '"Shared with me" now lives inside Social, with pending invitations at the top. The old link redirects there.',
       'The top bar no longer overlaps in long languages (German, Japanese, Korean): the full menu shows on wide screens and the compact menu is used on smaller ones. Profile is in your user menu.',
+      'Notification button fixed: it no longer stays disabled forever when the service worker is missing (it now explains why). Pages show skeleton placeholders of their own layout while they load instead of a plain "Loading...".',
+      'Search (Ctrl+K), the footer, the Dashboard filters, sorting and the task form fields are now translated, including difficulty and progress labels.',
       'Languages now load on demand: the app only downloads the language you use, and fetches another one only when you switch. The admin menu is translated too.',
       'The user menu fits its text, and the hover now fills each row up to the rounded corners.',
       'Fixed a loophole where someone refused access to your notes could remove the refusal and ask again.',

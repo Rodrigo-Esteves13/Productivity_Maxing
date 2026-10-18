@@ -14,7 +14,7 @@ import CookieNotice from '../components/Legal/CookieNotice';
 import CommandPalette from '../components/CommandPalette/CommandPalette';
 import GlobalStudyTimer from '../components/Study/GlobalStudyTimer';
 import CalendarSyncReviewModal from '../components/Schedule/CalendarSyncReviewModal';
-import LoadingState from '../components/UI/LoadingState';
+import RouteSkeleton from '../components/UI/RouteSkeleton';
 
 // Route-level code splitting: everything below only downloads its JS chunk
 // when the user actually navigates there, instead of all of it (including
@@ -59,7 +59,7 @@ const NotFound = lazy(() => import('../pages/NotFound'));
 export default function AppRouter() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<LoadingState message="Loading..." className="min-h-[60vh]" />}>
+      <Suspense fallback={<RouteSkeleton />}>
         <Routes>
           <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<Login />} />

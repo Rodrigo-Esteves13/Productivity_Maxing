@@ -3,7 +3,7 @@ import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ActionButton from '../components/UI/ActionButton';
 import ErrorState from '../components/UI/ErrorState';
-import LoadingState from '../components/UI/LoadingState';
+import TableSkeleton from '../components/UI/TableSkeleton';
 import Select from '../components/UI/Select';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useTaskPackImport } from '../hooks/useTaskPackImport';
@@ -19,7 +19,7 @@ export default function ImportTaskPack() {
   } = useTaskPackImport(code);
 
   if (state === 'loading') {
-    return <PageLayout><LoadingState message={t('common.loading')} className="min-h-[40vh]" /></PageLayout>;
+    return <PageLayout><TableSkeleton rows={4} columns={3} /></PageLayout>;
   }
   if (state === 'not-found' || state === 'error' || !preview) {
     return (

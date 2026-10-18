@@ -47,7 +47,7 @@ export default function PushNotificationsCard() {
       {message && <p className="mt-3 text-sm text-neutral-300">{message}</p>}
       {error && (
         <p role="alert" className="mt-3 text-sm text-red-400">
-          {t('push.error')}
+          {error === 'noWorker' ? t('push.noWorker') : t('push.error')}
         </p>
       )}
       {(state === 'off' || state === 'on') && (

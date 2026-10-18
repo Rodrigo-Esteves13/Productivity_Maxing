@@ -74,4 +74,5 @@ export const share: Record<string, string> = {
   'share.invite.needsAuthorized': "Cambia el enlace a Autorizado para invitar amigos con un rol.",
   'share.gate.invited.title': "Te han invitado",
   'share.gate.invited.body': "Un amigo te invitó a esta clase. Acepta para abrirla.",
+  'push.noWorker': "Las notificaciones necesitan la app instalada o la versión de producción del sitio. Recarga la página e inténtalo de nuevo.",
 };

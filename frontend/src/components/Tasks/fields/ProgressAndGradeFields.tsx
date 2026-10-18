@@ -1,7 +1,8 @@
 import FormField from '../../UI/FormField';
 import Input from '../../UI/Input';
 import Select from '../../UI/Select';
-import { formatEnumLabel } from '../../../utils/formatEnumLabel';
+import { useEnumLabel } from '../../../hooks/useEnumLabel';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface ProgressAndGradeFieldsProps {
   idPrefix: string;
@@ -36,11 +37,13 @@ export default function ProgressAndGradeFields({
   onRecalledStudyMinutesChange,
   onIsPinnedChange,
 }: ProgressAndGradeFieldsProps) {
+  const { t } = useI18n();
+  const enumLabel = useEnumLabel();
   return (
     <div className="space-y-4 pt-4 border-t border-neutral-800">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {showProgressStatus && (
-          <FormField label="Progress" htmlFor={`${idPrefix}-progress-status`}>
+          <FormField label={t('taskForm.progress')} htmlFor={`${idPrefix}-progress-status`}>
             <Select
               id={`${idPrefix}-progress-status`}
               value={progressStatus}
@@ -49,34 +52,34 @@ export default function ProgressAndGradeFields({
             >
               {progressStatuses.map((status) => (
                 <option key={status} value={status}>
-                  {formatEnumLabel(status)}
+                  {enumLabel(status)}
                 </option>
               ))}
             </Select>
           </FormField>
         )}
         {showRealGrade && (
-          <FormField label="Real Grade" htmlFor={`${idPrefix}-real-grade`}>
+          <FormField label={t('taskForm.realGrade')} htmlFor={`${idPrefix}-real-grade`}>
             <Input
               id={`${idPrefix}-real-grade`}
               type="number"
               min="0"
               max="20"
               step="0.1"
-              placeholder="Not entered yet"
+              placeholder={t('taskForm.notEntered')}
               value={realGrade}
               onChange={(e) => onRealGradeChange(e.target.value)}
               className="w-full"
             />
           </FormField>
         )}
-        <FormField label="Study time already done (minutes)" htmlFor={`${idPrefix}-recalled-minutes`}>
+        <FormField label={t('taskForm.studyDone')} htmlFor={`${idPrefix}-recalled-minutes`}>
           <Input
             id={`${idPrefix}-recalled-minutes`}
             type="number"
             min="0"
             step="5"
-            placeholder="Optional, from memory"
+            placeholder={t('taskForm.fromMemory')}
             value={recalledStudyMinutes}
             onChange={(e) => onRecalledStudyMinutesChange(e.target.value)}
             className="w-full"
@@ -91,7 +94,7 @@ export default function ProgressAndGradeFields({
           onChange={(e) => onIsPinnedChange(e.target.checked)}
           className="accent-violet-500"
         />
-        Pin this task to the top of the list
+        {t('taskForm.pin')}
       </label>
     </div>
   );

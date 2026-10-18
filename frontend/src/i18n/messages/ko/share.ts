@@ -74,4 +74,5 @@ export const share: Record<string, string> = {
   'share.invite.needsAuthorized': "역할을 지정해 친구를 초대하려면 링크를 '승인 필요'로 바꾸세요.",
   'share.gate.invited.title': "초대받았어요",
   'share.gate.invited.body': "친구가 이 수업에 초대했어요. 수락하면 열 수 있어요.",
+  'push.noWorker': "알림은 설치된 앱 또는 사이트의 프로덕션 버전에서만 작동해요. 페이지를 새로고침한 뒤 다시 시도해 주세요.",
 };

@@ -74,4 +74,5 @@ export const share: Record<string, string> = {
   'share.invite.needsAuthorized': "请将链接切换为“需授权”，才能按角色邀请好友。",
   'share.gate.invited.title': "你收到了邀请",
   'share.gate.invited.body': "有好友邀请你查看这节课。接受后即可打开。",
+  'push.noWorker': "通知需要已安装的应用或网站的正式版本。请刷新页面后重试。",
 };

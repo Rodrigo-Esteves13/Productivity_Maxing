@@ -83,7 +83,9 @@ describe('NotebookInviteService', () => {
     const { service, prisma, push } = setup();
     const res = await service.invite('o', 'e1', 'x', 'EDITOR');
     expect(prisma.notebookShare.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ visibility: 'AUTHORIZED' }),
+      data: expect.objectContaining({
+        visibility: 'AUTHORIZED',
+      }) as unknown,
     });
     expect(res.status).toBe('PENDING');
     const arg = (

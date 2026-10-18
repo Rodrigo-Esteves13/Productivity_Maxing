@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useSchedule } from '../../hooks/useSchedule';
 import { useWorkShiftRange } from '../../hooks/useWorkShiftRange';
-import LoadingState from '../UI/LoadingState';
+import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
 import type { ClassOccurrence, WorkShiftOccurrence } from '../../types/models';
 import { toDateKey } from '../../lib/dateKey';
@@ -100,7 +100,7 @@ export default function WeekGrid({ refreshKey }: WeekGridProps) {
         </div>
       </div>
 
-      {isLoading && <LoadingState message="Loading schedule..." />}
+      {isLoading && <LinesSkeleton lines={6} />}
       {!isLoading && error && <ErrorState message={error} />}
 
       {!isLoading && !error && (

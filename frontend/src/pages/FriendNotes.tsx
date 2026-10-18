@@ -4,7 +4,7 @@ import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
-import LoadingState from '../components/UI/LoadingState';
+import TableSkeleton from '../components/UI/TableSkeleton';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { getFriendNotes, type FriendNotesList } from '../api/socialNotesService';
 import { useI18n } from '../i18n/useI18n';
@@ -42,7 +42,7 @@ export default function FriendNotes() {
         description={t('social.notes.readOnlyHint')}
       />
       {isLoading ? (
-        <LoadingState message={t('common.loading')} />
+        <TableSkeleton rows={5} columns={3} />
       ) : hasError || !data ? (
         <ErrorState message={t('social.notes.noAccess')} />
       ) : data.entries.length === 0 ? (

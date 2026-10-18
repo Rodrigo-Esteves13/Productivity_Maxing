@@ -11,12 +11,15 @@ const PRODUCT_LINKS = [
   { label: 'nav.focus', to: '/focus' },
   { label: 'nav.schedule', to: '/schedule' },
   { label: 'nav.notebook', to: '/notebook' },
+  { label: 'nav.areas', to: '/areas' },
+  { label: 'nav.social', to: '/social' },
   { label: 'nav.profile', to: '/profile' },
 ];
 
 const RESOURCE_LINKS = [
   { label: 'footer.repo', href: REPO_URL },
   { label: 'footer.issue', href: REPO_ISSUES_URL },
+  { label: 'nav.changelog', to: '/changelog' },
 ];
 
 const LEGAL_LINKS = [

@@ -20,7 +20,7 @@ import { LinkIcon, FileIcon, BookOpenIcon, PencilIcon, ShieldIcon } from '../com
 import Button from '../components/UI/Button';
 import SharedEntryEditForm from '../components/Notebook/SharedEntryEditForm';
 import { useI18n } from '../i18n/useI18n';
-import LoadingState from '../components/UI/LoadingState';
+import DocumentSkeleton from '../components/UI/DocumentSkeleton';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const noop = () => {};
@@ -134,7 +134,7 @@ export default function SharedNotebookEntry() {
   if (isLoading) {
     return (
       <PageLayout>
-        <LoadingState message="Loading shared lesson..." className="min-h-[50vh]" />
+        <DocumentSkeleton />
       </PageLayout>
     );
   }

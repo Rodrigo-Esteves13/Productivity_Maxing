@@ -4,7 +4,7 @@ import PageHeader from '../components/Layout/PageHeader';
 import ActionButton from '../components/UI/ActionButton';
 import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
-import LoadingState from '../components/UI/LoadingState';
+import TableSkeleton from '../components/UI/TableSkeleton';
 import TaskPackList from '../components/TaskPacks/TaskPackList';
 import CreateTaskPackModal from '../components/TaskPacks/CreateTaskPackModal';
 import useDocumentTitle from '../hooks/useDocumentTitle';
@@ -25,7 +25,7 @@ export default function TaskPacks() {
         action={<ActionButton onClick={() => setIsCreating(true)}>{t('packs.new')}</ActionButton>}
       />
       {isLoading ? (
-        <LoadingState message={t('common.loading')} />
+        <TableSkeleton rows={4} columns={3} />
       ) : hasError ? (
         <ErrorState message={t('packs.loadError')} />
       ) : packs.length === 0 ? (
