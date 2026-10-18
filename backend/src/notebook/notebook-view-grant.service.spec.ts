@@ -117,4 +117,23 @@ describe('NotebookViewGrantService', () => {
       NotFoundException,
     );
   });
+
+  it('quem pediu nao consegue apagar uma recusa', async () => {
+    const { service, prisma } = setup();
+    (prisma.notebookViewGrant.deleteMany as Mock).mockResolvedValue({
+      count: 0,
+    });
+    await expect(service.remove('viewer', 'g1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    const where = (
+      (prisma.notebookViewGrant.deleteMany as Mock).mock.calls as [
+        { where: { OR: unknown[] } },
+      ][]
+    )[0][0].where;
+    expect(where.OR).toContainEqual({
+      viewerId: 'viewer',
+      status: { not: 'DENIED' },
+    });
+  });
 });

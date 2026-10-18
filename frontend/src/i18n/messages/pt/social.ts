@@ -62,4 +62,9 @@ export const social: Record<string, string> = {
   'social.notes.noAccess': "Não tens acesso a estas notas.",
   'social.notes.noEntries': "Ainda não há nada para ler nas cadeiras partilhadas contigo.",
   'social.notes.back': "← Voltar às notas",
+  'sharedWithMe.invite.title': "Convites",
+  'sharedWithMe.invite.text': "{name} convidou-te como {role}.",
+  'sharedWithMe.invite.accept': "Aceitar",
+  'sharedWithMe.invite.decline': "Recusar",
+  'sharedWithMe.invite.error': "Não foi possível responder ao convite. Tenta outra vez.",
 };

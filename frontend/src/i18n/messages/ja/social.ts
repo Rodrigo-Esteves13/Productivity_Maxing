@@ -62,4 +62,9 @@ export const social: Record<string, string> = {
   'social.notes.noAccess': "このノートにはアクセスできません。",
   'social.notes.noEntries': "共有された科目にはまだ読めるものがありません。",
   'social.notes.back': "← ノートに戻る",
+  'sharedWithMe.invite.title': "招待",
+  'sharedWithMe.invite.text': "{name}さんが{role}として招待しました。",
+  'sharedWithMe.invite.accept': "承認",
+  'sharedWithMe.invite.decline': "辞退",
+  'sharedWithMe.invite.error': "招待に返事できませんでした。もう一度お試しください。",
 };

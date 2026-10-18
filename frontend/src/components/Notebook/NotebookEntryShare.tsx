@@ -7,6 +7,7 @@ import IconButton from '../UI/IconButton';
 import SegmentedControl from '../UI/SegmentedControl';
 import type { SegmentedOption } from '../UI/SegmentedControl';
 import { useI18n } from '../../i18n/useI18n';
+import NotebookEntryInvite from './NotebookEntryInvite';
 
 interface NotebookEntryShareProps {
   share: UseEntryShareResult;
@@ -129,7 +130,7 @@ export default function NotebookEntryShare({ share, currentTitle, currentText }:
   const {
     isOpen, token, visibility, isLoading, error, shareUrl, requests, pendingCount,
     isRequestsLoading, decidingId, proposals, decidingProposalId, visits, visitsError,
-    open, close, create, revoke, changeVisibility, decide, decideProposal,
+    open, close, create, revoke, changeVisibility, decide, decideProposal, removeAccess,
   } = share;
   // Papel escolhido para cada pedido pendente, antes de aprovar.
   const [pendingRoles, setPendingRoles] = useState<Record<string, ShareAccessRole>>({});
@@ -251,6 +252,12 @@ export default function NotebookEntryShare({ share, currentTitle, currentText }:
         </div>
       )}
 
+      {token && visibility === 'PUBLIC' && (
+        <p className="mt-3 border-t border-neutral-800 pt-2 text-[11px] text-neutral-500">
+          {t('share.invite.needsAuthorized')}
+        </p>
+      )}
+
       {token && visibility === 'AUTHORIZED' && (
         <>
           {proposals.length > 0 && (
@@ -276,6 +283,8 @@ export default function NotebookEntryShare({ share, currentTitle, currentText }:
             </div>
           )}
 
+          <NotebookEntryInvite share={share} />
+
           <div className="mt-3 border-t border-neutral-800 pt-2">
             <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-neutral-300">
               {t('share.requests.title')}
@@ -294,10 +303,30 @@ export default function NotebookEntryShare({ share, currentTitle, currentText }:
               {requests.map((req) => (
                 <li key={req.id} className="flex items-center justify-between gap-2 text-xs">
                   <div className="min-w-0">
-                    <p className="truncate text-neutral-200">{req.requestingUser.name ?? req.requestingUser.email}</p>
-                    <p className="truncate text-neutral-500">{req.requestingUser.email}</p>
+                    <p className="truncate text-neutral-200">
+                      {req.requestingUser.name ?? (req.requestingUser.email || t('social.anonymous'))}
+                    </p>
+                    {req.requestingUser.email && (
+                      <p className="truncate text-neutral-500">{req.requestingUser.email}</p>
+                    )}
                   </div>
-                  {req.status === 'PENDING' ? (
+                  {req.status === 'PENDING' && req.invitedByOwner ? (
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <span className="text-[11px] text-neutral-500">
+                        {t('share.invite.invited')} · {t(ROLE_KEY[req.accessRole])}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={decidingId === req.id}
+                        onClick={() => void removeAccess(req.id)}
+                        aria-label={t('share.invite.cancel')}
+                        title={t('share.invite.cancel')}
+                        className="rounded-md bg-red-500/15 p-1 text-red-400 hover:bg-red-500/25 disabled:opacity-50"
+                      >
+                        <XIcon className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : req.status === 'PENDING' ? (
                     <div className="flex shrink-0 items-center gap-1">
                       <RoleSelect
                         value={pendingRoles[req.id] ?? 'VIEWER'}
@@ -326,11 +355,23 @@ export default function NotebookEntryShare({ share, currentTitle, currentText }:
                       </button>
                     </div>
                   ) : req.status === 'APPROVED' ? (
-                    <RoleSelect
-                      value={req.accessRole}
-                      disabled={decidingId === req.id}
-                      onChange={(role) => void decide(req.id, 'APPROVED', role)}
-                    />
+                    <div className="flex shrink-0 items-center gap-1">
+                      <RoleSelect
+                        value={req.accessRole}
+                        disabled={decidingId === req.id}
+                        onChange={(role) => void decide(req.id, 'APPROVED', role)}
+                      />
+                      <button
+                        type="button"
+                        disabled={decidingId === req.id}
+                        onClick={() => void removeAccess(req.id)}
+                        aria-label={t('share.invite.remove')}
+                        title={t('share.invite.remove')}
+                        className="rounded-md bg-red-500/15 p-1 text-red-400 hover:bg-red-500/25 disabled:opacity-50"
+                      >
+                        <XIcon className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   ) : (
                     <span className="flex shrink-0 items-center gap-1 text-[11px] text-neutral-500">
                       <XIcon className="h-3 w-3" />

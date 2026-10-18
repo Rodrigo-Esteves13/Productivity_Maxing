@@ -8,6 +8,10 @@ export interface SharedWithMeItem {
   token: string;
   status: SharedWithMeStatus;
   role: SharedWithMeRole;
+  /** Convite do dono a espera de resposta tua (aceitar/recusar). */
+  invited: boolean;
+  /** Id do convite, so quando `invited`. */
+  requestId: string | null;
   /** null enquanto o acesso nao esta aprovado: nao se revela conteudo/metadados. */
   title: string | null;
   areaName: string | null;
@@ -53,8 +57,10 @@ export class NotebookSharedWithMeService {
         orderBy: { createdAt: 'desc' },
         take: MAX_ITEMS,
         select: {
+          id: true,
           status: true,
           accessRole: true,
+          invitedByOwner: true,
           createdAt: true,
           decidedAt: true,
           notebookShare: { select: shareSelect },
@@ -81,11 +87,16 @@ export class NotebookSharedWithMeService {
 
     for (const r of requests) {
       const share = r.notebookShare;
-      const visible = r.status === 'APPROVED';
+      // Convite pendente: o dono escolheu mostrar-te a nota, por isso ja
+      // ves titulo/dono para decidir. Pedido teu pendente continua escondido.
+      const invited = r.invitedByOwner === true && r.status === 'PENDING';
+      const visible = r.status === 'APPROVED' || invited;
       items.set(share.token, {
         token: share.token,
         status: r.status,
         role: r.accessRole,
+        invited,
+        requestId: invited ? r.id : null,
         title: visible ? share.notebookEntry.title : null,
         areaName: visible ? share.notebookEntry.area.name : null,
         areaColor: visible ? share.notebookEntry.area.colorHex : null,
@@ -101,6 +112,8 @@ export class NotebookSharedWithMeService {
         token: share.token,
         status: 'PUBLIC',
         role: 'VIEWER',
+        invited: false,
+        requestId: null,
         title: share.notebookEntry.title,
         areaName: share.notebookEntry.area.name,
         areaColor: share.notebookEntry.area.colorHex,

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { SharedWithMeItem, SharedWithMeRole, SharedWithMeStatus } from '../../api/notebookService';
 import { useI18n } from '../../i18n/useI18n';
@@ -20,12 +21,76 @@ const ROLE_KEY: Record<SharedWithMeRole, string> = {
 const isHexColor = (value: string | null): value is string =>
   value !== null && /^#[0-9a-fA-F]{3,8}$/.test(value);
 
-export default function SharedWithMeList({ items }: { items: SharedWithMeItem[] }) {
+function InvitationCard({
+  item,
+  onRespond,
+}: {
+  item: SharedWithMeItem;
+  onRespond: (requestId: string, accept: boolean) => Promise<boolean>;
+}) {
+  const { t } = useI18n();
+  const [isBusy, setIsBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const answer = async (accept: boolean) => {
+    if (!item.requestId) return;
+    setIsBusy(true);
+    setFailed(false);
+    const ok = await onRespond(item.requestId, accept);
+    if (!ok) setFailed(true);
+    setIsBusy(false);
+  };
+
+  return (
+    <div className="rounded-xl border border-violet-800 bg-violet-950/20 p-4">
+      <p className="truncate font-medium text-white">{item.title ?? t('sharedWithMe.hiddenTitle')}</p>
+      <p className="mt-1 text-xs text-neutral-400">
+        {t('sharedWithMe.invite.text', {
+          name: item.ownerName ?? t('social.anonymous'),
+          role: t(ROLE_KEY[item.role]),
+        })}
+      </p>
+      {failed && <p className="mt-2 text-xs text-red-400">{t('sharedWithMe.invite.error')}</p>}
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => void answer(true)}
+          className="rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+        >
+          {t('sharedWithMe.invite.accept')}
+        </button>
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => void answer(false)}
+          className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+        >
+          {t('sharedWithMe.invite.decline')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface SharedWithMeListProps {
+  items: SharedWithMeItem[];
+  onRespond: (requestId: string, accept: boolean) => Promise<boolean>;
+}
+
+export default function SharedWithMeList({ items, onRespond }: SharedWithMeListProps) {
   const { t, lang } = useI18n();
 
   return (
     <ul className="space-y-3">
       {items.map((item) => {
+        if (item.invited) {
+          return (
+            <li key={item.token}>
+              <InvitationCard item={item} onRespond={onRespond} />
+            </li>
+          );
+        }
         const accessible = item.status === 'APPROVED' || item.status === 'PUBLIC';
         return (
           <li key={item.token}>

@@ -7,6 +7,8 @@ import {
   updateShareVisibility,
   getShareAccessRequests,
   decideShareAccessRequest,
+  inviteFriendToEntry,
+  removeShareAccess,
   getChangeProposals,
   getShareVisits,
   decideChangeProposal,
@@ -42,6 +44,8 @@ export interface UseEntryShareResult {
   changeVisibility: (next: NotebookShareVisibility) => Promise<void>;
   decide: (requestId: string, decision: 'APPROVED' | 'DENIED', role?: ShareAccessRole) => Promise<void>;
   decideProposal: (proposalId: string, decision: 'APPROVED' | 'REJECTED') => Promise<void>;
+  invite: (friendId: string, role: ShareAccessRole) => Promise<boolean>;
+  removeAccess: (requestId: string) => Promise<void>;
 }
 
 // O painel Share lembra-se de como o deixaste: depois de o abrires pela
@@ -103,7 +107,7 @@ export function useEntryShare(
   }, [entryId]);
 
   const shareUrl = token ? `${window.location.origin}/shared/${token}` : '';
-  const pendingCount = requests.filter((r) => r.status === 'PENDING').length;
+  const pendingCount = requests.filter((r) => r.status === 'PENDING' && !r.invitedByOwner).length;
 
   const loadRequests = useCallback(async (silent = false) => {
     if (!silent) setIsRequestsLoading(true);
@@ -231,6 +235,37 @@ export function useEntryShare(
     [entryId],
   );
 
+  // Convida um amigo (ele tem de aceitar). Devolve true se o convite foi criado.
+  const invite = useCallback(
+    async (friendId: string, role: ShareAccessRole): Promise<boolean> => {
+      setError('');
+      try {
+        await inviteFriendToEntry(entryId, friendId, role);
+        await loadRequests(true);
+        return true;
+      } catch {
+        setError('Could not invite that friend. They may have declined recently, or this note is full.');
+        return false;
+      }
+    },
+    [entryId, loadRequests],
+  );
+
+  const removeAccess = useCallback(
+    async (requestId: string) => {
+      setDecidingId(requestId);
+      try {
+        await removeShareAccess(entryId, requestId);
+        setRequests((prev) => prev.filter((r) => r.id !== requestId));
+      } catch {
+        setError('Could not remove that access. Please try again.');
+      } finally {
+        setDecidingId(null);
+      }
+    },
+    [entryId],
+  );
+
   const decideProposal = useCallback(
     async (proposalId: string, decision: 'APPROVED' | 'REJECTED') => {
       const proposal = proposals.find((p) => p.id === proposalId);
@@ -270,5 +305,7 @@ export function useEntryShare(
     changeVisibility,
     decide,
     decideProposal,
+    invite,
+    removeAccess,
   };
 }

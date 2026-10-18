@@ -48,9 +48,6 @@ export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileM
       <Link to="/areas" onClick={onNavigate} className={getLinkClass('/areas')}>
         {t('nav.areas')}
       </Link>
-      <Link to="/shared-with-me" onClick={onNavigate} className={getLinkClass('/shared-with-me')}>
-        {t('nav.sharedWithMe')}
-      </Link>
       <Link to="/social" onClick={onNavigate} className={getLinkClass('/social')}>
         {t('nav.social')}
       </Link>

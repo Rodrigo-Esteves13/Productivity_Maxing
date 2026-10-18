@@ -62,4 +62,9 @@ export const social: Record<string, string> = {
   'social.notes.noAccess': "이 노트에 접근할 수 없습니다.",
   'social.notes.noEntries': "공유된 과목에 아직 읽을 내용이 없습니다.",
   'social.notes.back': "← 노트로 돌아가기",
+  'sharedWithMe.invite.title': "초대",
+  'sharedWithMe.invite.text': "{name}님이 {role}(으)로 초대했어요.",
+  'sharedWithMe.invite.accept': "수락",
+  'sharedWithMe.invite.decline': "거절",
+  'sharedWithMe.invite.error': "초대에 응답하지 못했어요. 다시 시도해 주세요.",
 };

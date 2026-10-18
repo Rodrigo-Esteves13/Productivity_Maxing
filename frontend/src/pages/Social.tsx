@@ -7,15 +7,20 @@ import FriendCodeCard from '../components/Social/FriendCodeCard';
 import AddFriendForm from '../components/Social/AddFriendForm';
 import NotesAccessPanel from '../components/Social/NotesAccessPanel';
 import SocialLists from '../components/Social/SocialLists';
+import SharedWithMeList from '../components/SharedWithMe/SharedWithMeList';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useSocial } from '../hooks/useSocial';
 import { useNotesAccess } from '../hooks/useNotesAccess';
+import { useSharedWithMe } from '../hooks/useSharedWithMe';
 import { useI18n } from '../i18n/useI18n';
 
 export default function Social() {
   const { t } = useI18n();
   useDocumentTitle(t('nav.social'));
   const notes = useNotesAccess();
+  const shared = useSharedWithMe();
+  const invitations = shared.items.filter((item) => item.invited);
+  const rest = shared.items.filter((item) => !item.invited);
   const { data, isLoading, hasError, addFriend, newCode, accept, remove, block, unblock } = useSocial();
 
   const isEmpty =
@@ -31,6 +36,12 @@ export default function Social() {
         <ErrorState message={t('social.loadError')} />
       ) : (
         <div className="space-y-6">
+          {invitations.length > 0 && (
+            <section aria-label={t('sharedWithMe.invite.title')} className="space-y-3">
+              <h2 className="text-sm font-semibold text-white">{t('sharedWithMe.invite.title')}</h2>
+              <SharedWithMeList items={invitations} onRespond={shared.respond} />
+            </section>
+          )}
           <div className="grid gap-4 md:grid-cols-2">
             <FriendCodeCard code={data.friendCode} onRegenerate={newCode} />
             <AddFriendForm onAdd={addFriend} />
@@ -56,6 +67,21 @@ export default function Social() {
               />
             </>
           )}
+          <section aria-label={t('nav.sharedWithMe')} className="space-y-3">
+            <div>
+              <h2 className="text-sm font-semibold text-white">{t('nav.sharedWithMe')}</h2>
+              <p className="text-xs text-neutral-500">{t('sharedWithMe.description')}</p>
+            </div>
+            {shared.isLoading ? (
+              <LoadingState message={t('common.loading')} />
+            ) : shared.hasError ? (
+              <ErrorState message={t('sharedWithMe.error')} />
+            ) : rest.length === 0 ? (
+              <EmptyState message={t('sharedWithMe.empty')} />
+            ) : (
+              <SharedWithMeList items={rest} onRespond={shared.respond} />
+            )}
+          </section>
           <p className="text-xs text-neutral-600">{t('social.privacy')}</p>
         </div>
       )}

@@ -9,8 +9,9 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SharedEditDto } from './dto/shared-edit.dto';
 import { PushService } from '../push/push.service';
+import { resolveShareAccess, type SharedRole } from './share-role.util';
 
-export type SharedRole = 'OWNER' | 'CO_OWNER' | 'EDITOR' | 'VIEWER';
+export type { SharedRole };
 
 // Campos que uma partilha pode alterar (ver SharedEditDto).
 export interface EditableFields {
@@ -76,23 +77,9 @@ export class NotebookCollabService {
     if (!share) {
       throw new NotFoundException('This share link is invalid or was removed.');
     }
-    if (share.createdByUserId === userId) {
-      return { share, role: 'OWNER' as SharedRole };
-    }
-    if (share.visibility === 'AUTHORIZED') {
-      const request = await this.prisma.notebookShareAccessRequest.findUnique({
-        where: {
-          notebookShareId_requestingUserId: {
-            notebookShareId: share.id,
-            requestingUserId: userId,
-          },
-        },
-      });
-      if (request?.status === 'APPROVED') {
-        return { share, role: request.accessRole as SharedRole };
-      }
-    }
-    return { share, role: 'VIEWER' as SharedRole };
+    const access = await resolveShareAccess(this.prisma, share, userId);
+    const role: SharedRole = access.state === 'ok' ? access.role : 'VIEWER';
+    return { share, role };
   }
 
   private async assertOwnsEntry(ownerId: string, entryId: string) {
@@ -200,8 +187,21 @@ export class NotebookCollabService {
         },
       },
     });
+    // Propostas de amigos convidados: sem email (so o nome).
+    const invited = await this.prisma.notebookShareAccessRequest.findMany({
+      where: {
+        invitedByOwner: true,
+        requestingUserId: { in: rows.map((r) => r.proposedBy.id) },
+        notebookShare: { notebookEntryId: entryId },
+      },
+      select: { requestingUserId: true },
+    });
+    const hideEmail = new Set(invited.map((i) => i.requestingUserId));
     return rows.map((row) => ({
       ...row,
+      proposedBy: hideEmail.has(row.proposedBy.id)
+        ? { ...row.proposedBy, email: '' }
+        : row.proposedBy,
       payload: fieldsFromPayload(row.payload),
     }));
   }

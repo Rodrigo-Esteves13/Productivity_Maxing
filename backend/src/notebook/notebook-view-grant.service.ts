@@ -207,10 +207,20 @@ export class NotebookViewGrantService {
     if (res.count === 0) throw new NotFoundException();
   }
 
-  /** Dono revoga/apaga, ou quem pediu cancela/desiste. */
+  /**
+   * Dono revoga/apaga, ou quem pediu cancela/desiste. Quem pediu NAO pode
+   * apagar uma recusa: senao apagava-a e voltava a pedir (e a notificar o
+   * dono) em ciclo, contornando o "recusado nao volta a apitar".
+   */
   async remove(userId: string, grantId: string): Promise<void> {
     const res = await this.prisma.notebookViewGrant.deleteMany({
-      where: { id: grantId, OR: [{ ownerId: userId }, { viewerId: userId }] },
+      where: {
+        id: grantId,
+        OR: [
+          { ownerId: userId },
+          { viewerId: userId, status: { not: 'DENIED' } },
+        ],
+      },
     });
     if (res.count === 0) throw new NotFoundException();
   }

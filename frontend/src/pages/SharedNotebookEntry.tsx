@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLiveRefresh } from '../hooks/useLiveRefresh';
 import { usePushNotifications } from '../hooks/usePushNotifications';
-import { useParams } from 'react-router-dom';
-import { getSharedNotebookEntry, requestShareAccess } from '../api/notebookService';
+import { useNavigate, useParams } from 'react-router-dom';
+import { getSharedNotebookEntry, requestShareAccess, respondToInvitation } from '../api/notebookService';
 import { fetchCsrfToken } from '../api/userService';
 import { setCsrfToken } from '../api/csrfStore';
 import type { SharedNotebookEntry as SharedNotebookEntryData, SharedRole } from '../types/models';
@@ -28,7 +28,7 @@ const noop = () => {};
 // Usa o mesmo PageLayout (header + footer) das restantes páginas, para quem
 // abre um link partilhado - mesmo sem conta - ver a app inteira à volta e
 // não um ecrã solto. É a única página pensada para alguém sem conta.
-type ShareGateStatus = 'login_required' | 'not_requested' | 'pending' | 'denied';
+type ShareGateStatus = 'login_required' | 'not_requested' | 'pending' | 'invited' | 'denied';
 
 export default function SharedNotebookEntry() {
   const { token } = useParams<{ token: string }>();
@@ -36,6 +36,8 @@ export default function SharedNotebookEntry() {
   const [role, setRole] = useState<SharedRole>('VIEWER');
   const [hasPendingProposal, setHasPendingProposal] = useState(false);
   const [gateStatus, setGateStatus] = useState<ShareGateStatus | null>(null);
+  const [inviteRequestId, setInviteRequestId] = useState<string | null>(null);
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   // Whether a CSRF token was successfully picked up for the current
@@ -65,6 +67,7 @@ export default function SharedNotebookEntry() {
         } else {
           setEntry(null);
           setGateStatus(result.status);
+          setInviteRequestId(result.status === 'invited' ? result.requestId : null);
         }
       })
       .catch(() => {
@@ -112,6 +115,22 @@ export default function SharedNotebookEntry() {
     }
   };
 
+ // Convite do dono: aceitar abre a nota, recusar volta ao Social.
+  const handleInvitation = async (accept: boolean) => {
+    if (!inviteRequestId) return;
+    setIsRequesting(true);
+    setError('');
+    try {
+      await respondToInvitation(inviteRequestId, accept);
+      if (accept) load();
+      else navigate('/social');
+    } catch {
+      setError('Could not answer the invitation. Please try again.');
+    } finally {
+      setIsRequesting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <PageLayout>
@@ -130,6 +149,7 @@ export default function SharedNotebookEntry() {
           isRequesting={isRequesting}
           error={error}
           onRequestAccess={handleRequestAccess}
+          onInvitation={handleInvitation}
         />
       </PageLayout>
     );
@@ -171,6 +191,7 @@ function ShareAccessGate({
   isRequesting,
   error,
   onRequestAccess,
+  onInvitation,
 }: {
   status: ShareGateStatus;
   token: string;
@@ -178,7 +199,9 @@ function ShareAccessGate({
   isRequesting: boolean;
   error: string;
   onRequestAccess: () => void;
+  onInvitation: (accept: boolean) => void;
 }) {
+  const { t } = useI18n();
   const redirectPath = `/shared/${token}`;
 
   const copy: Record<ShareGateStatus, { title: string; body: string }> = {
@@ -193,6 +216,10 @@ function ShareAccessGate({
     pending: {
       title: 'Request sent',
       body: "Your request is waiting for the owner's approval. Check back later.",
+    },
+    invited: {
+      title: t('share.gate.invited.title'),
+      body: t('share.gate.invited.body'),
     },
     denied: {
       title: 'Request denied',
@@ -217,6 +244,27 @@ function ShareAccessGate({
       )}
 
       {status === 'pending' && hasSession && <GateNotifyButton />}
+
+      {status === 'invited' && hasSession && (
+        <div className="mt-1 flex gap-2">
+          <button
+            type="button"
+            disabled={isRequesting}
+            onClick={() => onInvitation(true)}
+            className="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+          >
+            {t('sharedWithMe.invite.accept')}
+          </button>
+          <button
+            type="button"
+            disabled={isRequesting}
+            onClick={() => onInvitation(false)}
+            className="rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+          >
+            {t('sharedWithMe.invite.decline')}
+          </button>
+        </div>
+      )}
 
       {(status === 'not_requested' || status === 'denied') && hasSession && (
         <button

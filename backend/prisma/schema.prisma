@@ -1158,6 +1158,10 @@ model NotebookShareAccessRequest {
   // que o dono aprova/recusa, CO_OWNER edita direto. So faz sentido em
   // partilhas AUTHORIZED (e preciso saber QUEM e a pessoa).
   accessRole       ShareAccessRole           @default(VIEWER)
+  // true = convite do DONO a um amigo (PENDING = a espera de o convidado
+  // aceitar, nao de o dono decidir). Estes acessos sao re-verificados a cada
+  // leitura: se deixarem de ser amigos, o acesso corta logo.
+  invitedByOwner   Boolean                   @default(false)
   createdAt        DateTime                  @default(now())
   // Preenchido quando o dono aprova/nega - fica null enquanto PENDING.
   decidedAt        DateTime?

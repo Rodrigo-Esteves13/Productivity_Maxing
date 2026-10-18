@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getSharedWithMe, type SharedWithMeItem } from '../api/notebookService';
+import { getSharedWithMe, respondToInvitation, type SharedWithMeItem } from '../api/notebookService';
 import { useLiveRefresh } from './useLiveRefresh';
 
 export interface UseSharedWithMeResult {
   items: SharedWithMeItem[];
   isLoading: boolean;
   hasError: boolean;
+  /** Aceitar/recusar um convite. Devolve true se correu bem. */
+  respond: (requestId: string, accept: boolean) => Promise<boolean>;
 }
 
 export function useSharedWithMe(): UseSharedWithMeResult {
@@ -32,5 +34,18 @@ export function useSharedWithMe(): UseSharedWithMeResult {
   // Um pedido pendente passa a aprovado sem F5 (push + polling).
   useLiveRefresh(() => void load(true), { enabled: true, intervalMs: 15000 });
 
-  return { items, isLoading, hasError };
+  const respond = useCallback(
+    async (requestId: string, accept: boolean): Promise<boolean> => {
+      try {
+        await respondToInvitation(requestId, accept);
+        await load(true);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [load],
+  );
+
+  return { items, isLoading, hasError, respond };
 }

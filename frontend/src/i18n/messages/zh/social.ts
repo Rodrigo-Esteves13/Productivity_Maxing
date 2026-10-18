@@ -62,4 +62,9 @@ export const social: Record<string, string> = {
   'social.notes.noAccess': "你无权访问这些笔记。",
   'social.notes.noEntries': "与你共享的科目里还没有可读内容。",
   'social.notes.back': "← 返回笔记",
+  'sharedWithMe.invite.title': "邀请",
+  'sharedWithMe.invite.text': "{name} 邀请你担任{role}。",
+  'sharedWithMe.invite.accept': "接受",
+  'sharedWithMe.invite.decline': "拒绝",
+  'sharedWithMe.invite.error': "无法回复邀请，请重试。",
 };

@@ -291,6 +291,9 @@ export interface SharedWithMeItem {
   token: string;
   status: SharedWithMeStatus;
   role: SharedWithMeRole;
+  // Convite do dono a espera de resposta tua.
+  invited: boolean;
+  requestId: string | null;
   title: string | null;
   areaName: string | null;
   areaColor: string | null;
@@ -302,5 +305,36 @@ export interface SharedWithMeItem {
 // que abri com sessao). Titulo/dono so vem preenchido com acesso aprovado.
 export const getSharedWithMe = async (): Promise<SharedWithMeItem[]> => {
   const response = await api.get<SharedWithMeItem[]>('/notebook/shared/with-me');
+  return response.data;
+};
+
+// --- Convites de amigos para UMA nota -------------------------------------
+
+export const inviteFriendToEntry = async (
+  entryId: string,
+  friendId: string,
+  role: ShareAccessRole,
+): Promise<{ id: string; status: ShareAccessRequestStatus; accessRole: ShareAccessRole }> => {
+  const response = await api.post<{ id: string; status: ShareAccessRequestStatus; accessRole: ShareAccessRole }>(
+    `/notebook/entries/${entryId}/share/invite`,
+    { friendId, role },
+  );
+  return response.data;
+};
+
+/** Dono: tira o acesso a uma pessoa (ou cancela um convite pendente). */
+export const removeShareAccess = async (entryId: string, requestId: string): Promise<void> => {
+  await api.delete(`/notebook/entries/${entryId}/share/access/${requestId}`);
+};
+
+/** Convidado: aceita ou recusa. `token` vem preenchido quando aceita. */
+export const respondToInvitation = async (
+  requestId: string,
+  accept: boolean,
+): Promise<{ id: string; status: ShareAccessRequestStatus; token: string | null }> => {
+  const response = await api.post<{ id: string; status: ShareAccessRequestStatus; token: string | null }>(
+    `/notebook/invitations/${requestId}/respond`,
+    { accept },
+  );
   return response.data;
 };

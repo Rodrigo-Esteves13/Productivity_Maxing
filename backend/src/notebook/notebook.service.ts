@@ -16,6 +16,7 @@ import { fileTypeFromBuffer } from 'file-type';
 import { createHmac, randomUUID } from 'crypto';
 import { PushService } from '../push/push.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveShareAccess } from './share-role.util';
 import {
   CreateNotebookEntryDto,
   UpdateNotebookEntryDto,
@@ -143,6 +144,7 @@ export type SharedEntryResult =
   | { status: 'login_required' }
   | { status: 'not_requested' }
   | { status: 'pending' }
+  | { status: 'invited'; requestId: string }
   | { status: 'denied' };
 
 @Injectable()
@@ -516,13 +518,14 @@ export class NotebookService {
     });
     if (!share) return [];
 
-    return this.prisma.notebookShareAccessRequest.findMany({
+    const rows = await this.prisma.notebookShareAccessRequest.findMany({
       where: { notebookShareId: share.id },
       orderBy: { createdAt: 'asc' },
       select: {
         id: true,
         status: true,
         accessRole: true,
+        invitedByOwner: true,
         createdAt: true,
         decidedAt: true,
         requestingUser: {
@@ -530,6 +533,12 @@ export class NotebookService {
         },
       },
     });
+    // Amigos convidados: so o nome (o email de amigos nunca sai da pessoa).
+    return rows.map((row) =>
+      row.invitedByOwner
+        ? { ...row, requestingUser: { ...row.requestingUser, email: '' } }
+        : row,
+    );
   }
 
   // Lado do dono: aprova ou nega um pedido específico. requestId E entryId
@@ -551,6 +560,13 @@ export class NotebookService {
     });
     if (!request) {
       throw new NotFoundException('Access request not found.');
+    }
+    // Um convite pendente so quem foi convidado o aceita; o dono pode
+    // cancelar (DELETE .../access/:requestId), nunca aceitar por ele.
+    if (request.invitedByOwner && request.status === 'PENDING') {
+      throw new ConflictException(
+        'This is an invitation waiting for the invited person to accept.',
+      );
     }
 
     const updated = await this.prisma.notebookShareAccessRequest.update({
@@ -720,30 +736,17 @@ export class NotebookService {
       visitor,
     );
 
-    let role: 'OWNER' | 'CO_OWNER' | 'EDITOR' | 'VIEWER' =
-      share.createdByUserId === requestingUserId ? 'OWNER' : 'VIEWER';
-
-    if (
-      share.visibility === 'AUTHORIZED' &&
-      share.createdByUserId !== requestingUserId
-    ) {
-      if (!requestingUserId) return { status: 'login_required' };
-
-      const request = await this.prisma.notebookShareAccessRequest.findUnique({
-        where: {
-          notebookShareId_requestingUserId: {
-            notebookShareId: share.id,
-            requestingUserId,
-          },
-        },
-      });
-      if (!request) return { status: 'not_requested' };
-      if (request.status === 'PENDING') return { status: 'pending' };
-      if (request.status === 'DENIED') return { status: 'denied' };
-      // status === 'APPROVED' falls through to the same rendering as a
-      // PUBLIC share, below - mas com o papel que o dono deu.
-      role = request.accessRole;
+    const access = await resolveShareAccess(
+      this.prisma,
+      share,
+      requestingUserId,
+    );
+    if (access.state !== 'ok') {
+      return access.state === 'invited'
+        ? { status: 'invited', requestId: access.requestId }
+        : { status: access.state };
     }
+    const role = access.role;
 
     const hasPendingProposal =
       role === 'EDITOR' && requestingUserId

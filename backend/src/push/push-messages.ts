@@ -22,7 +22,9 @@ export type PushMessageKey =
   | 'pushTest'
   | 'friendRequest'
   | 'notesRequested'
-  | 'notesGranted';
+  | 'notesGranted'
+  | 'shareInvited'
+  | 'shareInviteAccepted';
 
 interface Template {
   title: string;
@@ -72,6 +74,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Notes shared',
       body: '{name} let you read their notes.',
     },
+    shareInvited: {
+      title: 'Invitation',
+      body: '{name} invited you to collaborate on \"{title}\".',
+    },
+    shareInviteAccepted: {
+      title: 'Invitation accepted',
+      body: '{name} accepted your invitation to \"{title}\".',
+    },
   },
   pt: {
     shareAccessRequested: {
@@ -113,6 +123,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     notesGranted: {
       title: 'Notas partilhadas',
       body: '{name} deixou-te ler as notas.',
+    },
+    shareInvited: {
+      title: 'Convite',
+      body: '{name} convidou-te para colaborar em \"{title}\".',
+    },
+    shareInviteAccepted: {
+      title: 'Convite aceite',
+      body: '{name} aceitou o teu convite para \"{title}\".',
     },
   },
   es: {
@@ -156,6 +174,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Apuntes compartidos',
       body: '{name} te permitió leer sus apuntes.',
     },
+    shareInvited: {
+      title: 'Invitación',
+      body: '{name} te invitó a colaborar en \"{title}\".',
+    },
+    shareInviteAccepted: {
+      title: 'Invitación aceptada',
+      body: '{name} aceptó tu invitación a \"{title}\".',
+    },
   },
   zh: {
     shareAccessRequested: {
@@ -186,6 +212,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     friendRequest: { title: '好友请求', body: '{name} 向你发送了好友请求。' },
     notesRequested: { title: '笔记请求', body: '{name} 想阅读你的笔记。' },
     notesGranted: { title: '笔记已共享', body: '{name} 允许你阅读其笔记。' },
+    shareInvited: {
+      title: '邀请',
+      body: '{name} 邀请你协作编辑“{title}”。',
+    },
+    shareInviteAccepted: {
+      title: '邀请已接受',
+      body: '{name} 接受了你对“{title}”的邀请。',
+    },
   },
   ja: {
     shareAccessRequested: {
@@ -227,6 +261,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     notesGranted: {
       title: 'ノートが共有されました',
       body: '{name} さんがノートを読めるようにしました。',
+    },
+    shareInvited: {
+      title: '招待',
+      body: '{name}さんが「{title}」への参加に招待しました。',
+    },
+    shareInviteAccepted: {
+      title: '招待が承認されました',
+      body: '{name}さんが「{title}」への招待を承認しました。',
     },
   },
   ko: {
@@ -270,6 +312,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '노트 공유됨',
       body: '{name}님이 노트를 볼 수 있게 했습니다.',
     },
+    shareInvited: {
+      title: '초대',
+      body: '{name}님이 \"{title}\" 공동 작업에 초대했어요.',
+    },
+    shareInviteAccepted: {
+      title: '초대 수락됨',
+      body: '{name}님이 \"{title}\" 초대를 수락했어요.',
+    },
   },
   fr: {
     shareAccessRequested: {
@@ -312,6 +362,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Notes partagées',
       body: '{name} vous a donné accès à ses notes.',
     },
+    shareInvited: {
+      title: 'Invitation',
+      body: '{name} t’a invité à collaborer sur \"{title}\".',
+    },
+    shareInviteAccepted: {
+      title: 'Invitation acceptée',
+      body: '{name} a accepté ton invitation à \"{title}\".',
+    },
   },
   de: {
     shareAccessRequested: {
@@ -353,6 +411,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     notesGranted: {
       title: 'Notizen geteilt',
       body: '{name} lässt dich seine Notizen lesen.',
+    },
+    shareInvited: {
+      title: 'Einladung',
+      body: '{name} hat dich eingeladen, an \"{title}\" mitzuarbeiten.',
+    },
+    shareInviteAccepted: {
+      title: 'Einladung angenommen',
+      body: '{name} hat deine Einladung zu \"{title}\" angenommen.',
     },
   },
 };

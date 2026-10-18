@@ -6,6 +6,7 @@ import {
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PushService } from '../push/push.service';
+import { areFriends as areFriendsQuery } from './friendship.util';
 import { MAX_FRIENDS, MAX_PENDING_OUTGOING } from './social.constants';
 
 /** Unico dado de outra pessoa que sai daqui: nunca email, nunca ids internos alem do userId. */
@@ -263,17 +264,7 @@ export class SocialService {
   }
 
   /** Para outros modulos (futuros pedidos de acesso): sao amigos aceites? */
-  async areFriends(a: string, b: string): Promise<boolean> {
-    const row = await this.prisma.friendship.findFirst({
-      where: {
-        status: 'ACCEPTED',
-        OR: [
-          { requesterId: a, addresseeId: b },
-          { requesterId: b, addresseeId: a },
-        ],
-      },
-      select: { id: true },
-    });
-    return row !== null;
+  areFriends(a: string, b: string): Promise<boolean> {
+    return areFriendsQuery(this.prisma, a, b);
   }
 }

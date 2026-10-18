@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
 import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
 import RootRedirect from './RootRedirect';
@@ -37,7 +37,6 @@ const Profile = lazy(() => import('../pages/Profile'));
 const Developer = lazy(() => import('../pages/Developer'));
 const Agent = lazy(() => import('../pages/Agent'));
 const Areas = lazy(() => import('../pages/Areas'));
-const SharedWithMe = lazy(() => import('../pages/SharedWithMe'));
 const Social = lazy(() => import('../pages/Social'));
 const FriendNotes = lazy(() => import('../pages/FriendNotes'));
 const FriendNoteEntry = lazy(() => import('../pages/FriendNoteEntry'));
@@ -126,10 +125,7 @@ export default function AppRouter() {
             path="/packs/:code"
             element={<PrivateRoute><ImportTaskPack /></PrivateRoute>}
           />
-          <Route
-            path="/shared-with-me"
-            element={<PrivateRoute><SharedWithMe /></PrivateRoute>}
-          />
+          <Route path="/shared-with-me" element={<Navigate to="/social" replace />} />
           <Route
             path="/profile"
             element={<PrivateRoute><Profile /></PrivateRoute>}

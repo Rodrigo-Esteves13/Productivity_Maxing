@@ -1025,6 +1025,8 @@ export interface ShareAccessRequest {
   id: string;
   status: ShareAccessRequestStatus;
   accessRole: ShareAccessRole;
+  // true = convite do dono a um amigo (PENDING = a espera do convidado).
+  invitedByOwner: boolean;
   createdAt: string;
   decidedAt: string | null;
   requestingUser: { id: string; name: string | null; email: string; avatarUrl: string | null };
@@ -1067,6 +1069,7 @@ export type SharedEntryResult =
   | { status: 'login_required' }
   | { status: 'not_requested' }
   | { status: 'pending' }
+  | { status: 'invited'; requestId: string }
   | { status: 'denied' };
 
 export interface ScheduleLinkResult {
