@@ -7,6 +7,44 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-18',
+    title: 'Invite friends to a note, and a tidier menu',
+    items: [
+      'You can invite a friend to a single note as editor, co-owner or reader. Open Share on the note (link set to Authorized), pick a friend and a role. They get a notification and must accept; access stops as soon as you stop being friends.',
+      'Editors propose changes for you to approve, co-owners edit directly, and neither can delete the note or change its sharing. You can cancel an invite or remove someone at any time.',
+      'You are notified when a friend accepts. Declining stays quiet.',
+      'Your friends\' emails are never shown to you in the sharing panel, only their names.',
+      '"Shared with me" now lives inside Social, with pending invitations at the top. The old link redirects there.',
+      'The top bar no longer overlaps in long languages (German, Japanese, Korean): the full menu shows on wide screens and the compact menu is used on smaller ones. Profile is in your user menu.',
+      'Languages now load on demand: the app only downloads the language you use, and fetches another one only when you switch. The admin menu is translated too.',
+      'The user menu fits its text, and the hover now fills each row up to the rounded corners.',
+      'Fixed a loophole where someone refused access to your notes could remove the refusal and ask again.',
+    ],
+  },
+  {
+    date: '2026-10-17',
+    title: 'Social: friends and reading friends\' notes',
+    items: [
+      'New Social tab: add friends with a private friend code (no search by name or email), accept or decline requests, and block people. Being friends gives access to nothing by itself.',
+      'You can ask a friend to let you read their notes. They choose which courses, you can only read, and removing or blocking the friend cuts access immediately.',
+      'Notifications for friend requests and for notes requests and approvals.',
+    ],
+  },
+  {
+    date: '2026-10-16',
+    title: 'Languages, task packs, commute time and notifications',
+    items: [
+      'New languages: Chinese, Japanese, Korean, French and German, with system fonts and proper line breaking. These translations are not yet reviewed by native speakers: use Send feedback > "A translation problem" when something looks off. Many screens are still partly in English.',
+      'Send feedback from the user menu in any language, with a rating and the page you were on.',
+      'Push notifications for share requests and edit proposals, per device, plus a test button in Profile. Shared pages and the owner\'s panel refresh by themselves.',
+      'Share shows who visited your link and how often (only you can see it). Anonymous visitors are counted without storing their IP.',
+      'Areas are now either official (managed by the admin) or personal (only yours). You can propose a personal area to become official.',
+      'Task packs: share a list of tasks (title, date, weight, course and type only) with classmates through a link. They import it into their own account, and the weight limit still applies.',
+      'Commute time: add an address to a work shift, class place or one-off event to see the travel time.',
+      'Fixed days off per place for weekly shifts, and photos from Google, GitHub or Discord follow when you change them there.',
+    ],
+  },
+  {
     date: '2026-10-15',
     title: 'Weight limits, repeat badges and readable notebook tables',
     items: [

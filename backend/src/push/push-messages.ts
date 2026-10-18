@@ -76,11 +76,11 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     shareInvited: {
       title: 'Invitation',
-      body: '{name} invited you to collaborate on \"{title}\".',
+      body: '{name} invited you to collaborate on "{title}".',
     },
     shareInviteAccepted: {
       title: 'Invitation accepted',
-      body: '{name} accepted your invitation to \"{title}\".',
+      body: '{name} accepted your invitation to "{title}".',
     },
   },
   pt: {
@@ -126,11 +126,11 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     shareInvited: {
       title: 'Convite',
-      body: '{name} convidou-te para colaborar em \"{title}\".',
+      body: '{name} convidou-te para colaborar em "{title}".',
     },
     shareInviteAccepted: {
       title: 'Convite aceite',
-      body: '{name} aceitou o teu convite para \"{title}\".',
+      body: '{name} aceitou o teu convite para "{title}".',
     },
   },
   es: {
@@ -176,11 +176,11 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     shareInvited: {
       title: 'Invitación',
-      body: '{name} te invitó a colaborar en \"{title}\".',
+      body: '{name} te invitó a colaborar en "{title}".',
     },
     shareInviteAccepted: {
       title: 'Invitación aceptada',
-      body: '{name} aceptó tu invitación a \"{title}\".',
+      body: '{name} aceptó tu invitación a "{title}".',
     },
   },
   zh: {
@@ -314,11 +314,11 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     shareInvited: {
       title: '초대',
-      body: '{name}님이 \"{title}\" 공동 작업에 초대했어요.',
+      body: '{name}님이 "{title}" 공동 작업에 초대했어요.',
     },
     shareInviteAccepted: {
       title: '초대 수락됨',
-      body: '{name}님이 \"{title}\" 초대를 수락했어요.',
+      body: '{name}님이 "{title}" 초대를 수락했어요.',
     },
   },
   fr: {
@@ -364,11 +364,11 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     shareInvited: {
       title: 'Invitation',
-      body: '{name} t’a invité à collaborer sur \"{title}\".',
+      body: '{name} t’a invité à collaborer sur "{title}".',
     },
     shareInviteAccepted: {
       title: 'Invitation acceptée',
-      body: '{name} a accepté ton invitation à \"{title}\".',
+      body: '{name} a accepté ton invitation à "{title}".',
     },
   },
   de: {
@@ -414,11 +414,11 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     shareInvited: {
       title: 'Einladung',
-      body: '{name} hat dich eingeladen, an \"{title}\" mitzuarbeiten.',
+      body: '{name} hat dich eingeladen, an "{title}" mitzuarbeiten.',
     },
     shareInviteAccepted: {
       title: 'Einladung angenommen',
-      body: '{name} hat deine Einladung zu \"{title}\" angenommen.',
+      body: '{name} hat deine Einladung zu "{title}" angenommen.',
     },
   },
 };

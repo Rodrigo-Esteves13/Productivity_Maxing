@@ -98,7 +98,7 @@ describe('NotebookInviteService', () => {
     expect(push.notifyUser).toHaveBeenCalledWith(
       'x',
       'shareInvited',
-      expect.anything(),
+      expect.anything() as unknown,
     );
   });
 
@@ -164,7 +164,7 @@ describe('NotebookInviteService', () => {
     expect(push.notifyUser).toHaveBeenCalledWith(
       'o',
       'shareInviteAccepted',
-      expect.anything(),
+      expect.anything() as unknown,
     );
   });
 

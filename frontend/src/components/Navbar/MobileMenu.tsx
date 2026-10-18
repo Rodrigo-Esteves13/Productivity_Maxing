@@ -29,7 +29,7 @@ export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileM
   };
 
   return (
-    <div className="md:hidden border-t border-neutral-800 bg-neutral-950 px-2 py-3 space-y-1">
+    <div className="xl:hidden border-t border-neutral-800 bg-neutral-950 px-2 py-3 space-y-1">
       <Link to="/dashboard" onClick={onNavigate} className={getLinkClass('/dashboard')}>
         {t('nav.dashboard')}
       </Link>
@@ -65,19 +65,19 @@ export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileM
         <>
           <div className="my-2 border-t border-neutral-800" />
           <Link to="/users" onClick={onNavigate} className={getAdminLinkClass('/users')}>
-            Users
+            {t('nav.admin.users')}
           </Link>
           <Link to="/task-types" onClick={onNavigate} className={getAdminLinkClass('/task-types')}>
-            Task Types
+            {t('nav.admin.taskTypes')}
           </Link>
           <Link to="/security" onClick={onNavigate} className={getAdminLinkClass('/security')}>
-            Security
+            {t('nav.admin.security')}
           </Link>
           <Link to="/appeals" onClick={onNavigate} className={getAdminLinkClass('/appeals')}>
-            Appeals
+            {t('nav.admin.appeals')}
           </Link>
           <Link to="/feedback" onClick={onNavigate} className={getAdminLinkClass('/feedback')}>
-            Feedback
+            {t('nav.admin.feedback')}
           </Link>
         </>
       )}

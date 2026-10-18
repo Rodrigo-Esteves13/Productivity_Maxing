@@ -28,7 +28,7 @@ export default function Navbar() {
     <nav className="print-hide bg-neutral-950 border-b border-neutral-800 text-white sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 whitespace-nowrap">
             <Link
               to={isAuthenticated ? "/dashboard" : "/"}
               className="text-xl font-bold tracking-wider text-violet-500 hover:text-violet-400 transition-colors"
@@ -43,7 +43,7 @@ export default function Navbar() {
               links de admin deixaram de ir soltos para a barra (era isso
               que estourava a largura em ecrãs de portátil, ~1280-1366px);
               agora vivem atrás de um único trigger "Admin" (AdminMenu). */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden xl:flex items-center gap-4">
             {isAuthenticated && <NavLinks currentPath={location.pathname} />}
 
             {role === 'ADMIN' && <AdminMenu currentPath={location.pathname} />}
@@ -56,11 +56,11 @@ export default function Navbar() {
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent('pmaxing:open-command-palette'))}
                 aria-label={t('nav.palette')}
-                title="Search / go to (Ctrl+K)"
-                className="hidden sm:flex items-center gap-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors rounded-md px-2.5 py-1.5"
+                title={t('nav.search')}
+                className="hidden xl:flex shrink-0 items-center gap-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors rounded-md px-2.5 py-1.5"
               >
                 <SearchIcon className="shrink-0" />
-                <kbd className="text-[10px] border border-neutral-700 rounded px-1 py-0.5">
+                <kbd className="hidden 2xl:inline whitespace-nowrap text-[10px] border border-neutral-700 rounded px-1 py-0.5">
                   {navigator.platform.toUpperCase().includes('MAC') ? '⌘K' : 'Ctrl+K'}
                 </kbd>
               </button>
@@ -69,7 +69,7 @@ export default function Navbar() {
               <UserMenu user={user} onLogout={handleLogout} />
             ) : (
               <span className="text-sm font-medium text-neutral-500 italic">
-                Not Authenticated
+                {t('nav.notAuthenticated')}
               </span>
             )}
 
@@ -77,9 +77,9 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-                aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+                aria-label={isMobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
                 aria-expanded={isMobileMenuOpen}
-                className="md:hidden p-2 rounded-md text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
+                className="xl:hidden p-2 rounded-md text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
               >
                 {isMobileMenuOpen ? <XIcon /> : <MenuIcon />}
               </button>
