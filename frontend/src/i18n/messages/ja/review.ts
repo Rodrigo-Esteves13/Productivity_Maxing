@@ -1,0 +1,17 @@
+export const review: Record<string, string> = {
+  'review.title': "週間レビュー",
+  'review.description': "直近7日間の振り返りと、これからの予定です。",
+  'review.completed': "完了",
+  'review.studied': "学習時間",
+  'review.overdue': "現在の期限切れ",
+  'review.focus': "平均集中度",
+  'review.completedThisWeek': "今週完了したもの",
+  'review.nothingCompleted': "直近7日間に完了したものはありません。",
+  'review.studyByArea': "科目別の学習時間",
+  'review.noStudy': "今週の学習記録はありません。",
+  'review.pushedBack': "何度も延期したもの",
+  'review.comingUp': "今後の予定(次の7日間)",
+  'review.nothingDue': "次の7日間に期限のものはありません。",
+  'review.loading': "読み込み中...",
+  'review.error': "週間レビューを読み込めませんでした。",
+};

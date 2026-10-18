@@ -1,4 +1,5 @@
 import Button from './Button';
+import { useI18n } from '../../i18n/useI18n';
 
 interface PaginationProps {
   total: number;
@@ -13,6 +14,7 @@ interface PaginationProps {
 // mesmo controlo (mesma convenção skip/take/total do backend, ver
 // useSecurityLogsPage/useAppealsPage).
 export default function Pagination({ total, skip, pageSize, onNextPage, onPrevPage }: PaginationProps) {
+  const { t } = useI18n();
   if (total === 0) return null;
 
   const rangeStart = skip + 1;
@@ -21,11 +23,11 @@ export default function Pagination({ total, skip, pageSize, onNextPage, onPrevPa
   return (
     <div className="flex items-center justify-between px-4 py-3 text-sm text-neutral-400">
       <span>
-        Showing {rangeStart}-{rangeEnd} of {total}
+        {t('common.showing', { from: rangeStart, to: rangeEnd, total })}
       </span>
       <div className="flex gap-2">
         <Button type="button" variant="secondary" onClick={onPrevPage} disabled={skip === 0}>
-          Previous
+          {t('common.previous')}
         </Button>
         <Button
           type="button"
@@ -33,7 +35,7 @@ export default function Pagination({ total, skip, pageSize, onNextPage, onPrevPa
           onClick={onNextPage}
           disabled={skip + pageSize >= total}
         >
-          Next
+          {t('common.next')}
         </Button>
       </div>
     </div>

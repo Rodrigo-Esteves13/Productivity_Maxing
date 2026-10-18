@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
 import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
 import RootRedirect from './RootRedirect';
@@ -14,7 +14,7 @@ import CookieNotice from '../components/Legal/CookieNotice';
 import CommandPalette from '../components/CommandPalette/CommandPalette';
 import GlobalStudyTimer from '../components/Study/GlobalStudyTimer';
 import CalendarSyncReviewModal from '../components/Schedule/CalendarSyncReviewModal';
-import LoadingState from '../components/UI/LoadingState';
+import RouteSkeleton from '../components/UI/RouteSkeleton';
 
 // Route-level code splitting: everything below only downloads its JS chunk
 // when the user actually navigates there, instead of all of it (including
@@ -37,6 +37,11 @@ const Profile = lazy(() => import('../pages/Profile'));
 const Developer = lazy(() => import('../pages/Developer'));
 const Agent = lazy(() => import('../pages/Agent'));
 const Areas = lazy(() => import('../pages/Areas'));
+const Social = lazy(() => import('../pages/Social'));
+const FriendNotes = lazy(() => import('../pages/FriendNotes'));
+const FriendNoteEntry = lazy(() => import('../pages/FriendNoteEntry'));
+const TaskPacks = lazy(() => import('../pages/TaskPacks'));
+const ImportTaskPack = lazy(() => import('../pages/ImportTaskPack'));
 const Users = lazy(() => import('../pages/Users'));
 const Security = lazy(() => import('../pages/Security'));
 const Appeals = lazy(() => import('../pages/Appeals'));
@@ -54,7 +59,7 @@ const NotFound = lazy(() => import('../pages/NotFound'));
 export default function AppRouter() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<LoadingState message="Loading..." className="min-h-[60vh]" />}>
+      <Suspense fallback={<RouteSkeleton />}>
         <Routes>
           <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<Login />} />
@@ -100,6 +105,27 @@ export default function AppRouter() {
             path="/areas"
             element={<PrivateRoute><Areas /></PrivateRoute>}
           />
+          <Route
+            path="/social/notes/:ownerId"
+            element={<PrivateRoute><FriendNotes /></PrivateRoute>}
+          />
+          <Route
+            path="/social/notes/:ownerId/:entryId"
+            element={<PrivateRoute><FriendNoteEntry /></PrivateRoute>}
+          />
+          <Route
+            path="/social"
+            element={<PrivateRoute><Social /></PrivateRoute>}
+          />
+          <Route
+            path="/task-packs"
+            element={<PrivateRoute><TaskPacks /></PrivateRoute>}
+          />
+          <Route
+            path="/packs/:code"
+            element={<PrivateRoute><ImportTaskPack /></PrivateRoute>}
+          />
+          <Route path="/shared-with-me" element={<Navigate to="/social" replace />} />
           <Route
             path="/profile"
             element={<PrivateRoute><Profile /></PrivateRoute>}

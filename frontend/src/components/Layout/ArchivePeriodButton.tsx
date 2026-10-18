@@ -3,11 +3,13 @@ import { archivePeriod } from '../../api/academicService';
 import { useAcademic } from '../../context/useAcademic';
 import { getApiMessage, getHttpStatus } from '../../lib/httpError';
 import { useFeedback } from '../../context/useFeedback';
+import { useI18n } from '../../i18n/useI18n';
 
 // Never shows for the "View all" period (isViewingAllPeriods) nor for an
 // already-archived period (see RestorePeriodButton for that case) - only
 // makes sense for the actual active, non-archived period.
 export default function ArchivePeriodButton() {
+  const { t } = useI18n();
   const { notify, confirm } = useFeedback();
   const { activePeriod, isViewingAllPeriods, refresh } = useAcademic();
   const [isArchiving, setIsArchiving] = useState(false);
@@ -17,9 +19,9 @@ export default function ArchivePeriodButton() {
   const handleArchive = async (forceConfirm = false) => {
     if (!forceConfirm) {
       const confirmed = await confirm({
-        title: 'Archive period',
-        message: `Archive "${activePeriod.name}"? It gets hidden from the selector - you can bring it back anytime with "Show archived" + Restore.`,
-        confirmLabel: 'Archive',
+        title: t('period.archive.title'),
+        message: t('period.archive.message', { name: activePeriod.name }),
+        confirmLabel: t('period.archive.confirm'),
       });
       if (!confirmed) return;
     }
@@ -37,12 +39,12 @@ export default function ArchivePeriodButton() {
         // on the backend).
         const message = getApiMessage(
           err,
-          'This is the most recent period in this program, with no successor. Archive it anyway?',
+          t('period.archive.mostRecent'),
         );
         const confirmed = await confirm({
-          title: 'Archive period',
+          title: t('period.archive.title'),
           message,
-          confirmLabel: 'Archive anyway',
+          confirmLabel: t('period.archive.anyway'),
         });
         if (confirmed) {
           await handleArchive(true);
@@ -54,12 +56,12 @@ export default function ArchivePeriodButton() {
         notify(
           getApiMessage(
             err,
-            'This is your only active period. Create another one before archiving this one.',
+            t('period.archive.onlyActive'),
           ),
           'error',
         );
       } else {
-        notify('Could not archive the period. Try again.', 'error');
+        notify(t('period.archive.error'), 'error');
       }
     } finally {
       setIsArchiving(false);
@@ -73,7 +75,7 @@ export default function ArchivePeriodButton() {
       disabled={isArchiving}
       className="text-sm text-neutral-400 hover:text-neutral-200 underline decoration-dotted disabled:opacity-50"
     >
-      {isArchiving ? 'Archiving...' : 'Archive period'}
+      {isArchiving ? t('period.archive.busy') : t('period.archive.button')}
     </button>
   );
 }

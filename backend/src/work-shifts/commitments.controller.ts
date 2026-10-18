@@ -17,7 +17,11 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { CommitmentsService } from './commitments.service';
-import { CreateCommitmentDto, UpdateCommitmentDto } from './dto/commitment.dto';
+import {
+  CreateCommitmentDto,
+  EstimateCommitmentCommuteDto,
+  UpdateCommitmentDto,
+} from './dto/commitment.dto';
 
 @ApiTags('Schedule')
 @ApiBearerAuth()
@@ -56,6 +60,21 @@ export class CommitmentsController {
     @Body() dto: UpdateCommitmentDto,
   ) {
     return this.commitmentsService.update(user.id, id, dto);
+  }
+
+  @Post('commute/estimate')
+  @HttpCode(HttpStatus.OK)
+  // Cada chamada gasta quota da Google Maps: limite apertado por utilizador.
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({
+    summary:
+      'Estimates travel time from your home address to a place (does not save anything).',
+  })
+  estimateCommute(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: EstimateCommitmentCommuteDto,
+  ) {
+    return this.commitmentsService.estimateCommute(user.id, dto);
   }
 
   @Delete(':id')

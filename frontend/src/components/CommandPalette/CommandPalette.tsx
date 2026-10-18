@@ -14,6 +14,7 @@ import { getLastUsedAreaId, setLastUsedAreaId } from '../../lib/lastUsedArea';
 import type { Area, Task, NotebookSearchResult } from '../../types/models';
 import { PlusIcon, SearchIcon } from '../UI/Icons';
 import { ACADEMIC_TASK_TYPE_KEY } from '../../lib/constants';
+import { useI18n } from '../../i18n/useI18n';
 
 // Static "go to page" commands - mirrors the routes in AppRouter.tsx and
 // the admin gating already used in Navbar.tsx (role === 'ADMIN'). Kept as
@@ -22,7 +23,7 @@ import { ACADEMIC_TASK_TYPE_KEY } from '../../lib/constants';
 // save maintaining what is, in practice, a short and rarely-changing list.
 interface NavCommand {
   id: string;
-  label: string;
+  labelKey: string;
   path: string;
   adminOnly?: boolean;
   // Palavras extra que tambem encontram este comando (funcionalidades que
@@ -31,47 +32,50 @@ interface NavCommand {
 }
 
 const NAV_COMMANDS: NavCommand[] = [
-  { id: 'nav-dashboard', label: 'Dashboard', path: '/dashboard' },
-  { id: 'nav-tasks', label: 'Tasks', path: '/tasks' },
+  { id: 'nav-dashboard', labelKey: 'nav.dashboard', path: '/dashboard' },
+  { id: 'nav-tasks', labelKey: 'nav.tasks', path: '/tasks' },
   {
     id: 'nav-focus',
-    label: 'Focus',
+    labelKey: 'nav.focus',
     path: '/focus',
     keywords: ['study blocks', 'pomodoro', 'timer', 'estudo', 'blocos'],
   },
   {
     id: 'nav-schedule',
-    label: 'Schedule',
+    labelKey: 'nav.schedule',
     path: '/schedule',
     keywords: ['timetable', 'classes', 'calendar feed', 'import', 'horario'],
   },
   {
     id: 'nav-work-shifts',
-    label: 'Work shifts and fixed days off',
+    labelKey: 'palette.workShifts',
     path: '/schedule',
     keywords: ['folga', 'folgas', 'days off', 'day off', 'trabalho', 'work', 'turnos', 'shifts', 'commitments', 'replicate'],
   },
-  { id: 'nav-review', label: 'Weekly review', path: '/review' },
+  { id: 'nav-review', labelKey: 'nav.review', path: '/review' },
   {
     id: 'nav-notebook',
-    label: 'Notebook',
+    labelKey: 'nav.notebook',
     path: '/notebook',
     keywords: ['whiteboard', 'quadro', 'photos', 'fotos', 'share', 'shared lesson', 'caderno'],
   },
   {
     id: 'nav-profile',
-    label: 'Profile',
+    labelKey: 'nav.profile',
     path: '/profile',
     keywords: ['avatar', 'photo', 'google calendar', 'theme', 'language', '2fa', 'password', 'notifications'],
   },
-  { id: 'nav-changelog', label: "What's new", path: '/changelog' },
-  { id: 'nav-developer', label: 'Developer', path: '/developer' },
-  { id: 'nav-agent', label: 'Agent', path: '/agent' },
-  { id: 'nav-areas', label: 'Areas', path: '/areas', keywords: ['courses', 'subjects', 'propose'] },
-  { id: 'nav-users', label: 'Users', path: '/users', adminOnly: true },
-  { id: 'nav-task-types', label: 'Task Types', path: '/task-types', adminOnly: true },
-  { id: 'nav-security', label: 'Security', path: '/security', adminOnly: true },
-  { id: 'nav-appeals', label: 'Appeals', path: '/appeals', adminOnly: true },
+  { id: 'nav-changelog', labelKey: 'nav.changelog', path: '/changelog' },
+  { id: 'nav-developer', labelKey: 'nav.developer', path: '/developer' },
+  { id: 'nav-agent', labelKey: 'nav.agent', path: '/agent' },
+  { id: 'nav-social', labelKey: 'nav.social', path: '/social', keywords: ['friends', 'amigos', 'friend code'] },
+  { id: 'nav-task-packs', labelKey: 'nav.taskPacks', path: '/task-packs', keywords: ['share tasks', 'import'] },
+  { id: 'nav-areas', labelKey: 'nav.areas', path: '/areas', keywords: ['courses', 'subjects', 'propose'] },
+  { id: 'nav-users', labelKey: 'nav.admin.users', path: '/users', adminOnly: true },
+  { id: 'nav-task-types', labelKey: 'nav.admin.taskTypes', path: '/task-types', adminOnly: true },
+  { id: 'nav-security', labelKey: 'nav.admin.security', path: '/security', adminOnly: true },
+  { id: 'nav-appeals', labelKey: 'nav.admin.appeals', path: '/appeals', adminOnly: true },
+  { id: 'nav-feedback', labelKey: 'nav.admin.feedback', path: '/feedback', adminOnly: true },
 ];
 
 const MAX_TASK_RESULTS = 6;
@@ -118,6 +122,7 @@ type PaletteItem =
 
 export default function CommandPalette() {
   const { isAuthenticated, user } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -265,8 +270,9 @@ export default function CommandPalette() {
     if (isQuickAddMode) return quickAddItems;
 
     const navMatches: PaletteItem[] = NAV_COMMANDS.filter((c) => !c.adminOnly || isAdmin)
-      .filter((c) => q === '' || c.label.toLowerCase().includes(q) || c.keywords?.some((k) => k.includes(q)))
-      .map((c) => ({ kind: 'nav', id: c.id, label: c.label, path: c.path }));
+      .map((c) => ({ command: c, label: t(c.labelKey) }))
+      .filter(({ command, label }) => q === '' || label.toLowerCase().includes(q) || command.keywords?.some((k) => k.includes(q)))
+      .map(({ command, label }) => ({ kind: 'nav', id: command.id, label, path: command.path }));
 
     // Task titles only searched once there's a query - with no query,
     // showing 6 arbitrary tasks above the fold isn't useful; the nav
@@ -275,9 +281,9 @@ export default function CommandPalette() {
       q === '' || !tasks
         ? []
         : tasks
-            .filter((t) => t.title.toLowerCase().includes(q))
+            .filter((task) => task.title.toLowerCase().includes(q))
             .slice(0, MAX_TASK_RESULTS)
-            .map((t) => ({ kind: 'task', id: t.id, label: t.title, task: t }));
+            .map((task) => ({ kind: 'task', id: task.id, label: task.title, task }));
 
     const notebookMatches: PaletteItem[] =
       q === ''
@@ -289,7 +295,7 @@ export default function CommandPalette() {
     // Quick-add goes LAST, never first: Enter on a normal search must keep
     // opening the top match, not creating a task named after the query.
     return [...navMatches, ...taskMatches, ...notebookMatches, ...quickAddItems];
-  }, [query, tasks, notebookResults, user, areas]);
+  }, [query, tasks, notebookResults, user, areas, t]);
 
   // Clamp instead of reset-on-every-keystroke - keeps the highlighted row
   // stable when it's still a valid index after the result list shrinks.
@@ -336,7 +342,7 @@ export default function CommandPalette() {
       }
     } catch {
       // Palette stays open with the typed text intact, so nothing is lost.
-      setCreateError('Could not create the task. Please try again.');
+      setCreateError(t('palette.error'));
     } finally {
       setIsCreating(false);
     }
@@ -397,7 +403,7 @@ export default function CommandPalette() {
               setActiveIndex(0);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Go to a page, search, or type + to add a task..."
+            placeholder={t('palette.placeholder')}
             className="flex-1 bg-transparent text-white placeholder:text-neutral-500 outline-none text-sm"
           />
           <kbd className="hidden sm:inline text-[10px] text-neutral-500 border border-neutral-700 rounded px-1.5 py-0.5">
@@ -407,7 +413,7 @@ export default function CommandPalette() {
 
         <div className="max-h-80 overflow-y-auto py-2">
           {items.length === 0 && (
-            <p className="px-4 py-3 text-sm text-neutral-500">No matches.</p>
+            <p className="px-4 py-3 text-sm text-neutral-500">{t('palette.noMatches')}</p>
           )}
           {createError && (
             <p role="alert" className="px-4 py-2 text-xs text-red-400">
@@ -436,13 +442,19 @@ export default function CommandPalette() {
                   <span className="flex items-center gap-2 min-w-0">
                     <PlusIcon className="shrink-0 text-violet-400" />
                     <span className="truncate">
-                      {isCreating ? 'Creating...' : `Create "${item.title}"`}
+                      {isCreating ? t('palette.creating') : t('palette.create', { title: item.title })}
                     </span>
                   </span>
                   <span className="text-[10px] text-neutral-500 shrink-0 text-right">
                     {noArea
-                      ? 'Create an Area first'
-                      : `${item.area?.name ?? '...'} - ${dateLabel} - ${QUICK_ADD_TASK_TYPE.toLowerCase()}, ${QUICK_ADD_DIFFICULTY.toLowerCase()}${item.priority ? `, ${item.priority.toLowerCase()} priority` : ''}`}
+                      ? t('palette.needArea')
+                      : t('palette.meta', {
+                          area: item.area?.name ?? '...',
+                          date: dateLabel,
+                          details: `${QUICK_ADD_TASK_TYPE.toLowerCase()}, ${QUICK_ADD_DIFFICULTY.toLowerCase()}${
+                            item.priority ? `, ${t('palette.priorityTag', { level: item.priority.toLowerCase() })}` : ''
+                          }`,
+                        })}
                   </span>
                 </button>
               );
@@ -458,7 +470,7 @@ export default function CommandPalette() {
               >
                 <span className="truncate">{item.label}</span>
                 <span className="text-[10px] uppercase tracking-wide text-neutral-500 shrink-0">
-                  {item.kind === 'nav' ? 'Go to' : item.kind === 'task' ? 'Task' : 'Notebook'}
+                  {t(`palette.kind.${item.kind}`)}
                 </span>
               </button>
             );

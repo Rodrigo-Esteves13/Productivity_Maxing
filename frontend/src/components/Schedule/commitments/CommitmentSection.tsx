@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useI18n } from '../../../i18n/useI18n';
 import { PencilIcon, PlusIcon, TrashIcon } from '../../UI/Icons';
 import CommitmentForm from './CommitmentForm';
 import ShiftForm from './ShiftForm';
 import type { ShiftFormValues } from './ShiftForm';
 import ShiftList from './ShiftList';
 import { describeDaysOff } from './shiftText';
+import type { CommitmentInput } from '../../../api/commitmentsService';
 import type {
   CommitmentWithShifts,
   CreateWorkShiftInput,
@@ -18,10 +20,7 @@ type Mode = 'view' | 'edit' | 'add-shift' | 'confirm-delete';
 interface CommitmentSectionProps {
   commitment: CommitmentWithShifts;
   isSaving: boolean;
-  onEditCommitment: (
-    id: string,
-    changes: { name?: string; commuteMinutes?: number; daysOff?: number[] },
-  ) => Promise<boolean>;
+  onEditCommitment: (id: string, changes: Partial<CommitmentInput>) => Promise<boolean>;
   onDeleteCommitment: (id: string) => Promise<boolean>;
   onAddShifts: (shifts: CreateWorkShiftInput[]) => Promise<boolean>;
   onEditShift: (id: string, changes: UpdateWorkShiftInput) => Promise<boolean>;
@@ -37,6 +36,7 @@ export default function CommitmentSection({
   onEditShift,
   onDeleteShift,
 }: CommitmentSectionProps) {
+  const { t } = useI18n();
   const [mode, setMode] = useState<Mode>('view');
 
   const handleAddShift = async (values: ShiftFormValues): Promise<boolean> => {
@@ -58,13 +58,11 @@ export default function CommitmentSection({
     <section className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
       {mode === 'edit' ? (
         <CommitmentForm
-          initialName={commitment.name}
-          initialCommute={commitment.commuteMinutes}
-          initialDaysOff={commitment.daysOff}
-          submitLabel="Save"
+          initial={commitment}
+          submitLabel={t('common.save')}
           isSaving={isSaving}
-          onSubmit={async (name, commuteMinutes, daysOff) => {
-            const ok = await onEditCommitment(commitment.id, { name, commuteMinutes, daysOff });
+          onSubmit={async (values) => {
+            const ok = await onEditCommitment(commitment.id, values);
             if (ok) setMode('view');
             return ok;
           }}
@@ -76,9 +74,10 @@ export default function CommitmentSection({
             <h3 className="text-base font-semibold text-white truncate">{commitment.name}</h3>
             <p className="text-xs text-neutral-500">
               {commitment.commuteMinutes > 0
-                ? `${commitment.commuteMinutes} min travel each way`
-                : 'No travel time'}
-              {commitment.daysOff.length > 0 && ` · Days off: ${describeDaysOff(commitment.daysOff)}`}
+                ? t('commitment.travelLine', { minutes: commitment.commuteMinutes })
+                : t('commitment.noTravel')}
+              {commitment.daysOff.length > 0 &&
+                ` · ${t('commitment.daysOffLine', { days: describeDaysOff(commitment.daysOff) })}`}
             </p>
           </div>
           <div className="flex items-center gap-1 shrink-0">

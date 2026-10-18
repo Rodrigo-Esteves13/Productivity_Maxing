@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { reportClientError } from '../../api/telemetryService';
 import { AlertTriangleIcon } from '../UI/Icons';
+import { translateNow } from '../../i18n/translate';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -50,16 +51,16 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
           <div className="mx-auto mb-6 w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center text-red-400">
             <AlertTriangleIcon width={28} height={28} />
           </div>
-          <h1 className="text-2xl font-semibold text-white mb-2">Something went wrong</h1>
+          <h1 className="text-2xl font-semibold text-white mb-2">{translateNow('common.error.title')}</h1>
           <p className="text-neutral-400 mb-6">
-            The app hit an unexpected error. It's been reported - reloading usually fixes it.
+            {translateNow('common.error.body')}
           </p>
           <button
             type="button"
             onClick={() => window.location.reload()}
             className="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors"
           >
-            Reload
+            {translateNow('common.reload')}
           </button>
         </div>
       </div>

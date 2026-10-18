@@ -172,7 +172,8 @@ html:lang(ko) {
   word-break: keep-all;
 }
 html:lang(zh) body,
-html:lang(ja) body {
+html:lang(ja) body,
+html:lang(ko) body {
   /* chinês/japonês não têm espaços: deixa quebrar linha em qualquer caractere */
   overflow-wrap: anywhere;
   line-break: strict;
@@ -190,4 +191,12 @@ html:lang(zh) .tracking-widest,
 html:lang(ja) .tracking-widest,
 html:lang(ko) .tracking-widest {
   letter-spacing: normal;
+}
+
+/* --- Texto que passava as bordas -----------------------------------------
+   Palavras longas (alemão, francês, URLs) e frases CJK não podem empurrar o
+   layout. break-word parte só quando não cabe. (Sem regra global de
+   min-width em flex/grid: encolhia itens que dependem do tamanho natural.) */
+body {
+  overflow-wrap: break-word;
 }

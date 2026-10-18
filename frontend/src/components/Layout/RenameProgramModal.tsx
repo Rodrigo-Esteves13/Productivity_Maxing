@@ -6,6 +6,7 @@ import Button from '../UI/Button';
 import FormError from '../UI/FormError';
 import { updateProgram } from '../../api/academicService';
 import type { AcademicProgram } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface RenameProgramModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export default function RenameProgramModal({
   program,
   onRenamed,
 }: RenameProgramModalProps) {
+  const { t } = useI18n();
   const [name, setName] = useState(program.name);
   const [roundFinalGrade, setRoundFinalGrade] = useState(program.roundFinalGrade);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,16 +51,16 @@ export default function RenameProgramModal({
       onRenamed();
       handleClose();
     } catch {
-      setError('Could not save the program. Try again.');
+      setError(t('program.save.error'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Program settings">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t('program.settings')}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <FormField label="Program name" htmlFor="rename-program-name">
+        <FormField label={t('program.name')} htmlFor="rename-program-name">
           <Input
             id="rename-program-name"
             value={name}
@@ -81,11 +83,10 @@ export default function RenameProgramModal({
           />
           <span>
             <span className="block text-sm text-neutral-200">
-              Round each subject's final grade
+              {t('program.round.label')}
             </span>
             <span className="block text-xs text-neutral-500">
-              Default for every period in this program. A period can still
-              override it individually.
+              {t('program.round.editHelp')}
             </span>
           </span>
         </label>
@@ -94,10 +95,10 @@ export default function RenameProgramModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={handleClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={isSubmitting || !name.trim()}>
-            {isSubmitting ? 'Saving...' : 'Save'}
+            {isSubmitting ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>

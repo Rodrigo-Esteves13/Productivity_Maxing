@@ -1,7 +1,7 @@
 import { useTodayPlan } from '../../hooks/useTodayPlan';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
-import LoadingState from '../UI/LoadingState';
+import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
 import EmptyState from '../UI/EmptyState';
 
@@ -12,7 +12,7 @@ export default function TodayPlan() {
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
       <h2 className="text-lg font-semibold text-white mb-4">Due today</h2>
 
-      {isLoading && <LoadingState message="Loading tasks due today..." />}
+      {isLoading && <LinesSkeleton lines={3} />}
       {!isLoading && error && <ErrorState message={error} />}
       {!isLoading && !error && tasks.length === 0 && (
         <EmptyState message="No tasks due today." />

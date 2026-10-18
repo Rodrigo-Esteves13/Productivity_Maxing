@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import ActionButton from '../UI/ActionButton';
 import ErrorState from '../UI/ErrorState';
-import LoadingState from '../UI/LoadingState';
+import LinesSkeleton from '../UI/LinesSkeleton';
 import EmptyState from '../UI/EmptyState';
 import { PlusIcon } from '../UI/Icons';
 import { useCommitments } from '../../hooks/useCommitments';
 import CommitmentForm from './commitments/CommitmentForm';
 import CommitmentSection from './commitments/CommitmentSection';
+import { useI18n } from '../../i18n/useI18n';
 import CopyWeekPanel from './commitments/CopyWeekPanel';
 import EventsSection from './commitments/EventsSection';
 
@@ -15,6 +16,7 @@ interface CommitmentsCardProps {
 }
 
 export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
+  const { t } = useI18n();
   const {
     overview, isLoading, isSaving, error, clearError,
     addCommitment, editCommitment, removeCommitment, addShifts, editShift, removeShift,
@@ -65,10 +67,10 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
       {isCreating && (
         <div className="mb-4">
           <CommitmentForm
-            submitLabel="Create"
+            submitLabel={t('commitment.create')}
             isSaving={isSaving}
-            onSubmit={async (name, commuteMinutes, daysOff) => {
-              const ok = await addCommitment(name, commuteMinutes, daysOff);
+            onSubmit={async (values) => {
+              const ok = await addCommitment(values);
               if (ok) setIsCreating(false);
               return ok;
             }}
@@ -78,7 +80,7 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
       )}
 
       {error && <ErrorState message={error} />}
-      {isLoading && <LoadingState message="Loading commitments..." className="py-4" />}
+      {isLoading && <LinesSkeleton lines={3} />}
 
       {!isLoading && commitments.length === 0 && ungroupedShifts.length === 0 && !isCreating && (
         <EmptyState message="Nothing here yet. Create a place like work or the gym, or add a one-off event below." />

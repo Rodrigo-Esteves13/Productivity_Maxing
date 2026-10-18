@@ -1,7 +1,8 @@
 import FormField from '../../UI/FormField';
 import Select from '../../UI/Select';
 import type { TaskTypeOption, PriorityOption } from '../../../types/models';
-import { formatEnumLabel } from '../../../utils/formatEnumLabel';
+import { useEnumLabel } from '../../../hooks/useEnumLabel';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface DifficultyTypeFieldsProps {
   idPrefix: string;
@@ -34,9 +35,11 @@ export default function DifficultyTypeFields({
   onTypeChange,
   onClearArea,
 }: DifficultyTypeFieldsProps) {
+  const { t } = useI18n();
+  const enumLabel = useEnumLabel();
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <FormField label="Difficulty" htmlFor={`${idPrefix}-difficulty`}>
+      <FormField label={t('filters.difficulty')} htmlFor={`${idPrefix}-difficulty`}>
         <Select
           id={`${idPrefix}-difficulty`}
           value={difficulty}
@@ -45,19 +48,19 @@ export default function DifficultyTypeFields({
         >
           {difficulties.map((d) => (
             <option key={d} value={d}>
-              {formatEnumLabel(d)}
+              {enumLabel(d)}
             </option>
           ))}
         </Select>
       </FormField>
-      <FormField label="Priority" htmlFor={`${idPrefix}-priority`}>
+      <FormField label={t('tasks.col.priority')} htmlFor={`${idPrefix}-priority`}>
         <Select
           id={`${idPrefix}-priority`}
           value={priority}
           onChange={(e) => onPriorityChange(e.target.value)}
           className="w-full"
         >
-          <option value="">No priority</option>
+          <option value="">{t('taskForm.noPriority')}</option>
           {priorities.map((p) => (
             <option key={p.key} value={p.key}>
               {p.label}
@@ -65,7 +68,7 @@ export default function DifficultyTypeFields({
           ))}
         </Select>
       </FormField>
-      <FormField label="Type" htmlFor={`${idPrefix}-type`}>
+      <FormField label={t('taskForm.type')} htmlFor={`${idPrefix}-type`}>
         <Select
           id={`${idPrefix}-type`}
           value={type}
@@ -74,24 +77,24 @@ export default function DifficultyTypeFields({
           className="w-full"
         >
           <option value="" disabled>
-            Select Type...
+            {t('taskForm.selectType')}
           </option>
-          {taskTypes.map((t) => (
-            <option key={t.key} value={t.key}>
-              {t.label}
+          {taskTypes.map((taskType) => (
+            <option key={taskType.key} value={taskType.key}>
+              {taskType.label}
             </option>
           ))}
         </Select>
         {isTypeLockedByArea && (
           <p className="mt-1 text-xs text-neutral-500">
-            Set automatically by the "{lockedByAreaName}" Area.{' '}
+            {t('taskForm.lockedByArea', { area: lockedByAreaName ?? '' })}{' '}
             {onClearArea && (
               <button
                 type="button"
                 onClick={onClearArea}
                 className="text-violet-400 hover:text-violet-300 underline underline-offset-2"
               >
-                Change Area
+                {t('taskForm.changeArea')}
               </button>
             )}
           </p>

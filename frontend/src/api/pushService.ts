@@ -18,3 +18,14 @@ export async function subscribePush(subscription: PushSubscriptionJSON, lang: st
 export async function unsubscribePush(endpoint: string): Promise<void> {
   await api.post('/push/unsubscribe', { endpoint });
 }
+
+export interface PushTestResult {
+  configured: boolean;
+  devices: number;
+  delivered: number;
+}
+
+export async function sendTestPush(): Promise<PushTestResult> {
+  const response = await api.post<PushTestResult>('/push/test');
+  return response.data;
+}

@@ -1,6 +1,6 @@
 import { useStudyPlan } from '../../hooks/useStudyPlan';
 import { requestCalendarSyncReview } from '../../lib/calendarSyncEvents';
-import LoadingState from '../UI/LoadingState';
+import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
 import EmptyState from '../UI/EmptyState';
 import CapacityBanner from './plan/CapacityBanner';
@@ -31,7 +31,7 @@ export default function StudyPlanCard() {
         Next {PLAN_WINDOW_DAYS} days, fitted around classes, work, commute and quiet hours.
       </p>
 
-      {isLoading && <LoadingState message="Building your plan..." />}
+      {isLoading && <LinesSkeleton lines={4} />}
       {!isLoading && error && <ErrorState message={error} />}
 
       {!isLoading && !error && plan && (

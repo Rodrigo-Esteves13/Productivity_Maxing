@@ -7,9 +7,11 @@ import FormError from '../components/UI/FormError';
 import AuthCard from '../components/Auth/AuthCard';
 import AuthSwitchLink from '../components/Auth/AuthSwitchLink';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { useI18n } from '../i18n/useI18n';
 
 export default function ForgotPassword() {
-  useDocumentTitle('Forgot Password');
+  const { t } = useI18n();
+  useDocumentTitle(t('auth.forgot.docTitle'));
 
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -27,7 +29,7 @@ export default function ForgotPassword() {
       // comentário em forgotPasswordRequest.
       setSent(true);
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError(t('auth.forgot.error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -35,22 +37,21 @@ export default function ForgotPassword() {
 
   return (
     <PageLayout>
-      <AuthCard title="Reset Your Password">
+      <AuthCard title={t('auth.forgot.title')}>
         {sent ? (
           <p className="text-center text-neutral-300 text-sm">
-            If an account with that email exists, we've sent a link to reset your password.
-            Check your inbox (and spam folder).
+            {t('auth.forgot.sent')}
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && <FormError message={error} />}
 
             <p className="text-sm text-neutral-400">
-              Enter your email and we'll send you a link to reset your password.
+              {t('auth.forgot.intro')}
             </p>
 
             <Input
-              label="Email"
+              label={t('auth.email')}
               type="email"
               placeholder="you@example.com"
               value={email}
@@ -59,12 +60,12 @@ export default function ForgotPassword() {
             />
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Sending...' : 'Send Reset Link'}
+              {isSubmitting ? t('auth.sending') : t('auth.forgot.send')}
             </Button>
           </form>
         )}
 
-        <AuthSwitchLink question="Remembered your password?" linkText="Back to login" to="/login" />
+        <AuthSwitchLink question={t('auth.forgot.remembered')} linkText={t('auth.backToLogin')} to="/login" />
       </AuthCard>
     </PageLayout>
   );

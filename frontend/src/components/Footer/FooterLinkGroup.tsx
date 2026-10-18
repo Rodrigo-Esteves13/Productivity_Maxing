@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useI18n } from '../../i18n/useI18n';
 
 export interface FooterLinkItem {
   label: string;
@@ -13,6 +14,7 @@ interface FooterLinkGroupProps {
 
 // Cada coluna do footer usa isto - se tiver "to" é rota interna, se tiver "href" é link externo
 export default function FooterLinkGroup({ title, items }: FooterLinkGroupProps) {
+  const { t } = useI18n();
   return (
     <div>
       <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3">
@@ -26,7 +28,7 @@ export default function FooterLinkGroup({ title, items }: FooterLinkGroupProps) 
                 to={item.to}
                 className="text-sm text-neutral-400 hover:text-white transition-colors"
               >
-                {item.label}
+                {t(item.label)}
               </Link>
             ) : (
               <a
@@ -35,7 +37,7 @@ export default function FooterLinkGroup({ title, items }: FooterLinkGroupProps) 
                 rel="noreferrer"
                 className="text-sm text-neutral-400 hover:text-white transition-colors"
               >
-                {item.label}
+                {t(item.label)}
               </a>
             )}
           </li>

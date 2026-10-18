@@ -1,11 +1,12 @@
 import type { ProgressStatus } from '../../types/models';
-import { formatEnumLabel } from '../../utils/formatEnumLabel';
+import { useEnumLabel } from '../../hooks/useEnumLabel';
 
 interface StatusBadgeProps {
   status: ProgressStatus;
 }
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
+  const enumLabel = useEnumLabel();
   const styles: Record<string, string> = {
     AHEAD: 'bg-cyan-900/50 text-cyan-400 border-cyan-800',
     ON_TRACK: 'bg-violet-900/50 text-violet-300 border-violet-800',
@@ -17,7 +18,7 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
 
   return (
     <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${currentStyle}`}>
-      {formatEnumLabel(status)}
+      {enumLabel(status)}
     </span>
   );
 }

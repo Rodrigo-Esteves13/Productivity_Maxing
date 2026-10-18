@@ -1,15 +1,9 @@
-import {
-  BadRequestException,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ImportScheduleDto } from './dto/import-schedule.dto';
 import { EstimateCommuteDto } from './dto/estimate-commute.dto';
 import { runWithConcurrencyLimit } from '../common/concurrency.util';
-import { getGoogleMapsApiKey } from '../config/app.config';
+import { DistanceMatrixService } from '../maps/distance-matrix.service';
 
 // Mesmo raciocínio do IMPORT_CREATE_CONCURRENCY em tasks.service.ts: N
 // upserts independentes, rápido o suficiente para não valer a pena uma
@@ -37,7 +31,10 @@ export interface ImportScheduleResult {
 export class ScheduleService {
   private readonly logger = new Logger(ScheduleService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly distanceMatrix: DistanceMatrixService,
+  ) {}
 
   async importOccurrences(
     userId: string,
@@ -200,79 +197,17 @@ export class ScheduleService {
   }
 
   /**
-   * Calcula o tempo de viagem casa-campus via Google Maps Distance Matrix
-   * (modo "driving" - é o único trajeto que interessa aqui, sempre o
-   * mesmo par de moradas) e grava homeAddress/campusAddress/
-   * commuteMinutes de uma vez no User. Sem GOOGLE_MAPS_API_KEY
-   * configurada, este endpoint nem chega a ser chamado com sucesso -
-   * ScheduleController devolve 503 antes de tentar, e o frontend esconde
-   * o botão "Calculate automatically" (ver CommuteSettingsCard.tsx),
-   * deixando sempre o campo manual como caminho principal.
+   * Calcula o tempo de viagem casa-campus via Google Maps Distance Matrix e
+   * grava homeAddress/campusAddress/commuteMinutes de uma vez no User. Sem
+   * GOOGLE_MAPS_API_KEY o DistanceMatrixService devolve 503 e o frontend
+   * deixa sempre o campo manual como caminho principal.
    */
   async estimateCommute(userId: string, dto: EstimateCommuteDto) {
-    const apiKey = getGoogleMapsApiKey();
-    if (!apiKey) {
-      throw new ServiceUnavailableException(
-        'Automatic commute estimation is not configured on this server. Set commuteMinutes manually instead.',
-      );
-    }
-
-    const url = new URL(
-      'https://maps.googleapis.com/maps/api/distancematrix/json',
+    const commuteMinutes = await this.distanceMatrix.getTravelMinutes(
+      dto.homeAddress,
+      dto.campusAddress,
+      dto.mode,
     );
-    url.searchParams.set('origins', dto.homeAddress);
-    url.searchParams.set('destinations', dto.campusAddress);
-    // Google usa os valores do modo em minúsculas (driving/walking/
-    // bicycling/transit) - o enum do Prisma está em maiúsculas só por
-    // convenção do schema, daí o .toLowerCase() aqui.
-    url.searchParams.set('mode', dto.mode.toLowerCase());
-    url.searchParams.set('key', apiKey);
-
-    let payload: DistanceMatrixResponse;
-    try {
-      const res = await fetch(url.toString());
-      payload = (await res.json()) as DistanceMatrixResponse;
-    } catch (error) {
-      this.logger.error(
-        'Falha ao contactar a Distance Matrix API',
-        error as Error,
-      );
-      throw new InternalServerErrorException(
-        'Could not reach the maps service. Try again later.',
-      );
-    }
-
-    const element = payload.rows?.[0]?.elements?.[0];
-    if (
-      payload.status !== 'OK' ||
-      !element ||
-      element.status !== 'OK' ||
-      !element.duration
-    ) {
-      // O status "top-level" (payload.status) cobre problemas com o
-      // pedido inteiro (key inválida/restrita, API não ativada, billing
-      // por propagar, quota) - normalmente REQUEST_DENIED ou
-      // INVALID_REQUEST, e vem com error_message a explicar exatamente
-      // qual. O status "per-element" (element.status) cobre problemas
-      // com o par de moradas em si (ex: ZERO_RESULTS = sem rota de
-      // carro entre as duas). Nunca mostramos isto ao frontend (podia
-      // vazar detalhes da própria key), mas fica sempre no log do
-      // servidor - é o primeiro sítio a olhar quando isto falha.
-      this.logger.warn(
-        `Distance Matrix devolveu um erro: payload.status=${payload.status}` +
-          (payload.error_message
-            ? `, error_message="${payload.error_message}"`
-            : '') +
-          (element
-            ? `, element.status=${element.status}`
-            : ', sem elemento na resposta'),
-      );
-      throw new BadRequestException(
-        "Couldn't calculate a route between those two addresses. Check them and try again, or set the commute time manually.",
-      );
-    }
-
-    const commuteMinutes = Math.round(element.duration.value / 60);
 
     return this.prisma.user.update({
       where: { id: userId },
@@ -290,18 +225,4 @@ export class ScheduleService {
       },
     });
   }
-}
-
-// Só os campos que realmente lemos da resposta - a API devolve muito mais
-// (endereços "corrigidos", distância em texto/metros, etc.) que não
-// precisamos de tipar aqui.
-interface DistanceMatrixResponse {
-  status: string;
-  error_message?: string;
-  rows?: {
-    elements?: {
-      status: string;
-      duration?: { value: number; text: string };
-    }[];
-  }[];
 }

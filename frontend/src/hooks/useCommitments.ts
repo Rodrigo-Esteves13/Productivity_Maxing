@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   createCommitment,
+  type CommitmentInput,
   deleteCommitment,
   getCommitments,
   updateCommitment,
@@ -74,9 +75,9 @@ export function useCommitments(onChanged: () => void) {
     copyResult,
     clearCopyResult: () => setCopyResult(null),
     clearError: () => setError(''),
-    addCommitment: (name: string, commuteMinutes: number, daysOff: number[] = []) =>
-      mutate(() => createCommitment({ name, commuteMinutes, daysOff }), 'Could not create it.'),
-    editCommitment: (id: string, changes: { name?: string; commuteMinutes?: number; daysOff?: number[] }) =>
+    addCommitment: (input: CommitmentInput) =>
+      mutate(() => createCommitment(input), 'Could not create it.'),
+    editCommitment: (id: string, changes: Partial<CommitmentInput>) =>
       mutate(() => updateCommitment(id, changes), 'Could not save the changes.'),
     removeCommitment: (id: string) =>
       mutate(() => deleteCommitment(id), 'Could not delete it.'),

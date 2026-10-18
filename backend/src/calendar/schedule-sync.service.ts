@@ -5,7 +5,6 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { HTTP_GONE, HTTP_NOT_FOUND } from '../common/http-status.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import { WorkShiftsService } from '../work-shifts/work-shifts.service';
@@ -35,6 +34,7 @@ import type {
   SyncPreviewItem,
   SyncResult,
 } from './schedule-sync.types';
+import { HTTP_GONE, HTTP_NOT_FOUND } from './http-codes';
 
 // Calendario da app para o sync em curso. E mutavel de proposito: se a pessoa
 // apagou o calendario, a primeira criacao a falhar com 404 substitui-o e os

@@ -1,5 +1,6 @@
 import { XIcon } from './Icons';
 import type { ToastKind } from '../../context/feedback-context';
+import { useI18n } from '../../i18n/useI18n';
 
 export interface ToastItem {
   id: number;
@@ -21,6 +22,7 @@ const TONE_CLASS: Record<ToastKind, string> = {
 // Pilha de mensagens no canto inferior direito. Erros usam role=alert
 // (anunciados de imediato), o resto role=status.
 export default function ToastStack({ toasts, onDismiss }: ToastStackProps) {
+  const { t } = useI18n();
   return (
     <div className="pointer-events-none fixed bottom-4 right-4 z-[80] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2">
       {toasts.map((toast) => (
@@ -33,7 +35,7 @@ export default function ToastStack({ toasts, onDismiss }: ToastStackProps) {
           <button
             type="button"
             onClick={() => onDismiss(toast.id)}
-            aria-label="Dismiss message"
+            aria-label={t('common.dismissMessage')}
             className="text-neutral-400 hover:text-white"
           >
             <XIcon className="h-4 w-4" />

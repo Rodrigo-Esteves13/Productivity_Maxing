@@ -9,7 +9,7 @@ import StudyBlockTitle from '../StudyBlockTitle';
 import Button from '../../UI/Button';
 import EmptyState from '../../UI/EmptyState';
 import ErrorState from '../../UI/ErrorState';
-import LoadingState from '../../UI/LoadingState';
+import LinesSkeleton from '../../UI/LinesSkeleton';
 
 const DEFAULT_BREAK_MINUTES = 5;
 const MINUTES_PER_DAY = 24 * 60;
@@ -49,7 +49,7 @@ export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps
       <h2 className="text-lg font-semibold text-white mb-1">Study blocks for today</h2>
       <p className="mb-4 text-xs text-neutral-500">From your study plan. Start one and the timer matches its length.</p>
 
-      {isLoading && <LoadingState message="Loading today's blocks..." />}
+      {isLoading && <LinesSkeleton lines={3} />}
       {!isLoading && error && <ErrorState message={error} />}
       {!isLoading && !error && blocks.length === 0 && (
         <EmptyState message="No study blocks planned for today." />

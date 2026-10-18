@@ -4,7 +4,7 @@ import PageHeader from '../components/Layout/PageHeader';
 import Button from '../components/UI/Button';
 import EmptyState from '../components/UI/EmptyState';
 import { useI18n } from '../i18n/useI18n';
-import LoadingState from '../components/UI/LoadingState';
+import LinesSkeleton from '../components/UI/LinesSkeleton';
 import ErrorState from '../components/UI/ErrorState';
 import NotebookSubjectPicker from '../components/Notebook/NotebookSubjectPicker';
 import NotebookEntryList from '../components/Notebook/NotebookEntryList';
@@ -227,7 +227,7 @@ export default function Notebook() {
       ) : (
         <>
           {areasLoading ? (
-            <LoadingState message={t('notebook.subjects.loading')} />
+            <LinesSkeleton lines={5} />
           ) : areasError ? (
             <ErrorState message={areasError} />
           ) : areas.length === 0 ? (
@@ -282,7 +282,7 @@ export default function Notebook() {
               <div className="grid grid-cols-1 gap-6 md:grid-cols-[16rem_minmax(0,1fr)] lg:grid-cols-[18rem_minmax(0,1fr)]">
                 <div className="md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:self-start md:overflow-y-auto md:pr-1">
                   {entriesLoading ? (
-                    <LoadingState message={t('notebook.entries.loading')} />
+                    <LinesSkeleton lines={4} />
                   ) : (
                     <NotebookEntryList
                       entries={entries}

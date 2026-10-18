@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n/useI18n';
 interface InlineConfirmProps {
   message: string;
   confirmLabel: string;
@@ -17,6 +18,7 @@ export default function InlineConfirm({
   onCancel,
   className = '',
 }: InlineConfirmProps) {
+  const { t } = useI18n();
   return (
     <div role="alert" className={`flex flex-wrap items-center gap-2 text-sm ${className}`}>
       <span className="text-neutral-300">{message}</span>
@@ -29,7 +31,7 @@ export default function InlineConfirm({
         {confirmLabel}
       </button>
       <button type="button" onClick={onCancel} className="text-neutral-400 hover:text-white">
-        Cancel
+        {t('common.cancel')}
       </button>
     </div>
   );

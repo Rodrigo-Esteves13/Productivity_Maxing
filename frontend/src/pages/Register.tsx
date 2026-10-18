@@ -11,10 +11,12 @@ import AuthCard from '../components/Auth/AuthCard';
 import OAuthProviderList from '../components/Auth/OAuthProviderList';
 import AuthSwitchLink from '../components/Auth/AuthSwitchLink';
 import useSeo from '../hooks/useSeo';
+import { fillNodes } from '../i18n/fillNodes';
 
 export default function Register() {
+  const { t } = useI18n();
   useSeo({
-    title: 'Register',
+    title: t('auth.seo.register'),
     description: 'Create a free Productivity Maxing account to start tracking tasks, deadlines, and grades.',
     path: '/register',
   });
@@ -29,7 +31,6 @@ export default function Register() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Preenchido quando o backend exige verificacao de email: nao ha sessao,
   // so "vai ao teu email". Com a flag desligada nunca acontece.
-  const { t } = useI18n();
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
   const [resendMessage, setResendMessage] = useState('');
 
@@ -55,7 +56,7 @@ export default function Register() {
       login(csrfToken);
       navigate('/dashboard', { replace: true });
     } catch {
-      setError('Could not create the account. Check your details or try another email.');
+      setError(t('auth.registerFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -66,9 +67,9 @@ export default function Register() {
     setResendMessage('');
     try {
       await resendVerificationRequest(pendingVerificationEmail);
-      setResendMessage('If the email is still waiting for verification, a new link was sent.');
+      setResendMessage(t('auth.resendOkPending'));
     } catch {
-      setResendMessage('Could not resend right now. Try again in a minute.');
+      setResendMessage(t('auth.resendFailed'));
     }
   };
 
@@ -77,14 +78,15 @@ export default function Register() {
       <PageLayout>
         <AuthCard title={t('auth.checkEmail')}>
           <p className="text-sm text-neutral-300">
-            We sent a confirmation link to <strong>{pendingVerificationEmail}</strong>. Open it to
-            activate your account, then log in.
+            {fillNodes(t('auth.confirmationSent'), {
+              email: <strong>{pendingVerificationEmail}</strong>,
+            })}
           </p>
           <Button type="button" className="w-full mt-4" onClick={handleResend}>
             {t('auth.resendEmail')}
           </Button>
           {resendMessage && <p className="mt-3 text-xs text-neutral-400">{resendMessage}</p>}
-          <AuthSwitchLink question="Already confirmed?" linkText="Login" to="/login" />
+          <AuthSwitchLink question={t('auth.alreadyConfirmed')} linkText={t('auth.login')} to="/login" />
         </AuthCard>
       </PageLayout>
     );
@@ -126,13 +128,13 @@ export default function Register() {
           />
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating account...' : 'Create Account'}
+            {isSubmitting ? t('auth.creating') : t('auth.createAccount')}
           </Button>
         </form>
 
-        <AuthSwitchLink question="Already have an account?" linkText="Login" to="/login" />
+        <AuthSwitchLink question={t('auth.alreadyHaveAccount')} linkText={t('auth.login')} to="/login" />
 
-        <OAuthProviderList message="Or create an account with" />
+        <OAuthProviderList message={t('auth.oauthRegister')} />
       </AuthCard>
     </PageLayout>
   );

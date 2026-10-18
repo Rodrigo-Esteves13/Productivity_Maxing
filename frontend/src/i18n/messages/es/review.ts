@@ -1,0 +1,17 @@
+export const review: Record<string, string> = {
+  'review.title': "Revisión semanal",
+  'review.description': "Tus últimos 7 días y lo que viene.",
+  'review.completed': "Completadas",
+  'review.studied': "Estudiado",
+  'review.overdue': "Atrasadas ahora",
+  'review.focus': "Enfoque medio",
+  'review.completedThisWeek': "Completadas esta semana",
+  'review.nothingCompleted': "Nada completado en los últimos 7 días.",
+  'review.studyByArea': "Tiempo de estudio por área",
+  'review.noStudy': "Sin sesiones de estudio esta semana.",
+  'review.pushedBack': "Aplazadas más de una vez",
+  'review.comingUp': "Próximamente (7 días)",
+  'review.nothingDue': "Nada que entregar en los próximos 7 días.",
+  'review.loading': "Cargando...",
+  'review.error': "No se pudo cargar la revisión semanal.",
+};

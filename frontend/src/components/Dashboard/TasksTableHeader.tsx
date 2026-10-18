@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n/useI18n';
 import { useState, type DragEvent } from 'react';
 import { TASKS_TABLE_COLUMNS, type TasksTableColumnId } from '../../lib/tasksTableColumns';
 import { isSortableColumn } from '../../utils/taskSorting';
@@ -13,8 +14,8 @@ interface TasksTableHeaderProps {
   onSortColumn?: (id: TasksTableColumnId) => void;
 }
 
-const COLUMN_LABEL: Record<TasksTableColumnId, string> = Object.fromEntries(
-  TASKS_TABLE_COLUMNS.map((c) => [c.id, c.label]),
+const COLUMN_LABEL_KEY: Record<TasksTableColumnId, string> = Object.fromEntries(
+  TASKS_TABLE_COLUMNS.map((c) => [c.id, c.labelKey]),
 ) as Record<TasksTableColumnId, string>;
 
 // Columns that read better centered than left-aligned - kept as a small
@@ -30,6 +31,7 @@ export default function TasksTableHeader({
   sort = null,
   onSortColumn,
 }: TasksTableHeaderProps) {
+  const { t } = useI18n();
   const [draggedId, setDraggedId] = useState<TasksTableColumnId | null>(null);
   const [dragOverId, setDragOverId] = useState<TasksTableColumnId | null>(null);
 
@@ -98,11 +100,11 @@ export default function TasksTableHeader({
                     isSorted ? 'text-violet-300' : ''
                   }`}
                 >
-                  {COLUMN_LABEL[id]}
+                  {t(COLUMN_LABEL_KEY[id])}
                   {isSorted && <SortIcon className="h-3 w-3" />}
                 </button>
               ) : (
-                COLUMN_LABEL[id]
+                t(COLUMN_LABEL_KEY[id])
               )}
             </th>
           );

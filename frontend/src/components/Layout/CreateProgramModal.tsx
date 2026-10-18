@@ -4,6 +4,7 @@ import FormField from '../UI/FormField';
 import Input from '../UI/Input';
 import Button from '../UI/Button';
 import FormError from '../UI/FormError';
+import { useI18n } from '../../i18n/useI18n';
 
 interface CreateProgramModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface CreateProgramModalProps {
 }
 
 export default function CreateProgramModal({ isOpen, onClose, onCreate }: CreateProgramModalProps) {
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [roundFinalGrade, setRoundFinalGrade] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,26 +36,25 @@ export default function CreateProgramModal({ isOpen, onClose, onCreate }: Create
       await onCreate(name.trim(), roundFinalGrade);
       handleClose();
     } catch {
-      setError('Could not create the program. Try again.');
+      setError(t('program.create.error'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Create new program">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t('program.create.title')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm text-neutral-400">
-          A separate new dashboard (e.g. "Master's", "High School") - gets its
-          own active period, without mixing with the rest.
+          {t('program.create.intro')}
         </p>
 
-        <FormField label="Program name" htmlFor="program-name">
+        <FormField label={t('program.name')} htmlFor="program-name">
           <Input
             id="program-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Bachelor's in Computer Science"
+            placeholder={t('program.namePlaceholder')}
             autoFocus
             required
           />
@@ -72,13 +73,10 @@ export default function CreateProgramModal({ isOpen, onClose, onCreate }: Create
           />
           <span>
             <span className="block text-sm text-neutral-200">
-              Round each subject's final grade
+              {t('program.round.label')}
             </span>
             <span className="block text-xs text-neutral-500">
-              Rounds each subject to the nearest whole number before
-              computing the credit-weighted average - matches how most
-              universities record final grades. Individual periods can
-              override this later.
+              {t('program.round.createHelp')}
             </span>
           </span>
         </label>
@@ -87,10 +85,10 @@ export default function CreateProgramModal({ isOpen, onClose, onCreate }: Create
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={handleClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={isSubmitting || !name.trim()}>
-            {isSubmitting ? 'Creating...' : 'Create program'}
+            {isSubmitting ? t('common.creating') : t('program.create.submit')}
           </Button>
         </div>
       </form>

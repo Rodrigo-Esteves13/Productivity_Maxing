@@ -10,7 +10,7 @@ import { PlusIcon } from '../../UI/Icons';
 import EmptyState from '../../UI/EmptyState';
 import Select from '../../UI/Select';
 import ErrorState from '../../UI/ErrorState';
-import LoadingState from '../../UI/LoadingState';
+import LinesSkeleton from '../../UI/LinesSkeleton';
 import SessionForm, { type SessionFormValues } from './SessionForm';
 import SessionRow from './SessionRow';
 import type { StudySession } from '../../../types/models';
@@ -112,7 +112,7 @@ export default function SessionHistoryCard() {
         </div>
       )}
 
-      {isLoading && <LoadingState message="Loading sessions..." />}
+      {isLoading && <LinesSkeleton lines={4} />}
       {!isLoading && error && <ErrorState message="Could not load your sessions." />}
       {!isLoading && !error && groups.length === 0 && <EmptyState message={`No sessions in the last ${historyDays} days.`} />}
 

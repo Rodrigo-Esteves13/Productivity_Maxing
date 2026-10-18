@@ -16,7 +16,11 @@ self.addEventListener('push', (event) => {
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  // Avisa as janelas abertas para se atualizarem logo (ver useLiveRefresh.ts).
+  const notifyClients = self.clients
+    .matchAll({ type: 'window', includeUncontrolled: true })
+    .then((clients) => clients.forEach((c) => c.postMessage({ type: 'pmaxing-push', tag: options.tag })));
+  event.waitUntil(Promise.all([self.registration.showNotification(title, options), notifyClients]));
 });
 
 self.addEventListener('notificationclick', (event) => {

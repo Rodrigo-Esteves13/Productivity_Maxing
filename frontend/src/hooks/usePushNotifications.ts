@@ -19,11 +19,32 @@ const isSupported = () =>
   'PushManager' in window &&
   'Notification' in window;
 
+const WORKER_TIMEOUT_MS = 8000;
+
+// `serviceWorker.ready` nunca resolve se nao houver service worker registado
+// (ex: `npm run dev`, onde o SW esta desligado): sem limite, o botao ficava
+// preso em "a processar" para sempre e sem erro na consola.
+async function getActiveRegistration(): Promise<ServiceWorkerRegistration> {
+  const existing = await navigator.serviceWorker.getRegistration();
+  if (existing?.active) return existing;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('service-worker-timeout')), WORKER_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([navigator.serviceWorker.ready, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export type PushError = 'generic' | 'noWorker';
+
 export function usePushNotifications() {
   const { lang } = useI18n();
   const [state, setState] = useState<PushState>('loading');
   const [isBusy, setIsBusy] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<PushError | null>(null);
 
   const refresh = useCallback(async () => {
     if (!isSupported()) return setState('unsupported');
@@ -45,14 +66,14 @@ export function usePushNotifications() {
 
   const enable = useCallback(async () => {
     setIsBusy(true);
-    setError(false);
+    setError(null);
     try {
       const key = await getPushPublicKey();
       if (!key) return setState('unconfigured');
       // O pedido de permissão TEM de nascer de um clique do utilizador.
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') return setState(permission === 'denied' ? 'blocked' : 'off');
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await getActiveRegistration();
       const subscription =
         (await registration.pushManager.getSubscription()) ??
         (await registration.pushManager.subscribe({
@@ -61,8 +82,9 @@ export function usePushNotifications() {
         }));
       await subscribePush(subscription.toJSON(), lang);
       setState('on');
-    } catch {
-      setError(true);
+    } catch (err) {
+      console.error('Falha ao ativar notificacoes:', err);
+      setError(err instanceof Error && err.message === 'service-worker-timeout' ? 'noWorker' : 'generic');
     } finally {
       setIsBusy(false);
     }
@@ -70,7 +92,7 @@ export function usePushNotifications() {
 
   const disable = useCallback(async () => {
     setIsBusy(true);
-    setError(false);
+    setError(null);
     try {
       const registration = await navigator.serviceWorker.getRegistration();
       const subscription = await registration?.pushManager.getSubscription();
@@ -79,8 +101,9 @@ export function usePushNotifications() {
         await subscription.unsubscribe();
       }
       setState('off');
-    } catch {
-      setError(true);
+    } catch (err) {
+      console.error('Falha ao desativar notificacoes:', err);
+      setError('generic');
     } finally {
       setIsBusy(false);
     }

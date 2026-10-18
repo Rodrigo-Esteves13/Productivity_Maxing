@@ -17,6 +17,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { NotebookService } from './notebook.service';
 import { NotebookCollabService } from './notebook-collab.service';
+import { NotebookSharedWithMeService } from './notebook-shared-with-me.service';
 import { SharedEditDto } from './dto/shared-edit.dto';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -35,7 +36,21 @@ export class NotebookShareController {
   constructor(
     private readonly notebookService: NotebookService,
     private readonly collabService: NotebookCollabService,
+    private readonly sharedWithMe: NotebookSharedWithMeService,
   ) {}
+
+  // Declarada ANTES de ':token' - senao 'with-me' seria apanhado como token.
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Get('with-me')
+  @ApiOperation({
+    summary:
+      'Lessons other people shared with the current user (any request state).',
+  })
+  listSharedWithMe(@CurrentUser() user: AuthenticatedUser) {
+    return this.sharedWithMe.list(user.id);
+  }
 
   // OptionalJwtAuthGuard, não JwtAuthGuard: uma partilha PUBLIC continua a
   // abrir sem sessão nenhuma (o guard devolve user = null e o service

@@ -14,7 +14,7 @@ import Button from '../UI/Button';
 import Select from '../UI/Select';
 import Input from '../UI/Input';
 import FormField from '../UI/FormField';
-import LoadingState from '../UI/LoadingState';
+import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
 
 // Data curta para o rótulo da task no dropdown (ex: "20 Set") - timeZone
@@ -54,7 +54,7 @@ export default function StudySessionWidget() {
   if (isLoading) {
     return (
       <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
-        <LoadingState message="Loading study session..." />
+        <LinesSkeleton lines={3} />
       </div>
     );
   }

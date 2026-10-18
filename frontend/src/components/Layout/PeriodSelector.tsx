@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAcademic } from '../../context/useAcademic';
 import { PinIcon, ChevronDownIcon } from '../UI/Icons';
 import type { AcademicPeriod } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 // Lives next to ProgramSelector, always in this order (Program -> Period).
 //
@@ -11,6 +12,7 @@ import type { AcademicPeriod } from '../../types/models';
 // show an SVG inside one. Built as a small custom listbox instead, same
 // button + absolute panel + click-outside-to-close pattern as UserMenu.
 export default function PeriodSelector() {
+  const { t } = useI18n();
   const {
     periods,
     activePeriod,
@@ -49,8 +51,8 @@ export default function PeriodSelector() {
   if (visiblePeriods.length <= 1 && !hasArchived) return null;
 
   const currentLabel = isViewingAllPeriods
-    ? 'View all periods'
-    : (activePeriod?.name ?? 'Select period');
+    ? t('period.viewAll')
+    : (activePeriod?.name ?? t('period.select'));
 
   const handleSelect = (id: string) => {
     switchPeriod(id);
@@ -63,7 +65,7 @@ export default function PeriodSelector() {
         <div className="relative" ref={containerRef}>
           <button
             type="button"
-            aria-label="Active period"
+            aria-label={t('period.active')}
             aria-haspopup="listbox"
             aria-expanded={isOpen}
             onClick={() => setIsOpen((prev) => !prev)}
@@ -95,7 +97,7 @@ export default function PeriodSelector() {
                   {period.isPinned && <PinIcon className="text-violet-400 shrink-0" />}
                   <span className="truncate">
                     {period.name}
-                    {period.isArchived ? ' (archived)' : ''}
+                    {period.isArchived ? ` ${t('period.archivedTag')}` : ''}
                   </span>
                 </button>
               ))}
@@ -106,7 +108,7 @@ export default function PeriodSelector() {
                 onClick={() => handleSelect('all')}
                 className="flex items-center w-full text-left px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800 transition-colors border-t border-neutral-800"
               >
-                View all periods
+                {t('period.viewAll')}
               </button>
             </div>
           )}
@@ -121,7 +123,7 @@ export default function PeriodSelector() {
             onChange={toggleShowArchivedPeriods}
             className="accent-violet-500"
           />
-          Show archived
+          {t('period.showArchived')}
         </label>
       )}
     </div>

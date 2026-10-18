@@ -4,7 +4,7 @@ import Input from '../UI/Input';
 import FormError from '../UI/FormError';
 import ActionButton from '../UI/ActionButton';
 import Button from '../UI/Button';
-import LoadingState from '../UI/LoadingState';
+import LinesSkeleton from '../UI/LinesSkeleton';
 import { useBannedIps } from '../../hooks/useBannedIps';
 
 interface BannedIpsCardProps {
@@ -69,7 +69,7 @@ export default function BannedIpsCard({ prefillIp }: BannedIpsCardProps) {
       {error && <div className="mb-4"><FormError message={error} /></div>}
 
       {isLoading ? (
-        <LoadingState message="Loading banned IPs..." />
+        <LinesSkeleton lines={3} />
       ) : bannedIps.length === 0 ? (
         <p className="text-sm text-neutral-500">No IPs banned right now.</p>
       ) : (

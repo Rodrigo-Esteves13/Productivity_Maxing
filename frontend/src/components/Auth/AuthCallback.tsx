@@ -3,8 +3,11 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { fetchCsrfToken } from '../../api/userService';
 import { refreshCalendarStatus } from '../../hooks/useCalendarStatus';
+import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
 
 export default function AuthCallback() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login } = useAuth();
@@ -69,17 +72,16 @@ export default function AuthCallback() {
       <div className="flex items-center justify-center min-h-screen bg-neutral-950 px-4">
         <div className="max-w-md text-center">
           <h1 className="text-xl font-semibold text-neutral-100 mb-3">
-            Something went wrong
+            {t('common.error.title')}
           </h1>
           <p className="text-neutral-400 mb-6">
-            We couldn't complete that request with Google. Nothing was changed - you can
-            try again from your profile settings.
+            {t('auth.callback.errorBody')}
           </p>
           <Link
             to={genericError.stillAuthenticated ? '/profile' : '/login'}
             className="inline-block rounded-md bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 transition-colors"
           >
-            {genericError.stillAuthenticated ? 'Back to profile' : 'Back to login'}
+            {genericError.stillAuthenticated ? t('auth.callback.backToProfile') : t('auth.backToLogin')}
           </Link>
         </div>
       </div>
@@ -91,17 +93,16 @@ export default function AuthCallback() {
       <div className="flex items-center justify-center min-h-screen bg-neutral-950 px-4">
         <div className="max-w-md text-center">
           <h1 className="text-xl font-semibold text-neutral-100 mb-3">
-            Account already exists
+            {t('auth.callback.conflictTitle')}
           </h1>
           <p className="text-neutral-400 mb-6">
-            There's already an account with the email <strong>{conflictEmail}</strong>. Sign
-            in with your original method, then link this provider from your profile settings.
+            {fillNodes(t('auth.callback.conflictBody'), { email: <strong>{conflictEmail}</strong> })}
           </p>
           <Link
             to="/login"
             className="inline-block rounded-md bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 transition-colors"
           >
-            Back to login
+            {t('auth.backToLogin')}
           </Link>
         </div>
       </div>
@@ -110,7 +111,7 @@ export default function AuthCallback() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-neutral-950">
-      <p className="text-neutral-400 animate-pulse">Authenticating...</p>
+      <p className="text-neutral-400 animate-pulse">{t('auth.callback.authenticating')}</p>
     </div>
   );
 }

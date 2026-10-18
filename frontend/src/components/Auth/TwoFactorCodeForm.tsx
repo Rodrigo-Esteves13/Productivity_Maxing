@@ -27,7 +27,7 @@ export default function TwoFactorCodeForm({ token, onSuccess }: TwoFactorCodeFor
       const { csrfToken } = await twoFactorLoginRequest(token, code.trim());
       onSuccess(csrfToken);
     } catch (err) {
-      setError(getApiMessage(err, 'Invalid code. Please try again.'));
+      setError(getApiMessage(err, t('auth.twoFactor.invalidCode')));
     } finally {
       setIsSubmitting(false);
     }
@@ -48,7 +48,7 @@ export default function TwoFactorCodeForm({ token, onSuccess }: TwoFactorCodeFor
         onChange={(e) => setCode(e.target.value)}
         maxLength={32}
         placeholder="123456"
-        aria-label="Authentication code"
+        aria-label={t('auth.twoFactor.codeLabel')}
         className="w-full rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-center text-lg tracking-widest text-neutral-100 focus:outline-none focus:border-violet-600"
       />
       <Button type="submit" className="w-full" disabled={isSubmitting || code.trim().length < 6}>

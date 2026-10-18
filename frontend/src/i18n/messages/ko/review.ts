@@ -1,0 +1,17 @@
+export const review: Record<string, string> = {
+  'review.title': "주간 리뷰",
+  'review.description': "지난 7일간의 기록과 앞으로의 일정입니다.",
+  'review.completed': "완료",
+  'review.studied': "학습 시간",
+  'review.overdue': "현재 기한 초과",
+  'review.focus': "평균 집중도",
+  'review.completedThisWeek': "이번 주에 완료한 것",
+  'review.nothingCompleted': "지난 7일 동안 완료한 것이 없습니다.",
+  'review.studyByArea': "과목별 학습 시간",
+  'review.noStudy': "이번 주 학습 기록이 없습니다.",
+  'review.pushedBack': "여러 번 미룬 것",
+  'review.comingUp': "다가오는 일정(다음 7일)",
+  'review.nothingDue': "다음 7일 동안 마감인 것이 없습니다.",
+  'review.loading': "불러오는 중...",
+  'review.error': "주간 리뷰를 불러오지 못했습니다.",
+};

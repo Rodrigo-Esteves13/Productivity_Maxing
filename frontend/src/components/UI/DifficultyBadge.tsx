@@ -1,11 +1,12 @@
 import type { Difficulty } from '../../types/models';
-import { formatEnumLabel } from '../../utils/formatEnumLabel';
+import { useEnumLabel } from '../../hooks/useEnumLabel';
 
 interface DifficultyBadgeProps {
   difficulty: Difficulty;
 }
 
 export default function DifficultyBadge({ difficulty }: DifficultyBadgeProps) {
+  const enumLabel = useEnumLabel();
   // Color per difficulty level (labels are derived automatically from the enum value)
   const styles: Record<string, string> = {
     VERY_EASY: 'bg-cyan-900/30 text-cyan-300 border-cyan-800/40',
@@ -20,7 +21,7 @@ export default function DifficultyBadge({ difficulty }: DifficultyBadgeProps) {
 
   return (
     <span className={`inline-block whitespace-nowrap px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase rounded-md border ${currentStyle}`}>
-      {formatEnumLabel(difficulty)}
+      {enumLabel(difficulty)}
     </span>
   );
 }

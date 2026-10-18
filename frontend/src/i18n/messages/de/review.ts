@@ -1,0 +1,17 @@
+export const review: Record<string, string> = {
+  'review.title': "Wochenrückblick",
+  'review.description': "Deine letzten 7 Tage und was als Nächstes ansteht.",
+  'review.completed': "Erledigt",
+  'review.studied': "Gelernt",
+  'review.overdue': "Aktuell überfällig",
+  'review.focus': "Ø Fokus",
+  'review.completedThisWeek': "Diese Woche erledigt",
+  'review.nothingCompleted': "In den letzten 7 Tagen nichts erledigt.",
+  'review.studyByArea': "Lernzeit pro Fach",
+  'review.noStudy': "Diese Woche keine Lerneinheiten.",
+  'review.pushedBack': "Mehr als einmal verschoben",
+  'review.comingUp': "Demnächst (nächste 7 Tage)",
+  'review.nothingDue': "In den nächsten 7 Tagen ist nichts fällig.",
+  'review.loading': "Wird geladen...",
+  'review.error': "Der Wochenrückblick konnte nicht geladen werden.",
+};
