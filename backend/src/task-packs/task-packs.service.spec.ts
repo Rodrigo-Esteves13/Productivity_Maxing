@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { TaskPacksService } from './task-packs.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { TasksService } from '../tasks/tasks.service';
@@ -145,7 +145,6 @@ describe('TaskPacksService', () => {
     it('um erro de regra (peso>100%) nao impede as outras tarefas', async () => {
       const { service, prisma, tasks } = setup();
       prisma.taskPack.findUnique.mockResolvedValue(pack);
-      const { BadRequestException } = await import('@nestjs/common');
       tasks.create.mockRejectedValueOnce(
         new BadRequestException('Weight over 100%'),
       );

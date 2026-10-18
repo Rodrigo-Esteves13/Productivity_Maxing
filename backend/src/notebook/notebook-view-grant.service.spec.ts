@@ -5,6 +5,10 @@ import type { PushService } from '../push/push.service';
 import type { SocialService } from '../social/social.service';
 import type { NotebookService } from './notebook.service';
 
+// `file-type` e ESM-only e o Jest (CJS) nao o consegue carregar; o servico
+// importado transitivamente (NotebookService) nao o usa nestes testes.
+jest.mock('file-type', () => ({ fileTypeFromBuffer: jest.fn() }));
+
 type Mock = jest.Mock;
 
 function setup(opts: { friends?: boolean; grant?: unknown } = {}) {
