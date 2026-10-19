@@ -27,7 +27,7 @@ export default function EstimateEditor({ taskId, currentMinutes, onSaved, onCanc
     event.preventDefault();
     const value = Number(hours);
     if (!Number.isFinite(value) || value < MIN_HOURS || value > MAX_HOURS) {
-      setError(`Between ${MIN_HOURS} and ${MAX_HOURS} hours.`);
+      setError(t('ui.betweenHours', { min: MIN_HOURS, max: MAX_HOURS }));
       return;
     }
 
@@ -37,7 +37,7 @@ export default function EstimateEditor({ taskId, currentMinutes, onSaved, onCanc
       await updateTask(taskId, { estimatedMinutes: Math.round(value * MINUTES_PER_HOUR) });
       onSaved();
     } catch {
-      setError('Could not save the estimate.');
+      setError(t('ui.couldNotSaveTheEstimate'));
     } finally {
       setIsSaving(false);
     }
@@ -64,7 +64,7 @@ export default function EstimateEditor({ taskId, currentMinutes, onSaved, onCanc
         disabled={isSaving}
         className="px-2.5 py-1 text-xs rounded-md bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50"
       >
-        {isSaving ? 'Saving...' : 'Save'}
+        {isSaving ? t('common.saving') : t('ui.save')}
       </button>
       <button type="button" onClick={onCancel} className="text-xs text-neutral-400 hover:text-white">
         {t('ui.cancel')}

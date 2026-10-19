@@ -24,7 +24,7 @@ export default function DeadlineComplianceCard({ tasks }: DeadlineComplianceCard
     <DashboardCard>
       <CardHeading className="mb-3">
         <CheckIcon className="shrink-0" />
-        Deadlines met
+        {t('ui.deadlinesMet')}
       </CardHeading>
 
       <div className="flex items-end gap-2 mb-4">
@@ -40,8 +40,8 @@ export default function DeadlineComplianceCard({ tasks }: DeadlineComplianceCard
             className="flex-1 flex flex-col items-center justify-end gap-1 h-full"
             title={
               m.total > 0
-                ? `${m.label}: ${m.onTime}/${m.total} on time`
-                : `${m.label}: nothing finished`
+                ? t('ui.monthOnTime', { month: m.label, onTime: m.onTime, total: m.total })
+                : t('ui.monthNothingFinished', { month: m.label })
             }
           >
             <div className="w-full flex-1 flex items-end">

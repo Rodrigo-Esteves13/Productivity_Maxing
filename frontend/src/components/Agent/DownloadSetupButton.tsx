@@ -3,6 +3,8 @@ import { createApiKey } from '../../api/userService';
 import { DownloadIcon } from '../UI/Icons';
 import { AGENT_EXE_DOWNLOAD_PATH } from '../../lib/agentConstants';
 import { todayKey } from '../../lib/dateKey';
+import { useI18n } from '../../i18n/useI18n';
+import { API_BASE_URL } from '../../api/apiBaseUrl';
 
 // Setup num único clique: gera uma API key nova (nomeada automaticamente,
 // ex: "agent-desktop-2026-07-16") e cola-a ao fim do .exe vanilla antes de
@@ -32,6 +34,7 @@ const MARKER_START = '\n#--PMAXING-AGENT-EMBEDDED-CONFIG-V2-START--#\n';
 const MARKER_END = '\n#--PMAXING-AGENT-EMBEDDED-CONFIG-V2-END--#\n';
 
 export default function DownloadSetupButton() {
+  const { t } = useI18n();
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,7 +71,7 @@ export default function DownloadSetupButton() {
           // assim o .exe gerado aponta sempre para o backend real desta
           // build do frontend (produção, staging, ou local), nunca para
           // um domínio fixo que ignora onde este site está mesmo a correr.
-          baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+          baseUrl: API_BASE_URL,
           apiKey: keyResult.apiKey,
         },
       });
@@ -97,7 +100,7 @@ export default function DownloadSetupButton() {
       URL.revokeObjectURL(url);
     } catch (err: unknown) {
       console.error('Failed to generate pre-configured agent:', err);
-      setError('Could not generate the pre-configured .exe. Try again, or set it up manually below.');
+      setError(t('ui.couldNotGenerateThePre'));
     } finally {
       setIsGenerating(false);
     }
@@ -112,7 +115,7 @@ export default function DownloadSetupButton() {
         className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors disabled:opacity-50"
       >
         <DownloadIcon className="w-4 h-4" />
-        {isGenerating ? 'Generating...' : 'Download pmaxing-agent.exe (pre-configured)'}
+        {isGenerating ? t('ui.generating') : t('ui.downloadAgentPreconfigured')}
       </button>
       {error && <p className="text-sm text-red-400 mt-2">{error}</p>}
     </div>

@@ -85,7 +85,7 @@ export default function CopyWeekPanel({ isSaving, result, onCopy, onClose }: Cop
           disabled={isSaving}
           onClick={() => void onCopy({ fromWeekStart: from, mode, ...(isFixed ? {} : { toWeekStart: to }) })}
         >
-          {isSaving ? 'Copying...' : isFixed ? 'Make fixed' : 'Copy week'}
+          {isSaving ? t('ui.copying') : isFixed ? t('ui.makeFixed') : t('ui.copyWeek')}
         </ActionButton>
         <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
           {t('ui.close')}

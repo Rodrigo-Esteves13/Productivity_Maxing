@@ -3,6 +3,7 @@ import Modal from '../UI/Modal';
 import { useTaskImport } from '../../hooks/useTaskImport';
 import { CheckIcon, AlertTriangleIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
 
 interface TaskImportModalProps {
   isOpen: boolean;
@@ -60,10 +61,12 @@ export default function TaskImportModal({ isOpen, onClose, onImported }: TaskImp
             {t('ui.uploadAXlsxXlsOr')}
           </p>
           <p>
-            Only <span className="text-neutral-300">{t('ui.title')}</span>, <span className="text-neutral-300">{t('ui.date')}</span>, and{' '}
-            <span className="text-neutral-300">{t('ui.area')}</span> are required - Area must match one of your existing
-            areas exactly by name. <span className="text-neutral-300">{t('ui.period')}</span> is optional and lets you
-            import into a specific past/future semester by name instead of the currently active one.
+            {fillNodes(t('ui.importRequiredColumns'), {
+              title: <span className="text-neutral-300">{t('ui.title')}</span>,
+              date: <span className="text-neutral-300">{t('ui.date')}</span>,
+              area: <span className="text-neutral-300">{t('ui.area')}</span>,
+              period: <span className="text-neutral-300">{t('ui.period')}</span>,
+            })}
           </p>
         </div>
 
@@ -78,7 +81,7 @@ export default function TaskImportModal({ isOpen, onClose, onImported }: TaskImp
 
         {isBusy && (
           <p className="text-sm text-neutral-400">
-            {stage === 'reading' ? `Reading ${fileName}...` : 'Creating tasks...'}
+            {stage === 'reading' ? t('ui.readingFile', { name: fileName ?? '' }) : t('ui.creatingTasks')}
           </p>
         )}
 
@@ -95,8 +98,10 @@ export default function TaskImportModal({ isOpen, onClose, onImported }: TaskImp
               <div className="flex items-center gap-2 text-sm">
                 <CheckIcon className="text-emerald-400 shrink-0" />
                 <span className="text-neutral-200">
-                  {outcome.backendResult.created} task{outcome.backendResult.created === 1 ? '' : 's'} created
-                  {outcome.backendResult.failed > 0 && `, ${outcome.backendResult.failed} failed`}.
+                  {t(outcome.backendResult.created === 1 ? 'ui.tasksCreatedOne' : 'ui.tasksCreatedMany', {
+                    count: outcome.backendResult.created,
+                  })}
+                  {outcome.backendResult.failed > 0 && t('ui.tasksFailedSuffix', { count: outcome.backendResult.failed })}.
                 </span>
               </div>
             )}

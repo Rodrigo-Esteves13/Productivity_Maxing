@@ -42,8 +42,20 @@ const REQUIRED_ENV_VARS = [
   'DISCORD_CALLBACK_URL',
 ] as const;
 
+// So obrigatorias em producao: em desenvolvimento local tem um valor por
+// omissao seguro (ver config/app.config.ts). Sem FRONTEND_URL em producao, o
+// CORS, os redirects de OAuth e os links dos emails apontavam em silencio
+// para http://localhost:5173.
+const REQUIRED_IN_PRODUCTION_ENV_VARS = ['FRONTEND_URL'] as const;
+
+const DEFAULT_PORT = 3000;
+
 function assertRequiredEnvVars(): void {
-  const missing = REQUIRED_ENV_VARS.filter((key) => !process.env[key]);
+  const required: readonly string[] =
+    process.env.NODE_ENV === 'production'
+      ? [...REQUIRED_ENV_VARS, ...REQUIRED_IN_PRODUCTION_ENV_VARS]
+      : REQUIRED_ENV_VARS;
+  const missing = required.filter((key) => !process.env[key]);
   if (missing.length > 0) {
     throw new Error(
       `Missing required environment variables: ${missing.join(', ')}`,
@@ -133,7 +145,7 @@ async function bootstrap() {
     SwaggerModule.setup('api', app, document);
   }
 
-  // O NestJS arranca na porta 3000
-  await app.listen(3000);
+  // PORT vem do ambiente (o Render define-a); 3000 em desenvolvimento.
+  await app.listen(Number(process.env.PORT) || DEFAULT_PORT);
 }
 void bootstrap();

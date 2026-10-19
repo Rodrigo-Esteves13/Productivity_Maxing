@@ -32,7 +32,7 @@ export default function ImportOptionsPanel({ options, onChange, disabled }: Impo
       <summary className="cursor-pointer text-sm text-neutral-300">{t('ui.importOptionsOtherSchoolsFormats')}</summary>
       <div className="mt-3 space-y-3">
         <label className="block text-xs text-neutral-400">
-          Subject name comes from
+          {t('ui.subjectNameComesFrom')}
           <select
             disabled={disabled}
             value={segmentValue}
@@ -52,7 +52,7 @@ export default function ImportOptionsPanel({ options, onChange, disabled }: Impo
         </label>
 
         <label className="block text-xs text-neutral-400">
-          Title separator
+          {t('ui.titleSeparator')}
           <input
             disabled={disabled}
             value={options.subjectSeparator}
@@ -64,7 +64,7 @@ export default function ImportOptionsPanel({ options, onChange, disabled }: Impo
         </label>
 
         <label className="block text-xs text-neutral-400">
-          Words that introduce the teacher (comma separated)
+          {t('ui.teacherKeywords')}
           <input
             disabled={disabled}
             key={options.professorKeywords.join('|')}
@@ -76,7 +76,7 @@ export default function ImportOptionsPanel({ options, onChange, disabled }: Impo
         </label>
 
         <label className="block text-xs text-neutral-400">
-          Only import events containing (optional)
+          {t('ui.onlyImportContaining')}
           <input
             disabled={disabled}
             key={options.includeKeywords.join('|')}
@@ -88,7 +88,7 @@ export default function ImportOptionsPanel({ options, onChange, disabled }: Impo
         </label>
 
         <label className="block text-xs text-neutral-400">
-          Skip events containing (optional)
+          {t('ui.skipEventsContaining')}
           <input
             disabled={disabled}
             key={options.excludeKeywords.join('|')}

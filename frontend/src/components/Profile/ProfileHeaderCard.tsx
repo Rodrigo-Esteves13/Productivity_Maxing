@@ -19,7 +19,7 @@ export default function ProfileHeaderCard({ user, initials, stats, isLoadingStat
         <Avatar initials={initials} avatarUrl={user.avatarUrl} alt={t('ui.avatar')} size="lg" />
 
         <div className="text-center sm:text-left">
-          <h2 className="text-2xl font-bold text-white">{user.name || 'Anonymous User'}</h2>
+          <h2 className="text-2xl font-bold text-white">{user.name || t('ui.anonymousUser')}</h2>
           <p className="text-neutral-400">{user.email}</p>
           <span className="inline-block mt-2 px-3 py-1 bg-neutral-800 text-xs font-medium rounded-md text-neutral-300">
             {user.role}

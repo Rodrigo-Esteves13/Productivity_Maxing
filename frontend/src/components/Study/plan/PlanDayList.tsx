@@ -40,9 +40,9 @@ export default function PlanDayList({ suggestions, days, dailyLimitMinutes }: Pl
               <div className="flex items-baseline justify-between mb-1.5">
                 <p className="text-sm font-medium text-neutral-200">{formatDayLabel(day.date)}</p>
                 <p className="text-xs text-neutral-500">
-                  {formatDuration(day.studyMinutes)} study
-                  {day.classMinutes > 0 && ` · ${formatDuration(day.classMinutes)} class`}
-                  {day.workMinutes > 0 && ` · ${formatDuration(day.workMinutes)} work`}
+                  {t('ui.planStudyDuration', { duration: formatDuration(day.studyMinutes) })}
+                  {day.classMinutes > 0 && ` · ${t('ui.planClassDuration', { duration: formatDuration(day.classMinutes) })}`}
+                  {day.workMinutes > 0 && ` · ${t('ui.planWorkDuration', { duration: formatDuration(day.workMinutes) })}`}
                 </p>
               </div>
               <div
@@ -66,7 +66,7 @@ export default function PlanDayList({ suggestions, days, dailyLimitMinutes }: Pl
                   >
                     <span className="flex min-w-0 items-center gap-2 text-neutral-200">
                       <StudyBlockTitle block={s} />
-                      {s.kind === 'review' && <span className="shrink-0 text-[11px] text-violet-300">review</span>}
+                      {s.kind === 'review' && <span className="shrink-0 text-[11px] text-violet-300">{t('ui.reviewLower')}</span>}
                     </span>
                     <span className="text-neutral-500 shrink-0 ml-3">
                       {s.isOvertime && <span className="text-amber-400 mr-2">{t('ui.overtime')}</span>}

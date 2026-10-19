@@ -7,6 +7,7 @@ import { useGradeProjection } from '../../hooks/useGradeProjection';
 import { formatDayLabel, formatDuration } from '../../lib/timeFormat';
 import type { GradeProjection, GradeProjectionTask } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import { translateNow } from '../../i18n/translate';
 
 const MAX_TASKS_SHOWN = 4;
 // A partir daqui mais dados ja mexem pouco no resultado: deixa de se insistir.
@@ -15,14 +16,13 @@ const ENOUGH_SAMPLES_TO_STOP_ASKING = 20;
 // Mensagem honesta quando nao ha projecao: nao se mostra um numero inventado.
 function noProjectionMessage(projection: GradeProjection): string {
   if (projection.status === 'no_clear_link') {
-    return 'So far your grades do not follow how long you studied, so a projection would just be a guess. Keep logging sessions and grades.';
+    return translateNow('ui.projectionNoClearLink');
   }
-  return `Needs ${projection.minSamplesNeeded} finished graded tasks with study time logged. You have ${projection.trainingSamples}.`;
+  return translateNow('ui.projectionNeedsSamples', { needed: projection.minSamplesNeeded, have: projection.trainingSamples });
 }
 
 function basisText(task: GradeProjectionTask): string {
-  const scope = task.basis === 'course' ? 'this course' : 'all your courses';
-  return `Based on ${task.sampleSize} graded tasks in ${scope}`;
+  return translateNow(task.basis === 'course' ? 'ui.projectionBasisCourse' : 'ui.projectionBasisAll', { count: task.sampleSize });
 }
 
 // So fala do alvo quando a projecao fica abaixo dele: diz quanto estudo falta.
@@ -30,11 +30,11 @@ function targetAdvice(task: GradeProjectionTask): string | null {
   if (task.targetGrade === null || task.projectedGrade === null) return null;
   if (task.projectedGrade >= task.targetGrade) return null;
   if (task.minutesForTarget === null) {
-    return `Your data does not show a realistic amount of study that reaches ${gradeText(task.targetGrade)}.`;
+    return translateNow('ui.projectionNoRealisticStudy', { grade: gradeText(task.targetGrade) });
   }
   const extra = task.minutesForTarget - task.minutesBasis;
   if (extra <= 0) return null;
-  return `To reach ${gradeText(task.targetGrade)}, about ${formatDuration(task.minutesForTarget)} in total (${formatDuration(extra)} more).`;
+  return translateNow('ui.projectionToReach', { grade: gradeText(task.targetGrade), total: formatDuration(task.minutesForTarget), extra: formatDuration(extra) });
 }
 
 function gradeText(value: number): string {
@@ -66,8 +66,8 @@ function TaskLine({ task }: { task: GradeProjectionTask }) {
           </p>
           {task.gainPerExtraHour !== null && task.gainPerExtraHour > 0 && (
             <p className={`mt-0.5 pl-4 text-xs ${belowTarget ? 'text-amber-400' : 'text-violet-300'}`}>
-              {belowTarget && task.targetGrade !== null && `Below your target of ${gradeText(task.targetGrade)}. `}
-              Each extra hour adds about {gradeText(task.gainPerExtraHour)} points.
+              {belowTarget && task.targetGrade !== null && `${t('ui.belowYourTarget', { grade: gradeText(task.targetGrade) })} `}
+              {t('ui.eachExtraHourAdds', { points: gradeText(task.gainPerExtraHour) })}
             </p>
           )}
           {targetAdvice(task) && <p className="mt-0.5 pl-4 text-xs text-amber-300">{targetAdvice(task)}</p>}
@@ -75,7 +75,7 @@ function TaskLine({ task }: { task: GradeProjectionTask }) {
         </>
       ) : (
         <p className="mt-0.5 pl-4 text-xs text-neutral-500">
-          {task.reason === 'no_clear_link' ? 'No clear link between study time and grades here yet.' : 'Not enough graded history yet.'}
+          {task.reason === 'no_clear_link' ? t('ui.noClearLinkBetweenStudy') : t('ui.notEnoughGradedHistoryYet')}
         </p>
       )}
     </li>
@@ -102,7 +102,7 @@ export default function GradeProjectionCard() {
     <DashboardCard>
       <CardHeading className="mb-3">
         <TrendingUpIcon className="shrink-0" />
-        Grade projection
+        {t('ui.gradeProjection')}
       </CardHeading>
 
       {projection.status === 'ready' ? (
@@ -125,8 +125,8 @@ export default function GradeProjectionCard() {
         <details className="mt-3 rounded-lg border border-neutral-800 p-3" open={!isReady}>
           <summary className="cursor-pointer text-xs font-medium text-violet-300">
             {isReady
-              ? 'Make it more accurate: add study time for past evaluations'
-              : 'Unlock this now: how long did you study for past evaluations?'}
+              ? t('ui.makeItMoreAccurateAdd')
+              : t('ui.unlockThisNowHowLong')}
           </summary>
           <div className="mt-3">
             <BackfillStudyTime candidates={backfillCandidates} onSaved={reload} />

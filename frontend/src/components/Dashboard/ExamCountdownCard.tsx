@@ -39,7 +39,7 @@ export default function ExamCountdownCard({ tasks, areas }: ExamCountdownCardPro
     <DashboardCard>
       <CardHeading className="mb-3">
         <GraduationCapIcon className="shrink-0" />
-        Next graded evaluation
+        {t('ui.nextGradedEvaluation')}
       </CardHeading>
 
       <div className="mb-3">

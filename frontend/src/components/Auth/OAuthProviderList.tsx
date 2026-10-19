@@ -1,10 +1,11 @@
 import OAuthButton from './OAuthButton';
+import { API_BASE_URL } from '../../api/apiBaseUrl';
 
 interface OAuthProviderListProps {
   message: string;
 }
 
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const apiUrl = API_BASE_URL;
 
 export default function OAuthProviderList({ message }: OAuthProviderListProps) {
   return (

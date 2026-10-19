@@ -41,7 +41,7 @@ export function DashboardWidgetToggles({ visibility, toggle }: DashboardWidgetTo
         <div className="absolute right-0 z-10 mt-2 w-64 rounded-lg border border-neutral-800 bg-neutral-900 p-3 shadow-xl">
           <p className="text-xs uppercase tracking-wide text-neutral-500 mb-2 flex items-center gap-1.5">
             <SlidersIcon className="shrink-0" />
-            Show on dashboard
+            {t('widget.showOnDashboard')}
           </p>
           <ul className="space-y-2">
             {(Object.keys(WIDGET_LABELS) as DashboardWidgetKey[]).map((key) => (
@@ -53,7 +53,7 @@ export function DashboardWidgetToggles({ visibility, toggle }: DashboardWidgetTo
                     onChange={() => toggle(key)}
                     className="accent-violet-500"
                   />
-                  {WIDGET_LABELS[key]}
+                  {t(WIDGET_LABELS[key])}
                 </label>
               </li>
             ))}

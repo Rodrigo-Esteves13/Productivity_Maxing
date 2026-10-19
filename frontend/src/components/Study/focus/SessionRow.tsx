@@ -43,7 +43,7 @@ export default function SessionRow({ session, isSaving, serverError, onEdit, onD
   const start = toLocalParts(session.startedAt).time;
   const end = session.endedAt ? toLocalParts(session.endedAt).time : '';
   const minutes = Math.round((session.durationSeconds ?? 0) / 60);
-  const title = session.task?.title ?? session.area?.name ?? 'Study session';
+  const title = session.task?.title ?? session.area?.name ?? t('ui.studySession');
 
   return (
     <li className="rounded-lg border border-neutral-800 p-3">
@@ -76,7 +76,7 @@ export default function SessionRow({ session, isSaving, serverError, onEdit, onD
         <InlineConfirm
           className="mt-2"
           message={t('ui.deleteThisSessionItsTime')}
-          confirmLabel="Yes, delete"
+          confirmLabel={t('ui.yesDelete')}
           isBusy={isSaving}
           onConfirm={() => void onDelete(session.id)}
           onCancel={() => setMode('view')}

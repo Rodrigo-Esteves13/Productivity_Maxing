@@ -43,7 +43,7 @@ export default function Schedule() {
             className="flex items-center gap-2"
           >
             <UploadIcon />
-            Import .ics
+            {t('ui.importIcs')}
           </ActionButton>
         }
       />

@@ -25,6 +25,8 @@ export const prefs: Record<string, string> = {
   'prefs.savedToAccount': "계정에 저장되었습니다.",
   'prefs.reminders': "마감 알림",
   'prefs.remindersHelp': "진행 중인 할 일의 마감 약 24시간 전에 이메일을 한 통 보냅니다. 방해 금지 시간을 지킵니다.",
+  'prefs.pushReminders': "마감 푸시 알림",
+  'prefs.pushRemindersHelp': "진행 중인 할 일의 마감 약 24시간 전에, 아래에서 알림을 켠 기기로 알림을 보냅니다. 방해 금지 시간을 지킵니다.",
   'prefs.spacedReviews': "간격 복습",
   'prefs.spacedReviewsHelp': "학업 할 일을 완료하면 1일, 3일, 7일 뒤에 짧은 복습 할 일을 추가합니다.",
 };

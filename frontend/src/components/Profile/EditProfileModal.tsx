@@ -55,7 +55,7 @@ export default function EditProfileModal({ isOpen, onClose, user, onSaved, onUse
 
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setError('Name cannot be empty.');
+      setError(t('ui.nameCannotBeEmpty'));
       return;
     }
 
@@ -78,7 +78,7 @@ export default function EditProfileModal({ isOpen, onClose, user, onSaved, onUse
       onSaved(latestUser);
     } catch (err) {
       console.error('Failed to update profile:', err);
-      setError('Could not save your changes. Please try again.');
+      setError(t('ui.couldNotSaveYourChanges'));
     } finally {
       setIsSubmitting(false);
     }
@@ -114,7 +114,7 @@ export default function EditProfileModal({ isOpen, onClose, user, onSaved, onUse
             {t('ui.cancel')}
           </Button>
           <ActionButton type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
+            {isSubmitting ? t('common.saving') : t('ui.saveChanges')}
           </ActionButton>
         </div>
       </form>
@@ -122,6 +122,7 @@ export default function EditProfileModal({ isOpen, onClose, user, onSaved, onUse
       <PasswordSection
         hasPassword={passwordForm.hasPassword}
         showPasswordFields={passwordForm.showPasswordFields}
+        currentPassword={passwordForm.currentPassword}
         newPassword={passwordForm.newPassword}
         confirmNewPassword={passwordForm.confirmNewPassword}
         passwordError={passwordForm.passwordError}
@@ -129,6 +130,7 @@ export default function EditProfileModal({ isOpen, onClose, user, onSaved, onUse
         isSavingPassword={passwordForm.isSavingPassword}
         onShowFields={() => passwordForm.setShowPasswordFields(true)}
         onCancel={passwordForm.handleCancel}
+        onCurrentPasswordChange={passwordForm.setCurrentPassword}
         onNewPasswordChange={passwordForm.setNewPassword}
         onConfirmPasswordChange={passwordForm.setConfirmNewPassword}
         onSubmit={passwordForm.handleSetPassword}

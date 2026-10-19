@@ -77,7 +77,7 @@ export default function ReplicateShiftPanel({
   return (
     <div className="mt-2 space-y-2 rounded-lg bg-neutral-800/40 p-3">
       <p className="text-xs text-neutral-400">
-        {isWeekly ? 'Copy this shift to other weekdays:' : 'Copy this shift to the following days:'}
+        {isWeekly ? t('ui.copyThisShiftToOther2') : t('ui.copyThisShiftToThe')}
       </p>
       <div className="flex flex-wrap gap-1.5">
         {isWeekly
@@ -87,7 +87,7 @@ export default function ReplicateShiftPanel({
                 size="sm"
                 pressed={weekdays.includes(d.value)}
                 disabled={disabledDays.includes(d.value)}
-                title={disabledDays.includes(d.value) ? 'Fixed day off' : undefined}
+                title={disabledDays.includes(d.value) ? t('ui.fixedDayOff') : undefined}
                 onClick={() => toggle(weekdays, d.value, setWeekdays)}
               >
                 {d.label}
@@ -99,7 +99,7 @@ export default function ReplicateShiftPanel({
                 size="sm"
                 pressed={offsets.includes(d.offset)}
                 disabled={d.isDayOff}
-                title={d.isDayOff ? 'Fixed day off' : undefined}
+                title={d.isDayOff ? t('ui.fixedDayOff') : undefined}
                 onClick={() => toggle(offsets, d.offset, setOffsets)}
               >
                 {d.label}
@@ -108,7 +108,7 @@ export default function ReplicateShiftPanel({
       </div>
       <div className="flex gap-2">
         <ActionButton type="button" disabled={isSaving || count === 0} onClick={() => void handleSubmit()}>
-          {isSaving ? 'Copying...' : count > 1 ? `Copy to ${count} days` : 'Copy'}
+          {isSaving ? t('ui.copying') : count > 1 ? t('ui.copyToNDays', { count }) : t('ui.copy')}
         </ActionButton>
         <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
           {t('ui.cancel')}

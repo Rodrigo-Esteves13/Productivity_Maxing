@@ -57,6 +57,7 @@ export class AuthService {
       quietHoursStart?: number;
       quietHoursEnd?: number;
       deadlineEmailReminders?: boolean;
+      deadlinePushReminders?: boolean;
       spacedReviewsEnabled?: boolean;
     },
   ): Promise<User> {
@@ -87,6 +88,9 @@ export class AuthService {
           : {}),
         ...(data.deadlineEmailReminders !== undefined
           ? { deadlineEmailReminders: data.deadlineEmailReminders }
+          : {}),
+        ...(data.deadlinePushReminders !== undefined
+          ? { deadlinePushReminders: data.deadlinePushReminders }
           : {}),
         ...(data.spacedReviewsEnabled !== undefined
           ? { spacedReviewsEnabled: data.spacedReviewsEnabled }
@@ -228,8 +232,12 @@ export class AuthService {
     return this.password.forgotPassword(email);
   }
 
-  setPassword(userId: string, newPassword: string): Promise<void> {
-    return this.password.setPassword(userId, newPassword);
+  setPassword(
+    userId: string,
+    newPassword: string,
+    currentPassword?: string,
+  ): Promise<void> {
+    return this.password.setPassword(userId, newPassword, currentPassword);
   }
 
   // --- Avatar (ver services/avatar.service.ts) ---

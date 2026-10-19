@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import {
   getPeriodAverage,
   getProgramAverage,
@@ -6,15 +6,28 @@ import {
 } from '../../api/academicService';
 import type { PeriodAverage, ProgramAverage, PeriodComparisonEntry } from '../../types/models';
 import { useAcademic } from '../../context/useAcademic';
-import GpaTrendChart from './GpaTrendChart';
-import SparklineMini from './SparklineMini';
+import Sparkline from '../UI/Sparkline';
+import Skeleton from '../UI/Skeleton';
 import CreditSimulator from './CreditSimulator';
 import { ClockIcon, GraduationCapIcon, TrendingUpIcon } from '../UI/Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 function formatAverage(average: number | null, scale: string): string {
   if (average === null) return '-';
   return `${average.toFixed(2)} / ${scale.split('-')[1] ?? scale}`;
 }
+
+// recharts so e preciso para este grafico (e so com 2+ periodos): fica num
+// chunk a parte em vez de atrasar o primeiro desenho do Dashboard.
+const GpaTrendChart = lazy(() => import('./GpaTrendChart'));
+
+// Cor de cada cartao (linha do sparkline + brilho de fundo), sempre tokens
+// do Tailwind em vez de hex.
+const STAT_ACCENTS = {
+  violet: { line: 'text-violet-400', glow: 'bg-violet-400/15' },
+  indigo: { line: 'text-indigo-400', glow: 'bg-indigo-400/15' },
+} as const;
+type StatAccent = keyof typeof STAT_ACCENTS;
 
 // Glassmorphic stat card: translucent blurred background, soft border,
 // glow blob behind it that picks up the accent color.
@@ -25,7 +38,7 @@ function StatCard({
   valueClassName,
   sub,
   sparklineData,
-  sparklineColor,
+  accent,
   mounted,
   delayMs = 0,
 }: {
@@ -34,8 +47,8 @@ function StatCard({
   value: string;
   valueClassName: string;
   sub: string;
-  sparklineData: { value: number | null }[];
-  sparklineColor: string;
+  sparklineData: number[];
+  accent: StatAccent;
   mounted: boolean;
   delayMs?: number;
 }) {
@@ -47,8 +60,7 @@ function StatCard({
       style={{ transitionDelay: `${delayMs}ms` }}
     >
       <div
-        className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full blur-2xl"
-        style={{ backgroundColor: `${sparklineColor}22` }}
+        className={`pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full blur-2xl ${STAT_ACCENTS[accent].glow}`}
       />
       <div className="relative flex items-start justify-between gap-3">
         <div>
@@ -59,7 +71,14 @@ function StatCard({
           <p className={`text-2xl font-bold ${valueClassName}`}>{value}</p>
           <p className="text-xs text-neutral-500">{sub}</p>
         </div>
-        <SparklineMini data={sparklineData} color={sparklineColor} className="h-10 w-16 shrink-0" />
+        <Sparkline
+          values={sparklineData}
+          width={64}
+          height={40}
+          filled
+          colorClassName={STAT_ACCENTS[accent].line}
+          className="shrink-0"
+        />
       </div>
     </div>
   );
@@ -74,6 +93,7 @@ interface GpaSummaryProps {
 
 export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryProps) {
   const { activeProgram, activePeriod, isViewingAllPeriods } = useAcademic();
+  const { t } = useI18n();
 
   const [periodAverage, setPeriodAverage] = useState<PeriodAverage | null>(null);
   const [programAverage, setProgramAverage] = useState<ProgramAverage | null>(null);
@@ -130,7 +150,9 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
   if (!activeProgram || isLoading) return null;
 
   const scale = activeProgram.gradeScale;
-  const sparklineData = comparison.map((entry) => ({ value: entry.average }));
+  const sparklineData = comparison
+    .map((entry) => entry.average)
+    .filter((value): value is number => value !== null);
 
   return (
     <>
@@ -138,12 +160,12 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
       {!isViewingAllPeriods && periodAverage && (
         <StatCard
           icon={<ClockIcon className="shrink-0" />}
-          label={`Average: ${periodAverage.periodName}`}
+          label={t('ui.averageOfPeriod', { name: periodAverage.periodName })}
           value={formatAverage(periodAverage.average, scale)}
           valueClassName="text-violet-300"
-          sub={`${periodAverage.gradedTaskCount} graded task(s)`}
+          sub={t('ui.gradedTasksCount', { count: periodAverage.gradedTaskCount })}
           sparklineData={sparklineData}
-          sparklineColor="#a78bfa"
+          accent="violet"
           mounted={mounted}
           delayMs={0}
         />
@@ -152,12 +174,12 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
       {programAverage && (
         <StatCard
           icon={<GraduationCapIcon className="shrink-0" />}
-          label={`Cumulative average: ${activeProgram.name}`}
+          label={t('ui.cumulativeAverageOf', { name: activeProgram.name })}
           value={formatAverage(programAverage.average, scale)}
           valueClassName="text-white"
-          sub={`${programAverage.gradedTaskCount} graded task(s) across all periods`}
+          sub={t('ui.gradedTasksAcrossPeriods', { count: programAverage.gradedTaskCount })}
           sparklineData={sparklineData}
-          sparklineColor="#818cf8"
+          accent="indigo"
           mounted={mounted}
           delayMs={80}
         />
@@ -173,13 +195,15 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
       >
         <p className="text-xs uppercase tracking-wide text-neutral-500 mb-1 flex items-center gap-1.5">
           <TrendingUpIcon className="shrink-0" />
-          Period comparison
+          {t('ui.periodComparison')}
         </p>
-        <GpaTrendChart
-          entries={comparison}
-          scale={scale}
-          cumulativeAverage={programAverage?.average ?? null}
-        />
+        <Suspense fallback={<Skeleton className="h-72 w-full" />}>
+          <GpaTrendChart
+            entries={comparison}
+            scale={scale}
+            cumulativeAverage={programAverage?.average ?? null}
+          />
+        </Suspense>
         <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 border-t border-white/10 pt-3">
           {comparison.map((entry) => (
             <div

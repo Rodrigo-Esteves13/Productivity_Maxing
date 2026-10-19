@@ -51,7 +51,7 @@ export default function NotebookSearchResults({
                   {result.entryType === 'CLASS' && result.classNumber != null && (
                     <span className="mr-1 text-violet-400">#{result.classNumber}</span>
                   )}
-                  {result.title || 'Untitled entry'}
+                  {result.title || t('notebook.untitled')}
                 </p>
                 <p className="truncate text-xs text-neutral-500">{result.area.name}</p>
               </div>

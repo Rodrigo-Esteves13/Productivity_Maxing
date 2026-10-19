@@ -23,6 +23,11 @@ import { runWithConcurrencyLimit } from '../common/concurrency.util';
 import { TaskMetaCacheService } from '../common/task-meta-cache.service';
 import { nextOccurrence } from './recurrence.util';
 import {
+  getLisbonNow,
+  lisbonDayBounds,
+  toDateKey,
+} from '../common/date-key.util';
+import {
   MAX_COURSE_WEIGHT_PERCENT,
   WEIGHT_EPSILON,
   assertWeightFits,
@@ -220,15 +225,14 @@ export class TasksService {
    * aqui se preferires outro critério mais tarde.
    */
   async findToday(userId: string) {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
+    // "Hoje" em Lisboa, nao no fuso do servidor (UTC no Render): entre as
+    // 00:00 e a 01:00 de Lisboa no verao o servidor ainda esta no dia antes.
+    const { start, end } = lisbonDayBounds(toDateKey(getLisbonNow().today));
 
     const tasks = await this.prisma.task.findMany({
       where: {
         userId,
-        date: { gte: startOfDay, lte: endOfDay },
+        date: { gte: start, lt: end },
         progressStatus: { not: 'COMPLETED' },
         // Um período arquivado (semestre antigo já fechado) nunca deve
         // gerar alertas/plano do dia - ver regra de negócio da Fase 4.

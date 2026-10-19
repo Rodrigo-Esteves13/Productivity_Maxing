@@ -17,6 +17,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { AreaInterestsService } from './area-interests.service';
 import { SetAreaInterestDto } from './dto/set-area-interest.dto';
+import { perMinute } from '../common/throttle.util';
 
 @ApiTags('Area interests')
 @ApiBearerAuth()
@@ -32,7 +33,7 @@ export class AreaInterestsController {
   }
 
   @Put(':areaId')
-  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @Throttle(perMinute(60))
   @ApiOperation({
     summary: 'Sets how interested you are in a course (1 to 5).',
   })

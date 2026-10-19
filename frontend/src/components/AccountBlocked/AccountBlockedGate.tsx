@@ -1,7 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import AccountBlockedPage from './AccountBlockedPage';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { ACCOUNT_BLOCKED_EVENT } from '../../lib/accountBlockedEvents';
 import { getMyAccountStatus } from '../../api/userService';
+
+// Lazy: so quem tem a conta suspensa/banida descarrega esta pagina.
+const AccountBlockedPage = lazy(() => import('./AccountBlockedPage'));
 
 interface AccountBlockedGateProps {
   children: ReactNode;
@@ -55,7 +57,11 @@ export default function AccountBlockedGate({ children }: AccountBlockedGateProps
   }, [triggered]);
 
   if (triggered) {
-    return <AccountBlockedPage />;
+    return (
+      <Suspense fallback={null}>
+        <AccountBlockedPage />
+      </Suspense>
+    );
   }
 
   return <>{children}</>;

@@ -31,9 +31,9 @@ export default function AreaProposalsPanel({ proposals, onApprove, onReject }: A
                 <ColorDot color={p.colorHex} variant="circle" size="sm" />
                 <span className="truncate font-medium text-white">{p.name}</span>
                 <span className="text-xs text-neutral-500">
-                  {p.credits !== null ? `${p.credits} credits` : 'no credits'}
+                  {p.credits !== null ? t('ui.nCredits', { count: p.credits }) : t('ui.noCreditsLower')}
                   {p.defaultTaskType ? ` · ${p.defaultTaskType}` : ''}
-                  {p.proposedBy ? ` · by ${p.proposedBy}` : ''}
+                  {p.proposedBy ? ` · ${t('ui.byName', { name: p.proposedBy })}` : ''}
                 </span>
               </div>
               <div className="flex gap-2">

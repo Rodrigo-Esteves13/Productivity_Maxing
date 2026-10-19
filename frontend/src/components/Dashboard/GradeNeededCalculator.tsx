@@ -4,6 +4,7 @@ import { TargetIcon } from '../UI/Icons';
 import { computeWeightCoverage } from '../../utils/weightCoverage';
 import DashboardCard from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
 
 interface GradeNeededCalculatorProps {
   tasks: Task[];
@@ -80,7 +81,7 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
     <DashboardCard>
       <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3 flex items-center gap-1.5">
         <TargetIcon className="shrink-0" />
-        What do I need on what's left?
+        {t('ui.whatDoINeedOn')}
       </p>
 
       <div className="flex flex-wrap gap-2 mb-3">
@@ -101,7 +102,7 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
           type="number"
           value={target}
           onChange={(e) => setTarget(e.target.value)}
-          placeholder={`Target average (e.g. ${(max * 0.8).toFixed(0)})`}
+          placeholder={t('ui.targetAveragePlaceholder', { example: (max * 0.8).toFixed(0) })}
           min={0}
           max={max}
           step="0.1"
@@ -126,13 +127,18 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
 
       {hasValidTarget && remainingWeight > 0 && neededAverage !== null && (
         <p className={`text-sm ${impossible ? 'text-red-400' : 'text-neutral-200'}`}>
-          You need an average of{' '}
-          <span className="font-bold text-lg">{neededAverage.toFixed(2)}</span> on the{' '}
-          {ungraded.length > 0
-            ? `${ungraded.length} remaining task(s)${weightGap > 0 ? ' plus the ungraded part of the course' : ''}`
-            : 'ungraded part of the course'}{' '}
-          to reach {targetNum.toFixed(2)}.
-          {impossible && ' Not achievable within this grade scale.'}
+          {fillNodes(
+            t(
+              ungraded.length === 0
+                ? 'ui.neededAvgUngradedPart'
+                : weightGap > 0
+                  ? 'ui.neededAvgRemainingPlusPart'
+                  : 'ui.neededAvgRemaining',
+              { count: ungraded.length, target: targetNum.toFixed(2) },
+            ),
+            { average: <span className="font-bold text-lg">{neededAverage.toFixed(2)}</span> },
+          )}
+          {impossible && ` ${t('ui.notAchievableInScale')}`}
         </p>
       )}
     </DashboardCard>

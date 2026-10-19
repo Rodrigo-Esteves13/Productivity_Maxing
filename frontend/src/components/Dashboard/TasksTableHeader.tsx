@@ -87,7 +87,7 @@ export default function TasksTableHeader({
                 setDragOverId(null);
               }}
               aria-sort={isSorted ? (sort?.direction === 'asc' ? 'ascending' : 'descending') : undefined}
-              title={canSort ? 'Click to sort, drag to reorder columns' : 'Drag to reorder columns'}
+              title={canSort ? t('ui.clickToSortDragTo') : t('ui.dragToReorderColumns')}
               className={`px-4 py-3 font-medium cursor-grab active:cursor-grabbing select-none transition-colors ${
                 CENTERED_COLUMNS.has(id) ? 'text-center' : ''
               } ${dragOverId === id && draggedId !== id ? 'bg-violet-500/10 text-violet-300' : ''}`}

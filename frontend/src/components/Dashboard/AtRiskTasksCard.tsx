@@ -37,7 +37,7 @@ export default function AtRiskTasksCard({ tasks, areas }: AtRiskTasksCardProps) 
     <DashboardCard tone="danger">
       <CardHeading tone="danger" className="mb-3">
         <AlertTriangleIcon className="shrink-0" />
-        At risk ({atRisk.length})
+        {t('ui.atRiskCount', { count: atRisk.length })}
       </CardHeading>
       <ul className="space-y-2">
         {atRisk.map((task) => {

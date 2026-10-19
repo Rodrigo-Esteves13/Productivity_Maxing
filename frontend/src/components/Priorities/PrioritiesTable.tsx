@@ -55,7 +55,7 @@ export default function PrioritiesTable({ priorities, onEdit, onToggleActive }: 
                       </button>
                       <button
                         onClick={() => onToggleActive(p)}
-                        title={p.isActive ? 'Deactivate' : 'Reactivate'}
+                        title={p.isActive ? t('ui.deactivate') : t('ui.reactivate')}
                         className={`transition-colors p-1.5 ${
                           p.isActive
                             ? 'text-neutral-400 hover:text-red-500'

@@ -54,7 +54,7 @@ export default function CreditsAccumulatedCard() {
     <DashboardCard className="mb-4">
       <CardHeading className="mb-1">
         <GraduationCapIcon className="shrink-0" />
-        ECTS credits accumulated
+        {t('ui.ectsCreditsAccumulated')}
       </CardHeading>
       <p className="text-2xl font-bold text-violet-400">
         {summary.earnedCredits} <span className="text-neutral-500 text-lg">/ {summary.attemptedCredits}</span>

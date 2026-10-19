@@ -110,7 +110,7 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
     <DashboardCard>
       <CardHeading className="mb-3">
         <ChartPieIcon className="shrink-0" />
-        Breakdown by course
+        {t('ui.breakdownByCourse')}
       </CardHeading>
       <ul className="space-y-3">
         {rows.map(({ area, average, weightCoveredPct, gradeHistory }) => (
@@ -120,7 +120,7 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
                 <ColorDot size="xs" color={area.colorHex} />
                 <span className="truncate text-neutral-200">{area.name}</span>
                 <span className="text-xs text-neutral-500 shrink-0">
-                  {area.credits ? `${area.credits} credits` : 'no credits set'}
+                  {area.credits ? t('ui.nCredits', { count: area.credits }) : t('ui.noCreditsSet')}
                 </span>
                 {weightCoveredPct !== null && weightCoveredPct < FULL_PERCENT && (
                   <span

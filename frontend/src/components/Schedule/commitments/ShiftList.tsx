@@ -66,7 +66,7 @@ export default function ShiftList({
             onClick={() => setShowPast((open) => !open)}
             className="mt-2 text-xs text-neutral-500 hover:text-neutral-300"
           >
-            {showPast ? 'Hide past' : `Show past (${past.length})`}
+            {showPast ? t('ui.hidePast') : t('ui.showPastCount', { count: past.length })}
           </button>
           {showPast && <ul className="mt-1.5 space-y-1.5 opacity-60">{past.map(renderRow)}</ul>}
         </>

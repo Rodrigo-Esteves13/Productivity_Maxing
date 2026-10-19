@@ -53,7 +53,7 @@ export default function OverdueCheckinModal({
           <p className="text-sm text-red-400 mb-5">{getRemainingTimeLabel(task)}</p>
 
           <p className="text-neutral-200 font-medium mb-4">
-            {isGraded ? 'Did it happen? Add your grade if you have it.' : 'Is it actually done?'}
+            {isGraded ? t('ui.didItHappenAddYour') : t('ui.isItActuallyDone')}
           </p>
 
           {isGraded && (
@@ -86,7 +86,7 @@ export default function OverdueCheckinModal({
               onClick={() => onAnswer({ isCompleted: true, realGrade: parsedGrade })}
               className="flex-1 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold transition-colors"
             >
-              {isGraded ? 'Done, save' : 'Yes, mark as done'}
+              {isGraded ? t('ui.doneSave') : t('ui.yesMarkAsDone')}
             </button>
             <button
               type="button"

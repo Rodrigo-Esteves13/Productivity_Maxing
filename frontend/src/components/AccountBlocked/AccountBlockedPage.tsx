@@ -7,6 +7,7 @@ import { getMyAccountStatus, submitAppeal, logoutRequest } from '../../api/userS
 import type { AccountStatusInfo, AppealAvailability } from '../../types/models';
 import { getHttpStatus } from '../../lib/httpError';
 import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
 
 interface AccountBlockedPageProps {
   // Só vem preenchido no caso "bloqueado logo no login" (ver Login.tsx) -
@@ -198,23 +199,23 @@ export default function AccountBlockedPage({
           </div>
 
           <p className={`text-xs font-semibold tracking-[0.2em] uppercase mb-3 ${hero.eyebrow}`}>
-            {severity === 'lifted' && 'Restriction lifted'}
-            {severity === 'banned' && 'Account banned'}
-            {severity === 'suspended' && 'Account suspended'}
-            {severity === 'neutral' && 'Account restricted'}
+            {severity === 'lifted' && t('ui.restrictionLifted')}
+            {severity === 'banned' && t('ui.accountBanned')}
+            {severity === 'suspended' && t('ui.accountSuspended')}
+            {severity === 'neutral' && t('ui.accountRestricted')}
           </p>
 
           <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight">
-            {load.status === 'loading' && 'Checking your account'}
-            {load.status === 'error' && 'Account restricted'}
-            {severity === 'lifted' && "You're back in"}
-            {severity === 'suspended' && 'Your access is temporarily on hold'}
-            {severity === 'banned' && 'Your access has been permanently revoked'}
+            {load.status === 'loading' && t('ui.checkingYourAccount')}
+            {load.status === 'error' && t('ui.accountRestricted')}
+            {severity === 'lifted' && t('ui.youreBackIn')}
+            {severity === 'suspended' && t('ui.yourAccessIsTemporarilyOn')}
+            {severity === 'banned' && t('ui.yourAccessHasBeenPermanently')}
           </h1>
 
           {severity === 'suspended' && load.status === 'loaded' && load.data.suspendedUntil && (
             <p className="mt-3 text-sm text-amber-200/80">
-              Time remaining:{' '}
+              {t('ui.timeRemaining')}{' '}
               <span className="font-semibold text-amber-100">
                 {formatRemaining(load.data.suspendedUntil)}
               </span>
@@ -230,7 +231,7 @@ export default function AccountBlockedPage({
         <div className="max-w-lg w-full">
           {load.status === 'loading' && (
             <p className="text-center text-neutral-400">
-              {initialMessage ?? 'Loading details...'}
+              {initialMessage ?? t('ui.loadingDetails')}
             </p>
           )}
 
@@ -238,7 +239,7 @@ export default function AccountBlockedPage({
             <div className="text-center">
               <p className="text-neutral-400 mb-6">
                 {initialMessage ??
-                  'Your account has been restricted, and we could not load the full details.'}
+                  t('ui.yourAccountHasBeenRestricted')}
               </p>
               <div className="flex justify-center gap-3">
                 <Button variant="secondary" onClick={fetchStatus}>
@@ -333,7 +334,7 @@ function AccountBlockedDetails({
         )}
         <div className="flex items-start gap-2 text-sm text-neutral-300">
           <AlertTriangleIcon className="h-4 w-4 shrink-0 mt-0.5 text-neutral-500" />
-          <span>{data.statusReason || 'No reason was given.'}</span>
+          <span>{data.statusReason || t('ui.noReasonWasGiven')}</span>
         </div>
         <p className="text-xs text-neutral-500 pt-1">
           {t('ui.lastUpdated', { statusUpdatedAt: formatDate(data.statusUpdatedAt) })}</p>
@@ -350,8 +351,9 @@ function AccountBlockedDetails({
 
       {resolvedAppeal && resolvedAppeal.resolution === 'DENIED' && (
         <p className="text-sm text-neutral-400 mb-4">
-          Your previous appeal was denied on {formatDate(resolvedAppeal.resolvedAt)}
-          {resolvedAppeal.resolutionNote ? `: ${resolvedAppeal.resolutionNote}` : '.'}
+          {resolvedAppeal.resolutionNote
+            ? t('ui.appealDeniedOnNote', { date: formatDate(resolvedAppeal.resolvedAt), note: resolvedAppeal.resolutionNote })
+            : t('ui.appealDeniedOn', { date: formatDate(resolvedAppeal.resolvedAt) })}
         </p>
       )}
 
@@ -362,18 +364,19 @@ function AccountBlockedDetails({
 
       {!pendingAppeal && availability?.appealsExhausted && (
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 mb-6 text-sm text-neutral-400">
-          You&apos;ve used all {availability.maxAppeals} appeals available for this{' '}
-          {isBanned ? 'ban' : 'suspension'}. No further appeals can be submitted.
+          {t(isBanned ? 'ui.appealsExhaustedBan' : 'ui.appealsExhaustedSuspension', { max: availability.maxAppeals })}
         </div>
       )}
 
       {!pendingAppeal && !availability?.appealsExhausted && cooldownActive && availability && (
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 mb-6 text-sm text-neutral-400">
-          You can submit your final appeal in{' '}
-          <span className={`font-semibold ${accentText}`}>
-            {formatRemaining(availability.nextAppealAllowedAt as string)}
-          </span>
-          .
+          {fillNodes(t('ui.finalAppealIn'), {
+            time: (
+              <span className={`font-semibold ${accentText}`}>
+                {formatRemaining(availability.nextAppealAllowedAt as string)}
+              </span>
+            ),
+          })}
         </div>
       )}
 
@@ -389,7 +392,7 @@ function AccountBlockedDetails({
           />
           {submitError && <p className="mt-2 text-sm text-red-400">{submitError}</p>}
           <Button className="mt-3 w-full" onClick={onSubmit} disabled={submitting}>
-            {submitting ? 'Submitting...' : 'Submit appeal'}
+            {submitting ? t('ui.submitting') : t('ui.submitAppeal')}
           </Button>
         </div>
       )}
@@ -418,6 +421,7 @@ interface AppealProgressProps {
 // clara em vez de o utilizador ter de adivinhar quantas tentativas
 // ainda tem).
 function AppealProgress({ availability, accentText, isBanned }: AppealProgressProps) {
+  const { t } = useI18n();
   const filledClass = isBanned ? 'bg-red-600' : 'bg-amber-500';
 
   return (
@@ -433,8 +437,9 @@ function AppealProgress({ availability, accentText, isBanned }: AppealProgressPr
         ))}
       </div>
       <p className="mt-1.5 text-xs text-neutral-500">
-        <span className={accentText}>{availability.appealsUsed}</span> of{' '}
-        {availability.maxAppeals} appeals used
+        {fillNodes(t('ui.appealsUsedOf', { max: availability.maxAppeals }), {
+          used: <span className={accentText}>{availability.appealsUsed}</span>,
+        })}
       </p>
     </div>
   );

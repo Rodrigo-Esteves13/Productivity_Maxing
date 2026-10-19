@@ -23,6 +23,7 @@ import { CopyWeekDto } from './dto/copy-week.dto';
 import { CreateWorkShiftsDto } from './dto/create-work-shifts.dto';
 import { UpdateWorkShiftDto } from './dto/update-work-shift.dto';
 import { WorkShiftRangeQueryDto } from './dto/work-shift-range.query.dto';
+import { perMinute } from '../common/throttle.util';
 
 @ApiTags('Schedule')
 @ApiBearerAuth()
@@ -56,7 +57,7 @@ export class WorkShiftsController {
   }
 
   @Post()
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Throttle(perMinute(20))
   @ApiOperation({
     summary: 'Creates up to 31 work shifts atomically (all or none).',
   })
@@ -70,7 +71,7 @@ export class WorkShiftsController {
   // Literal declarado antes de qualquer rota com :id no mesmo verbo.
   @Post('copy-week')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   @ApiOperation({
     summary:
       "Copies a week's one-off shifts into another week, or makes them repeat every week.",
@@ -80,7 +81,7 @@ export class WorkShiftsController {
   }
 
   @Patch(':id')
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Throttle(perMinute(30))
   @ApiOperation({ summary: 'Edits one work shift owned by the caller.' })
   update(
     @CurrentUser() user: AuthenticatedUser,

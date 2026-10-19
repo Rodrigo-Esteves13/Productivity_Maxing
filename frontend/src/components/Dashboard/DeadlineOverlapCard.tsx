@@ -38,7 +38,7 @@ export default function DeadlineOverlapCard({ tasks, areas }: DeadlineOverlapCar
     <DashboardCard tone="warning">
       <CardHeading tone="warning" className="mb-3">
         <CalendarIcon className="shrink-0" />
-        Deadline overlaps ({overlaps.length})
+        {t('ui.deadlineOverlapsCount', { count: overlaps.length })}
       </CardHeading>
       <ul className="space-y-3">
         {overlaps.map((group) => (

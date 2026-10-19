@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { exportMyData } from '../api/userService'; 
 import { downloadJson } from '../utils/downloadJson';
 import { todayKey } from '../lib/dateKey';
+import { translateNow } from '../i18n/translate';
 
 interface UseDataExportReturn {
   isExporting: boolean;
@@ -28,7 +29,7 @@ export function useDataExport(): UseDataExportReturn {
       downloadJson(data, filename);
     } catch (err) {
       console.error('Error exporting data:', err);
-      setError('An error occurred while preparing your export. Please try again later.');
+      setError(translateNow('hook.anErrorOccurredWhilePreparingYour'));
     } finally {
       setIsExporting(false);
     }

@@ -6,6 +6,7 @@ import { useFeedback } from '../../context/useFeedback';
 import CopyButton from '../UI/CopyButton';
 import FormError from '../UI/FormError';
 import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
 
 interface TwoFactorCardProps {
   user: User;
@@ -48,7 +49,7 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
       const { secret, otpauthUri } = await beginTwoFactorSetup();
       setCode('');
       setStep({ kind: 'setup', secret, otpauthUri });
-    }, 'Could not start the setup.');
+    }, t('ui.couldNotStartTheSetup'));
 
   const confirm = () =>
     run(async () => {
@@ -56,7 +57,7 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
       onUserUpdate({ ...user, twoFactorEnabled: true });
       setCode('');
       setStep({ kind: 'codes', recoveryCodes });
-    }, 'Invalid code.');
+    }, t('ui.invalidCode'));
 
   const disable = () =>
     run(async () => {
@@ -64,8 +65,8 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
       onUserUpdate({ ...user, twoFactorEnabled: false });
       setCode('');
       setStep({ kind: 'idle' });
-      notify('Two-factor authentication turned off.', 'success');
-    }, 'Invalid code.');
+      notify(t('ui.twoFactorAuthenticationTurnedOff'), 'success');
+    }, t('ui.invalidCode'));
 
   const inputClass =
     'w-full max-w-xs rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:border-violet-600';
@@ -118,7 +119,9 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
             <CopyButton text={step.secret} />
           </div>
           <p className="text-xs text-neutral-500 break-all">
-            Or open this link on your phone: <a className="underline text-violet-400" href={step.otpauthUri}>{t('ui.setupLink')}</a>
+            {fillNodes(t('ui.orOpenLinkOnPhone'), {
+              link: <a className="underline text-violet-400" href={step.otpauthUri}>{t('ui.setupLink')}</a>,
+            })}
           </p>
           <input
             type="text"

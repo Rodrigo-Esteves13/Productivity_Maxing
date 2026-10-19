@@ -61,7 +61,7 @@ export default function AppealRow({ appeal, onResolve }: AppealRowProps) {
       {showNoteFor ? (
         <div className="mt-4">
           <Textarea
-            label={`Note for the user (optional) - ${showNoteFor === 'APPROVED' ? 'approving' : 'denying'}`}
+            label={t(showNoteFor === 'APPROVED' ? 'ui.appealNoteApproving' : 'ui.appealNoteDenying')}
             rows={2}
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -72,7 +72,7 @@ export default function AppealRow({ appeal, onResolve }: AppealRowProps) {
               className={showNoteFor === 'DENIED' ? 'border-red-800 text-red-400' : ''}
               onClick={() => confirm(showNoteFor)}
             >
-              {`Confirm ${showNoteFor === 'APPROVED' ? 'approve' : 'deny'}`}
+              {t(showNoteFor === 'APPROVED' ? 'ui.confirmApprove' : 'ui.confirmDeny')}
             </Button>
             <Button variant="secondary" onClick={() => setShowNoteFor(null)}>
               {t('ui.cancel')}

@@ -28,6 +28,7 @@ import {
   RequestViewGrantDto,
   UpdateViewGrantAreasDto,
 } from './dto/view-grant.dto';
+import { perMinute } from '../common/throttle.util';
 
 @ApiTags('Social notes')
 @ApiBearerAuth()
@@ -38,7 +39,7 @@ export class NotebookViewGrantController {
 
   @Post('requests')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   @ApiOperation({
     summary: 'Ask a friend for read-only access to their notes.',
   })
@@ -67,7 +68,7 @@ export class NotebookViewGrantController {
 
   @Post('grants/:id/decide')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Throttle(perMinute(30))
   decide(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
@@ -96,7 +97,7 @@ export class NotebookViewGrantController {
   }
 
   @Get('from/:ownerId')
-  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @Throttle(perMinute(60))
   list(
     @CurrentUser() user: AuthenticatedUser,
     @Param('ownerId', ParseUUIDPipe) ownerId: string,
@@ -105,7 +106,7 @@ export class NotebookViewGrantController {
   }
 
   @Get('from/:ownerId/entries/:entryId')
-  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @Throttle(perMinute(60))
   entry(
     @CurrentUser() user: AuthenticatedUser,
     @Param('ownerId', ParseUUIDPipe) ownerId: string,

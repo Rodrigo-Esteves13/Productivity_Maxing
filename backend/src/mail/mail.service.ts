@@ -2,6 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { getFrontendUrl, getMailFromName } from '../config/app.config';
 
+// Os logs nunca levam o email completo (dado pessoal): so a 1.a letra e o
+// dominio, o suficiente para distinguir casos ao depurar.
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  return domain ? `${local.slice(0, 1)}***@${domain}` : '***';
+}
+
 // Serviço central de envio de emails do backend. Em vez de deixar o
 // Supabase Auth enviar (e formatar) os emails de autenticação, o backend
 // gera os links ele próprio (ver AuthService.forgotPassword, que usa
@@ -64,10 +71,12 @@ export class MailService {
         subject: 'Reset your Productivity Maxing password',
         html: renderPasswordResetEmail(actionLink, frontendUrl),
       });
-      this.logger.log(`Email de reset de password enviado para ${to}`);
+      this.logger.log(
+        `Email de reset de password enviado para ${maskEmail(to)}`,
+      );
     } catch (err) {
       this.logger.error(
-        `Erro ao enviar email de reset de password para ${to}`,
+        `Erro ao enviar email de reset de password para ${maskEmail(to)}`,
         err,
       );
     }
@@ -104,10 +113,13 @@ export class MailService {
           frontendUrl: getFrontendUrl(),
         }),
       });
-      this.logger.log(`Email de verificação enviado para ${to}`);
+      this.logger.log(`Email de verificação enviado para ${maskEmail(to)}`);
       return true;
     } catch (err) {
-      this.logger.error(`Erro ao enviar email de verificação para ${to}`, err);
+      this.logger.error(
+        `Erro ao enviar email de verificação para ${maskEmail(to)}`,
+        err,
+      );
       return false;
     }
   }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CopyIcon, CheckIcon } from './Icons';
 import { COPY_FEEDBACK_MS } from '../../lib/constants';
+import { useI18n } from '../../i18n/useI18n';
 
 interface CopyButtonProps {
   /** The text copied to the clipboard when clicked. */
@@ -15,6 +16,7 @@ interface CopyButtonProps {
 // useful (e.g. the agent setup command) without re-implementing the
 // clipboard call and the timed "Copied!" state each time.
 export default function CopyButton({ text, label = 'Copy', className = '' }: CopyButtonProps) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -30,7 +32,7 @@ export default function CopyButton({ text, label = 'Copy', className = '' }: Cop
       className={`inline-flex items-center gap-1.5 shrink-0 px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-semibold text-neutral-200 transition-colors ${className}`}
     >
       {copied ? <CheckIcon className="w-3.5 h-3.5 text-emerald-400" /> : <CopyIcon className="w-3.5 h-3.5" />}
-      {copied ? 'Copied!' : label}
+      {copied ? t('ui.copied') : label}
     </button>
   );
 }

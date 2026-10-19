@@ -34,13 +34,14 @@ export default function AreaProposalBlock({ area, onPropose, onWithdraw }: AreaP
           </p>
           {area.proposalStatus === 'REJECTED' && (
             <p className="mt-2 text-xs text-red-400">
-              Not approved{area.proposalReviewNote ? `: ${area.proposalReviewNote}` : '.'} It stays personal;
-              you can edit it and propose again.
+              {area.proposalReviewNote
+                ? t('ui.proposalNotApprovedNote', { note: area.proposalReviewNote })
+                : t('ui.proposalNotApproved')}
             </p>
           )}
           <div className="mt-2">
             <Button type="button" variant="secondary" onClick={() => onPropose(area)}>
-              {area.proposalStatus === 'REJECTED' ? 'Propose again' : 'Propose as official'}
+              {area.proposalStatus === 'REJECTED' ? t('ui.proposeAgain') : t('ui.proposeAsOfficial')}
             </Button>
           </div>
         </>

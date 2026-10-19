@@ -76,8 +76,8 @@ export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps
                     <p className="text-[11px] text-violet-300">{t('ui.lightReviewToKeepIt')}</p>
                   )}
                   <p className="text-xs text-neutral-500">
-                    {formatClock(block.startMinutes)}-{formatClock(block.endMinutes)} ({blockMinutes(block)} min)
-                    {block.isOvertime && <span className="ml-2 text-amber-400">overtime</span>}
+                    {formatClock(block.startMinutes)}-{formatClock(block.endMinutes)} ({t('ui.nMin', { count: blockMinutes(block) })})
+                    {block.isOvertime && <span className="ml-2 text-amber-400">{t('ui.overtime')}</span>}
                   </p>
                 </div>
                 <Button
@@ -86,7 +86,7 @@ export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps
                   disabled={isSubmitting || activeSession !== null}
                   onClick={() => void handleStart(block)}
                 >
-                  {isRunning ? 'Running' : 'Start'}
+                  {isRunning ? t('ui.running') : t('ui.start')}
                 </Button>
               </li>
             );

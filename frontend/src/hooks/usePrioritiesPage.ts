@@ -8,6 +8,7 @@ import {
 } from '../api/prioritiesAdminService';
 import type { AdminPriority } from '../types/models';
 import { useFeedback } from '../context/useFeedback';
+import { translateNow } from '../i18n/translate';
 
 export function usePrioritiesPage() {
   const { notify } = useFeedback();
@@ -26,7 +27,7 @@ export function usePrioritiesPage() {
       const data = await getAdminPriorities();
       setPriorities(data);
     } catch {
-      setError('Error loading priorities.');
+      setError(translateNow('hook.errorLoadingPriorities'));
     } finally {
       setIsLoading(false);
     }
@@ -43,7 +44,7 @@ export function usePrioritiesPage() {
       setPriorities((prev) => [...prev, created].sort((a, b) => a.order - b.order));
       setIsCreateOpen(false);
     } catch {
-      notify('Error creating priority. Check the backend.', 'error');
+      notify(translateNow('hook.errorCreatingPriorityCheckTheBackend'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -57,7 +58,7 @@ export function usePrioritiesPage() {
       setPriorities((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
       setEditingPriority(null);
     } catch {
-      notify('Error saving changes. Check the backend.', 'error');
+      notify(translateNow('hook.errorSavingChangesCheckTheBackend'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -74,7 +75,7 @@ export function usePrioritiesPage() {
         : await updateAdminPriority(priority.id, { isActive: true });
       setPriorities((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
     } catch {
-      notify('Error updating priority status. Check the backend.', 'error');
+      notify(translateNow('hook.errorUpdatingPriorityStatusCheckThe'), 'error');
     }
   };
 

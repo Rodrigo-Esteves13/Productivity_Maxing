@@ -21,8 +21,8 @@ export default function TimerEndPrompt() {
     if (!isFinished || !sessionId || alertedFor.current === sessionId) return;
     alertedFor.current = sessionId;
     playChime();
-    notify('Focus block finished', 'Time for a break, or keep going if you are in the flow.');
-  }, [isFinished, sessionId]);
+    notify(t('ui.focusBlockFinished'), t('ui.timeForABreakOr'));
+  }, [isFinished, sessionId, t]);
 
   if (!activeSession || !timerPlan || !isFinished || dismissedFor === activeSession.id) return null;
 

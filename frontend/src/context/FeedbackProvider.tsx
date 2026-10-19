@@ -7,11 +7,13 @@ import {
   type FeedbackContextValue,
   type ToastKind,
 } from './feedback-context';
+import { translateNow } from '../i18n/translate';
 
 const TOAST_DURATION_MS = 6000;
 const MAX_TOASTS = 4;
-const DEFAULT_CONFIRM_TITLE = 'Are you sure?';
-const DEFAULT_CONFIRM_LABEL = 'Confirm';
+// Chaves i18n, traduzidas quando o dialogo abre.
+const DEFAULT_CONFIRM_TITLE = 'ui.areYouSure';
+const DEFAULT_CONFIRM_LABEL = 'ui.confirm';
 const DEFAULT_CANCEL_LABEL = 'Cancel';
 
 interface PendingConfirm {
@@ -66,9 +68,9 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
       <ToastStack toasts={toasts} onDismiss={dismiss} />
       {pending && (
         <ConfirmDialog
-          title={pending.options.title ?? DEFAULT_CONFIRM_TITLE}
+          title={pending.options.title ?? translateNow(DEFAULT_CONFIRM_TITLE)}
           message={pending.options.message}
-          confirmLabel={pending.options.confirmLabel ?? DEFAULT_CONFIRM_LABEL}
+          confirmLabel={pending.options.confirmLabel ?? translateNow(DEFAULT_CONFIRM_LABEL)}
           cancelLabel={pending.options.cancelLabel ?? DEFAULT_CANCEL_LABEL}
           tone={pending.options.tone ?? 'default'}
           onConfirm={() => settle(true)}

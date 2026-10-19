@@ -7,6 +7,7 @@ import ToolbarButton from '../../UI/ToolbarButton';
 import { CANVAS_SHAPE_DEFS } from '../canvasShapeDefs';
 import SelectionEditor from './SelectionEditor';
 import { useI18n } from '../../../i18n/useI18n';
+import { translateNow } from '../../../i18n/translate';
 
 interface CanvasShapesToolbarProps {
   shapes: UseCanvasShapesResult;
@@ -17,8 +18,8 @@ interface CanvasShapesToolbarProps {
 }
 
 function connectLabel(links: UseCanvasLinksResult): string {
-  if (!links.connectMode) return 'Connect';
-  return links.pendingSourceId ? 'Click the 2nd shape...' : 'Click the 1st shape...';
+  if (!links.connectMode) return translateNow('ui.connectShapes');
+  return translateNow(links.pendingSourceId ? 'ui.clickSecondShape' : 'ui.clickFirstShape');
 }
 
 // Segunda barra, à parte da de traço/apagador - são dois modelos
@@ -55,7 +56,7 @@ export default function CanvasShapesToolbar({
 
       {selectedShape && (
         <SelectionEditor
-          noun="shape"
+          noun={t('ui.shapeNoun')}
           label={selectedShape.label}
           placeholder={t('ui.label')}
           inputWidthClass="w-28"
@@ -67,7 +68,7 @@ export default function CanvasShapesToolbar({
 
       {!selectedShape && selectedLink && (
         <SelectionEditor
-          noun="link"
+          noun={t('ui.linkNoun')}
           label={selectedLink.label}
           placeholder={t('ui.linkLabelOptional')}
           inputWidthClass="w-36"

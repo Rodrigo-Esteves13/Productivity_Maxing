@@ -59,7 +59,7 @@ export default function UserTableRow({
             <>
               <button
                 onClick={() => onSuspend(user)}
-                title={isSelf ? "You can't suspend your own account" : 'Suspend user'}
+                title={isSelf ? t('ui.youCantSuspendYourOwn') : t('ui.suspendUser')}
                 disabled={isSelf}
                 className="text-neutral-400 hover:text-amber-400 transition-colors p-1.5 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-neutral-400"
               >
@@ -67,7 +67,7 @@ export default function UserTableRow({
               </button>
               <button
                 onClick={() => onBan(user)}
-                title={isSelf ? "You can't ban your own account" : 'Ban user'}
+                title={isSelf ? t('ui.youCantBanYourOwn') : t('ui.banUser')}
                 disabled={isSelf}
                 className="text-neutral-400 hover:text-red-500 transition-colors p-1.5 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-neutral-400"
               >
@@ -100,7 +100,7 @@ export default function UserTableRow({
           </button>
           <button
             onClick={() => onDelete(user)}
-            title={isSelf ? "You can't delete your own account here" : 'Delete user'}
+            title={isSelf ? t('ui.youCantDeleteYourOwn') : t('ui.deleteUser')}
             disabled={isSelf}
             className="text-neutral-400 hover:text-red-500 transition-colors p-1.5 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-neutral-400"
           >

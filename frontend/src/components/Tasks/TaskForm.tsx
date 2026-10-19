@@ -97,12 +97,12 @@ export default function TaskForm({
     setError('');
 
     if (!formData.areaId) {
-      setError('Please select an Area.');
+      setError(t('ui.pleaseSelectAnArea'));
       return;
     }
 
     if (!formData.type) {
-      setError('Please select a Type.');
+      setError(t('ui.pleaseSelectAType'));
       return;
     }
 
@@ -121,7 +121,7 @@ export default function TaskForm({
       const withRecurrence = { ...payload, ...recurrencePayload(recurrence, false) };
       await onSubmit(subtasks.length > 0 ? { ...withRecurrence, subtasks } : withRecurrence);
     } catch (err: unknown) {
-      setError(getApiMessage(err, 'Error creating task.'));
+      setError(getApiMessage(err, t('ui.errorCreatingTask')));
     } finally {
       setIsSubmitting(false);
     }
@@ -150,14 +150,14 @@ export default function TaskForm({
 
       <div>
         <label htmlFor="create-task-checklist" className="block text-sm font-medium text-neutral-300 mb-1">
-          Checklist <span className="text-neutral-500 font-normal">{t('ui.optionalOneStepPerLine')}</span>
+          {t('ui.checklist')} <span className="text-neutral-500 font-normal">{t('ui.optionalOneStepPerLine')}</span>
         </label>
         <textarea
           id="create-task-checklist"
           value={checklistText}
           onChange={(e) => setChecklistText(e.target.value)}
           rows={3}
-          placeholder={'Read chapter 1\nSolve worksheet 3'}
+          placeholder={t('ui.readChapter1SolveWorksheet')}
           className="w-full rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-violet-600"
         />
       </div>
@@ -167,7 +167,7 @@ export default function TaskForm({
           {t('ui.cancel')}
         </Button>
         <Button type="submit" variant="primary" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : 'Create Task'}
+          {isSubmitting ? t('common.saving') : t('ui.createTask')}
         </Button>
       </div>
     </form>

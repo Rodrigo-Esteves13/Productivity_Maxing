@@ -64,19 +64,19 @@ export default function ShiftForm({
     const endMinutes = parseClock(end);
 
     if (startMinutes === null || endMinutes === null || startMinutes >= endMinutes) {
-      setFormError('Start must be before end. Split overnight shifts in two.');
+      setFormError(t('ui.startMustBeBeforeEnd2'));
       return;
     }
     if (repeat === 'weekly' && days.length === 0) {
-      setFormError('Pick at least one weekday.');
+      setFormError(t('ui.pickAtLeastOneWeekday'));
       return;
     }
     if (repeat === 'weekly' && days.some((d) => disabledDays.includes(d))) {
-      setFormError('That weekday is a fixed day off here. Pick another day.');
+      setFormError(t('ui.thatWeekdayIsAFixed'));
       return;
     }
     if (repeat === 'once' && !date) {
-      setFormError('Pick a date.');
+      setFormError(t('ui.pickADate'));
       return;
     }
 
@@ -98,7 +98,7 @@ export default function ShiftForm({
       {repeat === 'weekly' ? (
         <fieldset>
           <legend className="block text-sm font-medium text-neutral-300 mb-1">
-            {isEditing ? 'Day' : 'Days'}
+            {isEditing ? t('ui.day') : t('ui.days')}
           </legend>
           <div className="flex flex-wrap gap-1.5">
             {WEEKDAYS.map((d) => (
@@ -107,7 +107,7 @@ export default function ShiftForm({
                 size="sm"
                 pressed={days.includes(d.value)}
                 disabled={disabledDays.includes(d.value) && !days.includes(d.value)}
-                title={disabledDays.includes(d.value) ? 'Fixed day off' : undefined}
+                title={disabledDays.includes(d.value) ? t('ui.fixedDayOff') : undefined}
                 onClick={() => toggleDay(d.value)}
               >
                 {d.label}
@@ -128,7 +128,7 @@ export default function ShiftForm({
 
       <div className="flex gap-2">
         <ActionButton type="submit" disabled={isSaving}>
-          {isSaving ? 'Saving...' : submitLabel}
+          {isSaving ? t('common.saving') : submitLabel}
         </ActionButton>
         <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
           {t('ui.cancel')}

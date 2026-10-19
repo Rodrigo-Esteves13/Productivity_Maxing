@@ -3,6 +3,7 @@ import { updateTask } from '../api/userService';
 import { syncTaskToCalendar } from '../api/calendarService';
 import type { Task } from '../types/models';
 import { useFeedback } from '../context/useFeedback';
+import { translateNow } from '../i18n/translate';
 
 interface UseQuickRescheduleReturn {
   reschedulingId: string | null;
@@ -56,7 +57,7 @@ export function useQuickReschedule(
       } catch (error: unknown) {
         console.error('Error rescheduling task:', error);
         // Num cenário ideal, ligarias isto ao teu sistema de Toast notifications
-        notify('Could not reschedule the task.', 'error');
+        notify(translateNow('hook.couldNotRescheduleTheTask'), 'error');
       } finally {
         setReschedulingId(null);
       }

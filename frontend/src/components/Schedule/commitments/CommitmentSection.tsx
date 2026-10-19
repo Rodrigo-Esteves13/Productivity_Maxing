@@ -81,10 +81,10 @@ export default function CommitmentSection({
             </p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            <IconButton label={`Edit ${commitment.name}`} onClick={() => setMode('edit')}>
+            <IconButton label={t('ui.editNamed', { name: commitment.name })} onClick={() => setMode('edit')}>
               <PencilIcon />
             </IconButton>
-            <IconButton tone="danger" label={`Delete ${commitment.name}`} onClick={() => setMode('confirm-delete')}>
+            <IconButton tone="danger" label={t('ui.deleteNamed', { name: commitment.name })} onClick={() => setMode('confirm-delete')}>
               <TrashIcon />
             </IconButton>
           </div>
@@ -94,8 +94,8 @@ export default function CommitmentSection({
       {mode === 'confirm-delete' && (
         <InlineConfirm
           className="mt-3"
-          message={`Delete ${commitment.name} and its ${commitment.shifts.length} shift(s)?`}
-          confirmLabel="Yes, delete"
+          message={t('ui.deleteCommitmentAndShifts', { name: commitment.name, count: commitment.shifts.length })}
+          confirmLabel={t('ui.yesDelete')}
           isBusy={isSaving}
           onConfirm={() => void onDeleteCommitment(commitment.id)}
           onCancel={() => setMode('view')}
@@ -115,7 +115,7 @@ export default function CommitmentSection({
       {mode === 'add-shift' ? (
         <div className="mt-3">
           <ShiftForm
-            submitLabel="Add shift"
+            submitLabel={t('ui.addShift')}
             disabledDays={commitment.daysOff}
             isSaving={isSaving}
             onSubmit={handleAddShift}
@@ -130,7 +130,7 @@ export default function CommitmentSection({
             className="mt-3 flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300"
           >
             <PlusIcon />
-            Add shift
+            {t('ui.addShift')}
           </button>
         )
       )}

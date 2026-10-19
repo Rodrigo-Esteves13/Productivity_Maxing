@@ -34,6 +34,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { ApiKeyScopeGuard } from '../auth/guards/api-key-scope.guard';
+import { perMinute } from '../common/throttle.util';
 
 // Modelo de Areas:
 // - OFICIAIS (ownerId = null): catálogo global, geridas só por ADMIN.
@@ -57,7 +58,7 @@ export class AreasController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Throttle(perMinute(20))
   @Post()
   @ApiOperation({ summary: 'Creates a PERSONAL (private) area for the caller' })
   create(
@@ -93,7 +94,7 @@ export class AreasController {
   // Estática: tem de vir antes de ':id/...'.
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Throttle(perMinute(20))
   @Put('visibility')
   @ApiOperation({ summary: 'Turns ALL official areas on/off for the caller' })
   setAllHidden(
@@ -105,7 +106,7 @@ export class AreasController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @Throttle(perMinute(60))
   @Put(':id/visibility')
   @ApiOperation({ summary: 'Turns one official area on/off for the caller' })
   setHidden(
@@ -154,7 +155,7 @@ export class AreasController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Throttle(perMinute(30))
   @Patch(':id')
   @ApiOperation({
     summary: 'Edits a personal area (owner) or an official one (Admin)',
@@ -169,7 +170,7 @@ export class AreasController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Throttle(perMinute(30))
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
@@ -184,7 +185,7 @@ export class AreasController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   @Post(':id/propose')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Proposes your personal area to become official' })
@@ -197,7 +198,7 @@ export class AreasController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   @Post(':id/withdraw')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Withdraws a pending proposal' })

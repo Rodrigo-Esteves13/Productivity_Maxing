@@ -63,7 +63,7 @@ const NAV_COMMANDS: NavCommand[] = [
     id: 'nav-profile',
     labelKey: 'nav.profile',
     path: '/profile',
-    keywords: ['avatar', 'photo', 'google calendar', 'theme', 'language', '2fa', 'password', 'notifications'],
+    keywords: ['avatar', 'photo', 'google calendar', 'theme', 'language', '2fa', 'password', 'notifications', 'push', 'reminders', 'deadline', 'lembretes', 'prazos'],
   },
   { id: 'nav-changelog', labelKey: 'nav.changelog', path: '/changelog' },
   { id: 'nav-developer', labelKey: 'nav.developer', path: '/developer' },

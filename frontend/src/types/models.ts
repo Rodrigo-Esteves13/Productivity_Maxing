@@ -456,6 +456,7 @@ export interface User {
   emailVerified?: boolean;
   // Preferencias (Profile > Preferences).
   deadlineEmailReminders?: boolean;
+  deadlinePushReminders?: boolean;
   spacedReviewsEnabled?: boolean;
   // 2FA: available = flag do backend (false => esconder tudo); enabled = esta conta tem 2FA.
   twoFactorAvailable?: boolean;

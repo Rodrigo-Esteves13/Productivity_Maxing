@@ -61,7 +61,7 @@ export function AttachmentsSection({ isEditing, attachments, onUpload, onDelete 
   const { error, handleChange } = useFileUpload({
     validate: (file) => validateAttachment(file, attachments.length),
     onUpload,
-    failureMessage: 'Could not upload the file. Please try again.',
+    failureMessage: t('ui.couldNotUploadFile'),
   });
 
   return (
@@ -114,7 +114,7 @@ export function PhotosSection({ isEditing, photos, onUpload, onDelete }: PhotosS
   const { error, handleChange } = useFileUpload({
     validate: validatePhoto,
     onUpload,
-    failureMessage: 'Could not upload the photo. Please try again.',
+    failureMessage: t('ui.couldNotUploadPhoto'),
   });
 
   return (

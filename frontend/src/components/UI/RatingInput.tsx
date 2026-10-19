@@ -1,5 +1,6 @@
 import ToggleChip from './ToggleChip';
 import { RATING_MAX, RATING_MIN, RATING_VALUES } from '../../lib/rating';
+import { useI18n } from '../../i18n/useI18n';
 
 interface RatingInputProps {
   value: number | null;
@@ -11,9 +12,10 @@ interface RatingInputProps {
 // Escala de 1 a 5. Clicar no valor ja escolhido volta a deixar em branco,
 // porque responder e sempre opcional.
 export default function RatingInput({ value, onChange, hint }: RatingInputProps) {
+  const { t } = useI18n();
   return (
     <div>
-      <div role="group" aria-label={`Rating from ${RATING_MIN} to ${RATING_MAX}`} className="flex gap-1.5">
+      <div role="group" aria-label={t('ui.ratingFromTo', { min: RATING_MIN, max: RATING_MAX })} className="flex gap-1.5">
         {RATING_VALUES.map((level) => (
           <ToggleChip key={level} size="sm" pressed={value === level} onClick={() => onChange(value === level ? null : level)}>
             {level}

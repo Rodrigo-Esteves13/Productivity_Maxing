@@ -16,7 +16,7 @@ export default function RecurrenceFields({ idPrefix, value, onChange }: Recurren
   return (
     <div className="space-y-2">
       <label htmlFor={`${idPrefix}-repeat`} className="block text-sm font-medium text-neutral-300">
-        Repeat <span className="text-neutral-500 font-normal">{t('ui.theNextOneIsCreated')}</span>
+        {t('ui.repeat')} <span className="text-neutral-500 font-normal">{t('ui.theNextOneIsCreated')}</span>
       </label>
       <div className="flex flex-wrap items-center gap-2">
         <select
@@ -32,7 +32,7 @@ export default function RecurrenceFields({ idPrefix, value, onChange }: Recurren
         </select>
         {value.frequency && (
           <>
-            <span className="text-sm text-neutral-400">every</span>
+            <span className="text-sm text-neutral-400">{t('ui.everyLower')}</span>
             <input
               type="number"
               min={1}

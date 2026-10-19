@@ -1,12 +1,16 @@
+import { lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUpIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { useFocusEffect } from '../../hooks/useFocusEffect';
 import { useI18n } from '../../i18n/useI18n';
-import FocusTrendChart from './FocusTrendChart';
-import FocusScatterChart from './FocusScatterChart';
 import type { FactorEffect, FocusEffect, FocusEffectStatus } from '../../types/models';
 import type { TranslateVars } from '../../i18n/i18n-context';
+
+// Os dois graficos usam recharts: chunk a parte, so carregado quando este
+// cartao aparece (e cada um ainda decide se tem dados suficientes).
+const FocusTrendChart = lazy(() => import('./FocusTrendChart'));
+const FocusScatterChart = lazy(() => import('./FocusScatterChart'));
 
 type Translate = (key: string, vars?: TranslateVars) => string;
 
@@ -90,8 +94,10 @@ export default function FocusEffectCard() {
         </p>
       </div>
 
-      <FocusTrendChart />
-      <FocusScatterChart />
+      <Suspense fallback={null}>
+        <FocusTrendChart />
+        <FocusScatterChart />
+      </Suspense>
 
       <div className="mt-2 space-y-1 text-xs text-neutral-500">
         {focus.excludedUnrated > 0 && <p>{t('focusEffect.excluded', { count: focus.excludedUnrated })}</p>}

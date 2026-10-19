@@ -14,7 +14,7 @@ import { useI18n } from '../i18n/useI18n';
 
 export default function Security() {
   const { t } = useI18n();
-  useDocumentTitle('Security Logs');
+  useDocumentTitle(t('ui.securityLogsTitle'));
   const {
     logs,
     total,

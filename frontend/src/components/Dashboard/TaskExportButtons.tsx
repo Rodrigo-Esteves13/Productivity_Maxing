@@ -3,6 +3,7 @@ import { tasksToCsv, tasksToMarkdown } from '../../utils/taskExportFormats';
 import { downloadTextFile } from '../../utils/downloadTextFile';
 import { DownloadIcon } from '../UI/Icons';
 import { todayKey } from '../../lib/dateKey';
+import { useI18n } from '../../i18n/useI18n';
 
 interface TaskExportButtonsProps {
   tasks: Task[];
@@ -16,6 +17,7 @@ interface TaskExportButtonsProps {
 // clicked). Purely client-side: no new backend endpoint needed, the tasks
 // are already loaded for the table itself.
 export default function TaskExportButtons({ tasks, areas, academicTaskTypes }: TaskExportButtonsProps) {
+  const { t } = useI18n();
   const dateStr = todayKey();
 
   const handleExportCsv = () => {
@@ -34,7 +36,7 @@ export default function TaskExportButtons({ tasks, areas, academicTaskTypes }: T
         type="button"
         onClick={handleExportCsv}
         disabled={tasks.length === 0}
-        title={tasks.length === 0 ? 'No tasks to export' : 'Export the tasks currently shown as CSV'}
+        title={tasks.length === 0 ? t('ui.noTasksToExport') : t('ui.exportShownAsCsv')}
         className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200 disabled:opacity-40 disabled:hover:text-neutral-400"
       >
         <DownloadIcon />
@@ -44,7 +46,7 @@ export default function TaskExportButtons({ tasks, areas, academicTaskTypes }: T
         type="button"
         onClick={handleExportMarkdown}
         disabled={tasks.length === 0}
-        title={tasks.length === 0 ? 'No tasks to export' : 'Export the tasks currently shown as Markdown'}
+        title={tasks.length === 0 ? t('ui.noTasksToExport') : t('ui.exportShownAsMarkdown')}
         className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200 disabled:opacity-40 disabled:hover:text-neutral-400"
       >
         <DownloadIcon />

@@ -63,22 +63,22 @@ export default function ImportScheduleModal({
   // locais e apontamentos do caderno nao sao tocados.
   const handleDeleteAll = async () => {
     const ok = await confirm({
-      title: 'Delete imported classes',
+      title: t('ui.deleteImportedClasses'),
       message:
-        'This removes every class imported from .ics files. Work shifts and your notebook entries are kept. If Google Calendar is connected, you will be asked to confirm removing the matching events. This cannot be undone.',
-      confirmLabel: 'Delete classes',
+        t('ui.thisRemovesEveryClassImported'),
+      confirmLabel: t('ui.deleteClasses'),
       tone: 'danger',
     });
     if (!ok) return;
     setIsDeleting(true);
     try {
       const { deleted } = await deleteImportedClasses();
-      notify(`${deleted} imported class${deleted === 1 ? '' : 'es'} deleted.`, 'success');
+      notify(t(deleted === 1 ? 'ui.importedClassesDeletedOne' : 'ui.importedClassesDeletedMany', { count: deleted }), 'success');
       // Refaz a grelha/plano e propoe limpar o Google Calendar (se ligado).
       onImported();
       handleClose();
     } catch {
-      notify('Could not delete the imported classes. Please try again.', 'error');
+      notify(t('ui.couldNotDeleteTheImported'), 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -89,9 +89,7 @@ export default function ImportScheduleModal({
       <div className="space-y-4">
         <div className="text-sm text-neutral-400 space-y-1">
           <p>
-            Export your timetable as .ics from your school's student portal or calendar app and upload it here. Each
-            class is matched by its own event ID, so re-importing (e.g. a new export a few weeks
-            later) updates existing classes and adds new ones - it never creates duplicates.
+            {t('ui.exportYourTimetableAsIcs')}
           </p>
           <p>
             {t('ui.theExportOnlyCoversA')}
@@ -111,7 +109,7 @@ export default function ImportScheduleModal({
 
         {isBusy && (
           <p className="text-sm text-neutral-400">
-            {stage === 'reading' ? `Reading ${fileName}...` : 'Saving classes...'}
+            {stage === 'reading' ? t('ui.readingFile', { name: fileName ?? '' }) : t('ui.savingClasses')}
           </p>
         )}
 
@@ -128,11 +126,12 @@ export default function ImportScheduleModal({
               <div className="flex items-center gap-2 text-sm">
                 <CheckIcon className="text-emerald-400 shrink-0" />
                 <span className="text-neutral-200">
-                  {outcome.backendResult.imported} class
-                  {outcome.backendResult.imported === 1 ? '' : 'es'} imported
-                  {outcome.backendResult.failed > 0 && `, ${outcome.backendResult.failed} failed`}
+                  {t(outcome.backendResult.imported === 1 ? 'ui.classesImportedOne' : 'ui.classesImportedMany', {
+                    count: outcome.backendResult.imported,
+                  })}
+                  {outcome.backendResult.failed > 0 && t('ui.tasksFailedSuffix', { count: outcome.backendResult.failed })}
                   {(outcome.backendResult.removed ?? 0) > 0 &&
-                    `, ${outcome.backendResult.removed} outdated replaced`}.
+                    t('ui.outdatedReplacedSuffix', { count: outcome.backendResult.removed ?? 0 })}.
                 </span>
               </div>
             )}
@@ -167,7 +166,7 @@ export default function ImportScheduleModal({
             className="inline-flex items-center gap-2 text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
           >
             <TrashIcon width={14} height={14} />
-            {isDeleting ? 'Deleting...' : 'Delete all imported classes'}
+            {isDeleting ? t('ui.deleting') : t('ui.deleteAllImportedClasses')}
           </button>
         </div>
       </div>

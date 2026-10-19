@@ -68,6 +68,7 @@ import {
   clearCookieOptions,
 } from './cookie.config';
 import { isWellFormedCsrfToken } from './csrf-token.util';
+import { perMinute } from '../common/throttle.util';
 
 // URL do frontend para onde se redireciona depois do callback OAuth.
 // Ajustar em produção para o domínio real (Netlify).
@@ -93,7 +94,7 @@ export class AuthController {
   // especificamente a estas rotas, por cima do guard global.
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Throttle(perMinute(3))
   async register(
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
@@ -115,7 +116,7 @@ export class AuthController {
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   @SkipCsrf()
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   async verifyEmail(@Body() dto: VerifyEmailDto) {
     const { email } = await this.authService.verifyEmail(dto.token);
     return { verified: true, email };
@@ -125,7 +126,7 @@ export class AuthController {
   @Post('resend-verification')
   @HttpCode(HttpStatus.OK)
   @SkipCsrf()
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Throttle(perMinute(3))
   async resendVerification(@Body() dto: ResendVerificationDto) {
     await this.authService.resendVerificationEmail(dto.email);
     return {
@@ -136,7 +137,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle(perMinute(5))
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -161,7 +162,7 @@ export class AuthController {
   @Post('2fa/login')
   @HttpCode(HttpStatus.OK)
   @SkipCsrf()
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   async twoFactorLogin(
     @Body() dto: TwoFactorLoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -182,7 +183,7 @@ export class AuthController {
   @Post('2fa/setup')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   beginTwoFactorSetup(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.beginTwoFactorSetup(user.id);
   }
@@ -190,7 +191,7 @@ export class AuthController {
   @Post('2fa/confirm')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   confirmTwoFactorSetup(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: TwoFactorCodeDto,
@@ -201,7 +202,7 @@ export class AuthController {
   @Post('2fa/disable')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   async disableTwoFactor(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: TwoFactorCodeDto,
@@ -236,7 +237,7 @@ export class AuthController {
   // enumerar contas.
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Throttle(perMinute(3))
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     await this.authService.forgotPassword(dto.email);
     return {
@@ -405,6 +406,7 @@ export class AuthController {
         // Só usado para derivar emailVerified abaixo.
         emailVerifiedAt: true,
         deadlineEmailReminders: true,
+        deadlinePushReminders: true,
         spacedReviewsEnabled: true,
         // Só para twoFactorEnabled (o segredo nunca sai do backend).
         twoFactorEnabledAt: true,
@@ -450,24 +452,29 @@ export class AuthController {
       quietHoursStart: dto.quietHoursStart,
       quietHoursEnd: dto.quietHoursEnd,
       deadlineEmailReminders: dto.deadlineEmailReminders,
+      deadlinePushReminders: dto.deadlinePushReminders,
       spacedReviewsEnabled: dto.spacedReviewsEnabled,
     });
     return this.buildProfile(user.id);
   }
 
-  // Define ou muda a password da conta autenticada. Não pede a password
-  // atual - a sessão válida (cookie + CSRF) já prova a posse da conta, e é
-  // exatamente o mesmo nível de confiança que o resto das rotas /auth/me/*.
+  // Define ou muda a password da conta autenticada. Se a conta ja tem
+  // password, pede a atual (uma sessao roubada nao chega para tomar a conta);
+  // contas so-OAuth adicionam a primeira sem ela.
   @Patch('me/password')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle(perMinute(5))
   async setPassword(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: SetPasswordDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    await this.authService.setPassword(user.id, dto.password);
+    await this.authService.setPassword(
+      user.id,
+      dto.password,
+      dto.currentPassword,
+    );
     // Mudar a password termina todas as outras sessoes (quem tivesse o
     // cookie antigo fica de fora); esta continua, com um token novo.
     const fresh = await this.authService.revokeAllSessions(user.id);
@@ -614,7 +621,7 @@ export class AuthController {
   // leak, mas polui a tabela ApiKey e permite abuso do storage/BD.
   @Post('api-keys')
   @UseGuards(JwtAuthGuard)
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle(perMinute(5))
   async createApiKey(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateApiKeyDto,

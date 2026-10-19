@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { PushService } from '../push/push.service';
 import { getFrontendUrl } from '../config/app.config';
 import { getLisbonNow, toDateKey } from '../common/date-key.util';
 import { lisbonWallClockToUtc } from '../calendar/feed/ics-feed.builder';
@@ -17,8 +18,15 @@ const MAX_TASKS_PER_RUN = 1000;
 
 export interface ReminderRunResult {
   usersEmailed: number;
+  usersPushed: number;
   remindersSent: number;
 }
+
+// Um aviso push por user e por execucao: a primeira task (a mais proxima)
+// no texto e "e mais N" para as restantes.
+const PUSH_KEY_BY_GROUP_SIZE = (count: number) =>
+  count === 1 ? 'deadlineSoon' : 'deadlinesSoon';
+const TASKS_PATH = '/tasks';
 
 // Corre por pedido do cron (ver RemindersController) - sem agendador dentro
 // da app (o Render pode adormecer/duplicar instâncias; um Cron Job externo
@@ -30,6 +38,7 @@ export class RemindersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
+    private readonly pushService: PushService,
   ) {}
 
   async run(now = new Date()): Promise<ReminderRunResult> {
@@ -38,7 +47,10 @@ export class RemindersService {
         progressStatus: { not: 'COMPLETED' },
         date: { gt: now, lte: new Date(now.getTime() + LOOKAHEAD_MS) },
         user: {
-          deadlineEmailReminders: true,
+          OR: [
+            { deadlineEmailReminders: true },
+            { deadlinePushReminders: true },
+          ],
           status: { not: UserStatus.BANNED },
         },
       },
@@ -49,7 +61,13 @@ export class RemindersService {
         userId: true,
         area: { select: { name: true } },
         user: {
-          select: { email: true, quietHoursStart: true, quietHoursEnd: true },
+          select: {
+            email: true,
+            quietHoursStart: true,
+            quietHoursEnd: true,
+            deadlineEmailReminders: true,
+            deadlinePushReminders: true,
+          },
         },
         sentReminders: { select: { taskDate: true } },
       },
@@ -74,31 +92,53 @@ export class RemindersService {
       byUser.set(task.userId, list);
     }
 
-    const result: ReminderRunResult = { usersEmailed: 0, remindersSent: 0 };
-    const tasksLink = `${getFrontendUrl()}/tasks`;
+    const result: ReminderRunResult = {
+      usersEmailed: 0,
+      usersPushed: 0,
+      remindersSent: 0,
+    };
+    const tasksLink = `${getFrontendUrl()}${TASKS_PATH}`;
 
-    for (const [, userTasks] of byUser) {
-      const accepted = await this.mailService.sendDeadlineReminderEmail(
-        userTasks[0].user.email,
-        userTasks.map((t) => ({
-          title: t.title,
-          areaName: t.area?.name ?? null,
-          dueLabel: this.dueLabel(t.date, now),
-        })),
-        tasksLink,
-      );
-      if (!accepted) continue; // volta a tentar na próxima execução
+    for (const [userId, userTasks] of byUser) {
+      const { user } = userTasks[0];
+      const emailed =
+        user.deadlineEmailReminders &&
+        (await this.mailService.sendDeadlineReminderEmail(
+          user.email,
+          userTasks.map((t) => ({
+            title: t.title,
+            areaName: t.area?.name ?? null,
+            dueLabel: this.dueLabel(t.date, now),
+          })),
+          tasksLink,
+        ));
+      const pushed =
+        user.deadlinePushReminders &&
+        (await this.pushService.notifyUser(
+          userId,
+          PUSH_KEY_BY_GROUP_SIZE(userTasks.length),
+          {
+            title: userTasks[0].title,
+            count: userTasks.length - 1,
+            url: TASKS_PATH,
+          },
+        )) > 0;
+      if (emailed) result.usersEmailed += 1;
+      if (pushed) result.usersPushed += 1;
+      // Basta um canal ter chegado ao user para nao repetir o lembrete.
+      // Se nenhum chegou (SMTP em baixo, sem dispositivos), tenta outra vez
+      // na proxima execucao.
+      if (!emailed && !pushed) continue;
 
       await this.prisma.sentReminder.createMany({
         data: userTasks.map((t) => ({ taskId: t.id, taskDate: t.date })),
         skipDuplicates: true,
       });
-      result.usersEmailed += 1;
       result.remindersSent += userTasks.length;
     }
 
     this.logger.log(
-      `Lembretes: ${result.remindersSent} tasks, ${result.usersEmailed} utilizadores`,
+      `Lembretes: ${result.remindersSent} tasks, ${result.usersEmailed} por email, ${result.usersPushed} por push`,
     );
     return result;
   }

@@ -1,4 +1,5 @@
 import type { RecurrenceFrequency, Task } from '../types/models';
+import { translateNow } from '../i18n/translate';
 
 export interface RecurrenceValue {
   frequency: '' | RecurrenceFrequency;
@@ -8,10 +9,11 @@ export interface RecurrenceValue {
 
 export const EMPTY_RECURRENCE: RecurrenceValue = { frequency: '', interval: '1', until: '' };
 
+// getters: lidos na lingua atual (ex: "day(s)" no seletor de repeticao).
 export const RECURRENCE_UNIT: Record<RecurrenceFrequency, string> = {
-  DAILY: 'day(s)',
-  WEEKLY: 'week(s)',
-  MONTHLY: 'month(s)',
+  get DAILY() { return translateNow('recurrence.unitDaily'); },
+  get WEEKLY() { return translateNow('recurrence.unitWeekly'); },
+  get MONTHLY() { return translateNow('recurrence.unitMonthly'); },
 };
 
 const MAX_RECURRENCE_INTERVAL = 365;
@@ -42,6 +44,8 @@ export function recurrencePayload(value: RecurrenceValue, forEdit: boolean) {
 export function recurrenceLabel(task: Pick<Task, 'recurrenceFrequency' | 'recurrenceInterval'>): string | null {
   if (!task.recurrenceFrequency) return null;
   const interval = task.recurrenceInterval ?? 1;
-  const unit = RECURRENCE_UNIT[task.recurrenceFrequency].replace('(s)', interval === 1 ? '' : 's');
-  return interval === 1 ? `Repeats every ${unit}` : `Repeats every ${interval} ${unit}`;
+  const freq = task.recurrenceFrequency;
+  return interval === 1
+    ? translateNow(`recurrence.every.${freq}`)
+    : translateNow(`recurrence.everyN.${freq}`, { n: interval });
 }

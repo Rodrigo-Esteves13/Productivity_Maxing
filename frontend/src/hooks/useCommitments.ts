@@ -20,6 +20,7 @@ import type {
   UpdateWorkShiftInput,
 } from '../types/models';
 import { getHttpStatus, HTTP_CONFLICT } from '../lib/httpError';
+import { translateNow } from '../i18n/translate';
 
 const EMPTY: CommitmentsOverview = { commitments: [], ungroupedShifts: [] };
 
@@ -36,7 +37,7 @@ export function useCommitments(onChanged: () => void) {
     try {
       setOverview(await getCommitments());
     } catch {
-      setError('Could not load your commitments.');
+      setError(translateNow('hook.couldNotLoadYourCommitments'));
     } finally {
       setIsLoading(false);
     }
@@ -58,7 +59,7 @@ export function useCommitments(onChanged: () => void) {
         onChanged();
         return true;
       } catch (caught) {
-        setError(getHttpStatus(caught) === HTTP_CONFLICT ? 'You already have one with that name.' : failureMessage);
+        setError(getHttpStatus(caught) === HTTP_CONFLICT ? translateNow('hook.youAlreadyHaveOneWithThat') : failureMessage);
         return false;
       } finally {
         setIsSaving(false);
@@ -76,21 +77,21 @@ export function useCommitments(onChanged: () => void) {
     clearCopyResult: () => setCopyResult(null),
     clearError: () => setError(''),
     addCommitment: (input: CommitmentInput) =>
-      mutate(() => createCommitment(input), 'Could not create it.'),
+      mutate(() => createCommitment(input), translateNow('hook.couldNotCreateIt')),
     editCommitment: (id: string, changes: Partial<CommitmentInput>) =>
-      mutate(() => updateCommitment(id, changes), 'Could not save the changes.'),
+      mutate(() => updateCommitment(id, changes), translateNow('hook.couldNotSaveTheChanges')),
     removeCommitment: (id: string) =>
-      mutate(() => deleteCommitment(id), 'Could not delete it.'),
+      mutate(() => deleteCommitment(id), translateNow('hook.couldNotDeleteIt')),
     addShifts: (shifts: CreateWorkShiftInput[]) =>
-      mutate(() => createWorkShifts(shifts), 'Could not save the shift. Check the times.'),
+      mutate(() => createWorkShifts(shifts), translateNow('hook.couldNotSaveTheShiftCheck')),
     editShift: (id: string, changes: UpdateWorkShiftInput) =>
-      mutate(() => updateWorkShift(id, changes), 'Could not save the shift. Check the times.'),
+      mutate(() => updateWorkShift(id, changes), translateNow('hook.couldNotSaveTheShiftCheck')),
     copyWeek: (input: CopyWeekInput) =>
       mutate(
         async () => setCopyResult(await copyWeekShifts(input)),
-        'Could not copy the week. Check the weeks you picked.',
+        translateNow('hook.couldNotCopyTheWeekCheck'),
       ),
     removeShift: (id: string) =>
-      mutate(() => deleteWorkShift(id), 'Could not delete the shift.'),
+      mutate(() => deleteWorkShift(id), translateNow('hook.couldNotDeleteTheShift')),
   };
 }

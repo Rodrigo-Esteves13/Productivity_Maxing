@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import type { Area, AcademicPeriod, ImportTaskRow, TaskMeta } from '../types/models';
 import { ACADEMIC_TASK_TYPE_KEY } from '../lib/constants';
+import { translateNow } from '../i18n/translate';
 
 // Accepted column headers, case-insensitive, with a couple of common
 // aliases per column so a spreadsheet built without reading the docs
@@ -142,24 +143,24 @@ export function mapImportRows(
 
     const title = findColumnValue(rawRow, 'title');
     if (typeof title !== 'string' || title.trim() === '') {
-      errors.push({ row: rowNumber, message: 'Missing title.' });
+      errors.push({ row: rowNumber, message: translateNow('import.missingTitle') });
       return;
     }
 
     const isoDate = toIsoDate(findColumnValue(rawRow, 'date'));
     if (!isoDate) {
-      errors.push({ row: rowNumber, message: 'Missing or unreadable date.' });
+      errors.push({ row: rowNumber, message: translateNow('import.missingDate') });
       return;
     }
 
     const areaName = findColumnValue(rawRow, 'area');
     if (typeof areaName !== 'string' || areaName.trim() === '') {
-      errors.push({ row: rowNumber, message: 'Missing area.' });
+      errors.push({ row: rowNumber, message: translateNow('import.missingArea') });
       return;
     }
     const area = findAreaByName(areaName, areas);
     if (!area) {
-      errors.push({ row: rowNumber, message: `Area "${areaName}" doesn't match any of your areas.` });
+      errors.push({ row: rowNumber, message: translateNow('import.unknownArea', { name: areaName }) });
       return;
     }
 
@@ -168,7 +169,7 @@ export function mapImportRows(
     if (typeof periodName === 'string' && periodName.trim() !== '') {
       const period = findPeriodByName(periodName, periods);
       if (!period) {
-        errors.push({ row: rowNumber, message: `Period "${periodName}" doesn't match any of your periods.` });
+        errors.push({ row: rowNumber, message: translateNow('import.unknownPeriod', { name: periodName }) });
         return;
       }
       periodId = period.id;
@@ -184,8 +185,8 @@ export function mapImportRows(
         row: rowNumber,
         message:
           typeof typeLabel === 'string' && typeLabel.trim() !== ''
-            ? `Type "${typeLabel}" doesn't match any known task type.`
-            : 'No task type available.',
+            ? translateNow('import.unknownType', { name: typeLabel })
+            : translateNow('import.noTaskType'),
       });
       return;
     }
@@ -197,7 +198,7 @@ export function mapImportRows(
       if (!academicType) {
         errors.push({
           row: rowNumber,
-          message: `Academic type "${academicTypeLabel}" doesn't match any known subcategory for that type.`,
+          message: translateNow('import.unknownAcademicType', { name: academicTypeLabel }),
         });
         return;
       }
@@ -205,13 +206,13 @@ export function mapImportRows(
 
     const difficultyKey = toEnumKey(findColumnValue(rawRow, 'difficulty'));
     if (difficultyKey && !meta.difficulties.includes(difficultyKey)) {
-      errors.push({ row: rowNumber, message: `Difficulty "${difficultyKey}" isn't a recognized value.` });
+      errors.push({ row: rowNumber, message: translateNow('import.unknownDifficulty', { value: difficultyKey }) });
       return;
     }
 
     const statusKey = toEnumKey(findColumnValue(rawRow, 'status'));
     if (statusKey && !meta.progressStatuses.includes(statusKey)) {
-      errors.push({ row: rowNumber, message: `Status "${statusKey}" isn't a recognized value.` });
+      errors.push({ row: rowNumber, message: translateNow('import.unknownStatus', { value: statusKey }) });
       return;
     }
 

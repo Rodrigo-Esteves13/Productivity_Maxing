@@ -5,6 +5,7 @@ import { breakRemainingSeconds } from '../../../lib/focusTimer';
 import { formatElapsed } from '../../../lib/formatDuration';
 import Button from '../../UI/Button';
 import { useI18n } from '../../../i18n/useI18n';
+import { fillNodes } from '../../../i18n/fillNodes';
 
 // Pausa entre blocos: contagem decrescente e, no fim, aviso e "comecar o
 // proximo bloco" com a mesma task.
@@ -27,8 +28,8 @@ export default function BreakBanner() {
     if (remaining !== 0 || endsAt === null || alertedFor.current === endsAt) return;
     alertedFor.current = endsAt;
     playChime();
-    notify('Break over', 'Ready for the next block?');
-  }, [remaining, endsAt]);
+    notify(t('ui.breakOver'), t('ui.readyForTheNextBlock'));
+  }, [remaining, endsAt, t]);
 
   if (!restBreak || remaining === null) return null;
 
@@ -39,7 +40,9 @@ export default function BreakBanner() {
       {remaining > 0 ? (
         <>
           <p className="text-sm font-medium text-white">
-            Break <span className="font-mono tabular-nums text-violet-300">{formatElapsed(remaining)}</span>
+            {fillNodes(t('ui.breakRemaining'), {
+              time: <span className="font-mono tabular-nums text-violet-300">{formatElapsed(remaining)}</span>,
+            })}
           </p>
           <p className="mt-1 text-xs text-neutral-400">{t('ui.stepAwayFromTheScreen')}</p>
           <div className="mt-3">

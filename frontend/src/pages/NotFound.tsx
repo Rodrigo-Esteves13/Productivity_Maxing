@@ -18,7 +18,7 @@ export default function NotFound() {
   const { t } = useI18n();
   useSeo({
     title: t('common.notFound.title'),
-    description: 'This page doesn\'t exist or may have moved.',
+    description: t('ui.thisPageDoesntExistOr'),
     path: '/404',
     noindex: true,
   });

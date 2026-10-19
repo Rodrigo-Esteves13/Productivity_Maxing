@@ -9,6 +9,7 @@ import { updateUserProfile } from '../../api/userService';
 import { estimateCommute } from '../../api/scheduleService';
 import type { CommuteMode, User } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import { translateNow } from '../../i18n/translate';
 
 interface CommuteSettingsCardProps {
   user: User;
@@ -18,10 +19,10 @@ interface CommuteSettingsCardProps {
 // Nem todo o estudante tem carro - estas são as opções que a Distance
 // Matrix API aceita (ver ScheduleService.estimateCommute).
 const COMMUTE_MODE_OPTIONS: { value: CommuteMode; label: string }[] = [
-  { value: 'WALKING', label: 'Walking' },
-  { value: 'TRANSIT', label: 'Public transit' },
-  { value: 'BICYCLING', label: 'Bicycle' },
-  { value: 'DRIVING', label: 'Car' },
+  { value: 'WALKING', get label() { return translateNow('ui.commuteWalking'); } },
+  { value: 'TRANSIT', get label() { return translateNow('ui.commuteTransit'); } },
+  { value: 'BICYCLING', get label() { return translateNow('ui.commuteBicycle'); } },
+  { value: 'DRIVING', get label() { return translateNow('ui.commuteCar'); } },
 ];
 
 // "480" -> "08:00", para popular um <input type="time">. Sem valor
@@ -75,7 +76,7 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
     setError('');
     setSuccessMessage('');
     if (!homeAddress.trim() || !campusAddress.trim()) {
-      setError('Fill in both addresses first.');
+      setError(t('ui.fillInBothAddressesFirst'));
       return;
     }
 
@@ -84,11 +85,11 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
       const result = await estimateCommute(homeAddress.trim(), campusAddress.trim(), commuteMode);
       setCommuteMinutes(String(result.commuteMinutes));
       onUserUpdate({ ...user, ...result });
-      setSuccessMessage(`Estimated at ${result.commuteMinutes} min - saved.`);
+      setSuccessMessage(t('ui.commuteEstimatedSaved', { count: result.commuteMinutes }));
     } catch (err) {
       console.error('Failed to estimate commute:', err);
       setError(
-        "Couldn't calculate a route between those addresses (or automatic estimation isn't configured on this server). You can still set the commute time manually below.",
+        t('ui.couldntCalculateARouteBetween'),
       );
     } finally {
       setIsEstimating(false);
@@ -102,14 +103,14 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
 
     const parsedCommute = commuteMinutes.trim() ? Number(commuteMinutes) : undefined;
     if (parsedCommute !== undefined && (Number.isNaN(parsedCommute) || parsedCommute < 0)) {
-      setError('Commute time must be a positive number of minutes.');
+      setError(t('ui.commuteTimeMustBeA'));
       return;
     }
 
     const startMinutes = timeValueToMinutes(quietHoursStart);
     const endMinutes = timeValueToMinutes(quietHoursEnd);
     if ((startMinutes == null) !== (endMinutes == null)) {
-      setError('Set both quiet hours fields, or leave both empty.');
+      setError(t('ui.setBothQuietHoursFields'));
       return;
     }
 
@@ -128,7 +129,7 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
       setSuccessMessage('Saved.');
     } catch (err) {
       console.error('Failed to save schedule settings:', err);
-      setError('Could not save your changes. Please try again.');
+      setError(t('ui.couldNotSaveYourChanges'));
     } finally {
       setIsSaving(false);
     }
@@ -136,7 +137,7 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 max-w-3xl mt-8">
-      <h2 className="text-lg font-semibold text-white mb-1">Commute &amp; quiet hours</h2>
+      <h2 className="text-lg font-semibold text-white mb-1">{t('ui.commuteQuietHours')}</h2>
       <p className="text-sm text-neutral-400 mb-4">
         {t('ui.usedByTheStudyPlan')}
       </p>
@@ -184,7 +185,7 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
             disabled={isEstimating}
             className="w-auto px-3 py-2 text-sm"
           >
-            {isEstimating ? 'Calculating...' : 'Calculate automatically'}
+            {isEstimating ? t('commitment.form.calculating') : t('ui.calculateAutomatically')}
           </Button>
           <p className="text-xs text-neutral-500">
             {t('ui.fillsInTheCommuteTime')}
@@ -228,7 +229,7 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
 
         <div className="flex justify-end">
           <ActionButton type="submit" disabled={isSaving}>
-            {isSaving ? 'Saving...' : 'Save settings'}
+            {isSaving ? t('common.saving') : t('ui.saveSettings')}
           </ActionButton>
         </div>
       </form>

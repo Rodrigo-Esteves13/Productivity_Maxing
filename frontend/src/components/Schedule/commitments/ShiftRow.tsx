@@ -61,7 +61,7 @@ export default function ShiftRow({
         <ShiftForm
           shift={shift}
           disabledDays={daysOff}
-          submitLabel="Save"
+          submitLabel={t('ui.save')}
           isSaving={isSaving}
           onSubmit={handleSubmit}
           onCancel={() => setIsEditing(false)}
@@ -85,7 +85,7 @@ export default function ShiftRow({
         )}
         {availableTargets.length > 0 && shift.dayOfWeek !== null && (
           <label className="text-xs text-neutral-500 flex items-center gap-1.5 mt-1">
-            Move to
+            {t('ui.moveTo')}
             <select
               value=""
               onChange={(e) => e.target.value && void onEdit(shift.id, { commitmentId: e.target.value })}

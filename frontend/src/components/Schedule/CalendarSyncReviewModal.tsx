@@ -31,7 +31,7 @@ function Summary({ preview }: { preview: SchedulePreview }) {
   return (
     <>
       <p className="text-sm text-neutral-300 mb-3">
-        Your schedule changed. Update Google Calendar for the next {preview.days} days?
+        {t('ui.scheduleChangedUpdateCalendar', { days: preview.days })}
         <span className="block text-xs text-neutral-500 mt-1">
           {t('ui.onlyEventsThisAppCreated')}
         </span>
@@ -92,7 +92,7 @@ export default function CalendarSyncReviewModal() {
       {phase === 'done' && result ? (
         <>
           <p role="status" className="text-sm text-sky-300">
-            Added {result.created}, updated {result.updated}, removed {result.deleted}.
+            {t('ui.syncResultCounts', { created: result.created, updated: result.updated, deleted: result.deleted })}
             {result.failed > 0 && (
               <span className="text-amber-400"> {t('ui.failedMakeAnotherChangeOr', { failed: result.failed })}</span>
             )}
@@ -120,11 +120,11 @@ export default function CalendarSyncReviewModal() {
               disabled={isBusy}
               className="px-4 py-2 text-sm rounded-lg border border-neutral-700 text-neutral-300 hover:text-white disabled:opacity-50"
             >
-              {hasChanges ? 'Deny' : 'Close'}
+              {hasChanges ? t('ui.deny') : t('ui.close')}
             </button>
             {hasChanges && (
               <ActionButton onClick={() => void confirm()} disabled={!canConfirm || isBusy}>
-                {isBusy ? 'Syncing...' : 'Confirm'}
+                {isBusy ? t('ui.syncing') : t('ui.confirm')}
               </ActionButton>
             )}
           </div>

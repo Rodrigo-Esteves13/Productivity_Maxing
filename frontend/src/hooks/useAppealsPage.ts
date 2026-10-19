@@ -3,13 +3,15 @@ import { getAppeals, resolveAppeal } from '../api/userService';
 import type { Feedback } from '../components/UI/FeedbackBanner';
 import type { AppealAdmin, AppealResolution, PaginatedAppeals } from '../types/models';
 import { getHttpStatus, HTTP_CONFLICT } from '../lib/httpError';
+import { translateNow } from '../i18n/translate';
 
 const PAGE_SIZE = 10;
 const FEEDBACK_MS = 4000;
 
-const RESOLVED_MESSAGE: Record<AppealResolution, string> = {
-  APPROVED: 'Appeal approved.',
-  DENIED: 'Appeal denied.',
+// Chaves (nao textos): traduz-se no momento de mostrar, na lingua atual.
+const RESOLVED_MESSAGE_KEY: Record<AppealResolution, string> = {
+  APPROVED: 'hook.appealApproved',
+  DENIED: 'hook.appealDenied',
 };
 
 function insertAt<T>(list: T[], item: T, index: number): T[] {
@@ -64,7 +66,7 @@ export function useAppealsPage() {
         if (seq === requestSeqRef.current) applyPage(data);
       } catch {
         // Um refetch silencioso que falha deixa o que ja esta no ecra.
-        if (!silent && seq === requestSeqRef.current) setError('Error loading appeals.');
+        if (!silent && seq === requestSeqRef.current) setError(translateNow('hook.errorLoadingAppeals'));
       } finally {
         if (!silent) setIsLoading(false);
       }
@@ -112,7 +114,7 @@ export function useAppealsPage() {
 
       try {
         await resolveAppeal(id, resolution, resolutionNote);
-        setFeedback({ type: 'success', message: RESOLVED_MESSAGE[resolution] });
+        setFeedback({ type: 'success', message: translateNow(RESOLVED_MESSAGE_KEY[resolution]) });
       } catch (caught) {
         if (getHttpStatus(caught) !== HTTP_CONFLICT) {
           // Falhou mesmo: a linha volta ao sitio onde estava, so ela.
@@ -121,11 +123,11 @@ export function useAppealsPage() {
             prev.some((appeal) => appeal.id === id) ? prev : insertAt(prev, removed, index),
           );
           setTotal((prev) => prev + 1);
-          setFeedback({ type: 'error', message: 'Could not resolve this appeal. Please try again.' });
+          setFeedback({ type: 'error', message: translateNow('hook.couldNotResolveThisAppealPlease') });
           return;
         }
         // 409: outra pessoa ja a resolveu. Continua escondida.
-        setFeedback({ type: 'error', message: 'This appeal was already resolved by someone else.' });
+        setFeedback({ type: 'error', message: translateNow('hook.thisAppealWasAlreadyResolvedBy') });
       } finally {
         inFlightIdsRef.current.delete(id);
       }

@@ -1,6 +1,8 @@
 import { useState, type SyntheticEvent  } from 'react';
 import { setPasswordRequest } from '../api/userService';
 import type { User } from '../types/models';
+import { translateNow } from '../i18n/translate';
+import { getHttpStatus, HTTP_UNAUTHORIZED } from '../lib/httpError';
 
 export interface UsePasswordFormOptions {
   user: User;
@@ -9,6 +11,7 @@ export interface UsePasswordFormOptions {
 
 export interface UsePasswordFormResult {
   showPasswordFields: boolean;
+  currentPassword: string;
   newPassword: string;
   confirmNewPassword: string;
   passwordError: string;
@@ -16,6 +19,7 @@ export interface UsePasswordFormResult {
   isSavingPassword: boolean;
   hasPassword: boolean;
   setShowPasswordFields: (value: boolean) => void;
+  setCurrentPassword: (value: string) => void;
   setNewPassword: (value: string) => void;
   setConfirmNewPassword: (value: string) => void;
   handleCancel: () => void;
@@ -34,6 +38,7 @@ export interface UsePasswordFormResult {
  */
 export function usePasswordForm({ user, onUserUpdate }: UsePasswordFormOptions): UsePasswordFormResult {
   const [showPasswordFields, setShowPasswordFields] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -44,6 +49,7 @@ export function usePasswordForm({ user, onUserUpdate }: UsePasswordFormOptions):
   const handleCancel = () => {
     setShowPasswordFields(false);
     setPasswordError('');
+    setCurrentPassword('');
     setNewPassword('');
     setConfirmNewPassword('');
   };
@@ -53,18 +59,23 @@ export function usePasswordForm({ user, onUserUpdate }: UsePasswordFormOptions):
     setPasswordError('');
 
     if (newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters.');
+      setPasswordError(translateNow('hook.passwordMustBeAtLeast8'));
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      setPasswordError('Passwords do not match.');
+      setPasswordError(translateNow('hook.passwordsDoNotMatch'));
+      return;
+    }
+    if (hasPassword && !currentPassword) {
+      setPasswordError(translateNow('ui.enterCurrentPassword'));
       return;
     }
 
     setIsSavingPassword(true);
     try {
-      await setPasswordRequest(newPassword);
+      await setPasswordRequest(newPassword, hasPassword ? currentPassword : undefined);
       setPasswordSuccess(true);
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
       setShowPasswordFields(false);
@@ -73,7 +84,7 @@ export function usePasswordForm({ user, onUserUpdate }: UsePasswordFormOptions):
       // contrário de onSaved que a Profile.tsx usa para fechar o modal
       // depois de guardar Nome/Foto.
       onUserUpdate?.({ ...user, hasPassword: true });
-    } catch {
+    } catch (error) {
       // CORREÇÃO DE SEGURANÇA: não passar o objeto de erro ao console.error.
       // Um AxiosError inclui `error.config.data`, que é o corpo do pedido
       // que falhou - ou seja, a própria password em texto plano que o
@@ -81,7 +92,14 @@ export function usePasswordForm({ user, onUserUpdate }: UsePasswordFormOptions):
       // browser e, pior, seria capturado automaticamente por qualquer
       // ferramenta de monitorização de erros do frontend (Sentry e
       // semelhantes costumam serializar objetos passados a console.error).
-      setPasswordError('Could not update your password. Please try again.');
+      // So o estado HTTP e lido (nunca o objeto inteiro, ver acima).
+      setPasswordError(
+        translateNow(
+          getHttpStatus(error) === HTTP_UNAUTHORIZED
+            ? 'ui.currentPasswordIncorrect'
+            : 'hook.couldNotUpdateYourPasswordPlease',
+        ),
+      );
     } finally {
       setIsSavingPassword(false);
     }
@@ -89,6 +107,7 @@ export function usePasswordForm({ user, onUserUpdate }: UsePasswordFormOptions):
 
   const reset = (nextHasPassword: boolean) => {
     setShowPasswordFields(false);
+    setCurrentPassword('');
     setNewPassword('');
     setConfirmNewPassword('');
     setPasswordError('');
@@ -98,6 +117,7 @@ export function usePasswordForm({ user, onUserUpdate }: UsePasswordFormOptions):
 
   return {
     showPasswordFields,
+    currentPassword,
     newPassword,
     confirmNewPassword,
     passwordError,
@@ -105,6 +125,7 @@ export function usePasswordForm({ user, onUserUpdate }: UsePasswordFormOptions):
     isSavingPassword,
     hasPassword,
     setShowPasswordFields,
+    setCurrentPassword,
     setNewPassword,
     setConfirmNewPassword,
     handleCancel,

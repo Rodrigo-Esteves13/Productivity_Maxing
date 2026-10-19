@@ -1,6 +1,7 @@
 import { TrashIcon, XIcon } from '../../UI/Icons';
 import IconButton from '../../UI/IconButton';
 import ToolbarButton from '../../UI/ToolbarButton';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface SelectionEditorProps {
   // "shape" ou "link": entra nos aria-labels ("Delete shape", "Selected link label").
@@ -26,6 +27,7 @@ export default function SelectionEditor({
   onDelete,
   onDeselect,
 }: SelectionEditorProps) {
+  const { t } = useI18n();
   return (
     <div className="ml-auto flex items-center gap-2">
       <input
@@ -33,14 +35,14 @@ export default function SelectionEditor({
         onChange={(e) => onLabelChange(e.target.value)}
         placeholder={placeholder}
         maxLength={LABEL_MAX_LENGTH}
-        aria-label={`Selected ${noun} label`}
+        aria-label={t('ui.selectedNounLabel', { noun })}
         className={`${inputWidthClass} rounded-md border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 focus:border-violet-500 focus:outline-none`}
       />
-      <ToolbarButton tone="danger" aria-label={`Delete ${noun}`} onClick={onDelete}>
+      <ToolbarButton tone="danger" aria-label={t('ui.deleteNamed', { name: noun })} onClick={onDelete}>
         <TrashIcon className="h-3.5 w-3.5" />
-        Delete
+        {t('common.delete')}
       </ToolbarButton>
-      <IconButton label={`Deselect ${noun}`} className="hover:bg-neutral-800 hover:text-neutral-200" onClick={onDeselect}>
+      <IconButton label={t('ui.deselectNoun', { noun })} className="hover:bg-neutral-800 hover:text-neutral-200" onClick={onDeselect}>
         <XIcon className="h-3.5 w-3.5" />
       </IconButton>
     </div>

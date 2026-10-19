@@ -13,6 +13,7 @@ import CanvasLinksLayer from './canvas/CanvasLinksLayer';
 import TextEditOverlay from './canvas/TextEditOverlay';
 import { CANVAS_PAPER_COLOR, DEFAULT_VIEW_HEIGHT, MAX_VIEW_HEIGHT, VIEW_WIDTH } from './canvas/canvasConstants';
 import type { DrawTool } from './canvas/canvasConstants';
+import { useI18n } from '../../i18n/useI18n';
 
 interface NotebookCanvasProps {
   canvas: UseDrawingCanvasResult;
@@ -48,6 +49,7 @@ export default function NotebookCanvas({
   canvasHeight,
   onGrowCanvas,
 }: NotebookCanvasProps) {
+  const { t } = useI18n();
   const viewHeight = canvasHeight ?? DEFAULT_VIEW_HEIGHT;
   const [tool, setTool] = useState<DrawTool>('pen');
 
@@ -141,7 +143,7 @@ export default function NotebookCanvas({
           disabled={viewHeight >= MAX_VIEW_HEIGHT}
           className="mt-2 w-full rounded-md border border-dashed border-neutral-700 py-1.5 text-xs font-medium text-neutral-400 hover:border-violet-500 hover:text-violet-400 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-neutral-700 disabled:hover:text-neutral-400"
         >
-          {viewHeight >= MAX_VIEW_HEIGHT ? 'Maximum whiteboard size reached' : '+ Add more space'}
+          {viewHeight >= MAX_VIEW_HEIGHT ? t('ui.maxWhiteboardSize') : t('ui.addMoreSpace')}
         </button>
       )}
     </div>

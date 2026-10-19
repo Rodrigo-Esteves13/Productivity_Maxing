@@ -1,57 +1,23 @@
 import type { AgentConfig, AgentTriggerMode, Difficulty, ProgressStatus } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import { useEnumLabel } from '../../hooks/useEnumLabel';
+import ToggleRow from '../UI/ToggleRow';
 
 interface TriggerRulesFormProps {
   config: AgentConfig;
   onChange: (patch: Partial<AgentConfig>) => void;
 }
 
-const DIFFICULTY_OPTIONS: { value: Difficulty; label: string }[] = [
-  { value: 'EASY', label: 'Easy' },
-  { value: 'MEDIUM', label: 'Medium' },
-  { value: 'HARD', label: 'Hard' },
-  { value: 'VERY_HARD', label: 'Very hard' },
-];
+// Rotulos vem de enum.<VALOR> (useEnumLabel), na lingua atual.
+const DIFFICULTY_OPTIONS: Difficulty[] = ['EASY', 'MEDIUM', 'HARD', 'VERY_HARD'];
 
 // COMPLETED fica de fora de propósito - não faz sentido como threshold de
 // atraso (o backend rejeita-o com 400 se tentares mandar isso).
-const PROGRESS_OPTIONS: { value: ProgressStatus; label: string }[] = [
-  { value: 'ON_TRACK', label: 'On track' },
-  { value: 'BEHIND', label: 'Behind' },
-  { value: 'VERY_BEHIND', label: 'Very behind' },
-];
-
-// Checkbox + rótulo + descrição, para as regras booleanas simples
-// (hasOverdueTasks, hasOverdueCheckins, anyTaskToday).
-function RuleToggle({
-  checked,
-  onToggle,
-  title,
-  description,
-}: {
-  checked: boolean;
-  onToggle: (value: boolean) => void;
-  title: string;
-  description: string;
-}) {
-  return (
-    <label className="flex items-start gap-3 p-3 rounded-lg border border-neutral-800 hover:border-neutral-700 cursor-pointer transition-colors">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onToggle(e.target.checked)}
-        className="mt-0.5 w-4 h-4 rounded border-neutral-700 bg-neutral-900 text-violet-600 focus:ring-violet-600 focus:ring-offset-neutral-950"
-      />
-      <span>
-        <span className="block text-sm font-medium text-white">{title}</span>
-        <span className="block text-sm text-neutral-500">{description}</span>
-      </span>
-    </label>
-  );
-}
+const PROGRESS_OPTIONS: ProgressStatus[] = ['ON_TRACK', 'BEHIND', 'VERY_BEHIND'];
 
 export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormProps) {
   const { t } = useI18n();
+  const enumLabel = useEnumLabel();
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -62,22 +28,25 @@ export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormP
           {t('ui.pickAsManyAsYou')}
         </p>
 
-        <RuleToggle
+        <ToggleRow
+          variant="card"
           checked={config.hasOverdueTasks}
-          onToggle={(v) => onChange({ hasOverdueTasks: v })}
-          title={t('ui.aTaskIsPastIts')}
+          onChange={(v) => onChange({ hasOverdueTasks: v })}
+          label={t('ui.aTaskIsPastIts')}
           description={t('ui.blocksUntilTheTaskIs')}
         />
-        <RuleToggle
+        <ToggleRow
+          variant="card"
           checked={config.hasOverdueCheckins}
-          onToggle={(v) => onChange({ hasOverdueCheckins: v })}
-          title={t('ui.aTaskHasnTBeen')}
+          onChange={(v) => onChange({ hasOverdueCheckins: v })}
+          label={t('ui.aTaskHasnTBeen')}
           description={t('ui.onlyCountsOverdueTasksYou')}
         />
-        <RuleToggle
+        <ToggleRow
+          variant="card"
           checked={config.anyTaskToday}
-          onToggle={(v) => onChange({ anyTaskToday: v })}
-          title={t('ui.anythingIsDueToday')}
+          onChange={(v) => onChange({ anyTaskToday: v })}
+          label={t('ui.anythingIsDueToday')}
           description={t('ui.theMostAggressiveOptionBlocks')}
         />
 
@@ -94,9 +63,9 @@ export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormP
             className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-600"
           >
             <option value="">{t('ui.off')}</option>
-            {PROGRESS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
+            {PROGRESS_OPTIONS.map((value) => (
+              <option key={value} value={value}>
+                {enumLabel(value)}
               </option>
             ))}
           </select>
@@ -117,9 +86,9 @@ export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormP
             className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-600"
           >
             <option value="">{t('ui.off')}</option>
-            {DIFFICULTY_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
+            {DIFFICULTY_OPTIONS.map((value) => (
+              <option key={value} value={value}>
+                {enumLabel(value)}
               </option>
             ))}
           </select>

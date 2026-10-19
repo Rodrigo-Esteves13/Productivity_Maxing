@@ -1,11 +1,13 @@
 import { useId, useState, type InputHTMLAttributes } from 'react';
 import { EyeIcon, EyeOffIcon } from './Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
 }
 
 export default function Input({ label, id, className = '', type, ...rest }: InputProps) {
+  const { t } = useI18n();
   // Most call sites only pass `label`, not `id` (Login.tsx, TaskEditForm,
   // etc.) - without an id, htmlFor below has nothing to point at, so the
   // <label> and <input> are visually together but NOT programmatically
@@ -44,7 +46,7 @@ export default function Input({ label, id, className = '', type, ...rest }: Inpu
         // sighted mouse/touch user doesn't need it in the tab sequence -
         // it's still reachable, just not in the way of keyboard form-filling.
         tabIndex={-1}
-        aria-label={isRevealed ? 'Hide password' : 'Show password'}
+        aria-label={isRevealed ? t('ui.hidePassword') : t('ui.showPassword')}
         aria-pressed={isRevealed}
         className="absolute inset-y-0 right-0 flex items-center px-3 text-neutral-500 hover:text-neutral-300 transition-colors"
       >

@@ -6,7 +6,7 @@ import LegalTable from '../components/Legal/LegalTable';
 import useSeo from '../hooks/useSeo';
 import { REPO_URL, CONTACT_EMAIL, APP_DOMAIN } from '../lib/constants';
 
-const LAST_UPDATED = '08/10/2026';
+const LAST_UPDATED = '19/10/2026';
 
 export default function PrivacyPolicy() {
   useSeo({
@@ -78,8 +78,11 @@ export default function PrivacyPolicy() {
           <li>
             Push notifications (optional, off by default): if you turn them on, I store your browser's
             push subscription (an address provided by your browser's push service, and its encryption
-            keys) and the app language of that device, only to notify you about access requests,
-            suggested changes and their answers on shared lessons. You can turn them off at any time
+            keys) and the app language of that device, only to notify you about friend requests, access
+            requests, invitations and suggested changes on shared notes and their answers, and, if you turn
+            on deadline push reminders, upcoming deadlines (the task title is in the notification). The
+            content is encrypted for your browser, so the push service cannot read it. You can turn them
+            off at any time
           </li>
           <li>
             Feedback you choose to send: your message, category, optional rating, the app language and

@@ -18,6 +18,7 @@ import type { Area, AreaProposal, TaskTypeOption } from '../types/models';
 import type { AreaFormValues } from '../components/Areas/AreaForm';
 import { useFeedback } from '../context/useFeedback';
 import { useAuth } from '../context/useAuth';
+import { translateNow } from '../i18n/translate';
 
 export type CreateMode = 'personal' | 'official';
 
@@ -57,7 +58,7 @@ export function useAreasPage() {
       setTaskTypes(meta.taskTypes);
       setProposals(proposalsData);
     } catch {
-      setError('Error loading areas.');
+      setError(translateNow('hook.errorLoadingAreas'));
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +84,7 @@ export function useAreasPage() {
   };
   const startEditing = (area: Area) => {
     if (!canEdit(area)) {
-      notify('Withdraw the proposal first to edit this area.', 'info');
+      notify(translateNow('hook.withdrawTheProposalFirstToEdit'), 'info');
       return;
     }
     setSelectedArea(area);
@@ -103,7 +104,7 @@ export function useAreasPage() {
       setAreas((prev) => [...prev, created]);
       setCreateMode(null);
     } catch (err) {
-      notify(errorMessage(err, 'Error creating area.'), 'error');
+      notify(errorMessage(err, translateNow('hook.errorCreatingArea')), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -116,7 +117,7 @@ export function useAreasPage() {
       replaceArea(await updateArea(selectedArea.id, values));
       setIsEditing(false);
     } catch (err) {
-      notify(errorMessage(err, 'Error saving changes.'), 'error');
+      notify(errorMessage(err, translateNow('hook.errorSavingChanges')), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -124,9 +125,9 @@ export function useAreasPage() {
 
   const handleDeleteArea = async (id: string) => {
     const confirmed = await confirm({
-      title: 'Delete area',
-      message: 'Are you sure? An area with tasks cannot be deleted - move or delete its tasks first.',
-      confirmLabel: 'Delete',
+      title: translateNow('hook.deleteArea'),
+      message: translateNow('hook.areYouSureAnAreaWith'),
+      confirmLabel: translateNow('hook.delete'),
       tone: 'danger',
     });
     if (!confirmed) return;
@@ -135,7 +136,7 @@ export function useAreasPage() {
       setAreas((prev) => prev.filter((a) => a.id !== id));
       if (selectedArea?.id === id) closeDetailModal();
     } catch (err) {
-      notify(errorMessage(err, 'Error deleting area.'), 'error');
+      notify(errorMessage(err, translateNow('hook.errorDeletingArea')), 'error');
     }
   };
 
@@ -147,7 +148,7 @@ export function useAreasPage() {
       await setAreaHidden(area.id, hidden);
     } catch (err) {
       setAreas((prev) => prev.map((a) => (a.id === area.id ? { ...a, isHidden: !hidden } : a)));
-      notify(errorMessage(err, 'Could not change this area.'), 'error');
+      notify(errorMessage(err, translateNow('hook.couldNotChangeThisArea')), 'error');
     }
   };
 
@@ -158,25 +159,22 @@ export function useAreasPage() {
       await setAllOfficialAreasHidden(hidden);
     } catch (err) {
       setAreas(previous);
-      notify(errorMessage(err, 'Could not change the official areas.'), 'error');
+      notify(errorMessage(err, translateNow('hook.couldNotChangeTheOfficialAreas')), 'error');
     }
   };
 
   const handlePropose = async (area: Area) => {
     const confirmed = await confirm({
-      title: 'Propose as official',
-      message:
-        'An administrator will review it. If approved, "' +
-        area.name +
-        '" becomes available to everyone (name, color, credits and type only - your tasks and notes stay private). You cannot edit it while it is under review.',
-      confirmLabel: 'Propose',
+      title: translateNow('hook.proposeAsOfficial'),
+      message: translateNow('hook.proposeAreaMessage', { name: area.name }),
+      confirmLabel: translateNow('hook.propose'),
     });
     if (!confirmed) return;
     try {
       replaceArea(await proposeArea(area.id));
-      notify('Proposal sent.', 'success');
+      notify(translateNow('hook.proposalSent'), 'success');
     } catch (err) {
-      notify(errorMessage(err, 'Could not send the proposal.'), 'error');
+      notify(errorMessage(err, translateNow('hook.couldNotSendTheProposal')), 'error');
     }
   };
 
@@ -184,7 +182,7 @@ export function useAreasPage() {
     try {
       replaceArea(await withdrawAreaProposal(area.id));
     } catch (err) {
-      notify(errorMessage(err, 'Could not withdraw the proposal.'), 'error');
+      notify(errorMessage(err, translateNow('hook.couldNotWithdrawTheProposal')), 'error');
     }
   };
 
@@ -192,9 +190,9 @@ export function useAreasPage() {
     try {
       await approveAreaProposal(proposal.id);
       setProposals((prev) => prev.filter((p) => p.id !== proposal.id));
-      notify(`"${proposal.name}" is now official.`, 'success');
+      notify(translateNow('hook.areaNowOfficial', { name: proposal.name }), 'success');
     } catch (err) {
-      notify(errorMessage(err, 'Could not approve.'), 'error');
+      notify(errorMessage(err, translateNow('hook.couldNotApprove')), 'error');
     }
   };
 
@@ -203,7 +201,7 @@ export function useAreasPage() {
       await rejectAreaProposal(proposal.id, note);
       setProposals((prev) => prev.filter((p) => p.id !== proposal.id));
     } catch (err) {
-      notify(errorMessage(err, 'Could not reject.'), 'error');
+      notify(errorMessage(err, translateNow('hook.couldNotReject')), 'error');
     }
   };
 

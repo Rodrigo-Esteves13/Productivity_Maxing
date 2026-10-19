@@ -6,15 +6,16 @@ import type { CourseForecast } from '../../types/models';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
 import { useI18n } from '../../i18n/useI18n';
+import { translateNow } from '../../i18n/translate';
 
 function typicalText(course: CourseForecast): string {
   if (course.avgMinutesPerGradedTask !== null) {
-    return `${formatDuration(course.avgMinutesPerGradedTask)} per graded task`;
+    return translateNow('ui.perGradedTask', { duration: formatDuration(course.avgMinutesPerGradedTask) });
   }
   if (course.avgMinutesPerCompletedTask !== null) {
-    return `${formatDuration(course.avgMinutesPerCompletedTask)} per task`;
+    return translateNow('ui.perTask', { duration: formatDuration(course.avgMinutesPerCompletedTask) });
   }
-  return 'No finished tasks yet';
+  return translateNow('ui.noFinishedTasksYet');
 }
 
 // Dados reais (do teu histórico de sessões) sobre quanto tempo cada
@@ -30,7 +31,7 @@ export default function CourseForecastCard() {
     <DashboardCard>
       <CardHeading className="mb-3">
         <BookOpenIcon className="shrink-0" />
-        Study time per course
+        {t('ui.studyTimePerCourse')}
       </CardHeading>
       <ul className="space-y-3">
         {courses.map((course) => (
@@ -44,14 +45,16 @@ export default function CourseForecastCard() {
                 {t('ui.studied', { studiedMinutes: formatDuration(course.studiedMinutes) })}</p>
             </div>
             <p className="text-xs text-neutral-500 mt-0.5 pl-4">
-              Typical: {typicalText(course)}
-              {course.completedTasks > 0 && ` (from ${course.completedTasks} finished)`}
+              {t('ui.forecastTypical', { value: typicalText(course) })}
+              {course.completedTasks > 0 && ` ${t('ui.forecastFromFinished', { count: course.completedTasks })}`}
             </p>
             {course.pendingTasks > 0 && (
               <p className="text-xs text-violet-300 mt-0.5 pl-4">
-                Still needed: {formatDuration(course.remainingMinutes)} across {course.pendingTasks}{' '}
-                {course.pendingTasks === 1 ? 'task' : 'tasks'}
-                {course.nextDeadline && `, next due ${formatDayLabel(course.nextDeadline)}`}
+                {t(course.pendingTasks === 1 ? 'ui.forecastStillNeededOne' : 'ui.forecastStillNeededMany', {
+                  duration: formatDuration(course.remainingMinutes),
+                  count: course.pendingTasks,
+                })}
+                {course.nextDeadline && t('ui.forecastNextDue', { day: formatDayLabel(course.nextDeadline) })}
               </p>
             )}
           </li>

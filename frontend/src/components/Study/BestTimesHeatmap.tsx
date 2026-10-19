@@ -65,7 +65,7 @@ export default function BestTimesHeatmap() {
                     return (
                       <td key={hourBucket} className="p-0">
                         <div
-                          title={minutes > 0 ? `${minutes} min (${cell?.sessionCount} sessions)` : 'No data'}
+                          title={minutes > 0 ? t('ui.minutesSessions', { minutes, sessions: cell?.sessionCount ?? 0 }) : t('ui.noData')}
                           className={`w-full aspect-square rounded-md border ${intensityClass(minutes, maxMinutes)}`}
                         />
                       </td>

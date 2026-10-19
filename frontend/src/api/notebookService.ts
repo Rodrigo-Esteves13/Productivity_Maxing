@@ -23,6 +23,7 @@ import type {
   Stroke,
   UsefulLink,
 } from '../types/models';
+import { API_BASE_URL } from './apiBaseUrl';
 
 export interface CreateNotebookEntryPayload {
   areaId: string;
@@ -263,7 +264,7 @@ export const editSharedEntry = async (
 // nenhuma, os cookies simplesmente não têm nada para enviar - continua
 // a funcionar normalmente para uma partilha PUBLIC.
 export const getSharedNotebookEntry = async (token: string): Promise<SharedEntryResult> => {
-  const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  const baseURL = API_BASE_URL;
   const response = await axios.get<SharedEntryResult>(`${baseURL}/notebook/shared/${token}`, {
     withCredentials: true,
   });

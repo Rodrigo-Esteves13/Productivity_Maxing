@@ -50,7 +50,7 @@ export default function SavedFilterViews({ filters, hasActiveFilters, onApply }:
           <button
             type="button"
             onClick={() => deleteView(view.id)}
-            aria-label={`Delete saved view ${view.name}`}
+            aria-label={t('ui.deleteSavedView', { name: view.name })}
             className="text-neutral-500 hover:text-red-400"
           >
             <XIcon width={12} height={12} />

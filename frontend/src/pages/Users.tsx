@@ -14,7 +14,7 @@ import { useI18n } from '../i18n/useI18n';
 
 export default function Users() {
   const { t } = useI18n();
-  useDocumentTitle('User Management');
+  useDocumentTitle(t('ui.userManagementTitle'));
   const { user: currentUser } = useAuth();
   const {
     users,
@@ -82,7 +82,7 @@ export default function Users() {
       <Modal
         isOpen={statusActionTarget !== null}
         onClose={closeStatusModal}
-        title={statusActionMode === 'ban' ? 'Ban User' : 'Suspend User'}
+        title={statusActionMode === 'ban' ? t('ui.banUser2') : t('ui.suspendUser2')}
       >
         {statusActionTarget && statusActionMode && (
           <UserStatusModal

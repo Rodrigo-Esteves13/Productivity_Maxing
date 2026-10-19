@@ -94,12 +94,12 @@ func TestLoadEmbedded_BaseURLOmitted(t *testing.T) {
 }
 
 func TestApplyDefaultsAndValidate_BaseURLFromEnv(t *testing.T) {
-	t.Setenv("PMAXING_BASE_URL", "http://staging.example.test")
+	t.Setenv("PMAXING_BASE_URL", "https://staging.example.test")
 	cfg := &Config{API: APIConfig{APIKey: "pmx_test"}}
 	if err := cfg.applyDefaultsAndValidate(); err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
-	if cfg.API.BaseURL != "http://staging.example.test" {
+	if cfg.API.BaseURL != "https://staging.example.test" {
 		t.Errorf("BaseURL = %q, esperava vir de PMAXING_BASE_URL", cfg.API.BaseURL)
 	}
 }
@@ -180,5 +180,27 @@ func TestLoadEmbedded_LastOccurrenceWins(t *testing.T) {
 	}
 	if cfg == nil || cfg.API.APIKey != "pmx_new_key" {
 		t.Fatalf("esperava a key mais recente 'pmx_new_key', obtive %+v", cfg)
+	}
+}
+
+func TestValidateBaseURL(t *testing.T) {
+	cases := map[string]bool{
+		"https://api.pmaxing.pt":        true,
+		"http://localhost:3000":         true,
+		"http://127.0.0.1:3000":         true,
+		"http://[::1]:3000":             true,
+		"http://api.pmaxing.pt":         false,
+		"http://localhost.evil.example": false,
+		"ftp://api.pmaxing.pt":          false,
+		"not a url":                     false,
+	}
+	for raw, ok := range cases {
+		err := validateBaseURL(raw)
+		if ok && err != nil {
+			t.Errorf("%q: esperava aceite, obtive %v", raw, err)
+		}
+		if !ok && err == nil {
+			t.Errorf("%q: esperava recusado", raw)
+		}
 	}
 }

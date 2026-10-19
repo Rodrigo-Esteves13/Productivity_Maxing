@@ -31,6 +31,7 @@ const noop = () => {};
 type ShareGateStatus = 'login_required' | 'not_requested' | 'pending' | 'invited' | 'denied';
 
 export default function SharedNotebookEntry() {
+  const { t } = useI18n();
   const { token } = useParams<{ token: string }>();
   const [entry, setEntry] = useState<SharedNotebookEntryData | null>(null);
   const [role, setRole] = useState<SharedRole>('VIEWER');
@@ -71,7 +72,7 @@ export default function SharedNotebookEntry() {
         }
       })
       .catch(() => {
-        if (!silent) setError('This share link is invalid or was removed.');
+        if (!silent) setError(t('ui.shareLinkInvalid'));
       })
       .finally(() => {
         if (!silent) setIsLoading(false);
@@ -99,7 +100,7 @@ export default function SharedNotebookEntry() {
       .catch(() => setHasSession(false));
   }, []);
 
-  useDocumentTitle(entry ? `${entry.title} (shared)` : 'Shared lesson');
+  useDocumentTitle(entry ? t('ui.sharedEntryTitle', { title: entry.title }) : t('ui.sharedLesson'));
 
   const handleRequestAccess = async () => {
     if (!token) return;
@@ -109,7 +110,7 @@ export default function SharedNotebookEntry() {
       await requestShareAccess(token);
       load();
     } catch {
-      setError('Could not send the request. Please try again.');
+      setError(t('ui.couldNotSendTheRequest'));
     } finally {
       setIsRequesting(false);
     }
@@ -125,7 +126,7 @@ export default function SharedNotebookEntry() {
       if (accept) load();
       else navigate('/social');
     } catch {
-      setError('Could not answer the invitation. Please try again.');
+      setError(t('sharedWithMe.invite.error'));
     } finally {
       setIsRequesting(false);
     }
@@ -160,7 +161,7 @@ export default function SharedNotebookEntry() {
       <PageLayout>
         <div className="flex min-h-[50vh] flex-col items-center justify-center gap-2 px-4 text-center">
           <BookOpenIcon className="h-8 w-8 text-neutral-700" />
-          <p className="text-sm text-neutral-400">{error || 'This share link is invalid or was removed.'}</p>
+          <p className="text-sm text-neutral-400">{error || t('ui.shareLinkInvalid')}</p>
         </div>
       </PageLayout>
     );
@@ -206,24 +207,24 @@ function ShareAccessGate({
 
   const copy: Record<ShareGateStatus, { title: string; body: string }> = {
     login_required: {
-      title: 'Log in to view this lesson',
-      body: 'The owner only allows people they approve to see this. Log in, then request access.',
+      title: t('ui.logInToViewThis'),
+      body: t('ui.theOwnerOnlyAllowsPeople'),
     },
     not_requested: {
-      title: 'Access required',
-      body: "This lesson is only visible to people the owner approves. You're logged in - request access and they'll be notified.",
+      title: t('ui.accessRequired'),
+      body: t('ui.thisLessonIsOnlyVisible'),
     },
     pending: {
-      title: 'Request sent',
-      body: "Your request is waiting for the owner's approval. Check back later.",
+      title: t('ui.requestSent'),
+      body: t('ui.yourRequestIsWaitingFor'),
     },
     invited: {
       title: t('share.gate.invited.title'),
       body: t('share.gate.invited.body'),
     },
     denied: {
-      title: 'Request denied',
-      body: 'The owner did not approve your request. You can ask again if you think this was a mistake.',
+      title: t('ui.requestDenied'),
+      body: t('ui.theOwnerDidNotApprove'),
     },
   };
 
@@ -273,7 +274,7 @@ function ShareAccessGate({
           onClick={onRequestAccess}
           className="mt-1 rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
         >
-          {isRequesting ? 'Sending...' : status === 'denied' ? 'Request again' : 'Request access'}
+          {isRequesting ? t('auth.sending') : status === 'denied' ? t('ui.requestAgain') : t('ui.requestAccess')}
         </button>
       )}
     </div>
@@ -343,7 +344,7 @@ export function SharedNotebookEntryView({
   return (
     <div className="mx-auto max-w-3xl space-y-4">
         <div className="rounded-md border border-violet-900/50 bg-violet-950/30 px-3 py-1.5 text-center text-xs text-violet-300">
-          {bannerKey ? t(bannerKey) : 'Shared read-only view - Productivity Maxing'}
+          {bannerKey ? t(bannerKey) : t('ui.sharedReadOnlyViewProductivity')}
         </div>
 
         {isProposal && (hasPendingProposal || justProposed) && (

@@ -2,6 +2,7 @@
 import api from './client';
 import { getCsrfToken } from './csrfStore';
 import type { StudySession, HeatmapCell, Task } from '../types/models';
+import { API_BASE_URL } from './apiBaseUrl';
 
 export interface StartStudySessionInput {
   taskId?: string;
@@ -101,7 +102,7 @@ export const getActiveStudySession = async (): Promise<StudySession | null> => {
 // StudySessionsService.autoCloseIfStale.
 export function stopStudySessionOnUnload(id: string): void {
   const csrfToken = getCsrfToken();
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  const baseUrl = API_BASE_URL;
 
   void fetch(`${baseUrl}/study-sessions/${id}/stop`, {
     method: 'PATCH',

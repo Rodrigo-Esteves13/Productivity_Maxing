@@ -22,6 +22,7 @@ import {
   type FriendCodeRequestAdminRow,
 } from './friend-code-requests.service';
 import { DecideFriendCodeRequestDto } from './dto/social.dto';
+import { perMinute } from '../common/throttle.util';
 
 // Admin: decidir pedidos de troca de codigo de amigo. Sessao normal (nao API key):
 // aprovar muda dados de outra conta.
@@ -41,7 +42,7 @@ export class FriendCodeRequestsController {
 
   @Post(':id/decision')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Throttle(perMinute(30))
   @ApiOperation({ summary: 'Approve (new code) or reject a request.' })
   decide(
     @CurrentUser() admin: AuthenticatedUser,

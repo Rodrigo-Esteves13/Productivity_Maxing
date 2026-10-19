@@ -1,6 +1,7 @@
 // src/api/calendarFeedService.ts
 import api from './client';
 import type { CalendarFeedStatus } from '../types/models';
+import { API_BASE_URL } from './apiBaseUrl';
 
 export const getCalendarFeed = async (): Promise<CalendarFeedStatus> => {
   const response = await api.get<CalendarFeedStatus>('/calendar/feed');
@@ -18,8 +19,6 @@ export const disableCalendarFeed = async (): Promise<CalendarFeedStatus> => {
   return response.data;
 };
 
-const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
-
-export const feedUrl = (token: string): string => `${apiBase}/feed/${token}.ics`;
+export const feedUrl = (token: string): string => `${API_BASE_URL}/feed/${token}.ics`;
 // webcal:// abre direto a app de calendario (Apple/Outlook).
 export const feedWebcalUrl = (token: string): string => feedUrl(token).replace(/^https?:/, 'webcal:');

@@ -7,8 +7,9 @@ import { removeSyncedSchedule } from '../../api/calendarService';
 import type { RemoveAllResult } from '../../api/calendarService';
 import { requestCalendarSyncReview } from '../../lib/calendarSyncEvents';
 import { useI18n } from '../../i18n/useI18n';
+import { API_BASE_URL } from '../../api/apiBaseUrl';
 
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const apiUrl = API_BASE_URL;
 
 export default function ScheduleSyncCard() {
   const { t } = useI18n();
@@ -27,7 +28,7 @@ export default function ScheduleSyncCard() {
       setError('');
       setRemoved(await removeSyncedSchedule());
     } catch {
-      setError('Could not remove the synced events.');
+      setError(t('ui.couldNotRemoveTheSynced'));
     } finally {
       setIsRemoving(false);
     }
@@ -47,7 +48,7 @@ export default function ScheduleSyncCard() {
             className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-500 text-white"
           >
             <GoogleIcon />
-            Connect Google Calendar
+            {t('ui.connectGoogleCalendar')}
           </a>
         </>
       ) : (
@@ -58,8 +59,8 @@ export default function ScheduleSyncCard() {
 
           {removed && (
             <p role="status" className="text-sm text-emerald-300 mb-3">
-              Removed {removed.deleted} events.
-              {removed.remaining > 0 && ` ${removed.remaining} left, press remove again.`}
+              {t('ui.removedNEvents', { count: removed.deleted })}
+              {removed.remaining > 0 && ` ${t('ui.eventsLeftPressAgain', { count: removed.remaining })}`}
             </p>
           )}
           {error && <ErrorState message={error} />}
@@ -89,7 +90,7 @@ export default function ScheduleSyncCard() {
                   }}
                   className="px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white"
                 >
-                  {isRemoving ? 'Removing...' : 'Yes, remove'}
+                  {isRemoving ? t('ui.removing') : t('ui.yesRemove')}
                 </button>
                 <button type="button" onClick={() => setConfirmRemove(false)} className="text-neutral-400 hover:text-white">
                   {t('ui.cancel')}

@@ -25,6 +25,8 @@ export const prefs: Record<string, string> = {
   'prefs.savedToAccount': "In deinem Konto gespeichert.",
   'prefs.reminders': "Fristerinnerungen",
   'prefs.remindersHelp': "Eine E-Mail etwa 24 Stunden vor der Frist einer offenen Aufgabe. Ruhezeiten werden beachtet.",
+  'prefs.pushReminders': "Push-Benachrichtigungen zu Fristen",
+  'prefs.pushRemindersHelp': "Eine Benachrichtigung etwa 24 Stunden vor der Frist einer offenen Aufgabe, auf den Geräten, auf denen du unten Benachrichtigungen eingeschaltet hast. Ruhezeiten werden beachtet.",
   'prefs.spacedReviews': "Wiederholung in Abständen",
   'prefs.spacedReviewsHelp': "Nach dem Abschluss einer Uni-Aufgabe werden kurze Wiederholungsaufgaben nach 1, 3 und 7 Tagen angelegt.",
 };

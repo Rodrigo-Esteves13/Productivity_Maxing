@@ -30,7 +30,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -66,7 +65,6 @@ func main() {
 	if err != nil {
 		fatalVisible("error loading configuration: %v", err)
 	}
-	warnIfInsecureBaseURL(cfg.API.BaseURL)
 
 	// Tem de ser adquirido antes de qualquer hosts.New()/hosts.Apply() -
 	// ver internal/singleinstance para a race concreta que isto evita.
@@ -177,23 +175,6 @@ func setupLogging(debug bool) (closeLog func()) {
 	}
 	log.SetOutput(f)
 	return func() { f.Close() }
-}
-
-// warnIfInsecureBaseURL avisa (sem bloquear o arranque - localhost em
-// desenvolvimento é um caso legítimo) se api.baseUrl não for https://.
-// Sem TLS, a x-api-key vai em claro em cada pedido, e a resposta de
-// GET /agent/config (domínios e nomes de processo que o agente aplica
-// sem mais validação além da adicionada em internal/blocker) pode ser
-// alterada por qualquer atacante na rede - deixa de ser só "fricção
-// contra ti próprio" (ver README) e passa a ser um vetor de ataque real.
-func warnIfInsecureBaseURL(baseURL string) {
-	if strings.HasPrefix(baseURL, "https://") {
-		return
-	}
-	if strings.HasPrefix(baseURL, "http://localhost") || strings.HasPrefix(baseURL, "http://127.0.0.1") {
-		return
-	}
-	log.Printf("warning: api.baseUrl (%s) is not https:// - the API key and every /agent/config response travel unencrypted, and are not protected from tampering by a network attacker", baseURL)
 }
 
 // fatalVisible mostra um erro fatal de arranque de forma garantidamente

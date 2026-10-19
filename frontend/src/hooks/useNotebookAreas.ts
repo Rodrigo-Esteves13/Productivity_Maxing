@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getUserAreas } from '../api/userService';
 import type { Area } from '../types/models';
+import { translateNow } from '../i18n/translate';
 
 export interface UseNotebookAreasResult {
   areas: Area[];
@@ -27,7 +28,7 @@ export function useNotebookAreas(periodId?: string): UseNotebookAreasResult {
       })
       .catch(() => {
         if (cancelled) return;
-        setError('Could not load your areas.');
+        setError(translateNow('hook.couldNotLoadYourAreas'));
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);

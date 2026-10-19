@@ -23,6 +23,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { FeedbackService } from './feedback.service';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
+import { perMinute } from '../common/throttle.util';
 
 class ResolveFeedbackDto {
   @IsBoolean()
@@ -36,7 +37,7 @@ export class FeedbackController {
   constructor(private readonly feedback: FeedbackService) {}
 
   @UseGuards(JwtAuthGuard)
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle(perMinute(5))
   @Post()
   @HttpCode(201)
   create(

@@ -25,6 +25,8 @@ export const prefs: Record<string, string> = {
   'prefs.savedToAccount': "アカウントに保存しました。",
   'prefs.reminders': "期限のリマインダー",
   'prefs.remindersHelp': "未完了のタスクの期限の約24時間前にメールを1通送ります。おやすみ時間を尊重します。",
+  'prefs.pushReminders': "期限のプッシュ通知",
+  'prefs.pushRemindersHelp': "未完了のタスクの期限の約24時間前に、下で通知をオンにした端末へ通知を送ります。おやすみ時間を尊重します。",
   'prefs.spacedReviews': "間隔をあけた復習",
   'prefs.spacedReviewsHelp': "学業タスクを完了すると、1日後・3日後・7日後に短い復習タスクを追加します。",
 };

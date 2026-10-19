@@ -45,7 +45,7 @@ export default function EstimationAccuracyCard() {
     <DashboardCard>
       <CardHeading className="mb-3">
         <TargetIcon className="shrink-0" />
-        Estimate accuracy
+        {t('ui.estimateAccuracy')}
       </CardHeading>
 
       <div className="flex items-end gap-2 mb-3">
@@ -53,7 +53,7 @@ export default function EstimationAccuracyCard() {
           {data.avgAbsPercentError}%
         </span>
         <span className="text-xs text-neutral-500 pb-1">
-          average error, across {data.sampleSize} task{data.sampleSize === 1 ? '' : 's'}
+          {t(data.sampleSize === 1 ? 'ui.avgErrorAcrossOne' : 'ui.avgErrorAcrossMany', { count: data.sampleSize })}
         </span>
       </div>
 

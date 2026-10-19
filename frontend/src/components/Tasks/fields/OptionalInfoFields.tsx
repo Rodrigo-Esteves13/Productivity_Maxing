@@ -101,8 +101,8 @@ export default function OptionalInfoFields({
             <span className="text-sm text-neutral-400">{t('ui.addToGoogleCalendar')}</span>
             <p className="text-xs text-neutral-600">
               {calendarConnected
-                ? 'Creates (or updates) an event for this task on save.'
-                : 'Connect Google Calendar in your profile to enable this.'}
+                ? t('ui.createsOrUpdatesAnEvent')
+                : t('ui.connectGoogleCalendarInYour2')}
             </p>
           </label>
 
@@ -132,7 +132,7 @@ export default function OptionalInfoFields({
                     className="w-20 bg-neutral-900 border border-neutral-700 rounded-md px-2 py-1 text-sm text-neutral-200 focus:outline-none focus:ring-1 focus:ring-violet-600"
                   />
                   <span className="text-xs text-neutral-600">
-                    min{' '}
+                    {t('ui.minShort')}{' '}
                     {formatDurationHint(Number(calendarDurationMinutes)) &&
                       `(${formatDurationHint(Number(calendarDurationMinutes))})`}
                   </span>

@@ -27,6 +27,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { perMinute } from '../common/throttle.util';
 
 @ApiTags('Appeals')
 @Controller('appeals')
@@ -40,7 +41,7 @@ export class AppealsController {
   // jwt-blocked-aware.strategy.ts sobre o que isto nunca deve proteger.
   @Post()
   @UseGuards(JwtBlockedAwareGuard)
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Throttle(perMinute(3))
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Submits an appeal against the current suspension/ban',

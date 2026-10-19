@@ -45,7 +45,7 @@ export default function FocusModeOverlay({ onClose }: FocusModeOverlayProps) {
 
   if (!activeSession) return null;
 
-  const label = activeSession.task?.title ?? activeSession.area?.name ?? 'Focus session';
+  const label = activeSession.task?.title ?? activeSession.area?.name ?? t('ui.focusSession');
   const shown = remainingSeconds ?? elapsedSeconds;
 
   return (
@@ -59,10 +59,10 @@ export default function FocusModeOverlay({ onClose }: FocusModeOverlayProps) {
       <p className="font-mono text-6xl font-bold tabular-nums text-violet-400 sm:text-8xl">{formatElapsed(shown)}</p>
       <p className="mt-3 text-sm text-neutral-500">
         {remainingSeconds === null
-          ? 'Counting up'
+          ? t('ui.countingUp')
           : remainingSeconds === 0
-            ? 'Time is up. Keep going or wrap up.'
-            : 'Remaining in this block'}
+            ? t('ui.timeIsUpKeepGoing')
+            : t('ui.remainingInThisBlock')}
       </p>
       <div className="mt-3">
         <OpenNotesLink areaId={activeSession.areaId} />

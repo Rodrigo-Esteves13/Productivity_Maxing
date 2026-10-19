@@ -14,8 +14,8 @@ export default function DeleteEntryModal({ isDeleting, onCancel, onConfirm }: De
     <ConfirmDialog
       title={t('ui.deleteThisEntry')}
       message={t('ui.thisRemovesTheEntryS')}
-      confirmLabel={isDeleting ? 'Deleting...' : 'Delete entry'}
-      cancelLabel="Cancel"
+      confirmLabel={isDeleting ? t('ui.deleting') : t('notebook.delete')}
+      cancelLabel={t('ui.cancel')}
       tone="danger"
       isBusy={isDeleting}
       onConfirm={onConfirm}

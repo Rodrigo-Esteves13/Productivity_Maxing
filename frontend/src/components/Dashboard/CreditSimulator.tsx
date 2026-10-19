@@ -3,6 +3,7 @@ import type { ProgramAverage } from '../../types/models';
 import { CalculatorIcon } from '../UI/Icons';
 import DashboardCard from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
 
 interface CreditSimulatorProps {
   programAverage: ProgramAverage;
@@ -41,13 +42,10 @@ export default function CreditSimulator({ programAverage, scale }: CreditSimulat
     <DashboardCard>
       <p className="text-xs uppercase tracking-wide text-neutral-500 mb-1 flex items-center gap-1.5">
         <CalculatorIcon className="shrink-0" />
-        "What if" GPA simulator
+        {t('ui.whatIfGpaSimulator')}
       </p>
       <p className="text-sm text-neutral-400 mb-3">
-        Since courses with more credits pull your cumulative average more (a 6-credit course
-        counts more than a 3-credit one), this answers "if I take/finish one more course worth N
-        credits and get grade G in it, what does my overall average become?" - without waiting
-        for the grade to actually be entered.
+        {t('ui.sinceCoursesWithMoreCredits')}
       </p>
 
       <div className="flex flex-wrap gap-2 mb-3">
@@ -63,7 +61,7 @@ export default function CreditSimulator({ programAverage, scale }: CreditSimulat
           type="number"
           value={grade}
           onChange={(e) => setGrade(e.target.value)}
-          placeholder={`Grade (0-${max})`}
+          placeholder={t('ui.gradePlaceholderMax', { max })}
           min={0}
           max={max}
           step="0.1"
@@ -73,12 +71,10 @@ export default function CreditSimulator({ programAverage, scale }: CreditSimulat
 
       {hasValidInputs && projectedAverage !== null ? (
         <p className="text-sm text-neutral-200">
-          Your cumulative average would go from{' '}
-          <span className="font-semibold">{programAverage.average.toFixed(2)}</span> to{' '}
-          <span className="font-bold text-lg text-violet-400">
-            {projectedAverage.toFixed(2)}
-          </span>
-          .
+          {fillNodes(t('ui.cumulativeAverageWouldGo'), {
+            from: <span className="font-semibold">{programAverage.average.toFixed(2)}</span>,
+            to: <span className="font-bold text-lg text-violet-400">{projectedAverage.toFixed(2)}</span>,
+          })}
         </p>
       ) : (
         <p className="text-sm text-neutral-500">{t('ui.fillInBothFieldsTo')}</p>

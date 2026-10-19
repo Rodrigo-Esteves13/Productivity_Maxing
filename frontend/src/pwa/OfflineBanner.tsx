@@ -1,4 +1,5 @@
 import { useOnlineStatus } from './useOnlineStatus';
+import { useI18n } from '../i18n/useI18n';
 
 /**
  * Aviso fixo no topo quando o browser está offline.
@@ -11,6 +12,7 @@ import { useOnlineStatus } from './useOnlineStatus';
  */
 export default function OfflineBanner() {
   const isOnline = useOnlineStatus();
+  const { t } = useI18n();
 
   if (isOnline) return null;
 
@@ -38,8 +40,7 @@ export default function OfflineBanner() {
         <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
         <line x1="12" y1="20" x2="12.01" y2="20" />
       </svg>
-      No internet connection. Some actions may not work until the
-      connection returns.
+      {t('ui.offlineBanner')}
     </div>
   );
 }

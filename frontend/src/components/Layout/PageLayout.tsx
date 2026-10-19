@@ -1,10 +1,9 @@
-import type { ReactNode } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
 import { useAuth } from '../../context/useAuth';
 import { useOverdueCheckins } from '../../hooks/useOverdueCheckins';
-import OverdueCheckinModal from '../Tasks/OverdueCheckinModal';
 import AcademicSelectors from './AcademicSelectors';
 import SkipToContentLink from '../UI/SkipToContentLink';
 import ScrollProgressBar from '../UI/ScrollProgressBar';
@@ -15,6 +14,9 @@ import BackToTopButton from '../UI/BackToTopButton';
 // Areas, admin pages, ...) the Program/Period pickers up top would just
 // sit there doing nothing, or worse, look like they filter content that
 // isn't actually scoped by them.
+// Lazy: so carrega quando ha uma task em atraso para confirmar.
+const OverdueCheckinModal = lazy(() => import('../Tasks/OverdueCheckinModal'));
+
 const ROUTES_WITH_ACADEMIC_SELECTORS = ['/dashboard', '/tasks', '/notebook'];
 
 interface PageLayoutProps {
@@ -59,13 +61,15 @@ export default function PageLayout({ children }: PageLayoutProps) {
       <BackToTopButton />
 
       {currentTask && (
-        <OverdueCheckinModal
-          key={currentTask.id}
-          task={currentTask}
-          queueLength={pendingTasks.length}
-          isAnswering={isAnswering}
-          onAnswer={answer}
-        />
+        <Suspense fallback={null}>
+          <OverdueCheckinModal
+            key={currentTask.id}
+            task={currentTask}
+            queueLength={pendingTasks.length}
+            isAnswering={isAnswering}
+            onAnswer={answer}
+          />
+        </Suspense>
       )}
     </div>
   );

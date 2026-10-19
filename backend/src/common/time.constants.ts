@@ -7,3 +7,6 @@ export const MS_PER_DAY = 24 * MS_PER_HOUR;
 export const MINUTES_PER_HOUR = 60;
 export const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR;
 export const ISO_DATE_KEY_LENGTH = 'YYYY-MM-DD'.length;
+
+// Fuso de referencia da app: o "dia" de uma aula/turno/task e o dia em Lisboa.
+export const APP_TIME_ZONE = 'Europe/Lisbon';

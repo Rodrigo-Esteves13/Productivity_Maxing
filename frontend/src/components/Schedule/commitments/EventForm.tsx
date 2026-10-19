@@ -39,13 +39,13 @@ export default function EventForm({ isSaving, onSubmit, onCancel }: EventFormPro
     const endMinutes = parseClock(end);
     const bufferMinutes = Number(travel);
 
-    if (!title.trim()) return setFormError('Give the event a title.');
-    if (!date) return setFormError('Pick a date.');
+    if (!title.trim()) return setFormError(t('ui.giveTheEventATitle'));
+    if (!date) return setFormError(t('ui.pickADate'));
     if (startMinutes === null || endMinutes === null || startMinutes >= endMinutes) {
-      return setFormError('Start must be before end.');
+      return setFormError(t('ui.startMustBeBeforeEnd'));
     }
     if (!Number.isInteger(bufferMinutes) || bufferMinutes < 0 || bufferMinutes > MAX_TRAVEL_MINUTES) {
-      return setFormError(`Travel time must be between 0 and ${MAX_TRAVEL_MINUTES} minutes.`);
+      return setFormError(t('ui.travelTimeRange', { max: MAX_TRAVEL_MINUTES }));
     }
 
     setFormError('');
@@ -77,7 +77,7 @@ export default function EventForm({ isSaving, onSubmit, onCancel }: EventFormPro
       {formError && <ErrorState message={formError} />}
       <div className="flex gap-2">
         <ActionButton type="submit" disabled={isSaving}>
-          {isSaving ? 'Saving...' : 'Add event'}
+          {isSaving ? t('common.saving') : t('ui.addEvent')}
         </ActionButton>
         <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
           {t('ui.cancel')}

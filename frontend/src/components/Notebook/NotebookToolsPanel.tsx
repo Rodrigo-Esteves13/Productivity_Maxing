@@ -108,7 +108,7 @@ export default function NotebookToolsPanel({ onInsert, onAddTable, onClose }: No
         <section>
           <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-500">
             <TableIcon className="h-3.5 w-3.5" />
-            Tables
+            {t('ui.tables')}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {TABLE_PRESETS.map((preset) => (
@@ -141,13 +141,13 @@ export default function NotebookToolsPanel({ onInsert, onAddTable, onClose }: No
               aria-label={t('ui.customTableColumns')}
               className="w-12 rounded-md border border-neutral-800 bg-neutral-950 px-1.5 py-1 text-xs text-neutral-100 focus:border-violet-500 focus:outline-none"
             />
-            <span className="text-xs text-neutral-600">cols</span>
+            <span className="text-xs text-neutral-600">{t('ui.colsShort')}</span>
             <button
               type="button"
               onClick={handleCustomTable}
               className="ml-auto rounded-md bg-neutral-800 px-2 py-1 text-[11px] font-medium text-neutral-200 hover:bg-neutral-700"
             >
-              {mode === 'insert' ? 'Insert' : 'Copy'}
+              {mode === 'insert' ? t('ui.insert') : t('ui.copy')}
             </button>
           </div>
         </section>
@@ -158,7 +158,7 @@ export default function NotebookToolsPanel({ onInsert, onAddTable, onClose }: No
             <section key={section.id}>
               <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 <SectionIcon className="h-3.5 w-3.5" />
-                {section.title}
+                {t(section.title)}
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {section.items.map((item) => {
@@ -167,7 +167,7 @@ export default function NotebookToolsPanel({ onInsert, onAddTable, onClose }: No
                     <SnippetButton
                       key={key}
                       label={item.label}
-                      title={item.description}
+                      title={item.description && t(item.description)}
                       showCopied={feedbackKey === key}
                       mode={mode}
                       onClick={() => handleUse(key, item.value)}

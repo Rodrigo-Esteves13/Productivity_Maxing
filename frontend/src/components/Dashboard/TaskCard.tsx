@@ -45,7 +45,7 @@ export default function TaskCard({
               checked={!!isSelected}
               onChange={() => onToggleSelect(task.id)}
               className="accent-violet-500 print-hide mt-1"
-              aria-label={`Select task ${task.title}`}
+              aria-label={t('ui.selectTaskNamed', { title: task.title })}
             />
           )}
           <div className="min-w-0">

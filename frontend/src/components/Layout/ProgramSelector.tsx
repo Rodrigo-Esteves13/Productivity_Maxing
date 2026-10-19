@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import Select from '../UI/Select';
 import { TrashIcon, PencilIcon } from '../UI/Icons';
 import { useAcademic } from '../../context/useAcademic';
 import { getApiMessage } from '../../lib/httpError';
 import CreateProgramModal from './CreateProgramModal';
 import RenameProgramModal from './RenameProgramModal';
-import ManagePeriodsModal from './ManagePeriodsModal';
 import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
+
+// Lazy e montado so quando aberto.
+const ManagePeriodsModal = lazy(() => import('./ManagePeriodsModal'));
 
 const CREATE_NEW_VALUE = '__create_new__';
 const NO_PROGRAM_VALUE = '__no_program__';
@@ -136,11 +138,15 @@ export default function ProgramSelector() {
             program={activeProgram}
             onRenamed={refresh}
           />
-          <ManagePeriodsModal
-            isOpen={isPeriodsModalOpen}
-            onClose={() => setIsPeriodsModalOpen(false)}
-            program={activeProgram}
-          />
+          {isPeriodsModalOpen && (
+            <Suspense fallback={null}>
+              <ManagePeriodsModal
+                isOpen
+                onClose={() => setIsPeriodsModalOpen(false)}
+                program={activeProgram}
+              />
+            </Suspense>
+          )}
         </>
       )}
     </>

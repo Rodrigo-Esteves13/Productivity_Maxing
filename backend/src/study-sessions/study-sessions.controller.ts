@@ -22,6 +22,7 @@ import { UpdateStudySessionDto } from './dto/update-study-session.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { perMinute } from '../common/throttle.util';
 
 @ApiTags('Focus')
 @ApiBearerAuth()
@@ -39,7 +40,7 @@ export class StudySessionsController {
   }
 
   @Post('manual')
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Throttle(perMinute(30))
   createManual(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateManualSessionDto,
@@ -76,7 +77,7 @@ export class StudySessionsController {
   // StudySessionProvider.tsx), so 10/min per user is already generous
   // headroom, not a tight limit.
   @Post(':id/heartbeat')
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   heartbeat(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.studySessionsService.heartbeat(user.id, id);
   }
@@ -124,7 +125,7 @@ export class StudySessionsController {
   }
 
   @Patch(':id')
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Throttle(perMinute(30))
   update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
@@ -134,7 +135,7 @@ export class StudySessionsController {
   }
 
   @Delete(':id')
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Throttle(perMinute(30))
   remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.studySessionsService.remove(user.id, id);
   }

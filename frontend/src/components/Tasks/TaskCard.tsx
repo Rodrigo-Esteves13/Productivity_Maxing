@@ -35,7 +35,7 @@ export default function TaskCard({
   onTogglePin,
 }: TaskCardProps) {
   const { t } = useI18n();
-  const areaName = task.area?.name || 'No Area';
+  const areaName = task.area?.name || t('ui.noArea2');
   const isInteractive = Boolean(onSelect);
   const status = getDateStatus(task);
   const canMoveArea = Boolean(areas && areas.length > 1 && onMoveArea);
@@ -82,7 +82,7 @@ export default function TaskCard({
                 e.stopPropagation();
                 onTogglePin(task);
               }}
-              title={task.isPinned ? 'Unpin task' : 'Pin task'}
+              title={task.isPinned ? t('ui.unpinTask') : t('ui.pinTask')}
               className={`p-0.5 transition-colors ${
                 task.isPinned ? 'text-violet-400' : 'text-neutral-600 hover:text-neutral-300'
               }`}
@@ -142,7 +142,7 @@ export default function TaskCard({
             <PostponedIndicator count={task.postponedCount} />
             {recurrenceLabel(task) && (
               <span
-                title={`${recurrenceLabel(task)}. The next one is created when you complete this task.`}
+                title={`${recurrenceLabel(task)}. ${t('ui.nextOneCreatedOnComplete')}`}
                 className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[11px] font-medium text-violet-300"
               >
                 <RepeatIcon className="h-3 w-3" />

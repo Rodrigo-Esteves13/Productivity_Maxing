@@ -56,7 +56,7 @@ export default function NotebookTableEditor({ table, readOnly = false, onChange,
               className="flex items-center gap-1 rounded-md bg-neutral-800 px-2 py-1 text-[11px] font-medium text-neutral-200 hover:bg-neutral-700"
             >
               <PlusIcon className="h-3 w-3" />
-              Row
+              {t('ui.row3')}
             </button>
             <button
               type="button"
@@ -64,7 +64,7 @@ export default function NotebookTableEditor({ table, readOnly = false, onChange,
               className="flex items-center gap-1 rounded-md bg-neutral-800 px-2 py-1 text-[11px] font-medium text-neutral-200 hover:bg-neutral-700"
             >
               <PlusIcon className="h-3 w-3" />
-              Column
+              {t('ui.column')}
             </button>
             <button
               type="button"

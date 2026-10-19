@@ -104,7 +104,7 @@ export default function TaskEditForm({
       setError('');
 
       if (!formData.areaId) {
-        setError('Please select an Area.');
+        setError(t('ui.pleaseSelectAnArea'));
         return;
       }
 
@@ -114,12 +114,12 @@ export default function TaskEditForm({
 
         await onSubmit({ ...payload, ...recurrencePayload(recurrence, true) });
       } catch (err: unknown) {
-        setError(getApiMessage(err, 'Error updating task.'));
+        setError(getApiMessage(err, t('ui.errorUpdatingTask')));
       } finally {
         setIsSubmitting(false);
       }
     },
-    [formData, onSubmit, recurrence]
+    [formData, onSubmit, recurrence, t]
   );
 
   return (
@@ -150,7 +150,7 @@ export default function TaskEditForm({
           {t('ui.cancel')}
         </Button>
         <Button type="submit" variant="primary" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : 'Save Changes'}
+          {isSubmitting ? t('common.saving') : t('ui.saveChanges')}
         </Button>
       </div>
     </form>

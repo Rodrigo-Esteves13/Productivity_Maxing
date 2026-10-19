@@ -40,7 +40,7 @@ export default function UpcomingTasksCard({ tasks, areas }: UpcomingTasksCardPro
     <DashboardCard>
       <CardHeading className="mb-3">
         <CalendarIcon className="shrink-0" />
-        Next {WINDOW_DAYS} days
+        {t('ui.nextNDays', { days: WINDOW_DAYS })}
       </CardHeading>
       <ul className="space-y-2">
         {upcoming.map((task) => {

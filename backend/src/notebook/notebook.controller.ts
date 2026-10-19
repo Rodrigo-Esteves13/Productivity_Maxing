@@ -37,6 +37,7 @@ import { NotebookCollabService } from './notebook-collab.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { perMinute } from '../common/throttle.util';
 
 // Mesma mitigação e o mesmo motivo do TS2353 do @types/multer que
 // AuthController.uploadAvatar já documenta (GHSA-72gw-mp4g-v24j,
@@ -237,7 +238,7 @@ export class NotebookController {
   // de ficheiro só tinha o limite global do ThrottlerModule, ao contrário
   // dos endpoints de auth - um endpoint caro em I/O de storage merece o
   // mesmo tratamento.
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   @Post('entries/:id/photos')
   @UseInterceptors(
     FileInterceptor('photo', {
@@ -277,7 +278,7 @@ export class NotebookController {
   // (ou, para texto puro, pela ausência de bytes binários) antes de
   // aceitar - ver ATTACHMENT_BINARY_MIME_TO_EXT/ATTACHMENT_TEXT_EXTENSIONS
   // em notebook.service.ts.
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   @Post('entries/:id/attachments')
   @UseInterceptors(
     FileInterceptor('file', {

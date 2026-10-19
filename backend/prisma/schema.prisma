@@ -307,6 +307,9 @@ model User {
   // Preferências (Profile > Preferences). Ambas DESLIGADAS por omissão.
   // Email 24h antes do prazo das tasks pendentes (ver RemindersService).
   deadlineEmailReminders Boolean @default(false)
+  // Push (nos dispositivos com notificacoes ligadas) com o mesmo calendario
+  // do email acima. Desligado por omissao.
+  deadlinePushReminders  Boolean @default(false)
   // Ao concluir uma task académica (não evento), cria 3 tasks leves de
   // revisão a +1/+3/+7 dias (ver TasksService.spawnFollowUps).
   spacedReviewsEnabled Boolean @default(false)
@@ -759,6 +762,11 @@ model Task {
   // findAll() ordena por [sortOrder, date] dentro de userId+periodId - sem
   // isto, o mesmo raciocínio dos índices acima aplica-se ao ORDER BY.
   @@index([userId, sortOrder])
+  // "Hoje", Dashboard e atrasadas filtram userId + intervalo de date.
+  @@index([userId, date])
+  // O cron de lembretes (RemindersService) procura por intervalo de date em
+  // todos os users.
+  @@index([date])
 }
 
 enum RecurrenceFrequency {
@@ -855,8 +863,8 @@ model BannedIp {
   // depois.
   bannedByUserId String?
   bannedBy       User?   @relation(fields: [bannedByUserId], references: [id], onDelete: SetNull)
-
-  @@index([ip])
+  // Sem @@index([ip]): o @unique ja cria esse indice (um segundo so pesava
+  // nas escritas).
 }
 
 /// Uma sessão de estudo/foco: início, fim (null enquanto está a decorrer),
@@ -1136,8 +1144,7 @@ model NotebookShare {
   createdBy      User                         @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
   accessRequests NotebookShareAccessRequest[]
   visits         ShareVisit[]
-
-  @@index([token])
+  // Sem @@index([token]): o @unique de token ja e o indice.
 }
 
 enum NotebookShareVisibility {

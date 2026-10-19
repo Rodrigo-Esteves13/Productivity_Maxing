@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ReportClientErrorDto } from './dto/report-client-error.dto';
 import { ReportWebVitalDto } from './dto/report-web-vital.dto';
+import { sanitizeClientUrl } from './client-url.util';
 
 /**
  * Logs client-reported errors and Core Web Vitals as structured JSON
@@ -20,7 +21,7 @@ export class TelemetryService {
     // consistent with how every other error in the app already logs,
     // and with JsonLogger's dedicated `trace` field.
     this.logger.error(
-      `Client error: ${dto.message} (${dto.url})`,
+      `Client error: ${dto.message} (${sanitizeClientUrl(dto.url)})`,
       dto.stack ?? dto.componentStack,
       'ClientError',
     );
@@ -28,7 +29,7 @@ export class TelemetryService {
 
   reportWebVital(dto: ReportWebVitalDto): void {
     this.logger.log(
-      `${dto.name}=${dto.value} (${dto.url}, id=${dto.id})`,
+      `${dto.name}=${dto.value} (${sanitizeClientUrl(dto.url)}, id=${dto.id})`,
       'WebVitals',
     );
   }

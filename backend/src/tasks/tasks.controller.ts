@@ -24,6 +24,7 @@ import { ReorderTasksDto } from './dto/reorder-tasks.dto';
 import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { perMinute } from '../common/throttle.util';
 
 @ApiTags('Task')
 @ApiBearerAuth()
@@ -117,7 +118,7 @@ export class TasksController {
   // up to 500 sequential DB writes per request, more expensive than any
   // other endpoint in this controller.
   @Post('import')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle(perMinute(5))
   importTasks(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: ImportTasksDto,

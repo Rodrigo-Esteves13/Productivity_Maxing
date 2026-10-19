@@ -12,9 +12,10 @@ self.addEventListener('push', (event) => {
   const options = {
     body: typeof data.body === 'string' ? data.body.slice(0, 300) : '',
     tag: typeof data.tag === 'string' ? data.tag : undefined,
-    data: { url: typeof data.url === 'string' && data.url.startsWith('/') ? data.url : '/' },
-    icon: '/pwa-192x192.png',
-    badge: '/pwa-192x192.png',
+    // Só caminhos da própria app: '/x' sim, '//host' (URL externo sem esquema) não.
+    data: { url: typeof data.url === 'string' && /^\/(?!\/)/.test(data.url) ? data.url : '/' },
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
   };
   // Avisa as janelas abertas para se atualizarem logo (ver useLiveRefresh.ts).
   const notifyClients = self.clients
