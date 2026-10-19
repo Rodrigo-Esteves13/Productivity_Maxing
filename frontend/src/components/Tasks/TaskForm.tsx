@@ -9,6 +9,7 @@ import DayLoadHint from './DayLoadHint';
 import RecurrenceFields from './RecurrenceFields';
 import { EMPTY_RECURRENCE, recurrencePayload, type RecurrenceValue } from '../../lib/recurrence';
 import { todayKey } from '../../lib/dateKey';
+import { useI18n } from '../../i18n/useI18n';
 
 const DEFAULT_PROGRESS_STATUS = 'ON_TRACK';
 
@@ -42,6 +43,7 @@ export default function TaskForm({
   progressStatuses,
   existingTasks = [],
 }: TaskFormProps) {
+  const { t } = useI18n();
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Checklist inicial: um passo por linha (opcional).
   const [checklistText, setChecklistText] = useState('');
@@ -148,7 +150,7 @@ export default function TaskForm({
 
       <div>
         <label htmlFor="create-task-checklist" className="block text-sm font-medium text-neutral-300 mb-1">
-          Checklist <span className="text-neutral-500 font-normal">(optional, one step per line)</span>
+          Checklist <span className="text-neutral-500 font-normal">{t('ui.optionalOneStepPerLine')}</span>
         </label>
         <textarea
           id="create-task-checklist"
@@ -162,7 +164,7 @@ export default function TaskForm({
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800">
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
+          {t('ui.cancel')}
         </Button>
         <Button type="submit" variant="primary" disabled={isSubmitting}>
           {isSubmitting ? 'Saving...' : 'Create Task'}

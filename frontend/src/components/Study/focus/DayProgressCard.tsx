@@ -6,6 +6,7 @@ import { useLoadOnce } from '../../../hooks/useLoadOnce';
 import { getStudyStreak } from '../../../api/studySessionsService';
 import { formatDuration } from '../../../lib/timeFormat';
 import { minutesSince, startOfLocalDay, type SessionSpan } from '../../../lib/studyWindow';
+import { useI18n } from '../../../i18n/useI18n';
 
 // Sessoes que podem tocar no dia de hoje: as de ontem a noite que passaram
 // da meia-noite entram, so a parte de hoje conta.
@@ -17,6 +18,7 @@ interface DayProgressCardProps {
 }
 
 export default function DayProgressCard({ dailyLimitMinutes }: DayProgressCardProps) {
+  const { t } = useI18n();
   const { activeSession } = useActiveStudySession();
   const { sessions } = useSessionHistory(HISTORY_DAYS, activeSession?.id ?? null);
   const { data: streak } = useLoadOnce(getStudyStreak);
@@ -32,12 +34,12 @@ export default function DayProgressCard({ dailyLimitMinutes }: DayProgressCardPr
 
   return (
     <DashboardCard>
-      <CardHeading className="mb-3">Today</CardHeading>
+      <CardHeading className="mb-3">{t('ui.today')}</CardHeading>
       <div className="flex items-center gap-4">
         <ProgressRing
           percent={percent}
           colorClassName={isOver ? 'text-amber-500' : 'text-violet-500'}
-          label="Study time today compared to your daily limit"
+          label={t('ui.studyTimeTodayComparedTo')}
         >
           <span className="text-sm font-semibold text-white">{formatDuration(doneMinutes)}</span>
         </ProgressRing>
@@ -49,7 +51,7 @@ export default function DayProgressCard({ dailyLimitMinutes }: DayProgressCardPr
                 : `${formatDuration(dailyLimitMinutes - doneMinutes)} left of your ${formatDuration(dailyLimitMinutes)} limit`}
             </p>
           ) : (
-            <p className="text-neutral-400">Set a daily limit in the study plan to see your progress.</p>
+            <p className="text-neutral-400">{t('ui.setADailyLimitIn')}</p>
           )}
           {streak && (
             <p className="mt-1.5 text-xs text-neutral-500">

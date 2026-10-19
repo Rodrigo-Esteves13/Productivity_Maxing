@@ -12,8 +12,10 @@ import AreaDetailView from '../components/Areas/AreaDetailView';
 import AreaProposalsPanel from '../components/Areas/AreaProposalsPanel';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useAreasPage } from '../hooks/useAreasPage';
+import { useI18n } from '../i18n/useI18n';
 
 export default function Areas() {
+  const { t } = useI18n();
   useDocumentTitle('Areas');
   const {
     isAdmin,
@@ -51,17 +53,17 @@ export default function Areas() {
   return (
     <PageLayout>
       <PageHeader
-        title="Areas"
-        description="Official areas are shared by everyone. Create your own personal areas for anything that is missing, and propose them to become official."
+        title={t('ui.areas')}
+        description={t('ui.officialAreasAreSharedBy')}
         action={
           <div className="flex gap-2">
             {isAdmin && (
               <ActionButton color="amber" onClick={() => openCreateModal('official')}>
-                + Official Area
+                {t('ui.officialArea')}
               </ActionButton>
             )}
             <ActionButton color="amber" onClick={() => openCreateModal('personal')}>
-              + My Area
+              {t('ui.myArea')}
             </ActionButton>
           </div>
         }
@@ -77,10 +79,10 @@ export default function Areas() {
             <AreaProposalsPanel proposals={proposals} onApprove={handleApprove} onReject={handleReject} />
           )}
 
-          <section className="mb-8" aria-label="My areas">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-400">My areas</h2>
+          <section className="mb-8" aria-label={t('ui.myAreas')}>
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-400">{t('ui.myAreas')}</h2>
             {personal.length === 0 ? (
-              <EmptyState message="You have no personal areas yet. Use '+ My Area' to add a subject that is not in the official list." />
+              <EmptyState message={t('ui.youHaveNoPersonalAreas')} />
             ) : (
               <AreaGrid
                 areas={personal}
@@ -92,9 +94,9 @@ export default function Areas() {
             )}
           </section>
 
-          <section aria-label="Official areas">
+          <section aria-label={t('ui.officialAreas')}>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Official areas</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">{t('ui.officialAreas')}</h2>
               {official.length > 0 && (
                 <div className="flex gap-3 text-xs">
                   <button
@@ -102,24 +104,23 @@ export default function Areas() {
                     onClick={() => void handleToggleAllOfficial(false)}
                     className="text-neutral-400 hover:text-white"
                   >
-                    Turn all on
+                    {t('ui.turnAllOn')}
                   </button>
                   <button
                     type="button"
                     onClick={() => void handleToggleAllOfficial(true)}
                     className="text-neutral-400 hover:text-white"
                   >
-                    Turn all off
+                    {t('ui.turnAllOff')}
                   </button>
                 </div>
               )}
             </div>
             <p className="mb-3 text-xs text-neutral-500">
-              Turned-off areas disappear from your task, notebook and quick-add lists. Existing tasks and notes
-              keep working.
+              {t('ui.turnedOffAreasDisappearFrom')}
             </p>
             {official.length === 0 ? (
-              <EmptyState message="No official areas yet." />
+              <EmptyState message={t('ui.noOfficialAreasYet')} />
             ) : (
               <AreaGrid
                 areas={official}

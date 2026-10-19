@@ -46,6 +46,7 @@ const Users = lazy(() => import('../pages/Users'));
 const Security = lazy(() => import('../pages/Security'));
 const Appeals = lazy(() => import('../pages/Appeals'));
 const FeedbackAdmin = lazy(() => import('../pages/FeedbackAdmin'));
+const FriendCodeRequestsAdmin = lazy(() => import('../pages/FriendCodeRequestsAdmin'));
 const TaskTypes = lazy(() => import('../pages/TaskTypes'));
 const PrivacyPolicy = lazy(() => import('../pages/PrivacyPolicy'));
 const SharedNotebookEntry = lazy(() => import('../pages/SharedNotebookEntry'));
@@ -145,6 +146,7 @@ export default function AppRouter() {
             <Route path="/security" element={<Security />} />
             <Route path="/appeals" element={<Appeals />} />
             <Route path="/feedback" element={<FeedbackAdmin />} />
+            <Route path="/friend-code-requests" element={<FriendCodeRequestsAdmin />} />
             <Route path="/task-types" element={<TaskTypes />} />
           </Route>
 

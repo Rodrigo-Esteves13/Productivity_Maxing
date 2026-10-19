@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { XIcon } from '../UI/Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 interface BlockListEditorProps {
   label: string;
@@ -20,6 +21,7 @@ export default function BlockListEditor({
   onChange,
   normalize,
 }: BlockListEditorProps) {
+  const { t } = useI18n();
   const [draft, setDraft] = useState('');
 
   const handleAdd = () => {
@@ -62,12 +64,12 @@ export default function BlockListEditor({
           disabled={!draft.trim()}
           className="px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-medium text-neutral-200 transition-colors disabled:opacity-40"
         >
-          Add
+          {t('ui.add')}
         </button>
       </div>
 
       {items.length === 0 ? (
-        <p className="text-sm text-neutral-600 italic">Nothing added yet.</p>
+        <p className="text-sm text-neutral-600 italic">{t('ui.nothingAddedYet')}</p>
       ) : (
         <div className="flex flex-wrap gap-2">
           {items.map((item) => (

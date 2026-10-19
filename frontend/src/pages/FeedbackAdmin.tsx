@@ -7,10 +7,12 @@ import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { getFeedbackList, setFeedbackResolved } from '../api/feedbackService';
 import type { FeedbackItem } from '../types/models';
+import { useI18n } from '../i18n/useI18n';
 
 // Admin: feedback enviado pelos users, em qualquer língua. A coluna da
 // língua diz o que estás a ler (para traduzires se for preciso).
 export default function FeedbackAdmin() {
+  const { t } = useI18n();
   useDocumentTitle('Feedback');
   const [items, setItems] = useState<FeedbackItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,13 +37,13 @@ export default function FeedbackAdmin() {
 
   return (
     <PageLayout>
-      <PageHeader title="Feedback" description="What users sent from the app, in any language." />
+      <PageHeader title={t('ui.feedback')} description={t('ui.whatUsersSentFromThe')} />
       {isLoading ? (
         <CardGridSkeleton cards={4} />
       ) : error ? (
         <ErrorState message={error} />
       ) : items.length === 0 ? (
-        <EmptyState message="No feedback yet." />
+        <EmptyState message={t('ui.noFeedbackYet')} />
       ) : (
         <ul className="space-y-3">
           {items.map((item) => (

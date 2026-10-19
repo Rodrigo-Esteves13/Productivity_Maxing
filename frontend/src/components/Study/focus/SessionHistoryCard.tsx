@@ -14,6 +14,7 @@ import LinesSkeleton from '../../UI/LinesSkeleton';
 import SessionForm, { type SessionFormValues } from './SessionForm';
 import SessionRow from './SessionRow';
 import type { StudySession } from '../../../types/models';
+import { useI18n } from '../../../i18n/useI18n';
 
 // Intervalos que o utilizador pode escolher (o backend limita a 90 dias).
 const HISTORY_RANGE_OPTIONS = [7, 14, 30, 90] as const;
@@ -33,6 +34,7 @@ function groupByDay(sessions: StudySession[]): [string, StudySession[]][] {
 // Ultimos dias de sessoes, com corrigir, apagar e acrescentar uma que te
 // esqueceste de ligar. Dados fiaveis aqui = previsoes melhores.
 export default function SessionHistoryCard() {
+  const { t } = useI18n();
   const { activeSession } = useActiveStudySession();
   const [historyDays, setHistoryDays] = useState<number>(DEFAULT_HISTORY_DAYS);
   const { sessions, isLoading, error, reload } = useSessionHistory(historyDays, activeSession?.id ?? null);
@@ -73,20 +75,19 @@ export default function SessionHistoryCard() {
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold text-white">Session history</h2>
-          <p className="text-xs text-neutral-500">Forgot to start the timer, or stopped too late? Fix it here.</p>
+          <h2 className="text-lg font-semibold text-white">{t('ui.sessionHistory')}</h2>
+          <p className="text-xs text-neutral-500">{t('ui.forgotToStartTheTimer')}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="w-40">
             <Select
-              aria-label="History range"
+              aria-label={t('ui.historyRange')}
               value={String(historyDays)}
               onChange={(e) => setHistoryDays(Number(e.target.value))}
             >
               {HISTORY_RANGE_OPTIONS.map((days) => (
                 <option key={days} value={days}>
-                  Last {days} days
-                </option>
+                  {t('ui.lastDays', { days: days })}</option>
               ))}
             </Select>
           </div>
@@ -113,7 +114,7 @@ export default function SessionHistoryCard() {
       )}
 
       {isLoading && <LinesSkeleton lines={4} />}
-      {!isLoading && error && <ErrorState message="Could not load your sessions." />}
+      {!isLoading && error && <ErrorState message={t('ui.couldNotLoadYourSessions')} />}
       {!isLoading && !error && groups.length === 0 && <EmptyState message={`No sessions in the last ${historyDays} days.`} />}
 
       <div className="space-y-4">
@@ -143,12 +144,11 @@ export default function SessionHistoryCard() {
         <div className="mt-4 flex items-center justify-center gap-4 text-sm">
           {hasMore && (
             <button type="button" onClick={showMore} className="text-violet-400 hover:text-violet-300">
-              Show more days ({groups.length - visibleCount} left)
-            </button>
+              {t('ui.showMoreDaysLeft', { remaining: groups.length - visibleCount })}</button>
           )}
           {canCollapse && (
             <button type="button" onClick={collapse} className="text-neutral-400 hover:text-neutral-200">
-              Show less
+              {t('ui.showLess')}
             </button>
           )}
         </div>

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { WIDGET_LABELS, type DashboardWidgetKey } from '../../hooks/useDashboardWidgetPrefs';
 import { SlidersIcon } from '../UI/Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 interface DashboardWidgetTogglesProps {
   visibility: Record<DashboardWidgetKey, boolean>;
@@ -13,6 +14,7 @@ interface DashboardWidgetTogglesProps {
 // want to see this one". Preference persists locally (see
 // useDashboardWidgetPrefs).
 export function DashboardWidgetToggles({ visibility, toggle }: DashboardWidgetTogglesProps) {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -32,7 +34,7 @@ export function DashboardWidgetToggles({ visibility, toggle }: DashboardWidgetTo
         onClick={() => setIsOpen((prev) => !prev)}
         className="text-sm text-neutral-400 hover:text-neutral-200 underline decoration-dotted"
       >
-        Customize widgets
+        {t('ui.customizeWidgets')}
       </button>
 
       {isOpen && (

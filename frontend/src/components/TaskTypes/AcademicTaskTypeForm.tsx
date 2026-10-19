@@ -5,6 +5,7 @@ import Button from '../UI/Button';
 import FormField from '../UI/FormField';
 import type { AcademicTaskTypeFormPayload } from '../../api/taskTypesAdminService';
 import type { AdminTaskType } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AcademicTaskTypeFormProps {
   idPrefix: string;
@@ -27,6 +28,7 @@ export default function AcademicTaskTypeForm({
   submitLabel,
   submittingLabel,
 }: AcademicTaskTypeFormProps) {
+  const { t } = useI18n();
   const [formData, setFormData] = useState<AcademicTaskTypeFormPayload>(
     initialValues ?? { label: '', taskTypeId: taskTypes[0]?.id ?? '', order: 0 },
   );
@@ -39,28 +41,28 @@ export default function AcademicTaskTypeForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-      <FormField label="Name" htmlFor={`${idPrefix}-label`}>
+      <FormField label={t('ui.name')} htmlFor={`${idPrefix}-label`}>
         <Input
           id={`${idPrefix}-label`}
           required
           type="text"
-          placeholder="E.g: Exam, Practical Assignment"
+          placeholder={t('ui.eGExamPracticalAssignment')}
           value={formData.label}
           onChange={(e) => setFormData({ ...formData, label: e.target.value })}
         />
         <p className="mt-1 text-xs text-neutral-500">
-          You can rename this whenever you want - it's only ever used for display.
+          {t('ui.youCanRenameThisWhenever')}
         </p>
       </FormField>
 
-      <FormField label="Parent Task Type" htmlFor={`${idPrefix}-parent`}>
+      <FormField label={t('ui.parentTaskType')} htmlFor={`${idPrefix}-parent`}>
         <Select
           id={`${idPrefix}-parent`}
           required
           value={formData.taskTypeId}
           onChange={(e) => setFormData({ ...formData, taskTypeId: e.target.value })}
         >
-          {taskTypes.length === 0 && <option value="">No task types yet</option>}
+          {taskTypes.length === 0 && <option value="">{t('ui.noTaskTypesYet')}</option>}
           {taskTypes.map((t) => (
             <option key={t.id} value={t.id}>
               {t.label}
@@ -69,7 +71,7 @@ export default function AcademicTaskTypeForm({
         </Select>
       </FormField>
 
-      <FormField label="Display order" htmlFor={`${idPrefix}-order`}>
+      <FormField label={t('ui.displayOrder')} htmlFor={`${idPrefix}-order`}>
         <Input
           id={`${idPrefix}-order`}
           type="number"
@@ -88,14 +90,14 @@ export default function AcademicTaskTypeForm({
         <span>
           Fixed-date event (test, exam)
           <span className="block text-xs text-neutral-500">
-            Marking it done after the day never counts as late, and it never asks "is this done?".
+            {t('ui.markingItDoneAfterThe')}
           </span>
         </span>
       </label>
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800 mt-6">
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
+          {t('ui.cancel')}
         </Button>
         <button
           type="submit"

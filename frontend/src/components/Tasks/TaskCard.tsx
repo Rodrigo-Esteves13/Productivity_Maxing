@@ -9,6 +9,7 @@ import RescheduleButton from '../UI/RescheduleButton';
 import { PinIcon, RepeatIcon } from '../UI/Icons';
 import { recurrenceLabel } from '../../lib/recurrence';
 import { getDateStatus } from '../../utils/taskDateStatus';
+import { useI18n } from '../../i18n/useI18n';
 
 interface TaskCardProps {
   task: Task;
@@ -33,6 +34,7 @@ export default function TaskCard({
   onMoveArea,
   onTogglePin,
 }: TaskCardProps) {
+  const { t } = useI18n();
   const areaName = task.area?.name || 'No Area';
   const isInteractive = Boolean(onSelect);
   const status = getDateStatus(task);
@@ -111,7 +113,7 @@ export default function TaskCard({
                 e.stopPropagation();
                 onMoveArea!(task, e.target.value);
               }}
-              title="Move to a different Area"
+              title={t('ui.moveToADifferentArea')}
               className="px-2 py-1 bg-neutral-800 rounded-md font-medium text-neutral-300 truncate max-w-[10rem] border border-transparent hover:border-neutral-600 focus:border-violet-500 outline-none cursor-pointer"
             >
               {areas!.map((area) => (

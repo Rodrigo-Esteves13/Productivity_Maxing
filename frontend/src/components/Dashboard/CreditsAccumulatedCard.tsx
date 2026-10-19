@@ -4,6 +4,7 @@ import type { CreditsSummary } from '../../types/models';
 import { useAcademic } from '../../context/useAcademic';
 import { GraduationCapIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
+import { useI18n } from '../../i18n/useI18n';
 
 // Cumulative across ALL periods of the active program (archived included) -
 // same scope as the cumulative average in GpaSummary, since "credits
@@ -12,6 +13,7 @@ import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 // for how "passed" is determined (the scale's midpoint, since there's no
 // explicit passing-grade concept stored anywhere yet).
 export default function CreditsAccumulatedCard() {
+  const { t } = useI18n();
   const { activeProgram } = useAcademic();
   const [summary, setSummary] = useState<CreditsSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,14 +60,16 @@ export default function CreditsAccumulatedCard() {
         {summary.earnedCredits} <span className="text-neutral-500 text-lg">/ {summary.attemptedCredits}</span>
       </p>
       <p className="text-xs text-neutral-500">
-        Passing mark: {summary.passThreshold} ({summary.gradeScale})
-      </p>
+        {t('ui.passingMark', { passThreshold: summary.passThreshold, gradeScale: summary.gradeScale })}</p>
 
       {passedAreas.length > 0 && (
         <div className="mt-3 pt-3 border-t border-neutral-800 flex flex-wrap gap-x-4 gap-y-1">
           {passedAreas.map((area) => (
             <span key={area.areaId} className="text-sm text-neutral-300">
-              {area.areaName} <span className="text-neutral-500">({area.credits} ECTS)</span>
+              {area.areaName}{' '}
+              {area.credits != null && (
+                <span className="text-neutral-500">{t('ui.ects', { credits: area.credits })}</span>
+              )}
             </span>
           ))}
         </div>

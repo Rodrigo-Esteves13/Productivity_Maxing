@@ -9,6 +9,7 @@ import Sparkline from '../UI/Sparkline';
 import ProgressBar from '../UI/ProgressBar';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AreaBreakdownCardProps {
   tasks: Task[];
@@ -81,6 +82,7 @@ function computeGradeHistory(tasks: Task[]): number[] {
 }
 
 export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdownCardProps) {
+  const { t } = useI18n();
   const max = scaleMax(scale);
   const components = usePeriodGradeComponents();
 
@@ -123,10 +125,9 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
                 {weightCoveredPct !== null && weightCoveredPct < FULL_PERCENT && (
                   <span
                     className="text-xs text-amber-400 shrink-0"
-                    title="Percent of this course's weight covered by tasks on file - the rest isn't graded yet, so this average is preliminary"
+                    title={t('ui.percentOfThisCourseS')}
                   >
-                    {weightCoveredPct.toFixed(0)}% of grade so far
-                  </span>
+                    {t('ui.ofGradeSoFar', { weightCoveredPct: weightCoveredPct.toFixed(0) })}</span>
                 )}
               </div>
               <div className="flex items-center gap-2 shrink-0">

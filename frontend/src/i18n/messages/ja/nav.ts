@@ -27,4 +27,5 @@ export const nav: Record<string, string> = {
   'nav.search': "検索・移動 (Ctrl+K)",
   'nav.openMenu': "メニューを開く",
   'nav.closeMenu': "メニューを閉じる",
+  'nav.admin.friendCodes': "友だちコード",
 };

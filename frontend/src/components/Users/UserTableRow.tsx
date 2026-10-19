@@ -3,6 +3,7 @@ import RoleBadge from './RoleBadge';
 import UserStatusBadge from './UserStatusBadge';
 import { PencilIcon, TrashIcon, DownloadIcon, ClockIcon, ShieldIcon, CheckIcon } from '../UI/Icons';
 import type { User } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface UserTableRowProps {
   user: User;
@@ -27,6 +28,7 @@ export default function UserTableRow({
   onReactivate,
   isReactivating,
 }: UserTableRowProps) {
+  const { t } = useI18n();
   const initials = (user.name?.trim()?.[0] ?? user.email[0] ?? '?').toUpperCase();
   const status = user.status ?? 'ACTIVE';
 
@@ -37,9 +39,9 @@ export default function UserTableRow({
           <Avatar initials={initials} avatarUrl={user.avatarUrl} size="sm" />
           <div>
             <div className="font-medium text-neutral-200">
-              {user.name || <span className="text-neutral-500 italic">No name</span>}
+              {user.name || <span className="text-neutral-500 italic">{t('ui.noName')}</span>}
             </div>
-            {isSelf && <div className="text-xs text-violet-400">That's you</div>}
+            {isSelf && <div className="text-xs text-violet-400">{t('ui.thatSYou')}</div>}
           </div>
         </div>
       </td>
@@ -75,7 +77,7 @@ export default function UserTableRow({
           ) : (
             <button
               onClick={() => onReactivate(user)}
-              title="Restore to active"
+              title={t('ui.restoreToActive')}
               disabled={isReactivating}
               className="text-neutral-400 hover:text-emerald-400 transition-colors p-1.5 disabled:opacity-30"
             >
@@ -84,14 +86,14 @@ export default function UserTableRow({
           )}
           <button
             onClick={() => onExport(user)}
-            title="Export data"
+            title={t('ui.exportData')}
             className="text-neutral-400 hover:text-white transition-colors p-1.5"
           >
             <DownloadIcon />
           </button>
           <button
             onClick={() => onEdit(user)}
-            title="Edit user"
+            title={t('ui.editUser')}
             className="text-neutral-400 hover:text-white transition-colors p-1.5"
           >
             <PencilIcon />

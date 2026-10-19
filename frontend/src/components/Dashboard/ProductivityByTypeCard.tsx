@@ -3,6 +3,7 @@ import type { Task, AcademicTaskTypeOption } from '../../types/models';
 import { computeProductivityByType } from '../../utils/productivityByType';
 import { ChartPieIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
+import { useI18n } from '../../i18n/useI18n';
 
 interface ProductivityByTypeCardProps {
   tasks: Task[];
@@ -17,6 +18,7 @@ export default function ProductivityByTypeCard({
   tasks,
   academicTaskTypes,
 }: ProductivityByTypeCardProps) {
+  const { t } = useI18n();
   const rows = useMemo(
     () => computeProductivityByType(tasks, academicTaskTypes),
     [tasks, academicTaskTypes],
@@ -33,10 +35,10 @@ export default function ProductivityByTypeCard({
         <table className="w-full text-xs">
           <thead>
             <tr className="text-neutral-500 text-left">
-              <th className="font-normal pb-2 pr-2">Type</th>
-              <th className="font-normal pb-2 px-2 text-right">Done</th>
-              <th className="font-normal pb-2 px-2 text-right">On time</th>
-              <th className="font-normal pb-2 pl-2 text-right">Avg grade</th>
+              <th className="font-normal pb-2 pr-2">{t('ui.type')}</th>
+              <th className="font-normal pb-2 px-2 text-right">{t('ui.done')}</th>
+              <th className="font-normal pb-2 px-2 text-right">{t('ui.onTime')}</th>
+              <th className="font-normal pb-2 pl-2 text-right">{t('ui.avgGrade')}</th>
             </tr>
           </thead>
           <tbody>

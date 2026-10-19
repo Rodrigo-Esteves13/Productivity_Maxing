@@ -1,6 +1,7 @@
 import type { ChangeEvent, RefObject } from 'react';
 import Button from '../UI/Button';
 import Avatar from './Avatar';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AvatarUploadFieldProps {
   initials: string;
@@ -17,9 +18,10 @@ export default function AvatarUploadField({
   onFileChange,
   onRemoveClick,
 }: AvatarUploadFieldProps) {
+  const { t } = useI18n();
   return (
     <div className="flex items-center gap-4">
-      <Avatar initials={initials} avatarUrl={displayedImage} alt="Avatar preview" size="md" />
+      <Avatar initials={initials} avatarUrl={displayedImage} alt={t('ui.avatarPreview')} size="md" />
 
       <div className="flex flex-col gap-2">
         <input
@@ -32,15 +34,15 @@ export default function AvatarUploadField({
         />
         <div className="flex gap-2">
           <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
-            Choose Photo
+            {t('ui.choosePhoto')}
           </Button>
           {displayedImage && (
             <Button type="button" variant="secondary" onClick={onRemoveClick}>
-              Remove
+              {t('ui.remove')}
             </Button>
           )}
         </div>
-        <p className="text-xs text-neutral-500">PNG, JPG, WEBP or GIF, up to 5MB.</p>
+        <p className="text-xs text-neutral-500">{t('ui.pngJpgWebpOrGif')}</p>
       </div>
     </div>
   );

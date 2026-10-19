@@ -27,4 +27,5 @@ export const nav: Record<string, string> = {
   'nav.search': "검색 / 이동 (Ctrl+K)",
   'nav.openMenu': "메뉴 열기",
   'nav.closeMenu': "메뉴 닫기",
+  'nav.admin.friendCodes': "친구 코드",
 };

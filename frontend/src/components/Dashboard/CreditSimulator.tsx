@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ProgramAverage } from '../../types/models';
 import { CalculatorIcon } from '../UI/Icons';
 import DashboardCard from '../UI/DashboardCard';
+import { useI18n } from '../../i18n/useI18n';
 
 interface CreditSimulatorProps {
   programAverage: ProgramAverage;
@@ -20,6 +21,7 @@ function scaleMax(scale: string): number {
 // client-side against the totalWeight the API now returns alongside the
 // average, instead of needing a dedicated simulation endpoint.
 export default function CreditSimulator({ programAverage, scale }: CreditSimulatorProps) {
+  const { t } = useI18n();
   const max = scaleMax(scale);
   const [credits, setCredits] = useState('6');
   const [grade, setGrade] = useState('');
@@ -53,7 +55,7 @@ export default function CreditSimulator({ programAverage, scale }: CreditSimulat
           type="number"
           value={credits}
           onChange={(e) => setCredits(e.target.value)}
-          placeholder="Credits"
+          placeholder={t('ui.credits')}
           min={1}
           className="w-24 border border-neutral-700 bg-neutral-900 text-white rounded-lg px-3 py-1.5 text-sm placeholder:text-neutral-500"
         />
@@ -79,7 +81,7 @@ export default function CreditSimulator({ programAverage, scale }: CreditSimulat
           .
         </p>
       ) : (
-        <p className="text-sm text-neutral-500">Fill in both fields to simulate.</p>
+        <p className="text-sm text-neutral-500">{t('ui.fillInBothFieldsTo')}</p>
       )}
     </DashboardCard>
   );

@@ -1,4 +1,5 @@
 import { DEFAULT_ICS_IMPORT_OPTIONS, type IcsImportOptions } from '../../utils/parseIcsSchedule';
+import { useI18n } from '../../i18n/useI18n';
 
 interface ImportOptionsPanelProps {
   options: IcsImportOptions;
@@ -20,6 +21,7 @@ const inputCls =
 // palavras indicam o docente, e filtros por palavra-chave. Ficam guardados
 // neste browser (ver useScheduleImport).
 export default function ImportOptionsPanel({ options, onChange, disabled }: ImportOptionsPanelProps) {
+  const { t } = useI18n();
   const set = (patch: Partial<IcsImportOptions>) => onChange({ ...options, ...patch });
   const segmentValue = options.subjectSegment === 'auto' || options.subjectSegment === 'whole'
     ? options.subjectSegment
@@ -27,7 +29,7 @@ export default function ImportOptionsPanel({ options, onChange, disabled }: Impo
 
   return (
     <details className="rounded-lg border border-neutral-800 p-3">
-      <summary className="cursor-pointer text-sm text-neutral-300">Import options (other schools / formats)</summary>
+      <summary className="cursor-pointer text-sm text-neutral-300">{t('ui.importOptionsOtherSchoolsFormats')}</summary>
       <div className="mt-3 space-y-3">
         <label className="block text-xs text-neutral-400">
           Subject name comes from
@@ -40,12 +42,11 @@ export default function ImportOptionsPanel({ options, onChange, disabled }: Impo
             }}
             className={`${inputCls} mt-1`}
           >
-            <option value="auto">Auto (3rd part if the title has 3+ parts, else whole title)</option>
-            <option value="whole">Whole event title</option>
+            <option value="auto">{t('ui.auto3rdPartIfThe')}</option>
+            <option value="whole">{t('ui.wholeEventTitle')}</option>
             {[1, 2, 3, 4, 5].map((n) => (
               <option key={n} value={n}>
-                Part {n} of the title
-              </option>
+                {t('ui.partOfTheTitle', { n: n })}</option>
             ))}
           </select>
         </label>
@@ -69,7 +70,7 @@ export default function ImportOptionsPanel({ options, onChange, disabled }: Impo
             key={options.professorKeywords.join('|')}
             defaultValue={options.professorKeywords.join(', ')}
             onBlur={(e) => set({ professorKeywords: toList(e.target.value) })}
-            placeholder="Teacher, Professor, 教师, 担当, 교수"
+            placeholder={t('ui.teacherProfessor')}
             className={`${inputCls} mt-1`}
           />
         </label>
@@ -81,7 +82,7 @@ export default function ImportOptionsPanel({ options, onChange, disabled }: Impo
             key={options.includeKeywords.join('|')}
             defaultValue={options.includeKeywords.join(', ')}
             onBlur={(e) => set({ includeKeywords: toList(e.target.value) })}
-            placeholder="Lecture, Lab"
+            placeholder={t('ui.lectureLab')}
             className={`${inputCls} mt-1`}
           />
         </label>
@@ -93,7 +94,7 @@ export default function ImportOptionsPanel({ options, onChange, disabled }: Impo
             key={options.excludeKeywords.join('|')}
             defaultValue={options.excludeKeywords.join(', ')}
             onBlur={(e) => set({ excludeKeywords: toList(e.target.value) })}
-            placeholder="Holiday, Exam"
+            placeholder={t('ui.holidayExam')}
             className={`${inputCls} mt-1`}
           />
         </label>
@@ -104,7 +105,7 @@ export default function ImportOptionsPanel({ options, onChange, disabled }: Impo
           onClick={() => onChange(DEFAULT_ICS_IMPORT_OPTIONS)}
           className="text-xs text-neutral-500 hover:text-neutral-300"
         >
-          Reset to defaults
+          {t('ui.resetToDefaults')}
         </button>
       </div>
     </details>

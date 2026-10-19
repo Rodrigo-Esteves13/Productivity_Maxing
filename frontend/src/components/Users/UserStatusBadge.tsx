@@ -1,4 +1,5 @@
 import type { UserStatus } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface UserStatusBadgeProps {
   status: UserStatus | undefined;
@@ -12,6 +13,7 @@ const STYLES: Record<UserStatus, string> = {
 };
 
 export default function UserStatusBadge({ status, suspendedUntil }: UserStatusBadgeProps) {
+  const { t } = useI18n();
   // status vem undefined em respostas que não passam por USER_ADMIN_SELECT
   // (ex: /auth/me) - nunca deveria acontecer nesta tabela, mas por defeito
   // não assumimos nada em vez de rebentar.
@@ -22,8 +24,7 @@ export default function UserStatusBadge({ status, suspendedUntil }: UserStatusBa
       {resolved === 'SUSPENDED' ? 'SUSPENDED' : resolved}
       {resolved === 'SUSPENDED' && suspendedUntil && (
         <span className="text-[10px] font-normal normal-case text-amber-500">
-          until {new Date(suspendedUntil).toLocaleDateString()}
-        </span>
+          {t('ui.until2', { newDate: new Date(suspendedUntil).toLocaleDateString() })}</span>
       )}
     </span>
   );

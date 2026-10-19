@@ -4,6 +4,7 @@ import Button from '../components/UI/Button';
 import FaqSection from '../components/Home/FaqSection';
 import StickyMobileCta from '../components/Home/StickyMobileCta';
 import useSeo from '../hooks/useSeo';
+import { useI18n } from '../i18n/useI18n';
 
 const HOME_DESCRIPTION =
   'Free task and grade tracker for academic life. Organize subjects into Areas, track deadlines and ' +
@@ -30,6 +31,7 @@ const HOME_JSON_LD = JSON.stringify({
 // tem de existir uma homepage pública, no mesmo domínio da app, que descreva
 // a funcionalidade e linke Privacy Policy + Terms (o Footer já trata disso).
 export default function Home() {
+  const { t } = useI18n();
   useSeo({
     description: HOME_DESCRIPTION,
     path: '/',
@@ -44,16 +46,15 @@ export default function Home() {
           Productivity <span className="text-violet-400">Maxing</span>
         </h1>
         <p className="mt-5 max-w-xl text-neutral-400 text-lg">
-          Task and grade tracker for academic life. Organize subjects into Areas, track deadlines,
-          difficulty and progress, and keep an eye on your target vs real grades, all in one place.
+          {t('ui.taskAndGradeTrackerFor')}
         </p>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <Button className="px-6 py-3 text-base" onClick={() => navigate('/register')}>
-            Get started for free
+            {t('ui.getStartedForFree')}
           </Button>
           <Button variant="secondary" className="px-6 py-3 text-base" onClick={() => navigate('/login')}>
-            Log in
+            {t('ui.logIn')}
           </Button>
         </div>
 
@@ -61,22 +62,19 @@ export default function Home() {
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6">
             <h3 className="font-semibold text-white mb-1">Areas & Tasks</h3>
             <p className="text-sm text-neutral-400">
-              Group your work by subject or context, each with its own color and, if you want,
-              its own default task type.
+              {t('ui.groupYourWorkBySubject')}
             </p>
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6">
             <h3 className="font-semibold text-white mb-1">Grades & Deadlines</h3>
             <p className="text-sm text-neutral-400">
-              Set a target grade and weight for academic work, and compare it against the real
-              grade once it's out.
+              {t('ui.setATargetGradeAnd')}
             </p>
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6">
             <h3 className="font-semibold text-white mb-1">Streaks & Progress</h3>
             <p className="text-sm text-neutral-400">
-              A dashboard that keeps track of completed work, active tasks, and how consistent
-              you've been.
+              {t('ui.aDashboardThatKeepsTrack')}
             </p>
           </div>
         </div>

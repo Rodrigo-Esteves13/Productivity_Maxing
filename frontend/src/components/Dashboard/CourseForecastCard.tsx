@@ -5,6 +5,7 @@ import { formatDayLabel, formatDuration } from '../../lib/timeFormat';
 import type { CourseForecast } from '../../types/models';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
+import { useI18n } from '../../i18n/useI18n';
 
 function typicalText(course: CourseForecast): string {
   if (course.avgMinutesPerGradedTask !== null) {
@@ -19,6 +20,7 @@ function typicalText(course: CourseForecast): string {
 // Dados reais (do teu histórico de sessões) sobre quanto tempo cada
 // cadeira costuma pedir e quanto ainda falta, em vez de um palpite.
 export default function CourseForecastCard() {
+  const { t } = useI18n();
   const { courses, isLoading, error } = useCourseForecast();
 
   // Sem dados o cartão não ocupa espaço (um buraco no layout é pior).
@@ -39,8 +41,7 @@ export default function CourseForecastCard() {
                 <span className="truncate">{course.areaName}</span>
               </p>
               <p className="text-xs text-neutral-500 shrink-0">
-                {formatDuration(course.studiedMinutes)} studied
-              </p>
+                {t('ui.studied', { studiedMinutes: formatDuration(course.studiedMinutes) })}</p>
             </div>
             <p className="text-xs text-neutral-500 mt-0.5 pl-4">
               Typical: {typicalText(course)}
@@ -60,7 +61,7 @@ export default function CourseForecastCard() {
         to="/schedule"
         className="inline-block text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted mt-3"
       >
-        Open study plan
+        {t('ui.openStudyPlan')}
       </Link>
     </DashboardCard>
   );

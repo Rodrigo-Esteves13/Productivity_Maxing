@@ -79,6 +79,9 @@ export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileM
           <Link to="/feedback" onClick={onNavigate} className={getAdminLinkClass('/feedback')}>
             {t('nav.admin.feedback')}
           </Link>
+          <Link to="/friend-code-requests" onClick={onNavigate} className={getAdminLinkClass('/friend-code-requests')}>
+            {t('nav.admin.friendCodes')}
+          </Link>
         </>
       )}
     </div>

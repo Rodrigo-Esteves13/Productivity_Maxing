@@ -6,6 +6,7 @@ import { AlertTriangleIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
 import { useAreaLookup } from '../../hooks/useAreaLookup';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AtRiskTasksCardProps {
   tasks: Task[];
@@ -16,6 +17,7 @@ interface AtRiskTasksCardProps {
 // by the user regardless of date - the two signals don't always overlap
 // (a task can be behind schedule without technically being overdue yet).
 export default function AtRiskTasksCard({ tasks, areas }: AtRiskTasksCardProps) {
+  const { t } = useI18n();
   const areaById = useAreaLookup(areas);
 
   const atRisk = tasks
@@ -57,7 +59,7 @@ export default function AtRiskTasksCard({ tasks, areas }: AtRiskTasksCardProps) 
         to="/tasks"
         className="block mt-3 text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
       >
-        View all tasks
+        {t('ui.viewAllTasks')}
       </Link>
     </DashboardCard>
   );

@@ -239,7 +239,7 @@ function ShareAccessGate({
           href={`/login?redirect=${encodeURIComponent(redirectPath)}`}
           className="mt-1 rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500"
         >
-          Log in
+          {t('ui.logIn')}
         </a>
       )}
 
@@ -425,7 +425,7 @@ export function SharedNotebookEntryView({
 
         {(entry.usefulLinks?.length ?? 0) > 0 && (
           <section>
-            <EntrySectionHeader icon={LinkIcon} title="Useful links" />
+            <EntrySectionHeader icon={LinkIcon} title={t('ui.usefulLinks')} />
             <div className="space-y-1.5">
               {entry.usefulLinks!.map((link) => (
                 <a

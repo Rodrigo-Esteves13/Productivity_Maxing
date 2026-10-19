@@ -3,6 +3,7 @@ import Input from '../../UI/Input';
 import { ClockIcon } from '../../UI/Icons';
 import WeightBudgetHint from './WeightBudgetHint';
 import type { DurationPrediction } from '../../../api/predictionService';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface GradingFieldsProps {
   idPrefix: string;
@@ -46,13 +47,14 @@ export default function GradingFields({
   prediction,
   isPredictionLoading = false,
 }: GradingFieldsProps) {
+  const { t } = useI18n();
   const hasSuggestion =
     !!prediction && prediction.method !== 'insufficient_data' && prediction.predictedMinutes != null;
 
   return (
     <div className="space-y-3 pt-4 border-t border-neutral-800">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <FormField label="Target Grade" htmlFor={`${idPrefix}-target-grade`}>
+        <FormField label={t('ui.targetGrade')} htmlFor={`${idPrefix}-target-grade`}>
           <Input
             id={`${idPrefix}-target-grade`}
             type="number"
@@ -64,7 +66,7 @@ export default function GradingFields({
             className="w-full"
           />
         </FormField>
-        <FormField label="Weight (%)" htmlFor={`${idPrefix}-weight`}>
+        <FormField label={t('ui.weight2')} htmlFor={`${idPrefix}-weight`}>
           <Input
             id={`${idPrefix}-weight`}
             type="number"
@@ -79,7 +81,7 @@ export default function GradingFields({
       </div>
       <WeightBudgetHint areaId={areaId} taskId={taskId} weightPercentage={weightPercentage} />
 
-      <FormField label="Estimated Duration (minutes)" htmlFor={`${idPrefix}-estimated-minutes`}>
+      <FormField label={t('ui.estimatedDurationMinutes')} htmlFor={`${idPrefix}-estimated-minutes`}>
         <div className="flex flex-wrap items-center gap-2">
           <Input
             id={`${idPrefix}-estimated-minutes`}
@@ -90,7 +92,7 @@ export default function GradingFields({
             onChange={(e) => onEstimatedMinutesChange(e.target.value)}
             className="w-32"
           />
-          {isPredictionLoading && <span className="text-xs text-neutral-600">Estimating...</span>}
+          {isPredictionLoading && <span className="text-xs text-neutral-600">{t('ui.estimating')}</span>}
           {!isPredictionLoading && hasSuggestion && (
             <button
               type="button"
@@ -115,8 +117,7 @@ export default function GradingFields({
         </div>
         {!isPredictionLoading && prediction?.method === 'insufficient_data' && (
           <p className="text-xs text-neutral-600 mt-1">
-            Not enough completed tasks with logged study time yet for a suggestion ({prediction.sampleSize}/10).
-          </p>
+            {t('ui.notEnoughCompletedTasksWith', { sampleSize: prediction.sampleSize })}</p>
         )}
       </FormField>
     </div>

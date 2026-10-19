@@ -6,7 +6,7 @@ import { join } from 'node:path';
 
 const root = join(import.meta.dirname, '..', 'src', 'i18n', 'messages');
 const langs = readdirSync(root).filter((d) => !d.includes('.'));
-const entry = /^\s*'([^']+)':\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'),?\s*$/gm;
+const entry = /^\s*['"]([^'"]+)['"]:\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'),?\s*$/gm;
 
 const load = (lang) => {
   const out = {};

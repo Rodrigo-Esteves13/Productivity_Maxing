@@ -4,7 +4,7 @@ import {
   acceptFriendRequest,
   blockUser,
   getSocialOverview,
-  regenerateFriendCode,
+  requestFriendCodeChange,
   removeFriendship,
   sendFriendRequest,
   unblockUser,
@@ -71,9 +71,18 @@ export function useSocial() {
     [load],
   );
 
-  const newCode = useCallback(
-    () => run(async () => regenerateFriendCode()),
-    [run],
+  // true se o pedido foi criado (o cartao mostra "pendente" a seguir).
+  const requestCodeChange = useCallback(
+    async (reason: string): Promise<boolean> => {
+      try {
+        await requestFriendCodeChange(reason);
+        await load(true);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [load],
   );
 
   return {
@@ -81,7 +90,7 @@ export function useSocial() {
     isLoading,
     hasError,
     addFriend,
-    newCode,
+    requestCodeChange,
     accept: (id: string) => run(() => acceptFriendRequest(id)),
     remove: (id: string) => run(() => removeFriendship(id)),
     block: (userId: string) => run(() => blockUser(userId)),

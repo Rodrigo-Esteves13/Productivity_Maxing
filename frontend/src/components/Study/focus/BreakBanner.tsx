@@ -4,10 +4,12 @@ import { notify, playChime, requestNotifyPermission } from '../../../lib/focusAl
 import { breakRemainingSeconds } from '../../../lib/focusTimer';
 import { formatElapsed } from '../../../lib/formatDuration';
 import Button from '../../UI/Button';
+import { useI18n } from '../../../i18n/useI18n';
 
 // Pausa entre blocos: contagem decrescente e, no fim, aviso e "comecar o
 // proximo bloco" com a mesma task.
 export default function BreakBanner() {
+  const { t } = useI18n();
   const { restBreak, endBreak, start, isSubmitting } = useActiveStudySession();
   const [now, setNow] = useState(() => Date.now());
   const alertedFor = useRef<number | null>(null);
@@ -39,17 +41,17 @@ export default function BreakBanner() {
           <p className="text-sm font-medium text-white">
             Break <span className="font-mono tabular-nums text-violet-300">{formatElapsed(remaining)}</span>
           </p>
-          <p className="mt-1 text-xs text-neutral-400">Step away from the screen.</p>
+          <p className="mt-1 text-xs text-neutral-400">{t('ui.stepAwayFromTheScreen')}</p>
           <div className="mt-3">
             <Button variant="secondary" className="px-3 py-1.5 text-sm" onClick={endBreak}>
-              Skip break
+              {t('ui.skipBreak')}
             </Button>
           </div>
         </>
       ) : (
         <>
-          <p className="text-sm font-medium text-white">Break over</p>
-          <p className="mt-1 text-xs text-neutral-400">Ready for the next block?</p>
+          <p className="text-sm font-medium text-white">{t('ui.breakOver')}</p>
+          <p className="mt-1 text-xs text-neutral-400">{t('ui.readyForTheNextBlock')}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {resume && (
               <Button
@@ -61,11 +63,11 @@ export default function BreakBanner() {
                   void start({ taskId: resume.taskId, areaId: resume.areaId }, resume.plan);
                 }}
               >
-                Start next block
+                {t('ui.startNextBlock')}
               </Button>
             )}
             <Button variant="secondary" className="px-3 py-1.5 text-sm" onClick={endBreak}>
-              Done for now
+              {t('ui.doneForNow')}
             </Button>
           </div>
         </>

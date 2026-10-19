@@ -2,6 +2,7 @@ import AppealRow from './AppealRow';
 import Pagination from '../UI/Pagination';
 import EmptyState from '../UI/EmptyState';
 import type { AppealAdmin, AppealResolution } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AppealsListProps {
   appeals: AppealAdmin[];
@@ -22,8 +23,9 @@ export default function AppealsList({
   onNextPage,
   onPrevPage,
 }: AppealsListProps) {
+  const { t } = useI18n();
   if (appeals.length === 0) {
-    return <EmptyState message="No pending appeals right now - new ones will show up here." />;
+    return <EmptyState message={t('ui.noPendingAppealsRightNow')} />;
   }
 
   return (

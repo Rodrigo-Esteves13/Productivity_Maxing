@@ -1,6 +1,7 @@
 import FormField from '../../UI/FormField';
 import Input from '../../UI/Input';
 import Select from '../../UI/Select';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface AreaOption {
   id: string;
@@ -29,9 +30,10 @@ export default function TitleDateAreaFields({
   onDateChange,
   onAreaChange,
 }: TitleDateAreaFieldsProps) {
+  const { t } = useI18n();
   return (
     <>
-      <FormField label="Title" htmlFor={`${idPrefix}-title`}>
+      <FormField label={t('ui.title')} htmlFor={`${idPrefix}-title`}>
         <Input
           id={`${idPrefix}-title`}
           required
@@ -43,7 +45,7 @@ export default function TitleDateAreaFields({
       </FormField>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <FormField label="Date" htmlFor={`${idPrefix}-date`}>
+        <FormField label={t('ui.date')} htmlFor={`${idPrefix}-date`}>
           <Input
             id={`${idPrefix}-date`}
             required
@@ -53,7 +55,7 @@ export default function TitleDateAreaFields({
             className="w-full"
           />
         </FormField>
-        <FormField label="Area" htmlFor={`${idPrefix}-area`}>
+        <FormField label={t('ui.area')} htmlFor={`${idPrefix}-area`}>
           <Select
             id={`${idPrefix}-area`}
             required
@@ -66,7 +68,7 @@ export default function TitleDateAreaFields({
             className="w-full"
           >
             <option value="" disabled>
-              Select Area...
+              {t('ui.selectArea')}
             </option>
             {areas.map((area) => (
               <option key={area.id} value={area.id}>

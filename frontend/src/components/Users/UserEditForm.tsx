@@ -4,6 +4,7 @@ import Select from '../UI/Select';
 import Button from '../UI/Button';
 import FormField from '../UI/FormField';
 import type { Role } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 export interface UserFormValues {
   name: string;
@@ -27,6 +28,7 @@ export default function UserEditForm({
   onCancel,
   isSubmitting,
 }: UserEditFormProps) {
+  const { t } = useI18n();
   const [formData, setFormData] = useState<UserFormValues>(initialValues);
 
   const handleSubmit = (e: SyntheticEvent) => {
@@ -37,37 +39,37 @@ export default function UserEditForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-      <FormField label="Name" htmlFor={`${idPrefix}-name`}>
+      <FormField label={t('ui.name')} htmlFor={`${idPrefix}-name`}>
         <Input
           id={`${idPrefix}-name`}
           required
           type="text"
-          placeholder="Full name"
+          placeholder={t('ui.fullName')}
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
         />
       </FormField>
 
-      <FormField label="Role" htmlFor={`${idPrefix}-role`}>
+      <FormField label={t('ui.role')} htmlFor={`${idPrefix}-role`}>
         <Select
           id={`${idPrefix}-role`}
           value={formData.role}
           disabled={isSelf}
           onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
         >
-          <option value="USER">User</option>
-          <option value="ADMIN">Admin</option>
+          <option value="USER">{t('ui.user')}</option>
+          <option value="ADMIN">{t('ui.admin')}</option>
         </Select>
         {isSelf && (
           <p className="mt-1 text-xs text-neutral-500">
-            You can't change your own role. Ask another admin to do it.
+            {t('ui.youCanTChangeYour')}
           </p>
         )}
       </FormField>
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800 mt-6">
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
+          {t('ui.cancel')}
         </Button>
         <button
           type="submit"

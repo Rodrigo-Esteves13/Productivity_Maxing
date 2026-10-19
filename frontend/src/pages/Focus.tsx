@@ -10,8 +10,10 @@ import StudyNowHint from '../components/Study/focus/StudyNowHint';
 import SessionHistoryCard from '../components/Study/focus/SessionHistoryCard';
 import { useStudyPlan } from '../hooks/useStudyPlan';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { useI18n } from '../i18n/useI18n';
 
 export default function Focus() {
+  const { t } = useI18n();
   useDocumentTitle('Focus');
   // Um so pedido do plano, partilhado pelo progresso do dia e pelos blocos.
   const { plan, isLoading, error } = useStudyPlan(1);
@@ -19,8 +21,8 @@ export default function Focus() {
   return (
     <PageLayout>
       <PageHeader
-        title="Focus"
-        description="Track study sessions, follow today's plan, fix your records, and learn your best times to study."
+        title={t('ui.focus')}
+        description={t('ui.trackStudySessionsFollowToday')}
       />
 
       <div className="mb-6 space-y-3">

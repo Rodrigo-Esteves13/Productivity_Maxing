@@ -1,9 +1,12 @@
 import {
+  IsBoolean,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUUID,
   Matches,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
@@ -24,4 +27,29 @@ export class BlockUserDto {
   @ApiProperty()
   @IsUUID()
   userId: string;
+}
+
+const trim = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim() : value;
+
+export class FriendCodeChangeRequestDto {
+  @ApiProperty({ description: 'Why you need a new friend code.' })
+  @Transform(trim)
+  @IsString()
+  @MinLength(10)
+  @MaxLength(500)
+  reason: string;
+}
+
+export class DecideFriendCodeRequestDto {
+  @ApiProperty()
+  @IsBoolean()
+  approve: boolean;
+
+  @ApiProperty({ required: false, description: 'Shown to the user.' })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(300)
+  note?: string;
 }

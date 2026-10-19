@@ -3,6 +3,7 @@ import ColorDot from '../UI/ColorDot';
 import { updateTask } from '../../api/userService';
 import { formatDayLabel } from '../../lib/timeFormat';
 import type { BackfillCandidate } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 const MIN_HOURS = 0.25;
 const MAX_HOURS = 200;
@@ -14,6 +15,7 @@ interface BackfillRowProps {
 }
 
 function BackfillRow({ candidate, onSaved }: BackfillRowProps) {
+  const { t } = useI18n();
   const [hours, setHours] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -45,8 +47,7 @@ function BackfillRow({ candidate, onSaved }: BackfillRowProps) {
           <span className="truncate">{candidate.title}</span>
         </p>
         <p className="pl-4 text-[11px] text-neutral-500">
-          {candidate.areaName} · {formatDayLabel(candidate.date)} · grade {candidate.grade}/{candidate.gradeMax}
-        </p>
+          {t('ui.grade', { areaName: candidate.areaName, date: formatDayLabel(candidate.date), grade: candidate.grade, gradeMax: candidate.gradeMax })}</p>
       </div>
       <input
         type="text"
@@ -86,10 +87,11 @@ interface BackfillStudyTimeProps {
 // avaliacoes antigas. Um valor aproximado chega: transforma o historico que
 // ja tens em dados para as previsoes, em vez de esperar meses de sessoes novas.
 export default function BackfillStudyTime({ candidates, onSaved }: BackfillStudyTimeProps) {
+  const { t } = useI18n();
   return (
     <div>
       <p className="mb-2 text-xs text-neutral-400">
-        A rough guess is fine. Sessions you log later always win over these numbers.
+        {t('ui.aRoughGuessIsFine')}
       </p>
       <ul className="space-y-3">
         {candidates.map((candidate) => (

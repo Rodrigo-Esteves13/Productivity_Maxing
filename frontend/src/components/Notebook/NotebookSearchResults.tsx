@@ -21,13 +21,13 @@ export default function NotebookSearchResults({
   query,
   onSelect,
 }: NotebookSearchResultsProps) {
-  const { lang } = useI18n();
+  const {lang, t } = useI18n();
   if (isLoading) {
-    return <p className="text-sm text-neutral-500">Searching...</p>;
+    return <p className="text-sm text-neutral-500">{t('ui.searching')}</p>;
   }
 
   if (results.length === 0) {
-    return <p className="text-sm text-neutral-500">No entries match "{query}".</p>;
+    return <p className="text-sm text-neutral-500">{t('ui.noEntriesMatch', { query: query })}</p>;
   }
 
   return (

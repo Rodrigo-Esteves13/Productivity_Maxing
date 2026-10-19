@@ -6,6 +6,7 @@ import SectionLabel from '../../UI/SectionLabel';
 import ToolbarButton from '../../UI/ToolbarButton';
 import { CANVAS_SHAPE_DEFS } from '../canvasShapeDefs';
 import SelectionEditor from './SelectionEditor';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface CanvasShapesToolbarProps {
   shapes: UseCanvasShapesResult;
@@ -30,9 +31,10 @@ export default function CanvasShapesToolbar({
   selectedLink,
   onDeleteSelectedShape,
 }: CanvasShapesToolbarProps) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg bg-neutral-900 px-3 py-2">
-      <SectionLabel>Shapes</SectionLabel>
+      <SectionLabel>{t('ui.shapes')}</SectionLabel>
       <div className="flex flex-wrap items-center gap-1.5">
         {CANVAS_SHAPE_DEFS.map((def) => (
           <button
@@ -46,7 +48,7 @@ export default function CanvasShapesToolbar({
         ))}
       </div>
 
-      <ToolbarButton pressed={links.connectMode} title="Click two shapes to link them" onClick={links.toggleConnectMode}>
+      <ToolbarButton pressed={links.connectMode} title={t('ui.clickTwoShapesToLink')} onClick={links.toggleConnectMode}>
         <LinkIcon className="h-3.5 w-3.5" />
         {connectLabel(links)}
       </ToolbarButton>
@@ -55,7 +57,7 @@ export default function CanvasShapesToolbar({
         <SelectionEditor
           noun="shape"
           label={selectedShape.label}
-          placeholder="Label"
+          placeholder={t('ui.label')}
           inputWidthClass="w-28"
           onLabelChange={(label) => shapes.relabelShape(selectedShape.id, label)}
           onDelete={onDeleteSelectedShape}
@@ -67,7 +69,7 @@ export default function CanvasShapesToolbar({
         <SelectionEditor
           noun="link"
           label={selectedLink.label}
-          placeholder="Link label (optional)"
+          placeholder={t('ui.linkLabelOptional')}
           inputWidthClass="w-36"
           onLabelChange={(label) => links.relabelLink(selectedLink.id, label)}
           onDelete={() => links.removeLink(selectedLink.id)}

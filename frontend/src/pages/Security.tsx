@@ -10,8 +10,10 @@ import BannedIpsCard from '../components/Security/BannedIpsCard';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useSecurityLogsPage } from '../hooks/useSecurityLogsPage';
 import { useBannedIps } from '../hooks/useBannedIps';
+import { useI18n } from '../i18n/useI18n';
 
 export default function Security() {
+  const { t } = useI18n();
   useDocumentTitle('Security Logs');
   const {
     logs,
@@ -46,8 +48,8 @@ export default function Security() {
   return (
     <PageLayout>
       <PageHeader
-        title="Security Logs"
-        description="Area exclusive to Administrators. Every request blocked by the rate limiter (a candidate DoS/brute-force attempt) is recorded here, with the offending IP, path, and user (if authenticated)."
+        title={t('ui.securityLogs')}
+        description={t('ui.areaExclusiveToAdministratorsEvery')}
       />
 
       <SecurityStatsCards stats={stats} />

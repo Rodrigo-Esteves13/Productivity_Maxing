@@ -6,6 +6,7 @@ import ActionButton from '../UI/ActionButton';
 import Button from '../UI/Button';
 import LinesSkeleton from '../UI/LinesSkeleton';
 import { useBannedIps } from '../../hooks/useBannedIps';
+import { useI18n } from '../../i18n/useI18n';
 
 interface BannedIpsCardProps {
   // Preenchido pelo botão "Ban" numa linha da tabela de logs (ver
@@ -16,6 +17,7 @@ interface BannedIpsCardProps {
 }
 
 export default function BannedIpsCard({ prefillIp }: BannedIpsCardProps) {
+  const { t } = useI18n();
   const { bannedIps, isLoading, error, isSubmitting, ban, unban } = useBannedIps();
   const [ip, setIp] = useState('');
   const [reason, setReason] = useState('');
@@ -35,13 +37,13 @@ export default function BannedIpsCard({ prefillIp }: BannedIpsCardProps) {
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 mb-6">
-      <h2 className="text-lg font-semibold text-white mb-1">Banned IPs</h2>
+      <h2 className="text-lg font-semibold text-white mb-1">{t('ui.bannedIps')}</h2>
       <p className="text-sm text-neutral-400 mb-4">
-        A banned IP gets a flat 403 on every request, before rate limiting or anything else runs.
+        {t('ui.aBannedIpGetsA')}
       </p>
 
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 mb-4">
-        <FormField label="IP address" htmlFor="ban-ip" className="flex-1">
+        <FormField label={t('ui.ipAddress')} htmlFor="ban-ip" className="flex-1">
           <Input
             id="ban-ip"
             value={ip}
@@ -50,12 +52,12 @@ export default function BannedIpsCard({ prefillIp }: BannedIpsCardProps) {
             required
           />
         </FormField>
-        <FormField label="Reason (optional)" htmlFor="ban-reason" className="flex-1">
+        <FormField label={t('ui.reasonOptional')} htmlFor="ban-reason" className="flex-1">
           <Input
             id="ban-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Why is this IP being banned?"
+            placeholder={t('ui.whyIsThisIpBeing')}
             maxLength={500}
           />
         </FormField>
@@ -71,7 +73,7 @@ export default function BannedIpsCard({ prefillIp }: BannedIpsCardProps) {
       {isLoading ? (
         <LinesSkeleton lines={3} />
       ) : bannedIps.length === 0 ? (
-        <p className="text-sm text-neutral-500">No IPs banned right now.</p>
+        <p className="text-sm text-neutral-500">{t('ui.noIpsBannedRightNow')}</p>
       ) : (
         <div className="space-y-2">
           {bannedIps.map((b) => (
@@ -93,7 +95,7 @@ export default function BannedIpsCard({ prefillIp }: BannedIpsCardProps) {
                 onClick={() => void unban(b.id)}
                 className="w-auto px-3 py-1.5 text-xs shrink-0"
               >
-                Unban
+                {t('ui.unban')}
               </Button>
             </div>
           ))}

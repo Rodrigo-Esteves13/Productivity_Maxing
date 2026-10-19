@@ -4,6 +4,7 @@ import Button from '../UI/Button';
 import FormField from '../UI/FormField';
 import type { User } from '../../types/models';
 import { toDateKey, todayKey } from '../../lib/dateKey';
+import { useI18n } from '../../i18n/useI18n';
 
 interface UserStatusModalProps {
   target: User;
@@ -23,6 +24,7 @@ function defaultUntilDate(): string {
 }
 
 export default function UserStatusModal({ target, mode, isSubmitting, onSubmit, onCancel }: UserStatusModalProps) {
+  const { t } = useI18n();
   const [reason, setReason] = useState('');
   const [until, setUntil] = useState(defaultUntilDate());
 
@@ -53,7 +55,7 @@ export default function UserStatusModal({ target, mode, isSubmitting, onSubmit, 
         )}
       </p>
 
-      <FormField label="Reason" htmlFor="status-reason">
+      <FormField label={t('ui.reason')} htmlFor="status-reason">
         <textarea
           id="status-reason"
           required
@@ -67,7 +69,7 @@ export default function UserStatusModal({ target, mode, isSubmitting, onSubmit, 
       </FormField>
 
       {!isBan && (
-        <FormField label="Suspended until" htmlFor="status-until">
+        <FormField label={t('ui.suspendedUntil')} htmlFor="status-until">
           <Input
             id="status-until"
             type="date"
@@ -81,7 +83,7 @@ export default function UserStatusModal({ target, mode, isSubmitting, onSubmit, 
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800 mt-6">
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
+          {t('ui.cancel')}
         </Button>
         <button
           type="submit"

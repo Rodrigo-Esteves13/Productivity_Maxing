@@ -1,4 +1,5 @@
 import ConfirmDialog from '../UI/ConfirmDialog';
+import { useI18n } from '../../i18n/useI18n';
 
 interface DisconnectCalendarModalProps {
   isDisconnecting: boolean;
@@ -14,10 +15,11 @@ export default function DisconnectCalendarModal({
   onCancel,
   onConfirm,
 }: DisconnectCalendarModalProps) {
+  const { t } = useI18n();
   return (
     <ConfirmDialog
-      title="Disconnect Google Calendar?"
-      message="Events already added to your Google Calendar will stay there - they just won't stay in sync anymore. The app's access is revoked with Google. You can reconnect anytime from here."
+      title={t('ui.disconnectGoogleCalendar')}
+      message={t('ui.eventsAlreadyAddedToYour')}
       confirmLabel={isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
       cancelLabel="Cancel"
       tone="danger"

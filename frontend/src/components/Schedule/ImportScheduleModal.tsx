@@ -5,6 +5,7 @@ import { CheckIcon, AlertTriangleIcon, TrashIcon } from '../UI/Icons';
 import { deleteImportedClasses } from '../../api/scheduleService';
 import { useFeedback } from '../../context/useFeedback';
 import ImportOptionsPanel from './ImportOptionsPanel';
+import { useI18n } from '../../i18n/useI18n';
 
 interface ImportScheduleModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export default function ImportScheduleModal({
   onClose,
   onImported,
 }: ImportScheduleModalProps) {
+  const { t } = useI18n();
   const { stage, outcome, errorMessage, runImport, reset, options, setOptions } = useScheduleImport();
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -83,7 +85,7 @@ export default function ImportScheduleModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Import schedule from .ics">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t('ui.importScheduleFromIcs')}>
       <div className="space-y-4">
         <div className="text-sm text-neutral-400 space-y-1">
           <p>
@@ -92,8 +94,7 @@ export default function ImportScheduleModal({
             later) updates existing classes and adds new ones - it never creates duplicates.
           </p>
           <p>
-            The export only covers a rolling window (usually 2-3 weeks) - re-import periodically
-            to keep the schedule filled in further ahead.
+            {t('ui.theExportOnlyCoversA')}
           </p>
         </div>
 
@@ -140,7 +141,7 @@ export default function ImportScheduleModal({
               (outcome.backendResult?.results.some((r) => !r.success) ?? false)) && (
               <div className="max-h-48 overflow-y-auto bg-neutral-950 border border-neutral-800 rounded-lg p-3 space-y-1">
                 <p className="text-xs uppercase tracking-wide text-neutral-500 mb-1">
-                  Events skipped
+                  {t('ui.eventsSkipped')}
                 </p>
                 {outcome.parseErrors.map((message, i) => (
                   <p key={`parse-${i}`} className="text-xs text-neutral-400">
@@ -151,8 +152,7 @@ export default function ImportScheduleModal({
                   .filter((r) => !r.success)
                   .map((r) => (
                     <p key={`backend-${r.row}`} className="text-xs text-neutral-400">
-                      Row {r.row}: {r.error}
-                    </p>
+                      {t('ui.row2', { row: r.row, error: r.error ?? '' })}</p>
                   ))}
               </div>
             )}

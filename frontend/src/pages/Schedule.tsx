@@ -11,8 +11,10 @@ import CalendarFeedCard from '../components/Schedule/CalendarFeedCard';
 import { UploadIcon } from '../components/UI/Icons';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { requestCalendarSyncReview } from '../lib/calendarSyncEvents';
+import { useI18n } from '../i18n/useI18n';
 
 export default function Schedule() {
+  const { t } = useI18n();
   useDocumentTitle('Schedule');
   const [isImportOpen, setIsImportOpen] = useState(false);
   // Incrementado a cada import bem-sucedido - passado ao WeekGrid como
@@ -33,8 +35,8 @@ export default function Schedule() {
   return (
     <PageLayout>
       <PageHeader
-        title="Schedule"
-        description="Your class timetable, imported from your school's calendar (.ics), and a study plan built around it."
+        title={t('ui.schedule')}
+        description={t('ui.yourClassTimetableImportedFrom')}
         action={
           <ActionButton
             onClick={() => setIsImportOpen(true)}

@@ -7,6 +7,7 @@ import DetailRow from '../UI/DetailRow';
 import { recurrenceLabel } from '../../lib/recurrence';
 import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
 import { useDurationPrediction } from '../../hooks/useDurationPrediction';
+import { useI18n } from '../../i18n/useI18n';
 
 interface TaskDetailViewProps {
   task: Task;
@@ -19,6 +20,7 @@ interface TaskDetailViewProps {
 }
 
 export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes = [], onSubtasksChange, onSubtaskConverted }: TaskDetailViewProps) {
+  const { t } = useI18n();
   const typeLabel = resolveOptionLabel(task.type, taskTypes);
   const academicTypeLabel = resolveOptionLabel(task.academicType, academicTaskTypes);
   // Reutiliza o mesmo hook do formulário só para ir buscar actualMinutes
@@ -34,19 +36,18 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
   });
   return (
     <div>
-      <DetailRow label="Title">{task.title}</DetailRow>
-      <DetailRow label="Date">
+      <DetailRow label={t('ui.title')}>{task.title}</DetailRow>
+      <DetailRow label={t('ui.date')}>
         <div className="flex items-center gap-2">
           <span>{new Date(task.date).toLocaleDateString()}</span>
           {task.postponedCount > 0 && (
             <span className="text-xs text-amber-500/80">
-              (postponed {task.postponedCount}x)
-            </span>
+              {t('ui.postponedX', { postponedCount: task.postponedCount })}</span>
           )}
         </div>
       </DetailRow>
       {onSubtasksChange && (
-        <DetailRow label="Checklist">
+        <DetailRow label={t('ui.checklist')}>
           <SubtaskChecklist
             taskId={task.id}
             subtasks={task.subtasks ?? []}
@@ -56,36 +57,36 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
         </DetailRow>
       )}
       {recurrenceLabel(task) && (
-        <DetailRow label="Repeat">
+        <DetailRow label={t('ui.repeat')}>
           {recurrenceLabel(task)}
           {task.recurrenceUntil ? ` until ${new Date(task.recurrenceUntil).toLocaleDateString()}` : ''}. The next one is created when you complete this task.
         </DetailRow>
       )}
-      <DetailRow label="Area">{task.area?.name ?? 'No Area'}</DetailRow>
+      <DetailRow label={t('ui.area')}>{task.area?.name ?? 'No Area'}</DetailRow>
 
-      <DetailRow label="Status">
+      <DetailRow label={t('ui.status')}>
         <StatusBadge status={task.progressStatus} />
       </DetailRow>
-      <DetailRow label="Difficulty">
+      <DetailRow label={t('ui.difficulty')}>
         <DifficultyBadge difficulty={task.difficulty} />
       </DetailRow>
       {task.priority && (
-        <DetailRow label="Priority">
+        <DetailRow label={t('ui.priority')}>
           <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
         </DetailRow>
       )}
 
-      <DetailRow label="Type">{typeLabel}</DetailRow>
-      {academicTypeLabel && <DetailRow label="Academic Type">{academicTypeLabel}</DetailRow>}
-      {task.topics && <DetailRow label="Topics">{task.topics}</DetailRow>}
+      <DetailRow label={t('ui.type')}>{typeLabel}</DetailRow>
+      {academicTypeLabel && <DetailRow label={t('ui.academicType')}>{academicTypeLabel}</DetailRow>}
+      {task.topics && <DetailRow label={t('ui.topics')}>{task.topics}</DetailRow>}
       {task.notes && (
-        <DetailRow label="Notes">
+        <DetailRow label={t('ui.notes')}>
           <span className="whitespace-pre-wrap break-words">{task.notes}</span>
         </DetailRow>
       )}
 
       {task.referenceLink && (
-        <DetailRow label="Reference Link">
+        <DetailRow label={t('ui.referenceLink')}>
           <a
             href={task.referenceLink}
             target="_blank"
@@ -98,30 +99,30 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       )}
 
       {task.weightPercentage != null && (
-        <DetailRow label="Weight">{task.weightPercentage}%</DetailRow>
+        <DetailRow label={t('ui.weight')}>{task.weightPercentage}%</DetailRow>
       )}
       {(task.estimatedMinutes != null || durationInfo?.actualMinutes != null) && (
-        <DetailRow label="Duration">
+        <DetailRow label={t('ui.duration')}>
           <div className="flex flex-wrap gap-x-4 gap-y-0.5">
-            {task.estimatedMinutes != null && <span>Estimated: {task.estimatedMinutes} min</span>}
+            {task.estimatedMinutes != null && <span>{t('ui.estimatedMin', { estimatedMinutes: task.estimatedMinutes })}</span>}
             {durationInfo?.actualMinutes != null && (
-              <span>Actual: {durationInfo.actualMinutes} min</span>
+              <span>{t('ui.actualMin', { actualMinutes: durationInfo.actualMinutes })}</span>
             )}
           </div>
         </DetailRow>
       )}
       {task.targetGrade != null && (
-        <DetailRow label="Target Grade">{task.targetGrade}</DetailRow>
+        <DetailRow label={t('ui.targetGrade')}>{task.targetGrade}</DetailRow>
       )}
-      <DetailRow label="Real Grade">
+      <DetailRow label={t('ui.realGrade')}>
         {task.realGrade != null ? (
           task.realGrade
         ) : (
-          <span className="text-neutral-500">Not entered yet</span>
+          <span className="text-neutral-500">{t('ui.notEnteredYet')}</span>
         )}
       </DetailRow>
 
-      <DetailRow label="Google Calendar">
+      <DetailRow label={t('ui.googleCalendar')}>
         {task.googleCalendarEventId ? (
           <span className="inline-flex items-center gap-1.5 text-cyan-400">
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />

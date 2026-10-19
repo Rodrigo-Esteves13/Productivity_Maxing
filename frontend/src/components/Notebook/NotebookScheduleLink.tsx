@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getScheduleLink, upsertScheduleLink, removeScheduleLink } from '../../api/notebookService';
 import { CheckIcon, XIcon } from '../UI/Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 interface NotebookScheduleLinkProps {
   areaId: string;
@@ -11,6 +12,7 @@ interface NotebookScheduleLinkProps {
 // visitas ao caderno não precisa de tocar nisto, só na primeira vez por
 // cadeira.
 export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkProps) {
+  const { t } = useI18n();
   const [linkedSubject, setLinkedSubject] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -69,7 +71,7 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
           onClick={() => setIsEditing(true)}
           className="text-violet-400 hover:underline"
         >
-          Change
+          {t('ui.change')}
         </button>
       </p>
     );
@@ -82,7 +84,7 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
         onClick={() => setIsEditing(true)}
         className="text-xs text-violet-400 hover:underline"
       >
-        Link this subject to your schedule for auto-detected class titles
+        {t('ui.linkThisSubjectToYour')}
       </button>
     );
   }
@@ -92,7 +94,7 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
       <input
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        placeholder="Subject text as it appears in your .ics (e.g. PC)"
+        placeholder={t('ui.subjectTextAsItAppears')}
         className="w-full sm:w-64 rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none"
       />
       <button
@@ -100,7 +102,7 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
         onClick={handleSave}
         disabled={isSaving}
         className="rounded-md p-1 text-violet-400 hover:bg-neutral-800 disabled:opacity-50"
-        aria-label="Save link"
+        aria-label={t('ui.saveLink')}
       >
         <CheckIcon className="h-3.5 w-3.5" />
       </button>
@@ -109,7 +111,7 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
           type="button"
           onClick={handleRemove}
           className="rounded-md p-1 text-red-400 hover:bg-neutral-800"
-          aria-label="Remove link"
+          aria-label={t('ui.removeLink')}
         >
           <XIcon className="h-3.5 w-3.5" />
         </button>

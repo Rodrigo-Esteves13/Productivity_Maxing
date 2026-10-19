@@ -5,6 +5,7 @@ import { PencilIcon, TrashIcon } from '../../UI/Icons';
 import ColorSwatches from '../../UI/ColorSwatches';
 import ToolbarButton from '../../UI/ToolbarButton';
 import { COLOR_SWATCHES } from './canvasConstants';
+import { useI18n } from '../../../i18n/useI18n';
 
 const MIN_FONT_SIZE = 10;
 const MAX_FONT_SIZE = 36;
@@ -16,11 +17,12 @@ interface SelectedTextControlsProps {
 
 // Controlos do texto selecionado: editar, tamanho, cor e apagar.
 export default function SelectedTextControls({ item, texts }: SelectedTextControlsProps) {
+  const { t } = useI18n();
   return (
     <div className="flex items-center gap-2">
       <ToolbarButton
-        aria-label="Edit text"
-        title="Edit (or double-click/double-tap the text)"
+        aria-label={t('ui.editText')}
+        title={t('ui.editOrDoubleClickDouble')}
         onClick={() => texts.startEditing(item.id)}
       >
         <PencilIcon className="h-3.5 w-3.5" />
@@ -34,8 +36,8 @@ export default function SelectedTextControls({ item, texts }: SelectedTextContro
         value={item.fontSize ?? DEFAULT_TEXT_FONT_SIZE}
         onChange={(e) => texts.setFontSize(item.id, Number(e.target.value))}
         className="w-20 accent-violet-500"
-        aria-label="Text size"
-        title="Text size"
+        aria-label={t('ui.textSize')}
+        title={t('ui.textSize')}
       />
       <ColorSwatches
         size="sm"
@@ -46,8 +48,8 @@ export default function SelectedTextControls({ item, texts }: SelectedTextContro
       />
       <ToolbarButton
         tone="danger"
-        aria-label="Delete text"
-        title="Delete (or press Delete/Backspace)"
+        aria-label={t('ui.deleteText')}
+        title={t('ui.deleteOrPressDeleteBackspace')}
         onClick={() => texts.removeText(item.id)}
       >
         <TrashIcon className="h-3.5 w-3.5" />

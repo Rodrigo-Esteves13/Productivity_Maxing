@@ -8,6 +8,7 @@ import { formatClock, parseClock } from '../../../lib/timeFormat';
 import { WEEKDAYS } from './shiftText';
 import type { WorkShift } from '../../../types/models';
 import ToggleChip from '../../UI/ToggleChip';
+import { useI18n } from '../../../i18n/useI18n';
 
 type Repeat = 'weekly' | 'once';
 
@@ -41,6 +42,7 @@ export default function ShiftForm({
   onSubmit,
   onCancel,
 }: ShiftFormProps) {
+  const { t } = useI18n();
   const isEditing = shift !== undefined;
   const [repeat, setRepeat] = useState<Repeat>(shift && shift.dayOfWeek === null ? 'once' : 'weekly');
   const [days, setDays] = useState<number[]>(shift?.dayOfWeek != null ? [shift.dayOfWeek] : []);
@@ -85,12 +87,12 @@ export default function ShiftForm({
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3 rounded-lg bg-neutral-800/40 p-3">
       <Select
-        label="Repeats"
+        label={t('ui.repeats')}
         value={repeat}
         onChange={(e) => setRepeat(e.target.value as Repeat)}
       >
-        <option value="weekly">Every week</option>
-        <option value="once">One day only</option>
+        <option value="weekly">{t('ui.everyWeek')}</option>
+        <option value="once">{t('ui.oneDayOnly')}</option>
       </Select>
 
       {repeat === 'weekly' ? (
@@ -114,12 +116,12 @@ export default function ShiftForm({
           </div>
         </fieldset>
       ) : (
-        <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <Input label={t('ui.date')} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <Input label="From" type="time" value={start} onChange={(e) => setStart(e.target.value)} />
-        <Input label="To" type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
+        <Input label={t('ui.from')} type="time" value={start} onChange={(e) => setStart(e.target.value)} />
+        <Input label={t('ui.to')} type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
       </div>
 
       {formError && <ErrorState message={formError} />}
@@ -129,7 +131,7 @@ export default function ShiftForm({
           {isSaving ? 'Saving...' : submitLabel}
         </ActionButton>
         <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
-          Cancel
+          {t('ui.cancel')}
         </button>
       </div>
     </form>

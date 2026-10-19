@@ -4,6 +4,7 @@ import Input from '../UI/Input';
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
 import ActionButton from '../UI/ActionButton';
+import { useI18n } from '../../i18n/useI18n';
 
 interface PasswordSectionProps {
   hasPassword: boolean;
@@ -34,6 +35,7 @@ export default function PasswordSection({
   onConfirmPasswordChange,
   onSubmit,
 }: PasswordSectionProps) {
+  const { t } = useI18n();
   return (
     <div className="mt-6 pt-5 border-t border-neutral-800">
       <h3 className="text-sm font-medium text-neutral-300 mb-2">
@@ -42,13 +44,12 @@ export default function PasswordSection({
 
       {!hasPassword && !showPasswordFields && !passwordSuccess && (
         <p className="text-xs text-neutral-500 mb-3">
-          Your account currently signs in only through a connected provider. Add a password to
-          also be able to log in with your email.
+          {t('ui.yourAccountCurrentlySignsIn')}
         </p>
       )}
 
       {passwordSuccess && (
-        <p className="text-sm text-green-400 mb-3">Password updated successfully.</p>
+        <p className="text-sm text-green-400 mb-3">{t('ui.passwordUpdatedSuccessfully')}</p>
       )}
 
       {!showPasswordFields ? (
@@ -59,7 +60,7 @@ export default function PasswordSection({
         <form onSubmit={onSubmit} className="space-y-3">
           {passwordError && <FormError message={passwordError} />}
 
-          <FormField label="New Password" htmlFor="new-password">
+          <FormField label={t('ui.newPassword')} htmlFor="new-password">
             <Input
               id="new-password"
               type="password"
@@ -69,7 +70,7 @@ export default function PasswordSection({
             />
           </FormField>
 
-          <FormField label="Confirm New Password" htmlFor="confirm-new-password">
+          <FormField label={t('ui.confirmNewPassword')} htmlFor="confirm-new-password">
             <Input
               id="confirm-new-password"
               type="password"
@@ -81,7 +82,7 @@ export default function PasswordSection({
 
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={onCancel}>
-              Cancel
+              {t('ui.cancel')}
             </Button>
             <ActionButton type="submit" disabled={isSavingPassword}>
               {isSavingPassword ? 'Saving...' : 'Save Password'}

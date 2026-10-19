@@ -22,6 +22,13 @@ export interface SocialOverview {
   incoming: RequestEntry[];
   outgoing: RequestEntry[];
   blocked: PublicPerson[];
+  codeChangeRequest: CodeChangeRequest | null;
+}
+
+export interface CodeChangeRequest {
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  adminNote: string | null;
+  createdAt: string;
 }
 
 export type SendRequestResult = { status: 'PENDING' | 'ACCEPTED' };
@@ -29,8 +36,24 @@ export type SendRequestResult = { status: 'PENDING' | 'ACCEPTED' };
 export const getSocialOverview = async (): Promise<SocialOverview> =>
   (await api.get<SocialOverview>('/social')).data;
 
-export const regenerateFriendCode = async (): Promise<string> =>
-  (await api.post<{ friendCode: string }>('/social/friend-code/regenerate')).data.friendCode;
+// O codigo nao se troca sozinho: pede-se ao admin, com motivo.
+export const requestFriendCodeChange = async (reason: string): Promise<CodeChangeRequest> =>
+  (await api.post<CodeChangeRequest>('/social/friend-code/change-request', { reason })).data;
+
+// Admin
+export interface FriendCodeRequestRow {
+  id: string;
+  reason: string;
+  createdAt: string;
+  user: { id: string; name: string | null; email: string };
+}
+
+export const getFriendCodeRequests = async (): Promise<FriendCodeRequestRow[]> =>
+  (await api.get<FriendCodeRequestRow[]>('/friend-code-requests')).data;
+
+export const decideFriendCodeRequest = async (id: string, approve: boolean, note?: string): Promise<void> => {
+  await api.post(`/friend-code-requests/${id}/decision`, { approve, note: note || undefined });
+};
 
 export const sendFriendRequest = async (friendCode: string): Promise<SendRequestResult> =>
   (await api.post<SendRequestResult>('/social/requests', { friendCode })).data;

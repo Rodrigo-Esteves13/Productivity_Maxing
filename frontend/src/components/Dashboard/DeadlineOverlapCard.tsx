@@ -5,6 +5,7 @@ import { CalendarIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
 import { useAreaLookup } from '../../hooks/useAreaLookup';
+import { useI18n } from '../../i18n/useI18n';
 
 interface DeadlineOverlapCardProps {
   tasks: Task[];
@@ -27,6 +28,7 @@ function formatGroupDate(dateKey: string): string {
 }
 
 export default function DeadlineOverlapCard({ tasks, areas }: DeadlineOverlapCardProps) {
+  const { t } = useI18n();
   const areaById = useAreaLookup(areas);
   const overlaps = detectDeadlineOverlaps(tasks);
 
@@ -65,7 +67,7 @@ export default function DeadlineOverlapCard({ tasks, areas }: DeadlineOverlapCar
         to="/tasks"
         className="block mt-3 text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
       >
-        View all tasks
+        {t('ui.viewAllTasks')}
       </Link>
     </DashboardCard>
   );

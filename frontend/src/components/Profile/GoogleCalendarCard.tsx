@@ -4,10 +4,12 @@ import { CalendarIcon, CheckIcon } from '../UI/Icons';
 import DisconnectCalendarModal from './DisconnectCalendarModal';
 import { disconnectGoogleCalendar } from '../../api/calendarService';
 import { refreshCalendarStatus, useCalendarStatus } from '../../hooks/useCalendarStatus';
+import { useI18n } from '../../i18n/useI18n';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function GoogleCalendarCard() {
+  const { t } = useI18n();
   // Usa a mesma cache partilhada do CalendarSyncButton/TaskFormFields -
   // antes este componente fazia o seu próprio getCalendarStatus() direto,
   // o que duplicava o GET /calendar/status sempre que o Profile abria (a
@@ -42,7 +44,7 @@ export default function GoogleCalendarCard() {
             <CalendarIcon className="text-violet-400" width={18} height={18} />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-neutral-100">Google Calendar</h3>
+            <h3 className="text-sm font-semibold text-neutral-100">{t('ui.googleCalendar')}</h3>
             <p className="text-sm text-neutral-400 mt-0.5">
               {connected === null
                 ? 'Checking connection...'
@@ -65,7 +67,7 @@ export default function GoogleCalendarCard() {
               href={`${apiUrl}/auth/google/link-calendar`}
               className="w-full sm:w-auto text-center rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 transition-colors"
             >
-              Connect
+              {t('ui.connect')}
             </a>
           )}
 
@@ -74,7 +76,7 @@ export default function GoogleCalendarCard() {
               onClick={() => setIsConfirmOpen(true)}
               className="rounded-lg border border-neutral-700 text-neutral-400 hover:border-red-800 hover:text-red-400 text-sm font-medium px-4 py-2 transition-colors"
             >
-              Disconnect
+              {t('ui.disconnect')}
             </button>
           )}
         </div>
@@ -85,7 +87,7 @@ export default function GoogleCalendarCard() {
       {connected === false && (
         <p className="mt-4 text-xs text-amber-300/90 leading-relaxed rounded-lg border border-amber-800/40 bg-amber-900/10 p-3">
           Google may show a "Google hasn't verified this app" warning. It is expected: click{' '}
-          <strong>Advanced</strong>, then <strong>Go to Productivity Maxing (unsafe)</strong> to
+          <strong>{t('ui.advanced')}</strong>, then <strong>{t('ui.goToProductivityMaxingUnsafe')}</strong> to
           continue. Only the one permission described below is requested.
         </p>
       )}
@@ -99,7 +101,7 @@ export default function GoogleCalendarCard() {
         change your primary calendar or any other calendar. You can hide or delete that calendar,
         disconnect, or remove the synced events at any time. See our{' '}
         <Link to="/privacy" className="underline text-violet-400 hover:text-violet-300">
-          Privacy Policy
+          {t('ui.privacyPolicy')}
         </Link>
         . Use of information received from Google APIs adheres to the{' '}
         <a
@@ -108,7 +110,7 @@ export default function GoogleCalendarCard() {
           rel="noreferrer"
           className="underline text-violet-400 hover:text-violet-300"
         >
-          Google API Services User Data Policy
+          {t('ui.googleApiServicesUserData')}
         </a>
         , including the Limited Use requirements.
       </p>

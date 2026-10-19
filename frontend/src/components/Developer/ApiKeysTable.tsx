@@ -1,5 +1,6 @@
 import type { ApiKeySummary } from '../../types/models';
 import { TrashIcon } from '../UI/Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 interface ApiKeysTableProps {
   keys: ApiKeySummary[];
@@ -15,15 +16,16 @@ function formatDate(iso: string): string {
 }
 
 export default function ApiKeysTable({ keys, onRevoke }: ApiKeysTableProps) {
+  const { t } = useI18n();
   return (
     <div className="overflow-x-auto border border-neutral-800 rounded-xl">
       <table className="min-w-full divide-y divide-neutral-800">
         <thead className="bg-neutral-900/50">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Name</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Scope</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Created</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Last used</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t('ui.name')}</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t('ui.scope')}</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t('ui.created')}</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t('ui.lastUsed')}</th>
             <th className="px-4 py-3" />
           </tr>
         </thead>
@@ -51,7 +53,7 @@ export default function ApiKeysTable({ keys, onRevoke }: ApiKeysTableProps) {
                   type="button"
                   onClick={() => onRevoke(key.id)}
                   className="text-neutral-500 hover:text-red-400 transition-colors p-1"
-                  title="Revoke key"
+                  title={t('ui.revokeKey')}
                 >
                   <TrashIcon />
                 </button>

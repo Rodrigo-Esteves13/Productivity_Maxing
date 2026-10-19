@@ -11,6 +11,7 @@ import CalendarSyncButton from './CalendarSyncButton';
 import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface TaskCardProps {
   task: Task;
@@ -30,6 +31,7 @@ export default function TaskCard({
   isSelected,
   onToggleSelect,
 }: TaskCardProps) {
+  const { t } = useI18n();
   const academicTypeLabel = resolveOptionLabel(task.academicType, academicTaskTypes);
   const status = getDateStatus(task);
 
@@ -94,17 +96,17 @@ export default function TaskCard({
 
       <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-neutral-800/70 text-center">
         <div>
-          <div className="text-[10px] uppercase text-neutral-500">Date</div>
+          <div className="text-[10px] uppercase text-neutral-500">{t('ui.date')}</div>
           <div className="text-xs text-neutral-300 mt-0.5">{new Date(task.date).toLocaleDateString()}</div>
         </div>
         <div>
-          <div className="text-[10px] uppercase text-neutral-500">Weight</div>
+          <div className="text-[10px] uppercase text-neutral-500">{t('ui.weight')}</div>
           <div className="text-xs text-neutral-300 mt-0.5">
             {task.weightPercentage ? `${task.weightPercentage}%` : 'N/A'}
           </div>
         </div>
         <div>
-          <div className="text-[10px] uppercase text-neutral-500">Target / Real</div>
+          <div className="text-[10px] uppercase text-neutral-500">{t('ui.targetReal')}</div>
           <div className="text-xs mt-0.5">
             <span className="font-medium text-blue-400">{task.targetGrade ?? 'N/A'}</span>
             <span className="text-neutral-600"> / </span>

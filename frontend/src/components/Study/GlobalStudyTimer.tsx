@@ -7,6 +7,7 @@ import BreakBanner from './focus/BreakBanner';
 import IdleSessionPrompt from './focus/IdleSessionPrompt';
 import TimerEndPrompt from './focus/TimerEndPrompt';
 import RateFocusPrompt from './focus/RateFocusPrompt';
+import { useI18n } from '../../i18n/useI18n';
 
 // Mounted once, app-wide (see AppRouter.tsx, next to CommandPalette) - not
 // just on the Focus page. That's the actual point of this component: a
@@ -16,6 +17,7 @@ import RateFocusPrompt from './focus/RateFocusPrompt';
 // back to Focus first. Tambem aloja os avisos que tem de aparecer em
 // qualquer pagina: inatividade, fim de bloco e pausa.
 export default function GlobalStudyTimer() {
+  const { t } = useI18n();
   const { isAuthenticated } = useAuth();
   const { activeSession, elapsedSeconds, remainingSeconds, isSubmitting, stop } = useActiveStudySession();
   const [isStopping, setIsStopping] = useState(false);
@@ -61,8 +63,8 @@ export default function GlobalStudyTimer() {
             type="button"
             onClick={() => void handleStop()}
             disabled={isSubmitting || isStopping}
-            aria-label="Stop focus session"
-            title="Stop focus session"
+            aria-label={t('ui.stopFocusSession')}
+            title={t('ui.stopFocusSession')}
             className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-800 text-neutral-300 transition-colors hover:bg-red-600 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <XIcon className="h-4 w-4" />

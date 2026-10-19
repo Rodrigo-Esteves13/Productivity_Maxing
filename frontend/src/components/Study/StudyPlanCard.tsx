@@ -7,10 +7,12 @@ import CapacityBanner from './plan/CapacityBanner';
 import DailyLimitControl from './plan/DailyLimitControl';
 import PlanTaskList from './plan/PlanTaskList';
 import PlanDayList from './plan/PlanDayList';
+import { useI18n } from '../../i18n/useI18n';
 
 const PLAN_WINDOW_DAYS = 7;
 
 export default function StudyPlanCard() {
+  const { t } = useI18n();
   const { plan, isLoading, error, refetch, setDailyLimit } = useStudyPlan(PLAN_WINDOW_DAYS);
 
   // Mudar uma estimativa ou o limite diário muda os blocos de estudo, e
@@ -26,10 +28,9 @@ export default function StudyPlanCard() {
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
-      <h2 className="text-lg font-semibold text-white mb-1">Suggested study plan</h2>
+      <h2 className="text-lg font-semibold text-white mb-1">{t('ui.suggestedStudyPlan')}</h2>
       <p className="text-sm text-neutral-400 mb-4">
-        Next {PLAN_WINDOW_DAYS} days, fitted around classes, work, commute and quiet hours.
-      </p>
+        {t('ui.nextDaysFittedAroundClasses', { planWindowDays: PLAN_WINDOW_DAYS })}</p>
 
       {isLoading && <LinesSkeleton lines={4} />}
       {!isLoading && error && <ErrorState message={error} />}
@@ -54,7 +55,7 @@ export default function StudyPlanCard() {
               dailyLimitMinutes={plan.dailyLimitMinutes}
             />
           ) : (
-            <EmptyState message="No study blocks to suggest. Add tasks with deadlines, or free up time in your week." />
+            <EmptyState message={t('ui.noStudyBlocksToSuggest')} />
           )}
         </>
       )}

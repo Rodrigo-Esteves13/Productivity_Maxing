@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { COOKIE_NOTICE_DISMISSED_KEY } from '../../lib/constants';
+import { useI18n } from '../../i18n/useI18n';
 
 /**
  * Aviso informativo sobre cookies - NÃO é um bloqueio/consent-gate, porque
@@ -13,6 +14,7 @@ import { COOKIE_NOTICE_DISMISSED_KEY } from '../../lib/constants';
  * lembra, via localStorage, que o utilizador já viu e fechou o aviso.
  */
 export default function CookieNotice() {
+  const { t } = useI18n();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export default function CookieNotice() {
           We use only strictly necessary cookies to keep you signed in and protect your account. No
           tracking or advertising cookies, ever. See our{' '}
           <Link to="/privacy" className="underline text-violet-400 hover:text-violet-300">
-            Privacy Policy
+            {t('ui.privacyPolicy')}
           </Link>{' '}
           for details.
         </p>
@@ -42,7 +44,7 @@ export default function CookieNotice() {
           onClick={dismiss}
           className="shrink-0 rounded-md bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 transition-colors"
         >
-          Got it
+          {t('ui.gotIt')}
         </button>
       </div>
     </div>

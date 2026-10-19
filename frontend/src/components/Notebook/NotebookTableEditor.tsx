@@ -1,6 +1,7 @@
 import type { NotebookTable } from '../../types/models';
 import { TrashIcon, PlusIcon } from '../UI/Icons';
 import NotebookTableCell from './NotebookTableCell';
+import { useI18n } from '../../i18n/useI18n';
 
 interface NotebookTableEditorProps {
   table: NotebookTable;
@@ -15,6 +16,7 @@ interface NotebookTableEditorProps {
 // Markdown, que o Notebook não tem. Guardada à parte, em
 // NotebookEntry.tables (ver schema.prisma), não em textContent.
 export default function NotebookTableEditor({ table, readOnly = false, onChange, onDelete }: NotebookTableEditorProps) {
+  const { t } = useI18n();
   const colCount = table.rows[0]?.length ?? 0;
 
   const updateCell = (rowIndex: number, colIndex: number, value: string) => {
@@ -45,7 +47,7 @@ export default function NotebookTableEditor({ table, readOnly = false, onChange,
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-3">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">Table</span>
+        <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">{t('ui.table')}</span>
         {!readOnly && (
           <div className="flex items-center gap-1.5">
             <button
@@ -67,7 +69,7 @@ export default function NotebookTableEditor({ table, readOnly = false, onChange,
             <button
               type="button"
               onClick={onDelete}
-              aria-label="Delete table"
+              aria-label={t('ui.deleteTable')}
               className="rounded-md p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-red-400"
             >
               <TrashIcon className="h-3.5 w-3.5" />
@@ -95,7 +97,7 @@ export default function NotebookTableEditor({ table, readOnly = false, onChange,
                     <button
                       type="button"
                       onClick={() => removeRow(rowIndex)}
-                      aria-label="Remove row"
+                      aria-label={t('ui.removeRow')}
                       className="text-neutral-600 hover:text-red-400"
                     >
                       &times;
@@ -111,7 +113,7 @@ export default function NotebookTableEditor({ table, readOnly = false, onChange,
                     <button
                       type="button"
                       onClick={() => removeColumn(colIndex)}
-                      aria-label="Remove column"
+                      aria-label={t('ui.removeColumn')}
                       className="text-[10px] text-neutral-600 hover:text-red-400"
                     >
                       &times;

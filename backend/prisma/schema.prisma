@@ -202,6 +202,7 @@ model User {
   taskPacks         TaskPack[]
   // Social: codigo de amigo aleatorio (criado a pedido), amizades e bloqueios.
   friendCode        String?  @unique
+  friendCodeRequests  FriendCodeChangeRequest[]
   friendshipsSent     Friendship[] @relation("FriendshipRequester")
   friendshipsReceived Friendship[] @relation("FriendshipAddressee")
   blocksMade          UserBlock[]  @relation("BlockMaker")
@@ -1593,4 +1594,28 @@ model NotebookViewGrant {
   @@unique([ownerId, viewerId])
   @@index([viewerId, status])
   @@index([ownerId, status])
+}
+
+enum FriendCodeChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Pedido para trocar o codigo de amigo. O utilizador nao troca sozinho: pede ao
+// admin com um motivo, e so a aprovacao gera o codigo novo.
+model FriendCodeChangeRequest {
+  id          String                 @id @default(uuid())
+  userId      String
+  reason      String                 @db.VarChar(500)
+  status      FriendCodeChangeStatus @default(PENDING)
+  adminNote   String?                @db.VarChar(300)
+  createdAt   DateTime               @default(now())
+  decidedAt   DateTime?
+  decidedById String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
 }

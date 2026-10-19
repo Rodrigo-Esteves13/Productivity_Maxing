@@ -5,6 +5,7 @@ import Button from '../UI/Button';
 import FormField from '../UI/FormField';
 import ColorPickerField from './ColorPickerField';
 import type { TaskTypeOption } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 export interface AreaFormValues {
   name: string;
@@ -36,6 +37,7 @@ export default function AreaForm({
   submitLabel,
   submittingLabel,
 }: AreaFormProps) {
+  const { t } = useI18n();
   const [formData, setFormData] = useState<AreaFormValues>(initialValues);
 
   const handleSubmit = (e: SyntheticEvent) => {
@@ -46,12 +48,12 @@ export default function AreaForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-      <FormField label="Area / Subject Name" htmlFor={`${idPrefix}-name`}>
+      <FormField label={t('ui.areaSubjectName')} htmlFor={`${idPrefix}-name`}>
         <Input
           id={`${idPrefix}-name`}
           required
           type="text"
-          placeholder="E.g: Math, Web Development"
+          placeholder={t('ui.eGMathWebDevelopment')}
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           className="w-full"
@@ -64,7 +66,7 @@ export default function AreaForm({
         onChange={(colorHex) => setFormData({ ...formData, colorHex })}
       />
 
-      <FormField label="Associated Type (optional)" htmlFor={`${idPrefix}-default-type`}>
+      <FormField label={t('ui.associatedTypeOptional')} htmlFor={`${idPrefix}-default-type`}>
         <Select
           id={`${idPrefix}-default-type`}
           value={formData.defaultTaskType ?? ''}
@@ -72,7 +74,7 @@ export default function AreaForm({
             setFormData({ ...formData, defaultTaskType: e.target.value || null })
           }
         >
-          <option value="">No fixed type, ask every time</option>
+          <option value="">{t('ui.noFixedTypeAskEvery')}</option>
           {taskTypes.map((t) => (
             <option key={t.key} value={t.key}>
               {t.label}
@@ -86,7 +88,7 @@ export default function AreaForm({
         </p>
       </FormField>
 
-      <FormField label="Credits (optional)" htmlFor={`${idPrefix}-credits`}>
+      <FormField label={t('ui.creditsOptional')} htmlFor={`${idPrefix}-credits`}>
         <Input
           id={`${idPrefix}-credits`}
           type="number"
@@ -103,14 +105,13 @@ export default function AreaForm({
           className="w-full"
         />
         <p className="mt-1 text-xs text-neutral-500">
-          ECTS or equivalent. Leave empty when credits don't apply (e.g. secondary school) - it
-          simply won't weigh into the average.
+          {t('ui.ectsOrEquivalentLeaveEmpty')}
         </p>
       </FormField>
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800 mt-6">
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
+          {t('ui.cancel')}
         </Button>
         <button
           type="submit"

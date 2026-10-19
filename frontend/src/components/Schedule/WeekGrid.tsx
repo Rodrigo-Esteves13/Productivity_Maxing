@@ -9,6 +9,7 @@ import { mergeAgenda } from '../../lib/agenda';
 import { todayUtcAnchored } from '../../lib/weekDates';
 import WeekDayCell from './WeekDayCell';
 import AgendaLegend from './AgendaLegend';
+import { useI18n } from '../../i18n/useI18n';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -26,6 +27,7 @@ interface WeekGridProps {
 }
 
 export default function WeekGrid({ refreshKey }: WeekGridProps) {
+  const { t } = useI18n();
   const {
     weekStart,
     weekEnd,
@@ -75,7 +77,7 @@ export default function WeekGrid({ refreshKey }: WeekGridProps) {
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-white">Schedule</h2>
+          <h2 className="text-lg font-semibold text-white">{t('ui.schedule')}</h2>
           <p className="text-sm text-neutral-400">{formatRangeLabel(weekStart, weekEnd)}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -83,19 +85,19 @@ export default function WeekGrid({ refreshKey }: WeekGridProps) {
             onClick={goToPreviousWeek}
             className="text-sm text-neutral-400 hover:text-white px-2 py-1 rounded-lg hover:bg-neutral-800"
           >
-            ‹ Prev
+            {t('ui.prev')}
           </button>
           <button
             onClick={goToCurrentWeek}
             className="text-sm text-neutral-400 hover:text-white px-2 py-1 rounded-lg hover:bg-neutral-800"
           >
-            Today
+            {t('ui.today')}
           </button>
           <button
             onClick={goToNextWeek}
             className="text-sm text-neutral-400 hover:text-white px-2 py-1 rounded-lg hover:bg-neutral-800"
           >
-            Next ›
+            {t('ui.next')}
           </button>
         </div>
       </div>

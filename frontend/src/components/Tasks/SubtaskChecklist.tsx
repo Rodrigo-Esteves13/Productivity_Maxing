@@ -9,6 +9,7 @@ import {
 } from '../../api/subtasksService';
 import { useFeedback } from '../../context/useFeedback';
 import { TrashIcon } from '../UI/Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 interface SubtaskChecklistProps {
   taskId: string;
@@ -23,6 +24,7 @@ interface SubtaskChecklistProps {
 // Checklist leve: sem peso, sem nota, nao conta para medias. Atualiza a UI
 // logo (otimista) e reverte se a API falhar.
 export default function SubtaskChecklist({ taskId, subtasks, onChange, onConverted }: SubtaskChecklistProps) {
+  const { t } = useI18n();
   const { notify } = useFeedback();
   const [draft, setDraft] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -136,7 +138,7 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
             onDrop={() => void handleDrop(subtask.id)}
             className={`group flex items-center gap-2 ${draggedId === subtask.id ? 'opacity-40' : ''}`}
           >
-            <span className="cursor-grab text-neutral-600 select-none" aria-hidden="true" title="Drag to reorder">
+            <span className="cursor-grab text-neutral-600 select-none" aria-hidden="true" title={t('ui.dragToReorder')}>
               ::
             </span>
             <input
@@ -158,9 +160,9 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
                 type="button"
                 onClick={() => void handleConvert(subtask)}
                 className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-[11px] text-neutral-500 hover:text-violet-300 transition-opacity"
-                title="Turn this step into its own task"
+                title={t('ui.turnThisStepIntoIts')}
               >
-                To task
+                {t('ui.toTask')}
               </button>
             )}
             <button
@@ -168,7 +170,7 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
               onClick={() => void handleDelete(subtask)}
               className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-500 hover:text-red-400 transition-opacity"
               aria-label={`Delete subtask "${subtask.title}"`}
-              title="Delete subtask"
+              title={t('ui.deleteSubtask')}
             >
               <TrashIcon width={14} height={14} />
             </button>
@@ -183,7 +185,7 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={handleKeyDown}
         disabled={isAdding}
-        placeholder="Add a step and press Enter"
+        placeholder={t('ui.addAStepAndPress')}
         className="w-full rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-1.5 text-sm text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-violet-600"
       />
     </div>

@@ -16,6 +16,7 @@ import Input from '../UI/Input';
 import FormField from '../UI/FormField';
 import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
+import { useI18n } from '../../i18n/useI18n';
 
 // Data curta para o rótulo da task no dropdown (ex: "20 Set") - timeZone
 // UTC de propósito: Task.date vem do backend como meia-noite UTC do dia
@@ -31,6 +32,7 @@ function formatTaskDate(iso: string): string {
 }
 
 export default function StudySessionWidget() {
+  const { t } = useI18n();
   const {
     activeSession,
     areas,
@@ -120,7 +122,7 @@ export default function StudySessionWidget() {
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 flex flex-col">
-      <h2 className="text-lg font-semibold text-white mb-4">Study session</h2>
+      <h2 className="text-lg font-semibold text-white mb-4">{t('ui.studySession')}</h2>
 
       {error && (
         <div className="mb-4">
@@ -163,7 +165,7 @@ export default function StudySessionWidget() {
           ) : (
             <div className="flex gap-2">
               <Button variant="primary" onClick={() => setIsStopping(true)} disabled={isSubmitting} className="flex-1">
-                Stop session
+                {t('ui.stopSession')}
               </Button>
               <Button
                 variant="secondary"
@@ -172,7 +174,7 @@ export default function StudySessionWidget() {
                   setIsFocusMode(true);
                 }}
               >
-                Focus mode
+                {t('ui.focusMode')}
               </Button>
             </div>
           )}
@@ -181,13 +183,13 @@ export default function StudySessionWidget() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <FormField label="Task (optional)" htmlFor="session-task">
+          <FormField label={t('ui.taskOptional')} htmlFor="session-task">
             <Select
               id="session-task"
               value={taskId}
               onChange={(e) => handleTaskChange(e.target.value)}
             >
-              <option value="">No task</option>
+              <option value="">{t('ui.noTask')}</option>
               {groupLabels.map((label) => (
                 <optgroup key={label} label={label}>
                   {(tasksByArea.get(label) ?? []).map((task) => (
@@ -200,13 +202,13 @@ export default function StudySessionWidget() {
             </Select>
           </FormField>
 
-          <FormField label="Area (optional)" htmlFor="session-area">
+          <FormField label={t('ui.areaOptional')} htmlFor="session-area">
             <Select
               id="session-area"
               value={areaId}
               onChange={(e) => handleAreaChange(e.target.value)}
             >
-              <option value="">No area</option>
+              <option value="">{t('ui.noArea')}</option>
               {areas.map((area) => (
                 <option key={area.id} value={area.id}>
                   {area.name}
@@ -215,17 +217,17 @@ export default function StudySessionWidget() {
             </Select>
           </FormField>
 
-          <FormField label="Note (optional)" htmlFor="start-note">
+          <FormField label={t('ui.noteOptional')} htmlFor="start-note">
             <Input
               id="start-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="What are you going to study?"
+              placeholder={t('ui.whatAreYouGoingTo')}
               maxLength={500}
             />
           </FormField>
 
-          <FormField label="Timer" htmlFor="session-timer">
+          <FormField label={t('ui.timer')} htmlFor="session-timer">
             <TimerModePicker value={plan} onChange={setPlan} />
           </FormField>
 

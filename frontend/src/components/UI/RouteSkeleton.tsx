@@ -25,6 +25,7 @@ const VARIANT_BY_PREFIX: [string, Variant][] = [
   ['/security', 'table'],
   ['/appeals', 'table'],
   ['/feedback', 'table'],
+  ['/friend-code-requests', 'table'],
   ['/task-types', 'table'],
   ['/privacy', 'document'],
   ['/terms', 'document'],

@@ -2,12 +2,14 @@ import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { CHANGELOG } from '../lib/changelog';
+import { useI18n } from '../i18n/useI18n';
 
 export default function Changelog() {
+  const { t } = useI18n();
   useDocumentTitle("What's new");
   return (
     <PageLayout>
-      <PageHeader title="What's new" description="Recent changes to Productivity Maxing." />
+      <PageHeader title={t('ui.whatSNew')} description={t('ui.recentChangesToProductivityMaxing')} />
       <div className="max-w-3xl space-y-6">
         {CHANGELOG.map((entry) => (
           <section

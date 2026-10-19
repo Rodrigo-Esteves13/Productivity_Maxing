@@ -10,10 +10,12 @@ import {
 } from '../../api/calendarFeedService';
 import { useFeedback } from '../../context/useFeedback';
 import type { CalendarFeedStatus } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 // Feed .ics subscrivivel: classes, turnos, viagens, blocos de estudo e tasks
 // no Google/Apple/Outlook Calendar sem OAuth. So leitura.
 export default function CalendarFeedCard() {
+  const { t } = useI18n();
   const { confirm, notify } = useFeedback();
   const [status, setStatus] = useState<CalendarFeedStatus | null>(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -75,7 +77,7 @@ export default function CalendarFeedCard() {
           <CalendarIcon className="text-violet-400" width={18} height={18} />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-semibold text-white">Calendar feed (.ics)</h2>
+          <h2 className="text-lg font-semibold text-white">{t('ui.calendarFeedIcs')}</h2>
           <p className="text-sm text-neutral-400 mt-0.5">
             Subscribe in Google, Apple or Outlook Calendar to see your classes, shifts, study blocks and
             task deadlines there. Read-only, no Google permission needed. Calendars refresh it on their
@@ -101,20 +103,19 @@ export default function CalendarFeedCard() {
               value={url}
               onFocus={(e) => e.currentTarget.select()}
               className="flex-1 min-w-0 rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-xs text-neutral-300 font-mono"
-              aria-label="Calendar feed URL"
+              aria-label={t('ui.calendarFeedUrl')}
             />
             <CopyButton text={url} />
           </div>
           <p className="text-xs text-neutral-500">
-            Anyone with this link can read your schedule. Keep it private. In Google Calendar: Other
-            calendars, From URL.
+            {t('ui.anyoneWithThisLinkCan')}
           </p>
           <div className="flex flex-wrap gap-3 text-sm">
             <a
               href={feedWebcalUrl(status.token as string)}
               className="underline text-violet-400 hover:text-violet-300"
             >
-              Open in calendar app
+              {t('ui.openInCalendarApp')}
             </a>
             <button
               type="button"
@@ -122,7 +123,7 @@ export default function CalendarFeedCard() {
               onClick={() => void handleRotate()}
               className="text-neutral-400 hover:text-white disabled:opacity-50"
             >
-              New link
+              {t('ui.newLink')}
             </button>
             <button
               type="button"
@@ -130,7 +131,7 @@ export default function CalendarFeedCard() {
               onClick={() => void handleDisable()}
               className="text-neutral-400 hover:text-red-400 disabled:opacity-50"
             >
-              Turn off
+              {t('ui.turnOff')}
             </button>
           </div>
         </div>

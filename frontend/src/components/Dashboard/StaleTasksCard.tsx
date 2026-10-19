@@ -5,6 +5,7 @@ import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
 import { useAreaLookup } from '../../hooks/useAreaLookup';
 import { MS_PER_DAY } from '../../lib/timeConstants';
+import { useI18n } from '../../i18n/useI18n';
 
 interface StaleTasksCardProps {
   tasks: Task[];
@@ -24,6 +25,7 @@ function daysSince(dateStr: string): number {
 // Task.updatedAt (Prisma @updatedAt, bumped by ANY update - editing the
 // title, moving the date, changing status, etc.), not just completion.
 export default function StaleTasksCard({ tasks, areas }: StaleTasksCardProps) {
+  const { t } = useI18n();
   const areaById = useAreaLookup(areas);
 
   const stale = tasks
@@ -52,8 +54,7 @@ export default function StaleTasksCard({ tasks, areas }: StaleTasksCardProps) {
                 <span className="truncate text-neutral-200">{task.title}</span>
               </div>
               <span className="text-xs text-amber-500/80 shrink-0">
-                {daysSince(task.updatedAt)}d ago
-              </span>
+                {t('ui.dAgo', { updatedAt: daysSince(task.updatedAt) })}</span>
             </li>
           );
         })}
@@ -62,7 +63,7 @@ export default function StaleTasksCard({ tasks, areas }: StaleTasksCardProps) {
         to="/tasks"
         className="block mt-3 text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
       >
-        View all tasks
+        {t('ui.viewAllTasks')}
       </Link>
     </DashboardCard>
   );

@@ -3,6 +3,7 @@ import type { Task } from '../../types/models';
 import { computeDeadlineCompliance } from '../../utils/deadlineCompliance';
 import { CheckIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
+import { useI18n } from '../../i18n/useI18n';
 
 interface DeadlineComplianceCardProps {
   tasks: Task[];
@@ -14,6 +15,7 @@ const MIN_TASKS_TO_SHOW = 3;
 // Complements AtRiskTasksCard (what is late right now) with the
 // historical view: is the habit improving or slipping.
 export default function DeadlineComplianceCard({ tasks }: DeadlineComplianceCardProps) {
+  const { t } = useI18n();
   const data = useMemo(() => computeDeadlineCompliance(tasks), [tasks]);
 
   if (data.total < MIN_TASKS_TO_SHOW) return null;
@@ -28,8 +30,7 @@ export default function DeadlineComplianceCard({ tasks }: DeadlineComplianceCard
       <div className="flex items-end gap-2 mb-4">
         <span className="text-2xl font-semibold text-violet-400">{data.ratePct}%</span>
         <span className="text-xs text-neutral-500 pb-1">
-          {data.onTime} of {data.total} finished on time, last 6 months
-        </span>
+          {t('ui.ofFinishedOnTimeLast', { onTime: data.onTime, total: data.total })}</span>
       </div>
 
       <div className="flex items-end gap-2 h-20">

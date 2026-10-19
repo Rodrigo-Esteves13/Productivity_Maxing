@@ -6,6 +6,7 @@ import { formatDayLabel, formatDuration } from '../../../lib/timeFormat';
 import { ESTIMATE_SOURCE_LABEL } from './planCopy';
 import ProgressBar from '../../UI/ProgressBar';
 import ColorDot from '../../UI/ColorDot';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface PlanTaskListProps {
   tasks: StudyPlanTask[];
@@ -19,6 +20,7 @@ function coveragePercent(task: StudyPlanTask): number {
 }
 
 export default function PlanTaskList({ tasks, calibrationFactor, onEstimateSaved }: PlanTaskListProps) {
+  const { t } = useI18n();
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   if (tasks.length === 0) return null;
 
@@ -28,7 +30,7 @@ export default function PlanTaskList({ tasks, calibrationFactor, onEstimateSaved
         id="plan-tasks-heading"
         className="text-xs uppercase tracking-wide text-neutral-500 mb-2"
       >
-        Time needed per task
+        {t('ui.timeNeededPerTask')}
       </h3>
       <ul className="space-y-2">
         {tasks.map((task) => {
@@ -42,7 +44,7 @@ export default function PlanTaskList({ tasks, calibrationFactor, onEstimateSaved
                   <p className="text-xs text-neutral-500 flex items-center gap-1.5">
                     <ColorDot size="xs" color={task.areaColorHex} />
                     <span className="truncate">{task.areaName}</span>
-                    <span>· due {formatDayLabel(task.deadline)}</span>
+                    <span>{t('ui.due', { deadline: formatDayLabel(task.deadline) })}</span>
                   </p>
                 </div>
                 <div className="text-right shrink-0">
@@ -94,8 +96,7 @@ export default function PlanTaskList({ tasks, calibrationFactor, onEstimateSaved
       </ul>
       {calibrationFactor !== null && (
         <p className="text-xs text-neutral-500 mt-2">
-          Based on your finished tasks, your estimates are scaled by {calibrationFactor.toFixed(2)}x.
-        </p>
+          {t('ui.basedOnYourFinishedTasks', { calibrationFactor: calibrationFactor.toFixed(2) })}</p>
       )}
     </section>
   );

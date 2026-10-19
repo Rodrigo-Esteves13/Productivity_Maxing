@@ -27,4 +27,5 @@ export const nav: Record<string, string> = {
   'nav.search': "Pesquisar / ir para (Ctrl+K)",
   'nav.openMenu': "Abrir menu",
   'nav.closeMenu': "Fechar menu",
+  'nav.admin.friendCodes': "Códigos de amigo",
 };

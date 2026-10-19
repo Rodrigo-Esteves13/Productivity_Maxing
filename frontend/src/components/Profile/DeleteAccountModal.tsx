@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n/useI18n';
 interface DeleteAccountModalProps {
   confirmText: string;
   isDeleting: boolean;
@@ -17,10 +18,11 @@ export default function DeleteAccountModal({
   onCancel,
   onConfirm,
 }: DeleteAccountModalProps) {
+  const { t } = useI18n();
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
       <div className="bg-neutral-900 border border-red-900/40 rounded-xl p-6 max-w-md w-full">
-        <h3 className="text-lg font-bold text-white mb-2">Delete your account?</h3>
+        <h3 className="text-lg font-bold text-white mb-2">{t('ui.deleteYourAccount')}</h3>
         <p className="text-neutral-400 text-sm mb-4">
           This is permanent. Type <span className="font-mono text-red-400">DELETE</span> below
           to confirm.
@@ -39,7 +41,7 @@ export default function DeleteAccountModal({
             className="px-4 py-2 rounded-lg text-neutral-300 hover:bg-neutral-800 text-sm"
             disabled={isDeleting}
           >
-            Cancel
+            {t('ui.cancel')}
           </button>
           <button
             onClick={onConfirm}

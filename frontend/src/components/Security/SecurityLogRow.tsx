@@ -1,4 +1,5 @@
 import type { SecurityLog } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface SecurityLogRowProps {
   log: SecurityLog;
@@ -15,6 +16,7 @@ const METHOD_STYLES: Record<string, string> = {
 };
 
 export default function SecurityLogRow({ log, onBanIp, isBanned }: SecurityLogRowProps) {
+  const { t } = useI18n();
   return (
     <tr className="border-b border-neutral-800 last:border-0 hover:bg-neutral-900/40">
       <td className="px-4 py-3 text-neutral-400">
@@ -31,7 +33,7 @@ export default function SecurityLogRow({ log, onBanIp, isBanned }: SecurityLogRo
               onClick={() => onBanIp(log.ip)}
               className="text-xs text-amber-500 hover:text-amber-400 hover:underline"
             >
-              Ban
+              {t('ui.ban')}
             </button>
           )}
         </div>

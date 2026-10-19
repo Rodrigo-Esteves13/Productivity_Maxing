@@ -3,6 +3,7 @@ import Button from '../UI/Button';
 import Textarea from '../UI/Textarea';
 import UserStatusBadge from '../Users/UserStatusBadge';
 import type { AppealAdmin, AppealResolution, UserStatus } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AppealRowProps {
   appeal: AppealAdmin;
@@ -21,6 +22,7 @@ const ACCENT: Record<UserStatus, string> = {
 };
 
 export default function AppealRow({ appeal, onResolve }: AppealRowProps) {
+  const { t } = useI18n();
   const [note, setNote] = useState('');
   const [showNoteFor, setShowNoteFor] = useState<AppealResolution | null>(null);
 
@@ -47,16 +49,14 @@ export default function AppealRow({ appeal, onResolve }: AppealRowProps) {
 
       {appeal.reasonAtSubmission && (
         <p className="mt-3 text-xs text-neutral-500 break-words">
-          Original reason: {appeal.reasonAtSubmission}
-        </p>
+          {t('ui.originalReason', { reasonAtSubmission: appeal.reasonAtSubmission })}</p>
       )}
 
       <p className="mt-2 text-sm text-neutral-300 whitespace-pre-wrap break-words leading-relaxed">
         {appeal.message}
       </p>
       <p className="mt-2 text-xs text-neutral-600">
-        Submitted {new Date(appeal.createdAt).toLocaleString()}
-      </p>
+        {t('ui.submitted', { newDate: new Date(appeal.createdAt).toLocaleString() })}</p>
 
       {showNoteFor ? (
         <div className="mt-4">
@@ -75,21 +75,21 @@ export default function AppealRow({ appeal, onResolve }: AppealRowProps) {
               {`Confirm ${showNoteFor === 'APPROVED' ? 'approve' : 'deny'}`}
             </Button>
             <Button variant="secondary" onClick={() => setShowNoteFor(null)}>
-              Cancel
+              {t('ui.cancel')}
             </Button>
           </div>
         </div>
       ) : (
         <div className="mt-4 flex gap-2">
           <Button onClick={() => setShowNoteFor('APPROVED')}>
-            Approve
+            {t('ui.approve')}
           </Button>
           <Button
             variant="secondary"
             className="border-red-800 text-red-400"
             onClick={() => setShowNoteFor('DENIED')}
           >
-            Deny
+            {t('ui.deny')}
           </Button>
         </div>
       )}

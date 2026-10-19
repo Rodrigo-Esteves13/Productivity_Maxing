@@ -106,8 +106,8 @@ export default function Tasks() {
   return (
     <PageLayout>
       <PageHeader
-        title="My Tasks"
-        description="Manage, filter, and track the progress of all your tasks."
+        title={t('ui.myTasks')}
+        description={t('ui.manageFilterAndTrackThe')}
         action={
           <div className="flex items-center gap-4">
             <Link to="/task-packs" className="text-sm text-violet-400 hover:text-violet-300">
@@ -132,7 +132,7 @@ export default function Tasks() {
             )}
             <div className="flex items-center gap-2">
               <ActionButton color="violet" onClick={openCreateModal}>
-                + New Task
+                {t('ui.newTask')}
               </ActionButton>
               <kbd className="hidden sm:inline text-[10px] text-neutral-500 border border-neutral-700 rounded px-1.5 py-0.5">
                 N
@@ -147,7 +147,7 @@ export default function Tasks() {
       ) : error ? (
         <ErrorState message={error} />
       ) : tasks.length === 0 ? (
-        <EmptyState message="You have no tasks registered." />
+        <EmptyState message={t('ui.youHaveNoTasksRegistered')} />
       ) : visibleTasks.length === 0 ? (
         // Every task exists, but they're all completed-and-old enough to
         // be archived, and the toggle above is off - "no tasks" would be
@@ -167,7 +167,7 @@ export default function Tasks() {
       )}
 
       {/* Modal de criação */}
-      <Modal isOpen={isCreateModalOpen} onClose={closeCreateModal} title="Create New Task">
+      <Modal isOpen={isCreateModalOpen} onClose={closeCreateModal} title={t('ui.createNewTask')}>
         <TaskForm
           onSubmit={handleCreateTask}
           onCancel={closeCreateModal}

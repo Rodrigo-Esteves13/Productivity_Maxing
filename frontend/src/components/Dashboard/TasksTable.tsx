@@ -6,6 +6,7 @@ import type { TableDensity } from '../../hooks/useTableDensity';
 import { useTasksTableColumnOrder } from '../../hooks/useTasksTableColumnOrder';
 import type { TableSortState } from '../../hooks/useTableSort';
 import type { TasksTableColumnId } from '../../lib/tasksTableColumns';
+import { useI18n } from '../../i18n/useI18n';
 
 interface TasksTableProps {
   tasks: Task[];
@@ -32,12 +33,13 @@ export default function TasksTable({
   sort = null,
   onSortColumn,
 }: TasksTableProps) {
+  const { t } = useI18n();
   const { columnOrder, reorderColumns } = useTasksTableColumnOrder();
 
   if (tasks.length === 0) {
     return (
       <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
-        <div className="px-4 py-8 text-center text-neutral-500">No tasks found.</div>
+        <div className="px-4 py-8 text-center text-neutral-500">{t('ui.noTasksFound')}</div>
       </div>
     );
   }

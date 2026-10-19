@@ -4,6 +4,7 @@ import type { DashboardFiltersState } from './dashboardFilters.types';
 import { XIcon } from '../UI/Icons';
 import Input from '../UI/Input';
 import Button from '../UI/Button';
+import { useI18n } from '../../i18n/useI18n';
 
 interface SavedFilterViewsProps {
   filters: DashboardFiltersState;
@@ -17,6 +18,7 @@ interface SavedFilterViewsProps {
 // browser (see useSavedFilterViews), same tier as the widget visibility
 // preferences.
 export default function SavedFilterViews({ filters, hasActiveFilters, onApply }: SavedFilterViewsProps) {
+  const { t } = useI18n();
   const { views, saveView, deleteView } = useSavedFilterViews();
   const [isNaming, setIsNaming] = useState(false);
   const [name, setName] = useState('');
@@ -35,7 +37,7 @@ export default function SavedFilterViews({ filters, hasActiveFilters, onApply }:
 
   return (
     <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-neutral-800">
-      <span className="text-xs uppercase tracking-wide text-neutral-500 mr-1">Views:</span>
+      <span className="text-xs uppercase tracking-wide text-neutral-500 mr-1">{t('ui.views')}</span>
 
       {views.map((view) => (
         <span
@@ -69,11 +71,11 @@ export default function SavedFilterViews({ filters, hasActiveFilters, onApply }:
                 setName('');
               }
             }}
-            placeholder="View name"
+            placeholder={t('ui.viewName')}
             className="w-32 py-1"
           />
           <Button type="button" onClick={handleSave}>
-            Save
+            {t('ui.save')}
           </Button>
         </span>
       ) : (
@@ -83,7 +85,7 @@ export default function SavedFilterViews({ filters, hasActiveFilters, onApply }:
             onClick={() => setIsNaming(true)}
             className="text-xs text-neutral-400 hover:text-neutral-200 underline decoration-dotted"
           >
-            + Save current filters as view
+            {t('ui.saveCurrentFiltersAsView')}
           </button>
         )
       )}

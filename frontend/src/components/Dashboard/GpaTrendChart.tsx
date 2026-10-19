@@ -11,6 +11,7 @@ import {
   Dot,
 } from 'recharts';
 import type { PeriodComparisonEntry } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface GpaTrendChartProps {
   entries: PeriodComparisonEntry[];
@@ -50,6 +51,7 @@ function CustomTooltip({
   payload?: { payload: PeriodComparisonEntry }[];
   scale: string;
 }) {
+  const { t } = useI18n();
   if (!active || !payload?.length) return null;
   const entry = payload[0].payload;
   return (
@@ -59,7 +61,7 @@ function CustomTooltip({
         {entry.average?.toFixed(2)}{' '}
         <span className="text-neutral-500 font-normal">/ {scale.split('-')[1] ?? scale}</span>
       </p>
-      {entry.isArchived && <p className="text-[10px] text-neutral-500">Archived</p>}
+      {entry.isArchived && <p className="text-[10px] text-neutral-500">{t('ui.archived')}</p>}
     </div>
   );
 }
@@ -115,6 +117,7 @@ function TrendDot(props: TrendDotRenderProps & { isLast?: boolean }) {
 // graded task yet (average === null) are dropped, a line can't be drawn
 // through a gap.
 export default function GpaTrendChart({ entries, scale, cumulativeAverage }: GpaTrendChartProps) {
+  const { t } = useI18n();
   const { min: scaleMin, max: scaleMax } = useMemo(() => parseScale(scale), [scale]);
 
   const data = useMemo(
@@ -139,8 +142,7 @@ export default function GpaTrendChart({ entries, scale, cumulativeAverage }: Gpa
 
       {zoomed && (
         <p className="absolute right-1 top-0 text-[10px] text-neutral-600">
-          zoomed to {domainMin}-{domainMax} of {scaleMin}-{scaleMax} scale
-        </p>
+          {t('ui.zoomedToOfScale', { domainMin: domainMin, domainMax: domainMax, scaleMin: scaleMin, scaleMax: scaleMax })}</p>
       )}
 
       <ResponsiveContainer width="100%" height="100%">
