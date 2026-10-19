@@ -34,6 +34,10 @@ import { AppealsModule } from './appeals/appeals.module';
 import { BannedIpGuard } from './common/guards/banned-ip.guard';
 import { CsrfGuard } from './auth/guards/csrf.guard';
 import { LoggingThrottlerGuard } from './common/guards/logging-throttler.guard';
+import {
+  DEFAULT_REQUESTS_PER_MINUTE,
+  THROTTLE_WINDOW_MS,
+} from './common/throttle.util';
 import { MaintenanceGuard } from './common/guards/maintenance.guard';
 import { RequestUserLoggerInterceptor } from './common/interceptors/request-user-logger.interceptor';
 
@@ -42,8 +46,8 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     // 100 pedidos por minuto
     ThrottlerModule.forRoot([
       {
-        ttl: 60000,
-        limit: 100,
+        ttl: THROTTLE_WINDOW_MS,
+        limit: DEFAULT_REQUESTS_PER_MINUTE,
       },
     ]),
     UsersModule,

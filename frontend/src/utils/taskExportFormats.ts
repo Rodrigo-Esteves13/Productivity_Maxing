@@ -2,6 +2,7 @@ import type { Area, AcademicTaskTypeOption, Task } from '../types/models';
 import { formatEnumLabel } from './formatEnumLabel';
 import { resolveOptionLabel } from './resolveOptionLabel';
 import { todayKey } from '../lib/dateKey';
+import { translateNow } from '../i18n/translate';
 
 // Shared column set for both CSV and Markdown exports, so the two formats
 // never silently drift apart (one gaining a column the other doesn't have).
@@ -19,7 +20,7 @@ const EXPORT_COLUMNS = [
 ] as const;
 
 function areaName(areaId: string, areas: Area[]): string {
-  return areas.find((a) => a.id === areaId)?.name ?? 'Unknown area';
+  return areas.find((a) => a.id === areaId)?.name ?? translateNow('ui.unknownArea');
 }
 
 function taskDateOnly(isoDate: string): string {

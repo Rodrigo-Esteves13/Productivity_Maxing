@@ -7,6 +7,15 @@
 // sério lá.
 const DEFAULT_LOCAL_FRONTEND_URL = 'http://localhost:5173';
 
+// Valores aceites como "ligado" numa flag de ambiente (tudo o resto, ou
+// variavel em falta, e desligado).
+const ENV_FLAG_ON_VALUES = new Set(['true', '1', 'yes', 'on']);
+
+function isEnvFlagOn(name: string): boolean {
+  const raw = process.env[name]?.trim().toLowerCase();
+  return raw !== undefined && ENV_FLAG_ON_VALUES.has(raw);
+}
+
 export function getFrontendUrl(): string {
   return process.env.FRONTEND_URL ?? DEFAULT_LOCAL_FRONTEND_URL;
 }
@@ -30,8 +39,7 @@ export function getGoogleMapsApiKey(): string | null {
 // verificou o email) e as contas que já existiam antes da migração ficam
 // verificadas por defeito (ver User.emailVerifiedAt no schema.prisma).
 export function isEmailVerificationRequired(): boolean {
-  const raw = process.env.REQUIRE_EMAIL_VERIFICATION?.trim().toLowerCase();
-  return raw === 'true' || raw === '1' || raw === 'yes' || raw === 'on';
+  return isEnvFlagOn('REQUIRE_EMAIL_VERIFICATION');
 }
 
 // 2FA por app autenticadora (TOTP). DESLIGADO por omissão: com a flag a false
@@ -40,8 +48,7 @@ export function isEmailVerificationRequired(): boolean {
 // ativar o 2FA com a flag ligada passa a ter de dar o código em cada login
 // (email+password e OAuth).
 export function isTwoFactorEnabled(): boolean {
-  const raw = process.env.TWO_FACTOR_ENABLED?.trim().toLowerCase();
-  return raw === 'true' || raw === '1' || raw === 'yes' || raw === 'on';
+  return isEnvFlagOn('TWO_FACTOR_ENABLED');
 }
 
 // Buckets do Supabase Storage e nome do remetente dos emails. Todos tem

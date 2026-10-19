@@ -29,7 +29,7 @@ export default function ProductivityByTypeCard({
     <DashboardCard>
       <CardHeading className="mb-3">
         <ChartPieIcon className="shrink-0" />
-        Productivity by task type
+        {t('ui.productivityByTaskType')}
       </CardHeading>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">

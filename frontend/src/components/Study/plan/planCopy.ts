@@ -1,5 +1,6 @@
 import type { CapacityStatus } from '../../../types/models';
 import { formatDuration } from '../../../lib/timeFormat';
+import { translateNow } from '../../../i18n/translate';
 
 interface BannerContext {
   neededMinutes: number;
@@ -20,38 +21,37 @@ interface BannerCopy {
 // e cor, e acrescentar um novo estado é acrescentar uma entrada.
 export const BANNER_BY_STATUS: Record<CapacityStatus, BannerCopy> = {
   no_work: {
-    title: 'Nothing to plan',
-    body: () => 'No pending tasks are due in this window.',
+    get title() { return translateNow('plan.noWorkTitle'); },
+    body: () => translateNow('plan.noWorkBody'),
     containerClass: 'border-neutral-800 bg-neutral-900/50',
     titleClass: 'text-neutral-200',
   },
   on_track: {
-    title: 'On track',
+    get title() { return translateNow('plan.onTrackTitle'); },
     body: (c) =>
-      `${formatDuration(c.neededMinutes)} of study fits inside your ${formatDuration(c.dailyLimitMinutes)} daily limit.`,
+      translateNow('plan.onTrackBody', { needed: formatDuration(c.neededMinutes), limit: formatDuration(c.dailyLimitMinutes) }),
     containerClass: 'border-emerald-900/50 bg-emerald-950/20',
     titleClass: 'text-emerald-300',
   },
   overtime: {
-    title: 'You should plan overtime',
+    get title() { return translateNow('plan.overtimeTitle'); },
     body: (c) =>
-      `${formatDuration(c.overtimeMinutes)} only fits by going past your ${formatDuration(c.dailyLimitMinutes)} daily limit. Blocks marked overtime are the ones to protect or move.`,
+      translateNow('plan.overtimeBody', { overtime: formatDuration(c.overtimeMinutes), limit: formatDuration(c.dailyLimitMinutes) }),
     containerClass: 'border-amber-900/50 bg-amber-950/20',
     titleClass: 'text-amber-300',
   },
   short: {
-    title: 'Not enough time',
-    body: (c) =>
-      `${formatDuration(c.shortfallMinutes)} cannot be scheduled before the deadlines, even with overtime. Free up time, move a deadline or drop a task.`,
+    get title() { return translateNow('plan.shortTitle'); },
+    body: (c) => translateNow('plan.shortBody', { shortfall: formatDuration(c.shortfallMinutes) }),
     containerClass: 'border-red-900/50 bg-red-950/20',
     titleClass: 'text-red-300',
   },
 };
 
 export const ESTIMATE_SOURCE_LABEL = {
-  manual: 'Your estimate',
-  manual_calibrated: 'Your estimate, adjusted',
-  predicted: 'Predicted',
-  course_history: 'From your past tasks here',
-  default: 'Default guess',
-} as const;
+  get manual() { return translateNow('plan.sourceManual'); },
+  get manual_calibrated() { return translateNow('plan.sourceManualCalibrated'); },
+  get predicted() { return translateNow('plan.sourcePredicted'); },
+  get course_history() { return translateNow('plan.sourceCourseHistory'); },
+  get default() { return translateNow('plan.sourceDefault'); },
+};

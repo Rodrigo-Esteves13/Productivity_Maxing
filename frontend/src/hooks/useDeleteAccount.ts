@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { deleteAccount } from '../api/userService';
 import { useAuth } from '../context/useAuth';
+import { translateNow } from '../i18n/translate';
 
 const CONFIRM_TEXT = 'DELETE';
 
@@ -33,7 +34,7 @@ export function useDeleteAccount() {
       await logout();
       navigate('/login', { replace: true });
     } catch {
-      setError('Could not delete your account. Please try again.');
+      setError(translateNow('hook.couldNotDeleteYourAccountPlease'));
       setIsDeleting(false);
     }
   };

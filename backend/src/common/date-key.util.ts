@@ -3,7 +3,9 @@
 // (hora de Lisboa), por isso misturar getters locais aqui reintroduz o
 // bug do dia errado já documentado em useSchedule.ts (frontend).
 
+import { lisbonWallClockToUtc } from '../calendar/feed/ics-feed.builder';
 import {
+  APP_TIME_ZONE,
   ISO_DATE_KEY_LENGTH,
   MINUTES_PER_HOUR,
   MS_PER_DAY,
@@ -36,7 +38,7 @@ export function diffUtcDays(from: Date, to: Date): number {
  */
 export function getLisbonNow(): { today: Date; nowMinutes: number } {
   const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Europe/Lisbon',
+    timeZone: APP_TIME_ZONE,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -53,5 +55,26 @@ export function getLisbonNow(): { today: Date; nowMinutes: number } {
   return {
     today,
     nowMinutes: Number(get('hour')) * MINUTES_PER_HOUR + Number(get('minute')),
+  };
+}
+
+// Chave "YYYY-MM-DD" do dia de calendario em Lisboa de um instante concreto
+// (uma sessao as 00:30 de Lisboa no verao ainda e 23:30 UTC do dia antes).
+export function toLisbonDateKey(at: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(at);
+}
+
+// Inicio e fim (exclusivo) de um dia de Lisboa como instantes UTC, para
+// filtrar "hoje" sem depender do fuso do servidor (UTC no Render).
+export function lisbonDayBounds(dateKey: string): { start: Date; end: Date } {
+  const nextKey = toDateKey(addUtcDays(parseDateKey(dateKey), 1));
+  return {
+    start: lisbonWallClockToUtc(dateKey, 0),
+    end: lisbonWallClockToUtc(nextKey, 0),
   };
 }

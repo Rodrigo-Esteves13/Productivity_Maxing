@@ -16,6 +16,7 @@ import { schedule } from './schedule';
 import { share } from './share';
 import { tasks } from './tasks';
 import { auto } from './auto';
+import { extra } from './extra';
 
 export const es: Record<string, string> = {
   ...packs,
@@ -36,4 +37,5 @@ export const es: Record<string, string> = {
   ...share,
   ...tasks,
   ...auto,
+  ...extra,
 };

@@ -1,5 +1,6 @@
 import type { Provider } from '../../types/models';
 import { GoogleIcon, DiscordIcon, GithubIcon } from '../UI/Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 interface OAuthButtonProps {
   provider: Provider;
@@ -14,6 +15,7 @@ const PROVIDER_CONFIG: Record<Provider, { label: string; Icon: typeof GoogleIcon
 
 export default function OAuthButton({ provider, href }: OAuthButtonProps) {
   const { label, Icon } = PROVIDER_CONFIG[provider];
+  const { t } = useI18n();
 
   return (
     <a
@@ -21,7 +23,7 @@ export default function OAuthButton({ provider, href }: OAuthButtonProps) {
       className="border border-neutral-700 rounded p-2 text-center text-neutral-200 hover:border-neutral-500 flex items-center justify-center gap-2"
     >
       <Icon />
-      Continue with {label}
+      {t('ui.continueWithProvider', { provider: label })}
     </a>
   );
 }

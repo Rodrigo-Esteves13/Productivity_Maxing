@@ -92,10 +92,13 @@ export class NotebookViewGrantService {
       where: { id: viewerId },
       select: { name: true },
     });
-    void this.push.notifyUser(ownerId, 'notesRequested', {
-      name: viewer?.name ?? '',
-      url: '/social',
-    });
+    // Cancelar e voltar a pedir nao volta a apitar no mesmo dia.
+    void this.push.notifyUserOnce(
+      ownerId,
+      'notesRequested',
+      { name: viewer?.name ?? '', url: '/social' },
+      `notesRequested:${ownerId}:${viewerId}`,
+    );
     return { status: 'PENDING' };
   }
 

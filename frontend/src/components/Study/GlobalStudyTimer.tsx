@@ -24,7 +24,7 @@ export default function GlobalStudyTimer() {
 
   if (!isAuthenticated) return null;
 
-  const label = activeSession?.task?.title ?? activeSession?.area?.name ?? 'Focus session';
+  const label = activeSession?.task?.title ?? activeSession?.area?.name ?? t('ui.focusSession');
 
   const handleStop = async () => {
     setIsStopping(true);
@@ -56,7 +56,7 @@ export default function GlobalStudyTimer() {
               {formatElapsed(remainingSeconds ?? elapsedSeconds)}
             </span>
             <span className="max-w-[10rem] truncate text-xs text-neutral-400">
-              {remainingSeconds === null ? label : `${label} (left)`}
+              {remainingSeconds === null ? label : t('ui.labelLeft', { label })}
             </span>
           </div>
           <button

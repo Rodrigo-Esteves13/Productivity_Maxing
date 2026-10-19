@@ -82,7 +82,7 @@ export default function BlockListEditor({
                 type="button"
                 onClick={() => handleRemove(item)}
                 className="text-neutral-500 hover:text-red-400 transition-colors p-0.5"
-                title={`Remove ${item}`}
+                title={t('ui.removeItem', { item })}
               >
                 <XIcon className="w-3.5 h-3.5" />
               </button>

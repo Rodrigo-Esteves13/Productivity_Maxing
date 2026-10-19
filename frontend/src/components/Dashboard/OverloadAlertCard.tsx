@@ -5,6 +5,7 @@ import { AlertTriangleIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
 import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
 
 interface OverloadAlertCardProps {
   tasks: Task[];
@@ -37,11 +38,12 @@ export default function OverloadAlertCard({ tasks, areas }: OverloadAlertCardPro
     <DashboardCard tone="danger" className="mb-6">
       <CardHeading tone="danger" className="mb-2">
         <AlertTriangleIcon className="shrink-0" />
-        Heavy week ahead
+        {t('ui.heavyWeekAhead')}
       </CardHeading>
       <p className="text-sm text-neutral-200 mb-3">
-        <span className="font-bold text-lg">{overload.tasks.length}</span> pending tasks are due in
-        the next 7 days - more than usual, worth planning ahead for.
+        {fillNodes(t('ui.overloadPendingDue'), {
+          count: <span className="font-bold text-lg">{overload.tasks.length}</span>,
+        })}
       </p>
       {breakdown.length > 0 && (
         <ul className="flex flex-wrap gap-x-4 gap-y-1 mb-3">

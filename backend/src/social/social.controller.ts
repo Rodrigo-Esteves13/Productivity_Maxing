@@ -27,6 +27,7 @@ import {
   FriendCodeChangeRequestDto,
   SendFriendRequestDto,
 } from './dto/social.dto';
+import { perMinute } from '../common/throttle.util';
 
 @ApiTags('Social')
 @ApiBearerAuth()
@@ -48,7 +49,7 @@ export class SocialController {
 
   @Post('friend-code/change-request')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle(perMinute(5))
   @ApiOperation({
     summary: 'Ask an admin to change your friend code (a reason is required).',
   })
@@ -61,7 +62,7 @@ export class SocialController {
 
   @Post('requests')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   @ApiOperation({
     summary: "Send a friend request using the other person's friend code.",
   })
@@ -93,7 +94,7 @@ export class SocialController {
 
   @Post('blocks')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Throttle(perMinute(20))
   block(@CurrentUser() user: AuthenticatedUser, @Body() dto: BlockUserDto) {
     return this.social.block(user.id, dto.userId);
   }

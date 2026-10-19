@@ -12,6 +12,7 @@ import { downloadJson } from '../utils/downloadJson';
 import type { User } from '../types/models';
 import type { UserFormValues } from '../components/Users/UserEditForm';
 import { useFeedback } from '../context/useFeedback';
+import { translateNow } from '../i18n/translate';
 
 export function useUsersPage(currentUserId: string | undefined) {
   const { notify, confirm } = useFeedback();
@@ -37,7 +38,7 @@ export function useUsersPage(currentUserId: string | undefined) {
       const data = await getAllUsers();
       setUsers(data);
     } catch {
-      setError('Error loading users.');
+      setError(translateNow('hook.errorLoadingUsers'));
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +63,7 @@ export function useUsersPage(currentUserId: string | undefined) {
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       setEditingUser(null);
     } catch {
-      notify('Error saving changes. Check the backend.', 'error');
+      notify(translateNow('hook.errorSavingChangesCheckTheBackend'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -72,9 +73,9 @@ export function useUsersPage(currentUserId: string | undefined) {
     if (target.id === currentUserId) return; // botão já vem desativado, isto é só defesa extra
 
     const confirmed = await confirm({
-      title: 'Delete user',
-      message: `Are you sure you want to permanently delete "${target.name || target.email}"? This cannot be undone.`,
-      confirmLabel: 'Delete',
+      title: translateNow('hook.deleteUser'),
+      message: translateNow('hook.confirmDeleteUser', { name: target.name || target.email }),
+      confirmLabel: translateNow('hook.delete'),
       tone: 'danger',
     });
     if (!confirmed) return;
@@ -83,7 +84,7 @@ export function useUsersPage(currentUserId: string | undefined) {
       await deleteUser(target.id);
       setUsers((prev) => prev.filter((u) => u.id !== target.id));
     } catch {
-      notify('Error deleting user. Check the backend.', 'error');
+      notify(translateNow('hook.errorDeletingUserCheckTheBackend'), 'error');
     }
   };
 
@@ -93,7 +94,7 @@ export function useUsersPage(currentUserId: string | undefined) {
       const data = await exportUserData(target.id);
       downloadJson(data, `user-${target.email}-export.json`);
     } catch {
-      notify('Error exporting user data. Check the backend.', 'error');
+      notify(translateNow('hook.errorExportingUserDataCheckThe'), 'error');
     } finally {
       setExportingId(null);
     }
@@ -127,8 +128,8 @@ export function useUsersPage(currentUserId: string | undefined) {
     } catch {
       notify(
         statusActionMode === 'ban'
-          ? 'Error banning user. Check the backend.'
-          : 'Error suspending user. Check the backend.',
+          ? translateNow('hook.errorBanningUserCheckTheBackend')
+          : translateNow('hook.errorSuspendingUserCheckTheBackend'),
         'error',
       );
     } finally {
@@ -142,7 +143,7 @@ export function useUsersPage(currentUserId: string | undefined) {
       const updated = await reactivateUser(target.id);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
     } catch {
-      notify('Error reactivating user. Check the backend.', 'error');
+      notify(translateNow('hook.errorReactivatingUserCheckTheBackend'), 'error');
     } finally {
       setReactivatingId(null);
     }

@@ -1,4 +1,7 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+
+const IP_FILTER_MAX_LENGTH = 45; // IPv6 completo
+const PATH_FILTER_MAX_LENGTH = 200;
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
@@ -10,6 +13,7 @@ export class QuerySecurityLogsDto extends PaginationDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(IP_FILTER_MAX_LENGTH)
   ip?: string;
 
   @ApiPropertyOptional({
@@ -18,6 +22,7 @@ export class QuerySecurityLogsDto extends PaginationDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(PATH_FILTER_MAX_LENGTH)
   path?: string;
 
   @ApiPropertyOptional({

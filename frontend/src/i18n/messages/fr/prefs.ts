@@ -25,6 +25,8 @@ export const prefs: Record<string, string> = {
   'prefs.savedToAccount': "Enregistré dans votre compte.",
   'prefs.reminders': "Rappels d'échéance",
   'prefs.remindersHelp': "Un e-mail environ 24 h avant l'échéance d'une tâche en attente. Respecte les heures de silence.",
+  'prefs.pushReminders': "Notifications push d'échéance",
+  'prefs.pushRemindersHelp': "Une notification environ 24 h avant l'échéance d'une tâche en attente, sur les appareils où tu as activé les notifications ci-dessous. Respecte les heures de silence.",
   'prefs.spacedReviews': "Révisions espacées",
   'prefs.spacedReviewsHelp': "Après avoir terminé une tâche universitaire, ajoute de courtes tâches de révision 1, 3 et 7 jours plus tard.",
 };

@@ -3,36 +3,11 @@ import type { User } from '../../types/models';
 import { updateUserProfile } from '../../api/userService';
 import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
+import ToggleRow from '../UI/ToggleRow';
 
 interface PreferencesCardProps {
   user: User;
   onUserUpdate: (user: User) => void;
-}
-
-interface ToggleRowProps {
-  label: string;
-  description: string;
-  checked: boolean;
-  disabled: boolean;
-  onChange: (value: boolean) => void;
-}
-
-function ToggleRow({ label, description, checked, disabled, onChange }: ToggleRowProps) {
-  return (
-    <label className="flex items-start justify-between gap-4 py-2.5 border-b border-neutral-800 last:border-b-0 cursor-pointer">
-      <span className="min-w-0">
-        <span className="block text-sm font-medium text-neutral-200">{label}</span>
-        <span className="block text-xs text-neutral-500 mt-0.5">{description}</span>
-      </span>
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-        className="mt-1 h-4 w-4 accent-violet-500 shrink-0"
-      />
-    </label>
-  );
 }
 
 export default function PreferencesCard({ user, onUserUpdate }: PreferencesCardProps) {
@@ -40,12 +15,16 @@ export default function PreferencesCard({ user, onUserUpdate }: PreferencesCardP
   const { t } = useI18n();
   const [isSaving, setIsSaving] = useState(false);
 
-  const save = async (patch: { deadlineEmailReminders?: boolean; spacedReviewsEnabled?: boolean }) => {
+  const save = async (patch: {
+    deadlineEmailReminders?: boolean;
+    deadlinePushReminders?: boolean;
+    spacedReviewsEnabled?: boolean;
+  }) => {
     setIsSaving(true);
     try {
       onUserUpdate(await updateUserProfile(patch));
     } catch {
-      notify('Could not save the preference. Please try again.', 'error');
+      notify(t('ui.couldNotSaveThePreference'), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -61,6 +40,13 @@ export default function PreferencesCard({ user, onUserUpdate }: PreferencesCardP
         checked={user.deadlineEmailReminders ?? false}
         disabled={isSaving}
         onChange={(value) => void save({ deadlineEmailReminders: value })}
+      />
+      <ToggleRow
+        label={t('prefs.pushReminders')}
+        description={t('prefs.pushRemindersHelp')}
+        checked={user.deadlinePushReminders ?? false}
+        disabled={isSaving}
+        onChange={(value) => void save({ deadlinePushReminders: value })}
       />
       <ToggleRow
         label={t('prefs.spacedReviews')}

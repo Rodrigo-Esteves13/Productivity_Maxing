@@ -4,6 +4,7 @@ import FormField from '../../UI/FormField';
 import Input from '../../UI/Input';
 import RatingInput from '../../UI/RatingInput';
 import { useI18n } from '../../../i18n/useI18n';
+import { fillNodes } from '../../../i18n/fillNodes';
 
 export interface StopDetails {
   note?: string;
@@ -53,7 +54,7 @@ export default function StopSessionPanel({ taskTitle, isSubmitting, onConfirm, o
             className="mt-0.5 accent-violet-500"
           />
           <span>
-            I finished <span className="text-white">{taskTitle}</span>
+            {fillNodes(t('ui.iFinishedTask'), { task: <span className="text-white">{taskTitle}</span> })}
           </span>
         </label>
       )}
@@ -71,7 +72,7 @@ export default function StopSessionPanel({ taskTitle, isSubmitting, onConfirm, o
             })
           }
         >
-          {isSubmitting ? 'Saving...' : 'Save session'}
+          {isSubmitting ? t('common.saving') : t('ui.saveSession')}
         </Button>
         <Button variant="secondary" disabled={isSubmitting} onClick={onCancel}>
           {t('ui.keepGoing')}

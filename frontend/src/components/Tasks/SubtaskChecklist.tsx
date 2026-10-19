@@ -43,7 +43,7 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
       onChange([...subtasks, created]);
       setDraft('');
     } catch {
-      notify('Could not add the subtask. Please try again.', 'error');
+      notify(t('ui.couldNotAddTheSubtask'), 'error');
     } finally {
       setIsAdding(false);
     }
@@ -56,7 +56,7 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
       await updateSubtask(taskId, subtask.id, { isDone: !subtask.isDone });
     } catch {
       onChange(previous);
-      notify('Could not update the subtask.', 'error');
+      notify(t('ui.couldNotUpdateTheSubtask'), 'error');
     }
   };
 
@@ -67,7 +67,7 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
       await deleteSubtask(taskId, subtask.id);
     } catch {
       onChange(previous);
-      notify('Could not delete the subtask.', 'error');
+      notify(t('ui.couldNotDeleteTheSubtask'), 'error');
     }
   };
 
@@ -77,10 +77,10 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
     try {
       const created = await convertSubtaskToTask(taskId, subtask.id);
       onConverted?.(created);
-      notify('Step promoted to its own task.', 'success');
+      notify(t('ui.stepPromotedToItsOwn'), 'success');
     } catch {
       onChange(previous);
-      notify('Could not convert the step to a task.', 'error');
+      notify(t('ui.couldNotConvertTheStep'), 'error');
     }
   };
 
@@ -101,7 +101,7 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
       await reorderSubtasks(taskId, next.map((s) => s.id));
     } catch {
       onChange(previous);
-      notify('Could not save the new order.', 'error');
+      notify(t('ui.couldNotSaveTheNew'), 'error');
     }
   };
 
@@ -146,7 +146,7 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
               checked={subtask.isDone}
               onChange={() => void handleToggle(subtask)}
               className="accent-violet-500"
-              aria-label={`Mark "${subtask.title}" as ${subtask.isDone ? 'not done' : 'done'}`}
+              aria-label={t(subtask.isDone ? 'ui.markStepNotDone' : 'ui.markStepDone', { title: subtask.title })}
             />
             <span
               className={`flex-1 text-sm break-words ${
@@ -169,7 +169,7 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
               type="button"
               onClick={() => void handleDelete(subtask)}
               className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-500 hover:text-red-400 transition-opacity"
-              aria-label={`Delete subtask "${subtask.title}"`}
+              aria-label={t('ui.deleteSubtaskNamed', { title: subtask.title })}
               title={t('ui.deleteSubtask')}
             >
               <TrashIcon width={14} height={14} />

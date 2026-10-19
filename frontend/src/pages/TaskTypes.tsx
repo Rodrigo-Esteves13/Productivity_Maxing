@@ -17,7 +17,7 @@ import { useI18n } from '../i18n/useI18n';
 
 export default function TaskTypes() {
   const { t } = useI18n();
-  useDocumentTitle('Task Type Management');
+  useDocumentTitle(t('ui.taskTypeManagementTitle'));
   const {
     taskTypes,
     academicTaskTypes,
@@ -138,8 +138,8 @@ export default function TaskTypes() {
           onSubmit={handleCreateTaskType}
           onCancel={() => setIsCreateTaskTypeOpen(false)}
           isSubmitting={isSubmitting}
-          submitLabel="Create Task Type"
-          submittingLabel="Creating..."
+          submitLabel={t('ui.createTaskType')}
+          submittingLabel={t('common.creating')}
         />
       </Modal>
 
@@ -160,8 +160,8 @@ export default function TaskTypes() {
             onSubmit={handleEditTaskType}
             onCancel={() => setEditingTaskType(null)}
             isSubmitting={isSubmitting}
-            submitLabel="Save Changes"
-            submittingLabel="Saving..."
+            submitLabel={t('ui.saveChanges')}
+            submittingLabel={t('common.saving')}
           />
         )}
       </Modal>
@@ -178,8 +178,8 @@ export default function TaskTypes() {
           onSubmit={handleCreateAcademic}
           onCancel={() => setIsCreateAcademicOpen(false)}
           isSubmitting={isSubmitting}
-          submitLabel="Create Subcategory"
-          submittingLabel="Creating..."
+          submitLabel={t('ui.createSubcategory')}
+          submittingLabel={t('common.creating')}
         />
       </Modal>
 
@@ -202,8 +202,8 @@ export default function TaskTypes() {
             onSubmit={handleEditAcademic}
             onCancel={() => setEditingAcademic(null)}
             isSubmitting={isSubmitting}
-            submitLabel="Save Changes"
-            submittingLabel="Saving..."
+            submitLabel={t('ui.saveChanges')}
+            submittingLabel={t('common.saving')}
           />
         )}
       </Modal>
@@ -219,8 +219,8 @@ export default function TaskTypes() {
           onSubmit={handleCreatePriority}
           onCancel={() => setIsCreatePriorityOpen(false)}
           isSubmitting={isPrioritySubmitting}
-          submitLabel="Create Priority"
-          submittingLabel="Creating..."
+          submitLabel={t('ui.createPriority')}
+          submittingLabel={t('common.creating')}
         />
       </Modal>
 
@@ -241,8 +241,8 @@ export default function TaskTypes() {
             onSubmit={handleEditPriority}
             onCancel={() => setEditingPriority(null)}
             isSubmitting={isPrioritySubmitting}
-            submitLabel="Save Changes"
-            submittingLabel="Saving..."
+            submitLabel={t('ui.saveChanges')}
+            submittingLabel={t('common.saving')}
           />
         )}
       </Modal>

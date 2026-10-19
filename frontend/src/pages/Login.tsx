@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from 'react';
+import { lazy, Suspense, useState, type SyntheticEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { loginRequest, resendVerificationRequest } from '../api/userService';
@@ -12,8 +12,10 @@ import FormError from '../components/UI/FormError';
 import AuthCard from '../components/Auth/AuthCard';
 import OAuthProviderList from '../components/Auth/OAuthProviderList';
 import AuthSwitchLink from '../components/Auth/AuthSwitchLink';
-import AccountBlockedPage from '../components/AccountBlocked/AccountBlockedPage';
 import useSeo from '../hooks/useSeo';
+
+// Lazy: so aparece quando o login devolve uma conta bloqueada.
+const AccountBlockedPage = lazy(() => import('../components/AccountBlocked/AccountBlockedPage'));
 
 interface BlockedLoginInfo {
   message: string;
@@ -24,7 +26,7 @@ export default function Login() {
   const { t } = useI18n();
   useSeo({
     title: t('auth.seo.login'),
-    description: 'Log in to Productivity Maxing to manage your academic tasks, deadlines, and grades.',
+    description: t('ui.logInToProductivityMaxing'),
     path: '/login',
   });
   const navigate = useNavigate();
@@ -101,10 +103,12 @@ export default function Login() {
 
   if (blockedInfo) {
     return (
-      <AccountBlockedPage
-        bearerToken={blockedInfo.appealToken}
-        initialMessage={blockedInfo.message}
-      />
+      <Suspense fallback={null}>
+        <AccountBlockedPage
+          bearerToken={blockedInfo.appealToken}
+          initialMessage={blockedInfo.message}
+        />
+      </Suspense>
     );
   }
 

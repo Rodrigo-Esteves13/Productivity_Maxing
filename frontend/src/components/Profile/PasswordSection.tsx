@@ -9,6 +9,7 @@ import { useI18n } from '../../i18n/useI18n';
 interface PasswordSectionProps {
   hasPassword: boolean;
   showPasswordFields: boolean;
+  currentPassword: string;
   newPassword: string;
   confirmNewPassword: string;
   passwordError: string;
@@ -16,6 +17,7 @@ interface PasswordSectionProps {
   isSavingPassword: boolean;
   onShowFields: () => void;
   onCancel: () => void;
+  onCurrentPasswordChange: (value: string) => void;
   onNewPasswordChange: (value: string) => void;
   onConfirmPasswordChange: (value: string) => void;
   onSubmit: (e: SyntheticEvent<HTMLFormElement>) => void;
@@ -24,6 +26,7 @@ interface PasswordSectionProps {
 export default function PasswordSection({
   hasPassword,
   showPasswordFields,
+  currentPassword,
   newPassword,
   confirmNewPassword,
   passwordError,
@@ -31,6 +34,7 @@ export default function PasswordSection({
   isSavingPassword,
   onShowFields,
   onCancel,
+  onCurrentPasswordChange,
   onNewPasswordChange,
   onConfirmPasswordChange,
   onSubmit,
@@ -39,7 +43,7 @@ export default function PasswordSection({
   return (
     <div className="mt-6 pt-5 border-t border-neutral-800">
       <h3 className="text-sm font-medium text-neutral-300 mb-2">
-        {hasPassword ? 'Change Password' : 'Add a Password'}
+        {hasPassword ? t('ui.changePassword') : t('ui.addAPassword')}
       </h3>
 
       {!hasPassword && !showPasswordFields && !passwordSuccess && (
@@ -49,21 +53,35 @@ export default function PasswordSection({
       )}
 
       {passwordSuccess && (
-        <p className="text-sm text-green-400 mb-3">{t('ui.passwordUpdatedSuccessfully')}</p>
+        <p className="text-sm text-violet-300 mb-3">{t('ui.passwordUpdatedSuccessfully')}</p>
       )}
 
       {!showPasswordFields ? (
         <Button type="button" variant="secondary" onClick={onShowFields}>
-          {hasPassword ? 'Change Password' : 'Add Password'}
+          {hasPassword ? t('ui.changePassword') : t('ui.addPassword')}
         </Button>
       ) : (
         <form onSubmit={onSubmit} className="space-y-3">
           {passwordError && <FormError message={passwordError} />}
 
+          {hasPassword && (
+            <FormField label={t('ui.currentPassword')} htmlFor="current-password">
+              <Input
+                id="current-password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={currentPassword}
+                onChange={(e) => onCurrentPasswordChange(e.target.value)}
+              />
+            </FormField>
+          )}
+
           <FormField label={t('ui.newPassword')} htmlFor="new-password">
             <Input
               id="new-password"
               type="password"
+              autoComplete="new-password"
               placeholder="••••••••"
               value={newPassword}
               onChange={(e) => onNewPasswordChange(e.target.value)}
@@ -74,6 +92,7 @@ export default function PasswordSection({
             <Input
               id="confirm-new-password"
               type="password"
+              autoComplete="new-password"
               placeholder="••••••••"
               value={confirmNewPassword}
               onChange={(e) => onConfirmPasswordChange(e.target.value)}
@@ -85,7 +104,7 @@ export default function PasswordSection({
               {t('ui.cancel')}
             </Button>
             <ActionButton type="submit" disabled={isSavingPassword}>
-              {isSavingPassword ? 'Saving...' : 'Save Password'}
+              {isSavingPassword ? t('common.saving') : t('ui.savePassword')}
             </ActionButton>
           </div>
         </form>

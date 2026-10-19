@@ -67,7 +67,7 @@ export default function SessionHistoryCard() {
   };
 
   const handleCreate = async (values: SessionFormValues) => {
-    const ok = await mutate(() => createManualSession(values), 'Could not add the session.');
+    const ok = await mutate(() => createManualSession(values), t('ui.couldNotAddSession'));
     if (ok) setIsAdding(false);
   };
 
@@ -101,7 +101,7 @@ export default function SessionHistoryCard() {
               className="flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300"
             >
               <PlusIcon />
-              Add session
+              {t('ui.addSession')}
             </button>
           )}
         </div>
@@ -115,7 +115,7 @@ export default function SessionHistoryCard() {
 
       {isLoading && <LinesSkeleton lines={4} />}
       {!isLoading && error && <ErrorState message={t('ui.couldNotLoadYourSessions')} />}
-      {!isLoading && !error && groups.length === 0 && <EmptyState message={`No sessions in the last ${historyDays} days.`} />}
+      {!isLoading && !error && groups.length === 0 && <EmptyState message={t('ui.noSessionsInLastDays', { days: historyDays })} />}
 
       <div className="space-y-4">
         {visibleGroups.map(([day, daySessions]) => (
@@ -128,10 +128,10 @@ export default function SessionHistoryCard() {
                   session={session}
                   isSaving={isSaving}
                   serverError={serverError}
-                  onEdit={(id, values) => mutate(() => updateStudySession(id, values), 'Could not save the changes.')}
-                  onDelete={(id) => mutate(() => deleteStudySession(id), 'Could not delete the session.')}
+                  onEdit={(id, values) => mutate(() => updateStudySession(id, values), t('hook.couldNotSaveTheChanges'))}
+                  onDelete={(id) => mutate(() => deleteStudySession(id), t('ui.couldNotDeleteSession'))}
                   onRateFocus={(id, rating) =>
-                    mutate(() => updateStudySession(id, { focusRating: rating }), 'Could not save the focus rating.')
+                    mutate(() => updateStudySession(id, { focusRating: rating }), t('ui.couldNotSaveFocusRating'))
                   }
                 />
               ))}

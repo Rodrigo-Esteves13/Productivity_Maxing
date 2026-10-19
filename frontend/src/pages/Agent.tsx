@@ -117,7 +117,7 @@ export default function Agent() {
 
               <div className="flex items-center gap-3 mt-6 pt-6 border-t border-neutral-800">
                 <ActionButton type="button" onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? 'Saving...' : 'Save configuration'}
+                  {isSaving ? t('common.saving') : t('ui.saveConfiguration')}
                 </ActionButton>
                 {justSaved && <span className="text-sm text-emerald-400">{t('ui.saved')}</span>}
                 {saveError && <span className="text-sm text-red-400">{saveError}</span>}

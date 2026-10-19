@@ -4,12 +4,14 @@ import { useAcademic } from '../../context/useAcademic';
 import type { ProgramAverage } from '../../types/models';
 import { BookOpenIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
+import { useI18n } from '../../i18n/useI18n';
 
 // Only makes sense with more than one program (e.g. "High School" +
 // "Bachelor's") - each program keeps its own grade scale, this never
 // merges them into a single number, just lays the cards side by side.
 export default function ProgramsOverviewCard() {
   const { programs, activeProgram, switchProgram } = useAcademic();
+  const { t } = useI18n();
   const [averages, setAverages] = useState<Record<string, ProgramAverage>>({});
   const [isLoading, setIsLoading] = useState(true);
 
@@ -46,7 +48,7 @@ export default function ProgramsOverviewCard() {
     <DashboardCard className="mb-6">
       <CardHeading className="mb-3">
         <BookOpenIcon className="shrink-0" />
-        All your programs
+        {t('ui.allYourPrograms')}
       </CardHeading>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {visiblePrograms.map((program) => {

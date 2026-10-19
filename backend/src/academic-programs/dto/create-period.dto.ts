@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsDateString,
   IsBoolean,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -13,8 +14,7 @@ export class CreatePeriodDto {
     example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
     description: 'ID of the AcademicProgram this period belongs to',
   })
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   programId: string;
 
   @ApiProperty({

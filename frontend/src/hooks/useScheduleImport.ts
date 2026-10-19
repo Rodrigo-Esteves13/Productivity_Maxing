@@ -6,6 +6,7 @@ import {
   type IcsImportOptions,
 } from '../utils/parseIcsSchedule';
 import type { ImportScheduleResult } from '../types/models';
+import { translateNow } from '../i18n/translate';
 
 export type ScheduleImportStage = 'idle' | 'reading' | 'importing' | 'done' | 'error';
 
@@ -85,7 +86,7 @@ export function useScheduleImport() {
       setStage('done');
     } catch (err) {
       console.error('Schedule import failed:', err);
-      setErrorMessage("Couldn't read or import that file. Make sure it's a valid .ics export.");
+      setErrorMessage(translateNow('hook.icsImportFailed'));
       setStage('error');
     }
   };

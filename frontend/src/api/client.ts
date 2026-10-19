@@ -2,10 +2,11 @@ import axios from 'axios';
 import { getCsrfToken, setCsrfToken } from './csrfStore';
 import { MAINTENANCE_EVENT } from '../lib/maintenanceEvents';
 import { ACCOUNT_BLOCKED_EVENT } from '../lib/accountBlockedEvents';
+import { API_BASE_URL } from './apiBaseUrl';
 
 // Create the base Axios instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -157,7 +158,7 @@ export default api;
 // rawFetch existe para esses casos partilharem pelo menos o mesmo baseURL
 // e um timeout, em vez de cada um inventar o seu próprio `fetch(...)` solto
 // - ver a documentação de cada chamador para a razão de não usar `api`.
-const RAW_FETCH_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const RAW_FETCH_BASE_URL = API_BASE_URL;
 
 export async function rawFetch(
   path: string,

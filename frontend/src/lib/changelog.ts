@@ -7,6 +7,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-19',
+    title: 'Deadline push reminders, and the app in your language',
+    items: [
+      'Error and confirmation messages, Dashboard cards, sentences with numbers, bold text or links, tooltips and page titles are now translated into all eight languages.',
+      'Weekday names in Schedule follow your language, and repeat labels ("Repeats every 2 weeks") read naturally in each one.',
+      'The home page FAQ now matches how sharing and the Google Calendar permission work today.',
+      'Deadline reminders can now arrive as push notifications too. Turn on "Deadline push notifications" in Profile, plus notifications on each device you want them on. Quiet hours still apply.',
+      'Notifications now show the app icon, and a few security settings were tightened.',
+    ],
+  },
+  {
     date: '2026-10-18',
     title: 'Invite friends to a note, and a tidier menu',
     items: [

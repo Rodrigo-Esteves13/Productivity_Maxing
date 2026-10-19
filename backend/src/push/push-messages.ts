@@ -24,14 +24,16 @@ export type PushMessageKey =
   | 'notesRequested'
   | 'notesGranted'
   | 'shareInvited'
-  | 'shareInviteAccepted';
+  | 'shareInviteAccepted'
+  | 'deadlineSoon'
+  | 'deadlinesSoon';
 
 interface Template {
   title: string;
   body: string;
 }
 
-// {name} = pessoa, {title} = título da entrada.
+// {name} = pessoa, {title} = título da entrada ou da task, {count} = quantas mais.
 const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
   en: {
     shareAccessRequested: {
@@ -81,6 +83,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     shareInviteAccepted: {
       title: 'Invitation accepted',
       body: '{name} accepted your invitation to "{title}".',
+    },
+    deadlineSoon: {
+      title: 'Deadline coming up',
+      body: '"{title}" is due soon.',
+    },
+    deadlinesSoon: {
+      title: 'Deadlines coming up',
+      body: '"{title}" and {count} more are due soon.',
     },
   },
   pt: {
@@ -132,6 +142,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Convite aceite',
       body: '{name} aceitou o teu convite para "{title}".',
     },
+    deadlineSoon: {
+      title: 'Prazo a aproximar-se',
+      body: '"{title}" termina em breve.',
+    },
+    deadlinesSoon: {
+      title: 'Prazos a aproximar-se',
+      body: '"{title}" e mais {count} terminam em breve.',
+    },
   },
   es: {
     shareAccessRequested: {
@@ -182,6 +200,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Invitación aceptada',
       body: '{name} aceptó tu invitación a "{title}".',
     },
+    deadlineSoon: {
+      title: 'Plazo cercano',
+      body: '"{title}" vence pronto.',
+    },
+    deadlinesSoon: {
+      title: 'Plazos cercanos',
+      body: '"{title}" y {count} más vencen pronto.',
+    },
   },
   zh: {
     shareAccessRequested: {
@@ -219,6 +245,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     shareInviteAccepted: {
       title: '邀请已接受',
       body: '{name} 接受了你对“{title}”的邀请。',
+    },
+    deadlineSoon: {
+      title: '截止日期临近',
+      body: '“{title}”即将截止。',
+    },
+    deadlinesSoon: {
+      title: '截止日期临近',
+      body: '“{title}”和另外 {count} 项即将截止。',
     },
   },
   ja: {
@@ -270,6 +304,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '招待が承認されました',
       body: '{name}さんが「{title}」への招待を承認しました。',
     },
+    deadlineSoon: {
+      title: '締め切りが近づいています',
+      body: '「{title}」の締め切りが近づいています。',
+    },
+    deadlinesSoon: {
+      title: '締め切りが近づいています',
+      body: '「{title}」ほか {count} 件の締め切りが近づいています。',
+    },
   },
   ko: {
     shareAccessRequested: {
@@ -319,6 +361,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     shareInviteAccepted: {
       title: '초대 수락됨',
       body: '{name}님이 "{title}" 초대를 수락했어요.',
+    },
+    deadlineSoon: {
+      title: '마감이 다가와요',
+      body: '"{title}" 마감이 곧이에요.',
+    },
+    deadlinesSoon: {
+      title: '마감이 다가와요',
+      body: '"{title}" 외 {count}개의 마감이 곧이에요.',
     },
   },
   fr: {
@@ -370,6 +420,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Invitation acceptée',
       body: '{name} a accepté ton invitation à "{title}".',
     },
+    deadlineSoon: {
+      title: 'Échéance proche',
+      body: '« {title} » arrive bientôt à échéance.',
+    },
+    deadlinesSoon: {
+      title: 'Échéances proches',
+      body: '« {title} » et {count} autres arrivent bientôt à échéance.',
+    },
   },
   de: {
     shareAccessRequested: {
@@ -420,13 +478,21 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Einladung angenommen',
       body: '{name} hat deine Einladung zu "{title}" angenommen.',
     },
+    deadlineSoon: {
+      title: 'Frist naht',
+      body: '„{title}“ ist bald fällig.',
+    },
+    deadlinesSoon: {
+      title: 'Fristen nahen',
+      body: '„{title}“ und {count} weitere sind bald fällig.',
+    },
   },
 };
 
 export function buildPushText(
   lang: string,
   key: PushMessageKey,
-  vars: { name?: string; title?: string },
+  vars: { name?: string; title?: string; count?: number },
 ): Template {
   const dict =
     (MESSAGES as Record<string, (typeof MESSAGES)['en']>)[lang] ?? MESSAGES.en;
@@ -434,6 +500,7 @@ export function buildPushText(
   const fill = (s: string) =>
     s
       .replace('{name}', (vars.name ?? '').slice(0, 60))
-      .replace('{title}', (vars.title ?? '').slice(0, 80));
+      .replace('{title}', (vars.title ?? '').slice(0, 80))
+      .replace('{count}', String(vars.count ?? ''));
   return { title: fill(tpl.title), body: fill(tpl.body) };
 }

@@ -7,6 +7,7 @@ import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { getFeedbackList, setFeedbackResolved } from '../api/feedbackService';
 import type { FeedbackItem } from '../types/models';
+import { translateNow } from '../i18n/translate';
 import { useI18n } from '../i18n/useI18n';
 
 // Admin: feedback enviado pelos users, em qualquer língua. A coluna da
@@ -21,7 +22,7 @@ export default function FeedbackAdmin() {
   useEffect(() => {
     getFeedbackList()
       .then(setItems)
-      .catch(() => setError('Error loading feedback.'))
+      .catch(() => setError(translateNow('ui.errorLoadingFeedback')))
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -56,14 +57,14 @@ export default function FeedbackAdmin() {
                 <span className="rounded-full border border-neutral-700 px-2 py-0.5 uppercase">{item.language}</span>
                 {item.rating !== null && <span>{item.rating}/5</span>}
                 {item.page && <span className="font-mono">{item.page}</span>}
-                <span>{item.user?.name ?? 'Unknown'}</span>
+                <span>{item.user?.name ?? t('ui.unknown')}</span>
                 <span>{new Date(item.createdAt).toLocaleString()}</span>
                 <button
                   type="button"
                   onClick={() => void toggle(item)}
                   className="ml-auto text-violet-300 hover:text-violet-200"
                 >
-                  {item.isResolved ? 'Reopen' : 'Mark resolved'}
+                  {item.isResolved ? t('ui.reopen') : t('ui.markResolved')}
                 </button>
               </div>
               {/* Texto de utilizador: nunca como HTML. */}

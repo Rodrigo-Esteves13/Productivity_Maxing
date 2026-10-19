@@ -1,4 +1,5 @@
 import type { ImportScheduleRow } from '../types/models';
+import { translateNow } from '../i18n/translate';
 
 // Fuso horário da app: muitos portais publicam em UTC (sufixo "Z") ou com
 // TZID; o resto da feature (ClassOccurrence.startMinutes,
@@ -79,8 +80,8 @@ export function parseIcsSchedule(
       const row = parseVEvent(eventLines, opts);
       if (row) rows.push(row);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error.';
-      errors.push(`Event ${index + 1}: ${message}`);
+      const message = error instanceof Error ? error.message : translateNow('import.unknownError');
+      errors.push(translateNow('import.icsEventError', { n: index + 1, message }));
     }
   });
 

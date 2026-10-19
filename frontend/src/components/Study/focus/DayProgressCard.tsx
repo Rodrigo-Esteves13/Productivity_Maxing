@@ -47,8 +47,8 @@ export default function DayProgressCard({ dailyLimitMinutes }: DayProgressCardPr
           {hasLimit ? (
             <p className="text-neutral-300">
               {isOver
-                ? `${formatDuration(doneMinutes - dailyLimitMinutes)} over your ${formatDuration(dailyLimitMinutes)} limit`
-                : `${formatDuration(dailyLimitMinutes - doneMinutes)} left of your ${formatDuration(dailyLimitMinutes)} limit`}
+                ? t('ui.overYourLimit', { over: formatDuration(doneMinutes - dailyLimitMinutes), limit: formatDuration(dailyLimitMinutes) })
+                : t('ui.leftOfYourLimit', { left: formatDuration(dailyLimitMinutes - doneMinutes), limit: formatDuration(dailyLimitMinutes) })}
             </p>
           ) : (
             <p className="text-neutral-400">{t('ui.setADailyLimitIn')}</p>
@@ -56,8 +56,8 @@ export default function DayProgressCard({ dailyLimitMinutes }: DayProgressCardPr
           {streak && (
             <p className="mt-1.5 text-xs text-neutral-500">
               {streak.currentStreak > 0
-                ? `${streak.currentStreak} day streak${streak.atRisk ? ', study today to keep it' : ''}`
-                : 'No streak yet. A session today starts one.'}
+                ? t(streak.atRisk ? 'ui.dayStreakAtRisk' : 'ui.dayStreak', { count: streak.currentStreak })
+                : t('ui.noStreakYetASession')}
             </p>
           )}
         </div>

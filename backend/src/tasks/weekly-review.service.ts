@@ -1,6 +1,7 @@
 import { roundTo } from '../common/round.util';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MS_PER_MINUTE } from '../common/time.constants';
 
 const DAY_MS = 86_400_000;
 // Uma sessão esquecida aberta não pode inflacionar a semana: tecto por sessão
@@ -111,7 +112,7 @@ export class WeeklyReviewService {
         Math.max(
           0,
           ((session.endedAt as Date).getTime() - session.startedAt.getTime()) /
-            60_000,
+            MS_PER_MINUTE,
         ),
       );
       studyMinutes += minutes;

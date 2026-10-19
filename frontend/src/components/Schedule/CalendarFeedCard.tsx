@@ -46,23 +46,23 @@ export default function CalendarFeedCard() {
 
   const handleRotate = async () => {
     const ok = await confirm({
-      title: 'Create a new link',
+      title: t('ui.createANewLink'),
       message:
-        'The current link stops working immediately. Calendars subscribed to it will need the new link.',
-      confirmLabel: 'Create new link',
+        t('ui.theCurrentLinkStopsWorking'),
+      confirmLabel: t('ui.createNewLink'),
       tone: 'danger',
     });
-    if (ok) await run(enableCalendarFeed, 'Could not create a new link.');
+    if (ok) await run(enableCalendarFeed, t('ui.couldNotCreateANew'));
   };
 
   const handleDisable = async () => {
     const ok = await confirm({
-      title: 'Turn off the feed',
-      message: 'The link will stop working. You can turn it on again later with a new link.',
-      confirmLabel: 'Turn off',
+      title: t('ui.turnOffTheFeed'),
+      message: t('ui.theLinkWillStopWorking'),
+      confirmLabel: t('ui.turnOff'),
       tone: 'danger',
     });
-    if (ok) await run(disableCalendarFeed, 'Could not turn off the feed.');
+    if (ok) await run(disableCalendarFeed, t('ui.couldNotTurnOffThe'));
   };
 
   if (loadFailed) return null;
@@ -79,9 +79,7 @@ export default function CalendarFeedCard() {
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-semibold text-white">{t('ui.calendarFeedIcs')}</h2>
           <p className="text-sm text-neutral-400 mt-0.5">
-            Subscribe in Google, Apple or Outlook Calendar to see your classes, shifts, study blocks and
-            task deadlines there. Read-only, no Google permission needed. Calendars refresh it on their
-            own schedule (often every few hours).
+            {t('ui.subscribeInGoogleAppleOr')}
           </p>
         </div>
       </div>
@@ -90,10 +88,10 @@ export default function CalendarFeedCard() {
         <button
           type="button"
           disabled={isBusy}
-          onClick={() => void run(enableCalendarFeed, 'Could not create the link.')}
+          onClick={() => void run(enableCalendarFeed, t('ui.couldNotCreateTheLink'))}
           className="mt-4 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 transition-colors"
         >
-          {isBusy ? 'Creating...' : 'Create subscription link'}
+          {isBusy ? t('common.creating') : t('ui.createSubscriptionLink')}
         </button>
       ) : (
         <div className="mt-4 space-y-3">

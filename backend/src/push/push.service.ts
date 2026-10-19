@@ -8,8 +8,16 @@ import * as webpush from 'web-push';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubscribePushDto } from './dto/subscribe-push.dto';
 import { buildPushText, type PushMessageKey } from './push-messages';
+import { MS_PER_DAY } from '../common/time.constants';
 
 const MAX_SUBSCRIPTIONS_PER_USER = 10;
+
+// Avisos de pedidos (acesso a uma nota, ler notas de um amigo): no maximo um
+// por par e por dia. Sem isto, cancelar e voltar a pedir notificava o dono em
+// ciclo. Em memoria (so ha uma instancia no Render); um restart apenas
+// permite um aviso a mais. Tamanho limitado para nunca crescer sem fim.
+export const REQUEST_NOTIFY_COOLDOWN_MS = MS_PER_DAY;
+const MAX_COOLDOWN_ENTRIES = 10_000;
 
 // O servidor faz POST ao `endpoint` que o cliente envia: sem esta lista, um
 // user mau registava http://rede-interna/... e usava o backend como proxy
@@ -37,14 +45,20 @@ export function isAllowedPushEndpoint(endpoint: string): boolean {
 export interface PushNotifyOptions {
   name?: string;
   title?: string;
+  /** Quantas mais (avisos agrupados, ex: "e mais 2 prazos"). */
+  count?: number;
   /** Caminho dentro da app a abrir ao clicar (sempre relativo). */
   url: string;
 }
+
+// Caminho relativo da app: começa por uma só barra.
+const APP_PATH_PATTERN = /^\/(?!\/)/;
 
 @Injectable()
 export class PushService implements OnModuleInit {
   private readonly logger = new Logger(PushService.name);
   private enabled = false;
+  private readonly lastNotifiedAt = new Map<string, number>();
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -111,18 +125,54 @@ export class PushService implements OnModuleInit {
   /**
    * Envia um aviso a TODOS os dispositivos do user. Nunca lança: um aviso
    * falhado não pode partir o pedido que o originou (aprovar, pedir acesso...).
+   * Devolve em quantos dispositivos o envio foi aceite (0 com push desligado).
    */
   async notifyUser(
     userId: string,
     key: PushMessageKey,
     options: PushNotifyOptions,
-  ): Promise<void> {
-    if (!this.enabled) return;
+  ): Promise<number> {
+    if (!this.enabled) return 0;
     try {
-      await this.deliverToUser(userId, key, options);
+      return (await this.deliverToUser(userId, key, options)).delivered;
     } catch (error) {
       this.logger.warn(`notifyUser falhou: ${(error as Error).message}`);
+      return 0;
     }
+  }
+
+  /**
+   * Como notifyUser, mas no maximo uma vez por `dedupeKey` dentro de
+   * `cooldownMs` (ex: o mesmo pedido cancelado e refeito). Devolve 0 quando
+   * suprimido.
+   */
+  async notifyUserOnce(
+    userId: string,
+    key: PushMessageKey,
+    options: PushNotifyOptions,
+    dedupeKey: string,
+    cooldownMs = REQUEST_NOTIFY_COOLDOWN_MS,
+    now = Date.now(),
+  ): Promise<number> {
+    const last = this.lastNotifiedAt.get(dedupeKey);
+    if (last !== undefined && now - last < cooldownMs) return 0;
+    this.rememberNotified(dedupeKey, now, cooldownMs);
+    return this.notifyUser(userId, key, options);
+  }
+
+  private rememberNotified(dedupeKey: string, now: number, cooldownMs: number) {
+    if (this.lastNotifiedAt.size >= MAX_COOLDOWN_ENTRIES) {
+      for (const [k, at] of this.lastNotifiedAt) {
+        if (now - at >= cooldownMs) this.lastNotifiedAt.delete(k);
+      }
+      // Ainda cheio: descarta o mais antigo (Map guarda ordem de insercao).
+      if (this.lastNotifiedAt.size >= MAX_COOLDOWN_ENTRIES) {
+        const oldest = this.lastNotifiedAt.keys().next();
+        if (!oldest.done) this.lastNotifiedAt.delete(oldest.value);
+      }
+    }
+    this.lastNotifiedAt.delete(dedupeKey);
+    this.lastNotifiedAt.set(dedupeKey, now);
   }
 
   /**
@@ -160,7 +210,8 @@ export class PushService implements OnModuleInit {
         const payload = JSON.stringify({
           title: text.title,
           body: text.body,
-          url: options.url.startsWith('/') ? options.url : '/',
+          // Só caminhos da app ('/x'); '//host' seria um URL externo.
+          url: APP_PATH_PATTERN.test(options.url) ? options.url : '/',
           tag: key,
         });
         try {

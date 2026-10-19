@@ -7,6 +7,7 @@ import {
 } from '../api/securityLogsService';
 import type { SecurityLog, SecurityLogsStats } from '../types/models';
 import { useFeedback } from '../context/useFeedback';
+import { translateNow } from '../i18n/translate';
 
 const PAGE_SIZE = 25;
 
@@ -52,7 +53,7 @@ export function useSecurityLogsPage() {
         setTotal(data.total);
         setSkip(data.skip);
       } catch {
-        setError('Error loading security logs.');
+        setError(translateNow('hook.errorLoadingSecurityLogs'));
       } finally {
         setIsLoading(false);
       }
@@ -93,12 +94,12 @@ export function useSecurityLogsPage() {
 
   const handlePurge = async (olderThanDays?: number) => {
     const message = olderThanDays
-      ? `Delete all security logs older than ${olderThanDays} days?`
-      : 'Delete ALL security logs? This cannot be undone.';
+      ? translateNow('hook.deleteLogsOlderThan', { days: olderThanDays })
+      : translateNow('hook.deleteAllSecurityLogsThisCannot');
     const confirmed = await confirm({
-      title: 'Clear security logs',
+      title: translateNow('hook.clearSecurityLogs'),
       message,
-      confirmLabel: 'Delete',
+      confirmLabel: translateNow('hook.delete'),
       tone: 'danger',
     });
     if (!confirmed) return;
@@ -108,7 +109,7 @@ export function useSecurityLogsPage() {
       await purgeSecurityLogs(olderThanDays);
       await Promise.all([fetchLogs(0), fetchStats()]);
     } catch {
-      notify('Error clearing logs. Check the backend.', 'error');
+      notify(translateNow('hook.errorClearingLogsCheckTheBackend'), 'error');
     } finally {
       setIsPurging(false);
     }

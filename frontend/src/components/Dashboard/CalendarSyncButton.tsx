@@ -57,7 +57,7 @@ export default function CalendarSyncButton({ task }: CalendarSyncButtonProps) {
     <button
       onClick={handleClick}
       disabled={isLoading}
-      title={eventId ? 'Remove from Google Calendar' : 'Add to Google Calendar'}
+      title={eventId ? t('ui.removeFromGoogleCalendar') : t('ui.addToGoogleCalendar')}
       className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors disabled:opacity-50 ${
         eventId
           ? 'border-cyan-800 text-cyan-400 bg-cyan-900/30'
@@ -65,7 +65,7 @@ export default function CalendarSyncButton({ task }: CalendarSyncButtonProps) {
       }`}
     >
       {eventId ? <CheckIcon width={12} height={12} /> : <CalendarIcon width={12} height={12} />}
-      {eventId ? 'Synced' : 'Sync'}
+      {eventId ? t('ui.synced') : t('ui.sync')}
     </button>
   );
 }

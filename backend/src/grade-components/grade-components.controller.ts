@@ -27,6 +27,7 @@ import {
   CreateGradeEntryDto,
   UpdateGradeEntryDto,
 } from './dto/grade-entry.dto';
+import { perMinute } from '../common/throttle.util';
 
 class ListGradeComponentsQuery {
   @IsOptional()
@@ -99,7 +100,7 @@ export class GradeComponentsController {
   }
 
   @Post()
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Throttle(perMinute(30))
   @ApiOperation({
     summary: 'Creates a grade component for a course and period.',
   })
@@ -111,7 +112,7 @@ export class GradeComponentsController {
   }
 
   @Patch(':id')
-  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @Throttle(perMinute(60))
   @ApiOperation({ summary: 'Edits name, weight or rule of a component.' })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -132,7 +133,7 @@ export class GradeComponentsController {
   }
 
   @Post(':id/entries')
-  @Throttle({ default: { limit: 120, ttl: 60000 } })
+  @Throttle(perMinute(120))
   @ApiOperation({ summary: 'Adds a grade (e.g. one seminar) to a component.' })
   addEntry(
     @CurrentUser() user: AuthenticatedUser,
@@ -143,7 +144,7 @@ export class GradeComponentsController {
   }
 
   @Patch(':id/entries/:entryId')
-  @Throttle({ default: { limit: 120, ttl: 60000 } })
+  @Throttle(perMinute(120))
   @ApiOperation({ summary: 'Edits one grade of a component.' })
   updateEntry(
     @CurrentUser() user: AuthenticatedUser,
@@ -155,7 +156,7 @@ export class GradeComponentsController {
   }
 
   @Delete(':id/entries/:entryId')
-  @Throttle({ default: { limit: 120, ttl: 60000 } })
+  @Throttle(perMinute(120))
   @ApiOperation({ summary: 'Removes one grade from a component.' })
   removeEntry(
     @CurrentUser() user: AuthenticatedUser,

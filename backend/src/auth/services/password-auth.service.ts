@@ -24,6 +24,23 @@ import {
 // completar a sessão de recovery e chamar updateUser({ password }).
 const FRONTEND_URL = getFrontendUrl();
 
+// Erros do Supabase no registo traduzidos para mensagens nossas. Nunca se
+// devolve o error.message do Supabase ao cliente (texto interno, pode mudar
+// entre versoes e revelar detalhes da configuracao do projeto).
+const SIGNUP_RATE_LIMIT_MESSAGE = 'Too many attempts. Please try again later.';
+const SIGNUP_ERROR_MESSAGES: Record<string, string> = {
+  weak_password: 'This password is too weak. Use a longer one.',
+  email_address_invalid: 'Enter a valid email address.',
+  over_email_send_rate_limit: SIGNUP_RATE_LIMIT_MESSAGE,
+  over_request_rate_limit: SIGNUP_RATE_LIMIT_MESSAGE,
+};
+const PASSWORD_UPDATE_FAILED_MESSAGE =
+  'Could not update the password. Please try again.';
+const CURRENT_PASSWORD_REQUIRED_MESSAGE = 'Enter your current password.';
+const CURRENT_PASSWORD_WRONG_MESSAGE = 'Your current password is incorrect.';
+const SIGNUP_FALLBACK_MESSAGE =
+  'Could not create the account. Please try again.';
+
 @Injectable()
 export class PasswordAuthService {
   private readonly logger = new Logger(PasswordAuthService.name);
@@ -80,14 +97,17 @@ export class PasswordAuthService {
           'An account with this email already exists.',
         );
       }
-      throw new UnauthorizedException(error.message);
+      this.logger.warn(`Supabase signUp failed: ${error.code ?? 'no code'}`);
+      throw new BadRequestException(
+        SIGNUP_ERROR_MESSAGES[error.code ?? ''] ?? SIGNUP_FALLBACK_MESSAGE,
+      );
     }
 
     if (!signUpData.user) {
       // Acontece se o projeto Supabase tiver confirmação de email obrigatória
       // e ainda não houver sessão, o utilizador tem de confirmar antes de entrar.
       throw new UnauthorizedException(
-        'Verifica o teu email para confirmares a conta antes de entrares.',
+        'Check your email to confirm your account before logging in.',
       );
     }
 
@@ -234,20 +254,46 @@ export class PasswordAuthService {
    *   passa a poder entrar por email+password e a usar "Esqueci-me da
    *   password" normalmente.
    */
-  async setPassword(userId: string, newPassword: string): Promise<void> {
+  // Confirma a password atual pelo próprio Supabase (mesmo caminho do login).
+  // Mensagem própria e sem detalhes do Supabase; o throttle da rota (5/min)
+  // trava tentativas em série.
+  private async assertCurrentPassword(
+    email: string,
+    currentPassword: string | undefined,
+  ): Promise<void> {
+    if (!currentPassword) {
+      throw new BadRequestException(CURRENT_PASSWORD_REQUIRED_MESSAGE);
+    }
+    const { error } = await this.clients.anon.auth.signInWithPassword({
+      email,
+      password: currentPassword,
+    });
+    if (error) {
+      throw new UnauthorizedException(CURRENT_PASSWORD_WRONG_MESSAGE);
+    }
+  }
+
+  async setPassword(
+    userId: string,
+    newPassword: string,
+    currentPassword?: string,
+  ): Promise<void> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
     });
 
     if (user.supabaseAuthId) {
+      // Conta que ja tem password: confirma a atual antes de a trocar.
+      await this.assertCurrentPassword(user.email, currentPassword);
       const { error } = await this.clients.admin.auth.admin.updateUserById(
         user.supabaseAuthId,
         { password: newPassword },
       );
       if (error) {
-        throw new BadRequestException(
-          `Could not update password: ${error.message}`,
+        this.logger.warn(
+          `Supabase updateUserById failed: ${error.code ?? 'no code'}`,
         );
+        throw new BadRequestException(PASSWORD_UPDATE_FAILED_MESSAGE);
       }
       return;
     }
@@ -279,9 +325,7 @@ export class PasswordAuthService {
     );
 
     if (!alreadyRegistered) {
-      throw new BadRequestException(
-        `Could not create a password for this account: ${error?.message ?? 'unknown error'}`,
-      );
+      throw new BadRequestException(PASSWORD_UPDATE_FAILED_MESSAGE);
     }
 
     const { data: linkData, error: linkError } =
@@ -302,9 +346,10 @@ export class PasswordAuthService {
       });
 
     if (updateError) {
-      throw new BadRequestException(
-        `Could not update password: ${updateError.message}`,
+      this.logger.warn(
+        `Supabase updateUserById failed: ${updateError.code ?? 'no code'}`,
       );
+      throw new BadRequestException(PASSWORD_UPDATE_FAILED_MESSAGE);
     }
 
     await this.prisma.user.update({

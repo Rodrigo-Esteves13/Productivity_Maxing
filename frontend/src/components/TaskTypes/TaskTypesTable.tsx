@@ -33,42 +33,42 @@ export default function TaskTypesTable({ taskTypes, onEdit, onToggleActive }: Ta
                 </td>
               </tr>
             ) : (
-              taskTypes.map((t) => (
-                <tr key={t.id} className="border-b border-neutral-800 last:border-0 hover:bg-neutral-800/30">
+              taskTypes.map((type) => (
+                <tr key={type.id} className="border-b border-neutral-800 last:border-0 hover:bg-neutral-800/30">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <ColorDot color={t.colorHex ?? '#808080'} />
-                      <span className="font-medium text-neutral-200">{t.label}</span>
+                      <ColorDot color={type.colorHex ?? '#808080'} />
+                      <span className="font-medium text-neutral-200">{type.label}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-neutral-500">
-                    {t.academicTaskTypes.length === 0
+                    {type.academicTaskTypes.length === 0
                       ? '-'
-                      : `${t.academicTaskTypes.filter((a) => a.isActive).length} active`}
+                      : t('ui.nActive', { count: type.academicTaskTypes.filter((a) => a.isActive).length })}
                   </td>
-                  <td className="px-4 py-3 text-center text-neutral-500">{t.order}</td>
+                  <td className="px-4 py-3 text-center text-neutral-500">{type.order}</td>
                   <td className="px-4 py-3 text-center">
-                    <ActiveBadge isActive={t.isActive} />
+                    <ActiveBadge isActive={type.isActive} />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
                       <button
-                        onClick={() => onEdit(t)}
-                        title="Edit task type"
+                        onClick={() => onEdit(type)}
+                        title={t('ui.editTaskType')}
                         className="text-neutral-400 hover:text-white transition-colors p-1.5"
                       >
                         <PencilIcon />
                       </button>
                       <button
-                        onClick={() => onToggleActive(t)}
-                        title={t.isActive ? 'Deactivate' : 'Reactivate'}
+                        onClick={() => onToggleActive(type)}
+                        title={type.isActive ? t('ui.deactivate') : t('ui.reactivate')}
                         className={`transition-colors p-1.5 ${
-                          t.isActive
+                          type.isActive
                             ? 'text-neutral-400 hover:text-red-500'
                             : 'text-emerald-500 hover:text-emerald-400'
                         }`}
                       >
-                        {t.isActive ? <TrashIcon /> : <span className="text-xs font-semibold px-1">Reactivate</span>}
+                        {type.isActive ? <TrashIcon /> : <span className="text-xs font-semibold px-1">{t('ui.reactivate')}</span>}
                       </button>
                     </div>
                   </td>

@@ -6,6 +6,7 @@ import { UpsertAgentConfigDto } from './dto/upsert-agent-config.dto';
 import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { perMinute } from '../common/throttle.util';
 
 // Mesmo guard do TasksController: esta rota é chamada tanto pela página
 // Agent na app (sessão JWT normal) como pelo pmaxing-agent local a correr
@@ -23,13 +24,13 @@ export class AgentConfigController {
   // app.module.ts) documenta esse contrato e evita que uma key comprometida
   // consiga fazer polling agressivo sem ser abrandada.
   @Get()
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Throttle(perMinute(20))
   find(@CurrentUser() user: AuthenticatedUser) {
     return this.agentConfigService.find(user.id);
   }
 
   @Put()
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   upsert(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpsertAgentConfigDto,

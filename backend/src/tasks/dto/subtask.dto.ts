@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -54,6 +55,6 @@ export class ReorderSubtasksDto {
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(MAX_SUBTASKS_PER_TASK)
-  @IsString({ each: true })
+  @IsUUID('all', { each: true })
   subtaskIds: string[];
 }

@@ -20,8 +20,8 @@ export default function DisconnectCalendarModal({
     <ConfirmDialog
       title={t('ui.disconnectGoogleCalendar')}
       message={t('ui.eventsAlreadyAddedToYour')}
-      confirmLabel={isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
-      cancelLabel="Cancel"
+      confirmLabel={isDisconnecting ? t('ui.disconnecting') : t('ui.disconnect')}
+      cancelLabel={t('ui.cancel')}
       tone="danger"
       isBusy={isDisconnecting}
       error={error}

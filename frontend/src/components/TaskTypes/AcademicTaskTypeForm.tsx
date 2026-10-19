@@ -88,7 +88,7 @@ export default function AcademicTaskTypeForm({
           className="mt-0.5 accent-violet-500"
         />
         <span>
-          Fixed-date event (test, exam)
+          {t('ui.fixedDateEvent')}
           <span className="block text-xs text-neutral-500">
             {t('ui.markingItDoneAfterThe')}
           </span>

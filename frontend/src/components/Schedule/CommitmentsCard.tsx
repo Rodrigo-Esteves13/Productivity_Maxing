@@ -48,7 +48,7 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
             </button>
             <ActionButton onClick={() => { clearError(); setIsCreating(true); }} className="flex items-center gap-2">
               <PlusIcon />
-              New
+              {t('ui.new')}
             </ActionButton>
           </div>
         )}

@@ -25,6 +25,7 @@ import { useQuickReschedule } from './useQuickReschedule';
 import { isRequestCanceled } from '../lib/abortable';
 import { useAcademic } from '../context/useAcademic';
 import { useFeedback } from '../context/useFeedback';
+import { translateNow } from '../i18n/translate';
 
 export function useTasksPage() {
   const { notify, confirm } = useFeedback();
@@ -83,7 +84,7 @@ export function useTasksPage() {
       setPriorities(metaData.priorities ?? []);
       setProgressStatuses(metaData.progressStatuses);
     } catch {
-      setError('Could not load the data.');
+      setError(translateNow('hook.couldNotLoadTheData'));
     } finally {
       setIsMetaLoading(false);
     }
@@ -99,7 +100,7 @@ export function useTasksPage() {
       setIsTasksLoading(false);
     } catch (caught) {
       if (isRequestCanceled(caught)) return;
-      setError('Could not load the data.');
+      setError(translateNow('hook.couldNotLoadTheData'));
       setIsTasksLoading(false);
     }
   };
@@ -161,7 +162,7 @@ export function useTasksPage() {
         const subtasks = await addSubtasksBulk(created.id, subtaskTitles);
         createdWithChecklist = { ...created, subtasks };
       } catch {
-        notify('Task created, but the checklist could not be saved.', 'error');
+        notify(translateNow('hook.taskCreatedButTheChecklistCould'), 'error');
       }
     }
     const finalTask = await applyCalendarSync(createdWithChecklist, !!syncToCalendar);
@@ -264,9 +265,9 @@ export function useTasksPage() {
     if (!selectedTask) return;
 
     const confirmDelete = await confirm({
-      title: 'Delete task',
-      message: 'Are you sure you want to delete this task? This action is irreversible.',
-      confirmLabel: 'Delete',
+      title: translateNow('hook.deleteTask'),
+      message: translateNow('hook.areYouSureYouWantTo'),
+      confirmLabel: translateNow('hook.delete'),
       tone: 'danger',
     });
     if (!confirmDelete) return;
@@ -278,10 +279,10 @@ export function useTasksPage() {
     const shouldRemoveFromCalendar =
       !!selectedTask.googleCalendarEventId &&
       (await confirm({
-        title: 'Google Calendar',
-        message: 'Also remove the linked event from Google Calendar?',
-        confirmLabel: 'Remove event',
-        cancelLabel: 'Keep event',
+        title: translateNow('hook.googleCalendar'),
+        message: translateNow('hook.alsoRemoveTheLinkedEventFrom'),
+        confirmLabel: translateNow('hook.removeEvent'),
+        cancelLabel: translateNow('hook.keepEvent'),
       }));
 
     try {
@@ -297,7 +298,7 @@ export function useTasksPage() {
       setTasks((prev) => prev.filter((t) => t.id !== selectedTask.id));
       closeDetailModal();
     } catch {
-      notify('Could not delete the task. Please try again.', 'error');
+      notify(translateNow('hook.couldNotDeleteTheTaskPlease'), 'error');
     }
   }, [selectedTask, closeDetailModal, confirm, notify]);
 
@@ -306,9 +307,9 @@ export function useTasksPage() {
     if (!selectedTask) return;
 
     const confirmDuplicate = await confirm({
-      title: 'Duplicate task',
-      message: 'Do you want to duplicate this task? A clean copy will be created (progress, grade and calendar event are not copied).',
-      confirmLabel: 'Duplicate',
+      title: translateNow('hook.duplicateTask'),
+      message: translateNow('hook.doYouWantToDuplicateThis'),
+      confirmLabel: translateNow('hook.duplicate'),
     });
     if (!confirmDuplicate) return;
 
@@ -343,7 +344,7 @@ export function useTasksPage() {
       // Falha ao duplicar é sempre um erro de rede/API neste fluxo (a
       // criação em si já trata os seus próprios erros de validação) - não
       // precisamos do objeto de erro para dar uma mensagem útil aqui.
-      notify('Could not duplicate the task. Please check your connection.', 'error');
+      notify(translateNow('hook.couldNotDuplicateTheTaskPlease'), 'error');
     }
   // handleCreateTask fica de fora de proposito: nao esta memoizado e
   // incluí-lo recriaria este callback em cada render.
@@ -366,7 +367,7 @@ export function useTasksPage() {
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setSelectedTask(updated);
     } catch {
-      notify('Could not mark the task as completed. Please try again.', 'error');
+      notify(translateNow('hook.couldNotMarkTheTaskAs'), 'error');
     }
   }, [selectedTask, notify, absorbSpawnedTasks]);
 
@@ -382,7 +383,7 @@ export function useTasksPage() {
         setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
         setSelectedTask((prev) => (prev?.id === updated.id ? updated : prev));
       } catch {
-        notify('Could not move the task to that area. Please try again.', 'error');
+        notify(translateNow('hook.couldNotMoveTheTaskTo'), 'error');
       }
     },
     [notify],
@@ -397,7 +398,7 @@ export function useTasksPage() {
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setSelectedTask((prev) => (prev?.id === updated.id ? updated : prev));
     } catch {
-      notify('Could not update the pin. Please try again.', 'error');
+      notify(translateNow('hook.couldNotUpdateThePinPlease'), 'error');
     }
   }, [notify]);
 
@@ -426,7 +427,7 @@ export function useTasksPage() {
         await reorderTasks(orderedIds);
       } catch {
         setTasks(previousTasks);
-        notify('Could not save the new order. Please try again.', 'error');
+        notify(translateNow('hook.couldNotSaveTheNewOrder'), 'error');
       }
     },
     [tasks, notify],

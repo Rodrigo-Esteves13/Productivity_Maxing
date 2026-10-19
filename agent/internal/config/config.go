@@ -25,6 +25,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"time"
 )
@@ -102,6 +103,28 @@ func Load(path string) (*Config, error) {
 	return &cfg, nil
 }
 
+// loopbackHosts: os únicos hosts onde http:// (sem TLS) é aceite, para
+// desenvolvimento local. Comparação exata do hostname já parsed - um
+// prefixo de texto aceitava "http://localhost.atacante.com".
+var loopbackHosts = map[string]bool{"localhost": true, "127.0.0.1": true, "::1": true}
+
+// validateBaseURL recusa um api.baseUrl sem TLS fora de loopback. Sem TLS a
+// x-api-key ia em claro e a resposta de GET /agent/config (domínios e
+// processos a bloquear) podia ser trocada por qualquer atacante na rede.
+func validateBaseURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return fmt.Errorf("api.baseUrl %q is not a valid URL", raw)
+	}
+	if u.Scheme == "https" {
+		return nil
+	}
+	if u.Scheme == "http" && loopbackHosts[u.Hostname()] {
+		return nil
+	}
+	return fmt.Errorf("api.baseUrl %q must use https:// (plain http:// is only allowed for localhost)", raw)
+}
+
 func (c *Config) applyDefaultsAndValidate() error {
 	if c.API.BaseURL == "" {
 		// Nunca um domínio fixo aqui - só a variável de ambiente. Se
@@ -112,6 +135,9 @@ func (c *Config) applyDefaultsAndValidate() error {
 		} else {
 			return fmt.Errorf("api.baseUrl is not set and PMAXING_BASE_URL is not set in the environment - there is no hardcoded fallback domain, set one of the two explicitly")
 		}
+	}
+	if err := validateBaseURL(c.API.BaseURL); err != nil {
+		return err
 	}
 	if c.API.APIKey == "" {
 		return fmt.Errorf("api.apiKey is required - generate one on the /agent page of the site")

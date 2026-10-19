@@ -109,7 +109,7 @@ export default function StudySessionWidget() {
   // selecionada (visibleTasks já é só dessa cadeira - um único optgroup
   // seria ruído).
   const tasksByArea = new Map<string, typeof tasks>();
-  const noAreaLabel = 'No subject';
+  const noAreaLabel = t('ui.noSubject');
   for (const task of visibleTasks) {
     const label = areaNameById.get(task.areaId) ?? noAreaLabel;
     const list = tasksByArea.get(label) ?? [];
@@ -138,15 +138,15 @@ export default function StudySessionWidget() {
             </p>
             <p className="mt-1 text-xs text-neutral-500">
               {timerPlan === null
-                ? 'Counting up'
+                ? t('ui.countingUp')
                 : remainingSeconds === 0
-                  ? 'Block finished'
-                  : `Left of ${timerPlan.focusMinutes} min`}
+                  ? t('ui.blockFinished')
+                  : t('ui.leftOfMinutes', { count: timerPlan.focusMinutes })}
             </p>
             <p className="mt-2 text-sm text-neutral-400">
               {activeSession.task?.title ??
                 activeSession.area?.name ??
-                'Untitled session'}
+                t('ui.untitledSession')}
             </p>
             <div className="mt-2">
               <OpenNotesLink areaId={activeSession.areaId} />
@@ -237,7 +237,7 @@ export default function StudySessionWidget() {
             disabled={isSubmitting}
             className="w-full"
           >
-            {isSubmitting ? 'Starting...' : 'Start session'}
+            {isSubmitting ? t('ui.starting') : t('ui.startSession')}
           </Button>
         </div>
       )}

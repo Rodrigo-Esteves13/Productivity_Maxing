@@ -42,9 +42,9 @@ export default function Developer() {
     // lado nenhum) - vale a pena confirmar em vez de deixar um clique
     // acidental partir uma integração a meio.
     const confirmed = await confirm({
-      title: 'Revoke API key',
-      message: 'Revoke this API key? Any script using it will stop working immediately.',
-      confirmLabel: 'Revoke',
+      title: t('ui.revokeApiKey'),
+      message: t('ui.revokeThisApiKeyAny'),
+      confirmLabel: t('social.notes.revoke'),
       tone: 'danger',
     });
     if (confirmed) removeKey(id);
@@ -77,7 +77,7 @@ export default function Developer() {
           </select>
         )}
         <ActionButton type="submit" disabled={!name.trim() || isCreating}>
-          {isCreating ? 'Generating...' : 'Generate new key'}
+          {isCreating ? t('ui.generating') : t('ui.generateNewKey')}
         </ActionButton>
       </form>
 

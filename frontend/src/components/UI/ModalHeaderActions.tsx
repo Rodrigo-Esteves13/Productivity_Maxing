@@ -1,4 +1,5 @@
 import { PencilIcon, TrashIcon, UndoIcon, CheckIcon, PinIcon } from './Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 const DuplicateIcon = () => (
   <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -36,18 +37,19 @@ export default function ModalHeaderActions({
   isPinned = false,
   onTogglePin,
   deleteTitle = 'Delete',
-  editTitle = 'Edit',
-  cancelEditTitle = 'Cancel edit',
-  duplicateTitle = 'Duplicate',
-  completeTitle = 'Mark complete',
+  editTitle,
+  cancelEditTitle,
+  duplicateTitle,
+  completeTitle,
 }: ModalHeaderActionsProps) {
+  const { t } = useI18n();
   return (
     <div className="flex items-center gap-1">
       {/* Botão de Pin - antes de tudo, sempre visível fora de edição */}
       {!isEditing && onTogglePin && (
         <button
           onClick={onTogglePin}
-          title={isPinned ? 'Unpin task' : 'Pin task'}
+          title={isPinned ? t('ui.unpinTask') : t('ui.pinTask')}
           className={`transition-colors p-1 ${
             isPinned ? 'text-violet-400 hover:text-violet-300' : 'text-neutral-400 hover:text-violet-400'
           }`}
@@ -60,7 +62,7 @@ export default function ModalHeaderActions({
       {!isEditing && onComplete && (
         <button
           onClick={onComplete}
-          title={completeTitle}
+          title={completeTitle ?? t('ui.markComplete')}
           className="text-neutral-400 hover:text-emerald-400 transition-colors p-1"
         >
           <CheckIcon />
@@ -71,7 +73,7 @@ export default function ModalHeaderActions({
       {!isEditing && onDuplicate && (
         <button
           onClick={onDuplicate}
-          title={duplicateTitle}
+          title={duplicateTitle ?? t('hook.duplicate')}
           className="text-neutral-400 hover:text-blue-400 transition-colors p-1"
         >
           <DuplicateIcon />
@@ -92,8 +94,8 @@ export default function ModalHeaderActions({
       {/* Botão de Editar / Cancelar (mantém o teu estilo original) */}
       <button
         onClick={onToggleEdit}
-        aria-label={isEditing ? cancelEditTitle : editTitle}
-        title={isEditing ? cancelEditTitle : editTitle}
+        aria-label={isEditing ? (cancelEditTitle ?? t('ui.cancelEdit')) : (editTitle ?? t('notebook.edit'))}
+        title={isEditing ? (cancelEditTitle ?? t('ui.cancelEdit')) : (editTitle ?? t('notebook.edit'))}
         className="text-neutral-400 hover:text-white transition-colors p-1"
       >
         {isEditing ? <UndoIcon /> : <PencilIcon />}

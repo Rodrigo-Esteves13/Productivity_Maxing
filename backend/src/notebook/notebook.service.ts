@@ -498,11 +498,17 @@ export class NotebookService {
         select: { title: true },
       }),
     ]);
-    void this.push.notifyUser(share.createdByUserId, 'shareAccessRequested', {
-      name: requester?.name ?? requester?.email?.split('@')[0] ?? '',
-      title: entry?.title ?? '',
-      url: '/notebook',
-    });
+    // No maximo um aviso por pedinte e por dia (recusado e refeito, etc.).
+    void this.push.notifyUserOnce(
+      share.createdByUserId,
+      'shareAccessRequested',
+      {
+        name: requester?.name ?? requester?.email?.split('@')[0] ?? '',
+        title: entry?.title ?? '',
+        url: '/notebook',
+      },
+      `shareAccessRequested:${share.id}:${requestingUserId}`,
+    );
     return { status: request.status };
   }
 
@@ -614,8 +620,11 @@ export class NotebookService {
     meta: { ip?: string; userAgent?: string } | null,
   ): string | null {
     if (userId) return `u:${userId}`;
-    const secret = process.env.JWT_SECRET;
-    if (!secret || !meta?.ip) return null;
+    const base = process.env.JWT_SECRET;
+    if (!base || !meta?.ip) return null;
+    // Chave DERIVADA (rotulo fixo), nunca o JWT_SECRET em bruto: o mesmo
+    // segredo nao serve dois fins (assinar sessoes e anonimizar visitas).
+    const secret = createHmac('sha256', base).update('share-visit-v1').digest();
     const hash = createHmac('sha256', secret)
       .update(`${meta.ip}|${meta.userAgent ?? ''}`)
       .digest('hex')

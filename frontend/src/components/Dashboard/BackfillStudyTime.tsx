@@ -23,7 +23,7 @@ function BackfillRow({ candidate, onSaved }: BackfillRowProps) {
   const save = async () => {
     const value = Number(hours.replace(',', '.'));
     if (!Number.isFinite(value) || value < MIN_HOURS || value > MAX_HOURS) {
-      setError(`Between ${MIN_HOURS} and ${MAX_HOURS} hours.`);
+      setError(t('ui.betweenHours', { min: MIN_HOURS, max: MAX_HOURS }));
       return;
     }
     setIsSaving(true);
@@ -34,7 +34,7 @@ function BackfillRow({ candidate, onSaved }: BackfillRowProps) {
       });
       onSaved();
     } catch {
-      setError('Could not save. Try again.');
+      setError(t('rateFocus.error'));
       setIsSaving(false);
     }
   };
@@ -52,8 +52,8 @@ function BackfillRow({ candidate, onSaved }: BackfillRowProps) {
       <input
         type="text"
         inputMode="decimal"
-        aria-label={`Hours studied for ${candidate.title}`}
-        placeholder="hours"
+        aria-label={t('ui.hoursStudiedFor', { title: candidate.title })}
+        placeholder={t('ui.hoursLower')}
         value={hours}
         onChange={(e) => setHours(e.target.value)}
         onKeyDown={(e) => {
@@ -67,7 +67,7 @@ function BackfillRow({ candidate, onSaved }: BackfillRowProps) {
         disabled={isSaving || hours.trim() === ''}
         className="rounded-md bg-violet-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
       >
-        {isSaving ? 'Saving...' : 'Save'}
+        {isSaving ? t('common.saving') : t('ui.save')}
       </button>
       {error && (
         <p role="alert" className="basis-full pl-4 text-xs text-red-400">

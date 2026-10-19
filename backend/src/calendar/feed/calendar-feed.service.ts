@@ -16,6 +16,7 @@ import {
   lisbonWallClockToUtc,
   type FeedEvent,
 } from './ics-feed.builder';
+import { MS_PER_MINUTE } from '../../common/time.constants';
 
 // Janela do feed: um pouco do passado (para a semana atual ficar completa) e
 // ~2 meses para a frente. 7 + 55 = 62 dias, o máximo que o expandRange dos
@@ -205,7 +206,7 @@ export class CalendarFeedService {
         events.push({
           ...base,
           start: task.date,
-          end: new Date(task.date.getTime() + minutes * 60_000),
+          end: new Date(task.date.getTime() + minutes * MS_PER_MINUTE),
         });
       }
     }

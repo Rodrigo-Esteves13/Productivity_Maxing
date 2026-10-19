@@ -43,7 +43,10 @@ function setup(opts: { friends?: boolean; grant?: unknown } = {}) {
     prisma as unknown as PrismaService,
     social as unknown as SocialService,
     {} as unknown as NotebookService,
-    { notifyUser: jest.fn() } as unknown as PushService,
+    {
+      notifyUser: jest.fn(),
+      notifyUserOnce: jest.fn(),
+    } as unknown as PushService,
   );
   return { service, prisma, social };
 }

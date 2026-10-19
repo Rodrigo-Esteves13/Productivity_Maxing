@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { getTaskMetadata, getUserAreas, getUserTasks } from '../api/userService';
 import type { AcademicTaskTypeOption, Area, Task } from '../types/models';
 import { isRequestCanceled } from '../lib/abortable';
+import { translateNow } from '../i18n/translate';
 
-const LOAD_ERROR_MESSAGE = 'Could not load the dashboard data.';
+const LOAD_ERROR_KEY = 'hook.couldNotLoadTheDashboardData';
 
 // Tudo o que o Dashboard vai buscar ao servidor: tarefas do periodo,
 // areas e metadados (tipos, dificuldades, estados). Fica fora da pagina
@@ -32,7 +33,7 @@ export function useDashboardData(periodParam: string | undefined, isAcademicLoad
         setProgressStatuses(metaData.progressStatuses);
       } catch (err) {
         console.error('Failed to load dashboard metadata', err);
-        setError(LOAD_ERROR_MESSAGE);
+        setError(translateNow(LOAD_ERROR_KEY));
       } finally {
         setIsMetaLoading(false);
       }
@@ -56,7 +57,7 @@ export function useDashboardData(periodParam: string | undefined, isAcademicLoad
       } catch (err) {
         if (isRequestCanceled(err)) return;
         console.error('Failed to load dashboard tasks', err);
-        setError(LOAD_ERROR_MESSAGE);
+        setError(translateNow(LOAD_ERROR_KEY));
         setIsTasksLoading(false);
       }
     }

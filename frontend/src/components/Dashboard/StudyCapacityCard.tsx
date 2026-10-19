@@ -34,7 +34,7 @@ export default function StudyCapacityCard() {
     <div className={`border rounded-xl p-4 shadow-xl bg-neutral-900/50 ${copy.containerClass}`}>
       <CardHeading className="mb-2">
         <Icon className="shrink-0" />
-        Study capacity, next {WINDOW_DAYS} days
+        {t('ui.studyCapacityNextDays', { days: WINDOW_DAYS })}
       </CardHeading>
       <p className={`text-lg font-semibold ${copy.titleClass}`}>{copy.title}</p>
       <p className="text-sm text-neutral-300 mt-1">

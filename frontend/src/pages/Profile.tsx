@@ -47,7 +47,7 @@ export default function Profile() {
         action={
           <ActionButton onClick={() => setIsEditOpen(true)} className="flex items-center gap-2">
             <PencilIcon />
-            Edit Profile
+            {t('ui.editProfile')}
           </ActionButton>
         }
       />

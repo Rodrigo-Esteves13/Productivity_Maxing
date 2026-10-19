@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { MS_PER_MINUTE } from './time.constants';
 
 // Soma, em minutos, de sessões de estudo já terminadas. Partilhado entre
 // PredictionService (treino/precisão) e StudyPlanService (tempo já
@@ -9,7 +10,8 @@ export function sumSessionMinutes(
   let total = 0;
   for (const session of sessions) {
     if (!session.endedAt) continue;
-    total += (session.endedAt.getTime() - session.startedAt.getTime()) / 60_000;
+    total +=
+      (session.endedAt.getTime() - session.startedAt.getTime()) / MS_PER_MINUTE;
   }
   return Math.round(Math.max(0, total));
 }
@@ -74,7 +76,7 @@ export function sumFocusedSessionMinutes(sessions: RatedSession[]): number {
   for (const session of sessions) {
     if (!session.endedAt) continue;
     const minutes =
-      (session.endedAt.getTime() - session.startedAt.getTime()) / 60_000;
+      (session.endedAt.getTime() - session.startedAt.getTime()) / MS_PER_MINUTE;
     total += minutes * focusWeight(session.focusRating);
   }
   return Math.round(Math.max(0, total));

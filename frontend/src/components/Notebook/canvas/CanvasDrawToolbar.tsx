@@ -10,14 +10,21 @@ import SelectedTextControls from './SelectedTextControls';
 import { COLOR_SWATCHES } from './canvasConstants';
 import type { DrawTool } from './canvasConstants';
 import { useI18n } from '../../../i18n/useI18n';
+import { translateNow } from '../../../i18n/translate';
 
 const MIN_STROKE_WIDTH = 1;
 const MAX_STROKE_WIDTH = 8;
 
 const TOOL_OPTIONS: SegmentedOption<DrawTool>[] = [
-  { value: 'pen', label: 'Draw', icon: PencilIcon },
-  { value: 'eraser', label: 'Eraser', icon: EraserIcon },
-  { value: 'text', label: 'Text', icon: TypeIcon, title: 'Click the whiteboard to type text' },
+  // getters: o texto e lido na lingua atual a cada render.
+  { value: 'pen', get label() { return translateNow('ui.drawTool'); }, icon: PencilIcon },
+  { value: 'eraser', get label() { return translateNow('ui.eraserTool'); }, icon: EraserIcon },
+  {
+    value: 'text',
+    get label() { return translateNow('ui.textTool'); },
+    icon: TypeIcon,
+    get title() { return translateNow('ui.textToolHint'); },
+  },
 ];
 
 interface CanvasDrawToolbarProps {
@@ -37,7 +44,7 @@ export default function CanvasDrawToolbar({ canvas, texts, selectedText, tool, o
       <ColorSwatches
         colors={COLOR_SWATCHES}
         selected={tool === 'pen' ? canvas.color : null}
-        labelPrefix="Use color"
+        labelPrefix={t('ui.useColor')}
         onSelect={(color) => {
           canvas.setColor(color);
           onToolChange('pen');
@@ -62,11 +69,11 @@ export default function CanvasDrawToolbar({ canvas, texts, selectedText, tool, o
       <div className="ml-auto flex items-center gap-2">
         <ToolbarButton onClick={canvas.undo} disabled={!canvas.canUndo}>
           <UndoIcon className="h-4 w-4" />
-          Undo
+          {t('ui.undo')}
         </ToolbarButton>
         <ToolbarButton tone="danger" onClick={canvas.clear} disabled={!canvas.canUndo}>
           <TrashIcon className="h-4 w-4" />
-          Clear
+          {t('ui.clear')}
         </ToolbarButton>
       </div>
     </div>

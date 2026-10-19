@@ -22,6 +22,7 @@ import {
   EstimateCommitmentCommuteDto,
   UpdateCommitmentDto,
 } from './dto/commitment.dto';
+import { perMinute } from '../common/throttle.util';
 
 @ApiTags('Schedule')
 @ApiBearerAuth()
@@ -40,7 +41,7 @@ export class CommitmentsController {
   }
 
   @Post()
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Throttle(perMinute(20))
   @ApiOperation({ summary: 'Creates a commitment with its own commute time.' })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -50,7 +51,7 @@ export class CommitmentsController {
   }
 
   @Patch(':id')
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Throttle(perMinute(30))
   @ApiOperation({
     summary: 'Edits the name or commute time of a commitment you own.',
   })
@@ -65,7 +66,7 @@ export class CommitmentsController {
   @Post('commute/estimate')
   @HttpCode(HttpStatus.OK)
   // Cada chamada gasta quota da Google Maps: limite apertado por utilizador.
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   @ApiOperation({
     summary:
       'Estimates travel time from your home address to a place (does not save anything).',

@@ -59,10 +59,11 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       {recurrenceLabel(task) && (
         <DetailRow label={t('ui.repeat')}>
           {recurrenceLabel(task)}
-          {task.recurrenceUntil ? ` until ${new Date(task.recurrenceUntil).toLocaleDateString()}` : ''}. The next one is created when you complete this task.
+          {task.recurrenceUntil ? ` ${t('ui.recurrenceUntil', { date: new Date(task.recurrenceUntil).toLocaleDateString() })}` : ''}.{' '}
+          {t('ui.nextOneCreatedOnComplete')}
         </DetailRow>
       )}
-      <DetailRow label={t('ui.area')}>{task.area?.name ?? 'No Area'}</DetailRow>
+      <DetailRow label={t('ui.area')}>{task.area?.name ?? t('ui.noArea2')}</DetailRow>
 
       <DetailRow label={t('ui.status')}>
         <StatusBadge status={task.progressStatus} />
@@ -126,12 +127,12 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
         {task.googleCalendarEventId ? (
           <span className="inline-flex items-center gap-1.5 text-cyan-400">
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-            Synced
+            {t('ui.synced')}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 text-neutral-500">
             <span className="h-1.5 w-1.5 rounded-full bg-neutral-600" />
-            Not synced
+            {t('ui.notSynced')}
           </span>
         )}
       </DetailRow>

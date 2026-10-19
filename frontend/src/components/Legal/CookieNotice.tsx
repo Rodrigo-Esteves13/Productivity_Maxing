@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { COOKIE_NOTICE_DISMISSED_KEY } from '../../lib/constants';
 import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
 
 /**
  * Aviso informativo sobre cookies - NÃO é um bloqueio/consent-gate, porque
@@ -33,12 +34,13 @@ export default function CookieNotice() {
     <div className="fixed bottom-0 inset-x-0 z-50 border-t border-neutral-800 bg-neutral-950/95 backdrop-blur px-4 py-4 sm:px-6">
       <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
         <p className="text-sm text-neutral-300 flex-1">
-          We use only strictly necessary cookies to keep you signed in and protect your account. No
-          tracking or advertising cookies, ever. See our{' '}
-          <Link to="/privacy" className="underline text-violet-400 hover:text-violet-300">
-            {t('ui.privacyPolicy')}
-          </Link>{' '}
-          for details.
+          {fillNodes(t('ui.cookieNoticeText'), {
+            link: (
+              <Link to="/privacy" className="underline text-violet-400 hover:text-violet-300">
+                {t('ui.privacyPolicy')}
+              </Link>
+            ),
+          })}
         </p>
         <button
           onClick={dismiss}

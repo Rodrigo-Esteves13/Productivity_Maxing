@@ -25,6 +25,8 @@ export const prefs: Record<string, string> = {
   'prefs.savedToAccount': "Saved to your account.",
   'prefs.reminders': "Deadline reminders",
   'prefs.remindersHelp': "One email about 24h before a pending task is due. Respects quiet hours.",
+  'prefs.pushReminders': "Deadline push notifications",
+  'prefs.pushRemindersHelp': "A notification about 24h before a pending task is due, on devices where you turned on notifications below. Respects quiet hours.",
   'prefs.spacedReviews': "Spaced reviews",
   'prefs.spacedReviewsHelp': "After you complete an academic task, add short review tasks 1, 3 and 7 days later.",
 };

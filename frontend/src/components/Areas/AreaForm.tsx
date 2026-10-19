@@ -82,9 +82,7 @@ export default function AreaForm({
           ))}
         </Select>
         <p className="mt-1 text-xs text-neutral-500">
-          If set, tasks created in this Area default to this Type automatically (e.g. an
-          academic subject always defaults to "Academic"). Leave unset for Areas like hobbies,
-          where forcing a Type doesn't make sense.
+          {t('ui.ifSetTasksCreatedIn')}
         </p>
       </FormField>
 

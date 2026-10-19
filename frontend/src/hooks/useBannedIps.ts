@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getBannedIps, banIp, unbanIp } from '../api/bannedIpsService';
 import type { BannedIp } from '../types/models';
+import { translateNow } from '../i18n/translate';
 
 export function useBannedIps() {
   const [bannedIps, setBannedIps] = useState<BannedIp[]>([]);
@@ -15,7 +16,7 @@ export function useBannedIps() {
       const data = await getBannedIps();
       setBannedIps(data);
     } catch {
-      setError('Could not load banned IPs.');
+      setError(translateNow('hook.couldNotLoadBannedIps'));
     } finally {
       setIsLoading(false);
     }
@@ -37,7 +38,7 @@ export function useBannedIps() {
       // diretamente é mais útil que um "erro genérico" aqui.
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        'Could not ban this IP.';
+        translateNow('hook.couldNotBanThisIp');
       setError(message);
       return false;
     } finally {
@@ -51,7 +52,7 @@ export function useBannedIps() {
       await unbanIp(id);
       setBannedIps((prev) => prev.filter((b) => b.id !== id));
     } catch {
-      setError('Could not unban this IP.');
+      setError(translateNow('hook.couldNotUnbanThisIp'));
     }
   }, []);
 

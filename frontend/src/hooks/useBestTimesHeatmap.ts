@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getStudyHeatmap } from '../api/studySessionsService';
 import type { HeatmapCell } from '../types/models';
+import { translateNow } from '../i18n/translate';
 
 export function useBestTimesHeatmap() {
   const [cells, setCells] = useState<HeatmapCell[]>([]);
@@ -14,7 +15,7 @@ export function useBestTimesHeatmap() {
       const data = await getStudyHeatmap();
       setCells(data);
     } catch {
-      setError('Could not load the heatmap.');
+      setError(translateNow('hook.couldNotLoadTheHeatmap'));
     } finally {
       setIsLoading(false);
     }

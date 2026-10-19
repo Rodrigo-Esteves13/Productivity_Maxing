@@ -43,7 +43,7 @@ export default function AcademicTaskTypesTable({
                     {a.isEvent && <span className="ml-2 text-[10px] uppercase text-violet-400">{t('ui.event')}</span>}
                   </td>
                   <td className="px-4 py-3 text-neutral-400">
-                    {a.taskType?.label ?? <span className="text-neutral-600 italic">deleted</span>}
+                    {a.taskType?.label ?? <span className="text-neutral-600 italic">{t('ui.deletedLower')}</span>}
                   </td>
                   <td className="px-4 py-3 text-center text-neutral-500">{a.order}</td>
                   <td className="px-4 py-3 text-center">
@@ -60,7 +60,7 @@ export default function AcademicTaskTypesTable({
                       </button>
                       <button
                         onClick={() => onToggleActive(a)}
-                        title={a.isActive ? 'Deactivate' : 'Reactivate'}
+                        title={a.isActive ? t('ui.deactivate') : t('ui.reactivate')}
                         className={`transition-colors p-1.5 ${
                           a.isActive
                             ? 'text-neutral-400 hover:text-red-500'

@@ -40,7 +40,7 @@ export default function StaleTasksCard({ tasks, areas }: StaleTasksCardProps) {
     <DashboardCard tone="warning">
       <CardHeading tone="warning" className="mb-3">
         <AlertTriangleIcon className="shrink-0" />
-        Not touched in a while
+        {t('ui.notTouchedInAWhile')}
       </CardHeading>
       <ul className="space-y-2">
         {stale.map((task) => {

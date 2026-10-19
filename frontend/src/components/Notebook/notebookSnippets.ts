@@ -11,12 +11,13 @@ export interface SnippetItem {
   label: string;
   /** Texto realmente inserido/copiado quando o botão é usado. */
   value: string;
-  /** Descrição opcional, mostrada como title="" (tooltip) ao passar o rato. */
+  /** Chave i18n opcional da descrição, mostrada como title="" (tooltip) ao passar o rato. */
   description?: string;
 }
 
 export interface SnippetSection {
   id: string;
+  /** Chave i18n do título da secção. */
   title: string;
   items: SnippetItem[];
 }
@@ -25,33 +26,33 @@ const MATH_SYMBOLS: SnippetItem[] = [
   { label: '±', value: '±' },
   { label: '×', value: '×' },
   { label: '÷', value: '÷' },
-  { label: '≈', value: '≈', description: 'Approximately equal' },
-  { label: '≠', value: '≠', description: 'Not equal' },
+  { label: '≈', value: '≈', description: 'snippet.approximatelyEqual' },
+  { label: '≠', value: '≠', description: 'snippet.notEqual' },
   { label: '≤', value: '≤' },
   { label: '≥', value: '≥' },
-  { label: '∞', value: '∞', description: 'Infinity' },
-  { label: '√', value: '√', description: 'Square root' },
-  { label: '∑', value: '∑', description: 'Sum' },
-  { label: '∏', value: '∏', description: 'Product' },
-  { label: '∫', value: '∫', description: 'Integral' },
-  { label: '∂', value: '∂', description: 'Partial derivative' },
-  { label: 'Δ', value: 'Δ', description: 'Delta (change in)' },
-  { label: 'π', value: 'π', description: 'Pi' },
-  { label: 'θ', value: 'θ', description: 'Theta' },
-  { label: 'λ', value: 'λ', description: 'Lambda' },
-  { label: 'μ', value: 'μ', description: 'Mu' },
-  { label: 'σ', value: 'σ', description: 'Sigma' },
-  { label: 'ω', value: 'ω', description: 'Omega' },
-  { label: '∈', value: '∈', description: 'Element of' },
-  { label: '∉', value: '∉', description: 'Not an element of' },
-  { label: '∀', value: '∀', description: 'For all' },
-  { label: '∃', value: '∃', description: 'There exists' },
-  { label: '→', value: '→', description: 'Arrow / implies' },
-  { label: '⇒', value: '⇒', description: 'Implies' },
-  { label: '⇔', value: '⇔', description: 'If and only if' },
-  { label: '∅', value: '∅', description: 'Empty set' },
-  { label: '∪', value: '∪', description: 'Union' },
-  { label: '∩', value: '∩', description: 'Intersection' },
+  { label: '∞', value: '∞', description: 'snippet.infinity' },
+  { label: '√', value: '√', description: 'snippet.squareRoot' },
+  { label: '∑', value: '∑', description: 'snippet.sum' },
+  { label: '∏', value: '∏', description: 'snippet.product' },
+  { label: '∫', value: '∫', description: 'snippet.integral' },
+  { label: '∂', value: '∂', description: 'snippet.partialDerivative' },
+  { label: 'Δ', value: 'Δ', description: 'snippet.deltaChangeIn' },
+  { label: 'π', value: 'π', description: 'snippet.pi' },
+  { label: 'θ', value: 'θ', description: 'snippet.theta' },
+  { label: 'λ', value: 'λ', description: 'snippet.lambda' },
+  { label: 'μ', value: 'μ', description: 'snippet.mu' },
+  { label: 'σ', value: 'σ', description: 'snippet.sigma' },
+  { label: 'ω', value: 'ω', description: 'snippet.omega' },
+  { label: '∈', value: '∈', description: 'snippet.elementOf' },
+  { label: '∉', value: '∉', description: 'snippet.notAnElementOf' },
+  { label: '∀', value: '∀', description: 'snippet.forAll' },
+  { label: '∃', value: '∃', description: 'snippet.thereExists' },
+  { label: '→', value: '→', description: 'snippet.arrowImplies' },
+  { label: '⇒', value: '⇒', description: 'snippet.implies' },
+  { label: '⇔', value: '⇔', description: 'snippet.ifAndOnlyIf' },
+  { label: '∅', value: '∅', description: 'snippet.emptySet' },
+  { label: '∪', value: '∪', description: 'snippet.union' },
+  { label: '∩', value: '∩', description: 'snippet.intersection' },
 ];
 
 // Abreviaturas/comandos que aparecem constantemente em apontamentos de
@@ -64,7 +65,7 @@ const NETWORKING_SNIPPETS: SnippetItem[] = [
   { label: 'Se0/0/0', value: 'Serial0/0/0' },
   { label: 'Te0/0', value: 'TenGigabitEthernet0/0' },
   { label: 'Lo0', value: 'Loopback0' },
-  { label: 'Po1', value: 'Port-channel1', description: 'EtherChannel logical interface' },
+  { label: 'Po1', value: 'Port-channel1', description: 'snippet.etherchannelLogicalInterface' },
   { label: 'VLAN', value: 'VLAN ' },
   { label: 'SVI', value: 'SVI (Switch Virtual Interface)' },
   { label: 'Trunk', value: 'Trunk' },
@@ -91,19 +92,19 @@ const NETWORKING_SNIPPETS: SnippetItem[] = [
   { label: '/24', value: '/24' },
   { label: '/28', value: '/28' },
   { label: '/30', value: '/30' },
-  { label: '::/64', value: '::/64', description: 'IPv6 prefix' },
+  { label: '::/64', value: '::/64', description: 'snippet.ipv6Prefix' },
   { label: 'show run', value: 'show running-config' },
   { label: 'ping', value: 'ping ' },
   { label: 'traceroute', value: 'traceroute ' },
-  { label: '↔', value: '↔', description: 'Link between two devices' },
-  { label: '→', value: '→', description: 'Traffic direction' },
+  { label: '↔', value: '↔', description: 'snippet.linkBetweenTwoDevices' },
+  { label: '→', value: '→', description: 'snippet.trafficDirection' },
   { label: '[Router]', value: '[Router]' },
   { label: '[Switch]', value: '[Switch]' },
   { label: '[Firewall]', value: '[Firewall]' },
   { label: '[Server]', value: '[Server]' },
   { label: '[PC]', value: '[PC]' },
   { label: '[Cloud]', value: '[Cloud]' },
-  { label: '[AP]', value: '[AP]', description: 'Wireless access point' },
+  { label: '[AP]', value: '[AP]', description: 'snippet.wirelessAccessPoint' },
 ];
 
 const PROGRAMMING_SNIPPETS: SnippetItem[] = [
@@ -113,8 +114,8 @@ const PROGRAMMING_SNIPPETS: SnippetItem[] = [
   { label: '!==', value: '!==' },
   { label: '&&', value: '&&' },
   { label: '||', value: '||' },
-  { label: '??', value: '??', description: 'Nullish coalescing' },
-  { label: '?.', value: '?.', description: 'Optional chaining' },
+  { label: '??', value: '??', description: 'snippet.nullishCoalescing' },
+  { label: '?.', value: '?.', description: 'snippet.optionalChaining' },
   { label: '<=', value: '<=' },
   { label: '>=', value: '>=' },
   { label: '{}', value: '{}' },
@@ -128,9 +129,9 @@ const PROGRAMMING_SNIPPETS: SnippetItem[] = [
 ];
 
 export const SNIPPET_SECTIONS: SnippetSection[] = [
-  { id: 'math', title: 'Math', items: MATH_SYMBOLS },
-  { id: 'networking', title: 'Networking', items: NETWORKING_SNIPPETS },
-  { id: 'programming', title: 'Programming', items: PROGRAMMING_SNIPPETS },
+  { id: 'math', title: 'snippet.sectionMath', items: MATH_SYMBOLS },
+  { id: 'networking', title: 'snippet.sectionNetworking', items: NETWORKING_SNIPPETS },
+  { id: 'programming', title: 'snippet.sectionProgramming', items: PROGRAMMING_SNIPPETS },
 ];
 
 // Templates de tabela em Markdown - inseridos como texto simples dentro

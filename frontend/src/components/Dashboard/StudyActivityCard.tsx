@@ -12,6 +12,7 @@ import ProgressBar from '../UI/ProgressBar';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { todayKey } from '../../lib/dateKey';
 import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
 
 const WINDOW_DAYS = 84; // ~12 weeks, GitHub-contributions-style grid
 const DEFAULT_GOAL_MINUTES = 60;
@@ -118,7 +119,7 @@ export default function StudyActivityCard() {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <CardHeading>
           <ActivityIcon className="shrink-0" />
-          Study activity
+          {t('ui.studyActivity')}
         </CardHeading>
         {streak && streak.currentStreak > 0 && (
           <span
@@ -128,14 +129,14 @@ export default function StudyActivityCard() {
           >
             <span className="flex items-center gap-1">
               <FlameIcon className="shrink-0" />
-              {streak.currentStreak} day{streak.currentStreak === 1 ? '' : 's'}
+              {t(streak.currentStreak === 1 ? 'ui.streakDaysOne' : 'ui.streakDaysMany', { count: streak.currentStreak })}
             </span>
             {streak.freezesAvailable > 0 && (
               <span
                 className="text-xs text-sky-400 font-normal"
-                title={`${streak.freezesAvailable} freeze${streak.freezesAvailable === 1 ? '' : 's'} banked - auto-covers a missed day`}
+                title={t(streak.freezesAvailable === 1 ? 'ui.freezesBankedOne' : 'ui.freezesBankedMany', { count: streak.freezesAvailable })}
               >
-                {streak.freezesAvailable} freeze{streak.freezesAvailable === 1 ? '' : 's'}
+                {t(streak.freezesAvailable === 1 ? 'ui.freezesOne' : 'ui.freezesMany', { count: streak.freezesAvailable })}
               </span>
             )}
             {streak.atRisk && (
@@ -154,7 +155,7 @@ export default function StudyActivityCard() {
               ) : (
                 <div
                   key={day.date}
-                  title={`${day.date}: ${day.totalMinutes} min`}
+                  title={t('ui.dayMinutes', { date: day.date, count: day.totalMinutes })}
                   className={`w-3 h-3 rounded-sm border ${intensityClass(day.totalMinutes, maxMinutes)}`}
                 />
               ),
@@ -166,14 +167,14 @@ export default function StudyActivityCard() {
       <div className="mt-4 pt-3 border-t border-neutral-800">
         <div className="flex items-center justify-between text-xs text-neutral-500 mb-1">
           <span>
-            Today: {todayMinutes} / {' '}
+            {t('ui.todayMinutesOf', { minutes: todayMinutes })}{' '}
             <input
               type="number"
               value={goalMinutes}
               onChange={(e) => setGoalMinutes(Math.max(1, Number(e.target.value) || 1))}
               className="w-14 bg-transparent border-b border-neutral-700 text-neutral-300 text-center"
             />{' '}
-            min goal
+            {t('ui.minGoal')}
           </span>
           <span>{goalPct.toFixed(0)}%</span>
         </div>
@@ -193,10 +194,14 @@ export default function StudyActivityCard() {
         return (
           <div className="mt-3 pt-3 border-t border-neutral-800 flex items-center justify-between text-xs text-neutral-500">
             <span>
-              This week: <span className="text-neutral-300">{formatDuration(thisWeek)}</span>
+              {fillNodes(t('ui.thisWeekDuration'), {
+                duration: <span className="text-neutral-300">{formatDuration(thisWeek)}</span>,
+              })}
             </span>
             <span>
-              vs last week: <span className="text-neutral-300">{formatDuration(lastWeek)}</span>
+              {fillNodes(t('ui.vsLastWeekDuration'), {
+                duration: <span className="text-neutral-300">{formatDuration(lastWeek)}</span>,
+              })}
               {deltaPct !== null && (
                 <span className={deltaPct >= 0 ? 'text-emerald-400' : 'text-neutral-400'}>
                   {' '}

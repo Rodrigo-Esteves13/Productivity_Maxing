@@ -63,7 +63,7 @@ export default function BannedIpsCard({ prefillIp }: BannedIpsCardProps) {
         </FormField>
         <div className="flex items-end">
           <ActionButton type="submit" color="amber" disabled={isSubmitting || !ip.trim()}>
-            {isSubmitting ? 'Banning...' : 'Ban IP'}
+            {isSubmitting ? t('ui.banning') : t('ui.banIp')}
           </ActionButton>
         </div>
       </form>

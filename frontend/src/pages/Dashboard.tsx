@@ -114,7 +114,7 @@ export default function Dashboard() {
             className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200"
           >
             <UploadIcon />
-            Import
+            {t('ui.import')}
           </button>
           <TaskExportButtons tasks={filteredTasks} areas={academicAreas} academicTaskTypes={academicTaskTypes} />
           <button
@@ -123,7 +123,7 @@ export default function Dashboard() {
             className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200"
           >
             <PrinterIcon />
-            Print
+            {t('ui.print')}
           </button>
           <button
             type="button"
@@ -132,7 +132,7 @@ export default function Dashboard() {
             className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200"
           >
             <SlidersIcon />
-            {density === 'compact' ? 'Comfortable' : 'Compact'}
+            {density === 'compact' ? t('ui.comfortable') : t('ui.compact')}
           </button>
           {archivedCount > 0 && (
             <label className="flex items-center gap-1.5 text-sm text-neutral-400 select-none cursor-pointer">
@@ -142,7 +142,7 @@ export default function Dashboard() {
                 onChange={toggleShowArchived}
                 className="accent-violet-500"
               />
-              Show archived ({archivedCount})
+              {t('ui.showArchivedCount', { count: archivedCount })}
             </label>
           )}
           <DashboardWidgetToggles visibility={visibility} toggle={toggle} />
@@ -224,8 +224,8 @@ export default function Dashboard() {
             <EmptyState
               message={
                 academicTasks.length === 0
-                  ? 'You have no academic tasks registered.'
-                  : 'No tasks match the current filters.'
+                  ? t('ui.youHaveNoAcademicTasks')
+                  : t('ui.noTasksMatchTheCurrent')
               }
             />
           ) : (

@@ -24,6 +24,7 @@ import {
   MIN_SYNC_DAYS,
   ScheduleSyncDto,
 } from './dto/schedule-sync.dto';
+import { perMinute } from '../common/throttle.util';
 
 @ApiTags('Calendar')
 @ApiBearerAuth()
@@ -34,7 +35,7 @@ export class ScheduleSyncController {
 
   // Só leitura: mostra o que um sync faria, sem tocar no Google Calendar.
   @Get('preview')
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   @ApiOperation({
     summary:
       'Counts of events a sync would add, update and remove. Writes nothing.',
@@ -53,7 +54,7 @@ export class ScheduleSyncController {
   }
 
   @Post('sync')
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Throttle(perMinute(3))
   @ApiOperation({
     summary:
       'Sends classes, work shifts, travel and suggested study blocks to Google Calendar. Only touches events this app created.',
@@ -66,7 +67,7 @@ export class ScheduleSyncController {
   }
 
   @Delete()
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Throttle(perMinute(3))
   @ApiOperation({
     summary:
       'Removes every event this app created in Google Calendar (never your own events).',

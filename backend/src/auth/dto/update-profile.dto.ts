@@ -96,6 +96,15 @@ export class UpdateProfileDto {
   @ApiPropertyOptional({
     example: true,
     description:
+      'Push notification 24h before the deadline of pending tasks, on devices with notifications turned on.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  deadlinePushReminders?: boolean;
+
+  @ApiPropertyOptional({
+    example: true,
+    description:
       'When an academic task is completed, create light review tasks at +1/+3/+7 days.',
   })
   @IsOptional()

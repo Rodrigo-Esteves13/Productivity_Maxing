@@ -68,7 +68,7 @@ export default function TimerModePicker({ value, onChange }: TimerModePickerProp
       {isCustom && (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-neutral-400">
           <label className="flex items-center gap-1.5">
-            Focus
+            {t('ui.focus')}
             <input
               type="number"
               min={MIN_FOCUS_MINUTES}
@@ -80,10 +80,10 @@ export default function TimerModePicker({ value, onChange }: TimerModePickerProp
               }}
               className="w-16 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-neutral-100 focus:border-violet-500 focus:outline-none"
             />
-            min
+            {t('ui.minShort')}
           </label>
           <label className="flex items-center gap-1.5">
-            Break
+            {t('ui.break')}
             <input
               type="number"
               min={0}
@@ -95,7 +95,7 @@ export default function TimerModePicker({ value, onChange }: TimerModePickerProp
               }}
               className="w-16 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-neutral-100 focus:border-violet-500 focus:outline-none"
             />
-            min
+            {t('ui.minShort')}
           </label>
           {value === null && (
             <span className="text-amber-400">
@@ -106,8 +106,8 @@ export default function TimerModePicker({ value, onChange }: TimerModePickerProp
 
       <p className="mt-1.5 text-[11px] text-neutral-500">
         {value === null
-          ? 'Free counts up until you stop.'
-          : `Counts down from ${value.focusMinutes} min, then a ${value.breakMinutes} min break.`}
+          ? t('ui.freeCountsUpUntilYou')
+          : t('ui.countsDownThenBreak', { focus: value.focusMinutes, rest: value.breakMinutes })}
       </p>
     </div>
   );

@@ -107,9 +107,10 @@ export const forgotPasswordRequest = async (email: string): Promise<void> => {
 
 // Define ou muda a password da conta autenticada (funciona tanto para
 // contas só-OAuth a adicionar a primeira password, como para contas que já
-// tinham uma). Não pede a password atual - a sessão válida já basta.
-export const setPasswordRequest = async (password: string): Promise<void> => {
-  await api.patch('/auth/me/password', { password });
+// tinham uma). Se a conta ja tem password, a atual e obrigatoria (o backend
+// devolve 400 sem ela e 401 se estiver errada).
+export const setPasswordRequest = async (password: string, currentPassword?: string): Promise<void> => {
+  await api.patch('/auth/me/password', currentPassword ? { password, currentPassword } : { password });
 };
 
 // Chamado depois de um redirect de OAuth (o cookie de sessão já lá está,
@@ -141,6 +142,7 @@ export const updateUserProfile = async (data: {
   quietHoursStart?: number;
   quietHoursEnd?: number;
   deadlineEmailReminders?: boolean;
+  deadlinePushReminders?: boolean;
   spacedReviewsEnabled?: boolean;
 }): Promise<User> => {
   const response = await api.patch<User>('/auth/me', data);

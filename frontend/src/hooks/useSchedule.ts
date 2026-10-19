@@ -4,6 +4,7 @@ import { isRequestCanceled } from '../lib/abortable';
 import type { ClassOccurrence } from '../types/models';
 import { startOfWeek, todayUtcAnchored } from '../lib/weekDates';
 import { toDateKey } from '../lib/dateKey';
+import { translateNow } from '../i18n/translate';
 
 // BUG HISTÓRICO (Set/2026): esta função e toDateKey() costumavam misturar
 // aritmética de datas em hora local (getDay/setDate/setHours) com
@@ -42,7 +43,7 @@ export function useSchedule(initialWeekStart: Date = todayUtcAnchored()) {
       } catch (caught) {
         // Mudar de semana depressa cancela a anterior: nao e um erro.
         if (isRequestCanceled(caught)) return;
-        setError('Could not load the schedule.');
+        setError(translateNow('hook.couldNotLoadTheSchedule'));
         setIsLoading(false);
       }
     },

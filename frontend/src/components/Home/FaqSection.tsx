@@ -1,30 +1,12 @@
 import { useI18n } from '../../i18n/useI18n';
+// Chaves i18n (pergunta/resposta), traduzidas no render.
+// Chaves i18n (pergunta/resposta), traduzidas no render.
 const FAQ_ITEMS = [
-  {
-    question: 'Is Productivity Maxing free?',
-    answer:
-      'Yes, completely. It\'s an independent, open-source project, not a business with a pricing page - there\'s no paid tier, no upsell, and no plan to add one.',
-  },
-  {
-    question: 'Who can see my tasks and grades?',
-    answer:
-      'Only you. There\'s no social or sharing feature, no public profile, and no analytics service that profiles visitors - see the Privacy Policy for the full breakdown of what\'s collected and why.',
-  },
-  {
-    question: 'What does the Google Calendar permission actually do?',
-    answer:
-      'It\'s optional, and uses Google\'s "see and edit events" permission only to create, update, and delete events the app itself made: tasks you choose to sync, and your schedule (classes, work, travel and study blocks) after you confirm a preview. It never reads or changes any other event in your calendar, and you can disconnect it in your profile or revoke access any time from your Google account settings.',
-  },
-  {
-    question: 'What\'s the Windows agent, and do I need it?',
-    answer:
-      'It\'s an optional companion app that shows your task status in the background and can block distracting sites during a focus session. Entirely optional - the web app is fully functional without it.',
-  },
-  {
-    question: 'Can I self-host it or contribute?',
-    answer:
-      'The full source is public on GitHub under the MIT License - clone it, run it yourself, or open a pull request.',
-  },
+  { question: 'faq.qFree', answer: 'faq.aFree' },
+  { question: 'faq.qPrivacy', answer: 'faq.aPrivacy' },
+  { question: 'faq.qCalendar', answer: 'faq.aCalendar' },
+  { question: 'faq.qAgent', answer: 'faq.aAgent' },
+  { question: 'faq.qSelfHost', answer: 'faq.aSelfHost' },
 ];
 
 // <details>/<summary> instead of a custom accordion component - free
@@ -40,16 +22,16 @@ export default function FaqSection() {
       <div className="space-y-3">
         {FAQ_ITEMS.map((item) => (
           <details
-            key={item.question}
+            key={t(item.question)}
             className="group bg-neutral-900/50 border border-neutral-800 rounded-xl px-5 py-4 open:pb-4"
           >
             <summary className="cursor-pointer list-none flex items-center justify-between gap-4 font-medium text-white">
-              {item.question}
+              {t(item.question)}
               <span className="shrink-0 text-neutral-500 transition-transform group-open:rotate-45 text-xl leading-none">
                 +
               </span>
             </summary>
-            <p className="mt-3 text-sm text-neutral-400 leading-relaxed">{item.answer}</p>
+            <p className="mt-3 text-sm text-neutral-400 leading-relaxed">{t(item.answer)}</p>
           </details>
         ))}
       </div>

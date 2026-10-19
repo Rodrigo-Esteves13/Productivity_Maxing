@@ -112,10 +112,12 @@ export default function WeeklyReview() {
             <DashboardCard tone="warning">
               <CardHeading tone="warning" className="mb-3">{t('review.pushedBack')}</CardHeading>
               <ul className="space-y-1.5">
-                {data.postponed.map((t) => (
-                  <li key={t.id} className="flex items-baseline justify-between gap-3">
-                    <TaskLink id={t.id} title={t.title} areaName={t.areaName} />
-                    <span className="text-xs text-neutral-500 shrink-0">postponed {t.postponedCount}x</span>
+                {data.postponed.map((task) => (
+                  <li key={task.id} className="flex items-baseline justify-between gap-3">
+                    <TaskLink id={task.id} title={task.title} areaName={task.areaName} />
+                    <span className="text-xs text-neutral-500 shrink-0">
+                      {t('ui.postponedTimes', { count: task.postponedCount })}
+                    </span>
                   </li>
                 ))}
               </ul>

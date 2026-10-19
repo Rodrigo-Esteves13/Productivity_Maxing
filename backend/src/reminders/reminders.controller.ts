@@ -7,7 +7,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
-import { SkipThrottle } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
+import { perMinute } from '../common/throttle.util';
+
+const CRON_REQUESTS_PER_MINUTE = 5;
 import { timingSafeEqual } from 'crypto';
 import { SkipCsrf } from '../common/decorators/skip-csrf.decorator';
 import { RemindersService } from './reminders.service';
@@ -30,7 +33,9 @@ export class RemindersController {
   @Post('run')
   @HttpCode(200)
   @SkipCsrf()
-  @SkipThrottle()
+  // Throttle apertado em vez de nenhum: o cron chama de hora a hora, e um
+  // limite baixo trava tentativas de adivinhar o CRON_SECRET.
+  @Throttle(perMinute(CRON_REQUESTS_PER_MINUTE))
   run(@Headers('x-cron-secret') secret: string | undefined) {
     const expected = process.env.CRON_SECRET;
     if (!expected) throw new NotFoundException();

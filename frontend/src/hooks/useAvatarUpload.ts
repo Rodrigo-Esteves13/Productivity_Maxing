@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { translateNow } from '../i18n/translate';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB, mesmo limite do backend
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
@@ -49,7 +50,7 @@ export function useAvatarUpload(): UseAvatarUploadResult {
       })
       .catch(() => {
         if (cancelled) return;
-        setError('This file does not look like a valid image.');
+        setError(translateNow('hook.thisFileDoesNotLookLike'));
         setSelectedFile(null);
       });
 
@@ -63,11 +64,11 @@ export function useAvatarUpload(): UseAvatarUploadResult {
     if (!file) return;
 
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      setError('Use PNG, JPG, WEBP or GIF.');
+      setError(translateNow('hook.usePngJpgWebpOrGif'));
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      setError('Image must be under 5MB.');
+      setError(translateNow('hook.imageMustBeUnder5mb'));
       return;
     }
 

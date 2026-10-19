@@ -26,7 +26,7 @@ export default function SelectedTextControls({ item, texts }: SelectedTextContro
         onClick={() => texts.startEditing(item.id)}
       >
         <PencilIcon className="h-3.5 w-3.5" />
-        Edit
+        {t('notebook.edit')}
       </ToolbarButton>
       <input
         type="range"
@@ -43,7 +43,7 @@ export default function SelectedTextControls({ item, texts }: SelectedTextContro
         size="sm"
         colors={COLOR_SWATCHES}
         selected={item.color ?? DEFAULT_TEXT_COLOR}
-        labelPrefix="Text color"
+        labelPrefix={t('ui.textColor')}
         onSelect={(color) => texts.setColor(item.id, color)}
       />
       <ToolbarButton
@@ -53,7 +53,7 @@ export default function SelectedTextControls({ item, texts }: SelectedTextContro
         onClick={() => texts.removeText(item.id)}
       >
         <TrashIcon className="h-3.5 w-3.5" />
-        Delete text
+        {t('ui.deleteText')}
       </ToolbarButton>
     </div>
   );

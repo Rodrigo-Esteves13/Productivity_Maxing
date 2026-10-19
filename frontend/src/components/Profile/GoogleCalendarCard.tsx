@@ -5,8 +5,10 @@ import DisconnectCalendarModal from './DisconnectCalendarModal';
 import { disconnectGoogleCalendar } from '../../api/calendarService';
 import { refreshCalendarStatus, useCalendarStatus } from '../../hooks/useCalendarStatus';
 import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
+import { API_BASE_URL } from '../../api/apiBaseUrl';
 
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const apiUrl = API_BASE_URL;
 
 export default function GoogleCalendarCard() {
   const { t } = useI18n();
@@ -30,7 +32,7 @@ export default function GoogleCalendarCard() {
       refreshCalendarStatus();
       setIsConfirmOpen(false);
     } catch {
-      setError('Could not disconnect Google Calendar. Please try again.');
+      setError(t('ui.couldNotDisconnectGoogleCalendar'));
     } finally {
       setIsDisconnecting(false);
     }
@@ -47,10 +49,10 @@ export default function GoogleCalendarCard() {
             <h3 className="text-sm font-semibold text-neutral-100">{t('ui.googleCalendar')}</h3>
             <p className="text-sm text-neutral-400 mt-0.5">
               {connected === null
-                ? 'Checking connection...'
+                ? t('ui.checkingConnection')
                 : connected
-                  ? 'Connected. Sync tasks as events from the Dashboard.'
-                  : 'Connect your Google account to sync tasks as calendar events.'}
+                  ? t('ui.connectedSyncTasksAsEvents')
+                  : t('ui.connectYourGoogleAccountTo')}
             </p>
           </div>
         </div>
@@ -58,7 +60,7 @@ export default function GoogleCalendarCard() {
         <div className="flex-shrink-0 flex items-center gap-3 sm:pl-4">
           {connected === true && (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-cyan-400 bg-cyan-900/20 border border-cyan-800/40 rounded-full px-2.5 py-1">
-              <CheckIcon width={12} height={12} /> Connected
+              <CheckIcon width={12} height={12} />{' '}{t('ui.connected')}
             </span>
           )}
 
@@ -86,24 +88,25 @@ export default function GoogleCalendarCard() {
           verificacao/branding), o utilizador sabe o que fazer. */}
       {connected === false && (
         <p className="mt-4 text-xs text-amber-300/90 leading-relaxed rounded-lg border border-amber-800/40 bg-amber-900/10 p-3">
-          Google may show a "Google hasn't verified this app" warning. It is expected: click{' '}
-          <strong>{t('ui.advanced')}</strong>, then <strong>{t('ui.goToProductivityMaxingUnsafe')}</strong> to
-          continue. Only the one permission described below is requested.
+          {fillNodes(t('ui.googleUnverifiedWarning'), {
+            advanced: <strong>{t('ui.advanced')}</strong>,
+            unsafe: <strong>{t('ui.goToProductivityMaxingUnsafe')}</strong>,
+          })}
         </p>
       )}
 
       {/* Aviso de privacidade in-product (a Google exige que seja visivel junto
           ao pedido de acesso, e que o link seja o mesmo do ecra de consentimento). */}
       <p className="mt-4 text-xs text-neutral-500 leading-relaxed">
-        Connecting asks Google for one permission, <code>calendar.app.created</code>. The app
-        creates its own separate calendar called "Productivity Maxing" and only creates, updates
-        and deletes events inside it, and only after you confirm a preview. It cannot see or
-        change your primary calendar or any other calendar. You can hide or delete that calendar,
-        disconnect, or remove the synced events at any time. See our{' '}
-        <Link to="/privacy" className="underline text-violet-400 hover:text-violet-300">
-          {t('ui.privacyPolicy')}
-        </Link>
-        . Use of information received from Google APIs adheres to the{' '}
+        {fillNodes(t('ui.googleScopeNotice'), {
+          scope: <code>calendar.app.created</code>,
+          privacy: (
+            <Link to="/privacy" className="underline text-violet-400 hover:text-violet-300">
+              {t('ui.privacyPolicy')}
+            </Link>
+          ),
+        })}{' '}
+        {t('ui.googleLimitedUsePrefix')}{' '}
         <a
           href="https://developers.google.com/terms/api-services-user-data-policy"
           target="_blank"
@@ -112,7 +115,7 @@ export default function GoogleCalendarCard() {
         >
           {t('ui.googleApiServicesUserData')}
         </a>
-        , including the Limited Use requirements.
+        {t('ui.googleLimitedUseSuffix')}
       </p>
 
       {isConfirmOpen && (

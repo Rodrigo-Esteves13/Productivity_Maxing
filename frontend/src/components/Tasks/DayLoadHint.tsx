@@ -68,8 +68,9 @@ export default function DayLoadHint({ date, tasks, excludeTaskId }: DayLoadHintP
       <div className="space-y-0.5">
         {busyDay && (
           <p>
-            {load.sameDay.length} other tasks are already due on this day
-            {load.estimated > 0 ? ` (about ${formatHours(load.estimated)} estimated)` : ''}.
+            {load.estimated > 0
+              ? t('ui.otherTasksDueEstimated', { count: load.sameDay.length, hours: formatHours(load.estimated) })
+              : t('ui.otherTasksDue', { count: load.sameDay.length })}
           </p>
         )}
         {heavyWeek && (

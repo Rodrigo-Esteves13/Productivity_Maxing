@@ -3,6 +3,7 @@ import DownloadSetupButton from './DownloadSetupButton';
 import CopyButton from '../UI/CopyButton';
 import { AGENT_EXE_DOWNLOAD_PATH } from '../../lib/agentConstants';
 import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
 
 // href aponta para o binário VANILLA (sem key nenhuma) servido a partir de
 // public/downloads/ - ver AGENT_EXE_DOWNLOAD_PATH em lib/agentConstants.ts,
@@ -40,9 +41,9 @@ export default function SetupInstructions() {
         </summary>
         <div className="mt-3 space-y-3 pl-1">
           <p>
-            You can download the plain .exe (no key baked in) and set the key yourself instead -
-            generate one in <span className="text-neutral-300">{t('ui.manageApiKeys')}</span> below, then
-            run:
+            {fillNodes(t('ui.plainExeInstructions'), {
+              keys: <span className="text-neutral-300">{t('ui.manageApiKeys')}</span>,
+            })}
           </p>
           <a
             href={DOWNLOAD_URL}
@@ -50,7 +51,7 @@ export default function SetupInstructions() {
             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-semibold text-white transition-colors"
           >
             <DownloadIcon className="w-3.5 h-3.5" />
-            Download pmaxing-agent.exe (plain)
+            {t('ui.downloadPmaxingAgentExePlain')}
           </a>
           <div className="flex items-start gap-2">
             <pre className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-xs text-neutral-300 overflow-x-auto">
@@ -59,11 +60,13 @@ export default function SetupInstructions() {
             <CopyButton text={SET_KEY_COMMAND} label={t('ui.copy')} />
           </div>
           <p>
-            To see live logs instead of the background log file (kept at{' '}
-            <code className="text-violet-300 bg-neutral-900 px-1 rounded">
-              {t('ui.appdataPmaxingagentAgentLog')}
-            </code>
-            ), run it from a terminal with:
+            {fillNodes(t('ui.liveLogsInstructions'), {
+              path: (
+                <code className="text-violet-300 bg-neutral-900 px-1 rounded">
+                  {t('ui.appdataPmaxingagentAgentLog')}
+                </code>
+              ),
+            })}
           </p>
           <div className="flex items-start gap-2">
             <pre className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-xs text-neutral-300 overflow-x-auto">
@@ -75,9 +78,7 @@ export default function SetupInstructions() {
       </details>
 
       <p className="text-xs text-amber-400/80">
-        This is friction against yourself, not a security boundary - a browser with DNS-over-HTTPS
-        enabled can bypass the site blocking. It's meant to make it a little harder to give in to
-        distraction, not to stop a determined attempt to get around it.
+        {t('ui.thisIsFrictionAgainstYourself')}
       </p>
     </div>
   );

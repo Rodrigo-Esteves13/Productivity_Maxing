@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getTodayTasks } from '../api/studySessionsService';
 import type { Task } from '../types/models';
+import { translateNow } from '../i18n/translate';
 
 export function useTodayPlan() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -14,7 +15,7 @@ export function useTodayPlan() {
       const data = await getTodayTasks();
       setTasks(data);
     } catch {
-      setError('Could not load today\'s tasks.');
+      setError(translateNow('hook.couldNotLoadTodaysTasks'));
     } finally {
       setIsLoading(false);
     }

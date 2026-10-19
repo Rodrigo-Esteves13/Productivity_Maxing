@@ -21,6 +21,7 @@ import { EstimateCommuteDto } from './dto/estimate-commute.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { perMinute } from '../common/throttle.util';
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -37,7 +38,7 @@ export class ScheduleController {
   // isto pode disparar até ~1000 upserts de uma vez (ver
   // ImportScheduleDto), o mesmo cuidado que já existe no import de tasks.
   @Post('import')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle(perMinute(5))
   @ApiOperation({
     summary:
       'Bulk-upserts class occurrences parsed client-side from a .ics export. Upserted by [userId, externalUid] - safe to re-run with an overlapping or newer export.',
@@ -106,7 +107,7 @@ export class ScheduleController {
   // uma quota gratuita - nada aqui devia permitir um utilizador esgotar
   // essa quota sozinho por engano (ex: duplo-clique).
   @Post('commute/estimate')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle(perMinute(5))
   @ApiOperation({
     summary:
       'Estimates driving time between two addresses via Google Maps and saves homeAddress/campusAddress/commuteMinutes on the user. Returns 503 if GOOGLE_MAPS_API_KEY is not configured on this server.',

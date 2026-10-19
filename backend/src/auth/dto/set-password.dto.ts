@@ -1,12 +1,21 @@
-import { IsString, MinLength, MaxLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from './auth-limits';
 
-// Usado por POST /auth/set-password. Serve tanto para "adicionar" password a
+// Usado por PATCH /auth/me/password. Serve tanto para "adicionar" password a
 // uma conta só-OAuth como para mudar a password de uma conta que já tinha
-// uma - a rota é sempre autenticada (JwtAuthGuard), por isso não pedimos a
-// password atual: a sessão válida já prova que é o dono da conta.
+// uma. Se a conta já tem password, a atual é obrigatória (ver
+// PasswordAuthService.setPassword): uma sessão roubada não chega para tomar
+// a conta trocando a password.
 export class SetPasswordDto {
   @IsString()
-  @MinLength(8, { message: 'Password must be at least 8 characters long.' })
-  @MaxLength(72)
+  @MinLength(PASSWORD_MIN_LENGTH, {
+    message: 'Password must be at least 8 characters long.',
+  })
+  @MaxLength(PASSWORD_MAX_LENGTH)
   password: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(PASSWORD_MAX_LENGTH)
+  currentPassword?: string;
 }

@@ -1,4 +1,5 @@
 import { UndoIcon } from './Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 interface PostponedIndicatorProps {
   count: number;
@@ -12,11 +13,12 @@ interface PostponedIndicatorProps {
 const MIN_COUNT_TO_SHOW = 2;
 
 export default function PostponedIndicator({ count, className = '' }: PostponedIndicatorProps) {
+  const { t } = useI18n();
   if (count < MIN_COUNT_TO_SHOW) return null;
 
   return (
     <span
-      title={`Postponed ${count} times`}
+      title={t('ui.postponedNTimes', { count })}
       className={`inline-flex items-center gap-1 text-[10px] font-medium text-amber-500/80 ${className}`}
     >
       <UndoIcon className="w-3 h-3" />

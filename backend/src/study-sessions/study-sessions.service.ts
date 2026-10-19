@@ -1,9 +1,18 @@
 import { assertAreaAccessible } from '../areas/area-access';
 import {
-  ISO_DATE_KEY_LENGTH,
   MS_PER_DAY,
+  MS_PER_MINUTE,
   MS_PER_SECOND,
 } from '../common/time.constants';
+import {
+  addUtcDays,
+  diffUtcDays,
+  getLisbonNow,
+  lisbonDayBounds,
+  parseDateKey,
+  toDateKey,
+  toLisbonDateKey,
+} from '../common/date-key.util';
 import {
   BadRequestException,
   Injectable,
@@ -405,7 +414,8 @@ export class StudySessionsService {
         session.startedAt.getHours() / HOUR_BUCKET_SIZE,
       );
       const minutes =
-        (session.endedAt.getTime() - session.startedAt.getTime()) / 60_000;
+        (session.endedAt.getTime() - session.startedAt.getTime()) /
+        MS_PER_MINUTE;
 
       const key = `${dayOfWeek}:${hourBucket}`;
       const cell = grid.get(key) ?? { totalMinutes: 0, sessionCount: 0 };
@@ -442,9 +452,9 @@ export class StudySessionsService {
    * cache/invalidate complexity as the heatmap.
    */
   async getDailyTotals(userId: string, days: number) {
-    const since = new Date();
-    since.setDate(since.getDate() - (days - 1));
-    since.setHours(0, 0, 0, 0);
+    // Janela em dias de Lisboa (o servidor corre em UTC no Render).
+    const firstDay = addUtcDays(getLisbonNow().today, -(days - 1));
+    const since = lisbonDayBounds(toDateKey(firstDay)).start;
 
     const sessions = await this.prisma.studySession.findMany({
       where: { userId, endedAt: { not: null }, startedAt: { gte: since } },
@@ -454,11 +464,10 @@ export class StudySessionsService {
     const totalsByDay = new Map<string, number>();
     for (const session of sessions) {
       if (!session.endedAt) continue; // already filtered by the where, just for TS
-      const dayKey = session.startedAt
-        .toISOString()
-        .slice(0, ISO_DATE_KEY_LENGTH);
+      const dayKey = toLisbonDateKey(session.startedAt);
       const minutes =
-        (session.endedAt.getTime() - session.startedAt.getTime()) / 60_000;
+        (session.endedAt.getTime() - session.startedAt.getTime()) /
+        MS_PER_MINUTE;
       totalsByDay.set(
         dayKey,
         (totalsByDay.get(dayKey) ?? 0) + Math.max(0, minutes),
@@ -467,9 +476,7 @@ export class StudySessionsService {
 
     const result: { date: string; totalMinutes: number }[] = [];
     for (let i = 0; i < days; i++) {
-      const day = new Date(since);
-      day.setDate(day.getDate() + i);
-      const dayKey = day.toISOString().slice(0, ISO_DATE_KEY_LENGTH);
+      const dayKey = toDateKey(addUtcDays(firstDay, i));
       result.push({
         date: dayKey,
         totalMinutes: Math.round(totalsByDay.get(dayKey) ?? 0),
@@ -520,7 +527,8 @@ export class StudySessionsService {
       const resolvedArea = session.area ?? session.task?.area ?? null;
       const key = resolvedArea?.id ?? 'none';
       const minutes =
-        (session.endedAt.getTime() - session.startedAt.getTime()) / 60_000;
+        (session.endedAt.getTime() - session.startedAt.getTime()) /
+        MS_PER_MINUTE;
 
       const entry = totals.get(key) ?? {
         name: resolvedArea?.name ?? 'No area',
@@ -565,10 +573,10 @@ export class StudySessionsService {
       orderBy: { startedAt: 'asc' },
     });
 
+    // Dias de Lisboa, nao de UTC: uma sessao as 00:30 de Lisboa no verao
+    // contava para o dia anterior e podia partir a sequencia.
     const activeDays = new Set(
-      sessions.map((s) =>
-        s.startedAt.toISOString().slice(0, ISO_DATE_KEY_LENGTH),
-      ),
+      sessions.map((s) => toLisbonDateKey(s.startedAt)),
     );
 
     if (activeDays.size === 0) {
@@ -582,14 +590,10 @@ export class StudySessionsService {
       };
     }
 
-    const todayKey = new Date().toISOString().slice(0, ISO_DATE_KEY_LENGTH);
-    const firstDayKey = sessions[0].startedAt
-      .toISOString()
-      .slice(0, ISO_DATE_KEY_LENGTH);
-    const firstDay = new Date(`${firstDayKey}T00:00:00.000Z`);
-    const today = new Date(`${todayKey}T00:00:00.000Z`);
-    const totalDays =
-      Math.round((today.getTime() - firstDay.getTime()) / 86_400_000) + 1;
+    const today = getLisbonNow().today;
+    const todayKey = toDateKey(today);
+    const firstDay = parseDateKey(toLisbonDateKey(sessions[0].startedAt));
+    const totalDays = diffUtcDays(firstDay, today) + 1;
 
     let currentStreak = 0;
     let longestStreak = 0;
@@ -597,9 +601,7 @@ export class StudySessionsService {
     let freezesUsedTotal = 0;
 
     for (let i = 0; i < totalDays; i++) {
-      const day = new Date(firstDay);
-      day.setUTCDate(day.getUTCDate() + i);
-      const dayKey = day.toISOString().slice(0, ISO_DATE_KEY_LENGTH);
+      const dayKey = toDateKey(addUtcDays(firstDay, i));
       const isToday = dayKey === todayKey;
 
       if (activeDays.has(dayKey)) {

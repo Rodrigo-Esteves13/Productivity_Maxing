@@ -7,6 +7,7 @@ import {
   updateNotebookEntry,
 } from '../api/notebookService';
 import type { NotebookEntry } from '../types/models';
+import { translateNow } from '../i18n/translate';
 
 function byDateDesc(a: NotebookEntry, b: NotebookEntry): number {
   return new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -49,7 +50,7 @@ export function useNotebookEntries(areaId: string | null): UseNotebookEntriesRes
       })
       .catch(() => {
         if (cancelled) return;
-        setError('Could not load this notebook. Please try again.');
+        setError(translateNow('hook.couldNotLoadThisNotebookPlease'));
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);

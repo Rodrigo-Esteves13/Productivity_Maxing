@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getUserAreas, getUserTasks } from '../api/userService';
 import type { Area, Task } from '../types/models';
 import { useActiveStudySession } from '../context/useActiveStudySession';
+import { translateNow } from '../i18n/translate';
 
 // The active-session part (activeSession/elapsedSeconds/start/stop) now
 // lives in StudySessionProvider (see src/context) - shared with
@@ -58,7 +59,7 @@ export function useStudySession() {
           .sort((a, b) => a.date.localeCompare(b.date)),
       );
     } catch {
-      setError('Could not load the study session.');
+      setError(translateNow('hook.couldNotLoadTheStudySession'));
     } finally {
       setIsLoading(false);
     }

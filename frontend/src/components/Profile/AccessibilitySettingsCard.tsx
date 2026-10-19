@@ -1,27 +1,9 @@
 import { useAccessibilityPrefs, THEME_OPTIONS, type FontScale, type ThemeId } from '../../hooks/useAccessibilityPrefs';
 import { LANGUAGES, type LanguageCode } from '../../i18n/languages';
 import { useI18n } from '../../i18n/useI18n';
+import ToggleRow from '../UI/ToggleRow';
 
 const FONT_SCALES: FontScale[] = ['normal', 'large', 'larger', 'largest'];
-
-interface ToggleProps {
-  label: string;
-  help: string;
-  checked: boolean;
-  onChange: () => void;
-}
-
-function Toggle({ label, help, checked, onChange }: ToggleProps) {
-  return (
-    <div className="mt-5">
-      <label className="flex items-center gap-2 text-sm text-neutral-200 cursor-pointer select-none">
-        <input type="checkbox" checked={checked} onChange={onChange} className="accent-violet-500" />
-        {label}
-      </label>
-      <p className="mt-1 text-xs text-neutral-500">{help}</p>
-    </div>
-  );
-}
 
 // Aparencia e acessibilidade (tema, idioma, texto, contraste, daltonismo,
 // movimento). Tudo guardado neste dispositivo; mesmo estilo dos outros cartoes
@@ -129,21 +111,24 @@ export default function AccessibilitySettingsCard() {
         </div>
       </div>
 
-      <Toggle
+      <ToggleRow
+        variant="inline"
         label={t('prefs.highContrast')}
-        help={t('prefs.highContrastHelp')}
+        description={t('prefs.highContrastHelp')}
         checked={highContrast}
         onChange={toggleHighContrast}
       />
-      <Toggle
+      <ToggleRow
+        variant="inline"
         label={t('prefs.colorblind')}
-        help={t('prefs.colorblindHelp')}
+        description={t('prefs.colorblindHelp')}
         checked={colorblind}
         onChange={toggleColorblind}
       />
-      <Toggle
+      <ToggleRow
+        variant="inline"
         label={t('prefs.reduceMotion')}
-        help={t('prefs.reduceMotionHelp')}
+        description={t('prefs.reduceMotionHelp')}
         checked={reduceMotion}
         onChange={toggleReduceMotion}
       />

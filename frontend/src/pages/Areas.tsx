@@ -138,7 +138,7 @@ export default function Areas() {
       <Modal
         isOpen={createMode !== null}
         onClose={closeCreateModal}
-        title={createMode === 'official' ? 'Create Official Area' : 'Create My Area'}
+        title={createMode === 'official' ? t('ui.createOfficialArea') : t('ui.createMyArea')}
       >
         <AreaForm
           idPrefix="create-area"
@@ -146,15 +146,15 @@ export default function Areas() {
           onSubmit={handleCreateArea}
           onCancel={closeCreateModal}
           isSubmitting={isSubmitting}
-          submitLabel="Create Area"
-          submittingLabel="Creating..."
+          submitLabel={t('ui.createArea')}
+          submittingLabel={t('common.creating')}
         />
       </Modal>
 
       <Modal
         isOpen={selectedArea !== null}
         onClose={closeDetailModal}
-        title={isEditing ? 'Edit Area' : 'Area Details'}
+        title={isEditing ? t('ui.editArea') : t('ui.areaDetails')}
         action={
           selectedArea &&
           canManage(selectedArea) && (
@@ -165,8 +165,8 @@ export default function Areas() {
                 else if (canEdit(selectedArea)) startEditing(selectedArea);
               }}
               onDelete={() => handleDeleteArea(selectedArea.id)}
-              deleteTitle="Delete Area"
-              editTitle="Edit area"
+              deleteTitle={t('ui.deleteArea')}
+              editTitle={t('ui.editArea2')}
             />
           )
         }
@@ -185,8 +185,8 @@ export default function Areas() {
               onSubmit={handleEditArea}
               onCancel={stopEditing}
               isSubmitting={isSubmitting}
-              submitLabel="Save Changes"
-              submittingLabel="Saving..."
+              submitLabel={t('ui.saveChanges')}
+              submittingLabel={t('common.saving')}
             />
           ) : (
             <AreaDetailView

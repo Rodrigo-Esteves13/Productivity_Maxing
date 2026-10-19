@@ -17,7 +17,7 @@ export default function Register() {
   const { t } = useI18n();
   useSeo({
     title: t('auth.seo.register'),
-    description: 'Create a free Productivity Maxing account to start tracking tasks, deadlines, and grades.',
+    description: t('ui.createAFreeProductivityMaxing'),
     path: '/register',
   });
   const navigate = useNavigate();

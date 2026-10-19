@@ -5,6 +5,7 @@ import FormField from '../UI/FormField';
 import type { User } from '../../types/models';
 import { toDateKey, todayKey } from '../../lib/dateKey';
 import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
 
 interface UserStatusModalProps {
   target: User;
@@ -44,13 +45,15 @@ export default function UserStatusModal({ target, mode, isSubmitting, onSubmit, 
       <p className="text-sm text-neutral-400">
         {isBan ? (
           <>
-            <span className="font-medium text-red-400">{target.name || target.email}</span> will be permanently
-            banned and logged out immediately, everywhere.
+            {fillNodes(t('ui.userWillBeBanned'), {
+              name: <span className="font-medium text-red-400">{target.name || target.email}</span>,
+            })}
           </>
         ) : (
           <>
-            <span className="font-medium text-amber-400">{target.name || target.email}</span> will be suspended and
-            logged out immediately - the account reactivates on its own once the date below passes.
+            {fillNodes(t('ui.userWillBeSuspended'), {
+              name: <span className="font-medium text-amber-400">{target.name || target.email}</span>,
+            })}
           </>
         )}
       </p>
@@ -61,7 +64,7 @@ export default function UserStatusModal({ target, mode, isSubmitting, onSubmit, 
           required
           rows={3}
           maxLength={500}
-          placeholder={isBan ? 'Why is this account being banned?' : 'Why is this account being suspended?'}
+          placeholder={isBan ? t('ui.whyIsThisAccountBeing') : t('ui.whyIsThisAccountBeing2')}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           className="w-full block border border-neutral-700 bg-neutral-900 text-white rounded-lg px-3 py-2.5 text-sm placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-600/50 focus:border-violet-500"
@@ -90,7 +93,7 @@ export default function UserStatusModal({ target, mode, isSubmitting, onSubmit, 
           disabled={isSubmitting}
           className="px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-medium rounded-md transition-colors"
         >
-          {isSubmitting ? 'Saving...' : isBan ? 'Ban account' : 'Suspend account'}
+          {isSubmitting ? t('common.saving') : isBan ? t('ui.banAccount') : t('ui.suspendAccount')}
         </button>
       </div>
     </form>

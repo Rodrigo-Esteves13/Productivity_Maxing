@@ -14,6 +14,7 @@ import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
 import type { TableDensity } from '../../hooks/useTableDensity';
 import type { TasksTableColumnId } from '../../lib/tasksTableColumns';
+import { useI18n } from '../../i18n/useI18n';
 
 interface TaskTableRowProps {
   task: Task;
@@ -38,6 +39,7 @@ export default function TaskTableRow({
   density = 'comfortable',
   columnOrder,
 }: TaskTableRowProps) {
+  const { t } = useI18n();
   const academicTypeLabel = resolveOptionLabel(task.academicType, academicTaskTypes);
   const status = getDateStatus(task);
   const isCompact = density === 'compact';
@@ -128,7 +130,7 @@ export default function TaskTableRow({
             checked={!!isSelected}
             onChange={() => onToggleSelect(task.id)}
             className="accent-violet-500"
-            aria-label={`Select task ${task.title}`}
+            aria-label={t('ui.selectTaskNamed', { title: task.title })}
           />
         </td>
       )}

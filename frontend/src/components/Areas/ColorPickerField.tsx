@@ -1,4 +1,5 @@
 import FormField from '../UI/FormField';
+import { useI18n } from '../../i18n/useI18n';
 
 interface ColorPickerFieldProps {
   id: string;
@@ -7,9 +8,10 @@ interface ColorPickerFieldProps {
   label?: string;
 }
 
-export default function ColorPickerField({ id, value, onChange, label = 'Cor Identificativa' }: ColorPickerFieldProps) {
+export default function ColorPickerField({ id, value, onChange, label }: ColorPickerFieldProps) {
+  const { t } = useI18n();
   return (
-    <FormField label={label} htmlFor={id}>
+    <FormField label={label ?? t('ui.colorLabel')} htmlFor={id}>
       <div className="flex items-center gap-4 bg-neutral-950 border border-neutral-700 rounded-md p-2">
         <input
           id={id}

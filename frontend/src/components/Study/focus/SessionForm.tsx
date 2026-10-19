@@ -92,7 +92,7 @@ export default function SessionForm({ session, isSaving, serverError, onSubmit, 
       {(formError || serverError) && <ErrorState message={formError || serverError} />}
       <div className="flex gap-2">
         <ActionButton type="submit" disabled={isSaving}>
-          {isSaving ? 'Saving...' : session ? 'Save changes' : 'Add session'}
+          {isSaving ? t('common.saving') : session ? t('sharedEdit.save') : t('ui.addSession')}
         </ActionButton>
         <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
           {t('ui.cancel')}

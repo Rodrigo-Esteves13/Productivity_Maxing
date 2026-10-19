@@ -1,5 +1,5 @@
-import type { NotebookEntryType, NotebookTable } from '../../../types/models';
-import type { SegmentedOption } from '../../UI/SegmentedControl';
+import type { NotebookTable } from '../../../types/models';
+import { translateNow } from '../../../i18n/translate';
 
 // Tem de bater certo com @MaxLength(50000) em textContent no DTO do
 // backend (upsert-notebook-entry.dto.ts) - usado aqui só para mostrar o
@@ -32,12 +32,6 @@ export const ACCEPTED_ATTACHMENT_EXTENSIONS = [
 
 export const MAX_TABLE_ROWS = 30;
 export const MAX_TABLE_COLS = 12;
-
-export const ENTRY_TYPE_OPTIONS: SegmentedOption<NotebookEntryType>[] = [
-  { value: 'NOTE', label: 'Note' },
-  { value: 'STUDY', label: 'Study' },
-  { value: 'CLASS', label: 'Class' },
-];
 
 // Estilo dos campos pequenos do editor (class #, data, etiqueta/URL de links).
 export const SMALL_INPUT_CLASS =
@@ -73,17 +67,17 @@ export function withProtocol(url: string): string {
 // isSaving voltava a false e parecia ter gravado, sem gravar nada.
 export function describeSaveError(status: number | undefined, textLength: number): string {
   if (status === 400 && textLength > MAX_TEXT_CONTENT_LENGTH) {
-    return `Notes are too long (${textLength.toLocaleString()}/${MAX_TEXT_CONTENT_LENGTH.toLocaleString()} characters). Trim the text before saving.`;
+    return translateNow('notebook.err.tooLong', { length: textLength.toLocaleString(), max: MAX_TEXT_CONTENT_LENGTH.toLocaleString() });
   }
-  if (status === 403) return 'Session out of sync (403). Refresh the page and try saving again.';
-  return 'Could not save this entry. Please try again.';
+  if (status === 403) return translateNow('notebook.err.csrf');
+  return translateNow('notebook.err.save');
 }
 
 // Validadores rápidos de ficheiros: devolvem a mensagem de erro, ou null se
 // o ficheiro serve. Servem só para poupar um pedido ao servidor.
 export function validatePhoto(file: File): string | null {
-  if (!ACCEPTED_PHOTO_TYPES.includes(file.type)) return 'Use PNG, JPG or WEBP.';
-  if (file.size > MAX_PHOTO_SIZE) return 'Photo must be under 8MB.';
+  if (!ACCEPTED_PHOTO_TYPES.includes(file.type)) return translateNow('notebook.err.photoType');
+  if (file.size > MAX_PHOTO_SIZE) return translateNow('notebook.err.photoSize');
   return null;
 }
 
@@ -92,9 +86,9 @@ export function validateAttachment(file: File, currentCount: number): string | n
   if (!ACCEPTED_ATTACHMENT_EXTENSIONS.includes(claimedExt)) {
     return `Allowed: ${ACCEPTED_ATTACHMENT_EXTENSIONS.join(', ')}`;
   }
-  if (file.size > MAX_ATTACHMENT_SIZE) return 'File must be under 20MB.';
+  if (file.size > MAX_ATTACHMENT_SIZE) return translateNow('notebook.err.fileSize');
   if (currentCount >= MAX_ATTACHMENTS_PER_ENTRY) {
-    return `Each entry can have at most ${MAX_ATTACHMENTS_PER_ENTRY} files attached.`;
+    return translateNow('notebook.err.maxFiles', { max: MAX_ATTACHMENTS_PER_ENTRY });
   }
   return null;
 }

@@ -5,12 +5,14 @@ import ProgressBar from '../UI/ProgressBar';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
 import { formatDuration } from '../../lib/timeFormat';
+import { useI18n } from '../../i18n/useI18n';
 
 // "Where does my study time actually go" - a horizontal breakdown of all
 // finished Focus sessions by Area, all-time. Complements AreaBreakdownCard
 // (which is about grades) and StudyActivityCard (which is about daily
 // consistency) - this one is specifically about where the hours land.
 export default function TimeByAreaCard() {
+  const { t } = useI18n();
   const [rows, setRows] = useState<AreaTimeBreakdown[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -38,7 +40,7 @@ export default function TimeByAreaCard() {
     <DashboardCard>
       <CardHeading className="mb-3">
         <ClockIcon className="shrink-0" />
-        Time by course
+        {t('widget.timeByArea')}
       </CardHeading>
       <ul className="space-y-2.5">
         {rows.slice(0, 8).map((row) => (

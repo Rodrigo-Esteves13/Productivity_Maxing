@@ -5,6 +5,7 @@ import { CalendarIcon } from '../UI/Icons';
 import DashboardCard, { CardBody, CardHeading } from '../UI/DashboardCard';
 import LegendItem from '../UI/LegendItem';
 import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
 
 interface WeekdayLoadCardProps {
   tasks: Task[];
@@ -27,18 +28,20 @@ export default function WeekdayLoadCard({ tasks }: WeekdayLoadCardProps) {
     <DashboardCard fillBody>
       <CardHeading className="mb-3">
         <CalendarIcon className="shrink-0" />
-        Deadlines by weekday
+        {t('ui.deadlinesByWeekday')}
       </CardHeading>
       <CardBody>
         <p className="text-xs text-neutral-500 mb-3">
-          Busiest: <span className="text-neutral-200">{busiest?.label}</span> ({max} of {total})
+          {fillNodes(t('ui.busiestWeekday', { max, total }), {
+            day: <span className="text-neutral-200">{busiest?.label}</span>,
+          })}
         </p>
         <div className="flex items-end gap-2 h-24">
           {buckets.map((b) => (
             <div
               key={b.label}
               className="flex-1 flex flex-col items-center justify-end gap-1 h-full"
-              title={`${b.label}: ${b.pending} pending, ${b.completed} completed`}
+              title={t('ui.weekdayPendingCompleted', { day: b.label, pending: b.pending, completed: b.completed })}
             >
               <div className="w-full flex-1 flex flex-col justify-end">
                 <div

@@ -55,7 +55,7 @@ export default function EventsSection({ shifts, commitments, isSaving, onAdd, on
           className="mt-3 flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300"
         >
           <PlusIcon />
-          Add event
+          {t('ui.addEvent')}
         </button>
       )}
     </section>

@@ -21,6 +21,7 @@ import type {
   ShareAccessRequest,
   ShareAccessRole,
 } from '../types/models';
+import { translateNow } from '../i18n/translate';
 
 export interface UseEntryShareResult {
   isOpen: boolean;
@@ -146,7 +147,7 @@ export function useEntryShare(
       if (status.token) void loadVisits();
       if (status.token && status.visibility === 'AUTHORIZED') await loadRequests();
     } catch {
-      setError('Could not check the share status.');
+      setError(translateNow('hook.couldNotCheckTheShareStatus'));
     } finally {
       setIsLoading(false);
     }
@@ -178,7 +179,7 @@ export function useEntryShare(
       setVisibility(status.visibility);
       void loadVisits();
     } catch {
-      setError('Could not create the share link.');
+      setError(translateNow('hook.couldNotCreateTheShareLink'));
     } finally {
       setIsLoading(false);
     }
@@ -194,7 +195,7 @@ export function useEntryShare(
       setProposals([]);
       setVisits(null);
     } catch {
-      setError('Could not stop sharing.');
+      setError(translateNow('hook.couldNotStopSharing'));
     } finally {
       setIsLoading(false);
     }
@@ -210,7 +211,7 @@ export function useEntryShare(
         setVisibility(status.visibility);
         if (status.visibility === 'AUTHORIZED') await loadRequests();
       } catch {
-        setError('Could not change who can access this link.');
+        setError(translateNow('hook.couldNotChangeWhoCanAccess'));
       } finally {
         setIsLoading(false);
       }
@@ -227,7 +228,7 @@ export function useEntryShare(
           prev.map((r) => (r.id === requestId ? { ...r, status: updated.status, accessRole: updated.accessRole } : r)),
         );
       } catch {
-        setError('Could not update that request. Please try again.');
+        setError(translateNow('hook.couldNotUpdateThatRequestPlease'));
       } finally {
         setDecidingId(null);
       }
@@ -244,7 +245,7 @@ export function useEntryShare(
         await loadRequests(true);
         return true;
       } catch {
-        setError('Could not invite that friend. They may have declined recently, or this note is full.');
+        setError(translateNow('hook.couldNotInviteThatFriendThey'));
         return false;
       }
     },
@@ -258,7 +259,7 @@ export function useEntryShare(
         await removeShareAccess(entryId, requestId);
         setRequests((prev) => prev.filter((r) => r.id !== requestId));
       } catch {
-        setError('Could not remove that access. Please try again.');
+        setError(translateNow('hook.couldNotRemoveThatAccessPlease'));
       } finally {
         setDecidingId(null);
       }
@@ -275,7 +276,7 @@ export function useEntryShare(
         setProposals((prev) => prev.filter((p) => p.id !== proposalId));
         if (decision === 'APPROVED' && proposal) onProposalApplied?.(proposal.payload);
       } catch {
-        setError('Could not update that suggestion. Please try again.');
+        setError(translateNow('hook.couldNotUpdateThatSuggestionPlease'));
       } finally {
         setDecidingProposalId(null);
       }

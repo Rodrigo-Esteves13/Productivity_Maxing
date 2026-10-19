@@ -38,7 +38,7 @@ export default function AreaCard({ area, canManage, onSelect, onEdit, onDelete, 
           role="switch"
           aria-checked={!area.isHidden}
           aria-label={`${area.name} ${area.isHidden ? 'off' : 'on'}`}
-          title={area.isHidden ? 'Off - hidden from your lists. Click to turn on' : 'On - click to hide from your lists'}
+          title={area.isHidden ? t('ui.offHiddenFromYourLists') : t('ui.onClickToHideFrom')}
           onClick={() => onToggleHidden(area)}
           className={`ml-2 relative h-5 w-9 shrink-0 rounded-full transition-colors ${
             area.isHidden ? 'bg-neutral-700' : 'bg-violet-600'

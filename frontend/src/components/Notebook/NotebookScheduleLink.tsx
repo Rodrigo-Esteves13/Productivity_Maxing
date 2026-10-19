@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getScheduleLink, upsertScheduleLink, removeScheduleLink } from '../../api/notebookService';
 import { CheckIcon, XIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
 
 interface NotebookScheduleLinkProps {
   areaId: string;
@@ -45,7 +46,7 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
       setLinkedSubject(draft.trim());
       setIsEditing(false);
     } catch {
-      setError('That subject text is already linked to a different area.');
+      setError(t('ui.thatSubjectTextIsAlready'));
     } finally {
       setIsSaving(false);
     }
@@ -61,11 +62,13 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
   if (!isEditing && linkedSubject) {
     return (
       <p className="text-xs text-neutral-500">
-        Auto-detects classes tagged{' '}
-        <span className="rounded bg-neutral-800 px-1.5 py-0.5 font-mono text-neutral-300">
-          {linkedSubject}
-        </span>{' '}
-        in your schedule.{' '}
+        {fillNodes(t('ui.autoDetectsClassesTagged'), {
+          subject: (
+            <span className="rounded bg-neutral-800 px-1.5 py-0.5 font-mono text-neutral-300">
+              {linkedSubject}
+            </span>
+          ),
+        })}{' '}
         <button
           type="button"
           onClick={() => setIsEditing(true)}

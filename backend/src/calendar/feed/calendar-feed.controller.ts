@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { CalendarFeedService } from './calendar-feed.service';
+import { perMinute } from '../../common/throttle.util';
 
 // Gestão do link (precisa de sessão). O feed em si é o controller abaixo.
 @ApiTags('Calendar')
@@ -34,7 +35,7 @@ export class CalendarFeedManageController {
 
   @Post()
   @HttpCode(200)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   @ApiOperation({
     summary:
       'Turns the feed on, or rotates the secret (the old link stops working).',
@@ -59,7 +60,7 @@ export class CalendarFeedPublicController {
   constructor(private readonly feedService: CalendarFeedService) {}
 
   @Get(':file')
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Throttle(perMinute(30))
   @ApiOperation({
     summary:
       'Read-only .ics feed for calendar subscriptions. :file = <token>.ics',

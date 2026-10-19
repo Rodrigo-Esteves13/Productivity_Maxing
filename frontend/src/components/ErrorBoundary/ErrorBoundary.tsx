@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { reportClientError } from '../../api/telemetryService';
 import { AlertTriangleIcon } from '../UI/Icons';
 import { translateNow } from '../../i18n/translate';
+import { telemetryUrl } from '../../lib/telemetryUrl';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -36,7 +37,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
       message: error.message,
       stack: error.stack,
       componentStack: info.componentStack ?? undefined,
-      url: window.location.href,
+      url: telemetryUrl(),
     });
   }
 

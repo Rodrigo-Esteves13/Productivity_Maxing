@@ -34,7 +34,7 @@ export default function PeriodProgressBar({ period, tasks }: PeriodProgressBarPr
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs uppercase tracking-wide text-neutral-500 flex items-center gap-1.5">
           <GaugeIcon className="shrink-0" />
-          Pace: {period.name}
+          {t('ui.paceLabel', { name: period.name })}
         </p>
         {isBehindPace && (
           <span className="text-xs text-orange-400">{t('ui.behindThePeriodSPace')}</span>

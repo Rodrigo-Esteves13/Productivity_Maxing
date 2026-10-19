@@ -16,6 +16,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { NotebookInviteService } from './notebook-invite.service';
 import { InviteFriendDto, RespondInviteDto } from './dto/share-invite.dto';
+import { perMinute } from '../common/throttle.util';
 
 // Convites de amigos para UMA nota (editor / co-owner / leitor). Controller
 // a parte: rotas com sessao obrigatoria, ao contrario de /notebook/shared/:token.
@@ -28,7 +29,7 @@ export class NotebookInviteController {
 
   @Post('entries/:id/share/invite')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle(perMinute(10))
   @ApiOperation({ summary: 'Invite a friend to this note with a role.' })
   invite(
     @CurrentUser() user: AuthenticatedUser,
@@ -39,7 +40,7 @@ export class NotebookInviteController {
   }
 
   @Delete('entries/:id/share/access/:requestId')
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @Throttle(perMinute(30))
   @ApiOperation({ summary: 'Remove someone’s access (or cancel an invite).' })
   removeAccess(
     @CurrentUser() user: AuthenticatedUser,
@@ -51,7 +52,7 @@ export class NotebookInviteController {
 
   @Post('invitations/:requestId/respond')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Throttle(perMinute(20))
   @ApiOperation({ summary: 'Accept or decline an invitation to a note.' })
   respond(
     @CurrentUser() user: AuthenticatedUser,

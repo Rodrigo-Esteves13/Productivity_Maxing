@@ -6,9 +6,6 @@ import RootRedirect from './RootRedirect';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
 import ForgotPassword from '../pages/ForgotPassword';
-import ResetPassword from '../pages/ResetPassword';
-import VerifyEmail from '../pages/VerifyEmail';
-import LoginTwoFactor from '../pages/LoginTwoFactor';
 import AuthCallback from '../components/Auth/AuthCallback';
 import CookieNotice from '../components/Legal/CookieNotice';
 import CommandPalette from '../components/CommandPalette/CommandPalette';
@@ -21,10 +18,12 @@ import RouteSkeleton from '../components/UI/RouteSkeleton';
 // recharts/xlsx-heavy pages like Dashboard, and admin-only pages almost
 // nobody hits) being bundled into the one script every visitor's browser
 // has to parse before anything renders. Login/Register/ForgotPassword/
-// ResetPassword/AuthCallback stay eager on purpose - they're the actual
-// entry point for a first-time or logged-out visitor, they're small (plain
-// forms, no charting/spreadsheet libs), and lazy-loading them would just
-// add a network round-trip to the page almost everyone hits first.
+// AuthCallback stay eager on purpose - they're the actual entry point for a
+// first-time or logged-out visitor, they're small (plain forms), and
+// lazy-loading them would just add a network round-trip to the page almost
+// everyone hits first. ResetPassword, VerifyEmail and the 2FA step are lazy:
+// they're only opened from an email link or a 2FA account, and ResetPassword
+// pulls in the whole Supabase client (~200 KB) that nothing else uses.
 // Home is lazy too, but imported inside RootRedirect.tsx itself (see
 // there) rather than here, since an authenticated user hitting "/" never
 // needs it at all.
@@ -56,6 +55,9 @@ const DmcaPolicy = lazy(() => import('../pages/DmcaPolicy'));
 const WeeklyReview = lazy(() => import('../pages/WeeklyReview'));
 const Changelog = lazy(() => import('../pages/Changelog'));
 const NotFound = lazy(() => import('../pages/NotFound'));
+const ResetPassword = lazy(() => import('../pages/ResetPassword'));
+const VerifyEmail = lazy(() => import('../pages/VerifyEmail'));
+const LoginTwoFactor = lazy(() => import('../pages/LoginTwoFactor'));
 
 export default function AppRouter() {
   return (

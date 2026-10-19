@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { getAgentConfig, updateAgentConfig } from '../api/agentService';
 import type { AgentConfig } from '../types/models';
+import { translateNow } from '../i18n/translate';
 
 interface UseAgentConfigReturn {
   config: AgentConfig | null;
@@ -29,7 +30,7 @@ function extractErrorMessage(error: unknown): string {
     if (Array.isArray(data?.message)) return data.message.join(' ');
     if (typeof data?.message === 'string') return data.message;
   }
-  return 'Could not save the configuration. Try again.';
+  return translateNow('hook.couldNotSaveTheConfigurationTry');
 }
 
 // Rede de segurança: mesmo que o input do formulário deixe passar algo

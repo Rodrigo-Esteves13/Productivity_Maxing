@@ -127,7 +127,7 @@ export default function Tasks() {
                   onChange={toggleShowArchived}
                   className="accent-violet-500"
                 />
-                Show archived ({archivedCount})
+                {t('ui.showArchivedCount', { count: archivedCount })}
               </label>
             )}
             <div className="flex items-center gap-2">
@@ -152,7 +152,7 @@ export default function Tasks() {
         // Every task exists, but they're all completed-and-old enough to
         // be archived, and the toggle above is off - "no tasks" would be
         // actively misleading here (the user very much has tasks).
-        <EmptyState message={`All ${archivedCount} of your tasks are archived. Toggle "Show archived" above to see them.`} />
+        <EmptyState message={t('ui.allTasksArchived', { count: archivedCount })} />
       ) : (
         <TaskGrid 
           tasks={sortedTasks} 
@@ -185,7 +185,7 @@ export default function Tasks() {
       <Modal
         isOpen={selectedTask !== null}
         onClose={closeDetailModal}
-        title={isEditing ? 'Edit Task' : 'Task Details'}
+        title={isEditing ? t('ui.editTask') : t('ui.taskDetails')}
         action={
           selectedTask && (
             <ModalHeaderActions
@@ -198,9 +198,9 @@ export default function Tasks() {
               }
               isPinned={selectedTask.isPinned}
               onTogglePin={() => toggleTaskPin(selectedTask)}
-              deleteTitle="Delete task (Del)"
-              editTitle="Edit task (E)"
-              completeTitle="Mark complete (C)"
+              deleteTitle={t('ui.deleteTaskDel')}
+              editTitle={t('ui.editTaskE')}
+              completeTitle={t('ui.markCompleteC')}
             />
           )
         }

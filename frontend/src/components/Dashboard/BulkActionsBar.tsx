@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CheckIcon, TrashIcon } from '../UI/Icons';
 import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
+import { fillNodes } from '../../i18n/fillNodes';
 
 interface BulkActionsBarProps {
   selectedCount: number;
@@ -39,9 +40,9 @@ export default function BulkActionsBar({
 
   const handleDelete = async () => {
     const confirmed = await confirm({
-      title: 'Delete tasks',
-      message: `Delete ${selectedCount} selected task${selectedCount === 1 ? '' : 's'}? This can't be undone.`,
-      confirmLabel: 'Delete',
+      title: t('ui.deleteTasks'),
+      message: t(selectedCount === 1 ? 'ui.deleteSelectedTasksOne' : 'ui.deleteSelectedTasksMany', { count: selectedCount }),
+      confirmLabel: t('common.delete'),
       tone: 'danger',
     });
     if (!confirmed) return;
@@ -56,7 +57,9 @@ export default function BulkActionsBar({
   return (
     <div className="print-hide flex flex-wrap items-center justify-between gap-3 rounded-lg border border-violet-800/50 bg-violet-900/20 px-4 py-3 mb-4">
       <p className="text-sm text-neutral-200">
-        <span className="font-semibold text-white">{selectedCount}</span> selected
+        {fillNodes(t('ui.selectedCount'), {
+          count: <span className="font-semibold text-white">{selectedCount}</span>,
+        })}
       </p>
       <div className="flex items-center gap-2">
         <button
@@ -66,7 +69,7 @@ export default function BulkActionsBar({
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-md transition-colors disabled:opacity-50"
         >
           <CheckIcon />
-          {isMarkingDone ? 'Marking...' : 'Mark as done'}
+          {isMarkingDone ? t('ui.marking') : t('ui.markAsDone')}
         </button>
         <button
           type="button"
@@ -75,7 +78,7 @@ export default function BulkActionsBar({
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-red-700 hover:bg-red-600 rounded-md transition-colors disabled:opacity-50"
         >
           <TrashIcon />
-          {isDeleting ? 'Deleting...' : 'Delete'}
+          {isDeleting ? t('ui.deleting') : t('common.delete')}
         </button>
         <button
           type="button"

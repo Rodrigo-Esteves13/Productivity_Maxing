@@ -1,16 +1,15 @@
 # Cabecalhos de seguranca do Netlify (app.pmaxing.pt).
 #
-# A CSP esta em modo Report-Only: NAO bloqueia nada, so escreve na consola do
-# browser o que bloquearia. Usa a app toda uns dias (login com email, Google,
-# GitHub e Discord, Focus, Notebook com fotos e anexos, Schedule, Profile com
-# avatar, Dashboard) e abre a consola. Se aparecer "[Report Only] Refused to
-# ...", acrescenta a origem em falta. Quando estiver limpa, muda o nome do
-# cabecalho para Content-Security-Policy (sem Report-Only).
+# A CSP esta a ser aplicada (bloqueia). Se uma funcionalidade nova precisar
+# de outra origem (imagem, API, script), acrescenta-a aqui ou o browser
+# recusa-a e escreve "Refused to ..." na consola. Avatares do Google: todos
+# os *.googleusercontent.com, igual a allow-list do backend
+# (auth/provider-avatar.util.ts).
 #
 # Confirmado no index.html: sem scripts inline e sem Google Fonts.
 
 /*
-  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://lh3.googleusercontent.com https://avatars.githubusercontent.com https://cdn.discordapp.com; font-src 'self' data:; connect-src 'self' https://api.pmaxing.pt https://*.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://avatars.githubusercontent.com https://cdn.discordapp.com; font-src 'self' data:; connect-src 'self' https://api.pmaxing.pt https://*.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

@@ -1,3 +1,5 @@
+import { translateNow } from '../i18n/translate';
+
 // Junta data + horas dos campos do formulario numa janela [inicio, fim] em
 // ISO, com as mesmas regras que o servidor aplica (validateSessionWindow no
 // backend): fim depois do inicio, nao no futuro, no maximo 16 horas. Dar o
@@ -19,9 +21,9 @@ function parseLocal(date: string, time: string): Date | null {
 export function buildSessionWindow(date: string, startTime: string, endTime: string, now: Date): SessionWindowResult {
   const start = parseLocal(date, startTime);
   const end = parseLocal(date, endTime);
-  if (!start || !end) return { ok: false, error: 'Fill in the date and both times.' };
-  if (end.getTime() <= start.getTime()) return { ok: false, error: 'The end must be after the start.' };
-  if (end.getTime() > now.getTime()) return { ok: false, error: 'A session cannot end in the future.' };
+  if (!start || !end) return { ok: false, error: translateNow('session.err.fillTimes') };
+  if (end.getTime() <= start.getTime()) return { ok: false, error: translateNow('session.err.endAfterStart') };
+  if (end.getTime() > now.getTime()) return { ok: false, error: translateNow('session.err.future') };
   if ((end.getTime() - start.getTime()) / 3_600_000 > MAX_SESSION_HOURS) {
     return { ok: false, error: `A session cannot be longer than ${MAX_SESSION_HOURS} hours.` };
   }

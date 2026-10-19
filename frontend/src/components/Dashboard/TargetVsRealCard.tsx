@@ -4,6 +4,7 @@ import { computeTargetVsReal } from '../../utils/targetVsReal';
 import { TargetIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
+import { useI18n } from '../../i18n/useI18n';
 
 interface TargetVsRealCardProps {
   tasks: Task[];
@@ -19,6 +20,7 @@ function scaleMax(scale: string): number {
 // Target vs actual grade per course. AreaBreakdownCard shows where each
 // course stands; this shows how far that is from what was aimed for.
 export default function TargetVsRealCard({ tasks, areas, scale }: TargetVsRealCardProps) {
+  const { t } = useI18n();
   const rows = useMemo(() => computeTargetVsReal(tasks, areas), [tasks, areas]);
   if (rows.length === 0) return null;
 
@@ -28,7 +30,7 @@ export default function TargetVsRealCard({ tasks, areas, scale }: TargetVsRealCa
     <DashboardCard>
       <CardHeading className="mb-3">
         <TargetIcon className="shrink-0" />
-        Target vs real
+        {t('widget.targetVsReal')}
       </CardHeading>
       <ul className="space-y-3">
         {rows.slice(0, 6).map((row) => (
@@ -55,12 +57,15 @@ export default function TargetVsRealCard({ tasks, areas, scale }: TargetVsRealCa
               <div
                 className="absolute -top-0.5 -bottom-0.5 w-0.5 bg-white"
                 style={{ left: `${Math.min((row.avgTarget / max) * 100, 100)}%` }}
-                title={`Target ${row.avgTarget}`}
+                title={t('ui.targetValue', { value: row.avgTarget })}
               />
             </div>
             <p className="text-[10px] text-neutral-500 mt-1">
-              Real {row.avgReal} / target {row.avgTarget} - {row.taskCount} graded task
-              {row.taskCount === 1 ? '' : 's'}
+              {t(row.taskCount === 1 ? 'ui.realVsTargetOne' : 'ui.realVsTargetMany', {
+                real: row.avgReal,
+                target: row.avgTarget,
+                count: row.taskCount,
+              })}
             </p>
           </li>
         ))}

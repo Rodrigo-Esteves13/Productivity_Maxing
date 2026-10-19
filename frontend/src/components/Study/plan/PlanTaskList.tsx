@@ -53,7 +53,7 @@ export default function PlanTaskList({ tasks, calibrationFactor, onEstimateSaved
                     <button
                       type="button"
                       onClick={() => setEditingTaskId(task.taskId)}
-                      aria-label={`Set time needed for ${task.title}`}
+                      aria-label={t('ui.setTimeNeededFor', { title: task.title })}
                       className="text-neutral-500 hover:text-white"
                     >
                       <PencilIcon />
@@ -79,15 +79,15 @@ export default function PlanTaskList({ tasks, calibrationFactor, onEstimateSaved
                 className="mt-2"
                 percent={pct}
                 fillClassName={isShort ? 'bg-red-500' : 'bg-violet-500'}
-                label={`${task.title} scheduled`}
+                label={t('ui.taskScheduled', { title: task.title })}
               />
               {(task.loggedMinutes > 0 || task.overtimeMinutes > 0 || isShort) && (
                 <p className="text-xs text-neutral-500 mt-1.5">
-                  {task.loggedMinutes > 0 && `${formatDuration(task.loggedMinutes)} already studied`}
+                  {task.loggedMinutes > 0 && t('ui.alreadyStudied', { duration: formatDuration(task.loggedMinutes) })}
                   {task.overtimeMinutes > 0 &&
-                    `${task.loggedMinutes > 0 ? ' · ' : ''}${formatDuration(task.overtimeMinutes)} overtime`}
+                    `${task.loggedMinutes > 0 ? ' · ' : ''}${t('ui.durationOvertime', { duration: formatDuration(task.overtimeMinutes) })}`}
                   {isShort &&
-                    `${task.loggedMinutes > 0 || task.overtimeMinutes > 0 ? ' · ' : ''}${formatDuration(task.shortfallMinutes)} unscheduled`}
+                    `${task.loggedMinutes > 0 || task.overtimeMinutes > 0 ? ' · ' : ''}${t('ui.durationUnscheduled', { duration: formatDuration(task.shortfallMinutes) })}`}
                 </p>
               )}
             </li>

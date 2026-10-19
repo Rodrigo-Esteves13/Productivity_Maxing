@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { User } from '../../types/models';
 import { LogoutIcon } from '../UI/Icons';
 import Avatar from '../Profile/Avatar';
 import { useI18n } from '../../i18n/useI18n';
-import FeedbackModal from '../Feedback/FeedbackModal';
+
+// Lazy e montado so quando aberto: quase ninguem envia feedback numa visita.
+const FeedbackModal = lazy(() => import('../Feedback/FeedbackModal'));
 
 interface UserMenuProps {
   user: User | null;
@@ -119,7 +121,11 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
           </button>
         </div>
       )}
-      <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
+      {isFeedbackOpen && (
+        <Suspense fallback={null}>
+          <FeedbackModal isOpen onClose={() => setIsFeedbackOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

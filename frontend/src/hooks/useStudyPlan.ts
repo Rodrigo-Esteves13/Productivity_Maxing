@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getStudyPlan, updateStudyPlanSettings } from '../api/studyPlanService';
 import type { StudyPlanResult } from '../types/models';
 import { isRequestCanceled } from '../lib/abortable';
+import { translateNow } from '../i18n/translate';
 
 export function useStudyPlan(days = 7) {
   const [plan, setPlan] = useState<StudyPlanResult | null>(null);
@@ -17,7 +18,7 @@ export function useStudyPlan(days = 7) {
         setIsLoading(false);
       } catch (caught) {
         if (isRequestCanceled(caught)) return;
-        setError('Could not generate the study plan.');
+        setError(translateNow('hook.couldNotGenerateTheStudyPlan'));
         setIsLoading(false);
       }
     },
@@ -36,7 +37,7 @@ export function useStudyPlan(days = 7) {
         await updateStudyPlanSettings(minutes);
         await fetchPlan();
       } catch {
-        setError('Could not save the daily limit.');
+        setError(translateNow('hook.couldNotSaveTheDailyLimit'));
       }
     },
     [fetchPlan],

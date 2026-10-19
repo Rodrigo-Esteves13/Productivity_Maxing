@@ -46,7 +46,7 @@ export default function ApiKeysTable({ keys, onRevoke }: ApiKeysTableProps) {
               </td>
               <td className="px-4 py-3 text-sm text-neutral-400">{formatDate(key.createdAt)}</td>
               <td className="px-4 py-3 text-sm text-neutral-400">
-                {key.lastUsed ? formatDate(key.lastUsed) : 'Never'}
+                {key.lastUsed ? formatDate(key.lastUsed) : t('ui.never')}
               </td>
               <td className="px-4 py-3 text-right">
                 <button

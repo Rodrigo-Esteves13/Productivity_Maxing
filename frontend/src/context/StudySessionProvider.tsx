@@ -33,6 +33,7 @@ import {
   type RestBreak,
   type TimerPlan,
 } from '../lib/focusTimer';
+import { translateNow } from '../i18n/translate';
 
 const HTTP_NOT_FOUND = 404;
 
@@ -78,7 +79,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
       const session = await getActiveStudySession();
       setActiveSession(session);
     } catch {
-      setError('Could not load the study session.');
+      setError(translateNow('hook.couldNotLoadTheStudySession'));
     } finally {
       setIsLoading(false);
     }
@@ -230,7 +231,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
         announceSessionChanged();
         return true;
       } catch {
-        setError('Could not start the session. Please try again.');
+        setError(translateNow('ui.couldNotStartSession'));
         return false;
       } finally {
         setIsSubmitting(false);
@@ -252,7 +253,7 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
         announceSessionChanged();
         return true;
       } catch {
-        setError('Could not stop the session. Please try again.');
+        setError(translateNow('ui.couldNotStopSession'));
         return false;
       } finally {
         setIsSubmitting(false);

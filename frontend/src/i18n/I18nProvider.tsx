@@ -13,11 +13,13 @@ export default function I18nProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(() => isLoaded(lang));
 
   // Primeira carga: espera pelo dicionario da lingua ativa para nao piscar em
-  // ingles. Se falhar (offline), segue em ingles em vez de bloquear a app.
+  // ingles. Se falhar (offline e sem cache), tenta o ingles; se nem esse
+  // chegar, segue na mesma em vez de bloquear a app.
   useEffect(() => {
     if (ready) return;
     let cancelled = false;
     loadDictionary(lang)
+      .catch(() => loadDictionary('en'))
       .catch(() => undefined)
       .finally(() => {
         if (!cancelled) setReady(true);

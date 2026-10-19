@@ -3,6 +3,7 @@ import { getUserAreas, getTaskMetadata, importTasks } from '../api/userService';
 import { getPrograms, getProgramPeriods } from '../api/academicService';
 import { parseSpreadsheetFile, mapImportRows } from '../utils/parseTaskImportFile';
 import type { AcademicPeriod, ImportTasksResult } from '../types/models';
+import { translateNow } from '../i18n/translate';
 
 export type ImportStage = 'idle' | 'reading' | 'importing' | 'done' | 'error';
 
@@ -58,7 +59,7 @@ export function useTaskImport() {
       const rawRows = await parseSpreadsheetFile(file);
 
       if (rawRows.length === 0) {
-        setErrorMessage('That file has no rows to import.');
+        setErrorMessage(translateNow('hook.thatFileHasNoRowsTo'));
         setStage('error');
         return;
       }
@@ -73,7 +74,7 @@ export function useTaskImport() {
 
       if (rows.length > MAX_IMPORT_ROWS) {
         setErrorMessage(
-          `That file has ${rows.length} valid rows, which is more than the ${MAX_IMPORT_ROWS}-row import limit. Split it into smaller files and import them one at a time.`,
+          translateNow('hook.importTooManyRows', { rows: rows.length, max: MAX_IMPORT_ROWS }),
         );
         setStage('error');
         return;
@@ -86,7 +87,7 @@ export function useTaskImport() {
     } catch (err) {
       console.error('Task import failed:', err);
       setErrorMessage(
-        "Couldn't read or import that file. Make sure it's a valid .xlsx, .xls, or .csv file.",
+        translateNow('hook.taskImportFailed'),
       );
       setStage('error');
     }

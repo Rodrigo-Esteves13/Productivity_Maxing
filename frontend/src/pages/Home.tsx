@@ -60,19 +60,19 @@ export default function Home() {
 
         <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl w-full text-left">
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6">
-            <h3 className="font-semibold text-white mb-1">Areas & Tasks</h3>
+            <h3 className="font-semibold text-white mb-1">{t('ui.areasTasks')}</h3>
             <p className="text-sm text-neutral-400">
               {t('ui.groupYourWorkBySubject')}
             </p>
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6">
-            <h3 className="font-semibold text-white mb-1">Grades & Deadlines</h3>
+            <h3 className="font-semibold text-white mb-1">{t('ui.gradesDeadlines')}</h3>
             <p className="text-sm text-neutral-400">
               {t('ui.setATargetGradeAnd')}
             </p>
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6">
-            <h3 className="font-semibold text-white mb-1">Streaks & Progress</h3>
+            <h3 className="font-semibold text-white mb-1">{t('ui.streaksProgress')}</h3>
             <p className="text-sm text-neutral-400">
               {t('ui.aDashboardThatKeepsTrack')}
             </p>
