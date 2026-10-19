@@ -32,6 +32,14 @@ export interface SocialOverview {
   incoming: RequestEntry[];
   outgoing: RequestEntry[];
   blocked: PublicPerson[];
+  /** Ultimo pedido de troca de codigo (null se nunca pediu). */
+  codeChangeRequest: CodeChangeRequestView | null;
+}
+
+export interface CodeChangeRequestView {
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  adminNote: string | null;
+  createdAt: string;
 }
 
 export type SendRequestResult = { status: 'PENDING' | 'ACCEPTED' };
@@ -80,8 +88,11 @@ export class SocialService {
     throw new BadRequestException('Could not create friend code.');
   }
 
-  /** Gera um codigo novo: o antigo deixa de funcionar (para quem recebeu spam, por ex.). */
-  async regenerateFriendCode(userId: string): Promise<string> {
+  /**
+   * Gera um codigo novo: o antigo deixa de funcionar. Nao ha rota para o
+   * utilizador chamar isto: so a aprovacao de um pedido por um admin.
+   */
+  async rotateFriendCode(userId: string): Promise<string> {
     await this.prisma.user.update({
       where: { id: userId },
       data: { friendCode: null },
@@ -90,7 +101,7 @@ export class SocialService {
   }
 
   async overview(userId: string): Promise<SocialOverview> {
-    const [friendCode, rows, blocks] = await Promise.all([
+    const [friendCode, rows, blocks, lastRequest] = await Promise.all([
       this.ensureFriendCode(userId),
       this.prisma.friendship.findMany({
         where: { OR: [{ requesterId: userId }, { addresseeId: userId }] },
@@ -104,6 +115,11 @@ export class SocialService {
         where: { blockerId: userId },
         include: { blocked: { select: PERSON_SELECT } },
         orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.friendCodeChangeRequest.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        select: { status: true, adminNote: true, createdAt: true },
       }),
     ]);
 
@@ -135,6 +151,13 @@ export class SocialService {
       incoming,
       outgoing,
       blocked: blocks.map((b) => person(b.blocked)),
+      codeChangeRequest: lastRequest
+        ? {
+            status: lastRequest.status,
+            adminNote: lastRequest.adminNote,
+            createdAt: lastRequest.createdAt.toISOString(),
+          }
+        : null,
     };
   }
 

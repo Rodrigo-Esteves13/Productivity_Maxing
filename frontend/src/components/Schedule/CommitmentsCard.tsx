@@ -31,10 +31,9 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 mt-6">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-white mb-1">Work and other commitments</h2>
+          <h2 className="text-lg font-semibold text-white mb-1">{t('ui.workAndOtherCommitments')}</h2>
           <p className="text-sm text-neutral-400">
-            Create a place once (work, gym...) with its travel time, then add its shifts, or add a
-            one-off event. The study plan and Google Calendar both schedule around them.
+            {t('ui.createAPlaceOnceWork')}
           </p>
         </div>
         {!isCreating && (
@@ -45,7 +44,7 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
               aria-expanded={isCopying}
               className="px-3 py-2 text-sm text-neutral-300 hover:text-white border border-neutral-700 rounded-md"
             >
-              Copy a week
+              {t('ui.copyAWeek')}
             </button>
             <ActionButton onClick={() => { clearError(); setIsCreating(true); }} className="flex items-center gap-2">
               <PlusIcon />
@@ -83,7 +82,7 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
       {isLoading && <LinesSkeleton lines={3} />}
 
       {!isLoading && commitments.length === 0 && ungroupedShifts.length === 0 && !isCreating && (
-        <EmptyState message="Nothing here yet. Create a place like work or the gym, or add a one-off event below." />
+        <EmptyState message={t('ui.nothingHereYetCreateA')} />
       )}
 
       <div className="space-y-3">

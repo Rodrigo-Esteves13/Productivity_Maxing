@@ -2,6 +2,7 @@ import SecurityLogsTableHeader from './SecurityLogsTableHeader';
 import SecurityLogRow from './SecurityLogRow';
 import Pagination from '../UI/Pagination';
 import type { SecurityLog } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface SecurityLogsTableProps {
   logs: SecurityLog[];
@@ -24,6 +25,7 @@ export default function SecurityLogsTable({
   onBanIp,
   bannedIpSet,
 }: SecurityLogsTableProps) {
+  const { t } = useI18n();
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
       <div className="overflow-x-auto">
@@ -33,7 +35,7 @@ export default function SecurityLogsTable({
             {logs.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-neutral-500">
-                  No blocked requests found for this filter.
+                  {t('ui.noBlockedRequestsFoundFor')}
                 </td>
               </tr>
             ) : (

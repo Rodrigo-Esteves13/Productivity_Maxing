@@ -3,6 +3,7 @@ import Button from '../../UI/Button';
 import FormField from '../../UI/FormField';
 import Input from '../../UI/Input';
 import RatingInput from '../../UI/RatingInput';
+import { useI18n } from '../../../i18n/useI18n';
 
 export interface StopDetails {
   note?: string;
@@ -21,25 +22,26 @@ interface StopSessionPanelProps {
 // Ao parar: nota, concentracao (1 a 5) e, se ha task, "ja terminei". Tudo
 // opcional: dá para guardar sem responder a nada.
 export default function StopSessionPanel({ taskTitle, isSubmitting, onConfirm, onCancel }: StopSessionPanelProps) {
+  const { t } = useI18n();
   const [note, setNote] = useState('');
   const [rating, setRating] = useState<number | null>(null);
   const [markDone, setMarkDone] = useState(false);
 
   return (
     <div className="flex flex-col gap-4">
-      <FormField label="Note (optional)" htmlFor="stop-note">
+      <FormField label={t('ui.noteOptional')} htmlFor="stop-note">
         <Input
           id="stop-note"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="What did you study?"
+          placeholder={t('ui.whatDidYouStudy')}
           maxLength={500}
         />
       </FormField>
 
       <div>
-        <p className="mb-1.5 text-sm font-medium text-neutral-300">How focused were you? (optional)</p>
-        <RatingInput value={rating} onChange={setRating} hint="1 = scattered, 5 = fully focused" />
+        <p className="mb-1.5 text-sm font-medium text-neutral-300">{t('ui.howFocusedWereYouOptional')}</p>
+        <RatingInput value={rating} onChange={setRating} hint={t('ui.1Scattered5FullyFocused')} />
       </div>
 
       {taskTitle && (
@@ -72,7 +74,7 @@ export default function StopSessionPanel({ taskTitle, isSubmitting, onConfirm, o
           {isSubmitting ? 'Saving...' : 'Save session'}
         </Button>
         <Button variant="secondary" disabled={isSubmitting} onClick={onCancel}>
-          Keep going
+          {t('ui.keepGoing')}
         </Button>
       </div>
     </div>

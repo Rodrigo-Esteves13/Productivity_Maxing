@@ -22,7 +22,7 @@ export default function Social() {
   const shared = useSharedWithMe();
   const invitations = shared.items.filter((item) => item.invited);
   const rest = shared.items.filter((item) => !item.invited);
-  const { data, isLoading, hasError, addFriend, newCode, accept, remove, block, unblock } = useSocial();
+  const { data, isLoading, hasError, addFriend, requestCodeChange, accept, remove, block, unblock } = useSocial();
 
   const isEmpty =
     data !== null &&
@@ -44,7 +44,7 @@ export default function Social() {
             </section>
           )}
           <div className="grid gap-4 md:grid-cols-2">
-            <FriendCodeCard code={data.friendCode} onRegenerate={newCode} />
+            <FriendCodeCard code={data.friendCode} request={data.codeChangeRequest} onRequestChange={requestCodeChange} />
             <AddFriendForm onAdd={addFriend} />
           </div>
           {isEmpty ? (

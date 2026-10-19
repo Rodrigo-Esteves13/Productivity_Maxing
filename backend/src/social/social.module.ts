@@ -4,11 +4,13 @@ import { PushModule } from '../push/push.module';
 import { AuthModule } from '../auth/auth.module';
 import { SocialController } from './social.controller';
 import { SocialService } from './social.service';
+import { FriendCodeRequestsService } from './friend-code-requests.service';
+import { FriendCodeRequestsController } from './friend-code-requests.controller';
 
 @Module({
   imports: [PrismaModule, AuthModule, PushModule],
-  controllers: [SocialController],
-  providers: [SocialService],
+  controllers: [SocialController, FriendCodeRequestsController],
+  providers: [SocialService, FriendCodeRequestsService],
   exports: [SocialService],
 })
 export class SocialModule {}

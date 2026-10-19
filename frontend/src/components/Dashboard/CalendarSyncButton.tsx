@@ -4,12 +4,14 @@ import { CalendarIcon, CheckIcon } from '../UI/Icons';
 import { syncTaskToCalendar, unsyncTaskFromCalendar } from '../../api/calendarService';
 import { useCalendarStatus } from '../../hooks/useCalendarStatus';
 import type { Task } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface CalendarSyncButtonProps {
   task: Task;
 }
 
 export default function CalendarSyncButton({ task }: CalendarSyncButtonProps) {
+  const { t } = useI18n();
   const connected = useCalendarStatus();
   const [eventId, setEventId] = useState<string | null>(task.googleCalendarEventId);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,7 +24,7 @@ export default function CalendarSyncButton({ task }: CalendarSyncButtonProps) {
     return (
       <Link
         to="/profile"
-        title="Connect Google Calendar in your profile first"
+        title={t('ui.connectGoogleCalendarInYour')}
         onClick={(e) => e.stopPropagation()}
         className="flex items-center text-neutral-600 hover:text-neutral-400 transition-colors"
       >

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/useAuth';
 import { useCalendarSyncReview } from '../../hooks/useCalendarSyncReview';
 import { formatClock, formatDayLabel } from '../../lib/timeFormat';
 import type { SchedulePreview, SyncAction } from '../../api/calendarService';
+import { useI18n } from '../../i18n/useI18n';
 
 const ACTION_LABEL: Record<SyncAction, string> = {
   create: 'Add',
@@ -18,28 +19,29 @@ const ACTION_CLASS: Record<SyncAction, string> = {
 };
 
 function Summary({ preview }: { preview: SchedulePreview }) {
+  const { t } = useI18n();
   // Por ordem de ocorrencia (dia e hora), nao pela ordem em que o servidor as calculou.
   const sortedItems = [...preview.items].sort(
     (a, b) => a.date.localeCompare(b.date) || a.startMinutes - b.startMinutes,
   );
   const hasChanges = preview.create + preview.update + preview.remove > 0;
   if (!hasChanges) {
-    return <p className="text-sm text-neutral-300">Your Google Calendar is already up to date.</p>;
+    return <p className="text-sm text-neutral-300">{t('ui.yourGoogleCalendarIsAlready')}</p>;
   }
   return (
     <>
       <p className="text-sm text-neutral-300 mb-3">
         Your schedule changed. Update Google Calendar for the next {preview.days} days?
         <span className="block text-xs text-neutral-500 mt-1">
-          Only events this app created are touched, never your own.
+          {t('ui.onlyEventsThisAppCreated')}
         </span>
       </p>
       <p className="text-sm mb-3">
-        <span className="text-sky-400">{preview.create} to add</span>
+        <span className="text-sky-400">{t('ui.toAdd', { create: preview.create })}</span>
         {' · '}
-        <span className="text-amber-400">{preview.update} to update</span>
+        <span className="text-amber-400">{t('ui.toUpdate', { update: preview.update })}</span>
         {' · '}
-        <span className="text-red-400">{preview.remove} to remove</span>
+        <span className="text-red-400">{t('ui.toRemove', { remove: preview.remove })}</span>
       </p>
       <ul className="space-y-1 max-h-56 overflow-y-auto rounded-lg bg-neutral-800/40 p-2">
         {sortedItems.map((item, index) => (
@@ -54,12 +56,12 @@ function Summary({ preview }: { preview: SchedulePreview }) {
           </li>
         ))}
         {preview.hiddenCount > 0 && (
-          <li className="text-xs text-neutral-500 px-1">and {preview.hiddenCount} more</li>
+          <li className="text-xs text-neutral-500 px-1">{t('ui.andMore', { hiddenCount: preview.hiddenCount })}</li>
         )}
       </ul>
       {!preview.withinLimit && (
         <p className="text-xs text-amber-400 mt-2">
-          That is too many changes for one sync. Remove some commitments or shifts first.
+          {t('ui.thatIsTooManyChanges')}
         </p>
       )}
     </>
@@ -70,6 +72,7 @@ function Summary({ preview }: { preview: SchedulePreview }) {
 // calendário devia refletir mudou, e pede Confirm ou Deny. Ao contrário de
 // um botão "Check changes" + "Sync now", não depende de a pessoa se lembrar.
 export default function CalendarSyncReviewModal() {
+  const { t } = useI18n();
   const { isAuthenticated } = useAuth();
   const { phase, preview, result, confirm, deny } = useCalendarSyncReview();
 
@@ -84,27 +87,27 @@ export default function CalendarSyncReviewModal() {
       isOpen
       // Esc e clique no fundo contam como Deny, exceto enquanto escreve.
       onClose={() => !isBusy && deny()}
-      title="Update Google Calendar"
+      title={t('ui.updateGoogleCalendar')}
     >
       {phase === 'done' && result ? (
         <>
           <p role="status" className="text-sm text-sky-300">
             Added {result.created}, updated {result.updated}, removed {result.deleted}.
             {result.failed > 0 && (
-              <span className="text-amber-400"> {result.failed} failed. Make another change or sync again to retry.</span>
+              <span className="text-amber-400"> {t('ui.failedMakeAnotherChangeOr', { failed: result.failed })}</span>
             )}
           </p>
           <div className="mt-4 flex justify-end">
-            <ActionButton onClick={deny}>Close</ActionButton>
+            <ActionButton onClick={deny}>{t('ui.close')}</ActionButton>
           </div>
         </>
       ) : phase === 'error' ? (
         <>
           <p role="alert" className="text-sm text-red-300">
-            Could not reach Google Calendar. Check your connection in Profile and try again.
+            {t('ui.couldNotReachGoogleCalendar')}
           </p>
           <div className="mt-4 flex justify-end">
-            <ActionButton onClick={deny}>Close</ActionButton>
+            <ActionButton onClick={deny}>{t('ui.close')}</ActionButton>
           </div>
         </>
       ) : (

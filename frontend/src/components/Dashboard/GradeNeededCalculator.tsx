@@ -3,6 +3,7 @@ import type { Task, Area } from '../../types/models';
 import { TargetIcon } from '../UI/Icons';
 import { computeWeightCoverage } from '../../utils/weightCoverage';
 import DashboardCard from '../UI/DashboardCard';
+import { useI18n } from '../../i18n/useI18n';
 
 interface GradeNeededCalculatorProps {
   tasks: Task[];
@@ -24,6 +25,7 @@ function scaleMax(scale: string): number {
 // weighted tasks to reach it. Purely a frontend calculation over data the
 // Dashboard already has loaded - no new endpoint needed.
 export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeededCalculatorProps) {
+  const { t } = useI18n();
   const max = scaleMax(scale);
   const areasWithTasks = useMemo(() => {
     const ids = new Set(tasks.map((t) => t.areaId));
@@ -87,7 +89,7 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
           onChange={(e) => setScope(e.target.value)}
           className="border border-neutral-700 bg-neutral-900 text-white rounded-lg px-2 py-1.5 text-sm"
         >
-          <option value={WHOLE_PERIOD_VALUE}>Whole period</option>
+          <option value={WHOLE_PERIOD_VALUE}>{t('ui.wholePeriod')}</option>
           {areasWithTasks.map((area) => (
             <option key={area.id} value={area.id}>
               {area.name}
@@ -109,18 +111,16 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
 
       {weightGap > 0 && (
         <p className="text-xs text-amber-400 mb-2">
-          Tasks on file for this course only add up to {coverage.totalWeight.toFixed(0)}% of the
-          grade - treating the missing {weightGap.toFixed(0)}% as still to be graded.
-        </p>
+          {t('ui.tasksOnFileForThis', { totalWeight: coverage.totalWeight.toFixed(0), weightGap: weightGap.toFixed(0) })}</p>
       )}
 
       {!hasValidTarget && (
-        <p className="text-sm text-neutral-500">Set a target average to see what you need.</p>
+        <p className="text-sm text-neutral-500">{t('ui.setATargetAverageTo')}</p>
       )}
 
       {hasValidTarget && remainingWeight === 0 && (
         <p className="text-sm text-neutral-500">
-          No ungraded tasks left in this scope - nothing left to influence the average.
+          {t('ui.noUngradedTasksLeftIn')}
         </p>
       )}
 

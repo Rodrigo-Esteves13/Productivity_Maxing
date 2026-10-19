@@ -10,6 +10,7 @@ import SetupInstructions from '../components/Agent/SetupInstructions';
 import TriggerRulesForm from '../components/Agent/TriggerRulesForm';
 import BlockListEditor from '../components/Agent/BlockListEditor';
 import { COPY_FEEDBACK_MS } from '../lib/constants';
+import { useI18n } from '../i18n/useI18n';
 
 // Secção genérica com título + descrição, para não repetir o mesmo
 // wrapper de cartão em cada bloco da página.
@@ -43,6 +44,7 @@ function normalizeDomain(raw: string): string | null {
 }
 
 export default function Agent() {
+  const { t } = useI18n();
   useDocumentTitle('Agent');
 
   const { config, isLoading: configLoading, isSaving, saveError, updateDraft, save } =
@@ -60,30 +62,30 @@ export default function Agent() {
   return (
     <PageLayout>
       <PageHeader
-        title="Agent"
-        description="Set up pmaxing-agent to block distracting apps and sites on your computer, based on your pending tasks."
+        title={t('ui.agent')}
+        description={t('ui.setUpPmaxingAgentTo')}
       />
 
       <div className="space-y-6">
-        <Section title="1. Set up the agent">
+        <Section title={t('ui.1SetUpTheAgent')}>
           <SetupInstructions />
         </Section>
 
         <Section
-          title="2. API key"
-          description="The agent authenticates with a personal API key, sent as the x-api-key header."
+          title={t('ui.2ApiKey')}
+          description={t('ui.theAgentAuthenticatesWithA')}
         >
           <Link
             to="/developer"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-semibold text-white transition-colors"
           >
-            Manage API keys →
+            {t('ui.manageApiKeys2')}
           </Link>
         </Section>
 
         <Section
-          title="3. Blocking rules"
-          description="Changes here apply on the agent's next poll - no need to restart it."
+          title={t('ui.3BlockingRules')}
+          description={t('ui.changesHereApplyOnThe')}
         >
           {configLoading || !config ? (
             <FormSkeleton sections={1} />
@@ -91,8 +93,7 @@ export default function Agent() {
             <>
               {!config.isConfigured && (
                 <p className="text-sm text-amber-400/80 mb-4">
-                  You haven't saved a configuration yet - these are just sensible defaults. Adjust
-                  and save below to activate the agent.
+                  {t('ui.youHavenTSavedA')}
                 </p>
               )}
 
@@ -100,14 +101,14 @@ export default function Agent() {
 
               <div className="grid sm:grid-cols-2 gap-6 mt-6 pt-6 border-t border-neutral-800">
                 <BlockListEditor
-                  label="Blocked processes"
-                  placeholder="e.g. steam.exe"
+                  label={t('ui.blockedProcesses')}
+                  placeholder={t('ui.eGSteamExe')}
                   items={config.blockedProcesses}
                   onChange={(items) => updateDraft({ blockedProcesses: items })}
                 />
                 <BlockListEditor
-                  label="Blocked domains"
-                  placeholder="e.g. youtube.com"
+                  label={t('ui.blockedDomains')}
+                  placeholder={t('ui.eGYoutubeCom')}
                   items={config.blockedDomains}
                   onChange={(items) => updateDraft({ blockedDomains: items })}
                   normalize={normalizeDomain}
@@ -118,7 +119,7 @@ export default function Agent() {
                 <ActionButton type="button" onClick={handleSave} disabled={isSaving}>
                   {isSaving ? 'Saving...' : 'Save configuration'}
                 </ActionButton>
-                {justSaved && <span className="text-sm text-emerald-400">Saved!</span>}
+                {justSaved && <span className="text-sm text-emerald-400">{t('ui.saved')}</span>}
                 {saveError && <span className="text-sm text-red-400">{saveError}</span>}
               </div>
             </>

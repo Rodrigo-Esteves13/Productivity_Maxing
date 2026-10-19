@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n/useI18n';
 const FAQ_ITEMS = [
   {
     question: 'Is Productivity Maxing free?',
@@ -30,10 +31,11 @@ const FAQ_ITEMS = [
 // keyboard support, no JS state, and it's inert content that doesn't need
 // more than that.
 export default function FaqSection() {
+  const { t } = useI18n();
   return (
     <section className="mt-20 max-w-3xl mx-auto w-full text-left" aria-labelledby="faq-heading">
       <h2 id="faq-heading" className="text-2xl font-bold text-white text-center mb-8">
-        Frequently asked questions
+        {t('ui.frequentlyAskedQuestions')}
       </h2>
       <div className="space-y-3">
         {FAQ_ITEMS.map((item) => (

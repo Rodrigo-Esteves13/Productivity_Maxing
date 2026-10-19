@@ -11,6 +11,7 @@ import { ActivityIcon, FlameIcon } from '../UI/Icons';
 import ProgressBar from '../UI/ProgressBar';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { todayKey } from '../../lib/dateKey';
+import { useI18n } from '../../i18n/useI18n';
 
 const WINDOW_DAYS = 84; // ~12 weeks, GitHub-contributions-style grid
 const DEFAULT_GOAL_MINUTES = 60;
@@ -56,6 +57,7 @@ function sumLastNDays(days: DailyStudyTotal[], n: number, offsetFromEnd: number)
 }
 
 export default function StudyActivityCard() {
+  const { t } = useI18n();
   const [days, setDays] = useState<DailyStudyTotal[]>([]);
   const [streak, setStreak] = useState<StudyStreak | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -137,7 +139,7 @@ export default function StudyActivityCard() {
               </span>
             )}
             {streak.atRisk && (
-              <span className="text-xs font-normal">study today to keep it</span>
+              <span className="text-xs font-normal">{t('ui.studyTodayToKeepIt')}</span>
             )}
           </span>
         )}

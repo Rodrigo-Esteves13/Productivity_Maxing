@@ -9,6 +9,7 @@ import FormError from '../UI/FormError';
 import Button from '../UI/Button';
 import { buildTaskPayload } from '../../utils/taskPayload';
 import { getApiMessage } from '../../lib/httpError';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AreaOption {
   id: string;
@@ -86,6 +87,7 @@ export default function TaskEditForm({
   progressStatuses,
   existingTasks = [],
 }: TaskEditFormProps) {
+  const { t } = useI18n();
   const initialValues = useMemo(() => buildInitialValues(task), [task]);
   const [formData, setFormData] = useState<TaskFormFieldValues>(initialValues);
   const [recurrence, setRecurrence] = useState<RecurrenceValue>(() => recurrenceFromTask(task));
@@ -145,7 +147,7 @@ export default function TaskEditForm({
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800">
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
+          {t('ui.cancel')}
         </Button>
         <Button type="submit" variant="primary" disabled={isSubmitting}>
           {isSubmitting ? 'Saving...' : 'Save Changes'}

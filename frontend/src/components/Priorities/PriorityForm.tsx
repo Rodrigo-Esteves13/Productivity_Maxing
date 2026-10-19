@@ -4,6 +4,7 @@ import Button from '../UI/Button';
 import FormField from '../UI/FormField';
 import ColorPickerField from '../Areas/ColorPickerField';
 import type { PriorityFormPayload } from '../../api/prioritiesAdminService';
+import { useI18n } from '../../i18n/useI18n';
 
 interface PriorityFormProps {
   idPrefix: string;
@@ -26,6 +27,7 @@ export default function PriorityForm({
   submitLabel,
   submittingLabel,
 }: PriorityFormProps) {
+  const { t } = useI18n();
   const [formData, setFormData] = useState<PriorityFormPayload>(initialValues);
 
   const handleSubmit = (e: SyntheticEvent) => {
@@ -36,17 +38,17 @@ export default function PriorityForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-      <FormField label="Name" htmlFor={`${idPrefix}-label`}>
+      <FormField label={t('ui.name')} htmlFor={`${idPrefix}-label`}>
         <Input
           id={`${idPrefix}-label`}
           required
           type="text"
-          placeholder="E.g: Urgent, Someday"
+          placeholder={t('ui.eGUrgentSomeday')}
           value={formData.label}
           onChange={(e) => setFormData({ ...formData, label: e.target.value })}
         />
         <p className="mt-1 text-xs text-neutral-500">
-          You can rename this whenever you want - it's only ever used for display.
+          {t('ui.youCanRenameThisWhenever')}
         </p>
       </FormField>
 
@@ -56,7 +58,7 @@ export default function PriorityForm({
         onChange={(colorHex) => setFormData({ ...formData, colorHex })}
       />
 
-      <FormField label="Display order" htmlFor={`${idPrefix}-order`}>
+      <FormField label={t('ui.displayOrder')} htmlFor={`${idPrefix}-order`}>
         <Input
           id={`${idPrefix}-order`}
           type="number"
@@ -67,7 +69,7 @@ export default function PriorityForm({
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800 mt-6">
         <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
+          {t('ui.cancel')}
         </Button>
         <button
           type="submit"

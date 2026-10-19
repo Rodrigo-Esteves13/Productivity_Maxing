@@ -6,8 +6,10 @@ import TableSkeleton from '../components/UI/TableSkeleton';
 import AppealsList from '../components/Appeals/AppealsList';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useAppealsPage } from '../hooks/useAppealsPage';
+import { useI18n } from '../i18n/useI18n';
 
 export default function Appeals() {
+  const { t } = useI18n();
   useDocumentTitle('Appeals');
   const {
     appeals,
@@ -25,8 +27,8 @@ export default function Appeals() {
   return (
     <PageLayout>
       <PageHeader
-        title="Appeals"
-        description="Suspended and banned users waiting on a decision, most recently submitted first."
+        title={t('ui.appeals')}
+        description={t('ui.suspendedAndBannedUsersWaiting')}
       />
 
       <FeedbackBanner feedback={feedback} className="mb-4" />

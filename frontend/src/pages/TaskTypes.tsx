@@ -13,8 +13,10 @@ import PriorityForm from '../components/Priorities/PriorityForm';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useTaskTypesPage } from '../hooks/useTaskTypesPage';
 import { usePrioritiesPage } from '../hooks/usePrioritiesPage';
+import { useI18n } from '../i18n/useI18n';
 
 export default function TaskTypes() {
+  const { t } = useI18n();
   useDocumentTitle('Task Type Management');
   const {
     taskTypes,
@@ -62,8 +64,8 @@ export default function TaskTypes() {
   return (
     <PageLayout>
       <PageHeader
-        title="Task Type Management"
-        description="Area exclusive to Administrators. Names can be renamed at any time - the stable identifier the app relies on internally is generated automatically and never shown here."
+        title={t('ui.taskTypeManagement')}
+        description={t('ui.areaExclusiveToAdministratorsNames')}
       />
 
       {isLoading ? (
@@ -77,9 +79,9 @@ export default function TaskTypes() {
         <div className="space-y-10">
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-white">Task Types</h2>
+              <h2 className="text-lg font-semibold text-white">{t('ui.taskTypes')}</h2>
               <ActionButton color="amber" onClick={() => setIsCreateTaskTypeOpen(true)}>
-                + New Task Type
+                {t('ui.newTaskType')}
               </ActionButton>
             </div>
             <TaskTypesTable
@@ -91,9 +93,9 @@ export default function TaskTypes() {
 
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-white">Subcategories</h2>
+              <h2 className="text-lg font-semibold text-white">{t('ui.subcategories')}</h2>
               <ActionButton color="amber" onClick={() => setIsCreateAcademicOpen(true)}>
-                + New Subcategory
+                {t('ui.newSubcategory')}
               </ActionButton>
             </div>
             <AcademicTaskTypesTable
@@ -105,9 +107,9 @@ export default function TaskTypes() {
 
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-white">Priorities</h2>
+              <h2 className="text-lg font-semibold text-white">{t('ui.priorities')}</h2>
               <ActionButton color="amber" onClick={() => setIsCreatePriorityOpen(true)}>
-                + New Priority
+                {t('ui.newPriority')}
               </ActionButton>
             </div>
             {isPrioritiesLoading ? (
@@ -129,7 +131,7 @@ export default function TaskTypes() {
       <Modal
         isOpen={isCreateTaskTypeOpen}
         onClose={() => setIsCreateTaskTypeOpen(false)}
-        title="Create New Task Type"
+        title={t('ui.createNewTaskType')}
       >
         <TaskTypeForm
           idPrefix="create-task-type"
@@ -145,7 +147,7 @@ export default function TaskTypes() {
       <Modal
         isOpen={editingTaskType !== null}
         onClose={() => setEditingTaskType(null)}
-        title="Edit Task Type"
+        title={t('ui.editTaskType')}
       >
         {editingTaskType && (
           <TaskTypeForm
@@ -168,7 +170,7 @@ export default function TaskTypes() {
       <Modal
         isOpen={isCreateAcademicOpen}
         onClose={() => setIsCreateAcademicOpen(false)}
-        title="Create New Academic Subcategory"
+        title={t('ui.createNewAcademicSubcategory')}
       >
         <AcademicTaskTypeForm
           idPrefix="create-academic"
@@ -185,7 +187,7 @@ export default function TaskTypes() {
       <Modal
         isOpen={editingAcademic !== null}
         onClose={() => setEditingAcademic(null)}
-        title="Edit Academic Subcategory"
+        title={t('ui.editAcademicSubcategory')}
       >
         {editingAcademic && (
           <AcademicTaskTypeForm
@@ -210,7 +212,7 @@ export default function TaskTypes() {
       <Modal
         isOpen={isCreatePriorityOpen}
         onClose={() => setIsCreatePriorityOpen(false)}
-        title="Create New Priority"
+        title={t('ui.createNewPriority')}
       >
         <PriorityForm
           idPrefix="create-priority"
@@ -226,7 +228,7 @@ export default function TaskTypes() {
       <Modal
         isOpen={editingPriority !== null}
         onClose={() => setEditingPriority(null)}
-        title="Edit Priority"
+        title={t('ui.editPriority2')}
       >
         {editingPriority && (
           <PriorityForm

@@ -1,6 +1,7 @@
 import UsersTableHeader from './UsersTableHeader';
 import UserTableRow from './UserTableRow';
 import type { User } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface UsersTableProps {
   users: User[];
@@ -25,6 +26,7 @@ export default function UsersTable({
   onReactivate,
   reactivatingId,
 }: UsersTableProps) {
+  const { t } = useI18n();
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
       <div className="overflow-x-auto">
@@ -34,7 +36,7 @@ export default function UsersTable({
             {users.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-neutral-500">
-                  No users found.
+                  {t('ui.noUsersFound')}
                 </td>
               </tr>
             ) : (

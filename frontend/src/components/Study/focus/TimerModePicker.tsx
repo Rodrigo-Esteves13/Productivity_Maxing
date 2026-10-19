@@ -8,6 +8,7 @@ import {
   normalizePlan,
   type TimerPlan,
 } from '../../../lib/focusTimer';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface TimerModePickerProps {
   value: TimerPlan | null;
@@ -20,6 +21,7 @@ const sameAs = (a: TimerPlan | null, b: TimerPlan) =>
 // Escolha do modo: cronometro livre (conta para cima) ou bloco com fim
 // (conta para baixo, com pausa a seguir).
 export default function TimerModePicker({ value, onChange }: TimerModePickerProps) {
+  const { t } = useI18n();
   const [isCustom, setIsCustom] = useState(false);
   const [focus, setFocus] = useState('45');
   const [rest, setRest] = useState('10');
@@ -30,7 +32,7 @@ export default function TimerModePicker({ value, onChange }: TimerModePickerProp
 
   return (
     <div>
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Timer mode">
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('ui.timerMode')}>
         <ToggleChip
           pressed={value === null && !isCustom}
           onClick={() => {
@@ -38,7 +40,7 @@ export default function TimerModePicker({ value, onChange }: TimerModePickerProp
             onChange(null);
           }}
         >
-          Free
+          {t('ui.free')}
         </ToggleChip>
         {TIMER_PRESETS.map((preset) => (
           <ToggleChip
@@ -59,7 +61,7 @@ export default function TimerModePicker({ value, onChange }: TimerModePickerProp
             applyCustom(focus, rest);
           }}
         >
-          Custom
+          {t('ui.custom')}
         </ToggleChip>
       </div>
 
@@ -97,8 +99,7 @@ export default function TimerModePicker({ value, onChange }: TimerModePickerProp
           </label>
           {value === null && (
             <span className="text-amber-400">
-              Focus {MIN_FOCUS_MINUTES}-{MAX_FOCUS_MINUTES} min, break up to {MAX_BREAK_MINUTES}.
-            </span>
+              {t('ui.focusMinBreakUpTo', { minFocusMinutes: MIN_FOCUS_MINUTES, maxFocusMinutes: MAX_FOCUS_MINUTES, maxBreakMinutes: MAX_BREAK_MINUTES })}</span>
           )}
         </div>
       )}

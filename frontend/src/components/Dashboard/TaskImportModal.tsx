@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import Modal from '../UI/Modal';
 import { useTaskImport } from '../../hooks/useTaskImport';
 import { CheckIcon, AlertTriangleIcon } from '../UI/Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 interface TaskImportModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface TaskImportModalProps {
 const ACCEPTED_EXTENSIONS = '.xlsx,.xls,.csv';
 
 export default function TaskImportModal({ isOpen, onClose, onImported }: TaskImportModalProps) {
+  const { t } = useI18n();
   const { stage, outcome, errorMessage, runImport, reset } = useTaskImport();
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -51,17 +53,16 @@ export default function TaskImportModal({ isOpen, onClose, onImported }: TaskImp
   const isBusy = stage === 'reading' || stage === 'importing';
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Import tasks from Excel/CSV">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t('ui.importTasksFromExcelCsv')}>
       <div className="space-y-4">
         <div className="text-sm text-neutral-400 space-y-1">
           <p>
-            Upload a .xlsx, .xls, or .csv file with one row per task. Expected columns: Title, Date, Area,
-            Period, Type, Academic Type, Weight %, Difficulty, Status, Target Grade, Real Grade, Topics.
+            {t('ui.uploadAXlsxXlsOr')}
           </p>
           <p>
-            Only <span className="text-neutral-300">Title</span>, <span className="text-neutral-300">Date</span>, and{' '}
-            <span className="text-neutral-300">Area</span> are required - Area must match one of your existing
-            areas exactly by name. <span className="text-neutral-300">Period</span> is optional and lets you
+            Only <span className="text-neutral-300">{t('ui.title')}</span>, <span className="text-neutral-300">{t('ui.date')}</span>, and{' '}
+            <span className="text-neutral-300">{t('ui.area')}</span> are required - Area must match one of your existing
+            areas exactly by name. <span className="text-neutral-300">{t('ui.period')}</span> is optional and lets you
             import into a specific past/future semester by name instead of the currently active one.
           </p>
         </div>
@@ -103,18 +104,16 @@ export default function TaskImportModal({ isOpen, onClose, onImported }: TaskImp
             {(outcome.parseErrors.length > 0 ||
               (outcome.backendResult?.results.some((r) => !r.success) ?? false)) && (
               <div className="max-h-48 overflow-y-auto bg-neutral-950 border border-neutral-800 rounded-lg p-3 space-y-1">
-                <p className="text-xs uppercase tracking-wide text-neutral-500 mb-1">Rows skipped</p>
+                <p className="text-xs uppercase tracking-wide text-neutral-500 mb-1">{t('ui.rowsSkipped')}</p>
                 {outcome.parseErrors.map((e) => (
                   <p key={`parse-${e.row}`} className="text-xs text-neutral-400">
-                    Row {e.row}: {e.message}
-                  </p>
+                    {t('ui.row', { row: e.row, message: e.message })}</p>
                 ))}
                 {outcome.backendResult?.results
                   .filter((r) => !r.success)
                   .map((r) => (
                     <p key={`backend-${r.row}`} className="text-xs text-neutral-400">
-                      Row {r.row}: {r.error}
-                    </p>
+                      {t('ui.row2', { row: r.row, error: r.error ?? '' })}</p>
                   ))}
               </div>
             )}

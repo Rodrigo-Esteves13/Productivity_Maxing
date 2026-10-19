@@ -3,6 +3,7 @@ import ShiftRow from './ShiftRow';
 import { orderShiftsByOccurrence } from '../../../lib/shiftOrder';
 import { todayUtcAnchored } from '../../../lib/weekDates';
 import type { Commitment, CreateWorkShiftInput, UpdateWorkShiftInput, WorkShift } from '../../../types/models';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface ShiftListProps {
   shifts: WorkShift[];
@@ -32,6 +33,7 @@ export default function ShiftList({
   showTitle = false,
   className = '',
 }: ShiftListProps) {
+  const { t } = useI18n();
   const [showPast, setShowPast] = useState(false);
   const { upcoming, past } = useMemo(() => orderShiftsByOccurrence(shifts, todayUtcAnchored()), [shifts]);
 
@@ -54,7 +56,7 @@ export default function ShiftList({
   return (
     <div className={className}>
       {upcoming.length > 0 && <ul className="space-y-1.5">{upcoming.map(renderRow)}</ul>}
-      {upcoming.length === 0 && <p className="text-xs text-neutral-500">Nothing coming up.</p>}
+      {upcoming.length === 0 && <p className="text-xs text-neutral-500">{t('ui.nothingComingUp')}</p>}
 
       {past.length > 0 && (
         <>

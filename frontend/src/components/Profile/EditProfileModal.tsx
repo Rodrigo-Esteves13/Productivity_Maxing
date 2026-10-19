@@ -11,6 +11,7 @@ import { useAvatarUpload } from '../../hooks/useAvatarUpload';
 import { usePasswordForm } from '../../hooks/usePasswordForm';
 import { updateUserProfile, uploadAvatar, removeAvatar } from '../../api/userService';
 import type { User } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ interface EditProfileModalProps {
 }
 
 export default function EditProfileModal({ isOpen, onClose, user, onSaved, onUserUpdate }: EditProfileModalProps) {
+  const { t } = useI18n();
   const [name, setName] = useState(user.name ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -86,7 +88,7 @@ export default function EditProfileModal({ isOpen, onClose, user, onSaved, onUse
   const displayedImage = avatar.previewUrl ?? (!avatar.removePhoto ? user.avatarUrl : null);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit Profile">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('ui.editProfile')}>
       <form onSubmit={handleSubmit} className="space-y-5">
         <AvatarUploadField
           initials={initials}
@@ -96,12 +98,12 @@ export default function EditProfileModal({ isOpen, onClose, user, onSaved, onUse
           onRemoveClick={avatar.handleRemovePhotoClick}
         />
 
-        <FormField label="Name" htmlFor="profile-name">
+        <FormField label={t('ui.name')} htmlFor="profile-name">
           <Input
             id="profile-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Your name"
+            placeholder={t('ui.yourName')}
           />
         </FormField>
 
@@ -109,7 +111,7 @@ export default function EditProfileModal({ isOpen, onClose, user, onSaved, onUse
 
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
+            {t('ui.cancel')}
           </Button>
           <ActionButton type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Saving...' : 'Save Changes'}

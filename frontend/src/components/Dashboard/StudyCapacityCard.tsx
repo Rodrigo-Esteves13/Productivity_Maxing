@@ -5,6 +5,7 @@ import { formatDuration } from '../../lib/timeFormat';
 import { BANNER_BY_STATUS } from '../Study/plan/planCopy';
 import ProgressBar from '../UI/ProgressBar';
 import { CardHeading } from '../UI/DashboardCard';
+import { useI18n } from '../../i18n/useI18n';
 
 const WINDOW_DAYS = 7;
 
@@ -13,6 +14,7 @@ const WINDOW_DAYS = 7;
 // horas de sono já descontadas) ou se é preciso overtime. O detalhe por
 // dia e por task vive na página Schedule.
 export default function StudyCapacityCard() {
+  const { t } = useI18n();
   const { plan, isLoading, error } = useStudyPlan(WINDOW_DAYS);
 
   // Sem dados (a carregar, erro ou nada por fazer) o cartão não ocupa
@@ -47,16 +49,15 @@ export default function StudyCapacityCard() {
         className="mt-3"
         percent={fillPct}
         fillClassName={needsAttention ? 'bg-amber-500' : 'bg-violet-500'}
-        label="Share of needed study time that fits in your week"
+        label={t('ui.shareOfNeededStudyTime')}
       />
       <p className="text-xs text-neutral-500 mt-2">
-        {formatDuration(summary.plannedMinutes)} of {formatDuration(summary.neededMinutes)} scheduled
-      </p>
+        {t('ui.ofScheduled', { plannedMinutes: formatDuration(summary.plannedMinutes), neededMinutes: formatDuration(summary.neededMinutes) })}</p>
       <Link
         to="/schedule"
         className="inline-block text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted mt-2"
       >
-        Open study plan
+        {t('ui.openStudyPlan')}
       </Link>
     </div>
   );

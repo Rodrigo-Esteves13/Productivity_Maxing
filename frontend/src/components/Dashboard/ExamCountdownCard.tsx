@@ -4,6 +4,7 @@ import { getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import { GraduationCapIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { useAreaLookup } from '../../hooks/useAreaLookup';
+import { useI18n } from '../../i18n/useI18n';
 
 interface ExamCountdownCardProps {
   tasks: Task[];
@@ -19,6 +20,7 @@ const MAX_SHOWN = 4;
 // and weight-toward-grade is the closest existing signal for "this one
 // actually counts".
 export default function ExamCountdownCard({ tasks, areas }: ExamCountdownCardProps) {
+  const { t } = useI18n();
   const areaById = useAreaLookup(areas);
 
   const graded = tasks
@@ -76,7 +78,7 @@ export default function ExamCountdownCard({ tasks, areas }: ExamCountdownCardPro
         to="/tasks"
         className="block mt-3 text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
       >
-        View all tasks
+        {t('ui.viewAllTasks')}
       </Link>
     </DashboardCard>
   );

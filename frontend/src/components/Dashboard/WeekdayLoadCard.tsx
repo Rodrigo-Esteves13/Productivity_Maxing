@@ -4,6 +4,7 @@ import { computeWeekdayDistribution } from '../../utils/weekdayDistribution';
 import { CalendarIcon } from '../UI/Icons';
 import DashboardCard, { CardBody, CardHeading } from '../UI/DashboardCard';
 import LegendItem from '../UI/LegendItem';
+import { useI18n } from '../../i18n/useI18n';
 
 interface WeekdayLoadCardProps {
   tasks: Task[];
@@ -14,6 +15,7 @@ const MIN_TASKS_TO_SHOW = 5;
 // Which weekdays deadlines tend to pile up on. Pending and completed are
 // stacked so a busy-but-already-done day doesn't look like a problem.
 export default function WeekdayLoadCard({ tasks }: WeekdayLoadCardProps) {
+  const { t } = useI18n();
   const buckets = useMemo(() => computeWeekdayDistribution(tasks), [tasks]);
   const total = buckets.reduce((s, b) => s + b.total, 0);
   if (total < MIN_TASKS_TO_SHOW) return null;
@@ -53,8 +55,8 @@ export default function WeekdayLoadCard({ tasks }: WeekdayLoadCardProps) {
           ))}
         </div>
         <div className="flex gap-4 mt-2 text-[10px] text-neutral-500">
-          <LegendItem dotClassName="bg-violet-500">Pending</LegendItem>
-          <LegendItem dotClassName="bg-neutral-700">Completed</LegendItem>
+          <LegendItem dotClassName="bg-violet-500">{t('ui.pending')}</LegendItem>
+          <LegendItem dotClassName="bg-neutral-700">{t('ui.completed')}</LegendItem>
         </div>
       </CardBody>
     </DashboardCard>

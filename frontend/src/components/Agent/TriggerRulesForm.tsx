@@ -1,4 +1,5 @@
 import type { AgentConfig, AgentTriggerMode, Difficulty, ProgressStatus } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface TriggerRulesFormProps {
   config: AgentConfig;
@@ -50,40 +51,40 @@ function RuleToggle({
 }
 
 export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormProps) {
+  const { t } = useI18n();
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">
-          Block when...
+          {t('ui.blockWhen')}
         </h3>
         <p className="text-sm text-neutral-500 mb-3">
-          Pick as many as you want. Use the mode below to decide if one is enough, or if all
-          selected conditions need to be true at once.
+          {t('ui.pickAsManyAsYou')}
         </p>
 
         <RuleToggle
           checked={config.hasOverdueTasks}
           onToggle={(v) => onChange({ hasOverdueTasks: v })}
-          title="A task is past its deadline"
-          description="Blocks until the task is actually marked complete - independent of whether you already answered today's overdue check-in popup."
+          title={t('ui.aTaskIsPastIts')}
+          description={t('ui.blocksUntilTheTaskIs')}
         />
         <RuleToggle
           checked={config.hasOverdueCheckins}
           onToggle={(v) => onChange({ hasOverdueCheckins: v })}
-          title="A task hasn't been checked in today"
-          description="Only counts overdue tasks you haven't responded to in today's check-in popup yet - resets once a day, even if the task itself is still not done."
+          title={t('ui.aTaskHasnTBeen')}
+          description={t('ui.onlyCountsOverdueTasksYou')}
         />
         <RuleToggle
           checked={config.anyTaskToday}
           onToggle={(v) => onChange({ anyTaskToday: v })}
-          title="Anything is due today"
-          description="The most aggressive option - blocks all day as soon as there's something pending today, regardless of difficulty or status."
+          title={t('ui.anythingIsDueToday')}
+          description={t('ui.theMostAggressiveOptionBlocks')}
         />
 
         <div className="p-3 rounded-lg border border-neutral-800 space-y-2">
-          <span className="block text-sm font-medium text-white">Progress status is at least</span>
+          <span className="block text-sm font-medium text-white">{t('ui.progressStatusIsAtLeast')}</span>
           <span className="block text-sm text-neutral-500 mb-2">
-            Matches the "Behind" / "Very behind" badges you see on the dashboard.
+            {t('ui.matchesTheBehindVeryBehind')}
           </span>
           <select
             value={config.minProgressStatus ?? ''}
@@ -92,7 +93,7 @@ export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormP
             }
             className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-600"
           >
-            <option value="">Off</option>
+            <option value="">{t('ui.off')}</option>
             {PROGRESS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -103,10 +104,10 @@ export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormP
 
         <div className="p-3 rounded-lg border border-neutral-800 space-y-2">
           <span className="block text-sm font-medium text-white">
-            Today's difficulty is at least
+            {t('ui.todaySDifficultyIsAt')}
           </span>
           <span className="block text-sm text-neutral-500 mb-2">
-            Only looks at tasks due today.
+            {t('ui.onlyLooksAtTasksDue')}
           </span>
           <select
             value={config.minDifficultyToday ?? ''}
@@ -115,7 +116,7 @@ export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormP
             }
             className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-600"
           >
-            <option value="">Off</option>
+            <option value="">{t('ui.off')}</option>
             {DIFFICULTY_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -128,36 +129,36 @@ export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormP
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-neutral-300 mb-2">
-            Trigger mode
+            {t('ui.triggerMode')}
           </label>
           <select
             value={config.triggerMode}
             onChange={(e) => onChange({ triggerMode: e.target.value as AgentTriggerMode })}
             className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-600"
           >
-            <option value="ANY">Any selected condition (recommended)</option>
-            <option value="ALL">All selected conditions at once</option>
+            <option value="ANY">{t('ui.anySelectedConditionRecommended')}</option>
+            <option value="ALL">{t('ui.allSelectedConditionsAtOnce')}</option>
           </select>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-neutral-300 mb-2">
-            If the agent can't reach the app
+            {t('ui.ifTheAgentCanT')}
           </label>
           <select
             value={config.failMode}
             onChange={(e) => onChange({ failMode: e.target.value as AgentConfig['failMode'] })}
             className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-600"
           >
-            <option value="CLOSED">Keep last known blocking state (recommended)</option>
-            <option value="OPEN">Unblock everything</option>
+            <option value="CLOSED">{t('ui.keepLastKnownBlockingState')}</option>
+            <option value="OPEN">{t('ui.unblockEverything')}</option>
           </select>
         </div>
       </div>
 
       <div className="max-w-xs">
         <label className="block text-sm font-medium text-neutral-300 mb-2">
-          Check for updates every (seconds)
+          {t('ui.checkForUpdatesEverySeconds')}
         </label>
         <input
           type="number"
@@ -175,7 +176,7 @@ export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormP
           }}
           className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-600"
         />
-        <p className="text-xs text-neutral-500 mt-1">Between 15 and 3600 seconds.</p>
+        <p className="text-xs text-neutral-500 mt-1">{t('ui.between15And3600Seconds')}</p>
       </div>
     </div>
   );

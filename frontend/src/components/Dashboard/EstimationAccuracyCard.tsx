@@ -3,6 +3,7 @@ import { getEstimationAccuracy, type EstimationAccuracy } from '../../api/predic
 import { TargetIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import LegendItem from '../UI/LegendItem';
+import { useI18n } from '../../i18n/useI18n';
 
 // How good Rodrigo's own manual `estimatedMinutes` guesses have actually
 // been, looking backward - the counterpart to the duration-prediction
@@ -11,6 +12,7 @@ import LegendItem from '../UI/LegendItem';
 // aggregate across every task, a different question than "what should I
 // guess for this one task right now".
 export default function EstimationAccuracyCard() {
+  const { t } = useI18n();
   const [data, setData] = useState<EstimationAccuracy | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -63,14 +65,11 @@ export default function EstimationAccuracyCard() {
 
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-400">
         <LegendItem dotClassName="bg-violet-500">
-          {data.accurateCount} on target
-        </LegendItem>
+          {t('ui.onTarget', { accurateCount: data.accurateCount })}</LegendItem>
         <LegendItem dotClassName="bg-amber-500">
-          {data.overestimatedCount} took less than guessed
-        </LegendItem>
+          {t('ui.tookLessThanGuessed', { overestimatedCount: data.overestimatedCount })}</LegendItem>
         <LegendItem dotClassName="bg-sky-500">
-          {data.underestimatedCount} took more than guessed
-        </LegendItem>
+          {t('ui.tookMoreThanGuessed', { underestimatedCount: data.underestimatedCount })}</LegendItem>
       </div>
     </DashboardCard>
   );

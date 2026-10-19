@@ -11,8 +11,10 @@ import ApiKeysTable from '../components/Developer/ApiKeysTable';
 import NewApiKeyModal from '../components/Developer/NewApiKeyModal';
 import type { ApiKeyScope } from '../types/models';
 import { useFeedback } from '../context/useFeedback';
+import { useI18n } from '../i18n/useI18n';
 
 export default function Developer() {
+  const { t } = useI18n();
   const { confirm } = useFeedback();
   useDocumentTitle('Developer');
   const { user } = useAuth();
@@ -51,8 +53,8 @@ export default function Developer() {
   return (
     <PageLayout>
       <PageHeader
-        title="Developer"
-        description="Personal API keys to script against your own Productivity Maxing data. Send yours as the x-api-key header."
+        title={t('ui.developer')}
+        description={t('ui.personalApiKeysToScript')}
       />
 
       <form onSubmit={handleCreate} className="flex flex-col sm:flex-row gap-3 mb-8">
@@ -60,18 +62,18 @@ export default function Developer() {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Key name (e.g. 'League bot script')"
+          placeholder={t('ui.keyNameEGLeague')}
           className="flex-1 bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-violet-600"
         />
         {isAdmin && (
           <select
             value={scope}
             onChange={(e) => setScope(e.target.value as ApiKeyScope)}
-            title="TASKS: your own tasks/periods/programs only. ADMIN: also the global Areas/TaskTypes catalog."
+            title={t('ui.tasksYourOwnTasksPeriods')}
             className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-violet-600"
           >
-            <option value="TASKS">TASKS scope</option>
-            <option value="ADMIN">ADMIN scope</option>
+            <option value="TASKS">{t('ui.tasksScope')}</option>
+            <option value="ADMIN">{t('ui.adminScope')}</option>
           </select>
         )}
         <ActionButton type="submit" disabled={!name.trim() || isCreating}>
@@ -82,7 +84,7 @@ export default function Developer() {
       {isLoading ? (
         <TableSkeleton rows={3} columns={4} />
       ) : keys.length === 0 ? (
-        <EmptyState message="You don't have any API keys yet. Generate one above to get started." />
+        <EmptyState message={t('ui.youDonTHaveAny')} />
       ) : (
         <ApiKeysTable keys={keys} onRevoke={handleRevoke} />
       )}

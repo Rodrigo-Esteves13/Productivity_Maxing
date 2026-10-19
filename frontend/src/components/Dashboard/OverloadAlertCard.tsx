@@ -4,6 +4,7 @@ import { detectOverloadWeek } from '../../utils/detectOverloadWeek';
 import { AlertTriangleIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
+import { useI18n } from '../../i18n/useI18n';
 
 interface OverloadAlertCardProps {
   tasks: Task[];
@@ -26,6 +27,7 @@ function countByArea(tasks: Task[], areas: Area[]): { area: Area; count: number 
 }
 
 export default function OverloadAlertCard({ tasks, areas }: OverloadAlertCardProps) {
+  const { t } = useI18n();
   const overload = detectOverloadWeek(tasks);
   if (!overload) return null;
 
@@ -55,7 +57,7 @@ export default function OverloadAlertCard({ tasks, areas }: OverloadAlertCardPro
         to="/tasks"
         className="text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
       >
-        View all tasks
+        {t('ui.viewAllTasks')}
       </Link>
     </DashboardCard>
   );

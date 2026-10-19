@@ -9,6 +9,7 @@ import ToolbarButton from '../../UI/ToolbarButton';
 import SelectedTextControls from './SelectedTextControls';
 import { COLOR_SWATCHES } from './canvasConstants';
 import type { DrawTool } from './canvasConstants';
+import { useI18n } from '../../../i18n/useI18n';
 
 const MIN_STROKE_WIDTH = 1;
 const MAX_STROKE_WIDTH = 8;
@@ -30,6 +31,7 @@ interface CanvasDrawToolbarProps {
 // Barra de traco/apagador/texto: cor, espessura, ferramenta, controlos do
 // texto selecionado e desfazer/limpar.
 export default function CanvasDrawToolbar({ canvas, texts, selectedText, tool, onToolChange }: CanvasDrawToolbarProps) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg bg-neutral-900 px-3 py-2">
       <ColorSwatches
@@ -50,7 +52,7 @@ export default function CanvasDrawToolbar({ canvas, texts, selectedText, tool, o
         value={canvas.width}
         onChange={(e) => canvas.setWidth(Number(e.target.value))}
         className="w-24 accent-violet-500"
-        aria-label="Stroke width"
+        aria-label={t('ui.strokeWidth')}
       />
 
       <SegmentedControl size="sm" surface="sunken" options={TOOL_OPTIONS} value={tool} onChange={onToolChange} />

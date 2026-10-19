@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatDuration } from '../../../lib/timeFormat';
+import { useI18n } from '../../../i18n/useI18n';
 
 const STEP_MINUTES = 30;
 const MIN_MINUTES = 30;
@@ -14,6 +15,7 @@ interface DailyLimitControlProps {
 // controlo, para não disparar um pedido (e um recálculo do plano) a
 // cada passo do slider.
 export default function DailyLimitControl({ value, onCommit }: DailyLimitControlProps) {
+  const { t } = useI18n();
   const [draft, setDraft] = useState(value);
 
   return (
@@ -22,7 +24,7 @@ export default function DailyLimitControl({ value, onCommit }: DailyLimitControl
         htmlFor="daily-study-limit"
         className="flex items-center justify-between text-xs text-neutral-400 mb-1"
       >
-        <span>Daily study limit</span>
+        <span>{t('ui.dailyStudyLimit')}</span>
         <span className="text-neutral-200 font-medium">{formatDuration(draft)}</span>
       </label>
       <input

@@ -2,6 +2,7 @@ import type { AcademicPeriod, Task } from '../../types/models';
 import { GaugeIcon } from '../UI/Icons';
 import ProgressBar from '../UI/ProgressBar';
 import DashboardCard from '../UI/DashboardCard';
+import { useI18n } from '../../i18n/useI18n';
 
 interface PeriodProgressBarProps {
   period: AcademicPeriod;
@@ -13,6 +14,7 @@ interface PeriodProgressBarProps {
 // Only renders when the period has an endDate: without one there's no
 // time-based percentage to compute (an ongoing/open-ended period).
 export default function PeriodProgressBar({ period, tasks }: PeriodProgressBarProps) {
+  const { t } = useI18n();
   if (!period.endDate) return null;
 
   const start = new Date(period.startDate).getTime();
@@ -35,14 +37,14 @@ export default function PeriodProgressBar({ period, tasks }: PeriodProgressBarPr
           Pace: {period.name}
         </p>
         {isBehindPace && (
-          <span className="text-xs text-orange-400">Behind the period's pace</span>
+          <span className="text-xs text-orange-400">{t('ui.behindThePeriodSPace')}</span>
         )}
       </div>
 
       <div className="space-y-2">
         <div>
           <div className="flex justify-between text-xs text-neutral-500 mb-1">
-            <span>Time elapsed</span>
+            <span>{t('ui.timeElapsed')}</span>
             <span>{timeElapsedPct.toFixed(0)}%</span>
           </div>
           <ProgressBar thickness="md" percent={timeElapsedPct} fillClassName="bg-neutral-500" />
@@ -50,7 +52,7 @@ export default function PeriodProgressBar({ period, tasks }: PeriodProgressBarPr
 
         <div>
           <div className="flex justify-between text-xs text-neutral-500 mb-1">
-            <span>Tasks completed</span>
+            <span>{t('ui.tasksCompleted')}</span>
             <span>
               {completedCount}/{tasks.length} ({tasksDonePct.toFixed(0)}%)
             </span>

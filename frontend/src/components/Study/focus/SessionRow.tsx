@@ -52,16 +52,16 @@ export default function SessionRow({ session, isSaving, serverError, onEdit, onD
           <p className="truncate text-sm font-medium text-white">{title}</p>
           <p className="text-xs text-neutral-400">
             {start}-{end} · {formatDuration(minutes)}
-            {session.focusRating !== null && <span className="ml-2 text-violet-300">focus {session.focusRating}/5</span>}
-            {session.isManual && <span className="ml-2 text-neutral-500">added by hand</span>}
+            {session.focusRating !== null && <span className="ml-2 text-violet-300">{t('ui.focus5', { focusRating: session.focusRating })}</span>}
+            {session.isManual && <span className="ml-2 text-neutral-500">{t('ui.addedByHand')}</span>}
           </p>
           {session.note && <p className="mt-1 break-words text-xs text-neutral-500">{session.note}</p>}
         </div>
         <div className="flex shrink-0 gap-1">
-          <IconButton label="Edit session" onClick={() => setMode('edit')}>
+          <IconButton label={t('ui.editSession')} onClick={() => setMode('edit')}>
             <PencilIcon />
           </IconButton>
-          <IconButton label="Delete session" tone="danger" onClick={() => setMode('confirm-delete')}>
+          <IconButton label={t('ui.deleteSession')} tone="danger" onClick={() => setMode('confirm-delete')}>
             <TrashIcon />
           </IconButton>
         </div>
@@ -75,7 +75,7 @@ export default function SessionRow({ session, isSaving, serverError, onEdit, onD
       {mode === 'confirm-delete' && (
         <InlineConfirm
           className="mt-2"
-          message="Delete this session? Its time stops counting."
+          message={t('ui.deleteThisSessionItsTime')}
           confirmLabel="Yes, delete"
           isBusy={isSaving}
           onConfirm={() => void onDelete(session.id)}

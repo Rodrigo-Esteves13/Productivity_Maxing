@@ -1,5 +1,6 @@
 import Input from '../../UI/Input';
 import Textarea from '../../UI/Textarea';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface OptionalInfoFieldsProps {
   topics: string;
@@ -55,6 +56,7 @@ export default function OptionalInfoFields({
   calendarDurationMinutes,
   onCalendarDurationMinutesChange,
 }: OptionalInfoFieldsProps) {
+  const { t } = useI18n();
   const showTimeField = calendarConnected && syncToCalendar;
   // A duração só faz sentido quando o evento tem mesmo uma hora de início -
   // um evento "dia inteiro" não tem hora de fim para calcular.
@@ -62,24 +64,24 @@ export default function OptionalInfoFields({
 
   return (
     <div className="space-y-4 pt-4 border-t border-neutral-800">
-      <p className="text-xs font-semibold text-neutral-500 uppercase">Optional Information</p>
+      <p className="text-xs font-semibold text-neutral-500 uppercase">{t('ui.optionalInformation')}</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
-          placeholder="Topics"
+          placeholder={t('ui.topics')}
           value={topics}
           onChange={(e) => onTopicsChange(e.target.value)}
           className="w-full"
         />
         <Input
           type="url"
-          placeholder="Reference link"
+          placeholder={t('ui.referenceLink2')}
           value={referenceLink}
           onChange={(e) => onReferenceLinkChange(e.target.value)}
           className="w-full"
         />
       </div>
       <Textarea
-        placeholder="Notes - reflections, how it went, anything worth remembering later"
+        placeholder={t('ui.notesReflectionsHowItWent')}
         value={notes}
         onChange={(e) => onNotesChange(e.target.value)}
         rows={3}
@@ -96,7 +98,7 @@ export default function OptionalInfoFields({
         />
         <div className="flex-1">
           <label htmlFor="sync-to-calendar" className={calendarConnected ? 'cursor-pointer' : ''}>
-            <span className="text-sm text-neutral-400">Add to Google Calendar</span>
+            <span className="text-sm text-neutral-400">{t('ui.addToGoogleCalendar')}</span>
             <p className="text-xs text-neutral-600">
               {calendarConnected
                 ? 'Creates (or updates) an event for this task on save.'
@@ -107,7 +109,7 @@ export default function OptionalInfoFields({
           {showTimeField && (
             <div className="mt-2 flex items-center gap-2">
               <label htmlFor="sync-to-calendar-time" className="text-xs text-neutral-500">
-                Time (optional)
+                {t('ui.timeOptional')}
               </label>
               <input
                 id="sync-to-calendar-time"
@@ -136,7 +138,7 @@ export default function OptionalInfoFields({
                   </span>
                 </>
               ) : (
-                <span className="text-xs text-neutral-600">Blank = all-day event.</span>
+                <span className="text-xs text-neutral-600">{t('ui.blankAllDayEvent')}</span>
               )}
             </div>
           )}

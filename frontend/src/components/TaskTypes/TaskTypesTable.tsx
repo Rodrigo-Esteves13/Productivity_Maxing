@@ -2,6 +2,7 @@ import ColorDot from '../UI/ColorDot';
 import ActiveBadge from './ActiveBadge';
 import { PencilIcon, TrashIcon } from '../UI/Icons';
 import type { AdminTaskType } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface TaskTypesTableProps {
   taskTypes: AdminTaskType[];
@@ -10,24 +11,25 @@ interface TaskTypesTableProps {
 }
 
 export default function TaskTypesTable({ taskTypes, onEdit, onToggleActive }: TaskTypesTableProps) {
+  const { t } = useI18n();
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left text-neutral-300 whitespace-nowrap">
           <thead className="text-xs text-neutral-400 uppercase bg-neutral-950/50 border-b border-neutral-800">
             <tr>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Subcategories</th>
-              <th className="px-4 py-3 font-medium text-center">Order</th>
-              <th className="px-4 py-3 font-medium text-center">Status</th>
-              <th className="px-4 py-3 font-medium text-right">Actions</th>
+              <th className="px-4 py-3 font-medium">{t('ui.name')}</th>
+              <th className="px-4 py-3 font-medium">{t('ui.subcategories')}</th>
+              <th className="px-4 py-3 font-medium text-center">{t('ui.order')}</th>
+              <th className="px-4 py-3 font-medium text-center">{t('ui.status')}</th>
+              <th className="px-4 py-3 font-medium text-right">{t('ui.actions')}</th>
             </tr>
           </thead>
           <tbody>
             {taskTypes.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-neutral-500">
-                  No task types yet.
+                  {t('ui.noTaskTypesYet2')}
                 </td>
               </tr>
             ) : (

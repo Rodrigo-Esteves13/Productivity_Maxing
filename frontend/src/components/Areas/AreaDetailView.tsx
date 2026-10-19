@@ -5,6 +5,7 @@ import GradeComponentsPanel from './GradeComponentsPanel';
 import AreaInterestPicker from './AreaInterestPicker';
 import AreaProposalBlock from './AreaProposalBlock';
 import AreaStatusBadge from './AreaStatusBadge';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AreaDetailViewProps {
   area: Area;
@@ -14,15 +15,16 @@ interface AreaDetailViewProps {
 }
 
 export default function AreaDetailView({ area, taskTypes, onPropose, onWithdraw }: AreaDetailViewProps) {
+  const { t } = useI18n();
   const associatedType = taskTypes.find((t) => t.key === area.defaultTaskType);
 
   return (
     <div className="-mt-2">
-      <DetailRow label="Area Name">{area.name}</DetailRow>
-      <DetailRow label="Visibility">
+      <DetailRow label={t('ui.areaName')}>{area.name}</DetailRow>
+      <DetailRow label={t('ui.visibility')}>
         <AreaStatusBadge area={area} />
       </DetailRow>
-      <DetailRow label="Associated Color">
+      <DetailRow label={t('ui.associatedColor')}>
         <div className="flex items-center gap-3">
           <ColorDot color={area.colorHex} variant="square" size="md" />
           <span className="text-neutral-200 font-mono text-sm uppercase tracking-widest">
@@ -30,11 +32,11 @@ export default function AreaDetailView({ area, taskTypes, onPropose, onWithdraw 
           </span>
         </div>
       </DetailRow>
-      <DetailRow label="Associated Type">
-        {associatedType ? associatedType.label : <span className="text-neutral-500 italic">None, asked every time</span>}
+      <DetailRow label={t('ui.associatedType')}>
+        {associatedType ? associatedType.label : <span className="text-neutral-500 italic">{t('ui.noneAskedEveryTime')}</span>}
       </DetailRow>
-      <DetailRow label="Credits">
-        {area.credits ?? <span className="text-neutral-500 italic">Not set</span>}
+      <DetailRow label={t('ui.credits')}>
+        {area.credits ?? <span className="text-neutral-500 italic">{t('ui.notSet')}</span>}
       </DetailRow>
       <GradeComponentsPanel area={area} />
       <AreaInterestPicker area={area} />

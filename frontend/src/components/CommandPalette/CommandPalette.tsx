@@ -407,7 +407,7 @@ export default function CommandPalette() {
             className="flex-1 bg-transparent text-white placeholder:text-neutral-500 outline-none text-sm"
           />
           <kbd className="hidden sm:inline text-[10px] text-neutral-500 border border-neutral-700 rounded px-1.5 py-0.5">
-            Esc
+            {t('ui.esc')}
           </kbd>
         </div>
 

@@ -23,6 +23,7 @@ const ADMIN_LINKS: AdminLink[] = [
   { to: '/security', labelKey: 'nav.admin.security' },
   { to: '/appeals', labelKey: 'nav.admin.appeals' },
   { to: '/feedback', labelKey: 'nav.admin.feedback' },
+  { to: '/friend-code-requests', labelKey: 'nav.admin.friendCodes' },
 ];
 
 export default function AdminMenu({ currentPath }: AdminMenuProps) {

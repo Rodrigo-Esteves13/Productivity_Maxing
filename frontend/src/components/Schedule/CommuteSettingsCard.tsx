@@ -8,6 +8,7 @@ import Button from '../UI/Button';
 import { updateUserProfile } from '../../api/userService';
 import { estimateCommute } from '../../api/scheduleService';
 import type { CommuteMode, User } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface CommuteSettingsCardProps {
   user: User;
@@ -42,6 +43,7 @@ function timeValueToMinutes(value: string): number | null {
 }
 
 export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSettingsCardProps) {
+  const { t } = useI18n();
   const [commuteMinutes, setCommuteMinutes] = useState(
     user.commuteMinutes != null ? String(user.commuteMinutes) : '',
   );
@@ -136,30 +138,30 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 max-w-3xl mt-8">
       <h2 className="text-lg font-semibold text-white mb-1">Commute &amp; quiet hours</h2>
       <p className="text-sm text-neutral-400 mb-4">
-        Used by the study plan to avoid suggesting sessions while you're in transit or asleep.
+        {t('ui.usedByTheStudyPlan')}
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField label="Home address" htmlFor="commute-home">
+          <FormField label={t('ui.homeAddress')} htmlFor="commute-home">
             <Input
               id="commute-home"
               value={homeAddress}
               onChange={(e) => setHomeAddress(e.target.value)}
-              placeholder="Street, city"
+              placeholder={t('ui.streetCity')}
             />
           </FormField>
-          <FormField label="Campus address" htmlFor="commute-campus">
+          <FormField label={t('ui.campusAddress')} htmlFor="commute-campus">
             <Input
               id="commute-campus"
               value={campusAddress}
               onChange={(e) => setCampusAddress(e.target.value)}
-              placeholder="Institution, city"
+              placeholder={t('ui.institutionCity')}
             />
           </FormField>
         </div>
 
-        <FormField label="How do you get to campus?" htmlFor="commute-mode">
+        <FormField label={t('ui.howDoYouGetTo')} htmlFor="commute-mode">
           <Select
             id="commute-mode"
             value={commuteMode}
@@ -185,11 +187,11 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
             {isEstimating ? 'Calculating...' : 'Calculate automatically'}
           </Button>
           <p className="text-xs text-neutral-500">
-            Fills in the commute time below from the two addresses above, using the mode selected.
+            {t('ui.fillsInTheCommuteTime')}
           </p>
         </div>
 
-        <FormField label="Commute time (minutes, one-way)" htmlFor="commute-minutes">
+        <FormField label={t('ui.commuteTimeMinutesOneWay')} htmlFor="commute-minutes">
           <Input
             id="commute-minutes"
             type="number"
@@ -203,7 +205,7 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
         </FormField>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField label="Quiet hours start (e.g. bedtime)" htmlFor="quiet-start">
+          <FormField label={t('ui.quietHoursStartEG')} htmlFor="quiet-start">
             <Input
               id="quiet-start"
               type="time"
@@ -211,7 +213,7 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
               onChange={(e) => setQuietHoursStart(e.target.value)}
             />
           </FormField>
-          <FormField label="Quiet hours end (e.g. wake up)" htmlFor="quiet-end">
+          <FormField label={t('ui.quietHoursEndEG')} htmlFor="quiet-end">
             <Input
               id="quiet-end"
               type="time"

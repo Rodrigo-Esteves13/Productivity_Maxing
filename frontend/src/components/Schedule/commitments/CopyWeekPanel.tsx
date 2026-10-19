@@ -11,6 +11,7 @@ import {
 } from './copyWeekText';
 import type { CopyWeekInput, CopyWeekMode, CopyWeekResult } from '../../../types/models';
 import ToggleChip from '../../UI/ToggleChip';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface CopyWeekPanelProps {
   isSaving: boolean;
@@ -20,6 +21,7 @@ interface CopyWeekPanelProps {
 }
 
 export default function CopyWeekPanel({ isSaving, result, onCopy, onClose }: CopyWeekPanelProps) {
+  const { t } = useI18n();
   const sourceWeeks = useMemo(
     () => weekStartKeys(SOURCE_WEEKS.firstOffset, SOURCE_WEEKS.count).reverse(),
     [],
@@ -41,7 +43,7 @@ export default function CopyWeekPanel({ isSaving, result, onCopy, onClose }: Cop
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 mb-4 space-y-3">
       <fieldset>
         <legend className="block text-sm font-medium text-neutral-300 mb-1.5">
-          What should happen to that week
+          {t('ui.whatShouldHappenToThat')}
         </legend>
         <div className="flex flex-wrap gap-1.5">
           {MODE_OPTIONS.map((option) => (
@@ -54,7 +56,7 @@ export default function CopyWeekPanel({ isSaving, result, onCopy, onClose }: Cop
       </fieldset>
 
       <div className={`grid gap-3 ${isFixed ? 'grid-cols-1' : 'sm:grid-cols-2'}`}>
-        <Select label="Copy from" value={from} onChange={(e) => setFrom(e.target.value)}>
+        <Select label={t('ui.copyFrom')} value={from} onChange={(e) => setFrom(e.target.value)}>
           {sourceWeeks.map((week) => (
             <option key={week.value} value={week.value}>
               {describeWeek(week.value, week.weeksFromNow)}
@@ -62,7 +64,7 @@ export default function CopyWeekPanel({ isSaving, result, onCopy, onClose }: Cop
           ))}
         </Select>
         {!isFixed && (
-          <Select label="Copy into" value={to} onChange={(e) => setTo(e.target.value)}>
+          <Select label={t('ui.copyInto')} value={to} onChange={(e) => setTo(e.target.value)}>
             {targetWeeks.map((week) => (
               <option key={week.value} value={week.value}>
                 {describeWeek(week.value, week.weeksFromNow)}
@@ -86,7 +88,7 @@ export default function CopyWeekPanel({ isSaving, result, onCopy, onClose }: Cop
           {isSaving ? 'Copying...' : isFixed ? 'Make fixed' : 'Copy week'}
         </ActionButton>
         <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
-          Close
+          {t('ui.close')}
         </button>
       </div>
     </div>

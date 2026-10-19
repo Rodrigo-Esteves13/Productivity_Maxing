@@ -15,19 +15,28 @@ import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { FriendCodeRequestsService } from './friend-code-requests.service';
 import {
   SocialService,
+  type CodeChangeRequestView,
   type SendRequestResult,
   type SocialOverview,
 } from './social.service';
-import { BlockUserDto, SendFriendRequestDto } from './dto/social.dto';
+import {
+  BlockUserDto,
+  FriendCodeChangeRequestDto,
+  SendFriendRequestDto,
+} from './dto/social.dto';
 
 @ApiTags('Social')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('social')
 export class SocialController {
-  constructor(private readonly social: SocialService) {}
+  constructor(
+    private readonly social: SocialService,
+    private readonly codeRequests: FriendCodeRequestsService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -37,13 +46,17 @@ export class SocialController {
     return this.social.overview(user.id);
   }
 
-  @Post('friend-code/regenerate')
+  @Post('friend-code/change-request')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  async regenerate(
+  @ApiOperation({
+    summary: 'Ask an admin to change your friend code (a reason is required).',
+  })
+  requestCodeChange(
     @CurrentUser() user: AuthenticatedUser,
-  ): Promise<{ friendCode: string }> {
-    return { friendCode: await this.social.regenerateFriendCode(user.id) };
+    @Body() dto: FriendCodeChangeRequestDto,
+  ): Promise<CodeChangeRequestView> {
+    return this.codeRequests.create(user.id, dto.reason);
   }
 
   @Post('requests')

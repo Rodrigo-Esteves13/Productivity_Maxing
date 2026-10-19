@@ -4,18 +4,20 @@ import PriorityBadge from '../UI/PriorityBadge';
 import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
 import EmptyState from '../UI/EmptyState';
+import { useI18n } from '../../i18n/useI18n';
 
 export default function TodayPlan() {
+  const { t } = useI18n();
   const { tasks, isLoading, error } = useTodayPlan();
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
-      <h2 className="text-lg font-semibold text-white mb-4">Due today</h2>
+      <h2 className="text-lg font-semibold text-white mb-4">{t('ui.dueToday')}</h2>
 
       {isLoading && <LinesSkeleton lines={3} />}
       {!isLoading && error && <ErrorState message={error} />}
       {!isLoading && !error && tasks.length === 0 && (
-        <EmptyState message="No tasks due today." />
+        <EmptyState message={t('ui.noTasksDueToday')} />
       )}
 
       {!isLoading && !error && tasks.length > 0 && (
@@ -32,8 +34,7 @@ export default function TodayPlan() {
                 <p className="text-sm text-white truncate">{task.title}</p>
                 {task.weightPercentage != null && (
                   <p className="text-xs text-neutral-500">
-                    {task.weightPercentage}% of final grade
-                  </p>
+                    {t('ui.ofFinalGrade', { weightPercentage: task.weightPercentage })}</p>
                 )}
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">

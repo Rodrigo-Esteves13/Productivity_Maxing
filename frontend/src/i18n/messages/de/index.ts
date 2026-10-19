@@ -15,6 +15,7 @@ import { review } from './review';
 import { schedule } from './schedule';
 import { share } from './share';
 import { tasks } from './tasks';
+import { auto } from './auto';
 
 export const de: Record<string, string> = {
   ...packs,
@@ -34,4 +35,5 @@ export const de: Record<string, string> = {
   ...schedule,
   ...share,
   ...tasks,
+  ...auto,
 };

@@ -10,6 +10,7 @@ import ErrorState from '../../UI/ErrorState';
 import Input from '../../UI/Input';
 import RatingInput from '../../UI/RatingInput';
 import Select from '../../UI/Select';
+import { useI18n } from '../../../i18n/useI18n';
 
 export interface SessionFormValues {
   startedAt: string;
@@ -31,10 +32,11 @@ interface SessionFormProps {
 
 // So se carrega a lista de tasks quando se abre o formulario de nova sessao.
 function TaskPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const { t } = useI18n();
   const { data: tasks } = useLoadOnce(getUserTasks);
   return (
-    <Select label="Task (optional)" value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="">No task</option>
+    <Select label={t('ui.taskOptional')} value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">{t('ui.noTask')}</option>
       {(tasks ?? []).map((task) => (
         <option key={task.id} value={task.id}>
           {task.title}
@@ -45,6 +47,7 @@ function TaskPicker({ value, onChange }: { value: string; onChange: (id: string)
 }
 
 export default function SessionForm({ session, isSaving, serverError, onSubmit, onCancel }: SessionFormProps) {
+  const { t } = useI18n();
   const start = session ? toLocalParts(session.startedAt) : null;
   const end = session?.endedAt ? toLocalParts(session.endedAt) : null;
 
@@ -76,14 +79,14 @@ export default function SessionForm({ session, isSaving, serverError, onSubmit, 
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3 rounded-lg bg-neutral-800/40 p-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <Input label="From" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-        <Input label="To" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+        <Input label={t('ui.date')} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <Input label={t('ui.from')} type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+        <Input label={t('ui.to')} type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
       </div>
       {!session && <TaskPicker value={taskId} onChange={setTaskId} />}
-      <Input label="Note (optional)" value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} />
+      <Input label={t('ui.noteOptional')} value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} />
       <div>
-        <p className="mb-1.5 text-sm font-medium text-neutral-300">Focus (optional)</p>
+        <p className="mb-1.5 text-sm font-medium text-neutral-300">{t('ui.focusOptional')}</p>
         <RatingInput value={rating} onChange={setRating} />
       </div>
       {(formError || serverError) && <ErrorState message={formError || serverError} />}
@@ -92,7 +95,7 @@ export default function SessionForm({ session, isSaving, serverError, onSubmit, 
           {isSaving ? 'Saving...' : session ? 'Save changes' : 'Add session'}
         </ActionButton>
         <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
-          Cancel
+          {t('ui.cancel')}
         </button>
       </div>
     </form>

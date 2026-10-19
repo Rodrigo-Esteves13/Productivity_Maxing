@@ -6,6 +6,7 @@ import BackfillStudyTime from './BackfillStudyTime';
 import { useGradeProjection } from '../../hooks/useGradeProjection';
 import { formatDayLabel, formatDuration } from '../../lib/timeFormat';
 import type { GradeProjection, GradeProjectionTask } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 const MAX_TASKS_SHOWN = 4;
 // A partir daqui mais dados ja mexem pouco no resultado: deixa de se insistir.
@@ -41,6 +42,7 @@ function gradeText(value: number): string {
 }
 
 function TaskLine({ task }: { task: GradeProjectionTask }) {
+  const { t } = useI18n();
   const hasProjection = task.projectedGrade !== null && task.rangeGrade !== null;
   const belowTarget =
     hasProjection && task.targetGrade !== null && task.projectedGrade! < task.targetGrade;
@@ -60,10 +62,7 @@ function TaskLine({ task }: { task: GradeProjectionTask }) {
           <p className="mt-0.5 pl-4 text-sm text-white">
             ~{gradeText(task.projectedGrade!)}
             <span className="text-xs text-neutral-500">
-              {' '}
-              (likely {gradeText(task.rangeGrade!.low)} to {gradeText(task.rangeGrade!.high)} of {task.gradeMax}) with{' '}
-              {formatDuration(task.minutesBasis)} of study
-            </span>
+              {t('ui.likelyToOfWithOf', { low: gradeText(task.rangeGrade!.low), high: gradeText(task.rangeGrade!.high), gradeMax: task.gradeMax, minutesBasis: formatDuration(task.minutesBasis) })}</span>
           </p>
           {task.gainPerExtraHour !== null && task.gainPerExtraHour > 0 && (
             <p className={`mt-0.5 pl-4 text-xs ${belowTarget ? 'text-amber-400' : 'text-violet-300'}`}>
@@ -87,6 +86,7 @@ function TaskLine({ task }: { task: GradeProjectionTask }) {
 // se relacionou com as notas nas que ja fizeste. So mostra um numero
 // quando essa relacao existe nos teus dados.
 export default function GradeProjectionCard() {
+  const { t } = useI18n();
   const { projection, isLoading, error, reload } = useGradeProjection();
 
   if (isLoading || error || !projection || projection.status === 'nothing_pending') return null;
@@ -112,9 +112,9 @@ export default function GradeProjectionCard() {
               <TaskLine key={task.taskId} task={task} />
             ))}
           </ul>
-          {hidden > 0 && <p className="mt-3 text-xs text-neutral-500">and {hidden} more graded tasks</p>}
+          {hidden > 0 && <p className="mt-3 text-xs text-neutral-500">{t('ui.andMoreGradedTasks', { hidden: hidden })}</p>}
           <p className="mt-3 text-[11px] text-neutral-600">
-            An estimate from your own past results, not a promise. The range shows where about 8 in 10 of your grades fell.
+            {t('ui.anEstimateFromYourOwn')}
           </p>
         </>
       ) : (
@@ -138,7 +138,7 @@ export default function GradeProjectionCard() {
         to="/schedule"
         className="mt-3 inline-block text-xs text-violet-400 underline decoration-dotted hover:text-violet-300"
       >
-        Open study plan
+        {t('ui.openStudyPlan')}
       </Link>
     </DashboardCard>
   );

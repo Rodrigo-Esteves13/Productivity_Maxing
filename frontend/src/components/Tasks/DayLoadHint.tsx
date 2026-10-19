@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import type { Task } from '../../types/models';
 import { OVERLOAD_THRESHOLD, OVERLOAD_WINDOW_DAYS } from '../../utils/detectOverloadWeek';
 import { AlertTriangleIcon } from '../UI/Icons';
+import { useI18n } from '../../i18n/useI18n';
 
 interface DayLoadHintProps {
   // "YYYY-MM-DD" escolhido no formulario.
@@ -36,6 +37,7 @@ function formatHours(minutes: number): string {
 // carregados? Mesmo criterio do OverloadAlertCard (contagem de tasks por
 // fazer), so frontend, sobre as tasks que a pagina ja tem.
 export default function DayLoadHint({ date, tasks, excludeTaskId }: DayLoadHintProps) {
+  const { t } = useI18n();
   const load = useMemo(() => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
     const start = dayIndex(date);
@@ -72,9 +74,7 @@ export default function DayLoadHint({ date, tasks, excludeTaskId }: DayLoadHintP
         )}
         {heavyWeek && (
           <p>
-            Heavy stretch: {load.inWindow.length} pending tasks fall in the 7 days from this date.
-            Consider another day.
-          </p>
+            {t('ui.heavyStretchPendingTasksFall', { inWindowCount: load.inWindow.length })}</p>
         )}
       </div>
     </div>

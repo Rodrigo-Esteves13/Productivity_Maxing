@@ -2,6 +2,7 @@ import { AlertTriangleIcon, CheckIcon } from '../../UI/Icons';
 import type { StudyPlanResult } from '../../../types/models';
 import { BANNER_BY_STATUS } from './planCopy';
 import { formatDuration } from '../../../lib/timeFormat';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface CapacityBannerProps {
   plan: StudyPlanResult;
@@ -15,6 +16,7 @@ const ICON_BY_STATUS = {
 } as const;
 
 export default function CapacityBanner({ plan }: CapacityBannerProps) {
+  const { t } = useI18n();
   const { summary, dailyLimitMinutes } = plan;
   const copy = BANNER_BY_STATUS[summary.status];
   const Icon = ICON_BY_STATUS[summary.status];
@@ -37,9 +39,7 @@ export default function CapacityBanner({ plan }: CapacityBannerProps) {
         })}
       </p>
       <p className="text-xs text-neutral-500 mt-2">
-        Needed {formatDuration(summary.neededMinutes)} · Fits without overtime{' '}
-        {formatDuration(summary.availableMinutes)}
-      </p>
+        {t('ui.neededFitsWithoutOvertime', { neededMinutes: formatDuration(summary.neededMinutes), availableMinutes: formatDuration(summary.availableMinutes) })}</p>
     </div>
   );
 }

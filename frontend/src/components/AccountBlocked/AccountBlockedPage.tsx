@@ -6,6 +6,7 @@ import { ShieldIcon, AlertTriangleIcon, ClockIcon } from '../UI/Icons';
 import { getMyAccountStatus, submitAppeal, logoutRequest } from '../../api/userService';
 import type { AccountStatusInfo, AppealAvailability } from '../../types/models';
 import { getHttpStatus } from '../../lib/httpError';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AccountBlockedPageProps {
   // Só vem preenchido no caso "bloqueado logo no login" (ver Login.tsx) -
@@ -59,6 +60,7 @@ export default function AccountBlockedPage({
   bearerToken,
   initialMessage,
 }: AccountBlockedPageProps) {
+  const { t } = useI18n();
   const [load, setLoad] = useState<LoadState>({ status: 'loading' });
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -240,9 +242,9 @@ export default function AccountBlockedPage({
               </p>
               <div className="flex justify-center gap-3">
                 <Button variant="secondary" onClick={fetchStatus}>
-                  Try again
+                  {t('ui.tryAgain')}
                 </Button>
-                <Button onClick={handleLogout}>Log out</Button>
+                <Button onClick={handleLogout}>{t('ui.logOut')}</Button>
               </div>
             </div>
           )}
@@ -250,9 +252,9 @@ export default function AccountBlockedPage({
           {load.status === 'loaded' && load.data.status === 'ACTIVE' && (
             <div className="text-center">
               <p className="text-neutral-400 mb-6">
-                Your account status has changed. Reload the page to continue.
+                {t('ui.yourAccountStatusHasChanged')}
               </p>
-              <Button onClick={() => window.location.reload()}>Reload</Button>
+              <Button onClick={() => window.location.reload()}>{t('ui.reload')}</Button>
             </div>
           )}
 
@@ -295,6 +297,7 @@ function AccountBlockedDetails({
   onSubmit,
   onLogout,
 }: DetailsProps) {
+  const { t } = useI18n();
   const isBanned = data.status === 'BANNED';
   const accentText = isBanned ? 'text-red-400' : 'text-amber-400';
 
@@ -325,7 +328,7 @@ function AccountBlockedDetails({
         {!isBanned && (
           <div className="flex items-start gap-2 text-sm text-neutral-300">
             <ClockIcon className="h-4 w-4 shrink-0 mt-0.5 text-neutral-500" />
-            <span>Suspended until {formatDate(data.suspendedUntil)}</span>
+            <span>{t('ui.suspendedUntil2', { suspendedUntil: formatDate(data.suspendedUntil) })}</span>
           </div>
         )}
         <div className="flex items-start gap-2 text-sm text-neutral-300">
@@ -333,8 +336,7 @@ function AccountBlockedDetails({
           <span>{data.statusReason || 'No reason was given.'}</span>
         </div>
         <p className="text-xs text-neutral-500 pt-1">
-          Last updated {formatDate(data.statusUpdatedAt)}
-        </p>
+          {t('ui.lastUpdated', { statusUpdatedAt: formatDate(data.statusUpdatedAt) })}</p>
       </div>
 
       {availability && (
@@ -343,9 +345,7 @@ function AccountBlockedDetails({
 
       {pendingAppeal && (
         <p className="text-sm text-neutral-400 mb-6">
-          Your appeal was submitted on {formatDate(pendingAppeal.createdAt)} and is awaiting
-          review.
-        </p>
+          {t('ui.yourAppealWasSubmittedOn', { createdAt: formatDate(pendingAppeal.createdAt) })}</p>
       )}
 
       {resolvedAppeal && resolvedAppeal.resolution === 'DENIED' && (
@@ -357,9 +357,7 @@ function AccountBlockedDetails({
 
       {resolvedAppeal && resolvedAppeal.resolution === 'APPROVED' && (
         <p className="text-sm text-neutral-400 mb-6">
-          Your appeal was approved on {formatDate(resolvedAppeal.resolvedAt)}. Reload the page to
-          continue.
-        </p>
+          {t('ui.yourAppealWasApprovedOn', { resolvedAt: formatDate(resolvedAppeal.resolvedAt) })}</p>
       )}
 
       {!pendingAppeal && availability?.appealsExhausted && (
@@ -382,8 +380,8 @@ function AccountBlockedDetails({
       {canSubmitNewAppeal && (
         <div className="text-left mb-6">
           <Textarea
-            label="Appeal this decision"
-            placeholder="Explain why you believe this suspension/ban should be reconsidered..."
+            label={t('ui.appealThisDecision')}
+            placeholder={t('ui.explainWhyYouBelieveThis')}
             rows={5}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -402,7 +400,7 @@ function AccountBlockedDetails({
           onClick={onLogout}
           className="text-sm text-neutral-500 hover:text-neutral-300 underline underline-offset-2 transition-colors"
         >
-          Log out
+          {t('ui.logOut')}
         </button>
       </div>
     </>

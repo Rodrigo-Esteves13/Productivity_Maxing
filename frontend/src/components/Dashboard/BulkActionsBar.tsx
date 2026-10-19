@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CheckIcon, TrashIcon } from '../UI/Icons';
 import { useFeedback } from '../../context/useFeedback';
+import { useI18n } from '../../i18n/useI18n';
 
 interface BulkActionsBarProps {
   selectedCount: number;
@@ -20,6 +21,7 @@ export default function BulkActionsBar({
   onDelete,
   onClear,
 }: BulkActionsBarProps) {
+  const { t } = useI18n();
   const { confirm } = useFeedback();
   const [isMarkingDone, setIsMarkingDone] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -81,7 +83,7 @@ export default function BulkActionsBar({
           disabled={isMarkingDone || isDeleting}
           className="px-3 py-1.5 text-sm text-neutral-400 hover:text-neutral-200 disabled:opacity-50"
         >
-          Clear
+          {t('ui.clear')}
         </button>
       </div>
     </div>

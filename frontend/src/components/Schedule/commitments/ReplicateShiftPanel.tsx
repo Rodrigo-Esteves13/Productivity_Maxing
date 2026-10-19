@@ -5,6 +5,7 @@ import ToggleChip from '../../UI/ToggleChip';
 import { formatDayLabel } from '../../../lib/timeFormat';
 import { WEEKDAYS } from './shiftText';
 import type { CreateWorkShiftInput, WorkShift } from '../../../types/models';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface ReplicateShiftPanelProps {
   shift: WorkShift;
@@ -32,6 +33,7 @@ export default function ReplicateShiftPanel({
   onReplicate,
   onClose,
 }: ReplicateShiftPanelProps) {
+  const { t } = useI18n();
   const isWeekly = shift.dayOfWeek !== null;
   const baseDate = shift.date ? shift.date.slice(0, 10) : null;
   const [weekdays, setWeekdays] = useState<number[]>([]);
@@ -109,7 +111,7 @@ export default function ReplicateShiftPanel({
           {isSaving ? 'Copying...' : count > 1 ? `Copy to ${count} days` : 'Copy'}
         </ActionButton>
         <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
-          Cancel
+          {t('ui.cancel')}
         </button>
       </div>
     </div>

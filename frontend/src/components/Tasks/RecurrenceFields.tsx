@@ -1,4 +1,5 @@
 import { RECURRENCE_UNIT, type RecurrenceValue } from '../../lib/recurrence';
+import { useI18n } from '../../i18n/useI18n';
 
 interface RecurrenceFieldsProps {
   idPrefix: string;
@@ -8,13 +9,14 @@ interface RecurrenceFieldsProps {
 
 // "Repetir": ao concluir a task cria-se a proxima ocorrencia.
 export default function RecurrenceFields({ idPrefix, value, onChange }: RecurrenceFieldsProps) {
+  const { t } = useI18n();
   const inputClass =
     'rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm text-neutral-200 focus:outline-none focus:border-violet-600';
 
   return (
     <div className="space-y-2">
       <label htmlFor={`${idPrefix}-repeat`} className="block text-sm font-medium text-neutral-300">
-        Repeat <span className="text-neutral-500 font-normal">(the next one is created when you mark this as completed)</span>
+        Repeat <span className="text-neutral-500 font-normal">{t('ui.theNextOneIsCreated')}</span>
       </label>
       <div className="flex flex-wrap items-center gap-2">
         <select
@@ -23,10 +25,10 @@ export default function RecurrenceFields({ idPrefix, value, onChange }: Recurren
           onChange={(e) => onChange({ ...value, frequency: e.target.value as RecurrenceValue['frequency'] })}
           className={inputClass}
         >
-          <option value="">Does not repeat</option>
-          <option value="DAILY">Daily</option>
-          <option value="WEEKLY">Weekly</option>
-          <option value="MONTHLY">Monthly</option>
+          <option value="">{t('ui.doesNotRepeat')}</option>
+          <option value="DAILY">{t('ui.daily')}</option>
+          <option value="WEEKLY">{t('ui.weekly')}</option>
+          <option value="MONTHLY">{t('ui.monthly')}</option>
         </select>
         {value.frequency && (
           <>
@@ -37,15 +39,15 @@ export default function RecurrenceFields({ idPrefix, value, onChange }: Recurren
               max={365}
               value={value.interval}
               onChange={(e) => onChange({ ...value, interval: e.target.value })}
-              aria-label="Repeat interval"
+              aria-label={t('ui.repeatInterval')}
               className={`${inputClass} w-20`}
             />
-            <span className="text-sm text-neutral-400">{RECURRENCE_UNIT[value.frequency]}, until</span>
+            <span className="text-sm text-neutral-400">{t('ui.until', { frequency: RECURRENCE_UNIT[value.frequency] })}</span>
             <input
               type="date"
               value={value.until}
               onChange={(e) => onChange({ ...value, until: e.target.value })}
-              aria-label="Repeat until (optional)"
+              aria-label={t('ui.repeatUntilOptional')}
               className={inputClass}
             />
           </>

@@ -10,8 +10,10 @@ import UserStatusModal from '../components/Users/UserStatusModal';
 import { useAuth } from '../context/useAuth';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useUsersPage } from '../hooks/useUsersPage';
+import { useI18n } from '../i18n/useI18n';
 
 export default function Users() {
+  const { t } = useI18n();
   useDocumentTitle('User Management');
   const { user: currentUser } = useAuth();
   const {
@@ -38,8 +40,8 @@ export default function Users() {
   return (
     <PageLayout>
       <PageHeader
-        title="User Management"
-        description="Area exclusive to Administrators to view, edit, and export or delete user accounts."
+        title={t('ui.userManagement')}
+        description={t('ui.areaExclusiveToAdministratorsTo')}
       />
 
       {isLoading ? (
@@ -47,7 +49,7 @@ export default function Users() {
       ) : error ? (
         <ErrorState message={error} />
       ) : users.length === 0 ? (
-        <EmptyState message="No users registered in the system." />
+        <EmptyState message={t('ui.noUsersRegisteredInThe')} />
       ) : (
         <UsersTable
           users={users}
@@ -62,9 +64,9 @@ export default function Users() {
         />
       )}
 
-      {exportingId && <p className="mt-3 text-xs text-neutral-500">Preparing export...</p>}
+      {exportingId && <p className="mt-3 text-xs text-neutral-500">{t('ui.preparingExport')}</p>}
 
-      <Modal isOpen={editingUser !== null} onClose={() => setEditingUser(null)} title="Edit User">
+      <Modal isOpen={editingUser !== null} onClose={() => setEditingUser(null)} title={t('ui.editUser2')}>
         {editingUser && (
           <UserEditForm
             idPrefix="edit-user"

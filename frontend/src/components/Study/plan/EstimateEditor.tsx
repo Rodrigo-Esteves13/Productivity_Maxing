@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { updateTask } from '../../../api/userService';
+import { useI18n } from '../../../i18n/useI18n';
 
 const MIN_HOURS = 0.25;
 const MAX_HOURS = 15; // alinhado com MAX_TASK_MINUTES (900) no backend
@@ -17,6 +18,7 @@ interface EstimateEditorProps {
 // plano: é a forma mais direta de corrigir um palpite que não bate certo
 // com a realidade, e passa a mandar sobre previsão e valores por defeito.
 export default function EstimateEditor({ taskId, currentMinutes, onSaved, onCancel }: EstimateEditorProps) {
+  const { t } = useI18n();
   const [hours, setHours] = useState(String(Math.round((currentMinutes / MINUTES_PER_HOUR) * 4) / 4));
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -44,7 +46,7 @@ export default function EstimateEditor({ taskId, currentMinutes, onSaved, onCanc
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="mt-2 flex flex-wrap items-center gap-2">
       <label className="text-xs text-neutral-400" htmlFor={`estimate-${taskId}`}>
-        Hours needed
+        {t('ui.hoursNeeded')}
       </label>
       <input
         id={`estimate-${taskId}`}
@@ -65,7 +67,7 @@ export default function EstimateEditor({ taskId, currentMinutes, onSaved, onCanc
         {isSaving ? 'Saving...' : 'Save'}
       </button>
       <button type="button" onClick={onCancel} className="text-xs text-neutral-400 hover:text-white">
-        Cancel
+        {t('ui.cancel')}
       </button>
       {error && <span role="alert" className="text-xs text-red-400">{error}</span>}
     </form>

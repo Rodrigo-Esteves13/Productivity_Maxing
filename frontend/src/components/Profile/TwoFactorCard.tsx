@@ -5,6 +5,7 @@ import { getApiMessage } from '../../lib/httpError';
 import { useFeedback } from '../../context/useFeedback';
 import CopyButton from '../UI/CopyButton';
 import FormError from '../UI/FormError';
+import { useI18n } from '../../i18n/useI18n';
 
 interface TwoFactorCardProps {
   user: User;
@@ -20,6 +21,7 @@ type Step =
 // 2FA por app autenticadora. So aparece quando o backend tem o 2FA ligado
 // (user.twoFactorAvailable); enquanto estiver desligado nao se renderiza nada.
 export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps) {
+  const { t } = useI18n();
   const { notify } = useFeedback();
   const [step, setStep] = useState<Step>({ kind: 'idle' });
   const [code, setCode] = useState('');
@@ -70,10 +72,9 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 max-w-3xl mt-8">
-      <h2 className="text-lg font-semibold text-white mb-1">Two-factor authentication</h2>
+      <h2 className="text-lg font-semibold text-white mb-1">{t('ui.twoFactorAuthentication')}</h2>
       <p className="text-sm text-neutral-400 mb-3">
-        Ask for a code from an authenticator app (Google Authenticator, Authy, 1Password) at every login,
-        including Google, GitHub and Discord sign-in.
+        {t('ui.askForACodeFrom')}
       </p>
       {error && <FormError message={error} />}
 
@@ -84,13 +85,13 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
           onClick={() => void startSetup()}
           className="rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2"
         >
-          Set up
+          {t('ui.setUp')}
         </button>
       )}
 
       {step.kind === 'idle' && enabled && (
         <div className="flex items-center gap-3">
-          <span className="text-sm text-violet-300">On</span>
+          <span className="text-sm text-violet-300">{t('ui.on')}</span>
           <button
             type="button"
             onClick={() => {
@@ -100,7 +101,7 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
             }}
             className="text-sm text-neutral-400 hover:text-red-400"
           >
-            Turn off
+            {t('ui.turnOff')}
           </button>
         </div>
       )}
@@ -108,8 +109,7 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
       {step.kind === 'setup' && (
         <div className="space-y-3">
           <p className="text-sm text-neutral-300">
-            In your authenticator app, add an account by entering this key manually, then type the 6-digit
-            code it shows.
+            {t('ui.inYourAuthenticatorAppAdd')}
           </p>
           <div className="flex items-center gap-2">
             <code className="flex-1 min-w-0 break-all rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-xs text-neutral-200">
@@ -118,7 +118,7 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
             <CopyButton text={step.secret} />
           </div>
           <p className="text-xs text-neutral-500 break-all">
-            Or open this link on your phone: <a className="underline text-violet-400" href={step.otpauthUri}>setup link</a>
+            Or open this link on your phone: <a className="underline text-violet-400" href={step.otpauthUri}>{t('ui.setupLink')}</a>
           </p>
           <input
             type="text"
@@ -128,7 +128,7 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
             placeholder="123456"
-            aria-label="6-digit code"
+            aria-label={t('ui.6DigitCode')}
             className={inputClass}
           />
           <div className="flex gap-3">
@@ -138,10 +138,10 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
               onClick={() => void confirm()}
               className="rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2"
             >
-              Turn on
+              {t('ui.turnOn')}
             </button>
             <button type="button" onClick={() => setStep({ kind: 'idle' })} className="text-sm text-neutral-400 hover:text-white">
-              Cancel
+              {t('ui.cancel')}
             </button>
           </div>
         </div>
@@ -150,7 +150,7 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
       {step.kind === 'codes' && (
         <div className="space-y-3">
           <p className="text-sm text-amber-300">
-            Save these recovery codes now. Each works once if you lose your phone. They will not be shown again.
+            {t('ui.saveTheseRecoveryCodesNow')}
           </p>
           <div className="grid grid-cols-2 gap-2 max-w-xs">
             {step.recoveryCodes.map((c) => (
@@ -159,10 +159,10 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
               </code>
             ))}
           </div>
-          <CopyButton text={step.recoveryCodes.join('\n')} label="Copy all" />
+          <CopyButton text={step.recoveryCodes.join('\n')} label={t('ui.copyAll')} />
           <div>
             <button type="button" onClick={() => setStep({ kind: 'idle' })} className="text-sm text-violet-400 hover:text-violet-300 underline">
-              I saved them
+              {t('ui.iSavedThem')}
             </button>
           </div>
         </div>
@@ -170,14 +170,14 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
 
       {step.kind === 'disable' && (
         <div className="space-y-3">
-          <p className="text-sm text-neutral-300">Enter a code from your app (or a recovery code) to turn it off.</p>
+          <p className="text-sm text-neutral-300">{t('ui.enterACodeFromYour')}</p>
           <input
             type="text"
             autoComplete="one-time-code"
             maxLength={32}
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            aria-label="Authentication code"
+            aria-label={t('ui.authenticationCode')}
             className={inputClass}
           />
           <div className="flex gap-3">
@@ -187,10 +187,10 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
               onClick={() => void disable()}
               className="rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2"
             >
-              Turn off
+              {t('ui.turnOff')}
             </button>
             <button type="button" onClick={() => setStep({ kind: 'idle' })} className="text-sm text-neutral-400 hover:text-white">
-              Cancel
+              {t('ui.cancel')}
             </button>
           </div>
         </div>

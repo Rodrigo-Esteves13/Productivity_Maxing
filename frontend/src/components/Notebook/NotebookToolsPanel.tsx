@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SNIPPET_SECTIONS, TABLE_PRESETS, buildMarkdownTable } from './notebookSnippets';
 import { TableIcon, SigmaIcon, NetworkIcon, CodeIcon, CopyIcon, CheckIcon, XIcon } from '../UI/Icons';
 import { COPY_FEEDBACK_MS } from '../../lib/constants';
+import { useI18n } from '../../i18n/useI18n';
 
 type InsertMode = 'insert' | 'copy';
 
@@ -21,6 +22,7 @@ const SECTION_ICONS: Record<string, typeof TableIcon> = {
 // utilizador escolhe o modo uma vez e depois clica à vontade em vários
 // símbolos seguidos sem ter de repetir a escolha a cada clique.
 export default function NotebookToolsPanel({ onInsert, onAddTable, onClose }: NotebookToolsPanelProps) {
+  const { t } = useI18n();
   const [mode, setMode] = useState<InsertMode>('insert');
   const [feedbackKey, setFeedbackKey] = useState<string | null>(null);
   const [customRows, setCustomRows] = useState('3');
@@ -67,7 +69,7 @@ export default function NotebookToolsPanel({ onInsert, onAddTable, onClose }: No
   return (
     <div className="flex h-full flex-col rounded-lg border border-neutral-800 bg-neutral-900/60">
       <div className="flex items-center justify-between gap-2 border-b border-neutral-800 px-3 py-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Tools</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">{t('ui.tools')}</span>
         <div className="flex items-center gap-2">
           <div className="flex items-center rounded-md border border-neutral-800 bg-neutral-950 p-0.5">
             <button
@@ -78,7 +80,7 @@ export default function NotebookToolsPanel({ onInsert, onAddTable, onClose }: No
                 mode === 'insert' ? 'bg-violet-600 text-white' : 'text-neutral-400 hover:text-neutral-200'
               }`}
             >
-              Insert
+              {t('ui.insert')}
             </button>
             <button
               type="button"
@@ -88,13 +90,13 @@ export default function NotebookToolsPanel({ onInsert, onAddTable, onClose }: No
                 mode === 'copy' ? 'bg-violet-600 text-white' : 'text-neutral-400 hover:text-neutral-200'
               }`}
             >
-              Copy
+              {t('ui.copy')}
             </button>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close tools panel"
+            aria-label={t('ui.closeToolsPanel')}
             className="rounded-md p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
           >
             <XIcon className="h-3.5 w-3.5" />
@@ -126,17 +128,17 @@ export default function NotebookToolsPanel({ onInsert, onAddTable, onClose }: No
               max={20}
               value={customRows}
               onChange={(e) => setCustomRows(e.target.value)}
-              aria-label="Custom table rows"
+              aria-label={t('ui.customTableRows')}
               className="w-12 rounded-md border border-neutral-800 bg-neutral-950 px-1.5 py-1 text-xs text-neutral-100 focus:border-violet-500 focus:outline-none"
             />
-            <span className="text-xs text-neutral-600">rows x</span>
+            <span className="text-xs text-neutral-600">{t('ui.rowsX')}</span>
             <input
               type="number"
               min={1}
               max={10}
               value={customCols}
               onChange={(e) => setCustomCols(e.target.value)}
-              aria-label="Custom table columns"
+              aria-label={t('ui.customTableColumns')}
               className="w-12 rounded-md border border-neutral-800 bg-neutral-950 px-1.5 py-1 text-xs text-neutral-100 focus:border-violet-500 focus:outline-none"
             />
             <span className="text-xs text-neutral-600">cols</span>

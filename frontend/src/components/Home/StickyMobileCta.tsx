@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { COOKIE_NOTICE_DISMISSED_KEY } from '../../lib/constants';
+import { useI18n } from '../../i18n/useI18n';
 
 // Desktop already has the Register/Log in buttons sitting right under the
 // hero, always in view on any reasonable viewport height. On mobile the
@@ -17,6 +18,7 @@ import { COOKIE_NOTICE_DISMISSED_KEY } from '../../lib/constants';
 // appears, rather than guessing at a pixel offset that only holds for one
 // specific line-wrap of the cookie notice's text.
 export default function StickyMobileCta() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [cookieNoticeDismissed, setCookieNoticeDismissed] = useState(true);
 
@@ -33,7 +35,7 @@ export default function StickyMobileCta() {
         onClick={() => navigate('/register')}
         className="w-full py-3 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-semibold transition-colors"
       >
-        Get started for free
+        {t('ui.getStartedForFree')}
       </button>
     </div>
   );

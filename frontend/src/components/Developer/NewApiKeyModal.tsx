@@ -1,4 +1,5 @@
 import CopyButton from '../UI/CopyButton';
+import { useI18n } from '../../i18n/useI18n';
 
 interface NewApiKeyModalProps {
   apiKey: string;
@@ -10,17 +11,17 @@ interface NewApiKeyModalProps {
 // key para sempre, por isso o aviso é bem explícito e o fecho é sempre uma
 // ação consciente do user (sem clique-fora nem Escape a fechar por acidente).
 export default function NewApiKeyModal({ apiKey, onClose }: NewApiKeyModalProps) {
+  const { t } = useI18n();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className="bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
         <div className="p-5 border-b border-neutral-800">
-          <h2 className="text-lg font-bold text-white">Your new API key</h2>
+          <h2 className="text-lg font-bold text-white">{t('ui.yourNewApiKey')}</h2>
         </div>
 
         <div className="p-5">
           <p className="text-sm text-amber-400 mb-4">
-            Copy it now. For security reasons, it won't be shown again, if you lose it,
-            you'll need to generate a new one.
+            {t('ui.copyItNowForSecurity')}
           </p>
 
           <div className="flex items-center gap-2 mb-4">
@@ -35,7 +36,7 @@ export default function NewApiKeyModal({ apiKey, onClose }: NewApiKeyModalProps)
             onClick={onClose}
             className="w-full py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-semibold transition-colors"
           >
-            I've saved it
+            {t('ui.iVeSavedIt')}
           </button>
         </div>
       </div>

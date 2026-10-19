@@ -10,6 +10,7 @@ import Button from '../../UI/Button';
 import EmptyState from '../../UI/EmptyState';
 import ErrorState from '../../UI/ErrorState';
 import LinesSkeleton from '../../UI/LinesSkeleton';
+import { useI18n } from '../../../i18n/useI18n';
 
 const DEFAULT_BREAK_MINUTES = 5;
 const MINUTES_PER_DAY = 24 * 60;
@@ -27,6 +28,7 @@ function blockMinutes(block: StudyPlanSuggestion): number {
 // Os blocos que o plano de estudo reservou para hoje, com "Start" que abre
 // uma sessao ja ligada a task e com o tempo do bloco.
 export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps) {
+  const { t } = useI18n();
   const { activeSession, isSubmitting, start } = useActiveStudySession();
 
   const today = toDateKey(todayUtcAnchored());
@@ -46,13 +48,13 @@ export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
-      <h2 className="text-lg font-semibold text-white mb-1">Study blocks for today</h2>
-      <p className="mb-4 text-xs text-neutral-500">From your study plan. Start one and the timer matches its length.</p>
+      <h2 className="text-lg font-semibold text-white mb-1">{t('ui.studyBlocksForToday')}</h2>
+      <p className="mb-4 text-xs text-neutral-500">{t('ui.fromYourStudyPlanStart')}</p>
 
       {isLoading && <LinesSkeleton lines={3} />}
       {!isLoading && error && <ErrorState message={error} />}
       {!isLoading && !error && blocks.length === 0 && (
-        <EmptyState message="No study blocks planned for today." />
+        <EmptyState message={t('ui.noStudyBlocksPlannedFor')} />
       )}
 
       {!isLoading && !error && blocks.length > 0 && (
@@ -71,7 +73,7 @@ export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps
                 <div className="min-w-0 flex-1 basis-40">
                   <StudyBlockTitle block={block} className="text-sm font-medium text-white" />
                   {block.kind === 'review' && (
-                    <p className="text-[11px] text-violet-300">Light review to keep it fresh</p>
+                    <p className="text-[11px] text-violet-300">{t('ui.lightReviewToKeepIt')}</p>
                   )}
                   <p className="text-xs text-neutral-500">
                     {formatClock(block.startMinutes)}-{formatClock(block.endMinutes)} ({blockMinutes(block)} min)

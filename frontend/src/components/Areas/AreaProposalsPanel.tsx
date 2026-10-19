@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ColorDot from '../UI/ColorDot';
 import Button from '../UI/Button';
 import type { AreaProposal } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AreaProposalsPanelProps {
   proposals: AreaProposal[];
@@ -12,16 +13,16 @@ interface AreaProposalsPanelProps {
 // Fila do admin. Mostra só o que vai tornar-se público (nome, cor, créditos,
 // tipo) e o nome de quem propôs.
 export default function AreaProposalsPanel({ proposals, onApprove, onReject }: AreaProposalsPanelProps) {
+  const { t } = useI18n();
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [note, setNote] = useState('');
 
   if (proposals.length === 0) return null;
 
   return (
-    <section className="mb-8" aria-label="Area proposals">
+    <section className="mb-8" aria-label={t('ui.areaProposals')}>
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-amber-400">
-        Proposals to review ({proposals.length})
-      </h2>
+        {t('ui.proposalsToReview', { proposalsCount: proposals.length })}</h2>
       <ul className="space-y-2">
         {proposals.map((p) => (
           <li key={p.id} className="rounded-xl border border-amber-500/30 bg-neutral-900/50 p-4">
@@ -37,7 +38,7 @@ export default function AreaProposalsPanel({ proposals, onApprove, onReject }: A
               </div>
               <div className="flex gap-2">
                 <Button type="button" variant="secondary" onClick={() => onApprove(p)}>
-                  Approve
+                  {t('ui.approve')}
                 </Button>
                 <Button
                   type="button"
@@ -47,7 +48,7 @@ export default function AreaProposalsPanel({ proposals, onApprove, onReject }: A
                     setNote('');
                   }}
                 >
-                  Reject
+                  {t('ui.reject')}
                 </Button>
               </div>
             </div>
@@ -57,8 +58,8 @@ export default function AreaProposalsPanel({ proposals, onApprove, onReject }: A
                   value={note}
                   maxLength={300}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Reason (optional, shown to the owner)"
-                  aria-label="Rejection reason"
+                  placeholder={t('ui.reasonOptionalShownToThe')}
+                  aria-label={t('ui.rejectionReason')}
                   className="min-w-0 flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
                 />
                 <Button
@@ -69,7 +70,7 @@ export default function AreaProposalsPanel({ proposals, onApprove, onReject }: A
                     setRejectingId(null);
                   }}
                 >
-                  Confirm reject
+                  {t('ui.confirmReject')}
                 </Button>
               </div>
             )}

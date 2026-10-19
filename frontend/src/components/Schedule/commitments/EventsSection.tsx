@@ -3,6 +3,7 @@ import { PlusIcon } from '../../UI/Icons';
 import EventForm from './EventForm';
 import ShiftList from './ShiftList';
 import type { Commitment, CreateWorkShiftInput, UpdateWorkShiftInput, WorkShift } from '../../../types/models';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface EventsSectionProps {
   // Turnos sem local: eventos unicos e turnos antigos criados antes de haver locais.
@@ -15,14 +16,14 @@ interface EventsSectionProps {
 }
 
 export default function EventsSection({ shifts, commitments, isSaving, onAdd, onEdit, onDelete }: EventsSectionProps) {
+  const { t } = useI18n();
   const [isAdding, setIsAdding] = useState(false);
 
   return (
     <section className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
-      <h3 className="text-base font-semibold text-white">One-off events</h3>
+      <h3 className="text-base font-semibold text-white">{t('ui.oneOffEvents')}</h3>
       <p className="mb-3 text-xs text-neutral-500">
-        Things that happen once, like a doctor visit or an interview. No place needed, and they hide
-        themselves after the day.
+        {t('ui.thingsThatHappenOnceLike')}
       </p>
 
       <ShiftList

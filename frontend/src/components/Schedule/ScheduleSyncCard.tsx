@@ -6,10 +6,12 @@ import { useCalendarStatus } from '../../hooks/useCalendarStatus';
 import { removeSyncedSchedule } from '../../api/calendarService';
 import type { RemoveAllResult } from '../../api/calendarService';
 import { requestCalendarSyncReview } from '../../lib/calendarSyncEvents';
+import { useI18n } from '../../i18n/useI18n';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function ScheduleSyncCard() {
+  const { t } = useI18n();
   const connected = useCalendarStatus();
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
@@ -33,13 +35,12 @@ export default function ScheduleSyncCard() {
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 mt-6">
-      <h2 className="text-lg font-semibold text-white mb-1">Google Calendar</h2>
+      <h2 className="text-lg font-semibold text-white mb-1">{t('ui.googleCalendar')}</h2>
 
       {!connected ? (
         <>
           <p className="text-sm text-neutral-400 mb-4">
-            Connect Google Calendar to see your classes, work, travel time and study
-            blocks there. You will be asked to confirm before anything is written.
+            {t('ui.connectGoogleCalendarToSee')}
           </p>
           <a
             href={`${apiUrl}/auth/google/link-calendar`}
@@ -52,8 +53,7 @@ export default function ScheduleSyncCard() {
       ) : (
         <>
           <p className="text-sm text-neutral-400 mb-4">
-            Connected. Whenever your schedule, work or study plan changes you will be
-            asked to confirm the update. Only events this app created are ever edited.
+            {t('ui.connectedWheneverYourScheduleWork')}
           </p>
 
           {removed && (
@@ -66,7 +66,7 @@ export default function ScheduleSyncCard() {
 
           <div className="flex flex-wrap items-center gap-2">
             <ActionButton onClick={() => requestCalendarSyncReview({ force: true })}>
-              Review and sync now
+              {t('ui.reviewAndSyncNow')}
             </ActionButton>
 
             {!confirmRemove ? (
@@ -75,11 +75,11 @@ export default function ScheduleSyncCard() {
                 onClick={() => setConfirmRemove(true)}
                 className="px-3 py-2 text-sm rounded-lg border border-neutral-700 text-neutral-400 hover:text-white"
               >
-                Remove synced events
+                {t('ui.removeSyncedEvents')}
               </button>
             ) : (
               <span className="flex items-center gap-2 text-sm">
-                <span className="text-neutral-400">Delete all events this app added?</span>
+                <span className="text-neutral-400">{t('ui.deleteAllEventsThisApp')}</span>
                 <button
                   type="button"
                   disabled={isRemoving}
@@ -92,7 +92,7 @@ export default function ScheduleSyncCard() {
                   {isRemoving ? 'Removing...' : 'Yes, remove'}
                 </button>
                 <button type="button" onClick={() => setConfirmRemove(false)} className="text-neutral-400 hover:text-white">
-                  Cancel
+                  {t('ui.cancel')}
                 </button>
               </span>
             )}

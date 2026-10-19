@@ -6,6 +6,7 @@ import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
 import { useAreaLookup } from '../../hooks/useAreaLookup';
 import { MS_PER_DAY } from '../../lib/timeConstants';
+import { useI18n } from '../../i18n/useI18n';
 
 interface UpcomingTasksCardProps {
   tasks: Task[];
@@ -18,6 +19,7 @@ const WINDOW_DAYS = 7;
 // TasksTable below it - the table has every task and every filter, this
 // is just the next week at a glance, no scrolling needed.
 export default function UpcomingTasksCard({ tasks, areas }: UpcomingTasksCardProps) {
+  const { t } = useI18n();
   const areaById = useAreaLookup(areas);
 
   const now = Date.now();
@@ -62,7 +64,7 @@ export default function UpcomingTasksCard({ tasks, areas }: UpcomingTasksCardPro
         to="/tasks"
         className="block mt-3 text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
       >
-        View all tasks
+        {t('ui.viewAllTasks')}
       </Link>
     </DashboardCard>
   );

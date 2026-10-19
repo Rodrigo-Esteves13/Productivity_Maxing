@@ -3,6 +3,7 @@ import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
 import EmptyState from '../UI/EmptyState';
 import type { HeatmapCell } from '../../types/models';
+import { useI18n } from '../../i18n/useI18n';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const HOUR_BUCKET_LABELS = ['00-04', '04-08', '08-12', '12-16', '16-20', '20-24'];
@@ -20,6 +21,7 @@ function intensityClass(minutes: number, maxMinutes: number): string {
 }
 
 export default function BestTimesHeatmap() {
+  const { t } = useI18n();
   const { cells, isLoading, error, hasAnyData } = useBestTimesHeatmap();
 
   const maxMinutes = Math.max(0, ...cells.map((c) => c.totalMinutes));
@@ -29,15 +31,15 @@ export default function BestTimesHeatmap() {
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
-      <h2 className="text-lg font-semibold text-white mb-1">Best times to study</h2>
+      <h2 className="text-lg font-semibold text-white mb-1">{t('ui.bestTimesToStudy')}</h2>
       <p className="text-sm text-neutral-400 mb-4">
-        Total study time logged, by day of week and 4-hour block.
+        {t('ui.totalStudyTimeLoggedBy')}
       </p>
 
       {isLoading && <LinesSkeleton lines={5} />}
       {!isLoading && error && <ErrorState message={error} />}
       {!isLoading && !error && !hasAnyData && (
-        <EmptyState message="No completed study sessions yet. Start one in the widget on the side." />
+        <EmptyState message={t('ui.noCompletedStudySessionsYet')} />
       )}
 
       {!isLoading && !error && hasAnyData && (

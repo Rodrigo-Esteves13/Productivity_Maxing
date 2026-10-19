@@ -6,6 +6,7 @@ import { exitFullscreen } from '../../../lib/fullscreen';
 import Button from '../../UI/Button';
 import StopSessionPanel from './StopSessionPanel';
 import OpenNotesLink from './OpenNotesLink';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface FocusModeOverlayProps {
   onClose: () => void;
@@ -13,6 +14,7 @@ interface FocusModeOverlayProps {
 
 // Ecra limpo so com o tempo e a task, por cima de tudo. Esc sai.
 export default function FocusModeOverlay({ onClose }: FocusModeOverlayProps) {
+  const { t } = useI18n();
   const { activeSession, elapsedSeconds, remainingSeconds, isSubmitting } = useActiveStudySession();
   const { stopSession } = useStopSession();
   const [isStopping, setIsStopping] = useState(false);
@@ -50,7 +52,7 @@ export default function FocusModeOverlay({ onClose }: FocusModeOverlayProps) {
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Focus mode"
+      aria-label={t('ui.focusMode')}
       className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-neutral-950 px-6 text-center"
     >
       <p className="mb-2 max-w-xl truncate text-lg text-neutral-400">{label}</p>
@@ -81,10 +83,10 @@ export default function FocusModeOverlay({ onClose }: FocusModeOverlayProps) {
         ) : (
           <div className="flex justify-center gap-3">
             <Button variant="primary" onClick={() => setIsStopping(true)}>
-              Stop session
+              {t('ui.stopSession')}
             </Button>
             <Button variant="secondary" onClick={close}>
-              Exit focus mode (Esc)
+              {t('ui.exitFocusModeEsc')}
             </Button>
           </div>
         )}

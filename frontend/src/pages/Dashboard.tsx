@@ -37,8 +37,10 @@ import { PrinterIcon, UploadIcon, SlidersIcon } from '../components/UI/Icons';
 import BulkActionsBar from '../components/Dashboard/BulkActionsBar';
 import TaskExportButtons from '../components/Dashboard/TaskExportButtons';
 import { ACADEMIC_TASK_TYPE_KEY } from '../lib/constants';
+import { useI18n } from '../i18n/useI18n';
 
 export default function Dashboard() {
+  const { t } = useI18n();
   useDocumentTitle('Dashboard');
   const [filters, setFilters] = useState<DashboardFiltersState>(EMPTY_DASHBOARD_FILTERS);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -102,8 +104,8 @@ export default function Dashboard() {
     <PageLayout>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <PageHeader
-          title="Analytics Dashboard"
-          description="Global view of all your academic activities, grades, and progress."
+          title={t('ui.analyticsDashboard')}
+          description={t('ui.globalViewOfAllYour')}
         />
         <div className="print-hide flex items-center gap-4">
           <button
@@ -126,7 +128,7 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={toggleDensity}
-            title="Toggle table row density"
+            title={t('ui.toggleTableRowDensity')}
             className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200"
           >
             <SlidersIcon />

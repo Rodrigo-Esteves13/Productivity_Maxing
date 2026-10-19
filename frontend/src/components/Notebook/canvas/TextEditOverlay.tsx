@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 import { DEFAULT_TEXT_COLOR, DEFAULT_TEXT_FONT_SIZE } from '../../../hooks/useCanvasTexts';
 import { VIEW_WIDTH } from './canvasConstants';
+import { useI18n } from '../../../i18n/useI18n';
 
 const OVERLAY_WIDTH = 220;
 
@@ -20,6 +21,7 @@ interface TextEditOverlayProps {
 // ao vivo aqui, para o que se vê a escrever já bater certo com o que
 // fica depois de gravado.
 export default function TextEditOverlay({ item, svgRef, onChangeText, onCommit }: TextEditOverlayProps) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const rect = svgRef.current?.getBoundingClientRect();
   const scale = rect ? rect.width / VIEW_WIDTH : 1;
@@ -50,7 +52,7 @@ export default function TextEditOverlay({ item, svgRef, onChangeText, onCommit }
           e.currentTarget.blur();
         }
       }}
-      placeholder="Type..."
+      placeholder={t('ui.type2')}
       style={{
         position: 'absolute',
         left: item.x * scale,

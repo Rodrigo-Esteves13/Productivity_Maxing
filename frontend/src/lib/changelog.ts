@@ -18,6 +18,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       'The top bar no longer overlaps in long languages (German, Japanese, Korean): the full menu shows on wide screens and the compact menu is used on smaller ones. Profile is in your user menu.',
       'Notification button fixed: it no longer stays disabled forever when the service worker is missing (it now explains why). Pages show skeleton placeholders of their own layout while they load instead of a plain "Loading...".',
       'Search (Ctrl+K), the footer, the Dashboard filters, sorting and the task form fields are now translated, including difficulty and progress labels.',
+      'Your friend code can no longer be regenerated on a whim: you now ask an administrator for a new one and say why. An approved request replaces the code (your friends stay); a declined one shows the admin\'s note.',
+      'More of the app is translated into all eight languages: Agent, Areas, Focus, Schedule, Notebook tools, Profile, admin pages and many forms.',
       'Languages now load on demand: the app only downloads the language you use, and fetches another one only when you switch. The admin menu is translated too.',
       'The user menu fits its text, and the hover now fills each row up to the rounded corners.',
       'Fixed a loophole where someone refused access to your notes could remove the refusal and ask again.',

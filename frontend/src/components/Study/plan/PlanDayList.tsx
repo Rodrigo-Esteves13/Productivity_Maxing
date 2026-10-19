@@ -1,6 +1,7 @@
 import type { StudyPlanDay, StudyPlanSuggestion } from '../../../types/models';
 import { formatClock, formatDayLabel, formatDuration } from '../../../lib/timeFormat';
 import StudyBlockTitle from '../StudyBlockTitle';
+import { useI18n } from '../../../i18n/useI18n';
 
 interface PlanDayListProps {
   suggestions: StudyPlanSuggestion[];
@@ -19,6 +20,7 @@ function groupByDay(suggestions: StudyPlanSuggestion[]): Map<string, StudyPlanSu
 }
 
 export default function PlanDayList({ suggestions, days, dailyLimitMinutes }: PlanDayListProps) {
+  const { t } = useI18n();
   const byDay = groupByDay(suggestions);
   const visibleDays = days.filter((d) => byDay.has(d.date));
 
@@ -28,7 +30,7 @@ export default function PlanDayList({ suggestions, days, dailyLimitMinutes }: Pl
         id="plan-days-heading"
         className="text-xs uppercase tracking-wide text-neutral-500 mb-2"
       >
-        Day by day
+        {t('ui.dayByDay')}
       </h3>
       <div className="space-y-4">
         {visibleDays.map((day) => {
@@ -67,7 +69,7 @@ export default function PlanDayList({ suggestions, days, dailyLimitMinutes }: Pl
                       {s.kind === 'review' && <span className="shrink-0 text-[11px] text-violet-300">review</span>}
                     </span>
                     <span className="text-neutral-500 shrink-0 ml-3">
-                      {s.isOvertime && <span className="text-amber-400 mr-2">Overtime</span>}
+                      {s.isOvertime && <span className="text-amber-400 mr-2">{t('ui.overtime')}</span>}
                       {formatClock(s.startMinutes)}-{formatClock(s.endMinutes)}
                     </span>
                   </li>

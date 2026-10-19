@@ -67,7 +67,7 @@ export default function TasksTableHeader({
               checked={!!allSelected}
               onChange={onToggleAll}
               className="accent-violet-500"
-              aria-label="Select all tasks"
+              aria-label={t('ui.selectAllTasks')}
             />
           </th>
         )}

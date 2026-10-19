@@ -18,8 +18,10 @@ import FormSkeleton from '../components/UI/FormSkeleton';
 import ActionButton from '../components/UI/ActionButton';
 import { PencilIcon } from '../components/UI/Icons';
 import { useAuth } from '../context/useAuth';
+import { useI18n } from '../i18n/useI18n';
 
 export default function Profile() {
+  const { t } = useI18n();
   useDocumentTitle('Profile');
   const { user, isLoadingUser, updateUser } = useAuth();
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -29,7 +31,7 @@ export default function Profile() {
   if (isLoadingUser || !user) {
     return (
       <PageLayout>
-        <PageHeader title="User Profile" description="Manage your personal information and settings." />
+        <PageHeader title={t('ui.userProfile')} description={t('ui.manageYourPersonalInformationAnd')} />
         <FormSkeleton sections={4} />
       </PageLayout>
     );
@@ -40,8 +42,8 @@ export default function Profile() {
   return (
     <PageLayout>
       <PageHeader
-        title="User Profile"
-        description="Manage your personal information and settings."
+        title={t('ui.userProfile')}
+        description={t('ui.manageYourPersonalInformationAnd')}
         action={
           <ActionButton onClick={() => setIsEditOpen(true)} className="flex items-center gap-2">
             <PencilIcon />

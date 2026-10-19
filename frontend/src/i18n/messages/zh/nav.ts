@@ -27,4 +27,5 @@ export const nav: Record<string, string> = {
   'nav.search': "搜索 / 跳转 (Ctrl+K)",
   'nav.openMenu': "打开菜单",
   'nav.closeMenu': "关闭菜单",
+  'nav.admin.friendCodes': "好友代码",
 };

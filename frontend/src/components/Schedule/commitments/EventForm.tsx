@@ -7,6 +7,7 @@ import { parseClock } from '../../../lib/timeFormat';
 import { toDateKey } from '../../../lib/dateKey';
 import { todayUtcAnchored } from '../../../lib/weekDates';
 import type { CreateWorkShiftInput } from '../../../types/models';
+import { useI18n } from '../../../i18n/useI18n';
 
 const MAX_TITLE_LENGTH = 80;
 const MAX_TRAVEL_MINUTES = 240;
@@ -24,6 +25,7 @@ interface EventFormProps {
 // de um titulo, um dia e as horas. Guarda-se como um turno pontual sem
 // local, e sai da lista sozinho depois do dia.
 export default function EventForm({ isSaving, onSubmit, onCancel }: EventFormProps) {
+  const { t } = useI18n();
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(toDateKey(todayUtcAnchored()));
   const [start, setStart] = useState(DEFAULT_START);
@@ -53,18 +55,18 @@ export default function EventForm({ isSaving, onSubmit, onCancel }: EventFormPro
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3 rounded-lg bg-neutral-800/40 p-3">
       <Input
-        label="Title"
+        label={t('ui.title')}
         value={title}
         maxLength={MAX_TITLE_LENGTH}
-        placeholder="Doctor, job interview..."
+        placeholder={t('ui.doctorJobInterview')}
         onChange={(e) => setTitle(e.target.value)}
       />
-      <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      <Input label={t('ui.date')} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Input label="From" type="time" value={start} onChange={(e) => setStart(e.target.value)} />
-        <Input label="To" type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
+        <Input label={t('ui.from')} type="time" value={start} onChange={(e) => setStart(e.target.value)} />
+        <Input label={t('ui.to')} type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
         <Input
-          label="Travel each way (min)"
+          label={t('ui.travelEachWayMin')}
           type="number"
           min={0}
           max={MAX_TRAVEL_MINUTES}
@@ -78,7 +80,7 @@ export default function EventForm({ isSaving, onSubmit, onCancel }: EventFormPro
           {isSaving ? 'Saving...' : 'Add event'}
         </ActionButton>
         <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
-          Cancel
+          {t('ui.cancel')}
         </button>
       </div>
     </form>

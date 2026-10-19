@@ -1,12 +1,13 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+
 import { NotebookViewGrantService } from './notebook-view-grant.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { PushService } from '../push/push.service';
 import type { SocialService } from '../social/social.service';
 import type { NotebookService } from './notebook.service';
 
-// `file-type` e ESM-only e o Jest (CJS) nao o consegue carregar; o servico
-// importado transitivamente (NotebookService) nao o usa nestes testes.
+// `file-type` e so ESM e o Jest (CommonJS) nao a consegue carregar. Estes
+// testes nunca chegam a validar ficheiros, por isso basta um stub.
 jest.mock('file-type', () => ({ fileTypeFromBuffer: jest.fn() }));
 
 type Mock = jest.Mock;
