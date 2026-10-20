@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type CommuteMode } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   addUtcDays,
@@ -27,9 +27,17 @@ export const SHIFT_SELECT = {
   endMinutes: true,
   bufferMinutes: true,
   label: true,
+  address: true,
+  commuteMode: true,
   commitmentId: true,
   commitment: {
-    select: { name: true, commuteMinutes: true, daysOff: true },
+    select: {
+      name: true,
+      commuteMinutes: true,
+      daysOff: true,
+      address: true,
+      commuteMode: true,
+    },
   },
 } satisfies Prisma.WorkShiftSelect;
 
@@ -44,6 +52,10 @@ export interface WorkShiftView {
   commitmentId: string | null;
   label: string | null;
   bufferMinutes: number;
+  // Morada (do local, ou do proprio evento pontual) e meio de transporte
+  // para o itinerario do dia. null = desconhecido / o do utilizador.
+  address: string | null;
+  commuteMode: CommuteMode | null;
 }
 
 // O que a API devolve de um turno: nome e deslocação já resolvidos a
@@ -58,6 +70,10 @@ export function toShiftView(shift: ShiftRow): WorkShiftView {
     commitmentId: shift.commitmentId,
     label: shift.commitment?.name ?? shift.label,
     bufferMinutes: shift.commitment?.commuteMinutes ?? shift.bufferMinutes,
+    address: shift.commitment ? shift.commitment.address : shift.address,
+    commuteMode: shift.commitment
+      ? shift.commitment.commuteMode
+      : shift.commuteMode,
   };
 }
 
@@ -72,6 +88,8 @@ export interface WorkShiftOccurrence {
   bufferMinutes: number;
   label: string | null;
   isRecurring: boolean;
+  address: string | null;
+  commuteMode: CommuteMode | null;
 }
 
 @Injectable()
@@ -135,6 +153,8 @@ export class WorkShiftsService {
             endMinutes: shift.endMinutes,
             bufferMinutes: shift.bufferMinutes ?? 0,
             label: shift.label?.trim() || null,
+            address: shift.address?.trim() || null,
+            commuteMode: shift.commuteMode ?? null,
           },
           select: SHIFT_SELECT,
         }),
@@ -201,6 +221,10 @@ export class WorkShiftsService {
           bufferMinutes: dto.bufferMinutes,
         }),
         ...(dto.label !== undefined && { label: dto.label.trim() || null }),
+        ...(dto.address !== undefined && {
+          address: dto.address.trim() || null,
+        }),
+        ...(dto.commuteMode !== undefined && { commuteMode: dto.commuteMode }),
         ...(dto.commitmentId !== undefined && {
           commitmentId: dto.commitmentId,
         }),
@@ -286,6 +310,8 @@ export class WorkShiftsService {
           bufferMinutes: view.bufferMinutes,
           label: view.label,
           isRecurring: row.dayOfWeek !== null,
+          address: view.address,
+          commuteMode: view.commuteMode,
         });
       }
     }

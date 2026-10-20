@@ -69,6 +69,11 @@ function writePanelPreference(open: boolean): void {
   }
 }
 
+/** Links diretos (?share=1, avisos push): a proxima entrada abre com o painel aberto. */
+export function rememberSharePanelOpen(): void {
+  writePanelPreference(true);
+}
+
 // Estado do painel "Share" de uma entrada. Vive NUM HOOK chamado pelo
 // wrapper do editor (NotebookEntryEditor), fora do formulario que remonta no
 // "Cancel" - antes o estado vivia dentro do painel, por isso cancelar uma

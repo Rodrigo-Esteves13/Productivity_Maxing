@@ -175,8 +175,6 @@ export const auto: Record<string, string> = {
   "ui.googleCalendar": "Google 캘린더",
   "ui.connect": "연결",
   "ui.disconnect": "연결 해제",
-  "ui.advanced": "고급",
-  "ui.goToProductivityMaxingUnsafe": "Productivity Maxing(으)로 이동 (안전하지 않음)",
   "ui.googleApiServicesUserData": "Google API 서비스 사용자 데이터 정책",
   "ui.yourAccountCurrentlySignsIn": "현재 이 계정은 연결된 제공업체로만 로그인해요. 비밀번호를 추가하면 이메일로도 로그인할 수 있어요.",
   "ui.passwordUpdatedSuccessfully": "비밀번호를 업데이트했어요.",

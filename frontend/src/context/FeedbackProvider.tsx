@@ -14,7 +14,7 @@ const MAX_TOASTS = 4;
 // Chaves i18n, traduzidas quando o dialogo abre.
 const DEFAULT_CONFIRM_TITLE = 'ui.areYouSure';
 const DEFAULT_CONFIRM_LABEL = 'ui.confirm';
-const DEFAULT_CANCEL_LABEL = 'Cancel';
+const DEFAULT_CANCEL_LABEL = 'common.cancel';
 
 interface PendingConfirm {
   options: ConfirmOptions;
@@ -71,7 +71,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
           title={pending.options.title ?? translateNow(DEFAULT_CONFIRM_TITLE)}
           message={pending.options.message}
           confirmLabel={pending.options.confirmLabel ?? translateNow(DEFAULT_CONFIRM_LABEL)}
-          cancelLabel={pending.options.cancelLabel ?? DEFAULT_CANCEL_LABEL}
+          cancelLabel={pending.options.cancelLabel ?? translateNow(DEFAULT_CANCEL_LABEL)}
           tone={pending.options.tone ?? 'default'}
           onConfirm={() => settle(true)}
           onCancel={() => settle(false)}

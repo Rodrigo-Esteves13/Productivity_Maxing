@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PushService } from '../push/push.service';
 import { areFriends } from '../social/friendship.util';
 import type { ShareAccessRoleKind } from './dto/decide-access-request.dto';
+import { notebookEntrySharePath } from '../common/app-links.util';
 
 /** Maximo de pessoas com acesso (convites + pedidos) por nota. */
 const MAX_PEOPLE_PER_ENTRY = 30;
@@ -149,7 +150,9 @@ export class NotebookInviteService {
     void this.push.notifyUser(friendId, 'shareInvited', {
       name: owner?.name ?? owner?.email?.split('@')[0] ?? '',
       title: entry.title,
-      url: '/shared-with-me',
+      // Tocar na notificacao abre logo o convite (aceitar/recusar), sem ter
+      // de procurar a nota no Social.
+      url: `/shared/${share.token}`,
     });
     return { id: row.id, status: row.status, accessRole: row.accessRole };
   }
@@ -169,6 +172,7 @@ export class NotebookInviteService {
           select: {
             token: true,
             createdByUserId: true,
+            notebookEntryId: true,
             notebookEntry: { select: { title: true } },
           },
         },
@@ -204,7 +208,7 @@ export class NotebookInviteService {
         {
           name: me?.name ?? me?.email?.split('@')[0] ?? '',
           title: request.notebookShare.notebookEntry.title,
-          url: '/notebook',
+          url: notebookEntrySharePath(request.notebookShare.notebookEntryId),
         },
       );
     }

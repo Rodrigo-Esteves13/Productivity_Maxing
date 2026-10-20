@@ -84,17 +84,6 @@ export default function GoogleCalendarCard() {
         </div>
       </div>
 
-      {/* Se a Google mostrar "app nao verificada" no consent (app ainda sem
-          verificacao/branding), o utilizador sabe o que fazer. */}
-      {connected === false && (
-        <p className="mt-4 text-xs text-amber-300/90 leading-relaxed rounded-lg border border-amber-800/40 bg-amber-900/10 p-3">
-          {fillNodes(t('ui.googleUnverifiedWarning'), {
-            advanced: <strong>{t('ui.advanced')}</strong>,
-            unsafe: <strong>{t('ui.goToProductivityMaxingUnsafe')}</strong>,
-          })}
-        </p>
-      )}
-
       {/* Aviso de privacidade in-product (a Google exige que seja visivel junto
           ao pedido de acesso, e que o link seja o mesmo do ecra de consentimento). */}
       <p className="mt-4 text-xs text-neutral-500 leading-relaxed">

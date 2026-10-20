@@ -52,6 +52,7 @@ import {
   ChevronRight,
   ZoomIn,
   PenTool,
+  Share,
 } from 'lucide-react';
 
 // Re-exports finos sobre o lucide-react, mantendo os nomes que o resto da
@@ -319,4 +320,10 @@ export function ZoomInIcon(props: SVGProps<SVGSVGElement>) {
 
 export function PenToolIcon(props: SVGProps<SVGSVGElement>) {
   return <PenTool size={16} {...props} />;
+}
+
+// Botao Partilhar do Safari (quadrado com seta para cima), para os passos
+// de "Adicionar ao ecra principal" no iPhone/iPad.
+export function ShareIcon(props: SVGProps<SVGSVGElement>) {
+  return <Share size={16} {...props} />;
 }

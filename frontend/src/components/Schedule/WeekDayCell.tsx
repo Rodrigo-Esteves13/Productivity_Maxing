@@ -1,13 +1,39 @@
+import { Link } from 'react-router-dom';
 import { formatClock } from '../../lib/timeFormat';
 import type { AgendaItem } from '../../lib/agenda';
 import { AGENDA_TONE_CLASSES, getAgendaTone } from '../../lib/agendaTone';
+import { MONTH_CHIP_TONE_CLASSES, type DeadlineChip } from '../../lib/monthAgenda';
+import { GraduationCapIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
 
 interface WeekDayCellProps {
   label: string;
   dayOfMonth: number;
   isToday: boolean;
+  deadlines: DeadlineChip[];
   items: AgendaItem[];
+}
+
+// Prazo de uma task, com as mesmas cores da vista mensal (exames a cheio).
+// Abre a task na pagina Tasks, como o olho do Dashboard.
+function DeadlineEntry({ chip }: { chip: DeadlineChip }) {
+  const { t } = useI18n();
+  const title = chip.label ?? '';
+  return (
+    <Link
+      to={`/tasks?open=${encodeURIComponent(chip.taskId)}`}
+      title={t('common.openTaskNamed', { title })}
+      className={`flex items-start gap-1 text-xs rounded-md px-2 py-1 transition-colors hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+        MONTH_CHIP_TONE_CLASSES[chip.tone].chip
+      }`}
+    >
+      {chip.tone === 'exam' && <GraduationCapIcon aria-hidden className="mt-px h-3 w-3 shrink-0" />}
+      {/* 3 linhas no maximo: o titulo inteiro fica no title do link. */}
+      <span className={`min-w-0 font-medium leading-tight break-words line-clamp-3 ${chip.done ? 'line-through opacity-60' : ''}`}>
+        {title}
+      </span>
+    </Link>
+  );
 }
 
 function AgendaEntry({ item }: { item: AgendaItem }) {
@@ -39,8 +65,9 @@ function AgendaEntry({ item }: { item: AgendaItem }) {
   );
 }
 
-// Um dia da grelha semanal: aulas e turnos misturados por ordem de hora.
-export default function WeekDayCell({ label, dayOfMonth, isToday, items }: WeekDayCellProps) {
+// Um dia da grelha semanal: prazos primeiro, depois aulas e turnos
+// misturados por ordem de hora.
+export default function WeekDayCell({ label, dayOfMonth, isToday, deadlines, items }: WeekDayCellProps) {
   return (
     <div
       className={`rounded-lg border p-2 min-h-[6rem] min-w-0 ${
@@ -51,7 +78,10 @@ export default function WeekDayCell({ label, dayOfMonth, isToday, items }: WeekD
         {label} {dayOfMonth}
       </p>
       <div className="space-y-1.5">
-        {items.length === 0 && <p className="text-xs text-neutral-600">-</p>}
+        {deadlines.length === 0 && items.length === 0 && <p className="text-xs text-neutral-600">-</p>}
+        {deadlines.map((chip) => (
+          <DeadlineEntry key={chip.id} chip={chip} />
+        ))}
         {items.map((item) => (
           <AgendaEntry key={`${item.kind}-${item.id}`} item={item} />
         ))}

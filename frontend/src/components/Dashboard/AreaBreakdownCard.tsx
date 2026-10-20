@@ -115,10 +115,14 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
       <ul className="space-y-3">
         {rows.map(({ area, average, weightCoveredPct, gradeHistory }) => (
           <li key={area.id}>
-            <div className="flex items-center justify-between text-sm mb-1">
-              <div className="flex items-center gap-2 min-w-0">
-                <ColorDot size="xs" color={area.colorHex} />
-                <span className="truncate text-neutral-200">{area.name}</span>
+            {/* Creditos e "% da nota" descem para baixo do nome quando nao
+                cabem (telemovel, linguas compridas), em vez de cortar o nome. */}
+            <div className="flex items-start justify-between gap-3 text-sm mb-1">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span className="flex min-w-0 items-center gap-2">
+                  <ColorDot size="xs" color={area.colorHex} />
+                  <span className="truncate text-neutral-200">{area.name}</span>
+                </span>
                 <span className="text-xs text-neutral-500 shrink-0">
                   {area.credits ? t('ui.nCredits', { count: area.credits }) : t('ui.noCreditsSet')}
                 </span>

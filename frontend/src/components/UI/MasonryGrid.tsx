@@ -30,29 +30,51 @@ export default function MasonryGrid({ children, className = '' }: MasonryGridPro
     const container = containerRef.current;
     if (!container) return;
 
+    const resizeObserver = new ResizeObserver(() => schedule());
+
+    // Observa cada wrapper e o cartão lá dentro. Os cartões são lazy: no
+    // primeiro render o wrapper ainda está vazio (Suspense), por isso o
+    // cartão só existe mais tarde e tem de ser observado nessa altura. Sem
+    // isto, o último cartão de cada coluna (com altura fixa) não via o
+    // próprio conteúdo crescer e ficava cortado. observe() repetido no
+    // mesmo elemento não faz nada.
+    const observeItems = () => {
+      for (const item of Array.from(container.children)) {
+        resizeObserver.observe(item);
+        if (item.firstElementChild) resizeObserver.observe(item.firstElementChild);
+      }
+    };
+
     // rAF agrupa várias notificações num único cálculo por frame.
     const schedule = () => {
       cancelAnimationFrame(frameRef.current);
-      frameRef.current = requestAnimationFrame(layout);
+      frameRef.current = requestAnimationFrame(() => {
+        observeItems();
+        layout();
+      });
     };
 
-    const resizeObserver = new ResizeObserver(schedule);
     resizeObserver.observe(container);
-    for (const item of Array.from(container.children)) {
-      resizeObserver.observe(item);
-      if (item.firstElementChild) resizeObserver.observe(item.firstElementChild);
-    }
+    observeItems();
 
     // Cartões que carregam dados, aparecem ou desaparecem mexem no DOM
     // dentro do wrapper sem mudar o tamanho dele (porque o último está
-    // esticado): o MutationObserver apanha esses casos.
+    // esticado): o MutationObserver apanha esses casos. characterData apanha
+    // texto que muda no mesmo nó (trocar de língua).
     const mutationObserver = new MutationObserver(schedule);
-    mutationObserver.observe(container, { childList: true, subtree: true });
+    mutationObserver.observe(container, { childList: true, subtree: true, characterData: true });
+
+    // Fontes do sistema (CJK sobretudo) podem chegar depois do primeiro
+    // desenho e mudar a altura do texto sem mexer no DOM.
+    // (jsdom nos testes nao tem document.fonts.)
+    const fonts: FontFaceSet | undefined = document.fonts;
+    fonts?.addEventListener('loadingdone', schedule);
 
     return () => {
       cancelAnimationFrame(frameRef.current);
       resizeObserver.disconnect();
       mutationObserver.disconnect();
+      fonts?.removeEventListener('loadingdone', schedule);
     };
   }, [layout, items.length]);
 

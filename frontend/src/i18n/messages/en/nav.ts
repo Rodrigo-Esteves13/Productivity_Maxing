@@ -17,6 +17,7 @@ export const nav: Record<string, string> = {
   'nav.sharedWithMe': "Shared with me",
   'nav.taskPacks': "Task packs",
   'nav.social': "Social",
+  'nav.socialPending': "{count} waiting for your answer",
   'nav.admin': "Admin",
   'nav.admin.users': "Users",
   'nav.admin.taskTypes': "Task types",

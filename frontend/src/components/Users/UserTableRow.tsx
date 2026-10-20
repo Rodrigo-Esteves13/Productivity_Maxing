@@ -1,7 +1,9 @@
+import { Link } from 'react-router-dom';
 import Avatar from '../Profile/Avatar';
 import RoleBadge from './RoleBadge';
 import UserStatusBadge from './UserStatusBadge';
-import { PencilIcon, TrashIcon, DownloadIcon, ClockIcon, ShieldIcon, CheckIcon } from '../UI/Icons';
+import { PencilIcon, TrashIcon, DownloadIcon, ClockIcon, ShieldIcon, CheckIcon, NetworkIcon } from '../UI/Icons';
+import { adminUserPath } from '../../lib/appLinks';
 import type { User } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
 
@@ -35,17 +37,25 @@ export default function UserTableRow({
   return (
     <tr className="border-b border-neutral-800 hover:bg-neutral-800/30 transition-colors">
       <td className="px-4 py-3">
-        <div className="flex items-center gap-3">
+        {/* Nome abre o perfil (codigo de amigo e ligacoes). */}
+        <Link to={adminUserPath(user.id)} className="group flex items-center gap-3">
           <Avatar initials={initials} avatarUrl={user.avatarUrl} size="sm" />
           <div>
-            <div className="font-medium text-neutral-200">
+            <div className="font-medium text-neutral-200 group-hover:text-violet-300">
               {user.name || <span className="text-neutral-500 italic">{t('ui.noName')}</span>}
             </div>
             {isSelf && <div className="text-xs text-violet-400">{t('ui.thatSYou')}</div>}
           </div>
-        </div>
+        </Link>
       </td>
-      <td className="px-4 py-3 text-neutral-400">{user.email}</td>
+      <td className="px-4 py-3 text-neutral-400">
+        {user.email}
+        {user.friendCode && (
+          <div className="font-mono text-xs text-neutral-500" title={t('adminSocial.code.title')}>
+            {user.friendCode}
+          </div>
+        )}
+      </td>
       <td className="px-4 py-3 text-center">
         <RoleBadge role={user.role} />
       </td>
@@ -84,6 +94,14 @@ export default function UserTableRow({
               <CheckIcon className="h-4 w-4" />
             </button>
           )}
+          <Link
+            to={adminUserPath(user.id)}
+            title={t('adminSocial.open')}
+            aria-label={t('adminSocial.open')}
+            className="text-neutral-400 hover:text-violet-300 transition-colors p-1.5"
+          >
+            <NetworkIcon className="h-4 w-4" />
+          </Link>
           <button
             onClick={() => onExport(user)}
             title={t('ui.exportData')}

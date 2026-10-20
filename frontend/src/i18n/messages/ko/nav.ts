@@ -17,6 +17,7 @@ export const nav: Record<string, string> = {
   'nav.sharedWithMe': "나와 공유됨",
   'nav.taskPacks': "작업 묶음",
   'nav.social': "소셜",
+  'nav.socialPending': "답변을 기다리는 항목 {count}개",
   'nav.admin': "관리",
   'nav.admin.users': "사용자",
   'nav.admin.taskTypes': "작업 유형",

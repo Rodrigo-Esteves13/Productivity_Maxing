@@ -52,6 +52,7 @@ import type {
   StudyPlanResult,
   StudyPlanTask,
 } from './study-plan.types';
+import { ItineraryService } from '../schedule/itinerary.service';
 
 export interface EstimableTask {
   id: string;
@@ -123,13 +124,13 @@ export class StudyPlanService {
     private readonly studySessionsService: StudySessionsService,
     private readonly workShiftsService: WorkShiftsService,
     private readonly predictionService: PredictionService,
+    private readonly itineraryService: ItineraryService,
   ) {}
 
   async generate(userId: string, days: number): Promise<StudyPlanResult> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: {
-        commuteMinutes: true,
         quietHoursStart: true,
         quietHoursEnd: true,
         dailyStudyLimitMinutes: true,
@@ -199,7 +200,23 @@ export class StudyPlanService {
       );
     }
 
-    const commuteBuffer = user.commuteMinutes ?? 0;
+    // Viagens decididas pelo itinerario (vai a casa entre duas coisas so se
+    // houver tempo; senao vai direto). Ocupam tempo como as aulas.
+    const legsByDate = await this.itineraryService.buildRange(
+      userId,
+      classes.map((c) => ({
+        id: c.id,
+        date: toDateKey(c.date),
+        startMinutes: c.startMinutes,
+        endMinutes: c.endMinutes,
+      })),
+      shifts,
+    );
+    const toInterval = (start: number, end: number): Interval => ({
+      start: clamp(start, 0, MINUTES_PER_DAY),
+      end: clamp(end, 0, MINUTES_PER_DAY),
+    });
+
     const schedulerDays: SchedulerDay[] = [];
     for (let i = 0; i < horizonDays; i++) {
       const day = addUtcDays(today, i);
@@ -207,17 +224,12 @@ export class StudyPlanService {
       const dayClasses = classes.filter((c) => toDateKey(c.date) === key);
       const dayShifts = shifts.filter((s) => s.date === key);
 
-      // Aulas levam o buffer de viagem do utilizador; cada turno leva o
-      // seu próprio (o trajeto para o trabalho é outro).
       const busy: Interval[] = [
-        ...dayClasses.map((c) => ({
-          start: clamp(c.startMinutes - commuteBuffer, 0, MINUTES_PER_DAY),
-          end: clamp(c.endMinutes + commuteBuffer, 0, MINUTES_PER_DAY),
-        })),
-        ...dayShifts.map((s) => ({
-          start: clamp(s.startMinutes - s.bufferMinutes, 0, MINUTES_PER_DAY),
-          end: clamp(s.endMinutes + s.bufferMinutes, 0, MINUTES_PER_DAY),
-        })),
+        ...dayClasses.map((c) => toInterval(c.startMinutes, c.endMinutes)),
+        ...dayShifts.map((s) => toInterval(s.startMinutes, s.endMinutes)),
+        ...(legsByDate.get(key) ?? []).map((leg) =>
+          toInterval(leg.start, leg.end),
+        ),
       ];
 
       schedulerDays.push({

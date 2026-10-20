@@ -36,6 +36,17 @@ export type SendRequestResult = { status: 'PENDING' | 'ACCEPTED' };
 export const getSocialOverview = async (): Promise<SocialOverview> =>
   (await api.get<SocialOverview>('/social')).data;
 
+// So contagens, para o numero ao lado de Social na navbar.
+export interface SocialPendingCounts {
+  friendRequests: number;
+  noteInvitations: number;
+  notesRequests: number;
+  total: number;
+}
+
+export const getSocialPending = async (): Promise<SocialPendingCounts> =>
+  (await api.get<SocialPendingCounts>('/social/pending')).data;
+
 // O codigo nao se troca sozinho: pede-se ao admin, com motivo.
 export const requestFriendCodeChange = async (reason: string): Promise<CodeChangeRequest> =>
   (await api.post<CodeChangeRequest>('/social/friend-code/change-request', { reason })).data;

@@ -8,6 +8,7 @@ import Select from '../components/UI/Select';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useTaskPackImport } from '../hooks/useTaskPackImport';
 import { useI18n } from '../i18n/useI18n';
+import SelectionToolbar from '../components/UI/SelectionToolbar';
 
 export default function ImportTaskPack() {
   const { t, lang } = useI18n();
@@ -15,7 +16,7 @@ export default function ImportTaskPack() {
   const { code } = useParams<{ code: string }>();
   const {
     state, preview, areas, selected, areaChoice, isImporting, result, importError, missingArea,
-    toggle, chooseArea, runImport,
+    toggle, selectAll, selectNone, chooseArea, runImport,
   } = useTaskPackImport(code);
 
   if (state === 'loading') {
@@ -62,6 +63,13 @@ export default function ImportTaskPack() {
       <p className="mb-4 text-sm text-neutral-400">{t('packs.import.intro')}</p>
       {importError && <ErrorState message={t('packs.import.error')} />}
       {missingArea && <p className="mb-3 text-sm text-amber-300">{t('packs.import.pickSubject')}</p>}
+      <SelectionToolbar
+        className="mb-3"
+        selectedCount={selected.size}
+        selectableCount={preview.items.length}
+        onSelectAll={selectAll}
+        onSelectNone={selectNone}
+      />
       <ul className="space-y-2">
         {preview.items.map((item) => (
           <li key={item.id} className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-3">

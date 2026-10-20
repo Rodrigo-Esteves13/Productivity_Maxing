@@ -11,17 +11,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
-import { Prisma } from '@prisma/client';
+import { NotebookEntryType, Prisma } from '@prisma/client';
 import { fileTypeFromBuffer } from 'file-type';
 import { createHmac, randomUUID } from 'crypto';
 import { PushService } from '../push/push.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolveShareAccess } from './share-role.util';
+import { areFriends } from '../social/friendship.util';
 import {
   CreateNotebookEntryDto,
   UpdateNotebookEntryDto,
 } from './dto/upsert-notebook-entry.dto';
 import { UpsertScheduleLinkDto } from './dto/upsert-schedule-link.dto';
+import { notebookEntrySharePath } from '../common/app-links.util';
 import {
   getNotebookAttachmentsBucket,
   getNotebookBucket,
@@ -37,6 +39,55 @@ const NOTEBOOK_BUCKET = getNotebookBucket();
 // sobreviver ao carregamento da página de uma entrada, nunca fica
 // guardado em lado nenhum (nem na BD, nem no frontend entre navegações).
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
+
+// Caracteres de textContent no resumo da lista (ver listSummariesForArea).
+// O frontend tira o markdown e mostra no maximo ~220, por isso sobra margem.
+const SUMMARY_PREVIEW_CHARS = 400;
+
+export interface NotebookEntrySummary {
+  id: string;
+  areaId: string;
+  title: string;
+  entryType: NotebookEntryType;
+  classNumber: number | null;
+  date: Date;
+  preview: string | null;
+  photoCount: number;
+  attachmentCount: number;
+}
+
+// Caminhos por pedido de createSignedUrls (ver signPaths). Um caderno normal
+// cabe todo num so pedido; o limite so evita um corpo gigante.
+const SIGN_BATCH_SIZE = 500;
+
+interface SignableEntry {
+  photos: { id: string; storagePath: string }[];
+  attachments: {
+    id: string;
+    storagePath: string;
+    originalFileName: string;
+  }[];
+}
+
+// Omit: com `T & {...}` o tipo de `photos` ficava a interseção de dois
+// arrays e `.map` via o elemento sem `url`.
+type WithSignedUrls<T extends SignableEntry> = Omit<
+  T,
+  'photos' | 'attachments'
+> & {
+  photos: (T['photos'][number] & { url: string | null })[];
+  attachments: (T['attachments'][number] & { url: string | null })[];
+};
+
+// Igual ao que createSignedUrl(path, ttl, { download: name }) devolve: o
+// `download` nao faz parte da assinatura, o storage-js so o junta ao fim
+// do URL (encodeURI de "&download=<nome>"). createSignedUrls so aceita um
+// nome para o lote inteiro, por isso cada anexo recebe o seu aqui.
+function withDownloadName(signedUrl: string, fileName: string): string {
+  if (!fileName) return signedUrl;
+  const query = new URLSearchParams({ download: fileName }).toString();
+  return `${signedUrl}${encodeURI(`&${query}`)}`;
+}
 
 const ALLOWED_MIME_TO_EXT: Record<string, string> = {
   'image/png': 'png',
@@ -140,12 +191,27 @@ export type SharedEntryResult =
       // propoe alteracoes (ver NotebookCollabService).
       role: 'OWNER' | 'CO_OWNER' | 'EDITOR' | 'VIEWER';
       hasPendingProposal: boolean;
+      context: SharedEntryContext;
     }
   | { status: 'login_required' }
   | { status: 'not_requested' }
   | { status: 'pending' }
   | { status: 'invited'; requestId: string }
   | { status: 'denied' };
+
+/**
+ * Para navegar a partir de uma nota partilhada: o dono ve o id da nota (para
+ * "Abrir no caderno"); um AMIGO do dono ve quem partilhou (para ir a pagina
+ * desse amigo). Quem nao e amigo nao fica a saber quem e o dono por aqui.
+ */
+export interface SharedEntryContext {
+  ownEntryId: string | null;
+  owner: {
+    userId: string;
+    name: string | null;
+    avatarUrl: string | null;
+  } | null;
+}
 
 @Injectable()
 export class NotebookService {
@@ -182,62 +248,87 @@ export class NotebookService {
     return entry;
   }
 
+  // Assina varios ficheiros de um bucket com createSignedUrls: um pedido ao
+  // Storage por lote, nunca um por ficheiro. Antes, abrir um caderno com 40
+  // entradas e 3 fotos cada eram 120 pedidos HTTP ao Supabase. Devolve
+  // storagePath -> URL (sem entrada no mapa = o Storage nao assinou).
+  private async signPaths(
+    bucket: string,
+    paths: string[],
+  ): Promise<Map<string, string>> {
+    const urls = new Map<string, string>();
+    const unique = [...new Set(paths)];
+    const chunks: string[][] = [];
+    for (let i = 0; i < unique.length; i += SIGN_BATCH_SIZE) {
+      chunks.push(unique.slice(i, i + SIGN_BATCH_SIZE));
+    }
+    await Promise.all(
+      chunks.map(async (chunk) => {
+        const { data, error } = await this.storage.storage
+          .from(bucket)
+          .createSignedUrls(chunk, SIGNED_URL_TTL_SECONDS);
+        if (error) {
+          this.logger.warn(
+            `Could not sign ${chunk.length} URLs in bucket ${bucket}: ${error.message}`,
+          );
+          return;
+        }
+        data.forEach((item, index) => {
+          const path = item.path ?? chunk[index];
+          if (item.signedUrl && path) urls.set(path, item.signedUrl);
+        });
+      }),
+    );
+    return urls;
+  }
+
   // Troca cada storagePath por um signed URL fresco - nunca persistimos o
   // URL em si (expira), só o caminho no bucket. Anexos (ao contrário de
   // fotos) pedem sempre `download` no signed URL - força
   // Content-Disposition: attachment, nunca abre inline no browser.
-  private async attachSignedUrls<
-    T extends {
-      photos: { id: string; storagePath: string }[];
-      attachments: {
-        id: string;
-        storagePath: string;
-        originalFileName: string;
-      }[];
-    },
-  >(
-    entry: T,
-  ): Promise<
-    T & {
-      photos: (T['photos'][number] & { url: string | null })[];
-      attachments: (T['attachments'][number] & { url: string | null })[];
-    }
-  > {
-    const [photosWithUrls, attachmentsWithUrls] = await Promise.all([
-      Promise.all(
-        entry.photos.map(async (photo) => {
-          const { data, error } = await this.storage.storage
-            .from(NOTEBOOK_BUCKET)
-            .createSignedUrl(photo.storagePath, SIGNED_URL_TTL_SECONDS);
-          if (error) {
-            this.logger.warn(
-              `Could not sign URL for notebook photo ${photo.id}: ${error.message}`,
-            );
-          }
-          return { ...photo, url: data?.signedUrl ?? null };
-        }),
+  // Recebe varias entradas de uma vez: no maximo um pedido por bucket.
+  private async attachSignedUrlsMany<T extends SignableEntry>(
+    entries: T[],
+  ): Promise<WithSignedUrls<T>[]> {
+    const [photoUrls, attachmentUrls] = await Promise.all([
+      this.signPaths(
+        NOTEBOOK_BUCKET,
+        entries.flatMap((entry) => entry.photos.map((p) => p.storagePath)),
       ),
-      Promise.all(
-        entry.attachments.map(async (attachment) => {
-          const { data, error } = await this.storage.storage
-            .from(ATTACHMENT_BUCKET)
-            .createSignedUrl(attachment.storagePath, SIGNED_URL_TTL_SECONDS, {
-              download: attachment.originalFileName,
-            });
-          if (error) {
-            this.logger.warn(
-              `Could not sign URL for notebook attachment ${attachment.id}: ${error.message}`,
-            );
-          }
-          return { ...attachment, url: data?.signedUrl ?? null };
-        }),
+      this.signPaths(
+        ATTACHMENT_BUCKET,
+        entries.flatMap((entry) => entry.attachments.map((a) => a.storagePath)),
       ),
     ]);
-    return {
+    return entries.map((entry) => ({
       ...entry,
-      photos: photosWithUrls,
-      attachments: attachmentsWithUrls,
-    };
+      photos: entry.photos.map((photo) => {
+        const url = photoUrls.get(photo.storagePath) ?? null;
+        if (!url) {
+          this.logger.warn(`Could not sign URL for notebook photo ${photo.id}`);
+        }
+        return { ...photo, url };
+      }),
+      attachments: entry.attachments.map((attachment) => {
+        const url = attachmentUrls.get(attachment.storagePath) ?? null;
+        if (!url) {
+          this.logger.warn(
+            `Could not sign URL for notebook attachment ${attachment.id}`,
+          );
+        }
+        return {
+          ...attachment,
+          url: url && withDownloadName(url, attachment.originalFileName),
+        };
+      }),
+    }));
+  }
+
+  private async attachSignedUrls<T extends SignableEntry>(
+    entry: T,
+  ): Promise<WithSignedUrls<T>> {
+    const [signed] = await this.attachSignedUrlsMany([entry]);
+    return signed;
   }
 
   async findAllForArea(userId: string, areaId: string) {
@@ -250,7 +341,44 @@ export class NotebookService {
       },
       orderBy: { date: 'desc' },
     });
-    return Promise.all(entries.map((entry) => this.attachSignedUrls(entry)));
+    return this.attachSignedUrlsMany(entries);
+  }
+
+  /**
+   * A lista da cadeira no Notebook: so o que a lista e o resumo mostram.
+   * findAllForArea mandava o conteudo inteiro de todas as entradas
+   * (desenhos, tabelas e canvas em JSON, ~80 KB numa aula desenhada) e
+   * assinava todas as fotos, para o ecra so usar titulo, data, o inicio do
+   * texto e quantas fotos/ficheiros ha. A entrada completa vem a pedido de
+   * GET /notebook/entries/:id quando e aberta. findAllForArea fica igual
+   * para um separador aberto com o frontend antigo continuar a gravar com
+   * o conteudo completo.
+   */
+  async listSummariesForArea(
+    userId: string,
+    areaId: string,
+  ): Promise<NotebookEntrySummary[]> {
+    await this.assertAreaExists(userId, areaId);
+    const rows = await this.prisma.notebookEntry.findMany({
+      where: { userId, areaId },
+      select: {
+        id: true,
+        areaId: true,
+        title: true,
+        entryType: true,
+        classNumber: true,
+        date: true,
+        textContent: true,
+        _count: { select: { photos: true, attachments: true } },
+      },
+      orderBy: { date: 'desc' },
+    });
+    return rows.map(({ textContent, _count, ...rest }) => ({
+      ...rest,
+      preview: textContent ? textContent.slice(0, SUMMARY_PREVIEW_CHARS) : null,
+      photoCount: _count.photos,
+      attachmentCount: _count.attachments,
+    }));
   }
 
   async findOne(userId: string, id: string) {
@@ -505,7 +633,7 @@ export class NotebookService {
       {
         name: requester?.name ?? requester?.email?.split('@')[0] ?? '',
         title: entry?.title ?? '',
-        url: '/notebook',
+        url: notebookEntrySharePath(share.notebookEntryId),
       },
       `shareAccessRequested:${share.id}:${requestingUserId}`,
     );
@@ -772,7 +900,33 @@ export class NotebookService {
       status: 'ok',
       role,
       hasPendingProposal,
+      context: await this.sharedEntryContext(
+        share.createdByUserId,
+        share.notebookEntryId,
+        requestingUserId,
+      ),
       entry: await this.buildSharedEntryView(share.notebookEntry),
+    };
+  }
+
+  private async sharedEntryContext(
+    ownerId: string,
+    entryId: string,
+    viewerId: string | null,
+  ): Promise<SharedEntryContext> {
+    if (viewerId === ownerId) return { ownEntryId: entryId, owner: null };
+    if (!viewerId || !(await areFriends(this.prisma, ownerId, viewerId))) {
+      return { ownEntryId: null, owner: null };
+    }
+    const owner = await this.prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { id: true, name: true, avatarUrl: true },
+    });
+    return {
+      ownEntryId: null,
+      owner: owner
+        ? { userId: owner.id, name: owner.name, avatarUrl: owner.avatarUrl }
+        : null,
     };
   }
 
@@ -1134,7 +1288,7 @@ export class NotebookService {
    * Pesquisa em texto livre por título, conteúdo, nome da cadeira e data
    * (formatada dd/mm/aaaa) - à escala de um caderno pessoal (algumas
    * centenas de entradas ao longo de vários anos, não milhares), filtrar
-   * em JS depois de um único findMany é mais simples e mais correto do
+   * em JS depois de um findMany leve (só os campos comparados) é mais simples e mais correto do
    * que tentar exprimir "contém esta substring na data formatada" em SQL,
    * e continua instantâneo a este volume.
    */
@@ -1142,28 +1296,49 @@ export class NotebookService {
     const q = query.trim().toLowerCase();
     if (!q) return [];
 
-    const entries = await this.prisma.notebookEntry.findMany({
+    // 1.o passo: so os campos que a pesquisa compara. Os desenhos, tabelas
+    // e canvas (JSON que pode ser grande) e as fotos/anexos de TODAS as
+    // entradas ficavam fora de qualquer uso - e isto corre a cada tecla
+    // (com debounce) na paleta de comandos.
+    const candidates = await this.prisma.notebookEntry.findMany({
       where: { userId },
+      select: {
+        id: true,
+        title: true,
+        textContent: true,
+        date: true,
+        area: { select: { name: true } },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    const matchIds = candidates
+      .filter((entry) => {
+        const dateLabel = entry.date.toLocaleDateString('pt-PT');
+        return (
+          entry.title.toLowerCase().includes(q) ||
+          (entry.textContent ?? '').toLowerCase().includes(q) ||
+          entry.area.name.toLowerCase().includes(q) ||
+          dateLabel.includes(q)
+        );
+      })
+      .slice(0, 50)
+      .map((entry) => entry.id);
+    if (matchIds.length === 0) return [];
+
+    // 2.o passo: a entrada completa so para os resultados (max. 50), na
+    // mesma ordem do 1.o passo.
+    const rows = await this.prisma.notebookEntry.findMany({
+      where: { id: { in: matchIds }, userId },
       include: {
         photos: { orderBy: { position: 'asc' } },
         attachments: { orderBy: { createdAt: 'asc' } },
         area: { select: { id: true, name: true, colorHex: true } },
       },
-      orderBy: { date: 'desc' },
     });
+    const order = new Map(matchIds.map((id, index) => [id, index]));
+    rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
 
-    const matches = entries.filter((entry) => {
-      const dateLabel = entry.date.toLocaleDateString('pt-PT');
-      return (
-        entry.title.toLowerCase().includes(q) ||
-        (entry.textContent ?? '').toLowerCase().includes(q) ||
-        entry.area.name.toLowerCase().includes(q) ||
-        dateLabel.includes(q)
-      );
-    });
-
-    return Promise.all(
-      matches.slice(0, 50).map((entry) => this.attachSignedUrls(entry)),
-    );
+    return this.attachSignedUrlsMany(rows);
   }
 }

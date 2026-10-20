@@ -345,6 +345,7 @@ model User {
   classOccurrences ClassOccurrence[]
   workShifts       WorkShift[]
   commitments      Commitment[]
+  travelTimes      TravelTime[]
   calendarSyncedEvents CalendarSyncedEvent[]
   bannedIps        BannedIp[]
   areaScheduleLinks AreaScheduleLink[]
@@ -1145,6 +1146,8 @@ model NotebookShare {
   accessRequests NotebookShareAccessRequest[]
   visits         ShareVisit[]
   // Sem @@index([token]): o @unique de token ja e o indice.
+  // "As minhas partilhas" e "Partilhado comigo" filtram pelo dono.
+  @@index([createdByUserId])
 }
 
 enum NotebookShareVisibility {
@@ -1179,6 +1182,8 @@ model NotebookShareAccessRequest {
 
   @@unique([notebookShareId, requestingUserId])
   @@index([notebookShareId, status])
+  // "Partilhado comigo" e o contador do Social procuram por quem pediu.
+  @@index([requestingUserId, status])
 }
 
 enum ShareAccessRequestStatus {
@@ -1256,6 +1261,11 @@ model WorkShift {
   endMinutes    Int
   bufferMinutes Int    @default(0)
   label         String?
+  // Morada e meio de transporte de um evento pontual (sem local). Servem
+  // para calcular a viagem casa-evento e entre o evento e o resto do dia
+  // (ItineraryService). Turnos de um local usam a morada do local.
+  address       String?      @db.VarChar(300)
+  commuteMode   CommuteMode?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1625,4 +1635,22 @@ model FriendCodeChangeRequest {
 
   @@index([status, createdAt])
   @@index([userId, createdAt])
+}
+
+/// Cache de tempos de viagem entre duas moradas (Distance Matrix), por
+/// utilizador e meio de transporte. Evita repetir pedidos pagos à Google
+/// sempre que o itinerário do dia é calculado (sync, feed, plano de estudo).
+/// origin/destination guardados normalizados (trim, espaços, minúsculas).
+model TravelTime {
+  id          String      @id @default(uuid())
+  userId      String
+  origin      String      @db.VarChar(300)
+  destination String      @db.VarChar(300)
+  mode        CommuteMode
+  minutes     Int
+  updatedAt   DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, origin, destination, mode])
 }

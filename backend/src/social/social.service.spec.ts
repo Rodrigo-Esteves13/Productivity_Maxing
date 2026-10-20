@@ -142,3 +142,37 @@ describe('SocialService', () => {
     expect(db.$transaction).toHaveBeenCalled();
   });
 });
+
+describe('SocialService.pendingCounts', () => {
+  it('counts only what waits for this user and adds it up', async () => {
+    const db = {
+      friendship: { count: jest.fn().mockResolvedValue(2) },
+      notebookShareAccessRequest: { count: jest.fn().mockResolvedValue(1) },
+      notebookViewGrant: { count: jest.fn().mockResolvedValue(3) },
+    };
+    const svc = new SocialService(
+      db as unknown as PrismaService,
+      { notifyUser: jest.fn() } as unknown as PushService,
+    );
+
+    await expect(svc.pendingCounts('me')).resolves.toEqual({
+      friendRequests: 2,
+      noteInvitations: 1,
+      notesRequests: 3,
+      total: 6,
+    });
+    expect(db.friendship.count).toHaveBeenCalledWith({
+      where: { addresseeId: 'me', status: 'PENDING' },
+    });
+    expect(db.notebookShareAccessRequest.count).toHaveBeenCalledWith({
+      where: {
+        requestingUserId: 'me',
+        status: 'PENDING',
+        invitedByOwner: true,
+      },
+    });
+    expect(db.notebookViewGrant.count).toHaveBeenCalledWith({
+      where: { ownerId: 'me', status: 'PENDING' },
+    });
+  });
+});

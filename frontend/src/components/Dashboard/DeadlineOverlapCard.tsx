@@ -6,6 +6,7 @@ import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
 import { useAreaLookup } from '../../hooks/useAreaLookup';
 import { useI18n } from '../../i18n/useI18n';
+import { detectLanguage } from '../../i18n/storage';
 
 interface DeadlineOverlapCardProps {
   tasks: Task[];
@@ -24,7 +25,7 @@ const GROUP_DATE_FORMAT: Intl.DateTimeFormatOptions = {
 // viewer's own timezone offset, same reasoning as toDateOnlyString on the
 // backend's CalendarService.
 function formatGroupDate(dateKey: string): string {
-  return new Date(`${dateKey}T00:00:00Z`).toLocaleDateString('en-US', GROUP_DATE_FORMAT);
+  return new Date(`${dateKey}T00:00:00Z`).toLocaleDateString(detectLanguage(), GROUP_DATE_FORMAT);
 }
 
 export default function DeadlineOverlapCard({ tasks, areas }: DeadlineOverlapCardProps) {

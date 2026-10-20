@@ -259,6 +259,9 @@ export interface WorkShift {
   // Já resolvidos no servidor: nome e deslocação do local, quando existe.
   bufferMinutes: number;
   label: string | null;
+  // Morada (do local ou do evento pontual) e meio de transporte.
+  address: string | null;
+  commuteMode: CommuteMode | null;
 }
 
 // Um local/compromisso (ex: um trabalho) com a sua deslocação própria.
@@ -382,6 +385,8 @@ export interface CreateWorkShiftInput {
   endMinutes: number;
   bufferMinutes?: number;
   label?: string;
+  address?: string;
+  commuteMode?: CommuteMode;
 }
 
 // Full records used only by the admin area (/admin/task-types,
@@ -470,6 +475,8 @@ export interface User {
   statusReason?: string | null;
   statusUpdatedAt?: string | null;
   statusUpdatedBy?: { id: string; name: string | null; email: string } | null;
+  // Codigo de amigo (null = ainda nao abriu o Social).
+  friendCode?: string | null;
 
   // Active dashboard (selected Program + Period) - null while
   // AcademicContext hasn't resolved/created the default "General" yet.
@@ -987,6 +994,22 @@ export interface NotebookEntry {
   attachments: NotebookAttachment[];
 }
 
+// Linha da lista de uma cadeira (GET /notebook/entry-summaries): sem o
+// conteudo, que vem a pedido (GET /notebook/entries/:id) quando a entrada e
+// aberta. Uma aula desenhada sao ~80 KB de JSON que a lista nunca mostrava.
+export interface NotebookEntrySummary {
+  id: string;
+  areaId: string;
+  title: string;
+  entryType: NotebookEntryType;
+  classNumber: number | null;
+  date: string;
+  // Inicio do texto (ate 400 caracteres, ainda com markdown).
+  preview: string | null;
+  photoCount: number;
+  attachmentCount: number;
+}
+
 export interface NotebookSearchResult extends NotebookEntry {
   area: { id: string; name: string; colorHex: string };
 }
@@ -1065,8 +1088,21 @@ export interface FeedbackItem {
 // Mirrors SharedEntryResult in the backend's notebook.service.ts - a
 // visitor to /shared/:token can be in one of 5 states, not just
 // "here's the content or a 404". Only 'ok' carries the actual entry.
+// Para navegar a partir de uma nota partilhada: o dono recebe o id da nota
+// ("Abrir no caderno"); um amigo do dono recebe quem partilhou.
+export interface SharedEntryContext {
+  ownEntryId: string | null;
+  owner: { userId: string; name: string | null; avatarUrl: string | null } | null;
+}
+
 export type SharedEntryResult =
-  | { status: 'ok'; entry: SharedNotebookEntry; role: SharedRole; hasPendingProposal: boolean }
+  | {
+      status: 'ok';
+      entry: SharedNotebookEntry;
+      role: SharedRole;
+      hasPendingProposal: boolean;
+      context: SharedEntryContext;
+    }
   | { status: 'login_required' }
   | { status: 'not_requested' }
   | { status: 'pending' }

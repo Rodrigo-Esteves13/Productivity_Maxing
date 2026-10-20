@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useLiveRefresh } from '../hooks/useLiveRefresh';
 import { usePushNotifications } from '../hooks/usePushNotifications';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getSharedNotebookEntry, requestShareAccess, respondToInvitation } from '../api/notebookService';
 import { fetchCsrfToken } from '../api/userService';
 import { setCsrfToken } from '../api/csrfStore';
-import type { SharedNotebookEntry as SharedNotebookEntryData, SharedRole } from '../types/models';
+import type { SharedEntryContext, SharedNotebookEntry as SharedNotebookEntryData, SharedRole } from '../types/models';
 import { useDrawingCanvas } from '../hooks/useDrawingCanvas';
 import { useCanvasShapes } from '../hooks/useCanvasShapes';
 import { useCanvasLinks } from '../hooks/useCanvasLinks';
@@ -22,6 +22,10 @@ import SharedEntryEditForm from '../components/Notebook/SharedEntryEditForm';
 import { useI18n } from '../i18n/useI18n';
 import DocumentSkeleton from '../components/UI/DocumentSkeleton';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { notifySocialChanged } from '../lib/socialEvents';
+import Breadcrumbs from '../components/UI/Breadcrumbs';
+import PersonAvatar from '../components/Social/PersonAvatar';
+import { friendPath, notebookEntryPath, socialTabPath } from '../lib/appLinks';
 
 const noop = () => {};
 
@@ -36,6 +40,7 @@ export default function SharedNotebookEntry() {
   const [entry, setEntry] = useState<SharedNotebookEntryData | null>(null);
   const [role, setRole] = useState<SharedRole>('VIEWER');
   const [hasPendingProposal, setHasPendingProposal] = useState(false);
+  const [context, setContext] = useState<SharedEntryContext | null>(null);
   const [gateStatus, setGateStatus] = useState<ShareGateStatus | null>(null);
   const [inviteRequestId, setInviteRequestId] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -64,6 +69,7 @@ export default function SharedNotebookEntry() {
           setEntry(result.entry);
           setRole(result.role);
           setHasPendingProposal(result.hasPendingProposal);
+          setContext(result.context);
           setGateStatus(null);
         } else {
           setEntry(null);
@@ -123,6 +129,7 @@ export default function SharedNotebookEntry() {
     setError('');
     try {
       await respondToInvitation(inviteRequestId, accept);
+      notifySocialChanged();
       if (accept) load();
       else navigate('/social');
     } catch {
@@ -169,6 +176,7 @@ export default function SharedNotebookEntry() {
 
   return (
     <PageLayout>
+      {hasSession && <SharedEntryNav title={entry.title} context={context} />}
       <SharedNotebookEntryView
         entry={entry}
         token={token ?? ''}
@@ -177,6 +185,48 @@ export default function SharedNotebookEntry() {
         onChanged={() => load()}
       />
     </PageLayout>
+  );
+}
+
+// Onde estas e para onde ir a seguir (so com sessao): o dono volta ao seu
+// caderno; quem recebeu volta a "Partilhado comigo" e, se for amigo do dono,
+// ve quem partilhou e vai a pagina dessa pessoa.
+function SharedEntryNav({ title, context }: { title: string; context: SharedEntryContext | null }) {
+  const { t } = useI18n();
+  const ownEntryId = context?.ownEntryId ?? null;
+  const owner = context?.owner ?? null;
+  const ownerName = owner?.name?.trim() || t('social.anonymous');
+  return (
+    <div className="mx-auto mb-4 flex max-w-3xl flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <Breadcrumbs
+        className="mb-0"
+        items={
+          ownEntryId
+            ? [{ label: t('nav.notebook'), to: '/notebook' }, { label: title }]
+            : [
+                { label: t('nav.social'), to: socialTabPath('friends') },
+                { label: t('nav.sharedWithMe'), to: socialTabPath('shared') },
+                { label: title },
+              ]
+        }
+      />
+      {ownEntryId ? (
+        <Link
+          to={notebookEntryPath(ownEntryId, { share: true })}
+          className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-violet-700 hover:text-white"
+        >
+          {t('shared.nav.openInNotebook')}
+        </Link>
+      ) : owner ? (
+        <Link
+          to={friendPath(owner.userId)}
+          className="flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900/60 py-1 pl-1 pr-3 text-sm text-neutral-300 hover:border-violet-700 hover:text-white"
+        >
+          <PersonAvatar name={ownerName} avatarUrl={owner.avatarUrl} size="sm" />
+          {t('shared.nav.sharedBy', { name: ownerName })}
+        </Link>
+      ) : null}
+    </div>
   );
 }
 

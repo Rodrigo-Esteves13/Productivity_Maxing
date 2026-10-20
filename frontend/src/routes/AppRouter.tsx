@@ -38,6 +38,7 @@ const Agent = lazy(() => import('../pages/Agent'));
 const Areas = lazy(() => import('../pages/Areas'));
 const Social = lazy(() => import('../pages/Social'));
 const FriendNotes = lazy(() => import('../pages/FriendNotes'));
+const FriendProfile = lazy(() => import('../pages/FriendProfile'));
 const FriendNoteEntry = lazy(() => import('../pages/FriendNoteEntry'));
 const TaskPacks = lazy(() => import('../pages/TaskPacks'));
 const ImportTaskPack = lazy(() => import('../pages/ImportTaskPack'));
@@ -46,6 +47,7 @@ const Security = lazy(() => import('../pages/Security'));
 const Appeals = lazy(() => import('../pages/Appeals'));
 const FeedbackAdmin = lazy(() => import('../pages/FeedbackAdmin'));
 const FriendCodeRequestsAdmin = lazy(() => import('../pages/FriendCodeRequestsAdmin'));
+const AdminUserProfile = lazy(() => import('../pages/AdminUserProfile'));
 const TaskTypes = lazy(() => import('../pages/TaskTypes'));
 const PrivacyPolicy = lazy(() => import('../pages/PrivacyPolicy'));
 const SharedNotebookEntry = lazy(() => import('../pages/SharedNotebookEntry'));
@@ -109,6 +111,10 @@ export default function AppRouter() {
             element={<PrivateRoute><Areas /></PrivateRoute>}
           />
           <Route
+            path="/social/friends/:userId"
+            element={<PrivateRoute><FriendProfile /></PrivateRoute>}
+          />
+          <Route
             path="/social/notes/:ownerId"
             element={<PrivateRoute><FriendNotes /></PrivateRoute>}
           />
@@ -145,6 +151,7 @@ export default function AppRouter() {
           {/* /areas é para todos (oficiais + pessoais); só as páginas abaixo são admin. */}
           <Route element={<AdminRoute />}>
             <Route path="/users" element={<Users />} />
+            <Route path="/users/:userId" element={<AdminUserProfile />} />
             <Route path="/security" element={<Security />} />
             <Route path="/appeals" element={<Appeals />} />
             <Route path="/feedback" element={<FeedbackAdmin />} />

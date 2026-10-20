@@ -14,8 +14,11 @@ self.addEventListener('push', (event) => {
     tag: typeof data.tag === 'string' ? data.tag : undefined,
     // Só caminhos da própria app: '/x' sim, '//host' (URL externo sem esquema) não.
     data: { url: typeof data.url === 'string' && /^\/(?!\/)/.test(data.url) ? data.url : '/' },
+    // icon: logo a cores (imagem grande). badge: so a silhueta (o Android usa
+    // apenas a transparencia; com o logo a cores aparecia um quadrado branco).
     icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    badge: '/icons/badge-96.png',
+    timestamp: Date.now(),
   };
   // Avisa as janelas abertas para se atualizarem logo (ver useLiveRefresh.ts).
   const notifyClients = self.clients

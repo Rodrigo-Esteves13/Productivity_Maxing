@@ -2,6 +2,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsEnum,
   IsInt,
   IsOptional,
   IsString,
@@ -14,8 +15,10 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { CommuteMode } from '@prisma/client';
 import { DATE_KEY_PATTERN } from '../../common/date-key.util';
 import {
+  MAX_ADDRESS_LENGTH,
   MAX_BUFFER_MINUTES,
   MAX_LABEL_LENGTH,
   MAX_SHIFTS_PER_BATCH,
@@ -79,6 +82,19 @@ export class CreateWorkShiftDto {
   @IsString()
   @MaxLength(MAX_LABEL_LENGTH)
   label?: string;
+
+  // Evento pontual: morada e meio de transporte para o itinerario do dia
+  // (turnos de um local usam a morada do local).
+  @ApiPropertyOptional({ example: 'Rua Exemplo 5, Porto' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(MAX_ADDRESS_LENGTH)
+  address?: string;
+
+  @ApiPropertyOptional({ enum: CommuteMode })
+  @IsOptional()
+  @IsEnum(CommuteMode)
+  commuteMode?: CommuteMode;
 }
 
 export class CreateWorkShiftsDto {

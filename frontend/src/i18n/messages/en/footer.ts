@@ -16,4 +16,10 @@ export const footer: Record<string, string> = {
   'footer.madeBy': "Built with {heart} and way too much coffee by Rodrigo",
   'footer.tagline': "Track your tasks, crush your deadlines, and actually see the grind pay off.",
   'footer.star': "Star it on GitHub",
+  'footer.study': "Study",
+  'footer.socialGroup': "Social & sharing",
+  'footer.help': "Help",
+  'footer.getStarted': "Get started",
+  'footer.updated': "Updated {date}",
+  'footer.language': "Language",
 };

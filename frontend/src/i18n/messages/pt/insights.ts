@@ -29,7 +29,7 @@ export const insights: Record<string, string> = {
   'focusScatter.axisFocus': "Foco",
   'focusScatter.axisGrade': "Nota",
   'focusScatter.grade': "Nota {value}%",
-  'focusScatter.legend': "Cada ponto e uma task avaliada ({count}). O foco e a media das sessoes dos 14 dias antes do prazo.",
+  'focusScatter.legend': "Cada ponto é uma task avaliada ({count}). O foco é a média das sessões dela e das sessões da cadeira nos 14 dias antes do prazo.",
   'focusEffect.interestNotEnough': "Interesse: precisa de {needed} tasks avaliadas em pelo menos {areas} cadeiras onde classificaste o interesse. Tens {have}.",
   'focusEffect.interestNoVariation': "Interesse: deste o mesmo valor a todas as cadeiras, por isso nao ha nada para comparar.",
   'focusEffect.interestInconclusive': "Interesse: as tuas notas nao seguem claramente o quanto gostas de cada cadeira ({count} tasks).",
@@ -37,4 +37,6 @@ export const insights: Record<string, string> = {
   'focusEffect.interestClearLower': "Interesse: os teus dados mostram notas mais baixas nas cadeiras de que gostas mais ({points} pontos de nota por ponto de interesse, provavelmente {low} a {high}). As cadeiras tem dificuldades diferentes, le isto com cuidado. Com base em {count} tasks.",
   'focusEffect.interestMissing': "Classifica o interesse em mais {count} cadeiras para afinar isto.",
   'widget.missingGrade': "Peso da nota em falta",
+  'ui.projectionProgress': "{have} de {needed}",
+  'ui.projectionAreaStudyCounts': "Contam as tasks avaliadas com tempo de estudo, incluindo o estudo registado na cadeira sem escolher a task (nos 14 dias antes do prazo).",
 };

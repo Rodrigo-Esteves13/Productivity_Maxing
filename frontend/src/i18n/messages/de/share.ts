@@ -42,7 +42,7 @@ export const share: Record<string, string> = {
   'sharedEdit.noChanges': "Du hast nichts geändert.",
   'sharedEdit.error': "Deine Änderungen konnten nicht gesendet werden. Bitte versuche es erneut.",
   'push.title': "Push-Benachrichtigungen",
-  'push.help': "Werde benachrichtigt, wenn jemand Zugriff auf deine geteilten Vorlesungen anfragt oder Änderungen vorschlägt, und wenn deine eigenen Anfragen beantwortet werden.",
+  'push.help': "Erhalte auf diesem Gerät Benachrichtigungen zu nahenden Fristen (wenn oben eingeschaltet), Freundschafts- und Zugriffsanfragen, Einladungen zu Notizen und vorgeschlagenen Änderungen sowie Antworten auf deine Anfragen.",
   'push.enable': "Benachrichtigungen aktivieren",
   'push.disable': "Benachrichtigungen deaktivieren",
   'push.enabled': "Benachrichtigungen sind auf diesem Gerät aktiviert.",

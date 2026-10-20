@@ -11,6 +11,7 @@ import {
   type QuickAddPriority,
 } from '../../lib/parseQuickAddTask';
 import { getLastUsedAreaId, setLastUsedAreaId } from '../../lib/lastUsedArea';
+import { foldText, snippetAround, type TextSnippet } from '../../lib/textSearch';
 import type { Area, Task, NotebookSearchResult } from '../../types/models';
 import { PlusIcon, SearchIcon } from '../UI/Icons';
 import { ACADEMIC_TASK_TYPE_KEY } from '../../lib/constants';
@@ -32,7 +33,18 @@ interface NavCommand {
 }
 
 const NAV_COMMANDS: NavCommand[] = [
-  { id: 'nav-dashboard', labelKey: 'nav.dashboard', path: '/dashboard' },
+  {
+    id: 'nav-dashboard',
+    labelKey: 'nav.dashboard',
+    path: '/dashboard',
+    keywords: ['today', 'hoje', 'next class', 'proxima aula', 'due today', 'study block', 'bloco de estudo'],
+  },
+  {
+    id: 'nav-exam-mode',
+    labelKey: 'examMode.paletteLabel',
+    path: '/dashboard?exam=on',
+    keywords: ['exam', 'exams', 'exame', 'exames', 'tests', 'testes', 'countdown', 'semana de exames', 'focus'],
+  },
   { id: 'nav-tasks', labelKey: 'nav.tasks', path: '/tasks' },
   {
     id: 'nav-focus',
@@ -45,6 +57,12 @@ const NAV_COMMANDS: NavCommand[] = [
     labelKey: 'nav.schedule',
     path: '/schedule',
     keywords: ['timetable', 'classes', 'calendar feed', 'import', 'horario'],
+  },
+  {
+    id: 'nav-schedule-month',
+    labelKey: 'schedule.month.paletteLabel',
+    path: '/schedule?view=month',
+    keywords: ['month', 'monthly', 'mes', 'mensal', 'calendar', 'calendario', 'exams', 'exames', 'deadlines', 'prazos'],
   },
   {
     id: 'nav-work-shifts',
@@ -65,10 +83,19 @@ const NAV_COMMANDS: NavCommand[] = [
     path: '/profile',
     keywords: ['avatar', 'photo', 'google calendar', 'theme', 'language', '2fa', 'password', 'notifications', 'push', 'reminders', 'deadline', 'lembretes', 'prazos'],
   },
+  {
+    id: 'nav-install-app',
+    labelKey: 'install.title',
+    path: '/profile',
+    keywords: ['install', 'instalar', 'pwa', 'home screen', 'ecra principal', 'ecrã principal', 'add to home screen', 'iphone', 'android', 'app'],
+  },
   { id: 'nav-changelog', labelKey: 'nav.changelog', path: '/changelog' },
   { id: 'nav-developer', labelKey: 'nav.developer', path: '/developer' },
   { id: 'nav-agent', labelKey: 'nav.agent', path: '/agent' },
   { id: 'nav-social', labelKey: 'nav.social', path: '/social', keywords: ['friends', 'amigos', 'friend code'] },
+  { id: 'nav-social-requests', labelKey: 'palette.socialRequests', path: '/social?tab=requests', keywords: ['invitations', 'convites', 'pedidos', 'requests'] },
+  { id: 'nav-shared-with-me', labelKey: 'nav.sharedWithMe', path: '/social?tab=shared', keywords: ['shared', 'partilhado', 'lessons', 'notes'] },
+  { id: 'nav-my-shares', labelKey: 'social.tab.mine', path: '/social?tab=mine', keywords: ['my shares', 'partilhas', 'links', 'share'] },
   { id: 'nav-task-packs', labelKey: 'nav.taskPacks', path: '/task-packs', keywords: ['share tasks', 'import'] },
   { id: 'nav-areas', labelKey: 'nav.areas', path: '/areas', keywords: ['courses', 'subjects', 'propose'] },
   { id: 'nav-users', labelKey: 'nav.admin.users', path: '/users', adminOnly: true },
@@ -106,7 +133,8 @@ const PRIORITY_MATCH: Record<QuickAddPriority, string[]> = {
 
 type PaletteItem =
   | { kind: 'nav'; id: string; label: string; path: string }
-  | { kind: 'task'; id: string; label: string; task: Task }
+  // detail: onde apareceu o texto quando nao foi no titulo (notas ou passo).
+  | { kind: 'task'; id: string; label: string; task: Task; detail?: { prefix: string; snippet: TextSnippet } }
   | { kind: 'notebook'; id: string; label: string; entry: NotebookSearchResult }
   | {
       kind: 'quick-add';
@@ -234,6 +262,19 @@ export default function CommandPalette() {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [isOpen]);
 
+  // Titulo, notas e passos de cada task ja sem acentos/maiusculas: calcula
+  // uma vez por carga, nao a cada tecla.
+  const taskIndex = useMemo(
+    () =>
+      (tasks ?? []).map((task) => ({
+        task,
+        title: foldText(task.title),
+        notes: task.notes ? foldText(task.notes) : '',
+        subtasks: (task.subtasks ?? []).map((subtask) => foldText(subtask.title)),
+      })),
+    [tasks],
+  );
+
   const items = useMemo<PaletteItem[]>(() => {
     const trimmed = query.trim();
     const isQuickAddMode = trimmed.startsWith(QUICK_ADD_PREFIX);
@@ -274,16 +315,38 @@ export default function CommandPalette() {
       .filter(({ command, label }) => q === '' || label.toLowerCase().includes(q) || command.keywords?.some((k) => k.includes(q)))
       .map(({ command, label }) => ({ kind: 'nav', id: command.id, label, path: command.path }));
 
-    // Task titles only searched once there's a query - with no query,
-    // showing 6 arbitrary tasks above the fold isn't useful; the nav
-    // commands are.
-    const taskMatches: PaletteItem[] =
-      q === '' || !tasks
-        ? []
-        : tasks
-            .filter((task) => task.title.toLowerCase().includes(q))
-            .slice(0, MAX_TASK_RESULTS)
-            .map((task) => ({ kind: 'task', id: task.id, label: task.title, task }));
+    // Tasks only searched once there's a query - with no query, showing 6
+    // arbitrary tasks above the fold isn't useful; the nav commands are.
+    // Titulo primeiro; depois as que so tem o texto nas notas ou num passo,
+    // com o excerto onde apareceu (so para as que chegam a ser mostradas).
+    const taskMatches: PaletteItem[] = [];
+    if (q !== '') {
+      const fq = foldText(trimmed);
+      const inBody: { task: Task; subtaskIndex: number }[] = [];
+      for (const entry of taskIndex) {
+        if (entry.title.includes(fq)) {
+          taskMatches.push({ kind: 'task', id: entry.task.id, label: entry.task.title, task: entry.task });
+        } else if (entry.notes.includes(fq)) {
+          inBody.push({ task: entry.task, subtaskIndex: -1 });
+        } else {
+          const subtaskIndex = entry.subtasks.findIndex((title) => title.includes(fq));
+          if (subtaskIndex !== -1) inBody.push({ task: entry.task, subtaskIndex });
+        }
+      }
+      for (const { task, subtaskIndex } of inBody) {
+        if (taskMatches.length >= MAX_TASK_RESULTS) break;
+        const inNotes = subtaskIndex === -1;
+        const snippet = snippetAround(inNotes ? (task.notes ?? '') : (task.subtasks?.[subtaskIndex]?.title ?? ''), fq);
+        taskMatches.push({
+          kind: 'task',
+          id: task.id,
+          label: task.title,
+          task,
+          ...(snippet ? { detail: { prefix: t(inNotes ? 'palette.inNotes' : 'palette.inSubtask'), snippet } } : {}),
+        });
+      }
+      taskMatches.splice(MAX_TASK_RESULTS);
+    }
 
     const notebookMatches: PaletteItem[] =
       q === ''
@@ -295,7 +358,7 @@ export default function CommandPalette() {
     // Quick-add goes LAST, never first: Enter on a normal search must keep
     // opening the top match, not creating a task named after the query.
     return [...navMatches, ...taskMatches, ...notebookMatches, ...quickAddItems];
-  }, [query, tasks, notebookResults, user, areas, t]);
+  }, [query, taskIndex, notebookResults, user, areas, t]);
 
   // Clamp instead of reset-on-every-keystroke - keeps the highlighted row
   // stable when it's still a valid index after the result list shrinks.
@@ -468,7 +531,17 @@ export default function CommandPalette() {
                 onMouseEnter={() => setActiveIndex(index)}
                 className={rowClass}
               >
-                <span className="truncate">{item.label}</span>
+                <span className="min-w-0">
+                  <span className="block truncate">{item.label}</span>
+                  {item.kind === 'task' && item.detail && (
+                    <span className="block truncate text-xs text-neutral-500">
+                      <span className="text-neutral-400">{item.detail.prefix} </span>
+                      {item.detail.snippet.before}
+                      <mark className="bg-transparent text-violet-300">{item.detail.snippet.match}</mark>
+                      {item.detail.snippet.after}
+                    </span>
+                  )}
+                </span>
                 <span className="text-[10px] uppercase tracking-wide text-neutral-500 shrink-0">
                   {t(`palette.kind.${item.kind}`)}
                 </span>

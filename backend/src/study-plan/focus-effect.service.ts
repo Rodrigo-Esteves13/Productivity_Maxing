@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { hasStudyTimeWhere } from '../common/session-minutes.util';
 import { roundTo } from '../common/round.util';
 import { MS_PER_MINUTE } from '../common/time.constants';
 import {
@@ -24,15 +23,9 @@ import {
   type TrendSession,
   type TrendTask,
 } from './focus-trend.util';
-import {
-  SCATTER_MAX_POINTS,
-  SCATTER_WINDOW_DAYS,
-  buildFocusScatter,
-  type ScatterSession,
-  type ScatterTask,
-} from './focus-scatter.util';
+import { SCATTER_MAX_POINTS, buildFocusScatter } from './focus-scatter.util';
+import { loadGradedHistory } from './graded-history.loader';
 import { getLisbonNow } from '../common/date-key.util';
-import { MS_PER_DAY } from '../common/time.constants';
 import type {
   FactorEffect,
   FocusEffectResult,
@@ -62,38 +55,21 @@ export class FocusEffectService {
       interestRows.map((row) => [row.areaId, row.rating]),
     );
 
-    const tasks = await this.prisma.task.findMany({
-      where: { userId, realGrade: { not: null }, AND: [hasStudyTimeWhere()] },
-      orderBy: { date: 'desc' },
-      select: {
-        areaId: true,
-        realGrade: true,
-        period: { select: { program: { select: { gradeScale: true } } } },
-        studySessions: {
-          where: { endedAt: { not: null } },
-          select: { startedAt: true, endedAt: true, focusRating: true },
-        },
-      },
-    });
+    const history = await loadGradedHistory(this.prisma, userId);
 
     const samples: FocusSample[] = [];
     let excludedUnrated = 0;
     let latestScale: ParsedGradeScale | null = null;
     const gradedAreas = new Set<string>();
 
-    for (const task of tasks) {
-      if (task.realGrade === null) continue;
-      const scale = parseGradeScale(
-        task.period?.program.gradeScale ?? DEFAULT_SCALE_TEXT,
-      );
-      // Ordenadas da mais recente: a primeira com sessoes dita a escala.
-      latestScale ??= scale;
+    for (const task of history) {
+      const scale = parseGradeScale(task.gradeScale ?? DEFAULT_SCALE_TEXT);
       gradedAreas.add(task.areaId);
 
       let totalMinutes = 0;
       let ratedMinutes = 0;
       let ratedFocusMinutes = 0;
-      for (const session of task.studySessions) {
+      for (const session of task.sessions) {
         if (!session.endedAt) continue;
         const minutes =
           (session.endedAt.getTime() - session.startedAt.getTime()) /
@@ -104,8 +80,13 @@ export class FocusEffectService {
           ratedFocusMinutes += minutes * session.focusRating;
         }
       }
+      // Sem sessoes nenhumas (so tempo lembrado, ou nada): nao ha foco para
+      // medir, mas tambem nao e "faltou classificar".
+      if (totalMinutes <= 0) continue;
+      // Ordenadas da mais recente: a primeira com sessoes dita a escala.
+      latestScale ??= scale;
 
-      if (totalMinutes <= 0 || ratedMinutes / totalMinutes < MIN_RATED_SHARE) {
+      if (ratedMinutes / totalMinutes < MIN_RATED_SHARE) {
         excludedUnrated += 1;
         continue;
       }
@@ -207,77 +188,40 @@ export class FocusEffectService {
     return { weeks: buildFocusTrend(trendSessions, trendTasks, today) };
   }
 
-  /** Uma bolinha por task avaliada: foco medio antes do prazo vs nota. */
+  /**
+   * Uma bolinha por task avaliada: foco medio das sessoes que lhe pertencem
+   * (as mesmas que o modelo usa) contra a nota.
+   */
   async scatter(userId: string): Promise<FocusScatterResult> {
-    const tasks = await this.prisma.task.findMany({
-      where: { userId, realGrade: { not: null } },
-      orderBy: { date: 'desc' },
+    const history = await loadGradedHistory(this.prisma, userId, {
       take: SCATTER_MAX_POINTS,
-      select: {
-        id: true,
-        title: true,
-        areaId: true,
-        date: true,
-        realGrade: true,
-        area: { select: { name: true } },
-        period: { select: { program: { select: { gradeScale: true } } } },
-      },
     });
-    if (tasks.length === 0) return { points: [] };
-
-    // Sessoes desde a janela da task mais antiga, de uma vez (sem N+1).
-    const oldest = Math.min(...tasks.map((task) => task.date.getTime()));
-    const sessions = await this.prisma.studySession.findMany({
-      where: {
-        userId,
-        endedAt: { not: null },
-        focusRating: { not: null },
-        startedAt: { gte: new Date(oldest - SCATTER_WINDOW_DAYS * MS_PER_DAY) },
-      },
-      select: {
-        taskId: true,
-        areaId: true,
-        startedAt: true,
-        endedAt: true,
-        focusRating: true,
-      },
-    });
-
-    const scatterTasks: ScatterTask[] = tasks.flatMap((task) =>
-      task.realGrade === null
-        ? []
-        : [
-            {
-              id: task.id,
-              title: task.title,
-              areaId: task.areaId,
-              areaName: task.area.name,
-              date: task.date,
-              fraction: gradeToFraction(
-                task.realGrade,
-                parseGradeScale(
-                  task.period?.program.gradeScale ?? DEFAULT_SCALE_TEXT,
-                ),
-              ),
-            },
-          ],
-    );
-    const scatterSessions: ScatterSession[] = sessions.flatMap((session) =>
-      session.endedAt
-        ? [
-            {
-              taskId: session.taskId,
-              areaId: session.areaId,
-              startedAt: session.startedAt,
-              minutes:
-                (session.endedAt.getTime() - session.startedAt.getTime()) /
-                MS_PER_MINUTE,
-              focus: session.focusRating,
-            },
-          ]
-        : [],
-    );
-
-    return { points: buildFocusScatter(scatterTasks, scatterSessions) };
+    return {
+      points: buildFocusScatter(
+        history.map((task) => ({
+          id: task.id,
+          title: task.title,
+          areaName: task.areaName,
+          date: task.date,
+          fraction: gradeToFraction(
+            task.realGrade,
+            parseGradeScale(task.gradeScale ?? DEFAULT_SCALE_TEXT),
+          ),
+          sessions: task.sessions.flatMap((session) =>
+            session.endedAt
+              ? [
+                  {
+                    minutes:
+                      (session.endedAt.getTime() -
+                        session.startedAt.getTime()) /
+                      MS_PER_MINUTE,
+                    focus: session.focusRating,
+                  },
+                ]
+              : [],
+          ),
+        })),
+      ),
+    };
   }
 }

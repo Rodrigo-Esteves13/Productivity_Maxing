@@ -11,6 +11,8 @@ import {
   toDateKey,
 } from '../../common/date-key.util';
 import { buildDesiredEvents } from '../schedule-sync.builder';
+import { ItineraryService } from '../../schedule/itinerary.service';
+import { flattenItinerary } from '../../schedule/itinerary.builder';
 import {
   buildIcsFeed,
   lisbonWallClockToUtc,
@@ -51,6 +53,7 @@ export class CalendarFeedService {
     private readonly scheduleService: ScheduleService,
     private readonly workShiftsService: WorkShiftsService,
     private readonly studyPlanService: StudyPlanService,
+    private readonly itineraryService: ItineraryService,
   ) {}
 
   // ---------------------------------------------------------------- gestão
@@ -114,7 +117,7 @@ export class CalendarFeedService {
 
     const user = await this.prisma.user.findUnique({
       where: { calendarFeedToken: token },
-      select: { id: true, status: true, commuteMinutes: true },
+      select: { id: true, status: true },
     });
     if (!user || user.status === UserStatus.BANNED) {
       throw new NotFoundException();
@@ -150,6 +153,23 @@ export class CalendarFeedService {
       }),
     ]);
 
+    // Viagens pelo mesmo itinerario do sync, mas so com tempos ja guardados:
+    // o feed e publico (pedido pelos calendarios) e nunca gera custos na
+    // Google.
+    const travel = flattenItinerary(
+      await this.itineraryService.buildRange(
+        user.id,
+        classes.map((c) => ({
+          id: c.id,
+          date: toDateKey(c.date),
+          startMinutes: c.startMinutes,
+          endMinutes: c.endMinutes,
+        })),
+        shifts,
+        { allowLookups: false },
+      ),
+    );
+
     // Reaproveita o MESMO construtor do sync com o Google Calendar: aulas,
     // viagens, turnos e blocos de estudo ficam iguais nos dois sítios.
     const desired = buildDesiredEvents({
@@ -164,7 +184,7 @@ export class CalendarFeedService {
       })),
       shifts,
       study: plan.suggestions,
-      commuteMinutes: user.commuteMinutes,
+      travel,
     });
 
     const events: FeedEvent[] = desired.map((d) => ({

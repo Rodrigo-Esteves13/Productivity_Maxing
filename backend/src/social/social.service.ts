@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PushService } from '../push/push.service';
 import { areFriends as areFriendsQuery } from './friendship.util';
 import { MAX_FRIENDS, MAX_PENDING_OUTGOING } from './social.constants';
+import { SOCIAL_REQUESTS_PATH } from '../common/app-links.util';
 
 /** Unico dado de outra pessoa que sai daqui: nunca email, nunca ids internos alem do userId. */
 export interface PublicPerson {
@@ -43,6 +44,14 @@ export interface CodeChangeRequestView {
 }
 
 export type SendRequestResult = { status: 'PENDING' | 'ACCEPTED' };
+
+/** O que espera por uma resposta tua no Social (contador da navbar). */
+export interface SocialPendingCounts {
+  friendRequests: number;
+  noteInvitations: number;
+  notesRequests: number;
+  total: number;
+}
 
 const PERSON_SELECT = { id: true, name: true, avatarUrl: true } as const;
 const person = (u: {
@@ -161,6 +170,36 @@ export class SocialService {
     };
   }
 
+  /**
+   * So contagens (nada de nomes): pedidos de amizade recebidos, convites de
+   * amigos para notas e pedidos para ler as tuas notas, todos pendentes.
+   * Corre a cada poucos segundos na navbar, por isso sao tres counts com
+   * indice e nada mais.
+   */
+  async pendingCounts(userId: string): Promise<SocialPendingCounts> {
+    const [friendRequests, noteInvitations, notesRequests] = await Promise.all([
+      this.prisma.friendship.count({
+        where: { addresseeId: userId, status: 'PENDING' },
+      }),
+      this.prisma.notebookShareAccessRequest.count({
+        where: {
+          requestingUserId: userId,
+          status: 'PENDING',
+          invitedByOwner: true,
+        },
+      }),
+      this.prisma.notebookViewGrant.count({
+        where: { ownerId: userId, status: 'PENDING' },
+      }),
+    ]);
+    return {
+      friendRequests,
+      noteInvitations,
+      notesRequests,
+      total: friendRequests + noteInvitations + notesRequests,
+    };
+  }
+
   async sendRequest(
     userId: string,
     friendCode: string,
@@ -229,7 +268,7 @@ export class SocialService {
     });
     void this.push.notifyUser(target.id, 'friendRequest', {
       name: me?.name ?? '',
-      url: '/social',
+      url: SOCIAL_REQUESTS_PATH,
     });
     return { status: 'PENDING' };
   }

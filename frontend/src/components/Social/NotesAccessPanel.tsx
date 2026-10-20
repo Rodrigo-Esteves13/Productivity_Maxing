@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import type { IncomingGrant, IncomingGrantsView } from '../../api/socialNotesService';
 import { useI18n } from '../../i18n/useI18n';
+import { friendPath } from '../../lib/appLinks';
 import PersonRow from './PersonRow';
 
 interface Props {
   view: IncomingGrantsView;
+  /** So pedidos por decidir (separador Pedidos) ou so acessos dados (As minhas partilhas). */
+  status: IncomingGrant['status'];
+  title: string;
   onDecide: (grantId: string, approve: boolean, areaIds?: string[]) => Promise<boolean>;
   onUpdateAreas: (grantId: string, areaIds: string[]) => Promise<boolean>;
   onRevoke: (grantId: string) => Promise<boolean>;
@@ -72,16 +76,18 @@ function AreaPicker({
   );
 }
 
-export default function NotesAccessPanel({ view, onDecide, onUpdateAreas, onRevoke }: Props) {
+export default function NotesAccessPanel({ view, status, title, onDecide, onUpdateAreas, onRevoke }: Props) {
   const { t } = useI18n();
   const [open, setOpen] = useState<string | null>(null);
-  if (view.grants.length === 0) return null;
+  const grants = view.grants.filter((g) => g.status === status);
+  if (grants.length === 0) return null;
 
   const renderRow = (g: IncomingGrant) => (
     <li key={g.grantId} className="space-y-0">
       <ul>
         <PersonRow
           person={{ userId: g.viewerId, name: g.viewerName, avatarUrl: g.viewerAvatarUrl }}
+          to={friendPath(g.viewerId)}
           subtitle={
             g.status === 'APPROVED'
               ? t('social.notes.canRead', { count: g.areaIds.length })
@@ -137,9 +143,9 @@ export default function NotesAccessPanel({ view, onDecide, onUpdateAreas, onRevo
 
   return (
     <section className="space-y-2">
-      <h2 className="text-sm font-semibold text-white">{t('social.notes.title')}</h2>
+      <h2 className="text-sm font-semibold text-white">{title}</h2>
       <p className="text-xs text-neutral-500">{t('social.notes.readOnlyHint')}</p>
-      <ul className="space-y-2">{view.grants.map(renderRow)}</ul>
+      <ul className="space-y-2">{grants.map(renderRow)}</ul>
     </section>
   );
 }

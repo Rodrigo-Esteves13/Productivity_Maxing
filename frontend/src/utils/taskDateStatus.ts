@@ -1,6 +1,7 @@
 import type { Task } from '../types/models';
 import { MS_PER_HOUR, MS_PER_DAY } from '../lib/timeConstants';
 import { toDateKey } from '../lib/dateKey';
+import { translateNow } from '../i18n/translate';
 
 export type DateStatus = 'completed' | 'overdue' | 'today' | 'upcoming';
 
@@ -33,14 +34,15 @@ export function getRemainingTimeLabel(task: Task, now: Date = new Date()): strin
   const days = Math.floor(absMs / MS_PER_DAY);
   const hours = Math.floor((absMs % MS_PER_DAY) / MS_PER_HOUR);
 
+  // Unidades e frase na lingua da app ("3d 4h left", "剩余 3天4小时").
   let amount: string;
   if (days >= 1) {
-    amount = `${days}d${hours > 0 ? ` ${hours}h` : ''}`;
+    amount = hours > 0 ? translateNow('time.daysHours', { days, hours }) : translateNow('time.days', { days });
   } else if (hours >= 1) {
-    amount = `${hours}h`;
+    amount = translateNow('time.hours', { hours });
   } else {
-    amount = '<1h';
+    amount = translateNow('time.underHour');
   }
 
-  return diffMs < 0 ? `${amount} overdue` : `${amount} left`;
+  return translateNow(diffMs < 0 ? 'time.overdue' : 'time.left', { amount });
 }

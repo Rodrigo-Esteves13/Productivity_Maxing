@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { ACCOUNT_BLOCKED_EVENT } from '../../lib/accountBlockedEvents';
-import { getMyAccountStatus } from '../../api/userService';
 
 // Lazy: so quem tem a conta suspensa/banida descarrega esta pagina.
 const AccountBlockedPage = lazy(() => import('./AccountBlockedPage'));
@@ -8,10 +7,6 @@ const AccountBlockedPage = lazy(() => import('./AccountBlockedPage'));
 interface AccountBlockedGateProps {
   children: ReactNode;
 }
-
-// Intervalo do poll de fallback abaixo - mesma ordem de grandeza que
-// useHealthCheck.ts (30s), sem precisar de ser mais agressivo que isso.
-const STATUS_POLL_INTERVAL_MS = 30000;
 
 // Wraps the whole app, inside MaintenanceGate (see App.tsx) - covers the
 // MID-SESSION case: a valid cookie that gets rejected as SUSPENDED/BANNED
@@ -34,27 +29,12 @@ export default function AccountBlockedGate({ children }: AccountBlockedGateProps
   }, []);
 
   // The event above only fires when some OTHER request happens to get
-  // rejected - an idle tab (no navigation, no background fetch) could sit
-  // for a long time after an admin bans/suspends the account without
-  // noticing. This poll catches that directly instead of waiting for a
-  // coincidental failed request. Errors are ignored on purpose - a
-  // logged-out visitor hits this same endpoint's guard and gets a plain
-  // 401 (not the ACCOUNT_BLOCKED code), which just means "not our case".
-  useEffect(() => {
-    if (triggered) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const status = await getMyAccountStatus();
-        if (status.status !== 'ACTIVE') setTriggered(true);
-      } catch {
-        // Not authenticated yet, or a transient network error - nothing
-        // to do here, the next tick tries again.
-      }
-    }, STATUS_POLL_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [triggered]);
+  // rejected - an idle tab could sit for a long time after an admin
+  // bans/suspends the account without noticing. AccountStatusWatcher
+  // (inside AuthProvider, see App.tsx) polls for that and fires the same
+  // event. It used to live here, outside AuthProvider, and polled for
+  // logged-out visitors too - whose plain 401 the api client turned into
+  // a redirect to /login.
 
   if (triggered) {
     return (

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import DocumentSkeleton from '../components/UI/DocumentSkeleton';
+import Breadcrumbs from '../components/UI/Breadcrumbs';
+import { friendNotesPath, friendPath, socialTabPath } from '../lib/appLinks';
 import ErrorState from '../components/UI/ErrorState';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { getFriendNoteEntry } from '../api/socialNotesService';
-import type { SharedNotebookEntry as SharedNotebookEntryData } from '../types/models';
+import type { SharedEntryContext, SharedNotebookEntry as SharedNotebookEntryData } from '../types/models';
 import { SharedNotebookEntryView } from './SharedNotebookEntry';
 import { useI18n } from '../i18n/useI18n';
 
@@ -14,6 +16,7 @@ export default function FriendNoteEntry() {
   const { t } = useI18n();
   const { ownerId, entryId } = useParams<{ ownerId: string; entryId: string }>();
   const [entry, setEntry] = useState<SharedNotebookEntryData | null>(null);
+  const [context, setContext] = useState<SharedEntryContext | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   useDocumentTitle(entry?.title ?? t('social.notes.pageTitle'));
@@ -24,8 +27,10 @@ export default function FriendNoteEntry() {
     getFriendNoteEntry(ownerId, entryId)
       .then((res) => {
         if (cancelled) return;
-        if (res.status === 'ok') setEntry(res.entry);
-        else setHasError(true);
+        if (res.status === 'ok') {
+          setEntry(res.entry);
+          setContext(res.context);
+        } else setHasError(true);
       })
       .catch(() => {
         if (!cancelled) setHasError(true);
@@ -40,10 +45,18 @@ export default function FriendNoteEntry() {
 
   return (
     <PageLayout>
-      <div className="mx-auto mb-3 max-w-3xl">
-        <Link to={`/social/notes/${ownerId ?? ''}`} className="text-sm text-violet-400 hover:text-violet-300">
-          {t('social.notes.back')}
-        </Link>
+      <div className="mx-auto max-w-3xl">
+        <Breadcrumbs
+          items={[
+            { label: t('nav.social'), to: socialTabPath('friends') },
+            {
+              label: context?.owner?.name ?? t('social.anonymous'),
+              to: ownerId ? friendPath(ownerId) : undefined,
+            },
+            { label: t('social.notes.crumb'), to: ownerId ? friendNotesPath(ownerId) : undefined },
+            { label: entry?.title ?? t('social.notes.pageTitle') },
+          ]}
+        />
       </div>
       {isLoading ? (
         <DocumentSkeleton />

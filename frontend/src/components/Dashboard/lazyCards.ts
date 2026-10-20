@@ -4,6 +4,7 @@ import { lazy } from 'react';
 // próprio chunk, por isso o primeiro render da página já não descarrega o
 // código de 15 cartões + o modal de import (que arrasta a biblioteca de
 // folhas de cálculo) antes de mostrar o GPA e a tabela de tasks.
+export const TodayCard = lazy(() => import('./TodayCard'));
 export const UpcomingTasksCard = lazy(() => import('./UpcomingTasksCard'));
 export const AtRiskTasksCard = lazy(() => import('./AtRiskTasksCard'));
 export const DeadlineOverlapCard = lazy(() => import('./DeadlineOverlapCard'));

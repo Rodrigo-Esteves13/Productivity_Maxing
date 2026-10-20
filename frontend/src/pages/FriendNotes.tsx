@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
+import Breadcrumbs from '../components/UI/Breadcrumbs';
+import { friendNotesPath, friendPath, socialTabPath } from '../lib/appLinks';
 import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
 import TableSkeleton from '../components/UI/TableSkeleton';
@@ -37,6 +39,13 @@ export default function FriendNotes() {
 
   return (
     <PageLayout>
+      <Breadcrumbs
+        items={[
+          { label: t('nav.social'), to: socialTabPath('friends') },
+          { label: data?.ownerName ?? t('social.anonymous'), to: ownerId ? friendPath(ownerId) : undefined },
+          { label: t('social.notes.crumb') },
+        ]}
+      />
       <PageHeader
         title={t('social.notes.pageTitleOf', { name: data?.ownerName ?? t('social.anonymous') })}
         description={t('social.notes.readOnlyHint')}
@@ -52,7 +61,7 @@ export default function FriendNotes() {
           {data.entries.map((e) => (
             <li key={e.id}>
               <Link
-                to={`/social/notes/${ownerId}/${e.id}`}
+                to={`${friendNotesPath(ownerId ?? '')}/${encodeURIComponent(e.id)}`}
                 className="flex items-center justify-between gap-3 rounded-lg border border-neutral-800 bg-neutral-900/40 p-3 hover:border-neutral-700"
               >
                 <span className="min-w-0 truncate text-sm font-medium text-white">

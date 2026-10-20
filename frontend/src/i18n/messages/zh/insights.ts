@@ -29,7 +29,7 @@ export const insights: Record<string, string> = {
   'focusScatter.axisFocus': "专注度",
   'focusScatter.axisGrade': "成绩",
   'focusScatter.grade': "成绩 {value}%",
-  'focusScatter.legend': "每个点代表一个已评分的任务（共 {count} 个）。专注度是截止日期前 14 天内各次学习的平均值。",
+  'focusScatter.legend': "每个点代表一个已评分的任务（共 {count} 个）。专注度是该任务的学习记录与截止日期前 14 天内该科目学习记录的平均值。",
   'focusEffect.interestNotEnough': "兴趣：需要在至少 {areas} 门你评过兴趣的课程中有 {needed} 个已评分任务。你目前有 {have} 个。",
   'focusEffect.interestNoVariation': "兴趣：你给每门课的评分都一样，无法比较。",
   'focusEffect.interestInconclusive': "兴趣：你的成绩与你对各门课的喜爱程度没有明显关系（共 {count} 个任务）。",
@@ -37,4 +37,6 @@ export const insights: Record<string, string> = {
   'focusEffect.interestClearLower': "兴趣：你的数据显示，你更喜欢的课程成绩反而更低（兴趣每多 1 分，成绩 {points} 分，可能在 {low} 到 {high} 之间）。各门课难度不同，请谨慎解读。基于 {count} 个任务。",
   'focusEffect.interestMissing': "再为 {count} 门课程评价兴趣，可以让结果更准确。",
   'widget.missingGrade': "缺少的成绩权重",
+  'ui.projectionProgress': "{have} / {needed}",
+  'ui.projectionAreaStudyCounts': "计入有学习时间的已评分任务，包括未选择任务、只按科目记录的学习（截止日期前 14 天内）。",
 };

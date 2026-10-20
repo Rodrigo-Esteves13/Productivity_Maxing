@@ -17,6 +17,7 @@ export const nav: Record<string, string> = {
   'nav.sharedWithMe': "Compartido conmigo",
   'nav.taskPacks': "Paquetes de tareas",
   'nav.social': "Social",
+  'nav.socialPending': "{count} esperando tu respuesta",
   'nav.admin': "Admin",
   'nav.admin.users': "Usuarios",
   'nav.admin.taskTypes': "Tipos de tarea",

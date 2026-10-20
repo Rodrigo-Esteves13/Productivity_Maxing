@@ -175,8 +175,6 @@ export const auto: Record<string, string> = {
   "ui.googleCalendar": "Google Calendar",
   "ui.connect": "Connect",
   "ui.disconnect": "Disconnect",
-  "ui.advanced": "Advanced",
-  "ui.goToProductivityMaxingUnsafe": "Go to Productivity Maxing (unsafe)",
   "ui.googleApiServicesUserData": "Google API Services User Data Policy",
   "ui.yourAccountCurrentlySignsIn": "Your account currently signs in only through a connected provider. Add a password to also be able to log in with your email.",
   "ui.passwordUpdatedSuccessfully": "Password updated successfully.",

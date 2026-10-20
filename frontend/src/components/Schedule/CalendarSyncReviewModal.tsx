@@ -72,11 +72,19 @@ function Summary({ preview }: { preview: SchedulePreview }) {
 // calendário devia refletir mudou, e pede Confirm ou Deny. Ao contrário de
 // um botão "Check changes" + "Sync now", não depende de a pessoa se lembrar.
 export default function CalendarSyncReviewModal() {
-  const { t } = useI18n();
   const { isAuthenticated } = useAuth();
+  // So monta o hook com sessao: ele pede GET /calendar/status ao montar, e
+  // sem sessao o 401 passava pelo interceptor do api/client.ts, que manda
+  // para /login - um visitante em /terms era levado para o login. (E a
+  // cache de useCalendarStatus ficava com `false` ate recarregar.)
+  return isAuthenticated ? <CalendarSyncReview /> : null;
+}
+
+function CalendarSyncReview() {
+  const { t } = useI18n();
   const { phase, preview, result, confirm, deny } = useCalendarSyncReview();
 
-  if (!isAuthenticated || phase === 'closed') return null;
+  if (phase === 'closed') return null;
 
   const isBusy = phase === 'syncing';
   const hasChanges = !!preview && preview.create + preview.update + preview.remove > 0;

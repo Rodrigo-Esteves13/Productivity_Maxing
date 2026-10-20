@@ -27,6 +27,8 @@ const USER_ADMIN_SELECT = {
   statusReason: true,
   statusUpdatedAt: true,
   statusUpdatedBy: { select: { id: true, name: true, email: true } },
+  // O admin procura contas pelo codigo de amigo (ex.: denuncia de spam).
+  friendCode: true,
 } as const;
 
 @Injectable()

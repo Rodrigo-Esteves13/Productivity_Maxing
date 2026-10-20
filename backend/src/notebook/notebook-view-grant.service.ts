@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PushService } from '../push/push.service';
 import { SocialService } from '../social/social.service';
 import { NotebookService, type SharedEntryResult } from './notebook.service';
+import { SOCIAL_REQUESTS_PATH } from '../common/app-links.util';
 
 export interface OwnerAreaOption {
   areaId: string;
@@ -96,7 +97,7 @@ export class NotebookViewGrantService {
     void this.push.notifyUserOnce(
       ownerId,
       'notesRequested',
-      { name: viewer?.name ?? '', url: '/social' },
+      { name: viewer?.name ?? '', url: SOCIAL_REQUESTS_PATH },
       `notesRequested:${ownerId}:${viewerId}`,
     );
     return { status: 'PENDING' };
@@ -319,10 +320,21 @@ export class NotebookViewGrantService {
       },
     });
     if (!entry) throw new NotFoundException();
+    // So chega aqui quem e amigo (allowedAreas): pode ver quem e o dono.
+    const owner = await this.prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { id: true, name: true, avatarUrl: true },
+    });
     return {
       status: 'ok',
       role: 'VIEWER',
       hasPendingProposal: false,
+      context: {
+        ownEntryId: null,
+        owner: owner
+          ? { userId: owner.id, name: owner.name, avatarUrl: owner.avatarUrl }
+          : null,
+      },
       entry: await this.notebook.buildSharedEntryView(entry),
     };
   }

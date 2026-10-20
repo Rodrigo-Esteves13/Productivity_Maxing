@@ -8,8 +8,8 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, description, action }: PageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 border-b border-neutral-800 pb-5">
-      <div>
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8 border-b border-neutral-800 pb-5">
+      <div className="min-w-0">
         <h1 className="text-2xl font-bold leading-7 text-white sm:text-3xl sm:tracking-tight">
           {title}
         </h1>
@@ -18,7 +18,7 @@ export default function PageHeader({ title, description, action }: PageHeaderPro
         )}
       </div>
       {action && (
-        <div className="mt-4 sm:ml-4 sm:mt-0">
+        <div className="min-w-0 lg:ml-4">
           {action}
         </div>
       )}

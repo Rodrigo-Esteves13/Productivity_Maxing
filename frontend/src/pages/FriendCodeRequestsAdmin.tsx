@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ErrorState from '../components/UI/ErrorState';
@@ -7,6 +8,7 @@ import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { decideFriendCodeRequest, getFriendCodeRequests, type FriendCodeRequestRow } from '../api/socialService';
 import { useI18n } from '../i18n/useI18n';
+import { adminUserPath } from '../lib/appLinks';
 
 // Admin: pedidos de troca de codigo de amigo. Aprovar gera o codigo novo do
 // utilizador (as amizades ficam); recusar deixa uma nota opcional visivel a ele.
@@ -60,7 +62,12 @@ export default function FriendCodeRequestsAdmin() {
           {rows.map((row) => (
             <li key={row.id} className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
               <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-400">
-                <span className="text-sm font-medium text-white">{row.user.name ?? t('common.na')}</span>
+                <Link
+                  to={adminUserPath(row.user.id)}
+                  className="text-sm font-medium text-white hover:text-violet-300 hover:underline"
+                >
+                  {row.user.name ?? t('common.na')}
+                </Link>
                 <span className="break-all">{row.user.email}</span>
                 <span className="ml-auto">{new Date(row.createdAt).toLocaleString()}</span>
               </div>

@@ -1,14 +1,10 @@
-import { formatClock, formatDayLabel } from '../../../lib/timeFormat';
+import { formatClock, formatDayLabel, weekdayLabel } from '../../../lib/timeFormat';
 import type { WorkShift } from '../../../types/models';
 import { translateNow } from '../../../i18n/translate';
-import { detectLanguage } from '../../../i18n/storage';
+
+export { weekdayLabel };
 
 // Segunda primeiro (como a WeekGrid), mas o valor é o dayOfWeek do JS (0=Dom).
-// Nome curto do dia na lingua atual (Intl), em vez de "Mon".."Sun" fixos.
-// 7 jan 2024 foi domingo, por isso 7 + dayOfWeek da o dia certo.
-export function weekdayLabel(dayOfWeek: number): string {
-  return new Intl.DateTimeFormat(detectLanguage(), { weekday: 'short' }).format(new Date(2024, 0, 7 + dayOfWeek));
-}
 
 export const WEEKDAYS = [1, 2, 3, 4, 5, 6, 0].map((value) => ({
   value,

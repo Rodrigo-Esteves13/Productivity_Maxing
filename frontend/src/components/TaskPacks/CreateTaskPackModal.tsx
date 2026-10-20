@@ -5,6 +5,7 @@ import Button from '../UI/Button';
 import FormError from '../UI/FormError';
 import { useI18n } from '../../i18n/useI18n';
 import type { Area, Task } from '../../types/models';
+import SelectionToolbar from '../UI/SelectionToolbar';
 
 const MAX_PACK_ITEMS = 50;
 const MAX_NAME_LENGTH = 80;
@@ -37,6 +38,10 @@ export default function CreateTaskPackModal({ isOpen, tasks, areas, isSaving, on
       else if (next.size < MAX_PACK_ITEMS) next.add(id);
       return next;
     });
+
+  // "Todas" respeita o limite do pacote: as primeiras por data.
+  const selectAll = () => setSelected(new Set(sorted.slice(0, MAX_PACK_ITEMS).map((task) => task.id)));
+  const selectNone = () => setSelected(new Set());
 
   const reset = () => {
     setName('');
@@ -73,6 +78,15 @@ export default function CreateTaskPackModal({ isOpen, tasks, areas, isSaving, on
           <legend className="mb-1 block text-sm font-medium text-neutral-300">
             {t('packs.create.pick', { count: selected.size, max: MAX_PACK_ITEMS })}
           </legend>
+          {sorted.length > 0 && (
+            <SelectionToolbar
+              className="mb-2"
+              selectedCount={selected.size}
+              selectableCount={Math.min(sorted.length, MAX_PACK_ITEMS)}
+              onSelectAll={selectAll}
+              onSelectNone={selectNone}
+            />
+          )}
           {sorted.length === 0 ? (
             <p className="text-sm text-neutral-500">{t('packs.create.noTasks')}</p>
           ) : (

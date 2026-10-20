@@ -17,6 +17,8 @@ import {
 } from '../common/date-key.util';
 import { CalendarService } from './calendar.service';
 import { buildDesiredEvents, diffEvents } from './schedule-sync.builder';
+import { ItineraryService } from '../schedule/itinerary.service';
+import { flattenItinerary } from '../schedule/itinerary.builder';
 import {
   CALENDAR_TIME_ZONE,
   COLOR_ID_BY_KIND,
@@ -62,6 +64,7 @@ export class ScheduleSyncService {
     private readonly scheduleService: ScheduleService,
     private readonly workShiftsService: WorkShiftsService,
     private readonly studyPlanService: StudyPlanService,
+    private readonly itineraryService: ItineraryService,
   ) {}
 
   /** O que um sync faria, sem escrever NADA (nem na Google nem na BD). */
@@ -187,11 +190,7 @@ export class ScheduleSyncService {
     const rangeEnd = addUtcDays(today, days - 1);
     const todayKey = toDateKey(today);
 
-    const [user, classes, shifts, plan, existingRows] = await Promise.all([
-      this.prisma.user.findUniqueOrThrow({
-        where: { id: userId },
-        select: { commuteMinutes: true },
-      }),
+    const [classes, shifts, plan, existingRows] = await Promise.all([
       this.scheduleService.findRange(userId, today, rangeEnd),
       this.workShiftsService.expandRange(userId, todayKey, toDateKey(rangeEnd)),
       this.studyPlanService.generate(userId, days),
@@ -210,6 +209,16 @@ export class ScheduleSyncService {
       }),
     ]);
 
+    const classInputs = classes.map((c) => ({
+      id: c.id,
+      date: toDateKey(c.date),
+      startMinutes: c.startMinutes,
+      endMinutes: c.endMinutes,
+    }));
+    const travel = flattenItinerary(
+      await this.itineraryService.buildRange(userId, classInputs, shifts),
+    );
+
     const desired = buildDesiredEvents({
       classes: classes.map((c) => ({
         id: c.id,
@@ -222,7 +231,7 @@ export class ScheduleSyncService {
       })),
       shifts,
       study: plan.suggestions,
-      commuteMinutes: user.commuteMinutes,
+      travel,
     });
 
     const existing: ExistingSyncedEvent[] = existingRows.map((row) => ({

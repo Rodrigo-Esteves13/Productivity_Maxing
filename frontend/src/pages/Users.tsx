@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import Modal from '../components/UI/Modal';
@@ -11,6 +12,7 @@ import { useAuth } from '../context/useAuth';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useUsersPage } from '../hooks/useUsersPage';
 import { useI18n } from '../i18n/useI18n';
+import { SearchIcon } from '../components/UI/Icons';
 
 export default function Users() {
   const { t } = useI18n();
@@ -36,6 +38,16 @@ export default function Users() {
     handleSubmitStatusAction,
     handleReactivateUser,
   } = useUsersPage(currentUser?.id);
+  const [query, setQuery] = useState('');
+
+  // Nome, email ou codigo de amigo (ex.: alguem denuncia um codigo).
+  const visibleUsers = useMemo(() => {
+    const q = query.trim().toLocaleLowerCase();
+    if (!q) return users;
+    return users.filter((u) =>
+      [u.name ?? '', u.email, u.friendCode ?? ''].some((field) => field.toLocaleLowerCase().includes(q)),
+    );
+  }, [users, query]);
 
   return (
     <PageLayout>
@@ -51,8 +63,27 @@ export default function Users() {
       ) : users.length === 0 ? (
         <EmptyState message={t('ui.noUsersRegisteredInThe')} />
       ) : (
-        <UsersTable
-          users={users}
+        <>
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <label className="relative w-full sm:max-w-sm">
+              <span className="sr-only">{t('adminSocial.search')}</span>
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t('adminSocial.search')}
+                className="w-full rounded-lg border border-neutral-800 bg-neutral-900 py-2 pl-9 pr-3 text-sm text-white placeholder:text-neutral-500 focus:border-violet-600 focus:outline-none"
+              />
+            </label>
+            {query.trim() && (
+              <span className="text-xs text-neutral-500" aria-live="polite">
+                {t('adminSocial.searchCount', { shown: visibleUsers.length, total: users.length })}
+              </span>
+            )}
+          </div>
+          <UsersTable
+          users={visibleUsers}
           currentUserId={currentUser?.id}
           onEdit={setEditingUser}
           onDelete={handleDeleteUser}
@@ -62,6 +93,7 @@ export default function Users() {
           onReactivate={handleReactivateUser}
           reactivatingId={reactivatingId}
         />
+        </>
       )}
 
       {exportingId && <p className="mt-3 text-xs text-neutral-500">{t('ui.preparingExport')}</p>}

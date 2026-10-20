@@ -8,6 +8,7 @@ import type {
   DetectClassResult,
   NotebookAttachment,
   NotebookEntry,
+  NotebookEntrySummary,
   NotebookEntryType,
   NotebookPhoto,
   NotebookSearchResult,
@@ -46,10 +47,18 @@ export type UpdateNotebookEntryPayload = Partial<
   Omit<CreateNotebookEntryPayload, 'areaId' | 'classOccurrenceId'>
 >;
 
-export const getNotebookEntries = async (areaId: string): Promise<NotebookEntry[]> => {
-  const response = await api.get<NotebookEntry[]>('/notebook/entries', {
+// A lista da cadeira sem o conteudo das entradas (ver NotebookEntrySummary).
+export const getNotebookEntrySummaries = async (areaId: string): Promise<NotebookEntrySummary[]> => {
+  const response = await api.get<NotebookEntrySummary[]>('/notebook/entry-summaries', {
     params: { areaId },
   });
+  return response.data;
+};
+
+// Todas as entradas da cadeira com o conteudo completo, de uma vez. Pesado
+// (desenhos de todas as aulas): so para exportar a cadeira, nunca para a lista.
+export const getNotebookEntriesFull = async (areaId: string): Promise<NotebookEntry[]> => {
+  const response = await api.get<NotebookEntry[]>('/notebook/entries', { params: { areaId } });
   return response.data;
 };
 

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Task } from '../../types/models';
-import { computeDeadlineCompliance } from '../../utils/deadlineCompliance';
+import { computeDeadlineCompliance, DEADLINE_COMPLIANCE_MONTHS } from '../../utils/deadlineCompliance';
 import { CheckIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
@@ -15,8 +15,11 @@ const MIN_TASKS_TO_SHOW = 3;
 // Complements AtRiskTasksCard (what is late right now) with the
 // historical view: is the habit improving or slipping.
 export default function DeadlineComplianceCard({ tasks }: DeadlineComplianceCardProps) {
-  const { t } = useI18n();
-  const data = useMemo(() => computeDeadlineCompliance(tasks), [tasks]);
+  const { t, lang } = useI18n();
+  const data = useMemo(
+    () => computeDeadlineCompliance(tasks, DEADLINE_COMPLIANCE_MONTHS, new Date(), lang),
+    [tasks, lang],
+  );
 
   if (data.total < MIN_TASKS_TO_SHOW) return null;
 

@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { socialTabPath } from '../lib/appLinks';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import Button from '../components/UI/Button';
@@ -7,10 +9,12 @@ import { useI18n } from '../i18n/useI18n';
 import LinesSkeleton from '../components/UI/LinesSkeleton';
 import ErrorState from '../components/UI/ErrorState';
 import NotebookSubjectPicker from '../components/Notebook/NotebookSubjectPicker';
-import NotebookEntryList from '../components/Notebook/NotebookEntryList';
+import NotebookEntryList, { type EntryShareBadge } from '../components/Notebook/NotebookEntryList';
 import NotebookEntryEditor from '../components/Notebook/NotebookEntryEditor';
 import NotebookScheduleLink from '../components/Notebook/NotebookScheduleLink';
 import NotebookSearchResults from '../components/Notebook/NotebookSearchResults';
+import NotebookSharedPanel from '../components/Notebook/NotebookSharedPanel';
+import NotebookAreaOverview from '../components/Notebook/NotebookAreaOverview';
 import { useAcademic } from '../context/useAcademic';
 import { useNotebookAreas } from '../hooks/useNotebookAreas';
 import { useNotebookEntries } from '../hooks/useNotebookEntries';
@@ -22,11 +26,19 @@ import {
   uploadNotebookAttachment,
   deleteNotebookAttachment,
   searchNotebook,
+  getNotebookEntry,
+  getNotebookEntriesFull,
 } from '../api/notebookService';
+import { courseToMarkdown, entryTitle, entryToMarkdown, markdownFileName } from '../lib/notebookMarkdown';
+import { downloadTextFile } from '../utils/downloadTextFile';
+import { rememberSharePanelOpen } from '../hooks/useEntryShare';
+import { useMyShares } from '../hooks/useMyShares';
 import useDocumentTitle from '../hooks/useDocumentTitle';
-import { PlusIcon, SearchIcon, XIcon } from '../components/UI/Icons';
+import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, PlusIcon, SearchIcon, XIcon } from '../components/UI/Icons';
 import { consumePendingNotebookEntry } from '../lib/pendingNotebookEntry';
-import type { NotebookSearchResult } from '../types/models';
+import type { NotebookEntry, NotebookSearchResult } from '../types/models';
+
+const MARKDOWN_MIME = 'text/markdown;charset=utf-8';
 
 // Título nunca pode ficar vazio (o backend exige @IsNotEmpty) - sem aula
 // detetada, usa a data por extenso em vez de deixar em branco.
@@ -81,8 +93,14 @@ export default function Notebook() {
   const {
     entries,
     isLoading: entriesLoading,
+    selectedId,
     selectedEntry,
+    isLoadingEntry,
+    entryError,
     selectEntry,
+    prefetchEntry,
+    retryEntry,
+    replaceEntry,
     createEntry,
     updateEntry,
     removeEntry,
@@ -109,6 +127,77 @@ export default function Notebook() {
   }, [entries]);
 
   const selectedArea = areas.find((a) => a.id === selectedAreaId) ?? null;
+
+  // A ultima cadeira guardada pode ja nao existir neste periodo: em vez de
+  // um ecra vazio a pedir "escolhe uma cadeira", abre a primeira (as do
+  // periodo primeiro).
+  useEffect(() => {
+    if (areasLoading || areas.length === 0 || selectedArea) return;
+    const fallback = areas.find((a) => a.usedInPeriod) ?? areas[0];
+    setSelectedAreaId(fallback.id);
+  }, [areasLoading, areas, selectedArea]);
+
+  // Estado de partilha de cada nota (icone e pendentes na lista).
+  const myShares = useMyShares();
+  const shareByEntry = useMemo(
+    () =>
+      new Map<string, EntryShareBadge>(
+        myShares.items.map((share) => [
+          share.entryId,
+          { waiting: share.pendingRequests + share.pendingProposals },
+        ]),
+      ),
+    [myShares.items],
+  );
+  const sharedInArea = selectedArea
+    ? myShares.items.filter((share) => share.areaId === selectedArea.id).length
+    : 0;
+
+  // Anterior/seguinte na ordem da lista (mais recente primeiro): "anterior"
+  // e a entrada mais antiga a seguir, "seguinte" a mais recente.
+  const selectedIndex = selectedId ? entries.findIndex((e) => e.id === selectedId) : -1;
+  const olderEntry = selectedIndex >= 0 ? (entries[selectedIndex + 1] ?? null) : null;
+  const newerEntry = selectedIndex > 0 ? entries[selectedIndex - 1] : null;
+
+  // Telemovel: a lista fica por cima do editor, por isso ao escolher uma
+  // nota salta-se para ela (no ecra largo estao lado a lado).
+  const editorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selectedId || window.matchMedia('(min-width: 768px)').matches) return;
+    // Sem animacao para quem pediu menos movimento (sistema ou Perfil).
+    const reduceMotion =
+      document.documentElement.getAttribute('data-motion') === 'reduced' ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    editorRef.current?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  }, [selectedId]);
+
+  const [isExportingCourse, setIsExportingCourse] = useState(false);
+  const [exportError, setExportError] = useState('');
+
+  // A entrada aberta ja esta completa em memoria: descarrega logo.
+  const exportEntry = (entry: NotebookEntry) => {
+    if (!selectedArea) return;
+    downloadTextFile(
+      entryToMarkdown(entry, selectedArea.name, t),
+      markdownFileName(selectedArea.name, entry.date.slice(0, 10), entryTitle(entry, t)),
+      MARKDOWN_MIME,
+    );
+  };
+
+  // A lista so tem resumos: a cadeira inteira pede o conteudo completo.
+  const exportCourse = async () => {
+    if (!selectedArea || isExportingCourse) return;
+    setIsExportingCourse(true);
+    setExportError('');
+    try {
+      const fullEntries = await getNotebookEntriesFull(selectedArea.id);
+      downloadTextFile(courseToMarkdown(selectedArea.name, fullEntries, t), markdownFileName(selectedArea.name), MARKDOWN_MIME);
+    } catch {
+      setExportError(t('notebook.export.error'));
+    } finally {
+      setIsExportingCourse(false);
+    }
+  };
 
   const handleNewEntry = async () => {
     if (!selectedAreaId) return;
@@ -145,6 +234,20 @@ export default function Notebook() {
 
   // --- Pesquisa global --------------------------------------------------
   const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // "/" foca a pesquisa (como no GitHub/YouTube), se nao estiveres a escrever.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      event.preventDefault();
+      searchInputRef.current?.focus();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
   const [searchResults, setSearchResults] = useState<NotebookSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -190,21 +293,60 @@ export default function Notebook() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ?entry=<id>(&share=1): vindo do Social, de uma nota partilhada ou de um
+  // aviso push. Abre a nota (e o painel de partilha) e limpa o URL, para um
+  // F5 depois de mudar de nota nao voltar a esta.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linkedEntryId = searchParams.get('entry');
+  const linkedShare = searchParams.get('share') === '1';
+  useEffect(() => {
+    if (!linkedEntryId) return undefined;
+    if (linkedShare) rememberSharePanelOpen();
+    let cancelled = false;
+    getNotebookEntry(linkedEntryId)
+      .then((entry) => {
+        if (cancelled) return;
+        setSearchQuery('');
+        setSelectedAreaId(entry.areaId);
+        selectEntry(entry);
+        setJustCreatedEntryId(null);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setSearchParams({}, { replace: true });
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- so reage ao link
+  }, [linkedEntryId, linkedShare]);
+
   const isSearchActive = searchQuery.trim().length > 0;
 
   return (
     <PageLayout>
       <PageHeader title={t('notebook.title')} description={t('notebook.description')} />
 
+      <NotebookSharedPanel />
+
       <div className="relative mb-6">
         <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
         <input
+          ref={searchInputRef}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder={t('notebook.search.placeholder')}
           aria-label={t('notebook.search.placeholder')}
           className="w-full rounded-lg border border-neutral-800 bg-neutral-900 py-2.5 pl-10 pr-9 text-sm text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none"
         />
+        {!isSearchActive && (
+          <kbd
+            aria-hidden="true"
+            className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-500 sm:block"
+          >
+            /
+          </kbd>
+        )}
         {isSearchActive && (
           <button
             type="button"
@@ -259,14 +401,41 @@ export default function Notebook() {
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     {!entriesLoading && (
                       <span className="text-xs text-neutral-500">
-                        {t('notebook.entries.count', { count: entries.length })}
+                        {t(entries.length === 1 ? 'notebook.entries.countOne' : 'notebook.entries.count', {
+                          count: entries.length,
+                        })}
                       </span>
+                    )}
+                    {sharedInArea > 0 && (
+                      <Link to={socialTabPath('mine')} className="text-xs text-violet-400 hover:underline">
+                        {t(sharedInArea === 1 ? 'notebook.entries.sharedOne' : 'notebook.entries.shared', {
+                          count: sharedInArea,
+                        })}
+                      </Link>
                     )}
                     <NotebookScheduleLink areaId={selectedArea.id} />
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   {createError && <span className="text-xs text-red-400">{createError}</span>}
+                  {exportError && (
+                    <span role="alert" className="text-xs text-red-400">
+                      {exportError}
+                    </span>
+                  )}
+                  {entries.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => void exportCourse()}
+                      disabled={isExportingCourse}
+                      title={t('notebook.export.courseHint')}
+                      className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium disabled:opacity-50"
+                    >
+                      <DownloadIcon className="h-4 w-4" />
+                      {isExportingCourse ? t('notebook.export.exporting') : t('notebook.export.course')}
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     onClick={handleNewEntry}
@@ -279,6 +448,15 @@ export default function Notebook() {
                 </div>
               </div>
 
+              {!entriesLoading && entries.length === 0 ? (
+                // Caderno vazio: um so convite a comecar, sem lista vazia ao lado.
+                <NotebookAreaOverview
+                  entries={entries}
+                  isCreating={isCreating}
+                  onSelect={selectEntry}
+                  onNewEntry={() => void handleNewEntry()}
+                />
+              ) : (
               <div className="grid grid-cols-1 gap-6 md:grid-cols-[16rem_minmax(0,1fr)] lg:grid-cols-[18rem_minmax(0,1fr)]">
                 <div className="md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:self-start md:overflow-y-auto md:pr-1">
                   {entriesLoading ? (
@@ -286,7 +464,9 @@ export default function Notebook() {
                   ) : (
                     <NotebookEntryList
                       entries={entries}
-                      selectedId={selectedEntry?.id ?? null}
+                      shareByEntry={shareByEntry}
+                      selectedId={selectedId}
+                      onPrefetch={prefetchEntry}
                       onSelect={(entry) => {
                         selectEntry(entry);
                         setJustCreatedEntryId(null);
@@ -295,7 +475,48 @@ export default function Notebook() {
                   )}
                 </div>
 
-                <div className="min-w-0">
+                <div ref={editorRef} className="min-w-0 scroll-mt-20">
+                  {selectedId && (
+                    <nav
+                      aria-label={t('notebook.nav.label')}
+                      className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => selectEntry(null)}
+                        className="rounded-md px-2 py-1 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+                      >
+                        {t('notebook.nav.overview')}
+                      </button>
+                      <div className="flex items-center gap-1">
+                        <span className="px-1 tabular-nums text-neutral-500">
+                          {t('notebook.nav.position', { index: selectedIndex + 1, total: entries.length })}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={!olderEntry}
+                          onClick={() => olderEntry && selectEntry(olderEntry)}
+                          onPointerEnter={() => olderEntry && prefetchEntry(olderEntry.id)}
+                          title={olderEntry?.title}
+                          className="flex items-center gap-0.5 rounded-md px-2 py-1 text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+                        >
+                          <ChevronLeftIcon className="h-3.5 w-3.5" />
+                          {t('notebook.nav.older')}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!newerEntry}
+                          onClick={() => newerEntry && selectEntry(newerEntry)}
+                          onPointerEnter={() => newerEntry && prefetchEntry(newerEntry.id)}
+                          title={newerEntry?.title}
+                          className="flex items-center gap-0.5 rounded-md px-2 py-1 text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+                        >
+                          {t('notebook.nav.newer')}
+                          <ChevronRightIcon className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </nav>
+                  )}
                   {selectedEntry ? (
                     <NotebookEntryEditor
                       key={selectedEntry.id}
@@ -319,40 +540,61 @@ export default function Notebook() {
                         })
                       }
                       onDelete={() => removeEntry(selectedEntry.id)}
+                      onExport={() => exportEntry(selectedEntry)}
                       onUploadPhoto={async (file) => {
                         const photo = await uploadNotebookPhoto(selectedEntry.id, file);
-                        selectEntry({
+                        replaceEntry({
                           ...selectedEntry,
                           photos: [...selectedEntry.photos, photo],
                         });
                       }}
                       onDeletePhoto={async (photoId) => {
                         await deleteNotebookPhoto(selectedEntry.id, photoId);
-                        selectEntry({
+                        replaceEntry({
                           ...selectedEntry,
                           photos: selectedEntry.photos.filter((p) => p.id !== photoId),
                         });
                       }}
                       onUploadAttachment={async (file) => {
                         const attachment = await uploadNotebookAttachment(selectedEntry.id, file);
-                        selectEntry({
+                        replaceEntry({
                           ...selectedEntry,
                           attachments: [...selectedEntry.attachments, attachment],
                         });
                       }}
                       onDeleteAttachment={async (attachmentId) => {
                         await deleteNotebookAttachment(selectedEntry.id, attachmentId);
-                        selectEntry({
+                        replaceEntry({
                           ...selectedEntry,
                           attachments: selectedEntry.attachments.filter((a) => a.id !== attachmentId),
                         });
                       }}
                     />
+                  ) : isLoadingEntry ? (
+                    // So a entrada aberta vem com o conteudo (ver useNotebookEntries).
+                    <div role="status" aria-label={t('notebook.entry.loading')} className="rounded-xl border border-neutral-800 p-5">
+                      <LinesSkeleton lines={6} />
+                    </div>
+                  ) : entryError ? (
+                    <div className="space-y-3">
+                      <ErrorState message={entryError} />
+                      <Button type="button" variant="secondary" onClick={retryEntry} className="px-3 py-1.5 text-sm">
+                        {t('common.tryAgain')}
+                      </Button>
+                    </div>
+                  ) : entriesLoading ? (
+                    <LinesSkeleton lines={6} />
                   ) : (
-                    <EmptyState message={t('notebook.entries.select')} />
+                    <NotebookAreaOverview
+                      entries={entries}
+                      isCreating={isCreating}
+                      onSelect={selectEntry}
+                      onNewEntry={() => void handleNewEntry()}
+                    />
                   )}
                 </div>
               </div>
+              )}
             </div>
           )}
         </>

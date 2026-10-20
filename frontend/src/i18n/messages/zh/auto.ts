@@ -175,8 +175,6 @@ export const auto: Record<string, string> = {
   "ui.googleCalendar": "Google 日历",
   "ui.connect": "连接",
   "ui.disconnect": "断开",
-  "ui.advanced": "高级",
-  "ui.goToProductivityMaxingUnsafe": "前往 Productivity Maxing（不安全）",
   "ui.googleApiServicesUserData": "Google API 服务用户数据政策",
   "ui.yourAccountCurrentlySignsIn": "你的账户目前只能通过已连接的服务登录。添加密码后，也可以用邮箱登录。",
   "ui.passwordUpdatedSuccessfully": "密码已成功更新。",

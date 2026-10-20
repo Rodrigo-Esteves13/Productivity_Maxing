@@ -33,7 +33,7 @@ export default function TaskSortControl({ sortMode, onChange, direction, onToggl
   const { t } = useI18n();
   const options = OPTIONS.map((option) => ({ ...option, label: t(option.label) }));
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <SegmentedControl options={options} value={sortMode} onChange={onChange} />
       {sortMode !== 'manual' && (
         <SortDirectionButton

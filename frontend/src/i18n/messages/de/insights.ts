@@ -29,7 +29,7 @@ export const insights: Record<string, string> = {
   'focusScatter.axisFocus': "Fokus",
   'focusScatter.axisGrade': "Note",
   'focusScatter.grade': "Note {value} %",
-  'focusScatter.legend': "Jeder Punkt ist eine benotete Aufgabe ({count}). Der Fokus ist der Durchschnitt der Einheiten in den 14 Tagen vor der Frist.",
+  'focusScatter.legend': "Jeder Punkt ist eine benotete Aufgabe ({count}). Der Fokus ist der Durchschnitt ihrer Einheiten und der Einheiten des Fachs in den 14 Tagen vor der Frist.",
   'focusEffect.interestNotEnough': "Interesse: Es braucht {needed} benotete Aufgaben in mindestens {areas} Fächern, deren Interesse du bewertet hast. Du hast {have}.",
   'focusEffect.interestNoVariation': "Interesse: Du hast allen Fächern dieselbe Bewertung gegeben, daher gibt es nichts zu vergleichen.",
   'focusEffect.interestInconclusive': "Interesse: Deine Noten folgen nicht erkennbar deinem Interesse am jeweiligen Fach ({count} Aufgaben).",
@@ -37,4 +37,6 @@ export const insights: Record<string, string> = {
   'focusEffect.interestClearLower': "Interesse: Deine Daten zeigen schlechtere Noten in den Fächern, die dir am meisten gefallen ({points} Notenpunkte pro Interessenpunkt, wahrscheinlich zwischen {low} und {high}). Fächer unterscheiden sich im Schwierigkeitsgrad, bitte mit Vorsicht deuten. Basiert auf {count} Aufgaben.",
   'focusEffect.interestMissing': "Bewerte dein Interesse an {count} weiteren Fächern, um dieses Ergebnis zu verfeinern.",
   'widget.missingGrade': "Notengewichtung fehlt",
+  'ui.projectionProgress': "{have} von {needed}",
+  'ui.projectionAreaStudyCounts': "Es zählen benotete Aufgaben mit Lernzeit, auch Lernzeit, die für das Fach ohne Aufgabe erfasst wurde (in den 14 Tagen vor der Frist).",
 };

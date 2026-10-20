@@ -10,6 +10,7 @@ import {
   type OutgoingGrant,
 } from '../api/socialNotesService';
 import { useLiveRefresh } from './useLiveRefresh';
+import { notifySocialChanged } from '../lib/socialEvents';
 
 export function useNotesAccess() {
   const [incoming, setIncoming] = useState<IncomingGrantsView>({ areas: [], grants: [] });
@@ -34,6 +35,7 @@ export function useNotesAccess() {
     async (action: () => Promise<unknown>): Promise<boolean> => {
       try {
         await action();
+        notifySocialChanged();
         await load();
         return true;
       } catch {

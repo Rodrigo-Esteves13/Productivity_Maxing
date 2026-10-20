@@ -1,10 +1,13 @@
 import type { Task } from '../types/models';
+import { weekdayLabel } from '../lib/timeFormat';
 
-// Monday-first, matching how the rest of the app's week views read.
-export const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+// Monday-first, matching how the rest of the app's week views read. Values
+// are JS getDay() numbers (0 = Sunday).
+const WEEKDAYS_MONDAY_FIRST = [1, 2, 3, 4, 5, 6, 0] as const;
 
 export interface WeekdayBucket {
-  label: (typeof WEEKDAY_LABELS)[number];
+  // Short weekday name in the app language ("Mon", "周一", "seg.").
+  label: string;
   pending: number;
   completed: number;
   total: number;
@@ -22,9 +25,9 @@ function dueWeekdayIndexMondayFirst(task: Task): number {
   return (sundayFirst + 6) % 7;
 }
 
-export function computeWeekdayDistribution(tasks: Task[]): WeekdayBucket[] {
-  const buckets: WeekdayBucket[] = WEEKDAY_LABELS.map((label) => ({
-    label,
+export function computeWeekdayDistribution(tasks: Task[], locale?: string): WeekdayBucket[] {
+  const buckets: WeekdayBucket[] = WEEKDAYS_MONDAY_FIRST.map((dayOfWeek) => ({
+    label: weekdayLabel(dayOfWeek, locale),
     pending: 0,
     completed: 0,
     total: 0,
