@@ -718,4 +718,7 @@ export const extra: Record<string, string> = {
   "install.iosStep3": "Open the app from the new icon on your home screen.",
   "install.button": "Install",
   "install.notNow": "Not now",
+  "priority.LOW": "Low",
+  "priority.MEDIUM": "Medium",
+  "priority.HIGH": "High",
 };

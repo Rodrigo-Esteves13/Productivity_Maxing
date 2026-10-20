@@ -98,7 +98,7 @@ export default function TaskTableRow({
       </>
     ),
     priority: task.priority ? (
-      <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
+      <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
     ) : (
       <span className="text-neutral-600">N/A</span>
     ),

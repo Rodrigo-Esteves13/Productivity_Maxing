@@ -137,7 +137,7 @@ export default function TaskCard({
           <div className="flex items-center gap-1.5">
             <DifficultyBadge difficulty={task.difficulty} />
             {task.priority && (
-              <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
+              <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
             )}
             <PostponedIndicator count={task.postponedCount} />
             {recurrenceLabel(task) && (

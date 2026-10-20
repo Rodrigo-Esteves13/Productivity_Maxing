@@ -718,4 +718,7 @@ export const extra: Record<string, string> = {
   "install.iosStep3": "Öffne die App über das neue Symbol auf dem Home-Bildschirm.",
   "install.button": "Installieren",
   "install.notNow": "Nicht jetzt",
+  "priority.LOW": "Niedrig",
+  "priority.MEDIUM": "Mittel",
+  "priority.HIGH": "Hoch",
 };

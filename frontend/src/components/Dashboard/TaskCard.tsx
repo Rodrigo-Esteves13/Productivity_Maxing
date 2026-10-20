@@ -72,7 +72,7 @@ export default function TaskCard({
       <div className="flex flex-wrap items-center gap-2 mt-3">
         <DifficultyBadge difficulty={task.difficulty} />
         {task.priority && (
-          <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
+          <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
         )}
         <StatusBadge status={task.progressStatus} />
         <span className="text-[11px] text-neutral-400">{academicTypeLabel}</span>

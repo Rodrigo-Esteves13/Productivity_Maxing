@@ -718,4 +718,7 @@ export const extra: Record<string, string> = {
   "install.iosStep3": "ホーム画面の新しいアイコンからアプリを開きます。",
   "install.button": "インストール",
   "install.notNow": "今はしない",
+  "priority.LOW": "低",
+  "priority.MEDIUM": "中",
+  "priority.HIGH": "高",
 };

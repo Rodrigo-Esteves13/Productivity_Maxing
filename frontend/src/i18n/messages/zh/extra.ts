@@ -718,4 +718,7 @@ export const extra: Record<string, string> = {
   "install.iosStep3": "从主屏幕上的新图标打开应用。",
   "install.button": "安装",
   "install.notNow": "以后再说",
+  "priority.LOW": "低",
+  "priority.MEDIUM": "中",
+  "priority.HIGH": "高",
 };

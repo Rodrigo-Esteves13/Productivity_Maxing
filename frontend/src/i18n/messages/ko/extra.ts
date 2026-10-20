@@ -718,4 +718,7 @@ export const extra: Record<string, string> = {
   "install.iosStep3": "홈 화면의 새 아이콘으로 앱을 엽니다.",
   "install.button": "설치",
   "install.notNow": "나중에",
+  "priority.LOW": "낮음",
+  "priority.MEDIUM": "보통",
+  "priority.HIGH": "높음",
 };

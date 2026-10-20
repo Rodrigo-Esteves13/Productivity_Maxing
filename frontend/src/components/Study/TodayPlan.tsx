@@ -39,7 +39,7 @@ export default function TodayPlan() {
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
                 {task.priority && (
-                  <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
+                  <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
                 )}
                 <DifficultyBadge difficulty={task.difficulty} />
               </div>

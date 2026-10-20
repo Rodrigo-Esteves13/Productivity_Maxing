@@ -718,4 +718,7 @@ export const extra: Record<string, string> = {
   "install.iosStep3": "Abre la app desde el nuevo icono de la pantalla de inicio.",
   "install.button": "Instalar",
   "install.notNow": "Ahora no",
+  "priority.LOW": "Baja",
+  "priority.MEDIUM": "Media",
+  "priority.HIGH": "Alta",
 };

@@ -73,7 +73,7 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       </DetailRow>
       {task.priority && (
         <DetailRow label={t('ui.priority')}>
-          <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
+          <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
         </DetailRow>
       )}
 
