@@ -79,6 +79,18 @@ describe('entryToMarkdown', () => {
     expect(md).toContain('- slides.pdf (2.4 MB)\n- notebook.md.photos(1)\n\n_notebook.md.filesNotIncluded_');
     expect(md).not.toContain('https://cdn');
   });
+
+  it('escapes backslashes in link text and angle brackets in the address', () => {
+    const md = entryToMarkdown(
+      makeEntry({
+        textContent: '',
+        usefulLinks: [{ id: 'l1', label: 'C:\\pasta\\', url: 'https://x.pt/a>b\\c' }],
+      }),
+      'Redes',
+      t,
+    );
+    expect(md).toContain('- [C:\\\\pasta\\\\](<https://x.pt/a\\>b\\\\c>)');
+  });
 });
 
 describe('courseToMarkdown', () => {

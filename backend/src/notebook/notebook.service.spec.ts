@@ -4,6 +4,11 @@ import type { PushService } from '../push/push.service';
 
 // file-type e ESM puro e o jest nao o carrega; aqui nao e usado.
 jest.mock('file-type', () => ({ fileTypeFromBuffer: jest.fn() }));
+// O cliente real do Supabase arranca o Realtime, que exige WebSocket nativo
+// (Node 22+) e falhava no CI. O Storage e trocado por um falso em setup().
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: jest.fn(() => ({})),
+}));
 
 interface SignedItem {
   error: string | null;

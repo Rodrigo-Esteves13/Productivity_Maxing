@@ -22,6 +22,18 @@ function cell(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
 }
 
+// Texto de um link: "\" tem de ser escapado junto com "[" e "]", senao um
+// "\" no fim do titulo comia o "]" e partia o link.
+function linkLabel(value: string): string {
+  return value.replace(/[\\[\]]/g, '\\$&').replace(/\r?\n/g, ' ');
+}
+
+// Destino entre < >: o CommonMark nao aceita "<", ">" nem quebras de linha
+// ai dentro; "\" tambem e escapado para nao virar escape de outra coisa.
+function linkDestination(url: string): string {
+  return url.trim().replace(/[\\<>]/g, '\\$&').replace(/\r?\n/g, '');
+}
+
 function tableToMarkdown(table: NotebookTable): string | null {
   const width = Math.max(0, ...table.rows.map((row) => row.length));
   if (width === 0 || table.rows.every((row) => row.every((value) => !value.trim()))) return null;
@@ -62,7 +74,7 @@ export function entryToMarkdown(entry: NotebookEntry, areaName: string, t: Trans
     parts.push(heading(level + 1, t('notebook.md.links')));
     parts.push(
       links
-        .map((link) => `- [${(link.label.trim() || link.url).replace(/[[\]]/g, '\\$&')}](<${link.url.trim()}>)`)
+        .map((link) => `- [${linkLabel(link.label.trim() || link.url)}](<${linkDestination(link.url)}>)`)
         .join('\n'),
     );
   }
