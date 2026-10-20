@@ -10,9 +10,14 @@ import AccountStatusWatcher from './components/AccountBlocked/AccountStatusWatch
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 import { FeedbackProvider } from './context/FeedbackProvider';
 import I18nProvider from './i18n/I18nProvider';
+import { LucideProvider } from 'lucide-react';
+
+// Tamanho por defeito dos icones (ver components/UI/Icons.tsx).
+const ICON_SIZE_PX = 16;
 
 function App() {
   return (
+    <LucideProvider size={ICON_SIZE_PX}>
     <ErrorBoundary>
       <I18nProvider>
       <FeedbackProvider>
@@ -39,6 +44,7 @@ function App() {
       </FeedbackProvider>
       </I18nProvider>
     </ErrorBoundary>
+    </LucideProvider>
   );
 }
 

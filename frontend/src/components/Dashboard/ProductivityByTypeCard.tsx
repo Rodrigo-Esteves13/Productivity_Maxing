@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
-import { computeProductivityByType } from '../../utils/productivityByType';
+import { computeProductivityByType, NO_ACADEMIC_TYPE_KEY } from '../../utils/productivityByType';
+import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 import { ChartPieIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
@@ -19,6 +20,7 @@ export default function ProductivityByTypeCard({
   academicTaskTypes,
 }: ProductivityByTypeCardProps) {
   const { t } = useI18n();
+  const { catalogLabel } = useCatalogLabel();
   const rows = useMemo(
     () => computeProductivityByType(tasks, academicTaskTypes),
     [tasks, academicTaskTypes],
@@ -44,7 +46,11 @@ export default function ProductivityByTypeCard({
           <tbody>
             {rows.slice(0, 8).map((row) => (
               <tr key={row.key} className="border-t border-neutral-800">
-                <td className="py-1.5 pr-2 text-neutral-200 truncate max-w-[9rem]">{row.label}</td>
+                <td className="py-1.5 pr-2 text-neutral-200 truncate max-w-[9rem]">
+                  {row.key === NO_ACADEMIC_TYPE_KEY
+                    ? t('taskType.OTHER')
+                    : catalogLabel('academicType', row.key, row.label)}
+                </td>
                 <td className="py-1.5 px-2 text-right text-neutral-300">
                   {row.completed}/{row.total}
                   <span className="text-neutral-500"> ({row.completedPct}%)</span>

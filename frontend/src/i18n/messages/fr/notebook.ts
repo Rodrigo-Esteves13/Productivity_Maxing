@@ -66,6 +66,7 @@ export const notebook: Record<string, string> = {
   'notebook.links.label': "Libellé (facultatif)",
   'notebook.links.add': "Ajouter",
   'notebook.links.remove': "Supprimer le lien",
+  'notebook.links.invalid': "Saisissez une adresse web valide, comme https://example.com.",
   'notebook.files.add': "Ajouter un fichier",
   'notebook.files.none': "Aucun fichier pour le moment.",
   'notebook.files.remove': "Supprimer le fichier",

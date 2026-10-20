@@ -2,6 +2,7 @@ import { useAccessibilityPrefs, THEME_OPTIONS, type FontScale, type ThemeId } fr
 import { LANGUAGES, type LanguageCode } from '../../i18n/languages';
 import { useI18n } from '../../i18n/useI18n';
 import ToggleRow from '../UI/ToggleRow';
+import Card from '../UI/Card';
 
 const FONT_SCALES: FontScale[] = ['normal', 'large', 'larger', 'largest'];
 
@@ -29,7 +30,7 @@ export default function AccessibilitySettingsCard() {
   ];
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 max-w-3xl mt-8">
+    <Card>
       <h2 className="text-lg font-semibold text-white">{t('prefs.appearanceTitle')}</h2>
       <p className="mt-1 text-sm text-neutral-400">{t('prefs.appearanceHelp')}</p>
 
@@ -132,6 +133,6 @@ export default function AccessibilitySettingsCard() {
         checked={reduceMotion}
         onChange={toggleReduceMotion}
       />
-    </div>
+    </Card>
   );
 }

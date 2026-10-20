@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useActiveStudySession } from '../../../context/useActiveStudySession';
+import { useStudyClock } from '../../../context/useStudyClock';
 import { useStopSession } from '../../../hooks/useStopSession';
 import { notify, playChime } from '../../../lib/focusAlerts';
 import Button from '../../UI/Button';
@@ -9,7 +10,8 @@ import { useI18n } from '../../../i18n/useI18n';
 // escolha entre pausa, continuar ou parar.
 export default function TimerEndPrompt() {
   const { t } = useI18n();
-  const { activeSession, timerPlan, remainingSeconds, isSubmitting, startBreak } = useActiveStudySession();
+  const { activeSession, timerPlan, isSubmitting, startBreak } = useActiveStudySession();
+  const { remainingSeconds } = useStudyClock();
   const { stopSession } = useStopSession();
   const alertedFor = useRef<string | null>(null);
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);

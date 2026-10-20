@@ -3,7 +3,6 @@ import PageHeader from '../components/Layout/PageHeader';
 import MasonryGrid from '../components/UI/MasonryGrid';
 import StudySessionWidget from '../components/Study/StudySessionWidget';
 import BestTimesHeatmap from '../components/Study/BestTimesHeatmap';
-import TodayPlan from '../components/Study/TodayPlan';
 import TodayBlocks from '../components/Study/focus/TodayBlocks';
 import DayProgressCard from '../components/Study/focus/DayProgressCard';
 import StudyNowHint from '../components/Study/focus/StudyNowHint';
@@ -25,7 +24,7 @@ export default function Focus() {
         description={t('ui.trackStudySessionsFollowToday')}
       />
 
-      <div className="mb-6 space-y-3">
+      <div className="mb-6 space-y-3 empty:hidden">
         <StudyNowHint />
       </div>
 
@@ -33,18 +32,16 @@ export default function Focus() {
           mais alto que o resto e deixava um buraco enorme na coluna da
           esquerda. Cada cartao vai para a coluna mais curta e o ultimo de
           cada coluna estica, por isso acabam ao mesmo nivel. A ordem
-          importa: a sessao ativa fica sempre em primeiro lugar. */}
+          importa: a sessao ativa fica sempre em primeiro lugar. O "Due
+          today" vive dentro do cartao Today e o heatmap entra na grelha
+          (compacto) em vez de ocupar a largura toda no fim da pagina. */}
       <MasonryGrid>
         <StudySessionWidget />
         <DayProgressCard dailyLimitMinutes={plan?.dailyLimitMinutes ?? null} />
         <TodayBlocks plan={plan} isLoading={isLoading} error={error} />
-        <TodayPlan />
         <SessionHistoryCard />
-      </MasonryGrid>
-
-      <div className="mt-6">
         <BestTimesHeatmap />
-      </div>
+      </MasonryGrid>
     </PageLayout>
   );
 }

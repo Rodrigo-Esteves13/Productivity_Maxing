@@ -1,11 +1,20 @@
 interface EmptyStateProps {
   message: string;
+  // 'card': caixa propria, para quando a lista vazia e o conteudo da pagina.
+  // 'inline': so o texto, para dentro de um cartao que ja tem borda (uma
+  // caixa dentro da caixa so ocupava espaco).
+  variant?: 'card' | 'inline';
 }
 
-export default function EmptyState({ message }: EmptyStateProps) {
+const VARIANT_CLASS: Record<NonNullable<EmptyStateProps['variant']>, string> = {
+  card: 'p-8 text-center bg-neutral-900/50 border border-neutral-800 rounded-xl text-neutral-400',
+  inline: 'py-3 text-center text-sm text-neutral-500',
+};
+
+export default function EmptyState({ message, variant = 'card' }: EmptyStateProps) {
   return (
-    <div className="p-8 text-center bg-neutral-900/50 border border-neutral-800 rounded-xl">
-      <p className="text-neutral-400">{message}</p>
+    <div className={VARIANT_CLASS[variant]}>
+      <p>{message}</p>
     </div>
   );
 }

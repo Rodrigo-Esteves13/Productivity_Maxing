@@ -5,9 +5,10 @@ import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
 import DetailRow from '../UI/DetailRow';
 import { recurrenceLabel } from '../../lib/recurrence';
-import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
+import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 import { useDurationPrediction } from '../../hooks/useDurationPrediction';
 import { useI18n } from '../../i18n/useI18n';
+import { formatTaskDate } from '../../lib/timeFormat';
 
 interface TaskDetailViewProps {
   task: Task;
@@ -20,9 +21,10 @@ interface TaskDetailViewProps {
 }
 
 export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes = [], onSubtasksChange, onSubtaskConverted }: TaskDetailViewProps) {
-  const { t } = useI18n();
-  const typeLabel = resolveOptionLabel(task.type, taskTypes);
-  const academicTypeLabel = resolveOptionLabel(task.academicType, academicTaskTypes);
+  const { t, lang } = useI18n();
+  const { optionLabel } = useCatalogLabel();
+  const typeLabel = optionLabel('taskType', task.type, taskTypes);
+  const academicTypeLabel = optionLabel('academicType', task.academicType, academicTaskTypes);
   // Reutiliza o mesmo hook do formulário só para ir buscar actualMinutes
   // (soma real das StudySessions desta task) - o predictedMinutes que
   // ele também devolve não é mostrado aqui, o detail view só quer
@@ -39,7 +41,7 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       <DetailRow label={t('ui.title')}>{task.title}</DetailRow>
       <DetailRow label={t('ui.date')}>
         <div className="flex items-center gap-2">
-          <span>{new Date(task.date).toLocaleDateString()}</span>
+          <span>{formatTaskDate(task.date, lang)}</span>
           {task.postponedCount > 0 && (
             <span className="text-xs text-amber-500/80">
               {t('ui.postponedX', { postponedCount: task.postponedCount })}</span>
@@ -73,7 +75,7 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       </DetailRow>
       {task.priority && (
         <DetailRow label={t('ui.priority')}>
-          <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
+          <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
         </DetailRow>
       )}
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { useSchedule } from '../../hooks/useSchedule';
 import { useWorkShiftRange } from '../../hooks/useWorkShiftRange';
 import { useScheduleTasks } from '../../hooks/useScheduleTasks';
@@ -10,9 +10,12 @@ import { mergeAgenda } from '../../lib/agenda';
 import { buildDeadlineChips, type DeadlineChip } from '../../lib/monthAgenda';
 import { weekdayLabel } from '../../lib/timeFormat';
 import { todayUtcAnchored } from '../../lib/weekDates';
+import { minutesSinceMidnight } from '../../lib/todayOverview';
+import { useFeedback } from '../../context/useFeedback';
 import WeekDayCell from './WeekDayCell';
 import AgendaLegend from './AgendaLegend';
 import { useI18n } from '../../i18n/useI18n';
+import Card from '../UI/Card';
 
 const NO_DEADLINES: DeadlineChip[] = [];
 
@@ -32,10 +35,13 @@ interface WeekGridProps {
   initialDate?: Date;
   // Botao Semana/Mes, desenhado ao lado da navegacao.
   viewToggle?: ReactNode;
+  // Chamado depois de gravar uma presenca (o resumo de presencas refaz o fetch).
+  onAttendanceChanged?: () => void;
 }
 
-export default function WeekGrid({ refreshKey, initialDate, viewToggle }: WeekGridProps) {
+export default function WeekGrid({ refreshKey, initialDate, viewToggle, onAttendanceChanged }: WeekGridProps) {
   const { t, lang } = useI18n();
+  const { notify } = useFeedback();
   const {
     weekStart,
     weekEnd,
@@ -46,7 +52,17 @@ export default function WeekGrid({ refreshKey, initialDate, viewToggle }: WeekGr
     goToPreviousWeek,
     goToNextWeek,
     goToCurrentWeek,
+    setAttendance,
   } = useSchedule(initialDate);
+
+  const handleAttendance = useCallback(
+    async (occurrence: ClassOccurrence, attended: boolean | null) => {
+      const saved = await setAttendance(occurrence, attended);
+      if (saved) onAttendanceChanged?.();
+      else notify(t('attendance.failed'), 'error');
+    },
+    [setAttendance, onAttendanceChanged, notify, t],
+  );
 
   useEffect(() => {
     if (refreshKey > 0) void refetch();
@@ -85,9 +101,13 @@ export default function WeekGrid({ refreshKey, initialDate, viewToggle }: WeekGr
   }
 
   const todayKey = toDateKey(todayUtcAnchored());
+  const nowMinutes = minutesSinceMidnight(new Date());
+  // So aulas que ja comecaram podem ter presenca (ver WeekDayCell).
+  const markableUntil = (key: string): number | null =>
+    key < todayKey ? Number.POSITIVE_INFINITY : key === todayKey ? nowMinutes : null;
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
+    <Card>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div>
           <h2 className="text-lg font-semibold text-white">{t('ui.schedule')}</h2>
@@ -133,6 +153,8 @@ export default function WeekGrid({ refreshKey, initialDate, viewToggle }: WeekGr
                 isToday={key === todayKey}
                 deadlines={deadlinesByDay.get(key) ?? NO_DEADLINES}
                 items={mergeAgenda(occurrencesByDay.get(key) ?? [], shiftsByDay.get(key) ?? [])}
+                markableUntilMinutes={markableUntil(key)}
+                onAttendanceChange={handleAttendance}
               />
             );
           })}
@@ -140,6 +162,6 @@ export default function WeekGrid({ refreshKey, initialDate, viewToggle }: WeekGr
       )}
 
       {!isLoading && !error && <AgendaLegend />}
-    </div>
+    </Card>
   );
 }

@@ -2,6 +2,7 @@
 import api from './client';
 import type {
   ClassOccurrence,
+  SubjectAttendance,
   CommuteMode,
   ImportScheduleRow,
   ImportScheduleResult,
@@ -25,6 +26,27 @@ export const getSchedule = async (
   signal?: AbortSignal,
 ): Promise<ClassOccurrence[]> => {
   const response = await api.get<ClassOccurrence[]>('/schedule', {
+    params: { from, to },
+    signal,
+  });
+  return response.data;
+};
+
+// Presenca numa aula: true = fui, false = faltei, null = limpar.
+export const setClassAttendance = async (
+  id: string,
+  attended: boolean | null,
+): Promise<void> => {
+  await api.patch(`/schedule/${encodeURIComponent(id)}/attendance`, { attended });
+};
+
+// Presencas por disciplina entre from/to ("YYYY-MM-DD"); o backend corta em hoje.
+export const getAttendanceSummary = async (
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<SubjectAttendance[]> => {
+  const response = await api.get<SubjectAttendance[]>('/schedule/attendance', {
     params: { from, to },
     signal,
   });

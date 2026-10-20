@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from 'react';
 // Ignora a resposta se o componente ja desmontou. `fetcher` tem de ser uma
 // funcao estavel (definida fora do componente). `reload` busca outra vez
 // sem voltar ao estado de "a carregar", para o conteudo nao piscar.
-export function useLoadOnce<T>(fetcher: () => Promise<T>) {
+// `refreshKey` (opcional): quando muda, busca outra vez (ex: o id da sessao de
+// estudo ativa, para o streak atualizar quando uma sessao acaba).
+export function useLoadOnce<T>(fetcher: () => Promise<T>, refreshKey?: string | null) {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -28,7 +30,7 @@ export function useLoadOnce<T>(fetcher: () => Promise<T>) {
     return () => {
       cancelled = true;
     };
-  }, [fetcher, reloadCount]);
+  }, [fetcher, reloadCount, refreshKey]);
 
   const reload = useCallback(() => setReloadCount((count) => count + 1), []);
 

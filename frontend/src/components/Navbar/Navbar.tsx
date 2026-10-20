@@ -8,6 +8,7 @@ import AdminMenu from './AdminMenu';
 import { MenuIcon, XIcon, SearchIcon } from '../UI/Icons';
 import { useAuth } from '../../context/useAuth';
 import { useSocialPending } from '../../hooks/useSocialPending';
+import { OPEN_COMMAND_PALETTE_EVENT } from '../CommandPalette/CommandPaletteHost';
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
@@ -58,7 +59,7 @@ export default function Navbar() {
             {isAuthenticated && (
               <button
                 type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('pmaxing:open-command-palette'))}
+                onClick={() => window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT))}
                 aria-label={t('nav.palette')}
                 title={t('nav.search')}
                 className="hidden xl:flex shrink-0 items-center gap-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors rounded-md px-2.5 py-1.5"

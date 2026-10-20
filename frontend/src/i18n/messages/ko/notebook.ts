@@ -66,6 +66,7 @@ export const notebook: Record<string, string> = {
   'notebook.links.label': "라벨(선택)",
   'notebook.links.add': "추가",
   'notebook.links.remove': "링크 제거",
+  'notebook.links.invalid': "올바른 웹 주소를 입력하세요. 예: https://example.com",
   'notebook.files.add': "파일 추가",
   'notebook.files.none': "아직 파일이 없습니다.",
   'notebook.files.remove': "파일 제거",

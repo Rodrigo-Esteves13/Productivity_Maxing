@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { sendTestPush } from '../../api/pushService';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useI18n } from '../../i18n/useI18n';
+import Card from '../UI/Card';
 
 export default function PushNotificationsCard() {
   const { t } = useI18n();
@@ -40,11 +41,14 @@ export default function PushNotificationsCard() {
             : null;
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 max-w-3xl mt-8">
+    <Card>
       <h2 className="text-lg font-semibold text-white">{t('push.title')}</h2>
       <p className="mt-1 text-sm text-neutral-400">{t('push.help')}</p>
       <p className="mt-2 text-xs text-neutral-500">{t('push.eachDevice')}</p>
       {message && <p className="mt-3 text-sm text-neutral-300">{message}</p>}
+      {/* Depois de um "Bloquear" no browser a app ja nao pode voltar a
+          perguntar: so a pessoa desbloqueia, por isso diz-se onde. */}
+      {state === 'blocked' && <p className="mt-1 text-xs text-neutral-500">{t('push.blockedHow')}</p>}
       {error && (
         <p role="alert" className="mt-3 text-sm text-red-400">
           {error === 'noWorker' ? t('push.noWorker') : t('push.error')}
@@ -73,6 +77,6 @@ export default function PushNotificationsCard() {
         </div>
       )}
       {testMessage && <p className="mt-3 text-sm text-neutral-300">{testMessage}</p>}
-    </div>
+    </Card>
   );
 }

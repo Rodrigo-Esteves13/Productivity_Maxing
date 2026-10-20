@@ -3,7 +3,9 @@ import { getStudyHeatmap } from '../api/studySessionsService';
 import type { HeatmapCell } from '../types/models';
 import { translateNow } from '../i18n/translate';
 
-export function useBestTimesHeatmap() {
+// `refreshKey`: quando muda (ex: a sessao ativa acabou), volta a pedir o
+// heatmap, para a sessao acabada de gravar aparecer sem recarregar a pagina.
+export function useBestTimesHeatmap(refreshKey?: string | null) {
   const [cells, setCells] = useState<HeatmapCell[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -23,7 +25,7 @@ export function useBestTimesHeatmap() {
 
   useEffect(() => {
     void fetchHeatmap();
-  }, [fetchHeatmap]);
+  }, [fetchHeatmap, refreshKey]);
 
   const hasAnyData = cells.some((cell) => cell.sessionCount > 0);
 

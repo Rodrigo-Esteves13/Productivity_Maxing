@@ -20,13 +20,18 @@ interface SessionRowProps {
 
 type RowMode = 'view' | 'edit' | 'confirm-delete';
 
+// O pedido de nota de foco so aparece em sessoes recentes: dias depois ja
+// ninguem se lembra, e repetido em cada linha antiga so enchia a lista.
+// (Continua disponivel no Editar.)
+const RATE_PROMPT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 export default function SessionRow({ session, isSaving, serverError, onEdit, onDelete, onRateFocus }: SessionRowProps) {
   const { t } = useI18n();
   const [mode, setMode] = useState<RowMode>('view');
 
   if (mode === 'edit') {
     return (
-      <li>
+      <li className="py-2">
         <SessionForm
           session={session}
           isSaving={isSaving}
@@ -44,9 +49,13 @@ export default function SessionRow({ session, isSaving, serverError, onEdit, onD
   const end = session.endedAt ? toLocalParts(session.endedAt).time : '';
   const minutes = Math.round((session.durationSeconds ?? 0) / 60);
   const title = session.task?.title ?? session.area?.name ?? t('ui.studySession');
+  const canRateInline =
+    session.endedAt !== null &&
+    session.focusRating === null &&
+    Date.now() - new Date(session.endedAt).getTime() < RATE_PROMPT_WINDOW_MS;
 
   return (
-    <li className="rounded-lg border border-neutral-800 p-3">
+    <li className="py-2">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-white">{title}</p>
@@ -66,7 +75,7 @@ export default function SessionRow({ session, isSaving, serverError, onEdit, onD
           </IconButton>
         </div>
       </div>
-      {session.endedAt && session.focusRating === null && (
+      {canRateInline && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="text-xs text-neutral-500">{t('rateFocus.rowLabel')}</span>
           <RatingInput value={null} onChange={(value) => value !== null && void onRateFocus(session.id, value)} />

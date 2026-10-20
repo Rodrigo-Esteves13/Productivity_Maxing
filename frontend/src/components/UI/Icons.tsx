@@ -1,85 +1,85 @@
 import type { SVGProps } from 'react';
-import {
-  Pencil,
-  X,
-  Menu,
-  Trash2,
-  LogOut,
-  Heart,
-  Download,
-  Upload,
-  ArrowUpRight,
-  Calendar,
-  Check,
-  Pin,
-  Repeat,
-  ChevronDown,
-  Undo2,
-  GraduationCap,
-  TrendingUp,
-  Gauge,
-  Clock,
-  BookOpen,
-  PieChart,
-  Calculator,
-  Target,
-  AlertTriangle,
-  Flame,
-  Activity,
-  Search,
-  Printer,
-  SlidersHorizontal,
-  Eye,
-  EyeOff,
-  Copy,
-  ArrowUp,
-  ArrowDown,
-  Mail,
-  Image,
-  Flag,
-  GripVertical,
-  Eraser,
-  Shield,
-  Table2,
-  Sigma,
-  Network,
-  Code2,
-  Plus,
-  Link2,
-  Type,
-  File,
-  ChevronLeft,
-  ChevronRight,
-  ZoomIn,
-  PenTool,
-  Share,
-} from 'lucide-react';
 
-// Re-exports finos sobre o lucide-react, mantendo os nomes que o resto da
+// Re-exports diretos do lucide-react, mantendo os nomes que o resto da
 // app já usa (import { PencilIcon } from '.../Icons') - zero mudanças nos
-// ~47 ficheiros que importam daqui. `size={16}` só define o default (o
-// tamanho real na maioria dos sítios já vem de className, ex: "h-4 w-4",
-// que o CSS sobrepõe ao atributo width/height do próprio SVG).
+// ficheiros que importam daqui. O tamanho 16 por defeito vem do
+// <LucideProvider size={16}> no App.tsx (o tamanho real na maioria dos
+// sítios já vem de className, ex: "h-4 w-4", que o CSS sobrepõe ao
+// atributo width/height do próprio SVG). Antes eram funções embrulho num
+// só módulo, e por isso TODOS os ícones iam no JS de arranque; reexportados,
+// cada ícone vai só para o chunk da página que o usa.
 //
 // GoogleIcon/DiscordIcon/GithubIcon ficam à parte, mais abaixo - são
 // marcas (brand marks) para os botões de OAuth, não ícones genéricos, e o
 // lucide-react não inclui logótipos de marcas (nunca incluiu o do
 // GitHub, e descontinuou os que tinha doutras).
-export function PencilIcon(props: SVGProps<SVGSVGElement>) {
-  return <Pencil size={16} {...props} />;
-}
+export {
+  Pencil as PencilIcon,
+  X as XIcon,
+  Menu as MenuIcon,
+  Trash2 as TrashIcon,
+  LogOut as LogoutIcon,
+  Heart as HeartIcon,
+  Download as DownloadIcon,
+  Upload as UploadIcon,
+  ArrowUpRight as ArrowUpRightIcon,
+  Calendar as CalendarIcon,
+  Check as CheckIcon,
+  Repeat as RepeatIcon,
+  Pin as PinIcon,
+  ChevronDown as ChevronDownIcon,
+  // UndoIcon usa o glifo "Undo2" do lucide - é o que corresponde à seta
+  // curva com gancho que já usávamos (o "Undo" do lucide é uma curva
+  // diferente, mais parecida com um "voltar atrás" de navegador).
+  Undo2 as UndoIcon,
+  GraduationCap as GraduationCapIcon,
+  TrendingUp as TrendingUpIcon,
+  Gauge as GaugeIcon,
+  Clock as ClockIcon,
+  BookOpen as BookOpenIcon,
+  // ChartPieIcon -> PieChart no lucide-react (nome diferente, mesmo glifo).
+  PieChart as ChartPieIcon,
+  Calculator as CalculatorIcon,
+  Target as TargetIcon,
+  AlertTriangle as AlertTriangleIcon,
+  Flame as FlameIcon,
+  Activity as ActivityIcon,
+  Search as SearchIcon,
+  Printer as PrinterIcon,
+  // SlidersIcon usa "SlidersHorizontal" - é a variante com as barras na
+  // horizontal, que é o desenho que já tínhamos (o "Sliders" simples do
+  // lucide é a variante vertical).
+  SlidersHorizontal as SlidersIcon,
+  Eye as EyeIcon,
+  EyeOff as EyeOffIcon,
+  Copy as CopyIcon,
+  ArrowUp as ArrowUpIcon,
+  ArrowDown as ArrowDownIcon,
+  Mail as MailIcon,
+  Image as ImageIcon,
+  Flag as FlagIcon,
+  GripVertical as GripVerticalIcon,
+  Eraser as EraserIcon,
+  Shield as ShieldIcon,
+  Table2 as TableIcon,
+  Sigma as SigmaIcon,
+  Network as NetworkIcon,
+  Code2 as CodeIcon,
+  Plus as PlusIcon,
+  Link2 as LinkIcon,
+  Type as TypeIcon,
+  File as FileIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  ZoomIn as ZoomInIcon,
+  PenTool as PenToolIcon,
+  // Botao Partilhar do Safari (quadrado com seta para cima), para os passos
+  // de "Adicionar ao ecra principal" no iPhone/iPad.
+  Share as ShareIcon,
+  // Pedido de notificacoes ao entrar na app.
+  Bell as BellIcon,
+} from 'lucide-react';
 
-export function XIcon(props: SVGProps<SVGSVGElement>) {
-  return <X size={16} {...props} />;
-}
-
-export function MenuIcon(props: SVGProps<SVGSVGElement>) {
-  return <Menu size={16} {...props} />;
-}
-
-export function TrashIcon(props: SVGProps<SVGSVGElement>) {
-  return <Trash2 size={16} {...props} />;
-}
 export function GoogleIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -121,209 +121,4 @@ export function GithubIcon(props: SVGProps<SVGSVGElement>) {
       <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8" />
     </svg>
   );
-}
-
-export function LogoutIcon(props: SVGProps<SVGSVGElement>) {
-  return <LogOut size={16} {...props} />;
-}
-
-export function HeartIcon(props: SVGProps<SVGSVGElement>) {
-  return <Heart size={16} {...props} />;
-}
-
-export function DownloadIcon(props: SVGProps<SVGSVGElement>) {
-  return <Download size={16} {...props} />;
-}
-
-export function UploadIcon(props: SVGProps<SVGSVGElement>) {
-  return <Upload size={16} {...props} />;
-}
-
-export function ArrowUpRightIcon(props: SVGProps<SVGSVGElement>) {
-  return <ArrowUpRight size={16} {...props} />;
-}
-
-export function CalendarIcon(props: SVGProps<SVGSVGElement>) {
-  return <Calendar size={16} {...props} />;
-}
-
-export function CheckIcon(props: SVGProps<SVGSVGElement>) {
-  return <Check size={16} {...props} />;
-}
-
-export function RepeatIcon(props: SVGProps<SVGSVGElement>) {
-  return <Repeat size={16} {...props} />;
-}
-
-export function PinIcon(props: SVGProps<SVGSVGElement>) {
-  return <Pin size={16} {...props} />;
-}
-
-export function ChevronDownIcon(props: SVGProps<SVGSVGElement>) {
-  return <ChevronDown size={16} {...props} />;
-}
-
-// UndoIcon usa o glifo "Undo2" do lucide - é o que corresponde à seta
-// curva com gancho que já usávamos (o "Undo" do lucide é uma curva
-// diferente, mais parecida com um "voltar atrás" de navegador).
-export function UndoIcon(props: SVGProps<SVGSVGElement>) {
-  return <Undo2 size={16} {...props} />;
-}
-
-export function GraduationCapIcon(props: SVGProps<SVGSVGElement>) {
-  return <GraduationCap size={16} {...props} />;
-}
-
-export function TrendingUpIcon(props: SVGProps<SVGSVGElement>) {
-  return <TrendingUp size={16} {...props} />;
-}
-
-export function GaugeIcon(props: SVGProps<SVGSVGElement>) {
-  return <Gauge size={16} {...props} />;
-}
-
-export function ClockIcon(props: SVGProps<SVGSVGElement>) {
-  return <Clock size={16} {...props} />;
-}
-
-export function BookOpenIcon(props: SVGProps<SVGSVGElement>) {
-  return <BookOpen size={16} {...props} />;
-}
-
-// ChartPieIcon -> PieChart no lucide-react (nome diferente, mesmo glifo).
-export function ChartPieIcon(props: SVGProps<SVGSVGElement>) {
-  return <PieChart size={16} {...props} />;
-}
-
-export function CalculatorIcon(props: SVGProps<SVGSVGElement>) {
-  return <Calculator size={16} {...props} />;
-}
-
-export function TargetIcon(props: SVGProps<SVGSVGElement>) {
-  return <Target size={16} {...props} />;
-}
-
-export function AlertTriangleIcon(props: SVGProps<SVGSVGElement>) {
-  return <AlertTriangle size={16} {...props} />;
-}
-
-export function FlameIcon(props: SVGProps<SVGSVGElement>) {
-  return <Flame size={16} {...props} />;
-}
-
-export function ActivityIcon(props: SVGProps<SVGSVGElement>) {
-  return <Activity size={16} {...props} />;
-}
-
-export function SearchIcon(props: SVGProps<SVGSVGElement>) {
-  return <Search size={16} {...props} />;
-}
-
-export function PrinterIcon(props: SVGProps<SVGSVGElement>) {
-  return <Printer size={16} {...props} />;
-}
-
-// SlidersIcon usa "SlidersHorizontal" - é a variante com as barras na
-// horizontal, que é o desenho que já tínhamos (o "Sliders" simples do
-// lucide é a variante vertical).
-export function SlidersIcon(props: SVGProps<SVGSVGElement>) {
-  return <SlidersHorizontal size={16} {...props} />;
-}
-
-export function EyeIcon(props: SVGProps<SVGSVGElement>) {
-  return <Eye size={16} {...props} />;
-}
-
-export function EyeOffIcon(props: SVGProps<SVGSVGElement>) {
-  return <EyeOff size={16} {...props} />;
-}
-
-export function CopyIcon(props: SVGProps<SVGSVGElement>) {
-  return <Copy size={16} {...props} />;
-}
-
-export function ArrowUpIcon(props: SVGProps<SVGSVGElement>) {
-  return <ArrowUp size={16} {...props} />;
-}
-
-export function ArrowDownIcon(props: SVGProps<SVGSVGElement>) {
-  return <ArrowDown size={16} {...props} />;
-}
-
-export function MailIcon(props: SVGProps<SVGSVGElement>) {
-  return <Mail size={16} {...props} />;
-}
-
-export function ImageIcon(props: SVGProps<SVGSVGElement>) {
-  return <Image size={16} {...props} />;
-}
-
-export function FlagIcon(props: SVGProps<SVGSVGElement>) {
-  return <Flag size={16} {...props} />;
-}
-
-export function GripVerticalIcon(props: SVGProps<SVGSVGElement>) {
-  return <GripVertical size={16} {...props} />;
-}
-
-export function EraserIcon(props: SVGProps<SVGSVGElement>) {
-  return <Eraser size={16} {...props} />;
-}
-
-export function ShieldIcon(props: SVGProps<SVGSVGElement>) {
-  return <Shield size={16} {...props} />;
-}
-
-export function TableIcon(props: SVGProps<SVGSVGElement>) {
-  return <Table2 size={16} {...props} />;
-}
-
-export function SigmaIcon(props: SVGProps<SVGSVGElement>) {
-  return <Sigma size={16} {...props} />;
-}
-
-export function NetworkIcon(props: SVGProps<SVGSVGElement>) {
-  return <Network size={16} {...props} />;
-}
-
-export function CodeIcon(props: SVGProps<SVGSVGElement>) {
-  return <Code2 size={16} {...props} />;
-}
-
-export function PlusIcon(props: SVGProps<SVGSVGElement>) {
-  return <Plus size={16} {...props} />;
-}
-
-export function LinkIcon(props: SVGProps<SVGSVGElement>) {
-  return <Link2 size={16} {...props} />;
-}
-
-export function TypeIcon(props: SVGProps<SVGSVGElement>) {
-  return <Type size={16} {...props} />;
-}
-
-export function FileIcon(props: SVGProps<SVGSVGElement>) {
-  return <File size={16} {...props} />;
-}
-
-export function ChevronLeftIcon(props: SVGProps<SVGSVGElement>) {
-  return <ChevronLeft size={16} {...props} />;
-}
-
-export function ChevronRightIcon(props: SVGProps<SVGSVGElement>) {
-  return <ChevronRight size={16} {...props} />;
-}
-
-export function ZoomInIcon(props: SVGProps<SVGSVGElement>) {
-  return <ZoomIn size={16} {...props} />;
-}
-
-export function PenToolIcon(props: SVGProps<SVGSVGElement>) {
-  return <PenTool size={16} {...props} />;
-}
-
-// Botao Partilhar do Safari (quadrado com seta para cima), para os passos
-// de "Adicionar ao ecra principal" no iPhone/iPad.
-export function ShareIcon(props: SVGProps<SVGSVGElement>) {
-  return <Share size={16} {...props} />;
 }

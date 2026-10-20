@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
@@ -8,35 +9,51 @@ import RescheduleButton from '../UI/RescheduleButton';
 import ViewTaskButton from '../UI/ViewTaskButton';
 import SubtaskProgress from '../UI/SubtaskProgress';
 import CalendarSyncButton from './CalendarSyncButton';
+import SwipeableRow from '../UI/SwipeableRow';
+import { CheckIcon, ClockIcon } from '../UI/Icons';
 import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus';
-import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
+import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import { formatTaskDate } from '../../lib/timeFormat';
 
 interface TaskCardProps {
   task: Task;
   academicTaskTypes: AcademicTaskTypeOption[];
   // Novas props adicionadas aqui!
-  onReschedule?: (e: React.MouseEvent, task: Task) => void;
+  onReschedule?: (e: React.MouseEvent | null, task: Task) => void;
+  // Swipe: direita marca como feita, esquerda passa para amanha (so em atraso, como o +1 Day).
+  onComplete?: (task: Task) => void;
   isRescheduling?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (id: string) => void;
 }
 
-export default function TaskCard({
+function TaskCard({
   task,
   academicTaskTypes,
   onReschedule,
+  onComplete,
   isRescheduling = false,
   isSelected,
   onToggleSelect,
 }: TaskCardProps) {
-  const { t } = useI18n();
-  const academicTypeLabel = resolveOptionLabel(task.academicType, academicTaskTypes);
+  const { t, lang } = useI18n();
+  const { optionLabel } = useCatalogLabel();
+  const academicTypeLabel = optionLabel('academicType', task.academicType, academicTaskTypes);
   const status = getDateStatus(task);
+  const canComplete = Boolean(onComplete) && task.progressStatus !== 'COMPLETED';
+  const canPostpone = Boolean(onReschedule) && status === 'overdue';
 
   return (
-    <div className="border-b border-neutral-800 p-4 last:border-b-0">
+    <SwipeableRow
+      className="border-b border-neutral-800 last:border-b-0"
+      onSwipeRight={canComplete ? () => onComplete?.(task) : undefined}
+      onSwipeLeft={canPostpone ? () => onReschedule?.(null, task) : undefined}
+      rightHint={<><CheckIcon aria-hidden="true" />{t('swipe.done')}</>}
+      leftHint={<>{t('swipe.tomorrow')}<ClockIcon aria-hidden="true" /></>}
+    >
+    <div className="p-4">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0 flex items-start gap-2">
           {onToggleSelect && (
@@ -72,7 +89,7 @@ export default function TaskCard({
       <div className="flex flex-wrap items-center gap-2 mt-3">
         <DifficultyBadge difficulty={task.difficulty} />
         {task.priority && (
-          <PriorityBadge label={task.priorityLabel ?? task.priority} colorHex={task.priorityColorHex} />
+          <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
         )}
         <StatusBadge status={task.progressStatus} />
         <span className="text-[11px] text-neutral-400">{academicTypeLabel}</span>
@@ -97,7 +114,7 @@ export default function TaskCard({
       <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-neutral-800/70 text-center">
         <div>
           <div className="text-[10px] uppercase text-neutral-500">{t('ui.date')}</div>
-          <div className="text-xs text-neutral-300 mt-0.5">{new Date(task.date).toLocaleDateString()}</div>
+          <div className="text-xs text-neutral-300 mt-0.5">{formatTaskDate(task.date, lang)}</div>
         </div>
         <div>
           <div className="text-[10px] uppercase text-neutral-500">{t('ui.weight')}</div>
@@ -115,5 +132,9 @@ export default function TaskCard({
         </div>
       </div>
     </div>
+    </SwipeableRow>
   );
 }
+
+// memo: numa lista grande, escrever num filtro ou mudar uma linha ja nao volta a renderizar todas as outras.
+export default memo(TaskCard);

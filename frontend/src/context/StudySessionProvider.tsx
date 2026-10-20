@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -16,7 +17,7 @@ import {
 } from '../api/studySessionsService';
 import type { StudySession } from '../types/models';
 import { useAuth } from './useAuth';
-import { StudySessionContext } from './study-session-context';
+import { StudyClockContext, StudySessionContext } from './study-session-context';
 import { getHttpStatus } from '../lib/httpError';
 import { announceSessionChanged, onSessionChangedElsewhere } from '../lib/focusChannel';
 import { isAnotherTabOpen, registerTab } from '../lib/tabPresence';
@@ -275,26 +276,33 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     setRestBreak(null);
   }, []);
 
+  // Valor memorizado: so muda quando o estado da sessao muda, nao a cada
+  // tick. O relogio vai num contexto proprio (ver study-session-context).
+  const sessionValue = useMemo(
+    () => ({
+      activeSession,
+      isLoading,
+      isSubmitting,
+      error,
+      start,
+      stop,
+      timerPlan,
+      restBreak,
+      startBreak,
+      endBreak,
+      justStopped,
+      dismissJustStopped,
+    }),
+    [activeSession, isLoading, isSubmitting, error, start, stop, timerPlan, restBreak, startBreak, endBreak, justStopped, dismissJustStopped],
+  );
+  const clockValue = useMemo(
+    () => ({ elapsedSeconds, remainingSeconds: computeRemaining(elapsedSeconds, timerPlan) }),
+    [elapsedSeconds, timerPlan],
+  );
+
   return (
-    <StudySessionContext.Provider
-      value={{
-        activeSession,
-        elapsedSeconds,
-        isLoading,
-        isSubmitting,
-        error,
-        start,
-        stop,
-        timerPlan,
-        remainingSeconds: computeRemaining(elapsedSeconds, timerPlan),
-        restBreak,
-        startBreak,
-        endBreak,
-        justStopped,
-        dismissJustStopped,
-      }}
-    >
-      {children}
+    <StudySessionContext.Provider value={sessionValue}>
+      <StudyClockContext.Provider value={clockValue}>{children}</StudyClockContext.Provider>
     </StudySessionContext.Provider>
   );
 }

@@ -14,7 +14,7 @@ interface ProfileHeaderCardProps {
 export default function ProfileHeaderCard({ user, initials, stats, isLoadingStats }: ProfileHeaderCardProps) {
   const { t } = useI18n();
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-8 max-w-3xl">
+    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 sm:p-8">
       <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
         <Avatar initials={initials} avatarUrl={user.avatarUrl} alt={t('ui.avatar')} size="lg" />
 

@@ -62,6 +62,31 @@ export function withProtocol(url: string): string {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
 }
 
+// Mesmas regras do @IsUrl({ protocols: ['http', 'https'], require_protocol:
+// true }) + @MaxLength(2000) do UsefulLinkDto no backend. Sem isto um link
+// que o backend recusa entrava na lista e, dai em diante, cada autosave da
+// entrada inteira falhava com "Could not save", sem dizer porque.
+const LINK_URL_MAX_LENGTH = 2000;
+const TLD_PATTERN = /^([a-z¡-￿]{2,}|xn--[a-z0-9-]{2,})$/i;
+const IPV4_PATTERN = /^\d{1,3}(\.\d{1,3}){3}$/;
+
+/** URL pronto a gravar (com protocolo), ou null se o backend o recusaria. */
+export function toLinkUrl(raw: string): string | null {
+  const url = withProtocol(raw.trim());
+  if (url.length > LINK_URL_MAX_LENGTH) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+  if (IPV4_PATTERN.test(parsed.hostname)) return url;
+  const labels = parsed.hostname.split('.');
+  if (labels.length < 2 || labels.some((label) => label === '')) return null;
+  return TLD_PATTERN.test(labels[labels.length - 1]) ? url : null;
+}
+
 // Antes disto, um erro ao gravar (ex: textContent > 50000 carateres, ou
 // um 403 por CSRF token dessincronizado) desaparecia em silêncio -
 // isSaving voltava a false e parecia ter gravado, sem gravar nada.

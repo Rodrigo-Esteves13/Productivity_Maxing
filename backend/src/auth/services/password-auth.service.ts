@@ -13,10 +13,12 @@ import { MailService } from '../../mail/mail.service';
 import { getFrontendUrl } from '../../config/app.config';
 import { AccountGuardService } from './account-guard.service';
 import { SupabaseClientsService } from './supabase-clients.service';
+import { canPasswordCredentialOpenAccount } from '../password-link.policy';
 import {
   EMAIL_NOT_VERIFIED_CODE,
   EmailVerificationService,
 } from './email-verification.service';
+import { PasswordLinkService } from './password-link.service';
 
 // Mesmo URL usado no AuthController para os redirects de OAuth - usado aqui
 // só para o `redirectTo` do email de recuperação de password do Supabase,
@@ -40,6 +42,13 @@ const CURRENT_PASSWORD_REQUIRED_MESSAGE = 'Enter your current password.';
 const CURRENT_PASSWORD_WRONG_MESSAGE = 'Your current password is incorrect.';
 const SIGNUP_FALLBACK_MESSAGE =
   'Could not create the account. Please try again.';
+const ACCOUNT_EXISTS_MESSAGE = 'An account with this email already exists.';
+
+// Registo com um email que ja tem conta sem password: nao ha conta nova nem
+// sessao, so o email com o link para a juntar (ver PasswordLinkService).
+export type RegisterOutcome =
+  | { kind: 'created'; user: User }
+  | { kind: 'password-link-sent'; email: string };
 
 @Injectable()
 export class PasswordAuthService {
@@ -51,6 +60,7 @@ export class PasswordAuthService {
     private mailService: MailService,
     private accountGuard: AccountGuardService,
     private emailVerification: EmailVerificationService,
+    private passwordLink: PasswordLinkService,
   ) {}
 
   // LOGIN/REGISTO POR EMAIL+PASSWORD (via Supabase Auth)
@@ -66,23 +76,25 @@ export class PasswordAuthService {
     email: string;
     password: string;
     name?: string;
-  }): Promise<User> {
-    // Só com a verificação de email LIGADA (REQUIRE_EMAIL_VERIFICATION):
-    // recusa registar por password um email que já tem conta (ex: criada
-    // por Google/GitHub/Discord). Sem isto, syncLocalUser() devolvia essa
-    // conta existente e o registo abria uma sessão nela, ou seja, qualquer
-    // pessoa podia entrar na conta de outra só por "se registar" com o
-    // email dela. Com a flag desligada o comportamento é o de sempre.
-    if (this.emailVerification.isRequired()) {
-      const existingLocal = await this.prisma.user.findFirst({
-        where: { email: { equals: data.email, mode: 'insensitive' } },
-        select: { id: true },
-      });
-      if (existingLocal) {
-        throw new ConflictException(
-          'An account with this email already exists.',
-        );
+  }): Promise<RegisterOutcome> {
+    // Registar por password um email que já tem conta NUNCA abre sessão
+    // nela, com ou sem REQUIRE_EMAIL_VERIFICATION. Sem isto, syncLocalUser()
+    // devolvia essa conta existente e qualquer pessoa entrava na conta de
+    // outra só por "se registar" com o email dela (SCR-002, ver
+    // password-link.policy.ts).
+    // - Conta sem password (Google/GitHub/Discord): manda para a caixa do
+    //   dono o link para escolher uma, a mesma conta passa a aceitar os
+    //   dois logins. A password deste pedido é descartada.
+    // - Conta que já tem password: 409, é só fazer login.
+    const existingLocal = await this.prisma.user.findFirst({
+      where: { email: { equals: data.email, mode: 'insensitive' } },
+    });
+    if (existingLocal) {
+      if (!this.passwordLink.canLink(existingLocal)) {
+        throw new ConflictException(ACCOUNT_EXISTS_MESSAGE);
       }
+      await this.passwordLink.send(existingLocal);
+      return { kind: 'password-link-sent', email: data.email };
     }
 
     const { data: signUpData, error } = await this.clients.anon.auth.signUp({
@@ -93,9 +105,7 @@ export class PasswordAuthService {
 
     if (error) {
       if (/already registered|already exists/i.test(error.message)) {
-        throw new ConflictException(
-          'An account with this email already exists.',
-        );
+        throw new ConflictException(ACCOUNT_EXISTS_MESSAGE);
       }
       this.logger.warn(`Supabase signUp failed: ${error.code ?? 'no code'}`);
       throw new BadRequestException(
@@ -125,7 +135,30 @@ export class PasswordAuthService {
     if (this.emailVerification.needsVerification(user)) {
       await this.emailVerification.sendVerificationEmail(user);
     }
-    return user;
+    return { kind: 'created', user };
+  }
+
+  /**
+   * Pagina do link (POST /auth/password-link): cria a password da conta que
+   * ainda nao tinha. Quem clicou provou que o email e seu, por isso o email
+   * fica verificado. Nao abre sessao: o login normal a seguir continua a
+   * passar pelo 2FA.
+   */
+  async completePasswordLink(
+    token: string,
+    password: string,
+  ): Promise<{ email: string }> {
+    const user = await this.passwordLink.consume(token);
+    this.accountGuard.assertAccountIsUsable(user);
+    await this.setPassword(user.id, password);
+    if (user.emailVerifiedAt === null) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerifiedAt: new Date() },
+      });
+    }
+    this.logger.log(`Password adicionada por link: user ${user.id}`);
+    return { email: user.email };
   }
 
   async loginWithPassword(email: string, password: string): Promise<User> {
@@ -180,6 +213,29 @@ export class PasswordAuthService {
       // emitir um novo JWT, não só "tratada como ativa" na próxima leitura.
       this.accountGuard.assertAccountIsUsable(existing);
 
+      // SCR-002: uma credencial do Supabase criada por outra pessoa com este
+      // email (ex: signUp direto com a anon key) não abre a conta. Mesma
+      // mensagem de uma password errada, para não confirmar nada a ninguém.
+      if (supabaseAuthId) {
+        const oauthIdentityCount = existing.supabaseAuthId
+          ? 0
+          : await this.prisma.identity.count({
+              where: { userId: existing.id },
+            });
+        if (
+          !canPasswordCredentialOpenAccount(
+            existing,
+            supabaseAuthId,
+            oauthIdentityCount,
+          )
+        ) {
+          this.logger.warn(
+            `Password login refused: credential not linked to user ${existing.id}`,
+          );
+          throw new UnauthorizedException('Invalid credentials.');
+        }
+      }
+
       if (supabaseAuthId && existing.supabaseAuthId !== supabaseAuthId) {
         return this.prisma.user.update({
           where: { id: existing.id },
@@ -222,6 +278,17 @@ export class PasswordAuthService {
    * nunca registados) - esse caso é esperado e é ignorado silenciosamente.
    */
   async forgotPassword(email: string): Promise<void> {
+    // Conta sem password (so-OAuth): o Supabase nao tem nada para recuperar,
+    // ou tem uma credencial orfa que nao abre a conta (SCR-002). Manda o
+    // nosso link para escolher a password.
+    const local = await this.prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+    });
+    if (local && this.passwordLink.canLink(local)) {
+      await this.passwordLink.send(local);
+      return;
+    }
+
     const { data, error } = await this.clients.admin.auth.admin.generateLink({
       type: 'recovery',
       email,

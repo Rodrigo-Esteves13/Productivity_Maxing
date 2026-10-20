@@ -7,6 +7,7 @@ import CopyButton from '../UI/CopyButton';
 import FormError from '../UI/FormError';
 import { useI18n } from '../../i18n/useI18n';
 import { fillNodes } from '../../i18n/fillNodes';
+import Card from '../UI/Card';
 
 interface TwoFactorCardProps {
   user: User;
@@ -72,7 +73,7 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
     'w-full max-w-xs rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:border-violet-600';
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 max-w-3xl mt-8">
+    <Card>
       <h2 className="text-lg font-semibold text-white mb-1">{t('ui.twoFactorAuthentication')}</h2>
       <p className="text-sm text-neutral-400 mb-3">
         {t('ui.askForACodeFrom')}
@@ -198,6 +199,6 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

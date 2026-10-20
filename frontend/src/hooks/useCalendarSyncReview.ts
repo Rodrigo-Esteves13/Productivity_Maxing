@@ -17,9 +17,12 @@ export function useCalendarSyncReview() {
   const [result, setResult] = useState<ScheduleSyncResult | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // Se o modal já está aberto, novos pedidos não o devem fechar nem trocar
-  // o que a pessoa está a ler.
+  // o que a pessoa está a ler. Sincronizado num efeito (não no render) para o
+  // React Compiler poder otimizar o hook.
   const phaseRef = useRef<ReviewPhase>('closed');
-  phaseRef.current = phase;
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   const openReview = useCallback(async (force: boolean) => {
     if (phaseRef.current !== 'closed') return;

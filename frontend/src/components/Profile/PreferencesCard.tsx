@@ -4,6 +4,7 @@ import { updateUserProfile } from '../../api/userService';
 import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
 import ToggleRow from '../UI/ToggleRow';
+import Card from '../UI/Card';
 
 interface PreferencesCardProps {
   user: User;
@@ -31,7 +32,7 @@ export default function PreferencesCard({ user, onUserUpdate }: PreferencesCardP
   };
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 max-w-3xl mt-8">
+    <Card>
       <h2 className="text-lg font-semibold text-white">{t('prefs.notificationsTitle')}</h2>
       <p className="mt-1 mb-2 text-sm text-neutral-400">{t('prefs.savedToAccount')}</p>
       <ToggleRow
@@ -55,6 +56,6 @@ export default function PreferencesCard({ user, onUserUpdate }: PreferencesCardP
         disabled={isSaving}
         onChange={(value) => void save({ spacedReviewsEnabled: value })}
       />
-    </div>
+    </Card>
   );
 }

@@ -21,6 +21,9 @@ interface TextEditOverlayProps {
 // ao vivo aqui, para o que se vê a escrever já bater certo com o que
 // fica depois de gravado.
 export default function TextEditOverlay({ item, svgRef, onChangeText, onCommit }: TextEditOverlayProps) {
+  // Fora do React Compiler: mede o <svg> (svgRef) durante o render para
+  // posicionar a caixa, e isso nao pode ficar memoizado.
+  'use no memo';
   const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const rect = svgRef.current?.getBoundingClientRect();

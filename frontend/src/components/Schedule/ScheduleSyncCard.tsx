@@ -8,6 +8,7 @@ import type { RemoveAllResult } from '../../api/calendarService';
 import { requestCalendarSyncReview } from '../../lib/calendarSyncEvents';
 import { useI18n } from '../../i18n/useI18n';
 import { API_BASE_URL } from '../../api/apiBaseUrl';
+import Card from '../UI/Card';
 
 const apiUrl = API_BASE_URL;
 
@@ -35,7 +36,7 @@ export default function ScheduleSyncCard() {
   };
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 mt-6">
+    <Card>
       <h2 className="text-lg font-semibold text-white mb-1">{t('ui.googleCalendar')}</h2>
 
       {!connected ? (
@@ -58,7 +59,7 @@ export default function ScheduleSyncCard() {
           </p>
 
           {removed && (
-            <p role="status" className="text-sm text-emerald-300 mb-3">
+            <p role="status" className="text-sm text-violet-300 mb-3">
               {t('ui.removedNEvents', { count: removed.deleted })}
               {removed.remaining > 0 && ` ${t('ui.eventsLeftPressAgain', { count: removed.remaining })}`}
             </p>
@@ -100,6 +101,6 @@ export default function ScheduleSyncCard() {
           </div>
         </>
       )}
-    </div>
+    </Card>
   );
 }

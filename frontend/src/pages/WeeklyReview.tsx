@@ -4,6 +4,7 @@ import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ErrorState from '../components/UI/ErrorState';
 import DashboardCard, { CardHeading } from '../components/UI/DashboardCard';
+import MasonryGrid from '../components/UI/MasonryGrid';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { getWeeklyReview } from '../api/userService';
 import type { WeeklyReview as WeeklyReviewData } from '../types/models';
@@ -61,7 +62,7 @@ export default function WeeklyReview() {
       {error && <ErrorState message={t('review.error')} />}
       {!data && !error && <p className="text-sm text-neutral-400">{t('review.loading')}</p>}
       {data && (
-        <div className="space-y-6 max-w-4xl">
+        <div className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Stat label={t('review.completed')} value={String(data.completed.length)} />
             <Stat label={t('review.studied')} value={formatMinutes(data.studyMinutes)} />
@@ -69,78 +70,83 @@ export default function WeeklyReview() {
             <Stat label={t('review.focus')} value={data.focusAverage === null ? '-' : `${data.focusAverage}/5`} />
           </div>
 
-          <DashboardCard>
-            <CardHeading className="mb-3">{t('review.completedThisWeek')}</CardHeading>
-            {data.completed.length === 0 ? (
-              <p className="text-sm text-neutral-500">{t('review.nothingCompleted')}</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {data.completed.map((t) => (
-                  <li key={t.id}>
-                    <TaskLink id={t.id} title={t.title} areaName={t.areaName} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </DashboardCard>
-
-          <DashboardCard>
-            <CardHeading className="mb-3">{t('review.studyByArea')}</CardHeading>
-            {data.studyByArea.length === 0 ? (
-              <p className="text-sm text-neutral-500">{t('review.noStudy')}</p>
-            ) : (
-              <ul className="space-y-2">
-                {data.studyByArea.map((row) => (
-                  <li key={row.areaName}>
-                    <div className="flex justify-between text-sm text-neutral-300">
-                      <span>{row.areaName}</span>
-                      <span className="tabular-nums text-neutral-400">{formatMinutes(row.minutes)}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-neutral-800 mt-1 overflow-hidden">
-                      <div
-                        className="h-full bg-violet-500"
-                        style={{ width: `${Math.round((row.minutes / data.studyByArea[0].minutes) * 100)}%` }}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </DashboardCard>
-
-          {data.postponed.length > 0 && (
-            <DashboardCard tone="warning">
-              <CardHeading tone="warning" className="mb-3">{t('review.pushedBack')}</CardHeading>
-              <ul className="space-y-1.5">
-                {data.postponed.map((task) => (
-                  <li key={task.id} className="flex items-baseline justify-between gap-3">
-                    <TaskLink id={task.id} title={task.title} areaName={task.areaName} />
-                    <span className="text-xs text-neutral-500 shrink-0">
-                      {t('ui.postponedTimes', { count: task.postponedCount })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+          {/* Duas colunas a partir de lg (antes uma coluna de 896px com o
+              resto do ecra vazio). Sem esticar: listas curtas ficavam com
+              fundo vazio. */}
+          <MasonryGrid stretchLast={false}>
+            <DashboardCard>
+              <CardHeading className="mb-3">{t('review.completedThisWeek')}</CardHeading>
+              {data.completed.length === 0 ? (
+                <p className="text-sm text-neutral-500">{t('review.nothingCompleted')}</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {data.completed.map((t) => (
+                    <li key={t.id}>
+                      <TaskLink id={t.id} title={t.title} areaName={t.areaName} />
+                    </li>
+                  ))}
+                </ul>
+              )}
             </DashboardCard>
-          )}
 
-          <DashboardCard>
-            <CardHeading className="mb-3">{t('review.comingUp')}</CardHeading>
-            {data.upcoming.length === 0 ? (
-              <p className="text-sm text-neutral-500">{t('review.nothingDue')}</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {data.upcoming.map((t) => (
-                  <li key={t.id} className="flex items-baseline justify-between gap-3">
-                    <TaskLink id={t.id} title={t.title} areaName={t.areaName} />
-                    <span className="text-xs text-neutral-500 shrink-0">
-                      {new Date(t.date).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+            <DashboardCard>
+              <CardHeading className="mb-3">{t('review.studyByArea')}</CardHeading>
+              {data.studyByArea.length === 0 ? (
+                <p className="text-sm text-neutral-500">{t('review.noStudy')}</p>
+              ) : (
+                <ul className="space-y-2">
+                  {data.studyByArea.map((row) => (
+                    <li key={row.areaName}>
+                      <div className="flex justify-between text-sm text-neutral-300">
+                        <span>{row.areaName}</span>
+                        <span className="tabular-nums text-neutral-400">{formatMinutes(row.minutes)}</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-neutral-800 mt-1 overflow-hidden">
+                        <div
+                          className="h-full bg-violet-500"
+                          style={{ width: `${Math.round((row.minutes / data.studyByArea[0].minutes) * 100)}%` }}
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </DashboardCard>
+
+            {data.postponed.length > 0 && (
+              <DashboardCard tone="warning">
+                <CardHeading tone="warning" className="mb-3">{t('review.pushedBack')}</CardHeading>
+                <ul className="space-y-1.5">
+                  {data.postponed.map((task) => (
+                    <li key={task.id} className="flex items-baseline justify-between gap-3">
+                      <TaskLink id={task.id} title={task.title} areaName={task.areaName} />
+                      <span className="text-xs text-neutral-500 shrink-0">
+                        {t('ui.postponedTimes', { count: task.postponedCount })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </DashboardCard>
             )}
-          </DashboardCard>
+
+            <DashboardCard>
+              <CardHeading className="mb-3">{t('review.comingUp')}</CardHeading>
+              {data.upcoming.length === 0 ? (
+                <p className="text-sm text-neutral-500">{t('review.nothingDue')}</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {data.upcoming.map((t) => (
+                    <li key={t.id} className="flex items-baseline justify-between gap-3">
+                      <TaskLink id={t.id} title={t.title} areaName={t.areaName} />
+                      <span className="text-xs text-neutral-500 shrink-0">
+                        {new Date(t.date).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </DashboardCard>
+          </MasonryGrid>
         </div>
       )}
     </PageLayout>

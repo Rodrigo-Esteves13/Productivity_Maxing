@@ -23,6 +23,7 @@ Disallow: /users
 Disallow: /security
 Disallow: /task-types
 Disallow: /reset-password
+Disallow: /set-password
 Disallow: /auth/
 
 # --- AI training crawlers ---

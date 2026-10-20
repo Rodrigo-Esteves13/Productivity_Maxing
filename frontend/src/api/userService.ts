@@ -79,9 +79,19 @@ export const registerRequest = async (data: {
 
 // Com a verificacao de email LIGADA no backend (REQUIRE_EMAIL_VERIFICATION)
 // o registo nao abre sessao: devolve este shape em vez de um csrfToken.
+// Email de uma conta que ainda nao tem password (Google/GitHub/Discord): o
+// backend manda um link para o dono a juntar a mesma conta, sem sessao.
 export type RegisterResult =
-  | { csrfToken: string; requiresEmailVerification?: undefined }
-  | { requiresEmailVerification: true; email: string; csrfToken?: undefined };
+  | { csrfToken: string; requiresEmailVerification?: undefined; passwordLinkSent?: undefined }
+  | { requiresEmailVerification: true; email: string; csrfToken?: undefined; passwordLinkSent?: undefined }
+  | { passwordLinkSent: true; email: string; csrfToken?: undefined; requiresEmailVerification?: undefined };
+
+// Pagina /set-password: escolhe a password da conta do link do email. Nao
+// abre sessao, o login a seguir e o normal.
+export const completePasswordLinkRequest = async (token: string, password: string): Promise<{ email: string }> => {
+  const response = await api.post<{ linked: true; email: string }>('/auth/password-link', { token, password });
+  return { email: response.data.email };
+};
 
 // Link do email de verificacao (pagina /verify-email).
 export const verifyEmailRequest = async (token: string): Promise<{ email: string }> => {
@@ -341,6 +351,13 @@ export async function bulkUpdateTaskStatus(
     ids,
     progressStatus,
   });
+  return response.data;
+}
+
+// "Mover para" da selecao: date em ISO (meia-noite UTC do dia escolhido).
+// Tasks ja concluidas ficam onde estao (ver bulk-reschedule.util.ts).
+export async function bulkRescheduleTasks(ids: string[], date: string): Promise<{ count: number }> {
+  const response = await api.patch<{ count: number }>('/tasks/bulk-reschedule', { ids, date });
   return response.data;
 }
 

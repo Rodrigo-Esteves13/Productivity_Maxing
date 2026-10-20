@@ -10,6 +10,7 @@ import CommitmentSection from './commitments/CommitmentSection';
 import { useI18n } from '../../i18n/useI18n';
 import CopyWeekPanel from './commitments/CopyWeekPanel';
 import EventsSection from './commitments/EventsSection';
+import Card from '../UI/Card';
 
 interface CommitmentsCardProps {
   onChanged: () => void;
@@ -28,7 +29,7 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
   const { commitments, ungroupedShifts } = overview;
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 mt-6">
+    <Card className="mt-6">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <h2 className="text-lg font-semibold text-white mb-1">{t('ui.workAndOtherCommitments')}</h2>
@@ -82,7 +83,7 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
       {isLoading && <LinesSkeleton lines={3} />}
 
       {!isLoading && commitments.length === 0 && ungroupedShifts.length === 0 && !isCreating && (
-        <EmptyState message={t('ui.nothingHereYetCreateA')} />
+        <EmptyState variant="inline" message={t('ui.nothingHereYetCreateA')} />
       )}
 
       <div className="space-y-3">
@@ -108,6 +109,6 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
           onDelete={removeShift}
         />
       </div>
-    </div>
+    </Card>
   );
 }

@@ -6,9 +6,12 @@ import { layoutTwoColumns, resetToFlow } from '../../lib/masonryLayout';
 interface MasonryGridProps {
   children: ReactNode;
   className?: string;
+  // Estica o último cartão de cada coluna até ao fundo (default). Desligar
+  // em páginas de formulários, onde um cartão esticado é só espaço vazio.
+  stretchLast?: boolean;
 }
 
-export default function MasonryGrid({ children, className = '' }: MasonryGridProps) {
+export default function MasonryGrid({ children, className = '', stretchLast = true }: MasonryGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef(0);
   const columnCount = useColumnCount();
@@ -17,9 +20,9 @@ export default function MasonryGrid({ children, className = '' }: MasonryGridPro
   const layout = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
-    if (columnCount === 2) layoutTwoColumns(container);
+    if (columnCount === 2) layoutTwoColumns(container, stretchLast);
     else resetToFlow(container);
-  }, [columnCount]);
+  }, [columnCount, stretchLast]);
 
   // Síncrono antes do paint: sem um frame com os cartões todos empilhados.
   useLayoutEffect(() => {

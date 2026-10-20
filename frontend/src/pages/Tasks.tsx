@@ -1,7 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import TaskGrid from '../components/Tasks/TaskGrid';
+import TaskBoard from '../components/Tasks/TaskBoard';
+import SegmentedControl, { type SegmentedOption } from '../components/UI/SegmentedControl';
 import TaskSortControl from '../components/Tasks/TaskSortControl';
 import TaskDetailView from '../components/Tasks/TaskDetailView';
 import TaskEditForm from '../components/Tasks/TaskEditForm';
@@ -17,10 +19,18 @@ import { useTasksPage } from '../hooks/useTasksPage';
 import { useTaskShortcuts } from '../hooks/useTaskShortcuts';
 import { useShowArchivedTasks } from '../hooks/useShowArchivedTasks';
 import { useTaskSortMode } from '../hooks/useTaskSortMode';
+import { TASKS_VIEWS, isTasksView, useTasksView, type TasksView } from '../hooks/useTasksView';
 import { isTaskArchived } from '../utils/taskArchive';
 import { sortTasks } from '../utils/taskSorting';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../i18n/useI18n';
+
+// ?view=board (ou grid) vem da paleta Ctrl+K.
+const VIEW_PARAM = 'view';
+const VIEW_LABEL_KEY: Record<TasksView, string> = {
+  grid: 'board.view.grid',
+  board: 'board.view.board',
+};
 
 export default function Tasks() {
   const { t } = useI18n();
@@ -55,8 +65,31 @@ export default function Tasks() {
     handleSubtasksChange,
     handleSubtaskConverted,
     rescheduleToTomorrow,
+    completeTask,
+    changeTaskStatus,
     reschedulingId
   } = useTasksPage();
+  const { view, setView } = useTasksView();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const viewParam = searchParams.get(VIEW_PARAM);
+
+  useEffect(() => {
+    if (!isTasksView(viewParam)) return;
+    setView(viewParam);
+    // Tira o parametro para nao lutar com o botao Grelha/Quadro depois.
+    setSearchParams(
+      (params) => {
+        params.delete(VIEW_PARAM);
+        return params;
+      },
+      { replace: true },
+    );
+  }, [viewParam, setView, setSearchParams]);
+
+  const viewOptions: SegmentedOption<TasksView>[] = TASKS_VIEWS.map((value) => ({
+    value,
+    label: t(VIEW_LABEL_KEY[value]),
+  }));
 
   const { showArchived, toggleShowArchived } = useShowArchivedTasks();
   const { sortMode, setSortMode, direction, toggleDirection } = useTaskSortMode();
@@ -113,6 +146,7 @@ export default function Tasks() {
             <Link to="/task-packs" className="whitespace-nowrap text-sm text-violet-400 hover:text-violet-300">
               {t('packs.openLink')}
             </Link>
+            <SegmentedControl size="sm" options={viewOptions} value={view} onChange={setView} />
             <TaskSortControl
               sortMode={sortMode}
               onChange={setSortMode}
@@ -153,11 +187,19 @@ export default function Tasks() {
         // be archived, and the toggle above is off - "no tasks" would be
         // actively misleading here (the user very much has tasks).
         <EmptyState message={t('ui.allTasksArchived', { count: archivedCount })} />
+      ) : view === 'board' ? (
+        <TaskBoard
+          tasks={sortedTasks}
+          statuses={progressStatuses}
+          onSelect={handleSelectTask}
+          onChangeStatus={changeTaskStatus}
+        />
       ) : (
         <TaskGrid 
           tasks={sortedTasks} 
           onSelect={handleSelectTask} 
           onReschedule={rescheduleToTomorrow}
+          onComplete={completeTask}
           reschedulingId={reschedulingId}
           areas={areas}
           onMoveArea={moveTaskToArea}

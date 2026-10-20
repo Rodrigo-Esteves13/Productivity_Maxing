@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useActiveStudySession } from '../../../context/useActiveStudySession';
 import { useStopSession } from '../../../hooks/useStopSession';
-import { formatElapsed } from '../../../lib/formatDuration';
+import SessionClock, { BlockFinishedSwitch } from './SessionClock';
 import { exitFullscreen } from '../../../lib/fullscreen';
 import Button from '../../UI/Button';
 import StopSessionPanel from './StopSessionPanel';
@@ -15,7 +15,7 @@ interface FocusModeOverlayProps {
 // Ecra limpo so com o tempo e a task, por cima de tudo. Esc sai.
 export default function FocusModeOverlay({ onClose }: FocusModeOverlayProps) {
   const { t } = useI18n();
-  const { activeSession, elapsedSeconds, remainingSeconds, isSubmitting } = useActiveStudySession();
+  const { activeSession, isSubmitting, timerPlan } = useActiveStudySession();
   const { stopSession } = useStopSession();
   const [isStopping, setIsStopping] = useState(false);
 
@@ -46,7 +46,6 @@ export default function FocusModeOverlay({ onClose }: FocusModeOverlayProps) {
   if (!activeSession) return null;
 
   const label = activeSession.task?.title ?? activeSession.area?.name ?? t('ui.focusSession');
-  const shown = remainingSeconds ?? elapsedSeconds;
 
   return (
     <div
@@ -56,13 +55,15 @@ export default function FocusModeOverlay({ onClose }: FocusModeOverlayProps) {
       className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-neutral-950 px-6 text-center"
     >
       <p className="mb-2 max-w-xl truncate text-lg text-neutral-400">{label}</p>
-      <p className="font-mono text-6xl font-bold tabular-nums text-violet-400 sm:text-8xl">{formatElapsed(shown)}</p>
+      <p className="font-mono text-6xl font-bold tabular-nums text-violet-400 sm:text-8xl">
+        <SessionClock />
+      </p>
       <p className="mt-3 text-sm text-neutral-500">
-        {remainingSeconds === null
-          ? t('ui.countingUp')
-          : remainingSeconds === 0
-            ? t('ui.timeIsUpKeepGoing')
-            : t('ui.remainingInThisBlock')}
+        {timerPlan === null ? (
+          t('ui.countingUp')
+        ) : (
+          <BlockFinishedSwitch running={t('ui.remainingInThisBlock')} finished={t('ui.timeIsUpKeepGoing')} />
+        )}
       </p>
       <div className="mt-3">
         <OpenNotesLink areaId={activeSession.areaId} />

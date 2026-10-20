@@ -1,9 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ImportScheduleDto } from './dto/import-schedule.dto';
 import { EstimateCommuteDto } from './dto/estimate-commute.dto';
 import { runWithConcurrencyLimit } from '../common/concurrency.util';
 import { DistanceMatrixService } from '../maps/distance-matrix.service';
+import {
+  summarizeAttendance,
+  type SubjectAttendance,
+} from './attendance-summary.util';
 
 // Mesmo raciocínio do IMPORT_CREATE_CONCURRENCY em tasks.service.ts: N
 // upserts independentes, rápido o suficiente para não valer a pena uma
@@ -162,6 +166,44 @@ export class ScheduleService {
       where: { userId, date: { gte: from, lte: endOfTo } },
       orderBy: [{ date: 'asc' }, { startMinutes: 'asc' }],
     });
+  }
+
+  /**
+   * Marca presença numa aula (true/false) ou limpa a marcação (null).
+   * updateMany com { id, userId }: uma aula de outro user não bate e dá 404,
+   * sem nunca revelar se o id existe.
+   */
+  async setAttendance(
+    userId: string,
+    id: string,
+    attended: boolean | null,
+  ): Promise<{ id: string; attended: boolean | null }> {
+    const result = await this.prisma.classOccurrence.updateMany({
+      where: { id, userId },
+      data: { attended },
+    });
+    if (result.count === 0) throw new NotFoundException('Class not found.');
+    return { id, attended };
+  }
+
+  /**
+   * Presenças por disciplina entre duas datas (inclusive). Só conta aulas
+   * até ao fim de `upTo` (hoje, no controller): aulas futuras ainda não
+   * podem ter presença e iam inflacionar o "por marcar".
+   */
+  async attendanceSummary(
+    userId: string,
+    from: Date,
+    to: Date,
+  ): Promise<SubjectAttendance[]> {
+    const endOfTo = new Date(to);
+    endOfTo.setUTCHours(23, 59, 59, 999);
+    const rows = await this.prisma.classOccurrence.groupBy({
+      by: ['subject', 'attended'],
+      where: { userId, date: { gte: from, lte: endOfTo } },
+      _count: { _all: true },
+    });
+    return summarizeAttendance(rows);
   }
 
   /**

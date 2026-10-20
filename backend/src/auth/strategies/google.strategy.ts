@@ -4,7 +4,10 @@ import { Strategy, VerifyCallback, Profile } from 'passport-google-oauth20';
 import { Request } from 'express';
 import { Provider, User } from '@prisma/client';
 import { AuthService } from '../auth.service';
-import { OAUTH_LOGIN_STATE_COOKIE } from '../cookie.config';
+import {
+  ACCESS_TOKEN_COOKIE,
+  OAUTH_LOGIN_STATE_COOKIE,
+} from '../cookie.config';
 import { isValidLoginState } from '../guards/oauth-guard.helpers';
 import { GOOGLE_TOKENINFO_URL } from '../google-oauth.constants';
 
@@ -91,6 +94,9 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
           linkUserId = this.authService.consumeLinkState(
             state,
             Provider.GOOGLE,
+            (req.cookies as Record<string, string | undefined>)?.[
+              ACCESS_TOKEN_COOKIE
+            ],
           );
         } catch {
           linkUserId = undefined;

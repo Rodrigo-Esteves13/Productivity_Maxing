@@ -4,7 +4,7 @@ import { LinkIcon, PlusIcon } from '../../UI/Icons';
 import { useI18n } from '../../../i18n/useI18n';
 import EntrySectionHeader from './EntrySectionHeader';
 import EntryListRow from './EntryListRow';
-import { SMALL_INPUT_CLASS, withProtocol } from './notebookEntryConfig';
+import { SMALL_INPUT_CLASS, toLinkUrl } from './notebookEntryConfig';
 
 const LABEL_MAX_LENGTH = 120;
 
@@ -18,12 +18,18 @@ export default function UsefulLinksSection({ isEditing, links, onChange }: Usefu
   const { t } = useI18n();
   const [newLabel, setNewLabel] = useState('');
   const [newUrl, setNewUrl] = useState('');
+  const [isUrlInvalid, setIsUrlInvalid] = useState(false);
 
   const handleAdd = () => {
     const rawUrl = newUrl.trim();
     if (!rawUrl) return;
+    const url = toLinkUrl(rawUrl);
+    if (!url) {
+      setIsUrlInvalid(true);
+      return;
+    }
     const label = newLabel.trim() || rawUrl;
-    onChange((prev) => [...prev, { id: crypto.randomUUID(), label, url: withProtocol(rawUrl) }]);
+    onChange((prev) => [...prev, { id: crypto.randomUUID(), label, url }]);
     setNewLabel('');
     setNewUrl('');
   };
@@ -68,7 +74,11 @@ export default function UsefulLinksSection({ isEditing, links, onChange }: Usefu
           />
           <input
             value={newUrl}
-            onChange={(e) => setNewUrl(e.target.value)}
+            onChange={(e) => {
+              setNewUrl(e.target.value);
+              setIsUrlInvalid(false);
+            }}
+            aria-invalid={isUrlInvalid}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -86,6 +96,11 @@ export default function UsefulLinksSection({ isEditing, links, onChange }: Usefu
             <PlusIcon className="h-3 w-3" />
             {t('notebook.links.add')}
           </button>
+          {isUrlInvalid && (
+            <p role="alert" className="w-full text-xs text-red-400">
+              {t('notebook.links.invalid')}
+            </p>
+          )}
         </div>
       )}
     </section>

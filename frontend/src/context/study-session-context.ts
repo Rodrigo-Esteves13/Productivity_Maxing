@@ -3,9 +3,12 @@ import type { StudySession } from '../types/models';
 import type { StartStudySessionInput, StopStudySessionInput } from '../api/studySessionsService';
 import type { ResumeSpec, RestBreak, TimerPlan } from '../lib/focusTimer';
 
+// Estado da sessao que muda raramente (comecar, parar, pausas). O relogio
+// que muda a cada segundo vive a parte em StudyClockContext: antes estava
+// tudo no mesmo valor e, com uma sessao a correr, TODOS os consumidores
+// (historico, cartoes do Focus, avisos) voltavam a renderizar 1x/s.
 export interface ActiveStudySessionContextType {
   activeSession: StudySession | null;
-  elapsedSeconds: number;
   isLoading: boolean;
   isSubmitting: boolean;
   error: string;
@@ -15,7 +18,6 @@ export interface ActiveStudySessionContextType {
   stop: (options?: StopStudySessionInput, skipFocusPrompt?: boolean) => Promise<boolean>;
   // Contagem decrescente desta sessao (null = cronometro livre).
   timerPlan: TimerPlan | null;
-  remainingSeconds: number | null;
   // Pausa a decorrer entre dois blocos (null = nenhuma).
   restBreak: RestBreak | null;
   startBreak: (minutes: number, resume: ResumeSpec | null) => void;
@@ -29,3 +31,12 @@ export interface ActiveStudySessionContextType {
 export const StudySessionContext = createContext<
   ActiveStudySessionContextType | undefined
 >(undefined);
+
+// So o relogio: le isto (useStudyClock) apenas quem mostra os segundos.
+export interface StudyClockContextType {
+  elapsedSeconds: number;
+  // Segundos que faltam no bloco (null = cronometro livre).
+  remainingSeconds: number | null;
+}
+
+export const StudyClockContext = createContext<StudyClockContextType>({ elapsedSeconds: 0, remainingSeconds: null });

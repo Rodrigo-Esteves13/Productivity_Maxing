@@ -10,6 +10,7 @@ import { estimateCommute } from '../../api/scheduleService';
 import type { CommuteMode, User } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
 import { translateNow } from '../../i18n/translate';
+import Card from '../UI/Card';
 
 interface CommuteSettingsCardProps {
   user: User;
@@ -136,7 +137,7 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
   };
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 max-w-3xl mt-8">
+    <Card>
       <h2 className="text-lg font-semibold text-white mb-1">{t('ui.commuteQuietHours')}</h2>
       <p className="text-sm text-neutral-400 mb-4">
         {t('ui.usedByTheStudyPlan')}
@@ -234,6 +235,6 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
           </ActionButton>
         </div>
       </form>
-    </div>
+    </Card>
   );
 }

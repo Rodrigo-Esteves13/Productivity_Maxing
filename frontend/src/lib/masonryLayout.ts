@@ -4,8 +4,9 @@ const GAP_PX = 16;
 // coluna até ao fundo do contentor, para as duas colunas acabarem à mesma
 // altura. Mexe só em estilos inline (nunca na árvore React), por isso um
 // cartão nunca muda de pai nem é remontado: o estado e os dados que cada
-// cartão já carregou mantêm-se.
-export function layoutTwoColumns(container: HTMLElement): void {
+// cartão já carregou mantêm-se. Com stretchLast=false as colunas acabam
+// onde acabam (formulários de definições ficavam com fundo vazio esticado).
+export function layoutTwoColumns(container: HTMLElement, stretchLast = true): void {
   const items = Array.from(container.children) as HTMLElement[];
   const columnWidth = (container.clientWidth - GAP_PX) / 2;
 
@@ -41,6 +42,7 @@ export function layoutTwoColumns(container: HTMLElement): void {
   const totalHeight = Math.max(0, Math.max(...columnBottoms) - GAP_PX);
   container.style.height = `${totalHeight}px`;
 
+  if (!stretchLast) return;
   for (const item of lastInColumn) {
     if (item) item.style.height = `${totalHeight - (tops.get(item) ?? 0)}px`;
   }

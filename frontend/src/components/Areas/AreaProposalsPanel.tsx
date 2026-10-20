@@ -3,6 +3,7 @@ import ColorDot from '../UI/ColorDot';
 import Button from '../UI/Button';
 import type { AreaProposal } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 
 interface AreaProposalsPanelProps {
   proposals: AreaProposal[];
@@ -14,6 +15,8 @@ interface AreaProposalsPanelProps {
 // tipo) e o nome de quem propôs.
 export default function AreaProposalsPanel({ proposals, onApprove, onReject }: AreaProposalsPanelProps) {
   const { t } = useI18n();
+  // Sem a lista de tipos aqui: os semeados saem traduzidos, os outros formatados.
+  const { optionLabel } = useCatalogLabel();
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [note, setNote] = useState('');
 
@@ -32,7 +35,7 @@ export default function AreaProposalsPanel({ proposals, onApprove, onReject }: A
                 <span className="truncate font-medium text-white">{p.name}</span>
                 <span className="text-xs text-neutral-500">
                   {p.credits !== null ? t('ui.nCredits', { count: p.credits }) : t('ui.noCreditsLower')}
-                  {p.defaultTaskType ? ` · ${p.defaultTaskType}` : ''}
+                  {p.defaultTaskType ? ` · ${optionLabel('taskType', p.defaultTaskType, [])}` : ''}
                   {p.proposedBy ? ` · ${t('ui.byName', { name: p.proposedBy })}` : ''}
                 </span>
               </div>

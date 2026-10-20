@@ -2,6 +2,12 @@ import { createContext } from 'react';
 
 export type ToastKind = 'success' | 'error' | 'info';
 
+// Botao opcional dentro da mensagem (ex: "Undo"). Clicar corre a acao e fecha a mensagem.
+export interface ToastAction {
+  label: string;
+  onAction: () => void;
+}
+
 export interface ConfirmOptions {
   title?: string;
   message: string;
@@ -13,7 +19,7 @@ export interface ConfirmOptions {
 
 export interface FeedbackContextValue {
   // Mostra uma mensagem curta que desaparece sozinha (substitui alert()).
-  notify: (message: string, kind?: ToastKind) => void;
+  notify: (message: string, kind?: ToastKind, action?: ToastAction) => void;
   // Abre um dialogo de confirmacao e resolve true/false (substitui window.confirm()).
   confirm: (options: ConfirmOptions) => Promise<boolean>;
 }

@@ -1,7 +1,7 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTodayOverview } from '../../hooks/useTodayOverview';
-import { useVisibleInterval } from '../../hooks/useVisibleInterval';
+import { useNow } from '../../hooks/useNow';
 import type { AgendaItem } from '../../lib/agenda';
 import { AGENDA_TONE_CLASSES, getAgendaTone } from '../../lib/agendaTone';
 import { MONTH_CHIP_FALLBACK_KEY } from '../../lib/monthAgenda';
@@ -9,7 +9,6 @@ import { currentOrNextAgendaItem, minutesSinceMidnight, nextStudyBlock } from '.
 import { toDateKey } from '../../lib/dateKey';
 import { todayUtcAnchored } from '../../lib/weekDates';
 import { formatClock, formatDayLabel } from '../../lib/timeFormat';
-import { MS_PER_MINUTE } from '../../lib/timeConstants';
 import { ClockIcon, GraduationCapIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
@@ -52,12 +51,11 @@ function AgendaSlot({ item }: { item: AgendaItem }) {
 export default function TodayCard() {
   const { t } = useI18n();
   const overview = useTodayOverview();
-  const [now, setNow] = useState(() => new Date());
-  useVisibleInterval(() => setNow(new Date()), MS_PER_MINUTE);
+  const now = useNow();
 
   if (!overview) return null;
 
-  const todayKey = toDateKey(todayUtcAnchored());
+  const todayKey = toDateKey(todayUtcAnchored(now));
   const nowMinutes = minutesSinceMidnight(now);
   const agendaItem = currentOrNextAgendaItem(overview.agenda, nowMinutes);
   const studyBlock = nextStudyBlock(overview.studyBlocks, todayKey, nowMinutes);

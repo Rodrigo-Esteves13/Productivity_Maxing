@@ -3,6 +3,7 @@
 
 import { MINUTES_PER_DAY, MINUTES_PER_HOUR } from './timeConstants';
 import { detectLanguage } from '../i18n/storage';
+import { isUtcMidnight } from './dateKey';
 
 /** Minutos desde a meia-noite -> "HH:MM". */
 export function formatClock(minutes: number): string {
@@ -47,4 +48,14 @@ export function weekdayLabel(dayOfWeek: number, locale: string = detectLanguage(
 /** Nome curto do mes na lingua da app ("Sep", "9月", "set."). */
 export function monthLabel(date: Date, locale: string = detectLanguage()): string {
   return new Intl.DateTimeFormat(locale, { month: 'short' }).format(date);
+}
+
+/**
+ * Data de uma task na lingua da app. Uma task sem hora (meia-noite UTC) e
+ * mostrada em UTC: com o fuso local, a oeste de Greenwich (ex: Brasil) o
+ * prazo aparecia um dia antes. Uma task com hora usa o fuso local.
+ */
+export function formatTaskDate(value: string, locale: string = detectLanguage()): string {
+  const date = new Date(value);
+  return date.toLocaleDateString(locale, isUtcMidnight(date) ? { timeZone: 'UTC' } : undefined);
 }

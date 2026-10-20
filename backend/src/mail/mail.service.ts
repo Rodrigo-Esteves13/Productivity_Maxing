@@ -125,6 +125,44 @@ export class MailService {
   }
 
   /**
+   * Link para escolher a password de uma conta que ainda nao tem (criada
+   * por Google/GitHub/Discord), ver PasswordLinkService. Nunca lança.
+   */
+  async sendPasswordLinkEmail(to: string, actionLink: string): Promise<void> {
+    const transporter = this.getTransporter();
+    if (!transporter) return;
+
+    const fromEmail = process.env.SMTP_FROM_EMAIL ?? process.env.SMTP_USER;
+    const fromName = getMailFromName();
+
+    try {
+      await transporter.sendMail({
+        from: `"${fromName}" <${fromEmail}>`,
+        to,
+        subject: 'Add a password to your Productivity Maxing account',
+        html: renderActionEmail({
+          title: 'Add a password to your account',
+          intro:
+            'This email already has a Productivity Maxing account, created with Google, GitHub or Discord. Click the button below to choose a password, so you can also sign in with your email. This link is valid for 30 minutes.',
+          buttonLabel: 'Choose a password',
+          link: actionLink,
+          footer:
+            "If you didn't ask for this, you can safely ignore this email. Your account stays as it is.",
+          frontendUrl: getFrontendUrl(),
+        }),
+      });
+      this.logger.log(
+        `Email para adicionar password enviado para ${maskEmail(to)}`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `Erro ao enviar email para adicionar password para ${maskEmail(to)}`,
+        err,
+      );
+    }
+  }
+
+  /**
    * Lembrete de prazos (um email por utilizador por execução do cron, com
    * todas as tasks). Devolve se o SMTP aceitou: o RemindersService só marca
    * os lembretes como enviados quando isto é true (senão tenta de novo).

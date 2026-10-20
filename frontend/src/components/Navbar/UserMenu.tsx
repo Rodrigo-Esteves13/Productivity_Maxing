@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import PrefetchLink from '../UI/PrefetchLink';
+import { ACCOUNT_NAV } from './navItems';
 import type { User } from '../../types/models';
 import { LogoutIcon } from '../UI/Icons';
 import Avatar from '../Profile/Avatar';
@@ -65,41 +66,16 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
 
       {isOpen && (
         <div role="menu" className="absolute right-0 mt-2 w-max min-w-48 max-w-[min(20rem,calc(100vw-1rem))] overflow-hidden bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl z-50">
-          <Link
-            to="/profile"
-            onClick={() => setIsOpen(false)}
-            className="block px-4 py-2.5 text-sm break-words text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
-          >
-            {t('nav.profile')}
-          </Link>
-          <Link
-            to="/developer"
-            onClick={() => setIsOpen(false)}
-            className="block px-4 py-2.5 text-sm break-words text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
-          >
-            {t('nav.developer')}
-          </Link>
-          <Link
-            to="/agent"
-            onClick={() => setIsOpen(false)}
-            className="block px-4 py-2.5 text-sm break-words text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
-          >
-            {t('nav.agent')}
-          </Link>
-          <Link
-            to="/review"
-            onClick={() => setIsOpen(false)}
-            className="block px-4 py-2.5 text-sm break-words text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
-          >
-            {t('nav.review')}
-          </Link>
-          <Link
-            to="/changelog"
-            onClick={() => setIsOpen(false)}
-            className="block px-4 py-2.5 text-sm break-words text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
-          >
-            {t('nav.changelog')}
-          </Link>
+          {ACCOUNT_NAV.map((item) => (
+            <PrefetchLink
+              key={item.to}
+              to={item.to}
+              onClick={() => setIsOpen(false)}
+              className="block px-4 py-2.5 text-sm break-words text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
+            >
+              {t(item.labelKey)}
+            </PrefetchLink>
+          ))}
           <button
             onClick={() => {
               setIsOpen(false);

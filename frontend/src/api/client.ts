@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { dedupeGets } from './dedupeGets';
 import { getCsrfToken, setCsrfToken } from './csrfStore';
 import { MAINTENANCE_EVENT } from '../lib/maintenanceEvents';
 import { ACCOUNT_BLOCKED_EVENT } from '../lib/accountBlockedEvents';
@@ -17,6 +18,9 @@ const api = axios.create({
 });
 
 const SAFE_METHODS = new Set(['get', 'head', 'options']);
+
+// GETs iguais ao mesmo tempo partilham um so pedido de rede (ver dedupeGets.ts).
+api.defaults.adapter = dedupeGets(axios.getAdapter(api.defaults.adapter), (config) => api.getUri(config));
 
 // Mensagem exata que o CsrfGuard do backend devolve num 403 de CSRF. Serve
 // para distinguir "token desatualizado" de um 403 por falta de permissao.

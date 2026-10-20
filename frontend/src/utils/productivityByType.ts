@@ -15,7 +15,7 @@ export interface TypeProductivityRow {
   avgGrade: number | null;
 }
 
-const OTHER_KEY = '__none__';
+export const NO_ACADEMIC_TYPE_KEY = '__none__';
 
 // Per academic task type (Test, Project, Assignment... whatever the admin
 // catalog defines): how many exist, how many got finished, how many of
@@ -29,7 +29,7 @@ export function computeProductivityByType(
   const groups = new Map<string, Task[]>();
 
   for (const task of tasks) {
-    const key = task.academicType ?? OTHER_KEY;
+    const key = task.academicType ?? NO_ACADEMIC_TYPE_KEY;
     const list = groups.get(key);
     if (list) list.push(task);
     else groups.set(key, [task]);
@@ -44,7 +44,7 @@ export function computeProductivityByType(
 
     rows.push({
       key,
-      label: key === OTHER_KEY ? 'Other' : (labelByKey.get(key) ?? key),
+      label: key === NO_ACADEMIC_TYPE_KEY ? 'Other' : (labelByKey.get(key) ?? key),
       total: group.length,
       completed,
       completedPct: Math.round((completed / group.length) * 100),

@@ -7,6 +7,25 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-20',
+    title: 'Kanban board, attendance and faster task cleanup',
+    items: [
+      'Task types (Academic, Habit, Project...) and test types now show in your language, like priorities. Types the admin renamed or created keep their name.',
+      'Tasks has a Board view: one column per status, drag a card to change it (or use the status menu on each card, also on the phone).',
+      'Select several tasks on the Dashboard and move them to today, tomorrow or any date in one go. Completed tasks stay where they are.',
+      'Marking tasks as done now shows an Undo button for a few seconds.',
+      'On the phone, swipe a task card right to mark it done, or left to move an overdue task to tomorrow.',
+      'Attendance: mark each class you went to or missed in the Schedule week view, and see your absences per subject. A notebook entry written in a class marks it as attended.',
+      'Installed app: press and hold the icon for shortcuts to New task, Today, Schedule and Focus.',
+      'Focus fits on one screen: tasks due today sit in the Today card, session history opens on the last two days and the best-times chart is compact. Profile and Weekly review use two columns on wide screens.',
+      'The app now asks once, when you open it, whether to turn on notifications on that device. Nothing turns on unless you accept, and you can switch them off or back on anytime in Profile.',
+      'Faster app: a smaller first download, pages load before you click them, and a running focus timer no longer slows the rest of the page. The phone menu now also has Weekly review and Changelog.',
+      'Sign-in and linking a Google, GitHub or Discord account are more secure.',
+      'One account for every sign-in: if you signed up with Google, GitHub or Discord, registering or using Forgot password with the same email sends you a link to add a password to that same account.',
+      'Fixes: due dates show the right day in every timezone and count down to the end of that day, Focus updates your streak and best times right after a session, a bad notebook link shows an error instead of blocking saves, and task pack and Ctrl+K labels read correctly.',
+    ],
+  },
+  {
     date: '2026-10-19',
     title: 'Deadline push reminders, and the app in your language',
     items: [

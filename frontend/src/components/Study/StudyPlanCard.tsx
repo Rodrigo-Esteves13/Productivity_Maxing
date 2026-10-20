@@ -8,6 +8,7 @@ import DailyLimitControl from './plan/DailyLimitControl';
 import PlanTaskList from './plan/PlanTaskList';
 import PlanDayList from './plan/PlanDayList';
 import { useI18n } from '../../i18n/useI18n';
+import Card from '../UI/Card';
 
 const PLAN_WINDOW_DAYS = 7;
 
@@ -27,7 +28,7 @@ export default function StudyPlanCard() {
   };
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
+    <Card>
       <h2 className="text-lg font-semibold text-white mb-1">{t('ui.suggestedStudyPlan')}</h2>
       <p className="text-sm text-neutral-400 mb-4">
         {t('ui.nextDaysFittedAroundClasses', { planWindowDays: PLAN_WINDOW_DAYS })}</p>
@@ -55,10 +56,10 @@ export default function StudyPlanCard() {
               dailyLimitMinutes={plan.dailyLimitMinutes}
             />
           ) : (
-            <EmptyState message={t('ui.noStudyBlocksToSuggest')} />
+            <EmptyState variant="inline" message={t('ui.noStudyBlocksToSuggest')} />
           )}
         </>
       )}
-    </div>
+    </Card>
   );
 }

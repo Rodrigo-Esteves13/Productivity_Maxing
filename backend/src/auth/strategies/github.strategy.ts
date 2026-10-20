@@ -4,7 +4,10 @@ import { Strategy, Profile } from 'passport-github2';
 import { Request } from 'express';
 import { Provider, User } from '@prisma/client';
 import { AuthService } from '../auth.service';
-import { OAUTH_LOGIN_STATE_COOKIE } from '../cookie.config';
+import {
+  ACCESS_TOKEN_COOKIE,
+  OAUTH_LOGIN_STATE_COOKIE,
+} from '../cookie.config';
 import { isValidLoginState } from '../guards/oauth-guard.helpers';
 
 @Injectable()
@@ -67,6 +70,9 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
           const userId = this.authService.consumeLinkState(
             state,
             Provider.GITHUB,
+            (req.cookies as Record<string, string | undefined>)?.[
+              ACCESS_TOKEN_COOKIE
+            ],
           );
           user = await this.authService.linkIdentity(userId, data);
         } catch {

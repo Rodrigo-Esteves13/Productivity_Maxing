@@ -64,15 +64,21 @@ export function usePushNotifications() {
     void refresh();
   }, [refresh]);
 
-  const enable = useCallback(async () => {
+  // Devolve o estado final (null se falhou): o pedido a entrada na app
+  // precisa de saber se fecha ou mostra o erro.
+  const enable = useCallback(async (): Promise<PushState | null> => {
     setIsBusy(true);
     setError(null);
+    const finish = (next: PushState) => {
+      setState(next);
+      return next;
+    };
     try {
       const key = await getPushPublicKey();
-      if (!key) return setState('unconfigured');
+      if (!key) return finish('unconfigured');
       // O pedido de permissão TEM de nascer de um clique do utilizador.
       const permission = await Notification.requestPermission();
-      if (permission !== 'granted') return setState(permission === 'denied' ? 'blocked' : 'off');
+      if (permission !== 'granted') return finish(permission === 'denied' ? 'blocked' : 'off');
       const registration = await getActiveRegistration();
       const subscription =
         (await registration.pushManager.getSubscription()) ??
@@ -81,10 +87,11 @@ export function usePushNotifications() {
           applicationServerKey: urlBase64ToUint8Array(key),
         }));
       await subscribePush(subscription.toJSON(), lang);
-      setState('on');
+      return finish('on');
     } catch (err) {
       console.error('Falha ao ativar notificacoes:', err);
       setError(err instanceof Error && err.message === 'service-worker-timeout' ? 'noWorker' : 'generic');
+      return null;
     } finally {
       setIsBusy(false);
     }

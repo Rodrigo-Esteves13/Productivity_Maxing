@@ -1,4 +1,5 @@
 import { useActiveStudySession } from '../../../context/useActiveStudySession';
+import { useNow } from '../../../hooks/useNow';
 import { requestNotifyPermission } from '../../../lib/focusAlerts';
 import { MAX_FOCUS_MINUTES, MIN_FOCUS_MINUTES, normalizePlan } from '../../../lib/focusTimer';
 import { toDateKey } from '../../../lib/dateKey';
@@ -11,6 +12,7 @@ import EmptyState from '../../UI/EmptyState';
 import ErrorState from '../../UI/ErrorState';
 import LinesSkeleton from '../../UI/LinesSkeleton';
 import { useI18n } from '../../../i18n/useI18n';
+import Card from '../../UI/Card';
 
 const DEFAULT_BREAK_MINUTES = 5;
 const MINUTES_PER_DAY = 24 * 60;
@@ -31,8 +33,8 @@ export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps
   const { t } = useI18n();
   const { activeSession, isSubmitting, start } = useActiveStudySession();
 
-  const today = toDateKey(todayUtcAnchored());
-  const now = new Date();
+  const now = useNow();
+  const today = toDateKey(todayUtcAnchored(now));
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const blocks = (plan?.suggestions ?? [])
     .filter((block) => block.date === today)
@@ -47,14 +49,14 @@ export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps
   };
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
+    <Card>
       <h2 className="text-lg font-semibold text-white mb-1">{t('ui.studyBlocksForToday')}</h2>
       <p className="mb-4 text-xs text-neutral-500">{t('ui.fromYourStudyPlanStart')}</p>
 
       {isLoading && <LinesSkeleton lines={3} />}
       {!isLoading && error && <ErrorState message={error} />}
       {!isLoading && !error && blocks.length === 0 && (
-        <EmptyState message={t('ui.noStudyBlocksPlannedFor')} />
+        <EmptyState variant="inline" message={t('ui.noStudyBlocksPlannedFor')} />
       )}
 
       {!isLoading && !error && blocks.length > 0 && (
@@ -93,6 +95,6 @@ export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps
           })}
         </ol>
       )}
-    </div>
+    </Card>
   );
 }

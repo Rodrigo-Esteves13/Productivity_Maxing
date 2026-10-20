@@ -1,4 +1,5 @@
 import { useBestTimesHeatmap } from '../../../hooks/useBestTimesHeatmap';
+import { useNow } from '../../../hooks/useNow';
 import { suggestStudyWindow } from '../../../lib/studyWindow';
 import { useI18n } from '../../../i18n/useI18n';
 
@@ -13,7 +14,7 @@ function utcHourToLocalLabel(utcHour: number, now: Date): string {
 export default function StudyNowHint() {
   const { t } = useI18n();
   const { cells } = useBestTimesHeatmap();
-  const now = new Date();
+  const now = useNow();
   const hint = suggestStudyWindow(cells, now);
   if (!hint) return null;
 

@@ -37,7 +37,7 @@ const VARIANT_BY_PREFIX: [string, Variant][] = [
 ];
 
 // Paginas fora do PageLayout (login, registo...): so um formulario centrado.
-const STANDALONE_PREFIXES = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/auth'];
+const STANDALONE_PREFIXES = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/set-password', '/auth'];
 
 function variantFor(pathname: string): Variant {
   return VARIANT_BY_PREFIX.find(([prefix]) => pathname.startsWith(prefix))?.[1] ?? 'cards';

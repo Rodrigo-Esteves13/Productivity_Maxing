@@ -4,6 +4,7 @@ import Input from '../UI/Input';
 import Button from '../UI/Button';
 import FormError from '../UI/FormError';
 import { useI18n } from '../../i18n/useI18n';
+import { formatTaskDate } from '../../lib/timeFormat';
 import type { Area, Task } from '../../types/models';
 import SelectionToolbar from '../UI/SelectionToolbar';
 
@@ -103,7 +104,7 @@ export default function CreateTaskPackModal({ isOpen, tasks, areas, isSaving, on
                     <span className="min-w-0">
                       <span className="block truncate text-neutral-100">{task.title}</span>
                       <span className="block text-xs text-neutral-500">
-                        {areaName.get(task.areaId) ?? '-'} · {new Date(task.date).toLocaleDateString(lang)}
+                        {areaName.get(task.areaId) ?? '-'} · {formatTaskDate(task.date, lang)}
                         {task.weightPercentage != null && ` · ${task.weightPercentage}%`}
                       </span>
                     </span>

@@ -1,7 +1,7 @@
-import { Link } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
 import CountBadge from '../UI/CountBadge';
-import { socialTabPath } from '../../lib/appLinks';
+import PrefetchLink from '../UI/PrefetchLink';
+import { ACCOUNT_NAV, ADMIN_NAV, MAIN_NAV, SOCIAL_PATH, isNavActive, socialNavTarget, type NavItem } from './navItems';
 
 interface MobileMenuProps {
   currentPath: string;
@@ -10,86 +10,47 @@ interface MobileMenuProps {
   onNavigate: () => void;
 }
 
+const LINK_BASE = 'block px-3 py-2 rounded-md text-sm font-medium transition-colors';
+const LINK_ACTIVE = `${LINK_BASE} bg-neutral-800 text-white`;
+const LINK_IDLE = `${LINK_BASE} text-neutral-300 hover:bg-neutral-800 hover:text-white`;
+const ADMIN_BASE = 'block px-3 py-2 rounded-md text-sm font-bold transition-colors';
+const ADMIN_ACTIVE = `${ADMIN_BASE} text-amber-400 bg-amber-400/10`;
+const ADMIN_IDLE = `${ADMIN_BASE} text-amber-500/70 hover:text-amber-400 hover:bg-neutral-800`;
+
 // Painel de navegação para mobile. Em ecrãs < md a Navbar escondia
 // Dashboard/Tasks/Profile (NavLinks tinha "hidden md:block" sem
 // alternativa nenhuma) e mostrava sempre Areas/Users, o que fazia a
 // barra transbordar horizontalmente. Isto junta tudo num único painel
-// que abre por baixo da navbar.
+// que abre por baixo da navbar. As listas sao as mesmas da barra e dos
+// menus (navItems.ts).
 export default function MobileMenu({ currentPath, isAdmin, socialPending, onNavigate }: MobileMenuProps) {
   const { t } = useI18n();
-  const getLinkClass = (path: string) => {
-    const base = 'block px-3 py-2 rounded-md text-sm font-medium transition-colors';
-    return currentPath.startsWith(path)
-      ? `${base} bg-neutral-800 text-white`
-      : `${base} text-neutral-300 hover:bg-neutral-800 hover:text-white`;
-  };
-
-  const getAdminLinkClass = (path: string) => {
-    const base = 'block px-3 py-2 rounded-md text-sm font-bold transition-colors';
-    return currentPath.startsWith(path)
-      ? `${base} text-amber-400 bg-amber-400/10`
-      : `${base} text-amber-500/70 hover:text-amber-400 hover:bg-neutral-800`;
-  };
+  const linkClass = (path: string) => (isNavActive(currentPath, path) ? LINK_ACTIVE : LINK_IDLE);
+  const adminClass = (path: string) => (isNavActive(currentPath, path) ? ADMIN_ACTIVE : ADMIN_IDLE);
+  const renderItems = (items: NavItem[], classFor: (path: string) => string) =>
+    items.map((item) => (
+      <PrefetchLink key={item.to} to={item.to} onClick={onNavigate} className={classFor(item.to)}>
+        {t(item.labelKey)}
+      </PrefetchLink>
+    ));
 
   return (
     <div className="xl:hidden border-t border-neutral-800 bg-neutral-950 px-2 py-3 space-y-1">
-      <Link to="/dashboard" onClick={onNavigate} className={getLinkClass('/dashboard')}>
-        {t('nav.dashboard')}
-      </Link>
-      <Link to="/tasks" onClick={onNavigate} className={getLinkClass('/tasks')}>
-        {t('nav.tasks')}
-      </Link>
-      <Link to="/focus" onClick={onNavigate} className={getLinkClass('/focus')}>
-        {t('nav.focus')}
-      </Link>
-      <Link to="/schedule" onClick={onNavigate} className={getLinkClass('/schedule')}>
-        {t('nav.schedule')}
-      </Link>
-      <Link to="/notebook" onClick={onNavigate} className={getLinkClass('/notebook')}>
-        {t('nav.notebook')}
-      </Link>
-      <Link to="/areas" onClick={onNavigate} className={getLinkClass('/areas')}>
-        {t('nav.areas')}
-      </Link>
-      <Link
-        to={socialPending > 0 ? socialTabPath('requests') : '/social'}
+      {renderItems(MAIN_NAV, linkClass)}
+      <PrefetchLink
+        to={socialNavTarget(socialPending)}
         onClick={onNavigate}
-        className={`${getLinkClass('/social')} flex items-center gap-2`}
+        className={`${linkClass(SOCIAL_PATH)} flex items-center gap-2`}
       >
         {t('nav.social')}
         <CountBadge count={socialPending} label={t('nav.socialPending', { count: socialPending })} />
-      </Link>
-      <Link to="/profile" onClick={onNavigate} className={getLinkClass('/profile')}>
-        {t('nav.profile')}
-      </Link>
-      <Link to="/developer" onClick={onNavigate} className={getLinkClass('/developer')}>
-        {t('nav.developer')}
-      </Link>
-      <Link to="/agent" onClick={onNavigate} className={getLinkClass('/agent')}>
-        {t('nav.agent')}
-      </Link>
+      </PrefetchLink>
+      {renderItems(ACCOUNT_NAV, linkClass)}
 
       {isAdmin && (
         <>
           <div className="my-2 border-t border-neutral-800" />
-          <Link to="/users" onClick={onNavigate} className={getAdminLinkClass('/users')}>
-            {t('nav.admin.users')}
-          </Link>
-          <Link to="/task-types" onClick={onNavigate} className={getAdminLinkClass('/task-types')}>
-            {t('nav.admin.taskTypes')}
-          </Link>
-          <Link to="/security" onClick={onNavigate} className={getAdminLinkClass('/security')}>
-            {t('nav.admin.security')}
-          </Link>
-          <Link to="/appeals" onClick={onNavigate} className={getAdminLinkClass('/appeals')}>
-            {t('nav.admin.appeals')}
-          </Link>
-          <Link to="/feedback" onClick={onNavigate} className={getAdminLinkClass('/feedback')}>
-            {t('nav.admin.feedback')}
-          </Link>
-          <Link to="/friend-code-requests" onClick={onNavigate} className={getAdminLinkClass('/friend-code-requests')}>
-            {t('nav.admin.friendCodes')}
-          </Link>
+          {renderItems(ADMIN_NAV, adminClass)}
         </>
       )}
     </div>

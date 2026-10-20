@@ -42,6 +42,7 @@ import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResendVerificationDto, VerifyEmailDto } from './dto/verify-email.dto';
+import { CompletePasswordLinkDto } from './dto/password-link.dto';
 import { TwoFactorCodeDto, TwoFactorLoginDto } from './dto/two-factor.dto';
 import { SkipCsrf } from '../common/decorators/skip-csrf.decorator';
 import { SetPasswordDto } from './dto/set-password.dto';
@@ -99,7 +100,13 @@ export class AuthController {
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const user = await this.authService.registerWithPassword(dto);
+    const outcome = await this.authService.registerWithPassword(dto);
+    // Email de uma conta que ainda não tem password: o link para a juntar
+    // foi para a caixa do dono, aqui não há sessão nenhuma.
+    if (outcome.kind === 'password-link-sent') {
+      return { passwordLinkSent: true as const, email: outcome.email };
+    }
+    const { user } = outcome;
     // Com REQUIRE_EMAIL_VERIFICATION ligada não há sessão até o email estar
     // verificado: o link já foi enviado (ver PasswordAuthService). Com a
     // flag desligada isto nunca é true e o fluxo é o de sempre.
@@ -120,6 +127,22 @@ export class AuthController {
   async verifyEmail(@Body() dto: VerifyEmailDto) {
     const { email } = await this.authService.verifyEmail(dto.token);
     return { verified: true, email };
+  }
+
+  // Link do email "adicionar password" (ver PasswordLinkService). Pública e
+  // SEM CSRF pelo mesmo motivo do verify-email: o token assinado no corpo é
+  // a única credencial. Cria a password mas não abre sessão (o login a
+  // seguir passa pelo 2FA como sempre).
+  @Post('password-link')
+  @HttpCode(HttpStatus.OK)
+  @SkipCsrf()
+  @Throttle(perMinute(5))
+  async completePasswordLink(@Body() dto: CompletePasswordLinkDto) {
+    const { email } = await this.authService.completePasswordLink(
+      dto.token,
+      dto.password,
+    );
+    return { linked: true as const, email };
   }
 
   // Reenvio do link. Resposta sempre genérica, exista a conta ou não.

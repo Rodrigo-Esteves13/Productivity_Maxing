@@ -33,6 +33,9 @@ export default function Register() {
   // so "vai ao teu email". Com a flag desligada nunca acontece.
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
   const [resendMessage, setResendMessage] = useState('');
+  // O email ja tem conta sem password: o link para lhe juntar uma foi para
+  // essa caixa de correio (ver PasswordLinkService no backend).
+  const [linkSentEmail, setLinkSentEmail] = useState<string | null>(null);
 
   const handleRegister = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -48,6 +51,10 @@ export default function Register() {
       const result = await registerRequest({ name, email, password });
       if (result.requiresEmailVerification) {
         setPendingVerificationEmail(result.email);
+        return;
+      }
+      if (result.passwordLinkSent) {
+        setLinkSentEmail(result.email);
         return;
       }
       const { csrfToken } = result;
@@ -72,6 +79,21 @@ export default function Register() {
       setResendMessage(t('auth.resendFailed'));
     }
   };
+
+  if (linkSentEmail) {
+    return (
+      <PageLayout>
+        <AuthCard title={t('auth.checkEmail')}>
+          <p className="text-sm text-neutral-300">
+            {fillNodes(t('auth.linkSent'), {
+              email: <strong>{linkSentEmail}</strong>,
+            })}
+          </p>
+          <AuthSwitchLink question={t('auth.alreadyHaveAccount')} linkText={t('auth.login')} to="/login" />
+        </AuthCard>
+      </PageLayout>
+    );
+  }
 
   if (pendingVerificationEmail) {
     return (

@@ -66,6 +66,7 @@ export const notebook: Record<string, string> = {
   'notebook.links.label': "标签（可选）",
   'notebook.links.add': "添加",
   'notebook.links.remove': "移除链接",
+  'notebook.links.invalid': "请输入有效的网址，例如 https://example.com。",
   'notebook.files.add': "添加文件",
   'notebook.files.none': "还没有文件。",
   'notebook.files.remove': "移除文件",

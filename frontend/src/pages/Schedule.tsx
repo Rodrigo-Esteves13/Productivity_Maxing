@@ -5,6 +5,7 @@ import PageHeader from '../components/Layout/PageHeader';
 import ActionButton from '../components/UI/ActionButton';
 import SegmentedControl, { type SegmentedOption } from '../components/UI/SegmentedControl';
 import WeekGrid from '../components/Schedule/WeekGrid';
+import AttendanceCard from '../components/Schedule/AttendanceCard';
 import MonthGrid from '../components/Schedule/MonthGrid';
 import ImportScheduleModal from '../components/Schedule/ImportScheduleModal';
 import StudyPlanCard from '../components/Study/StudyPlanCard';
@@ -68,6 +69,9 @@ export default function Schedule() {
   // mudado (aulas novas), mas tem o seu próprio hook - mais simples
   // remontá-lo com uma key do que ligar outro canal de refresh.
   const [scheduleVersion, setScheduleVersion] = useState(0);
+  // Sobe a cada presenca marcada na grelha (o resumo refaz o fetch).
+  const [attendanceVersion, setAttendanceVersion] = useState(0);
+  const handleAttendanceChanged = useCallback(() => setAttendanceVersion((v) => v + 1), []);
 
   // Qualquer mudança (turno, local, import): refaz a grelha e o plano E
   // pergunta se o Google Calendar deve ser atualizado (o modal só abre se
@@ -96,7 +100,12 @@ export default function Schedule() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           {view === 'week' ? (
-            <WeekGrid refreshKey={scheduleVersion} initialDate={anchorDate} viewToggle={viewToggle} />
+            <WeekGrid
+              refreshKey={scheduleVersion}
+              initialDate={anchorDate}
+              viewToggle={viewToggle}
+              onAttendanceChanged={handleAttendanceChanged}
+            />
           ) : (
             <MonthGrid
               refreshKey={scheduleVersion}
@@ -106,11 +115,18 @@ export default function Schedule() {
             />
           )}
           <CommitmentsCard onChanged={handleScheduleChanged} />
-          <ScheduleSyncCard />
-          <CalendarFeedCard />
+          {/* Ligacoes ao calendario lado a lado: sao configuracao (mexe-se
+              uma vez) e empilhadas ocupavam mais que a propria semana. */}
+          <div className="mt-6 grid gap-6 md:grid-cols-2">
+            <ScheduleSyncCard />
+            <CalendarFeedCard />
+          </div>
         </div>
-        <div key={scheduleVersion}>
-          <StudyPlanCard />
+        <div>
+          <div key={scheduleVersion}>
+            <StudyPlanCard />
+          </div>
+          <AttendanceCard refreshKey={scheduleVersion + attendanceVersion} />
         </div>
       </div>
 

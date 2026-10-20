@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type Dispatch, type KeyboardEvent as ReactKeyboardEvent, type SetStateAction } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { createTask, getTaskMetadata, getUserAreas, getUserTasks } from '../../api/userService';
@@ -16,6 +16,8 @@ import type { Area, Task, NotebookSearchResult } from '../../types/models';
 import { PlusIcon, SearchIcon } from '../UI/Icons';
 import { ACADEMIC_TASK_TYPE_KEY } from '../../lib/constants';
 import { useI18n } from '../../i18n/useI18n';
+import { useCatalogLabel } from '../../hooks/useCatalogLabel';
+import { useEnumLabel } from '../../hooks/useEnumLabel';
 
 // Static "go to page" commands - mirrors the routes in AppRouter.tsx and
 // the admin gating already used in Navbar.tsx (role === 'ADMIN'). Kept as
@@ -47,6 +49,12 @@ const NAV_COMMANDS: NavCommand[] = [
   },
   { id: 'nav-tasks', labelKey: 'nav.tasks', path: '/tasks' },
   {
+    id: 'nav-tasks-board',
+    labelKey: 'board.paletteLabel',
+    path: '/tasks?view=board',
+    keywords: ['kanban', 'board', 'quadro', 'columns', 'colunas', 'status', 'estado', 'drag'],
+  },
+  {
     id: 'nav-focus',
     labelKey: 'nav.focus',
     path: '/focus',
@@ -63,6 +71,12 @@ const NAV_COMMANDS: NavCommand[] = [
     labelKey: 'schedule.month.paletteLabel',
     path: '/schedule?view=month',
     keywords: ['month', 'monthly', 'mes', 'mensal', 'calendar', 'calendario', 'exams', 'exames', 'deadlines', 'prazos'],
+  },
+  {
+    id: 'nav-attendance',
+    labelKey: 'attendance.title',
+    path: '/schedule',
+    keywords: ['attendance', 'presencas', 'presenças', 'faltas', 'absences', 'missed classes', 'aulas'],
   },
   {
     id: 'nav-work-shifts',
@@ -148,12 +162,21 @@ type PaletteItem =
       priority: QuickAddPriority | null;
     };
 
-export default function CommandPalette() {
+interface CommandPaletteProps {
+  isOpen: boolean;
+  setIsOpen: Dispatch<SetStateAction<boolean>>;
+}
+
+// Carregado a pedido pelo CommandPaletteHost (que tem o Ctrl+K e o evento
+// do botao de pesquisa): este ficheiro e pesado e nao precisa de ir no JS
+// que abre a app.
+export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProps) {
   const { isAuthenticated, user } = useAuth();
   const { t } = useI18n();
+  const { catalogLabel } = useCatalogLabel();
+  const enumLabel = useEnumLabel();
   const navigate = useNavigate();
 
-  const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [tasks, setTasks] = useState<Task[] | null>(null);
@@ -164,32 +187,7 @@ export default function CommandPalette() {
   const [createError, setCreateError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Global Cmd/Ctrl+K to open, from anywhere in the app (not just when
-  // something is already focused inside the palette). Escape to close is
-  // handled separately below, only while open, same split Modal.tsx uses.
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setIsOpen((prev) => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAuthenticated]);
-
-  // Also opens on a plain DOM CustomEvent - lets the visible search button
-  // in Navbar.tsx open the same palette without lifting isOpen state up
-  // into a context just for one cross-component trigger. Anyone with
-  // mouse-only usage (or who never learns the shortcut) still has a way
-  // in - a keyboard-only entry point isn't discoverable on its own.
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const handleOpenEvent = () => setIsOpen(true);
-    window.addEventListener('pmaxing:open-command-palette', handleOpenEvent);
-    return () => window.removeEventListener('pmaxing:open-command-palette', handleOpenEvent);
-  }, [isAuthenticated]);
+  // O Ctrl+K e o evento do botao da Navbar vivem no CommandPaletteHost.
 
   useEffect(() => {
     if (!isOpen) return;
@@ -260,7 +258,7 @@ export default function CommandPalette() {
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [isOpen]);
+  }, [isOpen, setIsOpen]);
 
   // Titulo, notas e passos de cada task ja sem acentos/maiusculas: calcula
   // uma vez por carga, nao a cada tecla.
@@ -514,8 +512,10 @@ export default function CommandPalette() {
                       : t('palette.meta', {
                           area: item.area?.name ?? '...',
                           date: dateLabel,
-                          details: `${QUICK_ADD_TASK_TYPE.toLowerCase()}, ${QUICK_ADD_DIFFICULTY.toLowerCase()}${
-                            item.priority ? `, ${t('palette.priorityTag', { level: item.priority.toLowerCase() })}` : ''
+                          // Rotulos traduzidos (antes mostrava as chaves cruas,
+                          // ex: "academico, medium").
+                          details: `${catalogLabel('taskType', QUICK_ADD_TASK_TYPE, null)}, ${enumLabel(QUICK_ADD_DIFFICULTY)}${
+                            item.priority ? `, ${t('palette.priorityTag', { level: catalogLabel('priority', item.priority, null) })}` : ''
                           }`,
                         })}
                   </span>

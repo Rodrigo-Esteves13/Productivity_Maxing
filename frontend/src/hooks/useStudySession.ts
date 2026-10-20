@@ -4,7 +4,7 @@ import type { Area, Task } from '../types/models';
 import { useActiveStudySession } from '../context/useActiveStudySession';
 import { translateNow } from '../i18n/translate';
 
-// The active-session part (activeSession/elapsedSeconds/start/stop) now
+// The active-session part (activeSession/start/stop) now
 // lives in StudySessionProvider (see src/context) - shared with
 // GlobalStudyTimer.tsx, the mini timer visible on every page, so it and
 // the Focus page's full widget are always looking at exactly the same
@@ -14,7 +14,6 @@ import { translateNow } from '../i18n/translate';
 export function useStudySession() {
   const {
     activeSession,
-    elapsedSeconds,
     isSubmitting,
     error: sessionError,
     start,
@@ -73,7 +72,6 @@ export function useStudySession() {
     activeSession,
     areas,
     tasks,
-    elapsedSeconds,
     isLoading,
     isSubmitting,
     error: error || sessionError,
