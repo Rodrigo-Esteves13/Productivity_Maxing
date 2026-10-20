@@ -6,6 +6,7 @@ import AreaInterestPicker from './AreaInterestPicker';
 import AreaProposalBlock from './AreaProposalBlock';
 import AreaStatusBadge from './AreaStatusBadge';
 import { useI18n } from '../../i18n/useI18n';
+import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 
 interface AreaDetailViewProps {
   area: Area;
@@ -16,7 +17,8 @@ interface AreaDetailViewProps {
 
 export default function AreaDetailView({ area, taskTypes, onPropose, onWithdraw }: AreaDetailViewProps) {
   const { t } = useI18n();
-  const associatedType = taskTypes.find((t) => t.key === area.defaultTaskType);
+  const { optionLabel } = useCatalogLabel();
+  const associatedType = optionLabel('taskType', area.defaultTaskType, taskTypes);
 
   return (
     <div className="-mt-2">
@@ -33,7 +35,7 @@ export default function AreaDetailView({ area, taskTypes, onPropose, onWithdraw 
         </div>
       </DetailRow>
       <DetailRow label={t('ui.associatedType')}>
-        {associatedType ? associatedType.label : <span className="text-neutral-500 italic">{t('ui.noneAskedEveryTime')}</span>}
+        {associatedType ?? <span className="text-neutral-500 italic">{t('ui.noneAskedEveryTime')}</span>}
       </DetailRow>
       <DetailRow label={t('ui.credits')}>
         {area.credits ?? <span className="text-neutral-500 italic">{t('ui.notSet')}</span>}

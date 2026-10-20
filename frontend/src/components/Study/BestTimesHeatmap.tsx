@@ -3,9 +3,12 @@ import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
 import EmptyState from '../UI/EmptyState';
 import type { HeatmapCell } from '../../types/models';
+import { weekdayLabel } from '../../lib/timeFormat';
 import { useI18n } from '../../i18n/useI18n';
+import Card from '../UI/Card';
+import { useActiveStudySession } from '../../context/useActiveStudySession';
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAYS_OF_WEEK = [0, 1, 2, 3, 4, 5, 6];
 const HOUR_BUCKET_LABELS = ['00-04', '04-08', '08-12', '12-16', '16-20', '20-24'];
 
 // Intensidade da cor proporcional ao máximo de minutos numa única célula -
@@ -22,7 +25,8 @@ function intensityClass(minutes: number, maxMinutes: number): string {
 
 export default function BestTimesHeatmap() {
   const { t } = useI18n();
-  const { cells, isLoading, error, hasAnyData } = useBestTimesHeatmap();
+  const { activeSession } = useActiveStudySession();
+  const { cells, isLoading, error, hasAnyData } = useBestTimesHeatmap(activeSession?.id ?? null);
 
   const maxMinutes = Math.max(0, ...cells.map((c) => c.totalMinutes));
 
@@ -30,16 +34,16 @@ export default function BestTimesHeatmap() {
     cells.find((c) => c.dayOfWeek === dayOfWeek && c.hourBucket === hourBucket);
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
+    <Card>
       <h2 className="text-lg font-semibold text-white mb-1">{t('ui.bestTimesToStudy')}</h2>
-      <p className="text-sm text-neutral-400 mb-4">
+      <p className="text-xs text-neutral-500 mb-4">
         {t('ui.totalStudyTimeLoggedBy')}
       </p>
 
       {isLoading && <LinesSkeleton lines={5} />}
       {!isLoading && error && <ErrorState message={error} />}
       {!isLoading && !error && !hasAnyData && (
-        <EmptyState message={t('ui.noCompletedStudySessionsYet')} />
+        <EmptyState variant="inline" message={t('ui.noCompletedStudySessionsYet')} />
       )}
 
       {!isLoading && !error && hasAnyData && (
@@ -56,17 +60,19 @@ export default function BestTimesHeatmap() {
               </tr>
             </thead>
             <tbody>
-              {DAY_LABELS.map((dayLabel, dayOfWeek) => (
-                <tr key={dayLabel}>
-                  <td className="text-neutral-500 pr-2 text-right">{dayLabel}</td>
+              {DAYS_OF_WEEK.map((dayOfWeek) => (
+                <tr key={dayOfWeek}>
+                  <td className="text-neutral-500 pr-2 text-right">{weekdayLabel(dayOfWeek)}</td>
                   {HOUR_BUCKET_LABELS.map((_, hourBucket) => {
                     const cell = cellAt(dayOfWeek, hourBucket);
                     const minutes = cell?.totalMinutes ?? 0;
                     return (
                       <td key={hourBucket} className="p-0">
+                        {/* Altura fixa (nao aspect-square): em largura total os
+                            quadrados chegavam a 120px e o cartao a ~900px. */}
                         <div
                           title={minutes > 0 ? t('ui.minutesSessions', { minutes, sessions: cell?.sessionCount ?? 0 }) : t('ui.noData')}
-                          className={`w-full aspect-square rounded-md border ${intensityClass(minutes, maxMinutes)}`}
+                          className={`h-5 w-full rounded border ${intensityClass(minutes, maxMinutes)}`}
                         />
                       </td>
                     );
@@ -77,6 +83,6 @@ export default function BestTimesHeatmap() {
           </table>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

@@ -32,9 +32,13 @@ export function useTaskShortcuts(
 ) {
   // `handlers` is a fresh object every render (the caller passes an
   // inline literal) - a ref keeps the listener itself stable across
-  // renders while still always calling the latest closures.
+  // renders while still always calling the latest closures. Atualizado num
+  // efeito e nao no render: escrever num ref durante o render impede o React
+  // Compiler de otimizar o hook.
   const handlersRef = useRef(handlers);
-  handlersRef.current = handlers;
+  useEffect(() => {
+    handlersRef.current = handlers;
+  }, [handlers]);
 
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {

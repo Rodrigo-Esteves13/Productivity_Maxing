@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/useAuth';
 import { useActiveStudySession } from '../../context/useActiveStudySession';
-import { formatElapsed } from '../../lib/formatDuration';
 import { ClockIcon, XIcon } from '../UI/Icons';
 import BreakBanner from './focus/BreakBanner';
 import IdleSessionPrompt from './focus/IdleSessionPrompt';
 import TimerEndPrompt from './focus/TimerEndPrompt';
 import RateFocusPrompt from './focus/RateFocusPrompt';
+import SessionClock from './focus/SessionClock';
 import { useI18n } from '../../i18n/useI18n';
 
 // Mounted once, app-wide (see AppRouter.tsx, next to CommandPalette) - not
@@ -19,7 +19,9 @@ import { useI18n } from '../../i18n/useI18n';
 export default function GlobalStudyTimer() {
   const { t } = useI18n();
   const { isAuthenticated } = useAuth();
-  const { activeSession, elapsedSeconds, remainingSeconds, isSubmitting, stop } = useActiveStudySession();
+  // Sem o relogio aqui: so o <SessionClock> muda a cada segundo, os avisos
+  // abaixo deixaram de renderizar 1x/s.
+  const { activeSession, isSubmitting, stop, timerPlan } = useActiveStudySession();
   const [isStopping, setIsStopping] = useState(false);
 
   if (!isAuthenticated) return null;
@@ -52,11 +54,9 @@ export default function GlobalStudyTimer() {
         >
           <ClockIcon className="h-4 w-4 shrink-0 text-violet-400" />
           <div className="flex flex-col leading-tight">
-            <span className="font-mono text-sm font-semibold text-violet-400 tabular-nums">
-              {formatElapsed(remainingSeconds ?? elapsedSeconds)}
-            </span>
+            <SessionClock className="font-mono text-sm font-semibold text-violet-400 tabular-nums" />
             <span className="max-w-[10rem] truncate text-xs text-neutral-400">
-              {remainingSeconds === null ? label : t('ui.labelLeft', { label })}
+              {timerPlan === null ? label : t('ui.labelLeft', { label })}
             </span>
           </div>
           <button

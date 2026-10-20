@@ -959,6 +959,12 @@ model ClassOccurrence {
   // ScheduleService.importOccurrences (upsert por [userId, externalUid]).
   externalUid String
 
+  // Presença: null = por marcar, true = fui, false = faltei. Marcada à mão
+  // na vista semanal do Schedule, ou sozinha (true) quando se cria uma
+  // entrada do caderno a partir desta aula. Reimportar o .ics não lhe toca
+  // (o update do upsert em importOccurrences não inclui este campo).
+  attended Boolean?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

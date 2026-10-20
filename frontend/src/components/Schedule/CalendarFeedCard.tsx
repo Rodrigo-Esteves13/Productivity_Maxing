@@ -11,6 +11,7 @@ import {
 import { useFeedback } from '../../context/useFeedback';
 import type { CalendarFeedStatus } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import Card from '../UI/Card';
 
 // Feed .ics subscrivivel: classes, turnos, viagens, blocos de estudo e tasks
 // no Google/Apple/Outlook Calendar sem OAuth. So leitura.
@@ -71,7 +72,7 @@ export default function CalendarFeedCard() {
   const url = status.token ? feedUrl(status.token) : null;
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 mt-6">
+    <Card>
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
           <CalendarIcon className="text-violet-400" width={18} height={18} />
@@ -134,6 +135,6 @@ export default function CalendarFeedCard() {
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

@@ -71,6 +71,10 @@ export class JwtBlockedAwareStrategy extends PassportStrategy(
     if (isAppealToken(payload)) {
       return { id: payload.sub, email: payload.email, role: payload.role };
     }
+    // Outro token com `purpose` (ex: o state de "ligar conta") nunca e sessao.
+    if ('purpose' in payload) {
+      throw new UnauthorizedException('Session expired. Please log in again.');
+    }
 
     // Mas um token de SESSAO revogado (logout, troca de password) nao pode
     // continuar a abrir estas duas rotas. Aqui NAO se verifica ban/suspend

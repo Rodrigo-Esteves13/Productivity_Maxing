@@ -423,6 +423,14 @@ export class NotebookService {
       } as Prisma.NotebookEntryCreateArgs['data'],
       include: { photos: true, attachments: true },
     });
+    if (dto.classOccurrenceId) {
+      // Apontamento escrito nessa aula = estive lá. Só preenche presenças
+      // ainda por marcar: uma falta marcada à mão nunca é sobreposta.
+      await this.prisma.classOccurrence.updateMany({
+        where: { id: dto.classOccurrenceId, userId, attended: null },
+        data: { attended: true },
+      });
+    }
     return this.attachSignedUrls(entry);
   }
 

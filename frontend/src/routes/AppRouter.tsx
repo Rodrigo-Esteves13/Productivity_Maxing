@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
 import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
@@ -8,10 +8,48 @@ import Register from '../pages/Register';
 import ForgotPassword from '../pages/ForgotPassword';
 import AuthCallback from '../components/Auth/AuthCallback';
 import CookieNotice from '../components/Legal/CookieNotice';
-import CommandPalette from '../components/CommandPalette/CommandPalette';
-import GlobalStudyTimer from '../components/Study/GlobalStudyTimer';
+import CommandPaletteHost from '../components/CommandPalette/CommandPaletteHost';
+import GlobalStudyTimerHost from '../components/Study/GlobalStudyTimerHost';
+import RoutePrefetcher from './RoutePrefetcher';
 import CalendarSyncReviewModal from '../components/Schedule/CalendarSyncReviewModal';
+import PushPermissionPrompt from '../pwa/PushPermissionPrompt';
 import RouteSkeleton from '../components/UI/RouteSkeleton';
+import {
+  Dashboard,
+  Tasks,
+  Focus,
+  Schedule,
+  Notebook,
+  Profile,
+  Developer,
+  Agent,
+  Areas,
+  Social,
+  FriendNotes,
+  FriendProfile,
+  FriendNoteEntry,
+  TaskPacks,
+  ImportTaskPack,
+  Users,
+  Security,
+  Appeals,
+  FeedbackAdmin,
+  FriendCodeRequestsAdmin,
+  AdminUserProfile,
+  TaskTypes,
+  PrivacyPolicy,
+  SharedNotebookEntry,
+  TermsOfService,
+  Eula,
+  DmcaPolicy,
+  WeeklyReview,
+  Changelog,
+  NotFound,
+  ResetPassword,
+  VerifyEmail,
+  SetPassword,
+  LoginTwoFactor,
+} from './pages';
 
 // Route-level code splitting: everything below only downloads its JS chunk
 // when the user actually navigates there, instead of all of it (including
@@ -27,40 +65,8 @@ import RouteSkeleton from '../components/UI/RouteSkeleton';
 // Home is lazy too, but imported inside RootRedirect.tsx itself (see
 // there) rather than here, since an authenticated user hitting "/" never
 // needs it at all.
-const Dashboard = lazy(() => import('../pages/Dashboard'));
-const Tasks = lazy(() => import('../pages/Tasks'));
-const Focus = lazy(() => import('../pages/Focus'));
-const Schedule = lazy(() => import('../pages/Schedule'));
-const Notebook = lazy(() => import('../pages/Notebook'));
-const Profile = lazy(() => import('../pages/Profile'));
-const Developer = lazy(() => import('../pages/Developer'));
-const Agent = lazy(() => import('../pages/Agent'));
-const Areas = lazy(() => import('../pages/Areas'));
-const Social = lazy(() => import('../pages/Social'));
-const FriendNotes = lazy(() => import('../pages/FriendNotes'));
-const FriendProfile = lazy(() => import('../pages/FriendProfile'));
-const FriendNoteEntry = lazy(() => import('../pages/FriendNoteEntry'));
-const TaskPacks = lazy(() => import('../pages/TaskPacks'));
-const ImportTaskPack = lazy(() => import('../pages/ImportTaskPack'));
-const Users = lazy(() => import('../pages/Users'));
-const Security = lazy(() => import('../pages/Security'));
-const Appeals = lazy(() => import('../pages/Appeals'));
-const FeedbackAdmin = lazy(() => import('../pages/FeedbackAdmin'));
-const FriendCodeRequestsAdmin = lazy(() => import('../pages/FriendCodeRequestsAdmin'));
-const AdminUserProfile = lazy(() => import('../pages/AdminUserProfile'));
-const TaskTypes = lazy(() => import('../pages/TaskTypes'));
-const PrivacyPolicy = lazy(() => import('../pages/PrivacyPolicy'));
-const SharedNotebookEntry = lazy(() => import('../pages/SharedNotebookEntry'));
-const TermsOfService = lazy(() => import('../pages/TermsOfService'));
-const Eula = lazy(() => import('../pages/Eula'));
-const DmcaPolicy = lazy(() => import('../pages/DmcaPolicy'));
-const WeeklyReview = lazy(() => import('../pages/WeeklyReview'));
-const Changelog = lazy(() => import('../pages/Changelog'));
-const NotFound = lazy(() => import('../pages/NotFound'));
-const ResetPassword = lazy(() => import('../pages/ResetPassword'));
-const VerifyEmail = lazy(() => import('../pages/VerifyEmail'));
-const LoginTwoFactor = lazy(() => import('../pages/LoginTwoFactor'));
-
+// As paginas (lazy, com preload) vivem em ./pages: os links do menu
+// usam o mesmo modulo para as pre-carregar antes do clique.
 export default function AppRouter() {
   return (
     <BrowserRouter>
@@ -72,6 +78,7 @@ export default function AppRouter() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/set-password" element={<SetPassword />} />
           <Route path="/login/2fa" element={<LoginTwoFactor />} />
           <Route path="/review" element={<PrivateRoute><WeeklyReview /></PrivateRoute>} />
           <Route path="/changelog" element={<PrivateRoute><Changelog /></PrivateRoute>} />
@@ -174,16 +181,20 @@ export default function AppRouter() {
       {/* Mesma razão: CommandPalette usa useNavigate(), que também precisa
           de estar dentro do Router. Gated internamente por isAuthenticated
           - não faz sentido nas páginas públicas de login/registo. */}
-      <CommandPalette />
+      <CommandPaletteHost />
       {/* Same pattern as CommandPalette above: mounted once, gated
           internally (isAuthenticated + an active session), so it stays
           visible across every navigation instead of remounting per page
           the way it would if it lived inside PageLayout instead. */}
-      <GlobalStudyTimer />
+      <GlobalStudyTimerHost />
+      <RoutePrefetcher />
       {/* Montado uma vez: abre sozinho a pedir Confirm/Deny quando o
           horário, os turnos ou o plano mudam e o Google Calendar está
           ligado. Gated internamente por isAuthenticated. */}
       <CalendarSyncReviewModal />
+      {/* Pede as notificacoes uma vez, logo ao entrar com sessao iniciada
+          (gated por dentro). Depois a escolha vive no Profile. */}
+      <PushPermissionPrompt />
     </BrowserRouter>
   );
 }

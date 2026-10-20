@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { ReactNode } from 'react';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
@@ -10,16 +11,17 @@ import ViewTaskButton from '../UI/ViewTaskButton';
 import SubtaskProgress from '../UI/SubtaskProgress';
 import CalendarSyncButton from './CalendarSyncButton';
 import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus';
-import { resolveOptionLabel } from '../../utils/resolveOptionLabel';
+import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
 import type { TableDensity } from '../../hooks/useTableDensity';
 import type { TasksTableColumnId } from '../../lib/tasksTableColumns';
 import { useI18n } from '../../i18n/useI18n';
+import { formatTaskDate } from '../../lib/timeFormat';
 
 interface TaskTableRowProps {
   task: Task;
   academicTaskTypes: AcademicTaskTypeOption[];
-  onReschedule?: (e: React.MouseEvent, task: Task) => void;
+  onReschedule?: (e: React.MouseEvent | null, task: Task) => void;
   isRescheduling?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (id: string) => void;
@@ -29,7 +31,7 @@ interface TaskTableRowProps {
 
 const CENTERED_COLUMNS = new Set<TasksTableColumnId>(['status', 'grade', 'calendar']);
 
-export default function TaskTableRow({
+function TaskTableRow({
   task,
   academicTaskTypes,
   onReschedule,
@@ -39,8 +41,9 @@ export default function TaskTableRow({
   density = 'comfortable',
   columnOrder,
 }: TaskTableRowProps) {
-  const { t } = useI18n();
-  const academicTypeLabel = resolveOptionLabel(task.academicType, academicTaskTypes);
+  const { t, lang } = useI18n();
+  const { optionLabel } = useCatalogLabel();
+  const academicTypeLabel = optionLabel('academicType', task.academicType, academicTaskTypes);
   const status = getDateStatus(task);
   const isCompact = density === 'compact';
   // Compact drops the secondary line under each cell (remaining-time
@@ -55,7 +58,7 @@ export default function TaskTableRow({
   const cellContent: Record<TasksTableColumnId, ReactNode> = {
     date: (
       <>
-        <div>{new Date(task.date).toLocaleDateString()}</div>
+        <div>{formatTaskDate(task.date, lang)}</div>
         {!isCompact && (
           <div className="mt-1 flex flex-col items-start gap-1">
             <span className="-ml-0.5">
@@ -148,3 +151,6 @@ export default function TaskTableRow({
     </tr>
   );
 }
+
+// memo: numa lista grande, escrever num filtro ou mudar uma linha ja nao volta a renderizar todas as outras.
+export default memo(TaskTableRow);

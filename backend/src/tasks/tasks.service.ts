@@ -22,6 +22,7 @@ import { DIFFICULTY_WEIGHT } from '../common/difficulty-weight.util';
 import { runWithConcurrencyLimit } from '../common/concurrency.util';
 import { TaskMetaCacheService } from '../common/task-meta-cache.service';
 import { nextOccurrence } from './recurrence.util';
+import { bulkRescheduleTasks } from './bulk-reschedule.util';
 import {
   getLisbonNow,
   lisbonDayBounds,
@@ -729,6 +730,11 @@ export class TasksService {
       data: { progressStatus },
     });
     return { count: result.count + untouched.count };
+  }
+
+  /** Bulk reschedule - ver bulkRescheduleTasks (mesma regra de postponedCount do update()). */
+  bulkReschedule(userId: string, ids: string[], date: Date) {
+    return bulkRescheduleTasks(this.prisma, userId, ids, date);
   }
 
   /** Bulk delete - same ownership scoping as bulkUpdateStatus() above. */

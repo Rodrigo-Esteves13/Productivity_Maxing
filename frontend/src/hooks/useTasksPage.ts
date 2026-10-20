@@ -22,10 +22,14 @@ import type {
   Subtask,
 } from '../types/models';
 import { useQuickReschedule } from './useQuickReschedule';
+import { useCompleteWithUndo } from './useCompleteWithUndo';
 import { isRequestCanceled } from '../lib/abortable';
 import { useAcademic } from '../context/useAcademic';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
+
+// /tasks?new=1 (atalho do icone da app) abre o formulario de criar task.
+const NEW_TASK_PARAM = 'new';
 
 export function useTasksPage() {
   const { notify, confirm } = useFeedback();
@@ -45,6 +49,8 @@ export function useTasksPage() {
   const [isEditing, setIsEditing] = useState(false);
 
   // Hook do reagendamento (Feature anterior)
+  // Swipe para a direita nos cartoes (Undo na mensagem).
+  const { completeOne: completeTask } = useCompleteWithUndo(setTasks);
   const { rescheduleToTomorrow, reschedulingId } = useQuickReschedule((updatedTask) => {
     setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
   });
@@ -201,6 +207,18 @@ export function useTasksPage() {
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks]);
+
+  // Atalho do icone da app (shortcuts do manifest em vite.config.ts):
+  // /tasks?new=1 abre logo o formulario de criar. Espera pelos tipos (o
+  // formulario escolhe o tipo a partir deles) e limpa o param como o ?open=.
+  useEffect(() => {
+    if (searchParams.get(NEW_TASK_PARAM) !== '1' || taskTypes.length === 0) return;
+    setIsCreateModalOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete(NEW_TASK_PARAM);
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskTypes]);
 
   // Checklist alterada no detalhe: espalha pela lista e pelo detalhe aberto
   // (o contador "2/5" dos cards atualiza sem recarregar).
@@ -371,6 +389,31 @@ export function useTasksPage() {
     }
   }, [selectedTask, notify, absorbSpawnedTasks]);
 
+  // Quadro Kanban: mudar de coluna = mudar o estado. Concluir passa pelo
+  // completeTask (Undo e tasks criadas ao concluir); o resto e otimista
+  // (o cartao muda logo de coluna) e volta atras se o PATCH falhar.
+  const changeTaskStatus = useCallback(
+    async (task: Task, status: string) => {
+      if (task.progressStatus === status) return;
+      if (status === 'COMPLETED') {
+        await completeTask(task);
+        return;
+      }
+      setTasks((prev) =>
+        prev.map((t) => (t.id === task.id ? { ...t, progressStatus: status as Task['progressStatus'] } : t)),
+      );
+      try {
+        const { spawnedTasks: ignored, ...updated } = await updateTask(task.id, { progressStatus: status });
+        void ignored;
+        setTasks((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
+      } catch {
+        setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+        notify(translateNow('board.moveFailed'), 'error');
+      }
+    },
+    [completeTask, notify],
+  );
+
   // Same partial-PATCH pattern as markSelectedTaskComplete, but for any
   // task in the list (not just the one open in the detail modal) - this
   // is what the quick Area dropdown on each TaskCard calls, so
@@ -447,6 +490,8 @@ export function useTasksPage() {
     selectedTask,
     isEditing,
     openCreateModal,
+    completeTask,
+    changeTaskStatus,
     closeCreateModal,
     handleCreateTask,
     handleSelectTask,

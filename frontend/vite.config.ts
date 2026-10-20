@@ -1,10 +1,49 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import react, { reactCompilerPreset } from '@vitejs/plugin-react';
+import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// Zonas frias (admin, auth, legal, landing, definições, rodapé): visitadas
+// pouco e quase só formulários/texto. Ficam fora do React Compiler porque
+// o código de memo que ele gera pesava 50-85% (gzip) a mais por chunk sem
+// ganho que se note. O resto da app (Dashboard, Tasks, Focus, Schedule,
+// Notebook, Social, Ctrl+K, UI partilhada, contexts, hooks) é compilado.
+const COMPILER_COLD_PAGES = [
+  'AdminUserProfile', 'Agent', 'Appeals', 'Changelog', 'Developer', 'DmcaPolicy', 'Eula',
+  'FeedbackAdmin', 'ForgotPassword', 'FriendCodeRequestsAdmin', 'Home', 'Login', 'LoginTwoFactor',
+  'NotFound', 'PrivacyPolicy', 'Profile', 'Register', 'ResetPassword', 'Security', 'TaskTypes',
+  'TermsOfService', 'Users', 'VerifyEmail',
+];
+const COMPILER_COLD_COMPONENT_DIRS = [
+  'AccountBlocked', 'Accessibility', 'Agent', 'Appeals', 'Auth', 'Developer', 'ErrorBoundary',
+  'Feedback', 'Footer', 'Home', 'Legal', 'Maintenance', 'Priorities', 'Security', 'TaskTypes', 'Users',
+];
+
+// React Compiler (via Babel, só nos ficheiros com componentes/hooks):
+// memoiza sozinho componentes e valores, para listas e páginas não
+// voltarem a renderizar sem precisar. Componentes que quebram as regras
+// do React são saltados pelo compilador (ficam como antes).
+const reactCompiler = reactCompilerPreset();
+reactCompiler.rolldown.filter = {
+  ...reactCompiler.rolldown.filter,
+  id: {
+    exclude: [
+      new RegExp(`[\\\\/]src[\\\\/]pages[\\\\/](${COMPILER_COLD_PAGES.join('|')})\\.tsx$`),
+      new RegExp(`[\\\\/]src[\\\\/]components[\\\\/](${COMPILER_COLD_COMPONENT_DIRS.join('|')})[\\\\/]`),
+      // Profile é só definições, mas o Avatar aparece na Navbar e nas listas de amigos.
+      /[\\/]src[\\/]components[\\/]Profile[\\/](?!Avatar\.tsx$)/,
+      /[\\/]src[\\/]pwa[\\/]/,
+      // Cartões/gráficos de analítica do Dashboard (folhas, lazy): a página
+      // compilada já os memoiza, não re-renderizam ao filtrar a tabela.
+      // O TaskCard é uma linha da lista e fica compilado.
+      /[\\/]src[\\/]components[\\/]Dashboard[\\/](?!TaskCard\.tsx$)\w+(Card|Chart)\.tsx$/,
+    ],
+  },
+};
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), VitePWA({
+  plugins: [react(), babel({ presets: [reactCompiler] }), tailwindcss(), VitePWA({
     // 'autoUpdate' -> o SW troca de versão sozinho no próximo load,
     // sem precisar de o user aceitar um prompt de "nova versão disponível".
     // Combinado com o registerSW.ts (que força skipWaiting), garante que
@@ -38,6 +77,26 @@ export default defineConfig({
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable'
+      }],
+      // Toque longo (ou clique direito) no icone da app instalada. Os URLs
+      // tem de bater com as rotas: /tasks?new=1 abre o formulario de criar
+      // (ver NEW_TASK_PARAM em useTasksPage.ts).
+      shortcuts: [{
+        name: 'New task',
+        url: '/tasks?new=1',
+        icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }]
+      }, {
+        name: 'Today',
+        url: '/dashboard',
+        icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }]
+      }, {
+        name: 'Schedule',
+        url: '/schedule',
+        icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }]
+      }, {
+        name: 'Focus',
+        url: '/focus',
+        icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }]
       }]
     },
     workbox: {

@@ -5,7 +5,8 @@ import type { Task, Area } from '../../types/models';
 interface TaskGridProps {
   tasks: Task[];
   onSelect: (task: Task) => void;
-  onReschedule?: (e: React.MouseEvent, task: Task) => void;
+  onReschedule?: (e: React.MouseEvent | null, task: Task) => void;
+  onComplete?: (task: Task) => void;
   reschedulingId?: string | null;
   areas?: Area[];
   onMoveArea?: (task: Task, areaId: string) => void;
@@ -27,6 +28,7 @@ export default function TaskGrid({
   tasks,
   onSelect,
   onReschedule,
+  onComplete,
   reschedulingId,
   areas,
   onMoveArea,
@@ -89,6 +91,7 @@ export default function TaskGrid({
             task={task}
             onSelect={onSelect}
             onReschedule={onReschedule}
+            onComplete={onComplete}
             isRescheduling={reschedulingId === task.id}
             areas={areas}
             onMoveArea={onMoveArea}

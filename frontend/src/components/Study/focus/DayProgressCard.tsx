@@ -3,10 +3,12 @@ import ProgressRing from '../../UI/ProgressRing';
 import { useActiveStudySession } from '../../../context/useActiveStudySession';
 import { useSessionHistory } from '../../../hooks/useSessionHistory';
 import { useLoadOnce } from '../../../hooks/useLoadOnce';
+import { useNow } from '../../../hooks/useNow';
 import { getStudyStreak } from '../../../api/studySessionsService';
 import { formatDuration } from '../../../lib/timeFormat';
 import { minutesSince, startOfLocalDay, type SessionSpan } from '../../../lib/studyWindow';
 import { useI18n } from '../../../i18n/useI18n';
+import DueTodayList from './DueTodayList';
 
 // Sessoes que podem tocar no dia de hoje: as de ontem a noite que passaram
 // da meia-noite entram, so a parte de hoje conta.
@@ -21,9 +23,10 @@ export default function DayProgressCard({ dailyLimitMinutes }: DayProgressCardPr
   const { t } = useI18n();
   const { activeSession } = useActiveStudySession();
   const { sessions } = useSessionHistory(HISTORY_DAYS, activeSession?.id ?? null);
-  const { data: streak } = useLoadOnce(getStudyStreak);
+  const { data: streak } = useLoadOnce(getStudyStreak, activeSession?.id ?? null);
 
-  const now = new Date();
+  // De minuto a minuto: com uma sessao a correr, o anel avanca sozinho.
+  const now = useNow();
   const spans: SessionSpan[] = sessions.map((s) => ({ startedAt: s.startedAt, endedAt: s.endedAt }));
   if (activeSession) spans.push({ startedAt: activeSession.startedAt, endedAt: null });
   const doneMinutes = minutesSince(startOfLocalDay(now), now, spans);
@@ -61,6 +64,9 @@ export default function DayProgressCard({ dailyLimitMinutes }: DayProgressCardPr
             </p>
           )}
         </div>
+      </div>
+      <div className="mt-4 border-t border-neutral-800 pt-3">
+        <DueTodayList />
       </div>
     </DashboardCard>
   );

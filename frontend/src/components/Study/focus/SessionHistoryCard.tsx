@@ -15,12 +15,14 @@ import SessionForm, { type SessionFormValues } from './SessionForm';
 import SessionRow from './SessionRow';
 import type { StudySession } from '../../../types/models';
 import { useI18n } from '../../../i18n/useI18n';
+import Card from '../../UI/Card';
 
 // Intervalos que o utilizador pode escolher (o backend limita a 90 dias).
 const HISTORY_RANGE_OPTIONS = [7, 14, 30, 90] as const;
 const DEFAULT_HISTORY_DAYS = 14;
 // Quantos dias aparecem de cada vez; o resto fica atras de "Show more".
-const DAYS_PER_PAGE = 5;
+// Hoje e ontem chegam por defeito: com 5 dias o cartao passava os 1000px.
+const DAYS_PER_PAGE = 2;
 
 function groupByDay(sessions: StudySession[]): [string, StudySession[]][] {
   const groups = new Map<string, StudySession[]>();
@@ -72,7 +74,7 @@ export default function SessionHistoryCard() {
   };
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
+    <Card>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold text-white">{t('ui.sessionHistory')}</h2>
@@ -115,13 +117,13 @@ export default function SessionHistoryCard() {
 
       {isLoading && <LinesSkeleton lines={4} />}
       {!isLoading && error && <ErrorState message={t('ui.couldNotLoadYourSessions')} />}
-      {!isLoading && !error && groups.length === 0 && <EmptyState message={t('ui.noSessionsInLastDays', { days: historyDays })} />}
+      {!isLoading && !error && groups.length === 0 && <EmptyState variant="inline" message={t('ui.noSessionsInLastDays', { days: historyDays })} />}
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {visibleGroups.map(([day, daySessions]) => (
           <section key={day}>
-            <h3 className="mb-1.5 text-xs font-medium uppercase tracking-wide text-neutral-500">{formatDayLabel(day)}</h3>
-            <ul className="space-y-1.5">
+            <h3 className="text-xs font-medium uppercase tracking-wide text-neutral-500">{formatDayLabel(day)}</h3>
+            <ul className="divide-y divide-neutral-800">
               {daySessions.map((session) => (
                 <SessionRow
                   key={session.id}
@@ -141,7 +143,7 @@ export default function SessionHistoryCard() {
       </div>
 
       {(hasMore || canCollapse) && (
-        <div className="mt-4 flex items-center justify-center gap-4 text-sm">
+        <div className="mt-3 flex items-center justify-center gap-4 text-sm">
           {hasMore && (
             <button type="button" onClick={showMore} className="text-violet-400 hover:text-violet-300">
               {t('ui.showMoreDaysLeft', { remaining: groups.length - visibleCount })}</button>
@@ -153,6 +155,6 @@ export default function SessionHistoryCard() {
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

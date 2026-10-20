@@ -9,7 +9,7 @@ import TimerModePicker from './focus/TimerModePicker';
 import StopSessionPanel from './focus/StopSessionPanel';
 import FocusModeOverlay from './focus/FocusModeOverlay';
 import OpenNotesLink from './focus/OpenNotesLink';
-import { formatElapsed } from '../../lib/formatDuration';
+import SessionClock, { BlockFinishedSwitch } from './focus/SessionClock';
 import Button from '../UI/Button';
 import Select from '../UI/Select';
 import Input from '../UI/Input';
@@ -17,6 +17,7 @@ import FormField from '../UI/FormField';
 import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
 import { useI18n } from '../../i18n/useI18n';
+import Card from '../UI/Card';
 
 // Data curta para o rótulo da task no dropdown (ex: "20 Set") - timeZone
 // UTC de propósito: Task.date vem do backend como meia-noite UTC do dia
@@ -37,13 +38,13 @@ export default function StudySessionWidget() {
     activeSession,
     areas,
     tasks,
-    elapsedSeconds,
     isLoading,
     isSubmitting,
     error,
     start,
   } = useStudySession();
-  const { remainingSeconds, timerPlan } = useActiveStudySession();
+  // O tempo vem do <SessionClock>: este formulario nao renderiza 1x/s.
+  const { timerPlan } = useActiveStudySession();
   const { stopSession } = useStopSession();
 
   const [plan, setPlan] = useState<TimerPlan | null>(null);
@@ -55,9 +56,9 @@ export default function StudySessionWidget() {
 
   if (isLoading) {
     return (
-      <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
+      <Card>
         <LinesSkeleton lines={3} />
-      </div>
+      </Card>
     );
   }
 
@@ -121,7 +122,7 @@ export default function StudySessionWidget() {
   );
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 flex flex-col">
+    <Card className="flex flex-col">
       <h2 className="text-lg font-semibold text-white mb-4">{t('ui.studySession')}</h2>
 
       {error && (
@@ -134,14 +135,17 @@ export default function StudySessionWidget() {
         <div className="flex flex-col gap-4">
           <div className="text-center py-6">
             <p className="text-4xl font-mono font-bold text-violet-400 tabular-nums">
-              {formatElapsed(remainingSeconds ?? elapsedSeconds)}
+              <SessionClock />
             </p>
             <p className="mt-1 text-xs text-neutral-500">
-              {timerPlan === null
-                ? t('ui.countingUp')
-                : remainingSeconds === 0
-                  ? t('ui.blockFinished')
-                  : t('ui.leftOfMinutes', { count: timerPlan.focusMinutes })}
+              {timerPlan === null ? (
+                t('ui.countingUp')
+              ) : (
+                <BlockFinishedSwitch
+                  running={t('ui.leftOfMinutes', { count: timerPlan.focusMinutes })}
+                  finished={t('ui.blockFinished')}
+                />
+              )}
             </p>
             <p className="mt-2 text-sm text-neutral-400">
               {activeSession.task?.title ??
@@ -183,39 +187,43 @@ export default function StudySessionWidget() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <FormField label={t('ui.taskOptional')} htmlFor="session-task">
-            <Select
-              id="session-task"
-              value={taskId}
-              onChange={(e) => handleTaskChange(e.target.value)}
-            >
-              <option value="">{t('ui.noTask')}</option>
-              {groupLabels.map((label) => (
-                <optgroup key={label} label={label}>
-                  {(tasksByArea.get(label) ?? []).map((task) => (
-                    <option key={task.id} value={task.id}>
-                      {task.title} ({formatTaskDate(task.date)})
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </Select>
-          </FormField>
+          {/* Task e cadeira lado a lado a partir de sm: o formulario era o
+              cartao mais alto da coluna so por empilhar dois selects. */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label={t('ui.taskOptional')} htmlFor="session-task">
+              <Select
+                id="session-task"
+                value={taskId}
+                onChange={(e) => handleTaskChange(e.target.value)}
+              >
+                <option value="">{t('ui.noTask')}</option>
+                {groupLabels.map((label) => (
+                  <optgroup key={label} label={label}>
+                    {(tasksByArea.get(label) ?? []).map((task) => (
+                      <option key={task.id} value={task.id}>
+                        {task.title} ({formatTaskDate(task.date)})
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </Select>
+            </FormField>
 
-          <FormField label={t('ui.areaOptional')} htmlFor="session-area">
-            <Select
-              id="session-area"
-              value={areaId}
-              onChange={(e) => handleAreaChange(e.target.value)}
-            >
-              <option value="">{t('ui.noArea')}</option>
-              {areas.map((area) => (
-                <option key={area.id} value={area.id}>
-                  {area.name}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+            <FormField label={t('ui.areaOptional')} htmlFor="session-area">
+              <Select
+                id="session-area"
+                value={areaId}
+                onChange={(e) => handleAreaChange(e.target.value)}
+              >
+                <option value="">{t('ui.noArea')}</option>
+                {areas.map((area) => (
+                  <option key={area.id} value={area.id}>
+                    {area.name}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          </div>
 
           <FormField label={t('ui.noteOptional')} htmlFor="start-note">
             <Input
@@ -241,6 +249,6 @@ export default function StudySessionWidget() {
           </Button>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

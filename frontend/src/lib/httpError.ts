@@ -6,6 +6,12 @@ export function getHttpStatus(error: unknown): number | undefined {
   return (error as { response?: { status?: number } } | null)?.response?.status;
 }
 
+/** Codigo estavel que o backend pos no corpo de um erro (ex: "INVALID_PASSWORD_LINK"). */
+export function getApiCode(error: unknown): string | undefined {
+  const code = (error as { response?: { data?: { code?: unknown } } } | null)?.response?.data?.code;
+  return typeof code === 'string' ? code : undefined;
+}
+
 /**
  * Mensagem legivel que o backend enviou num erro (ex: "This overlaps another
  * study session."), ou `fallback` se nao houver. O ValidationPipe pode

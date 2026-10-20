@@ -6,6 +6,7 @@ import FormField from '../UI/FormField';
 import ColorPickerField from './ColorPickerField';
 import type { TaskTypeOption } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 
 export interface AreaFormValues {
   name: string;
@@ -38,6 +39,7 @@ export default function AreaForm({
   submittingLabel,
 }: AreaFormProps) {
   const { t } = useI18n();
+  const { catalogLabel } = useCatalogLabel();
   const [formData, setFormData] = useState<AreaFormValues>(initialValues);
 
   const handleSubmit = (e: SyntheticEvent) => {
@@ -75,9 +77,9 @@ export default function AreaForm({
           }
         >
           <option value="">{t('ui.noFixedTypeAskEvery')}</option>
-          {taskTypes.map((t) => (
-            <option key={t.key} value={t.key}>
-              {t.label}
+          {taskTypes.map((type) => (
+            <option key={type.key} value={type.key}>
+              {catalogLabel('taskType', type.key, type.label)}
             </option>
           ))}
         </Select>

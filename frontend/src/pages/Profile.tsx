@@ -4,6 +4,7 @@ import { useProfileStats } from '../hooks/useProfileStats';
 import { useDeleteAccount } from '../hooks/useDeleteAccount';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
+import MasonryGrid from '../components/UI/MasonryGrid';
 import ProfileHeaderCard from '../components/Profile/ProfileHeaderCard';
 import DeleteAccountSection from '../components/Profile/DeleteAccountSection';
 import GoogleCalendarCard from '../components/Profile/GoogleCalendarCard';
@@ -55,17 +56,18 @@ export default function Profile() {
 
       <ProfileHeaderCard user={user} initials={initials} stats={stats} isLoadingStats={stats.isLoading} />
 
-      <GoogleCalendarCard />
-
-      <PreferencesCard user={user} onUserUpdate={updateUser} />
-      <InstallAppCard alwaysShow className="max-w-3xl mt-8" />
-      <PushNotificationsCard />
-
-      <TwoFactorCard user={user} onUserUpdate={updateUser} />
-
-      <AccessibilitySettingsCard />
-
-      <CommuteSettingsCard user={user} onUserUpdate={updateUser} />
+      {/* Duas colunas a partir de lg: numa so coluna de 768px a pagina tinha
+          metade do ecra vazio e o dobro do scroll. Sem esticar o ultimo
+          cartao de cada coluna (sao formularios, ficava um fundo vazio). */}
+      <MasonryGrid stretchLast={false} className="mt-4">
+        <GoogleCalendarCard />
+        <PreferencesCard user={user} onUserUpdate={updateUser} />
+        <InstallAppCard alwaysShow className="" />
+        <PushNotificationsCard />
+        <TwoFactorCard user={user} onUserUpdate={updateUser} />
+        <AccessibilitySettingsCard />
+        <CommuteSettingsCard user={user} onUserUpdate={updateUser} />
+      </MasonryGrid>
 
       <DeleteAccountSection onOpen={deleteAccount.open} />
 

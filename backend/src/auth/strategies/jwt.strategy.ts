@@ -43,6 +43,15 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: JwtPayload) {
+    // O state de "ligar conta" (10 min) e o token de appeal (15 min) sao
+    // assinados com o mesmo JWT_SECRET e nao trazem `tv`, que conta como
+    // versao 0. Sem isto, qualquer um deles posto no cookie valia como
+    // sessao de uma conta que nunca fez logout. Tokens de sessao nunca
+    // tem `purpose`.
+    if ('purpose' in payload) {
+      throw new UnauthorizedException('Session expired. Please log in again.');
+    }
+
     // Efeito imediato de um ban/suspend mesmo com um JWT ainda válido -
     // sem isto, a conta continuava a funcionar até o token expirar (até
     // 7 dias, ver JwtModule.register em auth.module.ts). Consulta uma

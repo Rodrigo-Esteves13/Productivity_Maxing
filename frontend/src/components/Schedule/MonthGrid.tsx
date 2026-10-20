@@ -10,6 +10,7 @@ import { useI18n } from '../../i18n/useI18n';
 import MonthDayCell from './MonthDayCell';
 import MonthDayDetail from './MonthDayDetail';
 import AgendaLegend from './AgendaLegend';
+import Card from '../UI/Card';
 
 // getUTCDay() de segunda a domingo, pela ordem das colunas.
 const WEEKDAY_COLUMNS = [1, 2, 3, 4, 5, 6, 0];
@@ -70,7 +71,7 @@ export default function MonthGrid({ refreshKey, initialDate, viewToggle, onOpenW
   const monthTitle = monthName.charAt(0).toLocaleUpperCase(lang) + monthName.slice(1);
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6">
+    <Card>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div>
           <h2 className="text-lg font-semibold text-white">{t('ui.schedule')}</h2>
@@ -168,6 +169,6 @@ export default function MonthGrid({ refreshKey, initialDate, viewToggle, onOpenW
           <AgendaLegend />
         </>
       )}
-    </div>
+    </Card>
   );
 }

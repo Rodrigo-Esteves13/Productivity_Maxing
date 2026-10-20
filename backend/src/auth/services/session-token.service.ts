@@ -75,12 +75,31 @@ export class SessionTokenService {
     return this.jwtService.sign(payload, { expiresIn: '10m' });
   }
 
-  consumeLinkState(state: string, provider: Provider): string {
+  /**
+   * Valida o state E que o browser que volta do provider tem a sessao do
+   * mesmo utilizador que o gerou. Sem a segunda parte, o state sozinho era
+   * transferivel: quem gerasse um state para a PROPRIA conta podia mandar o
+   * URL de autorizacao a outra pessoa, e a conta Google/GitHub/Discord dela
+   * (incluindo o token do Calendar) ficava ligada a conta de quem enviou
+   * (CSRF no "ligar conta", RFC 6749 10.12). O cookie de sessao e SameSite
+   * Lax, por isso chega neste redirect GET de topo vindo do provider.
+   */
+  consumeLinkState(
+    state: string,
+    provider: Provider,
+    sessionCookie: string | undefined,
+  ): string {
     try {
       const payload = this.jwtService.verify<LinkStatePayload>(state);
       if (payload.purpose !== 'link' || payload.provider !== provider) {
         throw new UnauthorizedException(
           'Invalid OAuth state for this provider.',
+        );
+      }
+      const session = this.verifyAccessTokenCookie(sessionCookie);
+      if (!session || 'purpose' in session || session.sub !== payload.sub) {
+        throw new UnauthorizedException(
+          'Start the link from your own signed-in session.',
         );
       }
       return payload.sub;

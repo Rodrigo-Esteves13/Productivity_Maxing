@@ -1,4 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import PrefetchLink from '../UI/PrefetchLink';
 import { useI18n } from '../../i18n/useI18n';
 
 export interface FooterLinkItem {
@@ -29,13 +30,13 @@ export default function FooterLinkGroup({ title, items }: FooterLinkGroupProps) 
         {items.map((item) => (
           <li key={item.label}>
             {item.to ? (
-              <Link
+              <PrefetchLink
                 to={item.to}
                 aria-current={item.to === here ? 'page' : undefined}
                 className={`${LINK_CLASS} aria-[current=page]:text-violet-300`}
               >
                 {t(item.label)}
-              </Link>
+              </PrefetchLink>
             ) : item.onClick ? (
               <button type="button" onClick={item.onClick} className={LINK_CLASS}>
                 {t(item.label)}

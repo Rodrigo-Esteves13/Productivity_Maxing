@@ -2,7 +2,7 @@ import FormField from '../../UI/FormField';
 import Select from '../../UI/Select';
 import type { TaskTypeOption, PriorityOption } from '../../../types/models';
 import { useEnumLabel } from '../../../hooks/useEnumLabel';
-import { usePriorityLabel } from '../../../hooks/usePriorityLabel';
+import { useCatalogLabel } from '../../../hooks/useCatalogLabel';
 import { useI18n } from '../../../i18n/useI18n';
 
 interface DifficultyTypeFieldsProps {
@@ -38,7 +38,7 @@ export default function DifficultyTypeFields({
 }: DifficultyTypeFieldsProps) {
   const { t } = useI18n();
   const enumLabel = useEnumLabel();
-  const priorityLabel = usePriorityLabel();
+  const { catalogLabel } = useCatalogLabel();
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <FormField label={t('filters.difficulty')} htmlFor={`${idPrefix}-difficulty`}>
@@ -65,7 +65,7 @@ export default function DifficultyTypeFields({
           <option value="">{t('taskForm.noPriority')}</option>
           {priorities.map((p) => (
             <option key={p.key} value={p.key}>
-              {priorityLabel(p.key, p.label)}
+              {catalogLabel('priority', p.key, p.label)}
             </option>
           ))}
         </Select>
@@ -83,7 +83,7 @@ export default function DifficultyTypeFields({
           </option>
           {taskTypes.map((taskType) => (
             <option key={taskType.key} value={taskType.key}>
-              {taskType.label}
+              {catalogLabel('taskType', taskType.key, taskType.label)}
             </option>
           ))}
         </Select>

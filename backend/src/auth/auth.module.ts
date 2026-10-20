@@ -9,6 +9,7 @@ import { AvatarService } from './services/avatar.service';
 import { OAuthIdentityService } from './services/oauth-identity.service';
 import { PasswordAuthService } from './services/password-auth.service';
 import { EmailVerificationService } from './services/email-verification.service';
+import { PasswordLinkService } from './services/password-link.service';
 import { TwoFactorService } from './services/two-factor.service';
 import { SessionTokenService } from './services/session-token.service';
 import { SupabaseClientsService } from './services/supabase-clients.service';
@@ -42,6 +43,7 @@ import { AccountStatusModule } from '../account-status/account-status.module';
     OAuthIdentityService,
     PasswordAuthService,
     EmailVerificationService,
+    PasswordLinkService,
     TwoFactorService,
     AvatarService,
     SessionTokenService,

@@ -4,7 +4,10 @@ import { Strategy, Profile } from 'passport-discord';
 import { Request } from 'express';
 import { Provider, type User } from '@prisma/client';
 import { AuthService } from '../auth.service';
-import { OAUTH_LOGIN_STATE_COOKIE } from '../cookie.config';
+import {
+  ACCESS_TOKEN_COOKIE,
+  OAUTH_LOGIN_STATE_COOKIE,
+} from '../cookie.config';
 import { isValidLoginState } from '../guards/oauth-guard.helpers';
 
 @Injectable()
@@ -60,6 +63,9 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
           const userId = this.authService.consumeLinkState(
             state,
             Provider.DISCORD,
+            (req.cookies as Record<string, string | undefined>)?.[
+              ACCESS_TOKEN_COOKIE
+            ],
           );
           user = await this.authService.linkIdentity(userId, data);
         } catch {

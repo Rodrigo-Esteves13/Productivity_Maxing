@@ -3,6 +3,7 @@ import Input from '../UI/Input';
 import Select from '../UI/Select';
 import Button from '../UI/Button';
 import { useEnumLabel } from '../../hooks/useEnumLabel';
+import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 import { useI18n } from '../../i18n/useI18n';
 import SavedFilterViews from './SavedFilterViews';
 import SortDirectionButton from '../UI/SortDirectionButton';
@@ -58,6 +59,7 @@ export default function DashboardFilters({
   onToggleSortDirection,
 }: DashboardFiltersProps) {
   const { t } = useI18n();
+  const { catalogLabel } = useCatalogLabel();
   const enumLabel = useEnumLabel();
   const update = (patch: Partial<DashboardFiltersState>) => onChange({ ...filters, ...patch });
   const hasActiveFilters = Object.values(filters).some((v) => v !== '');
@@ -99,7 +101,7 @@ export default function DashboardFilters({
               .filter((option) => option.taskTypeKey === ACADEMIC_TASK_TYPE_KEY)
               .map((option) => (
                 <option key={option.key} value={option.key}>
-                  {option.label}
+                  {catalogLabel('academicType', option.key, option.label)}
                 </option>
               ))}
           </Select>

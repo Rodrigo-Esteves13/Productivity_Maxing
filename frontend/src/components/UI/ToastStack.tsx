@@ -1,11 +1,12 @@
 import { XIcon } from './Icons';
-import type { ToastKind } from '../../context/feedback-context';
+import type { ToastAction, ToastKind } from '../../context/feedback-context';
 import { useI18n } from '../../i18n/useI18n';
 
 export interface ToastItem {
   id: number;
   kind: ToastKind;
   message: string;
+  action?: ToastAction;
 }
 
 interface ToastStackProps {
@@ -32,6 +33,18 @@ export default function ToastStack({ toasts, onDismiss }: ToastStackProps) {
           className={`pointer-events-auto flex items-start gap-3 rounded-lg border p-3 text-sm shadow-xl ${TONE_CLASS[toast.kind]}`}
         >
           <span className="flex-1">{toast.message}</span>
+          {toast.action && (
+            <button
+              type="button"
+              onClick={() => {
+                toast.action?.onAction();
+                onDismiss(toast.id);
+              }}
+              className="shrink-0 rounded-md px-2 py-0.5 font-semibold text-violet-300 hover:bg-violet-900/40 hover:text-white"
+            >
+              {toast.action.label}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onDismiss(toast.id)}

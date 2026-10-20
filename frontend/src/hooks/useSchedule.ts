@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getSchedule } from '../api/scheduleService';
+import { getSchedule, setClassAttendance } from '../api/scheduleService';
 import { isRequestCanceled } from '../lib/abortable';
 import type { ClassOccurrence } from '../types/models';
 import { startOfWeek, todayUtcAnchored } from '../lib/weekDates';
@@ -70,6 +70,26 @@ export function useSchedule(initialWeekStart: Date = todayUtcAnchored()) {
 
   const goToCurrentWeek = () => setWeekStart(startOfWeek(todayUtcAnchored()));
 
+  // Presenca marcada na grelha: otimista, volta ao valor anterior se o
+  // PATCH falhar. Devolve se gravou, para quem chama poder avisar.
+  const setAttendance = useCallback(
+    async (occurrence: ClassOccurrence, attended: boolean | null): Promise<boolean> => {
+      const apply = (value: boolean | null) =>
+        setOccurrences((prev) =>
+          prev.map((o) => (o.id === occurrence.id ? { ...o, attended: value } : o)),
+        );
+      apply(attended);
+      try {
+        await setClassAttendance(occurrence.id, attended);
+        return true;
+      } catch {
+        apply(occurrence.attended ?? null);
+        return false;
+      }
+    },
+    [],
+  );
+
   return {
     weekStart,
     weekEnd,
@@ -80,5 +100,6 @@ export function useSchedule(initialWeekStart: Date = todayUtcAnchored()) {
     goToPreviousWeek,
     goToNextWeek,
     goToCurrentWeek,
+    setAttendance,
   };
 }

@@ -4,6 +4,8 @@ import type { AgendaItem } from '../../lib/agenda';
 import { AGENDA_TONE_CLASSES, getAgendaTone } from '../../lib/agendaTone';
 import { MONTH_CHIP_TONE_CLASSES, type DeadlineChip } from '../../lib/monthAgenda';
 import { GraduationCapIcon } from '../UI/Icons';
+import type { ClassOccurrence } from '../../types/models';
+import AttendanceToggle from './AttendanceToggle';
 import { useI18n } from '../../i18n/useI18n';
 
 interface WeekDayCellProps {
@@ -12,6 +14,16 @@ interface WeekDayCellProps {
   isToday: boolean;
   deadlines: DeadlineChip[];
   items: AgendaItem[];
+  // Aulas que ja comecaram ate este minuto do dia podem ter presenca:
+  // Infinity num dia passado, a hora atual hoje, null num dia futuro.
+  markableUntilMinutes?: number | null;
+  onAttendanceChange?: (occurrence: ClassOccurrence, attended: boolean | null) => void;
+}
+
+interface AgendaEntryProps {
+  item: AgendaItem;
+  markableUntilMinutes: number | null;
+  onAttendanceChange?: WeekDayCellProps['onAttendanceChange'];
 }
 
 // Prazo de uma task, com as mesmas cores da vista mensal (exames a cheio).
@@ -36,20 +48,31 @@ function DeadlineEntry({ chip }: { chip: DeadlineChip }) {
   );
 }
 
-function AgendaEntry({ item }: { item: AgendaItem }) {
+function AgendaEntry({ item, markableUntilMinutes, onAttendanceChange }: AgendaEntryProps) {
   const { t } = useI18n();
   const tone = AGENDA_TONE_CLASSES[getAgendaTone(item)];
   const time = `${formatClock(item.startMinutes)}-${formatClock(item.endMinutes)}`;
 
   if (item.kind === 'class') {
     const { subject, location } = item.occurrence;
+    const canMark =
+      Boolean(onAttendanceChange) &&
+      markableUntilMinutes !== null &&
+      item.startMinutes <= markableUntilMinutes;
     return (
-      <div className={`text-xs rounded-md px-2 py-1 ${tone.card}`}>
+      <div className={`text-xs rounded-md px-2 py-1 ${tone.card} ${item.occurrence.attended === false ? 'opacity-60' : ''}`}>
         <p className={`${tone.title} font-medium leading-tight break-words`}>{subject}</p>
         <p className={`${tone.meta} leading-tight`}>
           {time}
           {location ? ` · ${location}` : ''}
         </p>
+        {canMark && (
+          <AttendanceToggle
+            subject={subject}
+            attended={item.occurrence.attended}
+            onChange={(attended) => onAttendanceChange?.(item.occurrence, attended)}
+          />
+        )}
       </div>
     );
   }
@@ -67,7 +90,15 @@ function AgendaEntry({ item }: { item: AgendaItem }) {
 
 // Um dia da grelha semanal: prazos primeiro, depois aulas e turnos
 // misturados por ordem de hora.
-export default function WeekDayCell({ label, dayOfMonth, isToday, deadlines, items }: WeekDayCellProps) {
+export default function WeekDayCell({
+  label,
+  dayOfMonth,
+  isToday,
+  deadlines,
+  items,
+  markableUntilMinutes = null,
+  onAttendanceChange,
+}: WeekDayCellProps) {
   return (
     <div
       className={`rounded-lg border p-2 min-h-[6rem] min-w-0 ${
@@ -83,7 +114,12 @@ export default function WeekDayCell({ label, dayOfMonth, isToday, deadlines, ite
           <DeadlineEntry key={chip.id} chip={chip} />
         ))}
         {items.map((item) => (
-          <AgendaEntry key={`${item.kind}-${item.id}`} item={item} />
+          <AgendaEntry
+            key={`${item.kind}-${item.id}`}
+            item={item}
+            markableUntilMinutes={markableUntilMinutes}
+            onAttendanceChange={onAttendanceChange}
+          />
         ))}
       </div>
     </div>

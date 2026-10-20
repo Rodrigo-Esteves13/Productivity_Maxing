@@ -1,8 +1,8 @@
-import { usePriorityLabel } from '../../hooks/usePriorityLabel';
+import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 
 interface PriorityBadgeProps {
   priorityKey: string;
-  // Rotulo do catalogo (priorityLabel da task); ver usePriorityLabel.
+  // Rotulo do catalogo (priorityLabel da task); ver useCatalogLabel.
   label: string | null;
   colorHex?: string | null;
 }
@@ -23,7 +23,7 @@ const FALLBACK_COLOR = '#808080';
 // whitespace-nowrap: em colunas estreitas (ex: tabela em chines) o rotulo
 // partia-se a meio ("Mediu" / "m") e a pilula ficava em duas linhas.
 export default function PriorityBadge({ priorityKey, label, colorHex }: PriorityBadgeProps) {
-  const priorityLabel = usePriorityLabel();
+  const { catalogLabel } = useCatalogLabel();
   const color = colorHex || FALLBACK_COLOR;
 
   return (
@@ -35,7 +35,7 @@ export default function PriorityBadge({ priorityKey, label, colorHex }: Priority
         color,
       }}
     >
-      {priorityLabel(priorityKey, label)}
+      {catalogLabel('priority', priorityKey, label)}
     </span>
   );
 }

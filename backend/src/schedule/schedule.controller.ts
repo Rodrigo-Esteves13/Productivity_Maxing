@@ -4,6 +4,9 @@ import {
   Controller,
   Delete,
   Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -18,6 +21,7 @@ import { Throttle } from '@nestjs/throttler';
 import { ScheduleService } from './schedule.service';
 import { ImportScheduleDto } from './dto/import-schedule.dto';
 import { EstimateCommuteDto } from './dto/estimate-commute.dto';
+import { SetAttendanceDto } from './dto/set-attendance.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
@@ -66,6 +70,46 @@ export class ScheduleController {
       new Date(from),
       new Date(to),
     );
+  }
+
+  // Literal antes de qualquer rota com :id (mesma regra do resto da app).
+  // `to` é cortado em hoje: aulas futuras ainda não têm presença.
+  @Get('attendance')
+  @ApiOperation({
+    summary:
+      'Attendance per subject (attended / missed / not marked) for classes between from and to, never past today.',
+  })
+  @ApiQuery({ name: 'from', example: '2026-09-14' })
+  @ApiQuery({ name: 'to', example: '2027-01-31' })
+  attendanceSummary(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    if (!DATE_KEY.test(from ?? '') || !DATE_KEY.test(to ?? '')) {
+      throw new BadRequestException('Send "from" and "to" as YYYY-MM-DD.');
+    }
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const toDate = new Date(`${to}T00:00:00.000Z`);
+    return this.scheduleService.attendanceSummary(
+      user.id,
+      new Date(`${from}T00:00:00.000Z`),
+      toDate.getTime() > today.getTime() ? today : toDate,
+    );
+  }
+
+  @Patch(':id/attendance')
+  @ApiOperation({
+    summary:
+      'Marks a class as attended (true), missed (false) or not marked (null).',
+  })
+  setAttendance(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetAttendanceDto,
+  ) {
+    return this.scheduleService.setAttendance(user.id, id, dto.attended);
   }
 
   // Sem `from`/`to` apaga TODO o horário importado; com os dois só esse

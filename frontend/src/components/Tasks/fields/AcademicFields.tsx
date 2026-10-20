@@ -2,6 +2,7 @@ import FormField from '../../UI/FormField';
 import Select from '../../UI/Select';
 import type { AcademicTaskTypeOption } from '../../../types/models';
 import { useI18n } from '../../../i18n/useI18n';
+import { useCatalogLabel } from '../../../hooks/useCatalogLabel';
 
 interface AcademicFieldsProps {
   idPrefix: string;
@@ -17,6 +18,7 @@ export default function AcademicFields({
   onAcademicTypeChange,
 }: AcademicFieldsProps) {
   const { t } = useI18n();
+  const { catalogLabel } = useCatalogLabel();
   return (
     <FormField label={t('ui.academicType')} htmlFor={`${idPrefix}-academic-type`}>
       <Select
@@ -28,7 +30,7 @@ export default function AcademicFields({
         <option value="">{t('ui.selectAcademicType')}</option>
         {availableAcademicTypes.map((a) => (
           <option key={a.key} value={a.key}>
-            {a.label}
+            {catalogLabel('academicType', a.key, a.label)}
           </option>
         ))}
       </Select>

@@ -16,6 +16,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { ConfirmOverdueDto } from './dto/confirm-overdue.dto';
 import { BulkTaskIdsDto } from './dto/bulk-task-ids.dto';
 import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
+import { BulkRescheduleDto } from './dto/bulk-reschedule.dto';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ImportTasksDto } from './dto/import-tasks.dto';
@@ -90,6 +91,20 @@ export class TasksController {
       user.id,
       dto.ids,
       dto.progressStatus,
+    );
+  }
+
+  // "Mover para hoje/amanhã" da seleção múltipla no Dashboard - literal,
+  // por isso também antes de @Patch(':id').
+  @Patch('bulk-reschedule')
+  bulkReschedule(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: BulkRescheduleDto,
+  ) {
+    return this.tasksService.bulkReschedule(
+      user.id,
+      dto.ids,
+      new Date(dto.date),
     );
   }
 

@@ -148,6 +148,16 @@ export interface ClassOccurrence {
   location: string | null;
   professor: string | null;
   externalUid: string;
+  // null = por marcar, true = fui, false = faltei (PATCH /schedule/:id/attendance).
+  attended?: boolean | null;
+}
+
+// GET /schedule/attendance: uma linha por disciplina, so aulas ate hoje.
+export interface SubjectAttendance {
+  subject: string;
+  attended: number;
+  missed: number;
+  unmarked: number;
 }
 
 // Uma linha já parseada de um .ics (ver utils/parseIcsSchedule.ts) - é o

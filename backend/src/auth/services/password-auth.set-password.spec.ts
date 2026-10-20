@@ -5,6 +5,7 @@ import type { SupabaseClientsService } from './supabase-clients.service';
 import type { MailService } from '../../mail/mail.service';
 import type { AccountGuardService } from './account-guard.service';
 import type { EmailVerificationService } from './email-verification.service';
+import type { PasswordLinkService } from './password-link.service';
 
 function setup(
   user: { supabaseAuthId: string | null },
@@ -41,6 +42,7 @@ function setup(
     {} as MailService,
     {} as AccountGuardService,
     {} as EmailVerificationService,
+    {} as PasswordLinkService,
   );
   return { service, clients };
 }

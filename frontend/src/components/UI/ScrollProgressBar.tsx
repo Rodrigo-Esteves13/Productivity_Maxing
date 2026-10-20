@@ -1,32 +1,42 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
-// Passive scroll listener, no rAF throttle needed - this only does a
-// couple of cheap reads + one setState per event, and React 19 batches
-// updates that happen in the same tick anyway. If this were ever doing
-// heavier work per scroll event it'd be worth revisiting.
+// Sem estado React: cada scroll so agenda UM frame (rAF) que escreve
+// transform: scaleX() direto no elemento. Antes era um setState por evento
+// e uma transicao de `width` (relayout a cada frame do scroll); o scaleX
+// fica so no compositor e o resto da arvore nunca volta a renderizar.
 export default function ScrollProgressBar() {
-  const [progress, setProgress] = useState(0);
+  const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleScroll = () => {
+    let frame = 0;
+    const paint = () => {
+      frame = 0;
       const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
       const scrollable = scrollHeight - clientHeight;
-      setProgress(scrollable > 0 ? (scrollTop / scrollable) * 100 : 0);
+      const ratio = scrollable > 0 ? Math.min(1, scrollTop / scrollable) : 0;
+      if (barRef.current) barRef.current.style.transform = `scaleX(${ratio})`;
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(paint);
     };
 
-    handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleScroll);
+    paint();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
     };
   }, []);
 
   return (
     <div
-      className="print-hide fixed top-0 left-0 h-0.5 bg-violet-500 z-[60] transition-[width] duration-150 ease-out"
-      style={{ width: `${progress}%` }}
+      ref={barRef}
+      // Sem a classe scale-x-0: no Tailwind 4 usa a propriedade `scale`, que
+      // se somava ao transform escrito acima e deixava a barra sempre a zero.
+      className="print-hide fixed top-0 left-0 h-0.5 w-full origin-left bg-violet-500 z-[60] will-change-transform"
+      style={{ transform: 'scaleX(0)' }}
       aria-hidden="true"
     />
   );

@@ -7,8 +7,7 @@ const SUNDAY = 0;
 const DAYS_FROM_MONDAY_TO_SUNDAY = 6;
 
 /** Meia-noite UTC do dia que a pessoa vê no relógio dela. */
-export function todayUtcAnchored(): Date {
-  const now = new Date();
+export function todayUtcAnchored(now: Date = new Date()): Date {
   // Única leitura local permitida: saber "que dia é hoje" para esta pessoa.
   return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
 }

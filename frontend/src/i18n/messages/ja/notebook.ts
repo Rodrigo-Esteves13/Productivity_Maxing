@@ -66,6 +66,7 @@ export const notebook: Record<string, string> = {
   'notebook.links.label': "ラベル(任意)",
   'notebook.links.add': "追加",
   'notebook.links.remove': "リンクを削除",
+  'notebook.links.invalid': "有効なウェブアドレスを入力してください（例: https://example.com）。",
   'notebook.files.add': "ファイルを追加",
   'notebook.files.none': "ファイルはまだありません。",
   'notebook.files.remove': "ファイルを削除",

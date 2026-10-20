@@ -5,11 +5,14 @@ import {
   FeedbackContext,
   type ConfirmOptions,
   type FeedbackContextValue,
+  type ToastAction,
   type ToastKind,
 } from './feedback-context';
 import { translateNow } from '../i18n/translate';
 
 const TOAST_DURATION_MS = 6000;
+// Com botao (Undo) fica mais tempo, para dar tempo de reagir.
+const TOAST_WITH_ACTION_DURATION_MS = 10000;
 const MAX_TOASTS = 4;
 // Chaves i18n, traduzidas quando o dialogo abre.
 const DEFAULT_CONFIRM_TITLE = 'ui.areYouSure';
@@ -37,10 +40,13 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const notify = useCallback(
-    (message: string, kind: ToastKind = 'info') => {
+    (message: string, kind: ToastKind = 'info', action?: ToastAction) => {
       const id = nextToastId.current++;
-      setToasts((prev) => [...prev.slice(-(MAX_TOASTS - 1)), { id, kind, message }]);
-      window.setTimeout(() => dismiss(id), TOAST_DURATION_MS);
+      setToasts((prev) => [...prev.slice(-(MAX_TOASTS - 1)), { id, kind, message, action }]);
+      window.setTimeout(
+        () => dismiss(id),
+        action ? TOAST_WITH_ACTION_DURATION_MS : TOAST_DURATION_MS,
+      );
     },
     [dismiss],
   );

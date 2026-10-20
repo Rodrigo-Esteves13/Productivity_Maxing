@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import PrefetchLink from '../UI/PrefetchLink';
+import { ADMIN_NAV } from './navItems';
 import { ShieldIcon, ChevronDownIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
 
@@ -7,31 +8,18 @@ interface AdminMenuProps {
   currentPath: string;
 }
 
-interface AdminLink {
-  to: string;
-  labelKey: string;
-}
-
-// Os 4 links de admin eram renderizados soltos na Navbar, cada um com o
+// Os links de admin eram renderizados soltos na Navbar, cada um com o
 // mesmo bloco de classes amarelas repetido - juntos aqui, com o mesmo
 // padrão de dropdown que o UserMenu já usa (ref + click-outside), isto
 // deixa de comer largura fixa na barra principal e passa a ser um único
 // trigger, tal como o resto do menu (mesma altura, mesmo espaçamento).
-const ADMIN_LINKS: AdminLink[] = [
-  { to: '/users', labelKey: 'nav.admin.users' },
-  { to: '/task-types', labelKey: 'nav.admin.taskTypes' },
-  { to: '/security', labelKey: 'nav.admin.security' },
-  { to: '/appeals', labelKey: 'nav.admin.appeals' },
-  { to: '/feedback', labelKey: 'nav.admin.feedback' },
-  { to: '/friend-code-requests', labelKey: 'nav.admin.friendCodes' },
-];
-
+// A lista e a mesma do painel mobile (ADMIN_NAV em navItems.ts).
 export default function AdminMenu({ currentPath }: AdminMenuProps) {
   const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const isAnyActive = ADMIN_LINKS.some((link) => currentPath.startsWith(link.to));
+  const isAnyActive = ADMIN_NAV.some((link) => currentPath.startsWith(link.to));
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -73,10 +61,10 @@ export default function AdminMenu({ currentPath }: AdminMenuProps) {
           role="menu"
           className="absolute left-0 mt-2 w-max min-w-44 max-w-[min(20rem,calc(100vw-1rem))] overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 shadow-2xl z-50"
         >
-          {ADMIN_LINKS.map((link) => {
+          {ADMIN_NAV.map((link) => {
             const isActive = currentPath.startsWith(link.to);
             return (
-              <Link
+              <PrefetchLink
                 key={link.to}
                 to={link.to}
                 role="menuitem"
@@ -89,7 +77,7 @@ export default function AdminMenu({ currentPath }: AdminMenuProps) {
                 }`}
               >
                 {t(link.labelKey)}
-              </Link>
+              </PrefetchLink>
             );
           })}
         </div>

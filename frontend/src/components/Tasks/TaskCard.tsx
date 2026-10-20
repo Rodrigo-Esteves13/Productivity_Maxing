@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { Task, Area } from '../../types/models';
 import StatusBadge from '../UI/StatusBadge';
@@ -6,15 +7,19 @@ import PriorityBadge from '../UI/PriorityBadge';
 import PostponedIndicator from '../UI/PostponedIndicator';
 import SubtaskProgress from '../UI/SubtaskProgress';
 import RescheduleButton from '../UI/RescheduleButton';
-import { PinIcon, RepeatIcon } from '../UI/Icons';
+import { CheckIcon, ClockIcon, PinIcon, RepeatIcon } from '../UI/Icons';
+import SwipeableRow from '../UI/SwipeableRow';
 import { recurrenceLabel } from '../../lib/recurrence';
 import { getDateStatus } from '../../utils/taskDateStatus';
 import { useI18n } from '../../i18n/useI18n';
+import { formatTaskDate } from '../../lib/timeFormat';
 
 interface TaskCardProps {
   task: Task;
   onSelect?: (task: Task) => void;
-  onReschedule?: (e: React.MouseEvent, task: Task) => void;
+  onReschedule?: (e: React.MouseEvent | null, task: Task) => void;
+  // Swipe: direita marca como feita, esquerda passa para amanha (so em atraso, como o +1 Day).
+  onComplete?: (task: Task) => void;
   isRescheduling?: boolean;
   // Both optional and only meaningful together - without a full Area
   // list to pick from there's nothing to offer besides the current one,
@@ -25,16 +30,17 @@ interface TaskCardProps {
   onTogglePin?: (task: Task) => void;
 }
 
-export default function TaskCard({ 
+function TaskCard({ 
   task, 
   onSelect,
   onReschedule,
+  onComplete,
   isRescheduling = false,
   areas,
   onMoveArea,
   onTogglePin,
 }: TaskCardProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const areaName = task.area?.name || t('ui.noArea2');
   const isInteractive = Boolean(onSelect);
   const status = getDateStatus(task);
@@ -48,7 +54,17 @@ export default function TaskCard({
     }
   };
 
+  const canComplete = Boolean(onComplete) && task.progressStatus !== 'COMPLETED';
+  const canPostpone = Boolean(onReschedule) && status === 'overdue';
+
   return (
+    <SwipeableRow
+      className="h-full rounded-xl"
+      onSwipeRight={canComplete ? () => onComplete?.(task) : undefined}
+      onSwipeLeft={canPostpone ? () => onReschedule?.(null, task) : undefined}
+      rightHint={<><CheckIcon aria-hidden="true" />{t('swipe.done')}</>}
+      leftHint={<>{t('swipe.tomorrow')}<ClockIcon aria-hidden="true" /></>}
+    >
     <div
       onClick={() => onSelect?.(task)}
       onKeyDown={handleKeyDown}
@@ -129,7 +145,7 @@ export default function TaskCard({
           )}
           <span>•</span>
           <span className={status === 'overdue' ? 'text-red-400 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>
-            {new Date(task.date).toLocaleDateString()}
+            {formatTaskDate(task.date, lang)}
           </span>
         </div>
 
@@ -159,5 +175,9 @@ export default function TaskCard({
         </div>
       </div>
     </div>
+    </SwipeableRow>
   );
 }
+
+// memo: numa lista grande, escrever num filtro ou mudar uma linha ja nao volta a renderizar todas as outras.
+export default memo(TaskCard);

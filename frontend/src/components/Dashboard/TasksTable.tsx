@@ -11,7 +11,9 @@ import { useI18n } from '../../i18n/useI18n';
 interface TasksTableProps {
   tasks: Task[];
   academicTaskTypes: AcademicTaskTypeOption[];
-  onReschedule?: (e: React.MouseEvent, task: Task) => void;
+  onReschedule?: (e: React.MouseEvent | null, task: Task) => void;
+  // Swipe para a direita nos cartoes mobile (ver SwipeableRow).
+  onComplete?: (task: Task) => void;
   reschedulingId?: string | null;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
@@ -25,6 +27,7 @@ export default function TasksTable({
   tasks, 
   academicTaskTypes,
   onReschedule,
+  onComplete,
   reschedulingId,
   selectedIds,
   onToggleSelect,
@@ -55,6 +58,7 @@ export default function TasksTable({
             task={task} 
             academicTaskTypes={academicTaskTypes} 
             onReschedule={onReschedule}
+            onComplete={onComplete}
             isRescheduling={reschedulingId === task.id}
             isSelected={selectedIds?.has(task.id)}
             onToggleSelect={onToggleSelect}

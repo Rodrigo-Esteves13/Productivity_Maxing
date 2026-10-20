@@ -31,8 +31,10 @@ export default function TaskPackList({ packs, onDelete }: Props) {
               <p className="truncate font-medium text-white">{pack.name}</p>
               <p className="mt-1 text-xs text-neutral-500">
                 {t('packs.list.meta', {
-                  items: pack.itemCount,
-                  imports: pack.importCount,
+                  items: t(pack.itemCount === 1 ? 'packs.list.itemsOne' : 'packs.list.itemsMany', { count: pack.itemCount }),
+                  imports: t(pack.importCount === 1 ? 'packs.list.importsOne' : 'packs.list.importsMany', {
+                    count: pack.importCount,
+                  }),
                   date: new Date(pack.createdAt).toLocaleDateString(lang),
                 })}
               </p>

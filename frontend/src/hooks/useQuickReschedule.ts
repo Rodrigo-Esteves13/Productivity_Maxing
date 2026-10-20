@@ -7,7 +7,7 @@ import { translateNow } from '../i18n/translate';
 
 interface UseQuickRescheduleReturn {
   reschedulingId: string | null;
-  rescheduleToTomorrow: (e: React.MouseEvent, task: Task) => Promise<void>;
+  rescheduleToTomorrow: (e: React.MouseEvent | null, task: Task) => Promise<void>;
 }
 
 export function useQuickReschedule(
@@ -17,9 +17,10 @@ export function useQuickReschedule(
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
 
   const rescheduleToTomorrow = useCallback(
-    async (e: React.MouseEvent, task: Task) => {
+    async (e: React.MouseEvent | null, task: Task) => {
       // Segurança UI: Impede que clicar no botão acione o "abrir modal" da linha inteira
-      e.stopPropagation();
+      // (null = veio de um swipe no cartão, não de um clique).
+      e?.stopPropagation();
 
       if (reschedulingId) return; // Previne duplo clique
 

@@ -6,7 +6,7 @@ import LegalTable from '../components/Legal/LegalTable';
 import useSeo from '../hooks/useSeo';
 import { REPO_URL, CONTACT_EMAIL, APP_DOMAIN } from '../lib/constants';
 
-const LAST_UPDATED = '19/10/2026';
+const LAST_UPDATED = '20/10/2026';
 
 export default function PrivacyPolicy() {
   useSeo({
@@ -81,8 +81,10 @@ export default function PrivacyPolicy() {
             keys) and the app language of that device, only to notify you about friend requests, access
             requests, invitations and suggested changes on shared notes and their answers, and, if you turn
             on deadline push reminders, upcoming deadlines (the task title is in the notification). The
-            content is encrypted for your browser, so the push service cannot read it. You can turn them
-            off at any time
+            content is encrypted for your browser, so the push service cannot read it. The app asks you
+            once per device, when you first open it signed in; nothing is turned on unless you accept, and
+            your answer is remembered on that device so you are not asked again. You can turn them off, or
+            back on, at any time in your Profile
           </li>
           <li>
             Feedback you choose to send: your message, category, optional rating, the app language and

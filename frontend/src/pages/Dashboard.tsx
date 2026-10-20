@@ -16,6 +16,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useQuickReschedule } from '../hooks/useQuickReschedule';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useTaskSelection } from '../hooks/useTaskSelection';
+import { useCompleteWithUndo } from '../hooks/useCompleteWithUndo';
 import { useAcademic } from '../context/useAcademic';
 import GpaSummary from '../components/Dashboard/GpaSummary';
 import PeriodProgressBar from '../components/Dashboard/PeriodProgressBar';
@@ -136,8 +137,10 @@ export default function Dashboard() {
   }, [academicTasks, filters, showArchived, isExamMode, sort]);
 
   const {
-    selectedIds, toggleSelect, toggleSelectAll, markSelectedDone, deleteSelected, clearSelection,
+    selectedIds, toggleSelect, toggleSelectAll, markSelectedDone, rescheduleSelected, deleteSelected,
+    clearSelection,
   } = useTaskSelection(filteredTasks, setTasks, filters);
+  const { completeOne } = useCompleteWithUndo(setTasks);
 
   return (
     <PageLayout>
@@ -284,6 +287,7 @@ export default function Dashboard() {
               <BulkActionsBar
                 selectedCount={selectedIds.size}
                 onMarkDone={markSelectedDone}
+                onReschedule={rescheduleSelected}
                 onDelete={deleteSelected}
                 onClear={clearSelection}
               />
@@ -291,6 +295,7 @@ export default function Dashboard() {
                 tasks={filteredTasks}
                 academicTaskTypes={academicTaskTypes}
                 onReschedule={rescheduleToTomorrow}
+                onComplete={completeOne}
                 reschedulingId={reschedulingId}
                 selectedIds={selectedIds}
                 onToggleSelect={toggleSelect}

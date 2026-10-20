@@ -7,6 +7,7 @@ import Button from '../UI/Button';
 import LinesSkeleton from '../UI/LinesSkeleton';
 import { useBannedIps } from '../../hooks/useBannedIps';
 import { useI18n } from '../../i18n/useI18n';
+import Card from '../UI/Card';
 
 interface BannedIpsCardProps {
   // Preenchido pelo botão "Ban" numa linha da tabela de logs (ver
@@ -36,7 +37,7 @@ export default function BannedIpsCard({ prefillIp }: BannedIpsCardProps) {
   };
 
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6 mb-6">
+    <Card className="mb-6">
       <h2 className="text-lg font-semibold text-white mb-1">{t('ui.bannedIps')}</h2>
       <p className="text-sm text-neutral-400 mb-4">
         {t('ui.aBannedIpGetsA')}
@@ -101,6 +102,6 @@ export default function BannedIpsCard({ prefillIp }: BannedIpsCardProps) {
           ))}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

@@ -1,6 +1,6 @@
 import type { Task } from '../types/models';
 import { MS_PER_HOUR, MS_PER_DAY } from '../lib/timeConstants';
-import { toDateKey } from '../lib/dateKey';
+import { isUtcMidnight, toDateKey } from '../lib/dateKey';
 import { translateNow } from '../i18n/translate';
 
 export type DateStatus = 'completed' | 'overdue' | 'today' | 'upcoming';
@@ -21,6 +21,15 @@ export function getDateStatus(task: Task, now: Date = new Date()): DateStatus {
 }
 
 
+// Prazo real de uma task. As tasks sem hora (o formulario so tem data) ficam
+// guardadas a meia-noite UTC desse dia, e o prazo e o FIM desse dia. Contar
+// ate a meia-noite em si mostrava "1h left" as 23h da vespera de um teste e
+// "overdue" durante o proprio dia, ao contrario do getDateStatus ("today").
+export function getDeadlineMs(task: Pick<Task, 'date'>): number {
+  const date = new Date(task.date);
+  return isUtcMidnight(date) ? date.getTime() + MS_PER_DAY : date.getTime();
+}
+
 // Short text for the time remaining (or already elapsed) until the due
 // date, to complement DateStatusBadge (which only says "Overdue"/"Upcoming",
 // without quantifying how much). Completed tasks don't show a count -
@@ -28,7 +37,7 @@ export function getDateStatus(task: Task, now: Date = new Date()): DateStatus {
 export function getRemainingTimeLabel(task: Task, now: Date = new Date()): string {
   if (task.progressStatus === 'COMPLETED') return 'N/A';
 
-  const diffMs = new Date(task.date).getTime() - now.getTime();
+  const diffMs = getDeadlineMs(task) - now.getTime();
   const absMs = Math.abs(diffMs);
 
   const days = Math.floor(absMs / MS_PER_DAY);

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { bulkDeleteTasks, bulkUpdateTaskStatus } from '../api/userService';
+import { bulkDeleteTasks, bulkRescheduleTasks } from '../api/userService';
+import { syncTaskToCalendar } from '../api/calendarService';
 import type { Task } from '../types/models';
+import { useCompleteWithUndo } from './useCompleteWithUndo';
 
 const COMPLETED_STATUS = 'COMPLETED';
 
@@ -36,18 +38,49 @@ export function useTaskSelection(
     });
   }, [visibleTasks]);
 
+  const { completeMany } = useCompleteWithUndo(setTasks);
+
   const markSelectedDone = useCallback(async () => {
-    const ids = Array.from(selectedIds);
-    await bulkUpdateTaskStatus(ids, COMPLETED_STATUS);
-    setTasks((prev) =>
-      prev.map((t) =>
-        ids.includes(t.id)
-          ? { ...t, progressStatus: COMPLETED_STATUS, completedAt: t.completedAt ?? new Date().toISOString() }
-          : t,
-      ),
-    );
+    await completeMany(visibleTasks.filter((t) => selectedIds.has(t.id)));
     setSelectedIds(new Set());
-  }, [selectedIds, setTasks]);
+  }, [completeMany, selectedIds, visibleTasks]);
+
+  // Mover a selecao para um dia ("YYYY-MM-DD"). Mesma conta local do
+  // backend: so as que avancam contam como adiadas, as concluidas nao mexem.
+  // Tasks com evento no Google Calendar sao re-sincronizadas como no "+1
+  // Day" (useQuickReschedule); falha silenciosa, a task ja esta guardada.
+  const rescheduleSelected = useCallback(
+    async (dateKey: string) => {
+      const date = new Date(dateKey).toISOString();
+      const moved = visibleTasks.filter(
+        (t) => selectedIds.has(t.id) && t.progressStatus !== COMPLETED_STATUS,
+      );
+      if (moved.length === 0) return 0;
+      const { count } = await bulkRescheduleTasks(moved.map((t) => t.id), date);
+      const movedIds = new Set(moved.map((t) => t.id));
+      setTasks((prev) =>
+        prev.map((t) =>
+          movedIds.has(t.id)
+            ? {
+                ...t,
+                date,
+                postponedCount: t.postponedCount + (new Date(t.date) < new Date(date) ? 1 : 0),
+              }
+            : t,
+        ),
+      );
+      setSelectedIds(new Set());
+      for (const task of moved.filter((t) => t.googleCalendarEventId)) {
+        try {
+          await syncTaskToCalendar(task.id);
+        } catch (syncError: unknown) {
+          console.error('Error re-syncing task with Google Calendar:', syncError);
+        }
+      }
+      return count;
+    },
+    [selectedIds, setTasks, visibleTasks],
+  );
 
   const deleteSelected = useCallback(async () => {
     const ids = Array.from(selectedIds);
@@ -56,5 +89,13 @@ export function useTaskSelection(
     setSelectedIds(new Set());
   }, [selectedIds, setTasks]);
 
-  return { selectedIds, toggleSelect, toggleSelectAll, markSelectedDone, deleteSelected, clearSelection };
+  return {
+    selectedIds,
+    toggleSelect,
+    toggleSelectAll,
+    markSelectedDone,
+    rescheduleSelected,
+    deleteSelected,
+    clearSelection,
+  };
 }
