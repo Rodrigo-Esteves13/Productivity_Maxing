@@ -3,10 +3,15 @@ import { Link } from 'react-router-dom';
 import type { SocialOverview } from '../../api/socialService';
 import type { OutgoingGrant } from '../../api/socialNotesService';
 import { useI18n } from '../../i18n/useI18n';
+import { friendNotesPath, friendPath } from '../../lib/appLinks';
 import PersonRow from './PersonRow';
+
+export type SocialListSection = 'incoming' | 'outgoing' | 'friends' | 'blocked';
 
 interface Props {
   data: SocialOverview;
+  /** Que listas mostrar (cada separador do Social mostra as suas). */
+  sections: SocialListSection[];
   onAccept: (friendshipId: string) => Promise<boolean>;
   onRemove: (friendshipId: string) => Promise<boolean>;
   onBlock: (userId: string) => Promise<boolean>;
@@ -31,6 +36,7 @@ function Section({ title, count, children }: { title: string; count: number; chi
 
 export default function SocialLists({
   data,
+  sections,
   onAccept,
   onRemove,
   onBlock,
@@ -66,7 +72,7 @@ export default function SocialLists({
     const grant = outgoingGrants.find((g) => g.ownerId === friendId);
     if (grant?.status === 'APPROVED') {
       return (
-        <Link to={`/social/notes/${friendId}`} className="text-sm text-violet-400 hover:text-violet-300">
+        <Link to={friendNotesPath(friendId)} className="text-sm text-violet-400 hover:text-violet-300">
           {t('social.notes.read')}
         </Link>
       );
@@ -81,9 +87,9 @@ export default function SocialLists({
 
   return (
     <div className="space-y-6">
-      <Section title={t('social.incoming')} count={data.incoming.length}>
+      <Section title={t('social.incoming')} count={sections.includes('incoming') ? data.incoming.length : 0}>
         {data.incoming.map((r) => (
-          <PersonRow key={r.friendshipId} person={r}>
+          <PersonRow key={r.friendshipId} person={r} subtitle={t('social.wantsToBeFriends')}>
             <button
               type="button"
               onClick={() => void onAccept(r.friendshipId)}
@@ -99,7 +105,7 @@ export default function SocialLists({
         ))}
       </Section>
 
-      <Section title={t('social.outgoing')} count={data.outgoing.length}>
+      <Section title={t('social.outgoing')} count={sections.includes('outgoing') ? data.outgoing.length : 0}>
         {data.outgoing.map((r) => (
           <PersonRow key={r.friendshipId} person={r} subtitle={t('social.waiting')}>
             <button type="button" onClick={() => void onRemove(r.friendshipId)} className={btn}>
@@ -109,13 +115,20 @@ export default function SocialLists({
         ))}
       </Section>
 
-      <Section title={t('social.friends')} count={data.friends.length}>
+      <Section title={t('social.friends')} count={sections.includes('friends') ? data.friends.length : 0}>
         {data.friends.map((f) => (
           <PersonRow
             key={f.friendshipId}
             person={f}
+            to={friendPath(f.userId)}
             subtitle={t('social.since', { date: new Date(f.since).toLocaleDateString(lang) })}
           >
+            <Link
+              to={friendPath(f.userId)}
+              className="rounded-md border border-neutral-700 px-2.5 py-1 text-sm text-neutral-200 hover:border-violet-700 hover:text-white"
+            >
+              {t('social.friend.open')}
+            </Link>
             {notesControl(f.userId)}
             {confirmable(`rm:${f.friendshipId}`, t('social.remove'), t('social.removeConfirm'), () =>
               onRemove(f.friendshipId),
@@ -125,7 +138,7 @@ export default function SocialLists({
         ))}
       </Section>
 
-      <Section title={t('social.blocked')} count={data.blocked.length}>
+      <Section title={t('social.blocked')} count={sections.includes('blocked') ? data.blocked.length : 0}>
         {data.blocked.map((b) => (
           <PersonRow key={b.userId} person={b}>
             <button type="button" onClick={() => void onUnblock(b.userId)} className={btn}>

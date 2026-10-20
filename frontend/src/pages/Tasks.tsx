@@ -109,8 +109,8 @@ export default function Tasks() {
         title={t('ui.myTasks')}
         description={t('ui.manageFilterAndTrackThe')}
         action={
-          <div className="flex items-center gap-4">
-            <Link to="/task-packs" className="text-sm text-violet-400 hover:text-violet-300">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+            <Link to="/task-packs" className="whitespace-nowrap text-sm text-violet-400 hover:text-violet-300">
               {t('packs.openLink')}
             </Link>
             <TaskSortControl

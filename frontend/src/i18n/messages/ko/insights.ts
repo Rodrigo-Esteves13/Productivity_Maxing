@@ -29,7 +29,7 @@ export const insights: Record<string, string> = {
   'focusScatter.axisFocus': "집중도",
   'focusScatter.axisGrade': "성적",
   'focusScatter.grade': "성적 {value}%",
-  'focusScatter.legend': "각 점은 채점된 할 일 하나를 나타냅니다({count}개). 집중도는 마감 전 14일 동안의 세션 평균입니다.",
+  'focusScatter.legend': "각 점은 채점된 할 일 하나예요({count}개). 집중도는 그 할 일의 세션과 마감 전 14일 동안의 과목 세션 평균이에요.",
   'focusEffect.interestNotEnough': "관심도: 관심도를 평가한 과목이 {areas}개 이상이고, 그 과목들의 채점된 할 일이 {needed}개 필요합니다. 현재 {have}개입니다.",
   'focusEffect.interestNoVariation': "관심도: 모든 과목을 똑같이 평가해서 비교할 수 없습니다.",
   'focusEffect.interestInconclusive': "관심도: 성적이 과목에 대한 선호도와 뚜렷하게 연결되지 않습니다(할 일 {count}개).",
@@ -37,4 +37,6 @@ export const insights: Record<string, string> = {
   'focusEffect.interestClearLower': "관심도: 데이터에서는 더 좋아하는 과목의 성적이 더 낮게 나타납니다(관심도 1당 {points}점, 대략 {low}~{high}). 과목마다 난이도가 다르므로 신중하게 해석하세요. 할 일 {count}개를 기준으로 합니다.",
   'focusEffect.interestMissing': "과목 {count}개의 관심도를 더 평가하면 결과가 더 정확해집니다.",
   'widget.missingGrade': "부족한 성적 비중",
+  'ui.projectionProgress': "{needed}개 중 {have}개",
+  'ui.projectionAreaStudyCounts': "학습 시간이 있는 채점된 할 일이 포함돼요. 할 일을 고르지 않고 과목으로 기록한 학습(마감 전 14일)도 포함돼요.",
 };

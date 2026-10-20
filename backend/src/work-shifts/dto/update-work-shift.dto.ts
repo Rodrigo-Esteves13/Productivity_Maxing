@@ -1,4 +1,5 @@
 import {
+  IsEnum,
   IsInt,
   IsOptional,
   IsString,
@@ -10,8 +11,13 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { CommuteMode } from '@prisma/client';
 import { DATE_KEY_PATTERN } from '../../common/date-key.util';
-import { MAX_BUFFER_MINUTES, MAX_LABEL_LENGTH } from '../work-shifts.constants';
+import {
+  MAX_ADDRESS_LENGTH,
+  MAX_BUFFER_MINUTES,
+  MAX_LABEL_LENGTH,
+} from '../work-shifts.constants';
 
 // Todos opcionais: só os campos enviados mudam. Enviar dayOfWeek OU date
 // troca a recorrência (o outro fica a null); enviar os dois é um 400.
@@ -61,4 +67,18 @@ export class UpdateWorkShiftDto {
   @ValidateIf((_, value) => value !== null)
   @IsUUID()
   commitmentId?: string | null;
+
+  // Evento pontual: morada e meio de transporte para o itinerario do dia
+  // (turnos de um local usam a morada do local).
+  // Vazio apaga a morada.
+  @ApiPropertyOptional({ example: 'Rua Exemplo 5, Porto' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(MAX_ADDRESS_LENGTH)
+  address?: string;
+
+  @ApiPropertyOptional({ enum: CommuteMode })
+  @IsOptional()
+  @IsEnum(CommuteMode)
+  commuteMode?: CommuteMode;
 }

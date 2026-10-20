@@ -59,4 +59,7 @@ export const tasks: Record<string, string> = {
   'taskForm.selectType': "Elige el tipo...",
   'taskForm.lockedByArea': "Definido automáticamente por el Área \"{area}\".",
   'taskForm.changeArea': "Cambiar Área",
+  'enum.ACTIVE': "Activo",
+  'enum.SUSPENDED': "Suspendido",
+  'enum.BANNED': "Bloqueado",
 };

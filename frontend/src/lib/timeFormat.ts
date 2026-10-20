@@ -2,6 +2,7 @@
 // dashboard. Antes havia uma cópia de formatMinutes() em cada componente.
 
 import { MINUTES_PER_DAY, MINUTES_PER_HOUR } from './timeConstants';
+import { detectLanguage } from '../i18n/storage';
 
 /** Minutos desde a meia-noite -> "HH:MM". */
 export function formatClock(minutes: number): string {
@@ -27,12 +28,23 @@ export function parseClock(value: string): number | null {
   return minutes >= 0 && minutes <= MINUTES_PER_DAY ? minutes : null;
 }
 
-/** "YYYY-MM-DD" -> "Mon, 5 Oct" (sempre em UTC, sem deslocar o dia). */
+/** "YYYY-MM-DD" -> "Mon, 5 Oct" (sempre em UTC, sem deslocar o dia), na lingua da app. */
 export function formatDayLabel(dateKey: string): string {
-  return new Date(`${dateKey}T00:00:00Z`).toLocaleDateString(undefined, {
+  return new Date(`${dateKey}T00:00:00Z`).toLocaleDateString(detectLanguage(), {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
     timeZone: 'UTC',
   });
+}
+
+// Nome curto do dia na lingua da app (Intl), em vez de "Mon".."Sun" fixos.
+// 7 jan 2024 foi domingo, por isso 7 + dayOfWeek (0=Dom) da o dia certo.
+export function weekdayLabel(dayOfWeek: number, locale: string = detectLanguage()): string {
+  return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(2024, 0, 7 + dayOfWeek));
+}
+
+/** Nome curto do mes na lingua da app ("Sep", "9月", "set."). */
+export function monthLabel(date: Date, locale: string = detectLanguage()): string {
+  return new Intl.DateTimeFormat(locale, { month: 'short' }).format(date);
 }

@@ -21,6 +21,7 @@ import {
   type CodeChangeRequestView,
   type SendRequestResult,
   type SocialOverview,
+  type SocialPendingCounts,
 } from './social.service';
 import {
   BlockUserDto,
@@ -45,6 +46,17 @@ export class SocialController {
   })
   overview(@CurrentUser() user: AuthenticatedUser): Promise<SocialOverview> {
     return this.social.overview(user.id);
+  }
+
+  @Get('pending')
+  @ApiOperation({
+    summary:
+      'How many friend requests, note invitations and notes requests wait for you.',
+  })
+  pending(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<SocialPendingCounts> {
+    return this.social.pendingCounts(user.id);
   }
 
   @Post('friend-code/change-request')

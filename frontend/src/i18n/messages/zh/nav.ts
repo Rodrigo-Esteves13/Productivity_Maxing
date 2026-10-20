@@ -17,6 +17,7 @@ export const nav: Record<string, string> = {
   'nav.sharedWithMe': "与我共享",
   'nav.taskPacks': "任务包",
   'nav.social': "社交",
+  'nav.socialPending': "{count} 项等待你回复",
   'nav.admin': "管理",
   'nav.admin.users': "用户",
   'nav.admin.taskTypes': "任务类型",

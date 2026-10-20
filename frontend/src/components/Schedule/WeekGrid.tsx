@@ -1,21 +1,25 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { useSchedule } from '../../hooks/useSchedule';
 import { useWorkShiftRange } from '../../hooks/useWorkShiftRange';
+import { useScheduleTasks } from '../../hooks/useScheduleTasks';
 import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
 import type { ClassOccurrence, WorkShiftOccurrence } from '../../types/models';
 import { toDateKey } from '../../lib/dateKey';
 import { mergeAgenda } from '../../lib/agenda';
+import { buildDeadlineChips, type DeadlineChip } from '../../lib/monthAgenda';
+import { weekdayLabel } from '../../lib/timeFormat';
 import { todayUtcAnchored } from '../../lib/weekDates';
 import WeekDayCell from './WeekDayCell';
 import AgendaLegend from './AgendaLegend';
 import { useI18n } from '../../i18n/useI18n';
 
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const NO_DEADLINES: DeadlineChip[] = [];
 
-function formatRangeLabel(start: Date, end: Date): string {
+// Na lingua da app, nao na do browser (antes dava "Oct 26" com a app em PT).
+function formatRangeLabel(start: Date, end: Date, locale: string): string {
   const fmt = (d: Date) =>
-    d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    d.toLocaleDateString(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' });
   return `${fmt(start)} - ${fmt(end)}`;
 }
 
@@ -24,10 +28,14 @@ interface WeekGridProps {
   // useSchedule é dono do seu próprio fetch, só precisa de um sinal
   // externo para saber que vale a pena repetir o pedido.
   refreshKey: number;
+  // Dia cuja semana abre primeiro (ex: o dia clicado na vista mensal).
+  initialDate?: Date;
+  // Botao Semana/Mes, desenhado ao lado da navegacao.
+  viewToggle?: ReactNode;
 }
 
-export default function WeekGrid({ refreshKey }: WeekGridProps) {
-  const { t } = useI18n();
+export default function WeekGrid({ refreshKey, initialDate, viewToggle }: WeekGridProps) {
+  const { t, lang } = useI18n();
   const {
     weekStart,
     weekEnd,
@@ -38,7 +46,7 @@ export default function WeekGrid({ refreshKey }: WeekGridProps) {
     goToPreviousWeek,
     goToNextWeek,
     goToCurrentWeek,
-  } = useSchedule();
+  } = useSchedule(initialDate);
 
   useEffect(() => {
     if (refreshKey > 0) void refetch();
@@ -50,6 +58,11 @@ export default function WeekGrid({ refreshKey }: WeekGridProps) {
     toDateKey(weekEnd),
     refreshKey,
   );
+  // Prazos sao best-effort, como os turnos: se falharem a grelha de aulas
+  // continua a aparecer (a vista mensal e que mostra o erro).
+  const { tasks } = useScheduleTasks();
+  const deadlinesByDay = useMemo(() => buildDeadlineChips(tasks), [tasks]);
+
   const shiftsByDay = new Map<string, WorkShiftOccurrence[]>();
   for (const shift of shiftOccurrences) {
     const list = shiftsByDay.get(shift.date) ?? [];
@@ -78,9 +91,10 @@ export default function WeekGrid({ refreshKey }: WeekGridProps) {
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div>
           <h2 className="text-lg font-semibold text-white">{t('ui.schedule')}</h2>
-          <p className="text-sm text-neutral-400">{formatRangeLabel(weekStart, weekEnd)}</p>
+          <p className="text-sm text-neutral-400">{formatRangeLabel(weekStart, weekEnd, lang)}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {viewToggle}
           <button
             onClick={goToPreviousWeek}
             className="text-sm text-neutral-400 hover:text-white px-2 py-1 rounded-lg hover:bg-neutral-800"
@@ -109,14 +123,15 @@ export default function WeekGrid({ refreshKey }: WeekGridProps) {
         // 1 coluna no telemovel, 2 em ecras medios e 7 so em ecras largos:
         // 7 colunas em 640px deixavam cada dia com ~80px e o texto cortado.
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
-          {days.map((date, i) => {
+          {days.map((date) => {
             const key = toDateKey(date);
             return (
               <WeekDayCell
                 key={key}
-                label={DAY_LABELS[i]}
+                label={weekdayLabel(date.getUTCDay(), lang)}
                 dayOfMonth={date.getUTCDate()}
                 isToday={key === todayKey}
+                deadlines={deadlinesByDay.get(key) ?? NO_DEADLINES}
                 items={mergeAgenda(occurrencesByDay.get(key) ?? [], shiftsByDay.get(key) ?? [])}
               />
             );

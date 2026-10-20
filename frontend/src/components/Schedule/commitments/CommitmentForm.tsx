@@ -1,31 +1,20 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import Input from '../../UI/Input';
-import Select from '../../UI/Select';
 import ActionButton from '../../UI/ActionButton';
 import ErrorState from '../../UI/ErrorState';
 import ToggleChip from '../../UI/ToggleChip';
 import { WEEKDAYS } from './shiftText';
-import { estimateCommitmentCommute } from '../../../api/commitmentsService';
+import AddressTravelFields from './AddressTravelFields';
 import type { CommitmentInput } from '../../../api/commitmentsService';
-import { getHttpStatus } from '../../../lib/httpError';
 import { useI18n } from '../../../i18n/useI18n';
 import type { Commitment, CommuteMode } from '../../../types/models';
 
 const MAX_NAME_LENGTH = 80;
-const MAX_ADDRESS_LENGTH = 300;
 const MAX_COMMUTE_MINUTES = 240;
 const DEFAULT_COMMUTE = '20';
-const HTTP_SERVICE_UNAVAILABLE = 503;
 // Tem de haver pelo menos um dia de trabalho possivel (igual ao backend).
 const MAX_DAYS_OFF = 6;
-
-const MODES: { value: CommuteMode; key: string }[] = [
-  { value: 'WALKING', key: 'commitment.mode.walking' },
-  { value: 'TRANSIT', key: 'commitment.mode.transit' },
-  { value: 'BICYCLING', key: 'commitment.mode.bicycling' },
-  { value: 'DRIVING', key: 'commitment.mode.driving' },
-];
 
 // Tudo o que o formulario devolve, no formato que a API aceita.
 export type CommitmentFormValues = Required<CommitmentInput>;
@@ -49,36 +38,9 @@ export default function CommitmentForm({ initial, submitLabel, isSaving, onSubmi
   );
   const [daysOff, setDaysOff] = useState<number[]>(initial?.daysOff ?? []);
   const [formError, setFormError] = useState('');
-  const [calcMessage, setCalcMessage] = useState('');
-  const [isCalculating, setIsCalculating] = useState(false);
 
   const toggleDayOff = (value: number) =>
     setDaysOff((prev) => (prev.includes(value) ? prev.filter((d) => d !== value) : [...prev, value]));
-
-  // Trajeto casa -> morada do local. So preenche o campo de minutos; a
-  // morada e o modo ficam guardados quando se grava o formulario.
-  const handleCalculate = async () => {
-    setFormError('');
-    setCalcMessage('');
-    if (!address.trim()) {
-      setFormError(t('commitment.form.needAddress'));
-      return;
-    }
-    setIsCalculating(true);
-    try {
-      const { commuteMinutes } = await estimateCommitmentCommute(address.trim(), mode);
-      setCommute(String(commuteMinutes));
-      setCalcMessage(t('commitment.form.calculated', { minutes: commuteMinutes }));
-    } catch (caught) {
-      setFormError(
-        getHttpStatus(caught) === HTTP_SERVICE_UNAVAILABLE
-          ? t('commitment.form.notConfigured')
-          : t('commitment.form.calculateFailed'),
-      );
-    } finally {
-      setIsCalculating(false);
-    }
-  };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -116,36 +78,13 @@ export default function CommitmentForm({ initial, submitLabel, isSaving, onSubmi
         placeholder={t('commitment.form.namePlaceholder')}
         onChange={(e) => setName(e.target.value)}
       />
-      <Input
-        label={t('commitment.form.address')}
-        value={address}
-        maxLength={MAX_ADDRESS_LENGTH}
-        placeholder={t('commitment.form.addressPlaceholder')}
-        onChange={(e) => setAddress(e.target.value)}
+      <AddressTravelFields
+        address={address}
+        onAddressChange={setAddress}
+        mode={mode}
+        onModeChange={setMode}
+        onEstimated={(minutes) => setCommute(String(minutes))}
       />
-      <Select
-        label={t('commitment.form.mode')}
-        value={mode}
-        onChange={(e) => setMode(e.target.value as CommuteMode)}
-        className="max-w-[14rem]"
-      >
-        {MODES.map((m) => (
-          <option key={m.value} value={m.value}>
-            {t(m.key)}
-          </option>
-        ))}
-      </Select>
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={() => void handleCalculate()}
-          disabled={isCalculating}
-          className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
-        >
-          {isCalculating ? t('commitment.form.calculating') : t('commitment.form.calculate')}
-        </button>
-        <p className="text-xs text-neutral-500">{t('commitment.form.calculateHelp')}</p>
-      </div>
       <Input
         label={t('commitment.form.travel')}
         type="number"
@@ -154,7 +93,6 @@ export default function CommitmentForm({ initial, submitLabel, isSaving, onSubmi
         value={commute}
         onChange={(e) => setCommute(e.target.value)}
       />
-      {calcMessage && !formError && <p className="text-sm text-emerald-400">{calcMessage}</p>}
       <fieldset>
         <legend className="block text-sm font-medium text-neutral-300 mb-1">{t('commitment.form.daysOff')}</legend>
         <div className="flex flex-wrap gap-1.5">

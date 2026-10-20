@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { friendPath } from '../../lib/appLinks';
 import type { UseEntryShareResult } from '../../hooks/useEntryShare';
 import type { ChangeProposal, NotebookShareVisibility, ShareAccessRole } from '../../types/models';
 import { LinkIcon, CheckIcon, XIcon } from '../UI/Icons';
@@ -303,9 +305,19 @@ export default function NotebookEntryShare({ share, currentTitle, currentText }:
               {requests.map((req) => (
                 <li key={req.id} className="flex items-center justify-between gap-2 text-xs">
                   <div className="min-w-0">
-                    <p className="truncate text-neutral-200">
-                      {req.requestingUser.name ?? (req.requestingUser.email || t('social.anonymous'))}
-                    </p>
+                    {/* Convidados sao amigos: o nome leva a pagina dessa pessoa. */}
+                    {req.invitedByOwner ? (
+                      <Link
+                        to={friendPath(req.requestingUser.id)}
+                        className="block truncate text-neutral-200 hover:text-violet-300 hover:underline"
+                      >
+                        {req.requestingUser.name ?? t('social.anonymous')}
+                      </Link>
+                    ) : (
+                      <p className="truncate text-neutral-200">
+                        {req.requestingUser.name ?? (req.requestingUser.email || t('social.anonymous'))}
+                      </p>
+                    )}
                     {req.requestingUser.email && (
                       <p className="truncate text-neutral-500">{req.requestingUser.email}</p>
                     )}

@@ -16,4 +16,10 @@ export const footer: Record<string, string> = {
   'footer.madeBy': "Rodrigo가 {heart}와 엄청난 양의 커피로 만들었습니다",
   'footer.tagline': "할 일을 관리하고 마감을 해내며 노력의 결실을 확인하세요.",
   'footer.star': "GitHub에서 스타 누르기",
+  'footer.study': "학습",
+  'footer.socialGroup': "소셜 및 공유",
+  'footer.help': "도움말",
+  'footer.getStarted': "시작하기",
+  'footer.updated': "{date} 업데이트",
+  'footer.language': "언어",
 };

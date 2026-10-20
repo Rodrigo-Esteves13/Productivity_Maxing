@@ -29,7 +29,7 @@ export const insights: Record<string, string> = {
   'focusScatter.axisFocus': "Foco",
   'focusScatter.axisGrade': "Nota",
   'focusScatter.grade': "Nota {value}%",
-  'focusScatter.legend': "Cada punto es una tarea evaluada ({count}). El foco es la media de las sesiones de los 14 dias antes del plazo.",
+  'focusScatter.legend': "Cada punto es una tarea evaluada ({count}). El foco es la media de sus sesiones y de las sesiones de la asignatura en los 14 días antes del plazo.",
   'focusEffect.interestNotEnough': "Interes: necesita {needed} tareas evaluadas en al menos {areas} asignaturas donde puntuaste el interes. Tienes {have}.",
   'focusEffect.interestNoVariation': "Interes: diste el mismo valor a todas las asignaturas, asi que no hay nada que comparar.",
   'focusEffect.interestInconclusive': "Interes: tus notas no siguen claramente cuanto te gusta cada asignatura ({count} tareas).",
@@ -37,4 +37,6 @@ export const insights: Record<string, string> = {
   'focusEffect.interestClearLower': "Interes: tus datos muestran notas mas bajas en las asignaturas que mas te gustan ({points} puntos de nota por punto de interes, probablemente {low} a {high}). Las asignaturas tienen dificultades distintas, interpreta esto con cuidado. Basado en {count} tareas.",
   'focusEffect.interestMissing': "Puntua tu interes en {count} asignaturas mas para afinar esto.",
   'widget.missingGrade': "Peso de nota que falta",
+  'ui.projectionProgress': "{have} de {needed}",
+  'ui.projectionAreaStudyCounts': "Cuentan las tareas evaluadas con tiempo de estudio, incluido el estudio registrado en la asignatura sin elegir la tarea (en los 14 días antes del plazo).",
 };

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { TrendingUpIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
+import ProgressBar from '../UI/ProgressBar';
 import BackfillStudyTime from './BackfillStudyTime';
 import { useGradeProjection } from '../../hooks/useGradeProjection';
 import { formatDayLabel, formatDuration } from '../../lib/timeFormat';
@@ -118,7 +119,20 @@ export default function GradeProjectionCard() {
           </p>
         </>
       ) : (
-        <p className="text-sm text-neutral-400">{noProjectionMessage(projection)}</p>
+        <>
+          <p className="text-sm text-neutral-400">{noProjectionMessage(projection)}</p>
+          {/* Quanto falta, em vez de so "ainda nao": cada task avaliada com
+              estudo registado aproxima a primeira previsao. */}
+          {projection.status === 'not_enough_data' && (
+            <div className="mt-3 space-y-1.5">
+              <ProgressBar
+                percent={(projection.trainingSamples / projection.minSamplesNeeded) * 100}
+                label={t('ui.projectionProgress', { have: projection.trainingSamples, needed: projection.minSamplesNeeded })}
+              />
+              <p className="text-xs text-neutral-500">{t('ui.projectionAreaStudyCounts')}</p>
+            </div>
+          )}
+        </>
       )}
 
       {shouldAskForHistory && (

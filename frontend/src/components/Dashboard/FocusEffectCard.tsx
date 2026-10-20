@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUpIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
+import ProgressBar from '../UI/ProgressBar';
 import { useFocusEffect } from '../../hooks/useFocusEffect';
 import { useI18n } from '../../i18n/useI18n';
 import type { FactorEffect, FocusEffect, FocusEffectStatus } from '../../types/models';
@@ -85,6 +86,12 @@ export default function FocusEffectCard() {
             have: focus.sampleSize,
           })}
         </p>
+        {focus.status === 'not_enough_data' && (
+          <ProgressBar
+            percent={(focus.sampleSize / focus.minSamplesNeeded) * 100}
+            label={t('ui.projectionProgress', { have: focus.sampleSize, needed: focus.minSamplesNeeded })}
+          />
+        )}
         <p>
           {factorMessage(interest, INTEREST_KEYS, t, {
             needed: interest.minSamplesNeeded,

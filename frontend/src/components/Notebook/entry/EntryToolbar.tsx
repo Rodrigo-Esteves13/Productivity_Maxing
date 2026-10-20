@@ -1,5 +1,5 @@
 import type { NotebookEntryType } from '../../../types/models';
-import { CheckIcon, PencilIcon, TrashIcon } from '../../UI/Icons';
+import { CheckIcon, DownloadIcon, PencilIcon, TrashIcon } from '../../UI/Icons';
 import Button from '../../UI/Button';
 import IconButton from '../../UI/IconButton';
 import SegmentedControl from '../../UI/SegmentedControl';
@@ -25,6 +25,7 @@ interface EntryToolbarProps {
   onDone: () => void;
   onRetry: () => void;
   onRequestDelete: () => void;
+  onExport?: () => void;
 }
 
 function AutosaveIndicator({
@@ -86,6 +87,7 @@ export default function EntryToolbar({
   onDone,
   onRetry,
   onRequestDelete,
+  onExport,
 }: EntryToolbarProps) {
   const { t, lang } = useI18n();
   const typeOptions = useEntryTypeOptions();
@@ -151,15 +153,22 @@ export default function EntryToolbar({
             </Button>
           </>
         ) : (
-          <Button
-            type="button"
-            variant="secondary"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium"
-            onClick={onRequestEdit}
-          >
-            <PencilIcon className="h-3.5 w-3.5" />
-            {t('notebook.edit')}
-          </Button>
+          <>
+            {onExport && (
+              <IconButton label={t('notebook.export.entry')} className="hover:bg-neutral-800" onClick={onExport}>
+                <DownloadIcon className="h-4 w-4" />
+              </IconButton>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium"
+              onClick={onRequestEdit}
+            >
+              <PencilIcon className="h-3.5 w-3.5" />
+              {t('notebook.edit')}
+            </Button>
+          </>
         )}
       </div>
     </div>

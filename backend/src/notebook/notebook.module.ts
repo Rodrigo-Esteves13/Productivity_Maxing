@@ -6,6 +6,8 @@ import { NotebookInviteService } from './notebook-invite.service';
 import { NotebookInviteController } from './notebook-invite.controller';
 import { NotebookViewGrantService } from './notebook-view-grant.service';
 import { NotebookViewGrantController } from './notebook-view-grant.controller';
+import { NotebookSocialHubService } from './notebook-social-hub.service';
+import { NotebookSocialHubController } from './notebook-social-hub.controller';
 import { SocialModule } from '../social/social.module';
 import { NotebookController } from './notebook.controller';
 import { NotebookShareController } from './notebook-share.controller';
@@ -20,6 +22,7 @@ import { PushModule } from '../push/push.module';
     NotebookShareController,
     NotebookViewGrantController,
     NotebookInviteController,
+    NotebookSocialHubController,
   ],
   providers: [
     NotebookService,
@@ -27,6 +30,7 @@ import { PushModule } from '../push/push.module';
     NotebookSharedWithMeService,
     NotebookViewGrantService,
     NotebookInviteService,
+    NotebookSocialHubService,
   ],
 })
 export class NotebookModule {}

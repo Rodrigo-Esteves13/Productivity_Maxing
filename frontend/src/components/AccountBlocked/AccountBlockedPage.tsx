@@ -27,7 +27,7 @@ type LoadState =
   | { status: 'error' }
   | { status: 'loaded'; data: AccountStatusInfo };
 
-// Mesmo intervalo do poll em AccountBlockedGate.tsx - aqui é o lado "já
+// Mesmo intervalo do poll em AccountStatusWatcher.tsx - aqui é o lado "já
 // estou no ecrã de bloqueio", para uma appeal resolvida (ou o
 // suspend/ban ser levantado diretamente) aparecer sozinha, sem precisar
 // de refresh manual. Também é o que faz a contagem decrescente abaixo

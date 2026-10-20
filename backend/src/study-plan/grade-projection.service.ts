@@ -1,15 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  hasStudyTimeWhere,
-  resolveFocusedStudyMinutes,
-} from '../common/session-minutes.util';
+import { resolveFocusedStudyMinutes } from '../common/session-minutes.util';
 import { toDateKey } from '../common/date-key.util';
 import { parseGradeScale } from '../academic-programs/grade-average.util';
 import { ESTIMABLE_TASK_SELECT, StudyPlanService } from './study-plan.service';
 import {
   MIN_SAMPLES_OVERALL,
   chooseModel,
+  cleanSamples,
   fitGradeModel,
   fractionToGrade,
   gradeToFraction,
@@ -18,6 +16,10 @@ import {
   projectFraction,
 } from './grade-projection.util';
 import type { GradeSample, ModelOutcome } from './grade-projection.util';
+import {
+  loadGradedHistory,
+  type GradedTaskHistory,
+} from './graded-history.loader';
 import type {
   BackfillCandidate,
   GradeProjectionResult,
@@ -51,24 +53,8 @@ export class GradeProjectionService {
    * grade-projection.util.ts); caso contrário diz porquê.
    */
   async project(userId: string): Promise<GradeProjectionResult> {
-    const [completed, pending, candidates] = await Promise.all([
-      this.prisma.task.findMany({
-        where: {
-          userId,
-          realGrade: { not: null },
-          AND: [hasStudyTimeWhere()],
-        },
-        select: {
-          areaId: true,
-          realGrade: true,
-          recalledStudyMinutes: true,
-          period: PERIOD_SCALE_SELECT,
-          studySessions: {
-            where: { endedAt: { not: null } },
-            select: { startedAt: true, endedAt: true, focusRating: true },
-          },
-        },
-      }),
+    const [history, pending] = await Promise.all([
+      loadGradedHistory(this.prisma, userId),
       this.prisma.task.findMany({
         where: {
           userId,
@@ -85,37 +71,25 @@ export class GradeProjectionService {
         },
         orderBy: { date: 'asc' },
       }),
-      this.prisma.task.findMany({
-        where: {
-          userId,
-          realGrade: { not: null },
-          NOT: hasStudyTimeWhere(),
-        },
-        select: {
-          id: true,
-          title: true,
-          date: true,
-          realGrade: true,
-          area: { select: { name: true, colorHex: true } },
-          period: PERIOD_SCALE_SELECT,
-        },
-        orderBy: { date: 'desc' },
-        take: MAX_BACKFILL_CANDIDATES,
-      }),
     ]);
 
+    // Estudo de cada task avaliada: sessoes dela + sessoes da cadeira antes
+    // do prazo (ver session-attribution.util.ts), ou o tempo lembrado.
     const overallSamples: GradeSample[] = [];
     const samplesByArea = new Map<string, GradeSample[]>();
-    for (const task of completed) {
-      if (task.realGrade === null) continue;
-      const scale = parseGradeScale(
-        task.period?.program.gradeScale ?? DEFAULT_SCALE_TEXT,
+    const withoutStudy: GradedTaskHistory[] = [];
+    for (const task of history) {
+      const minutes = resolveFocusedStudyMinutes(
+        task.sessions,
+        task.recalledStudyMinutes,
       );
+      if (minutes <= 0) {
+        withoutStudy.push(task);
+        continue;
+      }
+      const scale = parseGradeScale(task.gradeScale ?? DEFAULT_SCALE_TEXT);
       const sample: GradeSample = {
-        minutes: resolveFocusedStudyMinutes(
-          task.studySessions,
-          task.recalledStudyMinutes,
-        ),
+        minutes,
         fraction: gradeToFraction(task.realGrade, scale),
       };
       overallSamples.push(sample);
@@ -125,9 +99,13 @@ export class GradeProjectionService {
     }
 
     const overallOutcome = fitGradeModel(overallSamples, MIN_SAMPLES_OVERALL);
-    const trainingSamples = overallSamples.length;
+    // So as que o modelo usa de facto: "tens 7" com 2 descartadas (menos de
+    // 10 minutos, sessao esquecida ligada) dizia que ja chegava sem chegar.
+    const trainingSamples = cleanSamples(overallSamples).length;
 
-    const backfillCandidates = this.toBackfillCandidates(candidates);
+    const backfillCandidates = this.toBackfillCandidates(
+      withoutStudy.slice(0, MAX_BACKFILL_CANDIDATES),
+    );
 
     if (pending.length === 0) {
       return this.result(
@@ -244,33 +222,16 @@ export class GradeProjectionService {
       : 'not_enough_data';
   }
 
-  private toBackfillCandidates(
-    rows: {
-      id: string;
-      title: string;
-      date: Date;
-      realGrade: number | null;
-      area: { name: string; colorHex: string };
-      period: { program: { gradeScale: string } } | null;
-    }[],
-  ): BackfillCandidate[] {
-    return rows.flatMap((row) => {
-      if (row.realGrade === null) return [];
-      const scale = parseGradeScale(
-        row.period?.program.gradeScale ?? DEFAULT_SCALE_TEXT,
-      );
-      return [
-        {
-          taskId: row.id,
-          title: row.title,
-          areaName: row.area.name,
-          areaColorHex: row.area.colorHex,
-          date: toDateKey(row.date),
-          grade: row.realGrade,
-          gradeMax: scale.max,
-        },
-      ];
-    });
+  private toBackfillCandidates(rows: GradedTaskHistory[]): BackfillCandidate[] {
+    return rows.map((row) => ({
+      taskId: row.id,
+      title: row.title,
+      areaName: row.areaName,
+      areaColorHex: row.areaColorHex,
+      date: toDateKey(row.date),
+      grade: row.realGrade,
+      gradeMax: parseGradeScale(row.gradeScale ?? DEFAULT_SCALE_TEXT).max,
+    }));
   }
 
   private result(

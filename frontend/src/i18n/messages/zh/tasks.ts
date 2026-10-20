@@ -59,4 +59,7 @@ export const tasks: Record<string, string> = {
   'taskForm.selectType': "选择类型...",
   'taskForm.lockedByArea': "由科目“{area}”自动设定。",
   'taskForm.changeArea': "更换科目",
+  'enum.ACTIVE': "正常",
+  'enum.SUSPENDED': "已暂停",
+  'enum.BANNED': "已封禁",
 };

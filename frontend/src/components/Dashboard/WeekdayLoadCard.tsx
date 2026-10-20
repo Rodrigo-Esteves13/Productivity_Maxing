@@ -16,8 +16,8 @@ const MIN_TASKS_TO_SHOW = 5;
 // Which weekdays deadlines tend to pile up on. Pending and completed are
 // stacked so a busy-but-already-done day doesn't look like a problem.
 export default function WeekdayLoadCard({ tasks }: WeekdayLoadCardProps) {
-  const { t } = useI18n();
-  const buckets = useMemo(() => computeWeekdayDistribution(tasks), [tasks]);
+  const { t, lang } = useI18n();
+  const buckets = useMemo(() => computeWeekdayDistribution(tasks, lang), [tasks, lang]);
   const total = buckets.reduce((s, b) => s + b.total, 0);
   if (total < MIN_TASKS_TO_SHOW) return null;
 

@@ -10,6 +10,11 @@ import { SocialService, type CodeChangeRequestView } from './social.service';
 const MAX_REQUESTS_PER_30_DAYS = 3;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
+// Codigos estaveis para o frontend mostrar a mensagem certa (sem depender do
+// texto da mensagem).
+export const CODE_REQUEST_PENDING = 'CODE_REQUEST_PENDING';
+export const CODE_REQUEST_LIMIT = 'CODE_REQUEST_LIMIT';
+
 export interface FriendCodeRequestAdminRow {
   id: string;
   reason: string;
@@ -33,9 +38,10 @@ export class FriendCodeRequestsService {
       select: { id: true },
     });
     if (pending) {
-      throw new ConflictException(
-        'You already have a request waiting for an administrator.',
-      );
+      throw new ConflictException({
+        code: CODE_REQUEST_PENDING,
+        message: 'You already have a request waiting for an administrator.',
+      });
     }
     const recent = await this.prisma.friendCodeChangeRequest.count({
       where: {
@@ -44,9 +50,10 @@ export class FriendCodeRequestsService {
       },
     });
     if (recent >= MAX_REQUESTS_PER_30_DAYS) {
-      throw new ConflictException(
-        'You made too many requests recently. Try again later.',
-      );
+      throw new ConflictException({
+        code: CODE_REQUEST_LIMIT,
+        message: 'You made too many requests recently. Try again later.',
+      });
     }
     const row = await this.prisma.friendCodeChangeRequest.create({
       data: { userId, reason },

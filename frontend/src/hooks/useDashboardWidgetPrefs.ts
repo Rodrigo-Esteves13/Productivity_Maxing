@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 export type DashboardWidgetKey =
+  | 'today'
   | 'programsOverview'
   | 'periodProgress'
   | 'overloadAlert'
@@ -28,6 +29,7 @@ export type DashboardWidgetKey =
 
 // Chaves i18n (traduzidas com t() em DashboardWidgetToggles).
 export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
+  today: 'widget.today',
   programsOverview: 'widget.programsOverview',
   periodProgress: 'widget.periodProgress',
   overloadAlert: 'widget.overloadAlert',
@@ -60,6 +62,7 @@ const STORAGE_KEY = 'dashboard-widget-prefs';
 // not really optional. Everything else, including the credit simulator,
 // can be hidden.
 const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
+  today: true,
   programsOverview: true,
   periodProgress: true,
   overloadAlert: true,

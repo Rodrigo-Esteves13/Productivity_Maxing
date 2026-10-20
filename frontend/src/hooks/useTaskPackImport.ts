@@ -61,6 +61,12 @@ export function useTaskPackImport(code: string | undefined) {
     });
   }, []);
 
+  const selectAll = useCallback(() => {
+    setSelected(new Set(preview?.items.map((i) => i.id) ?? []));
+  }, [preview]);
+
+  const selectNone = useCallback(() => setSelected(new Set()), []);
+
   const chooseArea = useCallback((itemId: string, areaId: string) => {
     setAreaChoice((prev) => ({ ...prev, [itemId]: areaId }));
   }, []);
@@ -101,6 +107,8 @@ export function useTaskPackImport(code: string | undefined) {
     importError,
     missingArea,
     toggle,
+    selectAll,
+    selectNone,
     chooseArea,
     runImport,
   };

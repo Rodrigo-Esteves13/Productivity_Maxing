@@ -39,6 +39,8 @@ interface NotebookEntryEditorProps {
   onDeletePhoto: (photoId: string) => Promise<void>;
   onUploadAttachment: (file: File) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
+  // Descarrega a entrada (como esta gravada) em Markdown. So em leitura.
+  onExport?: () => void;
 }
 
 // Wrapper fino: só gere leitura vs edição. Abre sempre em leitura (medo de
@@ -97,6 +99,7 @@ function NotebookEntryEditorForm({
   onDeletePhoto,
   onUploadAttachment,
   onDeleteAttachment,
+  onExport,
 }: NotebookEntryEditorFormProps) {
   const draft = useEntryDraft(entry);
   const canvas = useDrawingCanvas(entry.drawingStrokes ?? []);
@@ -204,6 +207,7 @@ function NotebookEntryEditorForm({
             onDone={() => void handleDone()}
             onRetry={() => void autosave.flush()}
             onRequestDelete={deletion.request}
+            onExport={onExport}
           />
         }
       >

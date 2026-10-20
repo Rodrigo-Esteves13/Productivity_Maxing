@@ -8,9 +8,10 @@ import { getApiMessage } from '../../lib/httpError';
 import { editSharedEntry } from '../../api/notebookService';
 import CaseTransformBar from './CaseTransformBar';
 import EntrySectionHeader from './entry/EntrySectionHeader';
+import NotesCounter from './entry/NotesCounter';
+import { MAX_TEXT_CONTENT_LENGTH } from './entry/notebookEntryConfig';
 
 const MAX_TITLE_LENGTH = 200;
-const MAX_TEXT_LENGTH = 50000;
 const MAX_NOTE_LENGTH = 300;
 
 interface SharedEntryEditFormProps {
@@ -82,11 +83,12 @@ export default function SharedEntryEditForm({
           id="shared-edit-notes"
           ref={textareaRef}
           value={text}
-          maxLength={MAX_TEXT_LENGTH}
+          maxLength={MAX_TEXT_CONTENT_LENGTH}
           rows={10}
           onChange={(e) => setText(e.target.value)}
           className="notebook-ruled w-full resize-y rounded-lg border border-neutral-800 bg-neutral-950/50 p-3 font-serif text-base text-neutral-100 placeholder-neutral-700 focus:border-violet-500 focus:outline-none"
         />
+        <NotesCounter text={text} />
       </section>
 
       {isProposal && (

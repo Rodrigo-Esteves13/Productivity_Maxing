@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom';
 import { useI18n } from '../../i18n/useI18n';
+import CountBadge from '../UI/CountBadge';
+import { socialTabPath } from '../../lib/appLinks';
 
 interface MobileMenuProps {
   currentPath: string;
   isAdmin: boolean;
+  socialPending: number;
   onNavigate: () => void;
 }
 
@@ -12,7 +15,7 @@ interface MobileMenuProps {
 // alternativa nenhuma) e mostrava sempre Areas/Users, o que fazia a
 // barra transbordar horizontalmente. Isto junta tudo num único painel
 // que abre por baixo da navbar.
-export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileMenuProps) {
+export default function MobileMenu({ currentPath, isAdmin, socialPending, onNavigate }: MobileMenuProps) {
   const { t } = useI18n();
   const getLinkClass = (path: string) => {
     const base = 'block px-3 py-2 rounded-md text-sm font-medium transition-colors';
@@ -48,8 +51,13 @@ export default function MobileMenu({ currentPath, isAdmin, onNavigate }: MobileM
       <Link to="/areas" onClick={onNavigate} className={getLinkClass('/areas')}>
         {t('nav.areas')}
       </Link>
-      <Link to="/social" onClick={onNavigate} className={getLinkClass('/social')}>
+      <Link
+        to={socialPending > 0 ? socialTabPath('requests') : '/social'}
+        onClick={onNavigate}
+        className={`${getLinkClass('/social')} flex items-center gap-2`}
+      >
         {t('nav.social')}
+        <CountBadge count={socialPending} label={t('nav.socialPending', { count: socialPending })} />
       </Link>
       <Link to="/profile" onClick={onNavigate} className={getLinkClass('/profile')}>
         {t('nav.profile')}

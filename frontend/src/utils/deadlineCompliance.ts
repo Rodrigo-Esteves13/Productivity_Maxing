@@ -1,11 +1,12 @@
 import type { Task } from '../types/models';
 import { toLocalDayKey } from './profileStats';
 import { MS_PER_DAY } from '../lib/timeConstants';
+import { monthLabel } from '../lib/timeFormat';
 
 
 export interface MonthCompliance {
   monthKey: string; // "YYYY-MM", local time
-  label: string; // "Sep"
+  label: string; // "Sep", in the app language
   onTime: number;
   late: number;
   total: number;
@@ -54,17 +55,20 @@ function monthKeyOf(date: Date): string {
 // Only tasks with a real completedAt count. Tasks completed before that
 // column existed have none, and using their deadline as a stand-in would
 // mark every one of them "on time" and inflate the rate.
+export const DEADLINE_COMPLIANCE_MONTHS = 6;
+
 export function computeDeadlineCompliance(
   tasks: Task[],
-  monthsBack = 6,
+  monthsBack = DEADLINE_COMPLIANCE_MONTHS,
   now: Date = new Date(),
+  locale?: string,
 ): DeadlineCompliance {
   const buckets = new Map<string, MonthCompliance>();
   for (let i = monthsBack - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     buckets.set(monthKeyOf(d), {
       monthKey: monthKeyOf(d),
-      label: d.toLocaleDateString('en-US', { month: 'short' }),
+      label: monthLabel(d, locale),
       onTime: 0,
       late: 0,
       total: 0,

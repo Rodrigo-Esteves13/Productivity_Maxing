@@ -4,9 +4,9 @@ import { COLOR_ID_BY_KIND } from './schedule-sync.constants';
 import type {
   DesiredEvent,
   ExistingSyncedEvent,
-  ScheduleEventKind,
   SyncDiff,
 } from './schedule-sync.types';
+import type { ItineraryLeg } from '../schedule/itinerary.builder';
 
 // Lógica pura do sync: sem Prisma, sem rede, sem relógio. O
 // ScheduleSyncService carrega os dados e executa o diff contra a Google.
@@ -42,14 +42,22 @@ export interface SyncStudyInput {
   isOvertime: boolean;
 }
 
+// Uma viagem do itinerario do dia (ItineraryService), ja decidida: casa ->
+// sitio, sitio -> casa ou direta entre dois sitios.
+export interface SyncTravelInput {
+  date: string;
+  leg: ItineraryLeg;
+}
+
 export interface BuildInput {
   classes: SyncClassInput[];
   shifts: SyncShiftInput[];
   study: SyncStudyInput[];
-  // Deslocação casa-campus (um sentido). 0/null = sem eventos de viagem
-  // para as aulas.
-  commuteMinutes: number | null;
+  travel: SyncTravelInput[];
 }
+
+const LATE_TRAVEL_DESCRIPTION =
+  'This trip does not fit before the next start: you may arrive late.';
 
 function hashOf(parts: (string | number | null)[]): string {
   return createHash('sha256').update(JSON.stringify(parts)).digest('hex');
@@ -85,45 +93,8 @@ function pushIfValid(target: DesiredEvent[], event: DesiredEvent | null): void {
   if (event) target.push(event);
 }
 
-// Uma viagem antes e outra depois de um bloco. Partilhado por aulas (1º e
-// último do dia) e turnos (cada um, com o seu buffer).
-function travelAround(
-  keyPrefix: string,
-  date: string,
-  blockStart: number,
-  blockEnd: number,
-  minutes: number,
-  labels: { to: string; from: string },
-): DesiredEvent[] {
-  if (minutes <= 0) return [];
-  const events: DesiredEvent[] = [];
-  const base = {
-    kind: 'travel' as ScheduleEventKind,
-    date,
-    description: null,
-    location: null,
-  };
-  pushIfValid(
-    events,
-    makeEvent({
-      ...base,
-      sourceKey: `${keyPrefix}-to`,
-      title: labels.to,
-      startMinutes: blockStart - minutes,
-      endMinutes: blockStart,
-    }),
-  );
-  pushIfValid(
-    events,
-    makeEvent({
-      ...base,
-      sourceKey: `${keyPrefix}-from`,
-      title: labels.from,
-      startMinutes: blockEnd,
-      endMinutes: blockEnd + minutes,
-    }),
-  );
-  return events;
+function travelTitle(leg: ItineraryLeg): string {
+  return leg.kind === 'to_home' ? 'Travel home' : `Travel to ${leg.toLabel}`;
 }
 
 export function buildDesiredEvents(input: BuildInput): DesiredEvent[] {
@@ -145,33 +116,6 @@ export function buildDesiredEvents(input: BuildInput): DesiredEvent[] {
     );
   }
 
-  // Viagem das aulas: só antes da primeira e depois da última de cada dia.
-  const classesByDate = new Map<string, SyncClassInput[]>();
-  for (const c of input.classes) {
-    const list = classesByDate.get(c.date) ?? [];
-    list.push(c);
-    classesByDate.set(c.date, list);
-  }
-  if (input.commuteMinutes && input.commuteMinutes > 0) {
-    for (const [date, list] of classesByDate) {
-      const first = Math.min(...list.map((c) => c.startMinutes));
-      const last = Math.max(...list.map((c) => c.endMinutes));
-      events.push(
-        ...travelAround(
-          `travel:class:${date}`,
-          date,
-          first,
-          last,
-          input.commuteMinutes,
-          {
-            to: 'Travel to campus',
-            from: 'Travel home',
-          },
-        ),
-      );
-    }
-  }
-
   for (const s of input.shifts) {
     const isOneTimeEvent = s.commitmentId === null && !s.isRecurring;
     pushIfValid(
@@ -187,15 +131,23 @@ export function buildDesiredEvents(input: BuildInput): DesiredEvent[] {
         location: null,
       }),
     );
-    events.push(
-      ...travelAround(
-        `travel:shift:${s.shiftId}:${s.date}`,
-        s.date,
-        s.startMinutes,
-        s.endMinutes,
-        s.bufferMinutes,
-        { to: `Travel to ${s.label ?? 'work'}`, from: 'Travel home' },
-      ),
+  }
+
+  // Viagens: decididas pelo itinerario (vai a casa entre duas coisas so se
+  // houver tempo; senao vai direto).
+  for (const { date, leg } of input.travel) {
+    pushIfValid(
+      events,
+      makeEvent({
+        sourceKey: `travel:${date}:${leg.key}`,
+        kind: 'travel',
+        date,
+        startMinutes: leg.start,
+        endMinutes: leg.end,
+        title: travelTitle(leg),
+        description: leg.late ? LATE_TRAVEL_DESCRIPTION : null,
+        location: null,
+      }),
     );
   }
 

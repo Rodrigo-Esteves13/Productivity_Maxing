@@ -29,7 +29,7 @@ export const insights: Record<string, string> = {
   'focusScatter.axisFocus': "集中度",
   'focusScatter.axisGrade': "成績",
   'focusScatter.grade': "成績 {value}%",
-  'focusScatter.legend': "点は採点済みのタスク1件を表します({count} 件)。集中度は、締め切り前14日間のセッションの平均です。",
+  'focusScatter.legend': "点は採点済みのタスク1件です({count} 件)。集中度は、そのタスクのセッションと、締め切り前14日間の科目のセッションの平均です。",
   'focusEffect.interestNotEnough': "興味:興味を評価した科目が {areas} 科目以上あり、その採点済みタスクが {needed} 件必要です。現在は {have} 件です。",
   'focusEffect.interestNoVariation': "興味:すべての科目に同じ評価をしているため、比較できません。",
   'focusEffect.interestInconclusive': "興味:成績は、各科目への好みと明確には連動していません({count} 件のタスク)。",
@@ -37,4 +37,6 @@ export const insights: Record<string, string> = {
   'focusEffect.interestClearLower': "興味:データでは、好きな科目ほど成績が低くなっています(興味1あたり {points} 点、おそらく {low} 〜 {high})。科目によって難易度が違うため、慎重に解釈してください。{count} 件のタスクに基づきます。",
   'focusEffect.interestMissing': "あと {count} 科目の興味を評価すると、精度が上がります。",
   'widget.missingGrade': "足りない成績の配点",
+  'ui.projectionProgress': "{needed} 件中 {have} 件",
+  'ui.projectionAreaStudyCounts': "学習時間のある採点済みタスクが対象です。タスクを選ばずに科目で記録した学習（締め切り前14日間）も含みます。",
 };

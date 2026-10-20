@@ -88,6 +88,9 @@ export default function PrivacyPolicy() {
             Feedback you choose to send: your message, category, optional rating, the app language and
             the page you were on (without query parameters), together with your account
           </li>
+          <li>
+            Addresses you choose to add (home, campus, workplaces and one-off events) and how you travel, only to plan travel time in your schedule and study plan. When you press &quot;Calculate automatically&quot;, or when your day has two places in a row, those addresses are sent to Google Maps (Distance Matrix API) to get the trip time. Trip times between your places are kept in your account so they are not requested again. You can clear any address at any time
+          </li>
           <li>Usage data needed to compute your progress and streaks</li>
           <li>
             If you connect Google Calendar: a record of each event the App created for you (Google's

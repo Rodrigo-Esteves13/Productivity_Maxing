@@ -9,6 +9,7 @@ import DeleteAccountSection from '../components/Profile/DeleteAccountSection';
 import GoogleCalendarCard from '../components/Profile/GoogleCalendarCard';
 import PreferencesCard from '../components/Profile/PreferencesCard';
 import PushNotificationsCard from '../components/Profile/PushNotificationsCard';
+import InstallAppCard from '../pwa/InstallAppCard';
 import TwoFactorCard from '../components/Profile/TwoFactorCard';
 import AccessibilitySettingsCard from '../components/Profile/AccessibilitySettingsCard';
 import CommuteSettingsCard from '../components/Schedule/CommuteSettingsCard';
@@ -57,6 +58,7 @@ export default function Profile() {
       <GoogleCalendarCard />
 
       <PreferencesCard user={user} onUserUpdate={updateUser} />
+      <InstallAppCard alwaysShow className="max-w-3xl mt-8" />
       <PushNotificationsCard />
 
       <TwoFactorCard user={user} onUserUpdate={updateUser} />

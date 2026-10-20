@@ -6,7 +6,8 @@ import ErrorState from '../../UI/ErrorState';
 import { parseClock } from '../../../lib/timeFormat';
 import { toDateKey } from '../../../lib/dateKey';
 import { todayUtcAnchored } from '../../../lib/weekDates';
-import type { CreateWorkShiftInput } from '../../../types/models';
+import type { CommuteMode, CreateWorkShiftInput } from '../../../types/models';
+import AddressTravelFields from './AddressTravelFields';
 import { useI18n } from '../../../i18n/useI18n';
 
 const MAX_TITLE_LENGTH = 80;
@@ -14,6 +15,7 @@ const MAX_TRAVEL_MINUTES = 240;
 const DEFAULT_START = '10:00';
 const DEFAULT_END = '11:00';
 const DEFAULT_TRAVEL = '0';
+const DEFAULT_MODE: CommuteMode = 'TRANSIT';
 
 interface EventFormProps {
   isSaving: boolean;
@@ -23,7 +25,9 @@ interface EventFormProps {
 
 // Evento unico sem categoria (ir ao medico, uma entrevista...): so precisa
 // de um titulo, um dia e as horas. Guarda-se como um turno pontual sem
-// local, e sai da lista sozinho depois do dia.
+// local, e sai da lista sozinho depois do dia. A morada (opcional) calcula a
+// viagem casa-evento e deixa o itinerario do dia ir direto de/para as aulas
+// ou o trabalho quando nao ha tempo de passar por casa.
 export default function EventForm({ isSaving, onSubmit, onCancel }: EventFormProps) {
   const { t } = useI18n();
   const [title, setTitle] = useState('');
@@ -31,6 +35,8 @@ export default function EventForm({ isSaving, onSubmit, onCancel }: EventFormPro
   const [start, setStart] = useState(DEFAULT_START);
   const [end, setEnd] = useState(DEFAULT_END);
   const [travel, setTravel] = useState(DEFAULT_TRAVEL);
+  const [address, setAddress] = useState('');
+  const [mode, setMode] = useState<CommuteMode>(DEFAULT_MODE);
   const [formError, setFormError] = useState('');
 
   const handleSubmit = async (event: FormEvent) => {
@@ -49,7 +55,14 @@ export default function EventForm({ isSaving, onSubmit, onCancel }: EventFormPro
     }
 
     setFormError('');
-    await onSubmit({ label: title.trim(), date, startMinutes, endMinutes, bufferMinutes });
+    await onSubmit({
+      label: title.trim(),
+      date,
+      startMinutes,
+      endMinutes,
+      bufferMinutes,
+      ...(address.trim() && { address: address.trim(), commuteMode: mode }),
+    });
   };
 
   return (
@@ -74,6 +87,13 @@ export default function EventForm({ isSaving, onSubmit, onCancel }: EventFormPro
           onChange={(e) => setTravel(e.target.value)}
         />
       </div>
+      <AddressTravelFields
+        address={address}
+        onAddressChange={setAddress}
+        mode={mode}
+        onModeChange={setMode}
+        onEstimated={(minutes) => setTravel(String(minutes))}
+      />
       {formError && <ErrorState message={formError} />}
       <div className="flex gap-2">
         <ActionButton type="submit" disabled={isSaving}>

@@ -29,7 +29,7 @@ export const insights: Record<string, string> = {
   'focusScatter.axisFocus': "Focus",
   'focusScatter.axisGrade': "Grade",
   'focusScatter.grade': "Grade {value}%",
-  'focusScatter.legend': "Each dot is a graded task ({count}). Focus is the average of the sessions in the 14 days before its deadline.",
+  'focusScatter.legend': "Each dot is a graded task ({count}). Focus is the average of its sessions, plus the course sessions in the 14 days before its deadline.",
   'focusEffect.interestNotEnough': "Interest: needs {needed} graded tasks in at least {areas} courses where you rated your interest. You have {have}.",
   'focusEffect.interestNoVariation': "Interest: you rated every course the same, so there is nothing to compare.",
   'focusEffect.interestInconclusive': "Interest: your grades do not clearly follow how much you like each course ({count} tasks).",
@@ -37,4 +37,6 @@ export const insights: Record<string, string> = {
   'focusEffect.interestClearLower': "Interest: your data shows lower grades in the courses you like more ({points} grade points per interest point, likely {low} to {high}). Courses differ in difficulty, so read this with care. Based on {count} tasks.",
   'focusEffect.interestMissing': "Rate your interest in {count} more courses to sharpen this.",
   'widget.missingGrade': "Missing grade weight",
+  'ui.projectionProgress': "{have} of {needed}",
+  'ui.projectionAreaStudyCounts': "Graded tasks with study time count, including study logged for the course without picking the task (in the 14 days before the deadline).",
 };

@@ -58,6 +58,9 @@ export class NotebookController {
     private readonly collabService: NotebookCollabService,
   ) {}
 
+  // Conteudo completo de todas as entradas: o frontend so o pede para
+  // exportar a cadeira (a lista usa entry-summaries). Separadores com o
+  // frontend antigo ainda o usam para a lista.
   @Get('entries')
   @ApiOperation({
     summary: 'Lists notebook entries for an area, newest first.',
@@ -68,6 +71,21 @@ export class NotebookController {
     @Query('areaId', ParseUUIDPipe) areaId: string,
   ) {
     return this.notebookService.findAllForArea(user.id, areaId);
+  }
+
+  // Caminho proprio (e nao entries/summary) para nunca colidir com
+  // entries/:id, que so aceita UUIDs.
+  @Get('entry-summaries')
+  @ApiOperation({
+    summary:
+      'Lists notebook entries for an area without their content (title, date, text preview, photo and file counts), newest first.',
+  })
+  @ApiQuery({ name: 'areaId', required: true })
+  listSummaries(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('areaId', ParseUUIDPipe) areaId: string,
+  ) {
+    return this.notebookService.listSummariesForArea(user.id, areaId);
   }
 
   @Get('entries/:id')

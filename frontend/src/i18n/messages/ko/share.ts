@@ -42,7 +42,7 @@ export const share: Record<string, string> = {
   'sharedEdit.noChanges': "변경한 내용이 없습니다.",
   'sharedEdit.error': "변경 사항을 보내지 못했습니다. 다시 시도해 주세요.",
   'push.title': "푸시 알림",
-  'push.help': "누군가 내가 공유한 수업 노트에 접근을 요청하거나 변경을 제안할 때, 그리고 내 요청에 답변이 왔을 때 알림을 받습니다.",
+  'push.help': "이 기기에서 다가오는 마감(위에서 켠 경우), 친구 및 접근 요청, 노트 초대와 수정 제안, 내 요청에 대한 답변 알림을 받아요.",
   'push.enable': "알림 켜기",
   'push.disable': "알림 끄기",
   'push.enabled': "이 기기에서 알림이 켜져 있습니다.",

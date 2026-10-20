@@ -6,6 +6,7 @@ import OfflineBanner from './pwa/OfflineBanner';
 import AccessibilityEffects from './components/Accessibility/AccessibilityEffects';
 import MaintenanceGate from './components/Maintenance/MaintenanceGate';
 import AccountBlockedGate from './components/AccountBlocked/AccountBlockedGate';
+import AccountStatusWatcher from './components/AccountBlocked/AccountStatusWatcher';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 import { FeedbackProvider } from './context/FeedbackProvider';
 import I18nProvider from './i18n/I18nProvider';
@@ -18,6 +19,7 @@ function App() {
       <MaintenanceGate>
         <AccountBlockedGate>
           <AuthProvider>
+            <AccountStatusWatcher />
             {/* Needs useAuth() internally (only polls/heartbeats the active
                 session once actually authenticated), so it has to sit
                 inside AuthProvider - and above AcademicProvider/AppRouter

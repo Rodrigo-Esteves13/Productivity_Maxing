@@ -29,7 +29,7 @@ export const insights: Record<string, string> = {
   'focusScatter.axisFocus': "Concentration",
   'focusScatter.axisGrade': "Note",
   'focusScatter.grade': "Note {value} %",
-  'focusScatter.legend': "Chaque point est une tâche notée ({count}). La concentration est la moyenne des sessions des 14 jours précédant l'échéance.",
+  'focusScatter.legend': "Chaque point est une tâche notée ({count}). La concentration est la moyenne de ses sessions et des sessions de la matière dans les 14 jours avant l’échéance.",
   'focusEffect.interestNotEnough': "Intérêt : il faut {needed} tâches notées dans au moins {areas} matières dont vous avez évalué l'intérêt. Vous en avez {have}.",
   'focusEffect.interestNoVariation': "Intérêt : vous avez donné la même note à toutes les matières, il n'y a donc rien à comparer.",
   'focusEffect.interestInconclusive': "Intérêt : vos notes ne suivent pas clairement l'intérêt que vous portez à chaque matière ({count} tâches).",
@@ -37,4 +37,6 @@ export const insights: Record<string, string> = {
   'focusEffect.interestClearLower': "Intérêt : vos données montrent des notes plus basses dans les matières que vous aimez le plus ({points} points de note par point d'intérêt, probablement entre {low} et {high}). Les matières diffèrent en difficulté, à lire avec prudence. Basé sur {count} tâches.",
   'focusEffect.interestMissing': "Évaluez votre intérêt pour {count} matières de plus pour affiner ce résultat.",
   'widget.missingGrade': "Pondération de note manquante",
+  'ui.projectionProgress': "{have} sur {needed}",
+  'ui.projectionAreaStudyCounts': "Les tâches notées avec du temps d’étude comptent, y compris l’étude enregistrée pour la matière sans choisir la tâche (dans les 14 jours avant l’échéance).",
 };

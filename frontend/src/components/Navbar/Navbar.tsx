@@ -7,6 +7,7 @@ import MobileMenu from './MobileMenu';
 import AdminMenu from './AdminMenu';
 import { MenuIcon, XIcon, SearchIcon } from '../UI/Icons';
 import { useAuth } from '../../context/useAuth';
+import { useSocialPending } from '../../hooks/useSocialPending';
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
@@ -14,6 +15,9 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // Pedidos/convites a espera de resposta: numero ao lado de Social, para
+  // um convite para uma nota nao passar despercebido.
+  const socialPending = useSocialPending(isAuthenticated)?.total ?? 0;
 
   // O role vem agora diretamente dos dados reais do user (AuthContext),
   // em vez de andar a descodificar o JWT à mão.
@@ -44,7 +48,7 @@ export default function Navbar() {
               que estourava a largura em ecrãs de portátil, ~1280-1366px);
               agora vivem atrás de um único trigger "Admin" (AdminMenu). */}
           <div className="hidden xl:flex items-center gap-4">
-            {isAuthenticated && <NavLinks currentPath={location.pathname} />}
+            {isAuthenticated && <NavLinks currentPath={location.pathname} socialPending={socialPending} />}
 
             {role === 'ADMIN' && <AdminMenu currentPath={location.pathname} />}
           </div>
@@ -79,9 +83,12 @@ export default function Navbar() {
                 onClick={() => setIsMobileMenuOpen((prev) => !prev)}
                 aria-label={isMobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
                 aria-expanded={isMobileMenuOpen}
-                className="xl:hidden p-2 rounded-md text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
+                className="relative xl:hidden p-2 rounded-md text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
               >
                 {isMobileMenuOpen ? <XIcon /> : <MenuIcon />}
+                {socialPending > 0 && !isMobileMenuOpen && (
+                  <span aria-hidden="true" className="absolute right-1 top-1 h-2 w-2 rounded-full bg-violet-500" />
+                )}
               </button>
             )}
           </div>
@@ -92,6 +99,7 @@ export default function Navbar() {
         <MobileMenu
           currentPath={location.pathname}
           isAdmin={role === 'ADMIN'}
+          socialPending={socialPending}
           onNavigate={() => setIsMobileMenuOpen(false)}
         />
       )}

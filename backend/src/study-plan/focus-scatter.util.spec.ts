@@ -1,73 +1,55 @@
-import {
-  buildFocusScatter,
-  type ScatterSession,
-  type ScatterTask,
-} from './focus-scatter.util';
+import { buildFocusScatter, type ScatterTask } from './focus-scatter.util';
 
 const task = (over: Partial<ScatterTask> = {}): ScatterTask => ({
   id: 't1',
   title: 'Teste 1',
-  areaId: 'a1',
   areaName: 'Redes',
   date: new Date('2026-10-20T00:00:00Z'),
   fraction: 0.75,
-  ...over,
-});
-const session = (over: Partial<ScatterSession> = {}): ScatterSession => ({
-  taskId: null,
-  areaId: 'a1',
-  startedAt: new Date('2026-10-15T10:00:00Z'),
-  minutes: 60,
-  focus: 4,
+  sessions: [],
   ...over,
 });
 
 describe('buildFocusScatter', () => {
-  it('calcula foco ponderado e nota em % por task', () => {
-    const [point] = buildFocusScatter(
-      [task()],
-      [session({ minutes: 60, focus: 2 }), session({ minutes: 180, focus: 4 })],
-    );
+  it('calcula foco ponderado pelos minutos e nota em % por task', () => {
+    const [point] = buildFocusScatter([
+      task({
+        sessions: [
+          { minutes: 60, focus: 2 },
+          { minutes: 180, focus: 4 },
+        ],
+      }),
+    ]);
     expect(point.avgFocus).toBe(3.5);
     expect(point.gradePercent).toBe(75);
     expect(point.ratedMinutes).toBe(240);
+    expect(point.date).toBe('2026-10-20');
   });
 
-  it('ignora sessoes fora da janela de 14 dias antes do prazo', () => {
-    const points = buildFocusScatter(
-      [task()],
-      [
-        session({ startedAt: new Date('2026-09-01T10:00:00Z') }),
-        session({ startedAt: new Date('2026-10-25T10:00:00Z') }),
-      ],
-    );
-    expect(points).toHaveLength(0);
+  it('ignora sessoes sem foco e deixa de fora tasks sem nenhuma classificada', () => {
+    const points = buildFocusScatter([
+      task({ sessions: [{ minutes: 90, focus: null }] }),
+      task({
+        id: 't2',
+        sessions: [
+          { minutes: 30, focus: 5 },
+          { minutes: 60, focus: null },
+        ],
+      }),
+    ]);
+    expect(points.map((p) => p.taskId)).toEqual(['t2']);
+    expect(points[0].ratedMinutes).toBe(30);
   });
 
-  it('ignora sessoes de outra cadeira e sem foco', () => {
-    const points = buildFocusScatter(
-      [task()],
-      [session({ areaId: 'outra' }), session({ focus: null })],
-    );
-    expect(points).toHaveLength(0);
-  });
-
-  it('conta sessoes ligadas diretamente a task mesmo sem cadeira', () => {
-    const points = buildFocusScatter(
-      [task()],
-      [session({ taskId: 't1', areaId: null, focus: 5 })],
-    );
-    expect(points[0].avgFocus).toBe(5);
-  });
-
-  it('ordena da task mais recente para a mais antiga', () => {
-    const points = buildFocusScatter(
-      [
-        task({ id: 'a', date: new Date('2026-10-20T00:00:00Z') }),
-        task({ id: 'b', date: new Date('2026-10-22T00:00:00Z') }),
-      ],
-      [session()],
-    );
-    expect(points.map((p) => p.taskId)).toEqual(['b', 'a']);
+  it('ordena das mais recentes para as mais antigas', () => {
+    const points = buildFocusScatter([
+      task({
+        id: 'old',
+        date: new Date('2026-09-01T00:00:00Z'),
+        sessions: [{ minutes: 30, focus: 3 }],
+      }),
+      task({ id: 'new', sessions: [{ minutes: 30, focus: 3 }] }),
+    ]);
+    expect(points.map((p) => p.taskId)).toEqual(['new', 'old']);
   });
 });

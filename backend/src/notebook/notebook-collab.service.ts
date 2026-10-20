@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SharedEditDto } from './dto/shared-edit.dto';
 import { PushService } from '../push/push.service';
 import { resolveShareAccess, type SharedRole } from './share-role.util';
+import { notebookEntrySharePath } from '../common/app-links.util';
 
 export type { SharedRole };
 
@@ -158,7 +159,7 @@ export class NotebookCollabService {
           {
             name: proposer?.name ?? proposer?.email?.split('@')[0] ?? '',
             title: entry?.title ?? '',
-            url: '/notebook',
+            url: notebookEntrySharePath(share.notebookEntryId),
           },
         );
       }

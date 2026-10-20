@@ -42,7 +42,7 @@ export const share: Record<string, string> = {
   'sharedEdit.noChanges': "Vous n'avez rien modifié.",
   'sharedEdit.error': "Impossible d'envoyer vos modifications. Veuillez réessayer.",
   'push.title': "Notifications push",
-  'push.help': "Recevez une notification quand quelqu'un demande l'accès à vos cours partagés ou suggère des modifications, et quand vos propres demandes reçoivent une réponse.",
+  'push.help': "Reçois des notifications sur cet appareil pour les échéances proches (si activé ci-dessus), les demandes d’ami et d’accès, les invitations à des notes et les modifications suggérées, et les réponses à tes demandes.",
   'push.enable': "Activer les notifications",
   'push.disable': "Désactiver les notifications",
   'push.enabled': "Les notifications sont activées sur cet appareil.",

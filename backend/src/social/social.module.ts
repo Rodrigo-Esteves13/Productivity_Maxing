@@ -6,11 +6,17 @@ import { SocialController } from './social.controller';
 import { SocialService } from './social.service';
 import { FriendCodeRequestsService } from './friend-code-requests.service';
 import { FriendCodeRequestsController } from './friend-code-requests.controller';
+import { AdminSocialService } from './admin-social.service';
+import { AdminSocialController } from './admin-social.controller';
 
 @Module({
   imports: [PrismaModule, AuthModule, PushModule],
-  controllers: [SocialController, FriendCodeRequestsController],
-  providers: [SocialService, FriendCodeRequestsService],
+  controllers: [
+    SocialController,
+    FriendCodeRequestsController,
+    AdminSocialController,
+  ],
+  providers: [SocialService, FriendCodeRequestsService, AdminSocialService],
   exports: [SocialService],
 })
 export class SocialModule {}

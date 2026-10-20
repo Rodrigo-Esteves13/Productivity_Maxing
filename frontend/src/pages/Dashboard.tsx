@@ -1,4 +1,5 @@
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ErrorState from '../components/UI/ErrorState';
@@ -33,11 +34,27 @@ import { useDashboardWidgetPrefs } from '../hooks/useDashboardWidgetPrefs';
 import { useTableDensity } from '../hooks/useTableDensity';
 import { useShowArchivedTasks } from '../hooks/useShowArchivedTasks';
 import { isTaskArchived } from '../utils/taskArchive';
-import { PrinterIcon, UploadIcon, SlidersIcon } from '../components/UI/Icons';
+import { PrinterIcon, UploadIcon, SlidersIcon, GraduationCapIcon } from '../components/UI/Icons';
 import BulkActionsBar from '../components/Dashboard/BulkActionsBar';
 import TaskExportButtons from '../components/Dashboard/TaskExportButtons';
 import { ACADEMIC_TASK_TYPE_KEY } from '../lib/constants';
+import { useExamMode } from '../hooks/useExamMode';
+import { examModeVisibility, isExamTask } from '../lib/examMode';
+import ExamModePanel from '../components/Dashboard/ExamModePanel';
+import InstallAppCard from '../pwa/InstallAppCard';
 import { useI18n } from '../i18n/useI18n';
+
+// Mensagem da tabela vazia: sem tasks nenhumas, so sem exames (modo exame)
+// ou nenhuma a passar nos filtros.
+function emptyMessageKey(academicTaskCount: number, isExamMode: boolean): string {
+  if (academicTaskCount === 0) return 'ui.youHaveNoAcademicTasks';
+  if (isExamMode) return 'examMode.noExamsInTable';
+  return 'ui.noTasksMatchTheCurrent';
+}
+
+// ?exam=on / ?exam=off (paleta Ctrl+K) liga ou desliga o modo exame.
+const EXAM_MODE_PARAM = 'exam';
+const EXAM_MODE_OFF = 'off';
 
 export default function Dashboard() {
   const { t } = useI18n();
@@ -64,6 +81,27 @@ export default function Dashboard() {
   const { visibility, toggle } = useDashboardWidgetPrefs();
   const { density, toggleDensity } = useTableDensity();
   const { showArchived, toggleShowArchived } = useShowArchivedTasks();
+  const { isExamMode, setIsExamMode } = useExamMode();
+  // Em modo exame os cartoes ficam escondidos sem mexer nas preferencias
+  // de cada um: ao sair do modo volta tudo como estava.
+  const cardVisibility = useMemo(
+    () => (isExamMode ? examModeVisibility(visibility) : visibility),
+    [isExamMode, visibility],
+  );
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const examParam = searchParams.get(EXAM_MODE_PARAM);
+  useEffect(() => {
+    if (examParam === null) return;
+    setIsExamMode(examParam !== EXAM_MODE_OFF);
+    setSearchParams(
+      (params) => {
+        params.delete(EXAM_MODE_PARAM);
+        return params;
+      },
+      { replace: true },
+    );
+  }, [examParam, setIsExamMode, setSearchParams]);
 
   const academicTasks = useMemo(
     () => tasks.filter((task) => task.type === ACADEMIC_TASK_TYPE_KEY),
@@ -84,6 +122,7 @@ export default function Dashboard() {
     const search = filters.search.trim().toLowerCase();
     const matching = academicTasks.filter((task) => {
       if (!showArchived && isTaskArchived(task)) return false;
+      if (isExamMode && !isExamTask(task)) return false;
       if (search && !task.title.toLowerCase().includes(search)) return false;
       if (filters.areaId && task.areaId !== filters.areaId) return false;
       if (filters.academicType && task.academicType !== filters.academicType) return false;
@@ -94,7 +133,7 @@ export default function Dashboard() {
     });
     // Sem coluna escolhida mantem a ordem original do servidor.
     return sort ? sortTasks(matching, sort.key, sort.direction) : matching;
-  }, [academicTasks, filters, showArchived, sort]);
+  }, [academicTasks, filters, showArchived, isExamMode, sort]);
 
   const {
     selectedIds, toggleSelect, toggleSelectAll, markSelectedDone, deleteSelected, clearSelection,
@@ -107,7 +146,7 @@ export default function Dashboard() {
           title={t('ui.analyticsDashboard')}
           description={t('ui.globalViewOfAllYour')}
         />
-        <div className="print-hide flex items-center gap-4">
+        <div className="print-hide flex flex-wrap items-center gap-x-4 gap-y-2">
           <button
             type="button"
             onClick={() => setIsImportModalOpen(true)}
@@ -124,6 +163,18 @@ export default function Dashboard() {
           >
             <PrinterIcon />
             {t('ui.print')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsExamMode((prev) => !prev)}
+            aria-pressed={isExamMode}
+            title={t('examMode.toggleHelp')}
+            className={`flex items-center gap-1.5 text-sm ${
+              isExamMode ? 'text-violet-300 hover:text-violet-200' : 'text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            <GraduationCapIcon />
+            {t('examMode.toggle')}
           </button>
           <button
             type="button"
@@ -149,23 +200,29 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <GpaSummary showCreditSimulator={visibility.creditSimulator} />
+      <InstallAppCard />
 
-      {visibility.creditsAccumulated && <CreditsAccumulatedCard />}
+      {isExamMode && !isLoading && !error && (
+        <ExamModePanel tasks={academicTasks} areas={academicAreas} onTurnOff={() => setIsExamMode(false)} />
+      )}
 
-      {visibility.programsOverview && <ProgramsOverviewCard />}
+      {!isExamMode && <GpaSummary showCreditSimulator={visibility.creditSimulator} />}
 
-      {visibility.periodProgress && !isLoading && !error && !isViewingAllPeriods && activePeriod && (
+      {cardVisibility.creditsAccumulated && <CreditsAccumulatedCard />}
+
+      {cardVisibility.programsOverview && <ProgramsOverviewCard />}
+
+      {cardVisibility.periodProgress && !isLoading && !error && !isViewingAllPeriods && activePeriod && (
         <PeriodProgressBar period={activePeriod} tasks={academicTasks} />
       )}
 
-      {!isLoading && !error && <OnboardingChecklist taskCount={tasks.length} />}
+      {!isExamMode && !isLoading && !error && <OnboardingChecklist taskCount={tasks.length} />}
 
-      {visibility.missingGrade && !isLoading && !error && academicAreas.length > 0 && (
+      {cardVisibility.missingGrade && !isLoading && !error && academicAreas.length > 0 && (
         <MissingGradeCard areas={academicAreas} refreshKey={tasks.reduce((sum, task) => sum + (task.weightPercentage ?? 0), tasks.length)} />
       )}
 
-      {visibility.overloadAlert && !isLoading && !error && academicTasks.length > 0 && (
+      {cardVisibility.overloadAlert && !isLoading && !error && academicTasks.length > 0 && (
         <OverloadAlertCard tasks={academicTasks} areas={academicAreas} />
       )}
 
@@ -183,11 +240,11 @@ export default function Dashboard() {
           academicAreas={academicAreas}
           academicTaskTypes={academicTaskTypes}
           activeProgram={activeProgram}
-          visibility={visibility}
+          visibility={cardVisibility}
         />
       )}
 
-      {visibility.gradeCalculator && !isLoading && !error && academicAreas.length > 0 && activeProgram && (
+      {cardVisibility.gradeCalculator && !isLoading && !error && academicAreas.length > 0 && activeProgram && (
         <div className="mb-6">
           <Suspense fallback={null}>
             <GradeNeededCalculator
@@ -221,13 +278,7 @@ export default function Dashboard() {
           </div>
 
           {filteredTasks.length === 0 ? (
-            <EmptyState
-              message={
-                academicTasks.length === 0
-                  ? t('ui.youHaveNoAcademicTasks')
-                  : t('ui.noTasksMatchTheCurrent')
-              }
-            />
+            <EmptyState message={t(emptyMessageKey(academicTasks.length, isExamMode))} />
           ) : (
             <>
               <BulkActionsBar

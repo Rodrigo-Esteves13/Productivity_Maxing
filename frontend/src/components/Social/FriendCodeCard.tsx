@@ -1,14 +1,23 @@
 import { useState } from 'react';
 import { useI18n } from '../../i18n/useI18n';
 import type { CodeChangeRequest } from '../../api/socialService';
+import type { CodeRequestOutcome } from '../../hooks/useSocial';
 
 const MIN_REASON = 10;
 const MAX_REASON = 500;
 
+// Mensagem para cada resultado que nao e sucesso.
+const OUTCOME_ERROR_KEY: Partial<Record<CodeRequestOutcome, string>> = {
+  ALREADY_PENDING: 'social.code.errorPending',
+  TOO_MANY: 'social.code.errorTooMany',
+  INVALID: 'social.code.errorInvalid',
+  ERROR: 'social.code.errorGeneric',
+};
+
 interface Props {
   code: string;
   request: CodeChangeRequest | null;
-  onRequestChange: (reason: string) => Promise<boolean>;
+  onRequestChange: (reason: string) => Promise<CodeRequestOutcome>;
 }
 
 // O codigo nao se troca sozinho (para ninguem o rodar sem necessidade): pede-se
@@ -19,11 +28,12 @@ export default function FriendCodeCard({ code, request, onRequestChange }: Props
   const [isAsking, setIsAsking] = useState(false);
   const [reason, setReason] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
 
   const pending = request?.status === 'PENDING';
   const rejected = request?.status === 'REJECTED';
-  const canSend = reason.trim().length >= MIN_REASON && !isSending;
+  const reasonLength = reason.trim().length;
+  const canSend = reasonLength >= MIN_REASON && !isSending;
 
   const copy = async () => {
     try {
@@ -37,15 +47,15 @@ export default function FriendCodeCard({ code, request, onRequestChange }: Props
 
   const send = async () => {
     setIsSending(true);
-    setFailed(false);
-    const ok = await onRequestChange(reason.trim());
+    setErrorKey(null);
+    const outcome = await onRequestChange(reason.trim());
     setIsSending(false);
-    if (ok) {
+    if (outcome === 'SENT' || outcome === 'ALREADY_PENDING') {
+      // Pendente (novo ou ja existente): o cartao mostra o estado.
       setIsAsking(false);
       setReason('');
-    } else {
-      setFailed(true);
     }
+    setErrorKey(OUTCOME_ERROR_KEY[outcome] ?? null);
   };
 
   return (
@@ -71,6 +81,11 @@ export default function FriendCodeCard({ code, request, onRequestChange }: Props
       </div>
 
       {pending && <p className="mt-3 text-xs text-amber-400">{t('social.code.pending')}</p>}
+      {errorKey && (
+        <p role="alert" className="mt-2 text-xs text-red-400">
+          {t(errorKey)}
+        </p>
+      )}
       {rejected && !isAsking && (
         <div className="mt-3 text-xs text-neutral-400">
           <p className="text-red-400">{t('social.code.rejected')}</p>
@@ -90,7 +105,9 @@ export default function FriendCodeCard({ code, request, onRequestChange }: Props
             onChange={(e) => setReason(e.target.value)}
             className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-violet-500 focus:outline-none"
           />
-          {failed && <p className="text-xs text-red-400">{t('social.code.requestError')}</p>}
+          <p className={`text-xs ${reasonLength >= MIN_REASON ? 'text-neutral-500' : 'text-amber-400'}`}>
+            {t('social.code.reasonCount', { count: reasonLength, min: MIN_REASON, max: MAX_REASON })}
+          </p>
           <div className="flex items-center gap-2">
             <button
               type="button"

@@ -141,6 +141,7 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
       <p className="text-sm text-neutral-400 mb-4">
         {t('ui.usedByTheStudyPlan')}
       </p>
+      <p className="text-xs text-neutral-500 mb-4">{t('ui.itineraryExplained')}</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -225,7 +226,7 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
         </div>
 
         {error && <FormError message={error} />}
-        {successMessage && !error && <p className="text-sm text-emerald-400">{successMessage}</p>}
+        {successMessage && !error && <p className="text-sm text-violet-300">{successMessage}</p>}
 
         <div className="flex justify-end">
           <ActionButton type="submit" disabled={isSaving}>

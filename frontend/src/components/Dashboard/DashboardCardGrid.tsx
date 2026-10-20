@@ -1,5 +1,6 @@
 import MasonryGrid from '../UI/MasonryGrid';
 import {
+  TodayCard,
   UpcomingTasksCard,
   AtRiskTasksCard,
   DeadlineOverlapCard,
@@ -40,6 +41,7 @@ export default function DashboardCardGrid({
 }: DashboardCardGridProps) {
   return (
     <MasonryGrid className="mb-6">
+      {visibility.today && <TodayCard />}
       {visibility.studyCapacity && <StudyCapacityCard />}
       {academicTasks.length > 0 && visibility.upcoming && (
         <UpcomingTasksCard tasks={academicTasks} areas={academicAreas} />

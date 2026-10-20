@@ -11,8 +11,17 @@ import {
   type SocialOverview,
 } from '../api/socialService';
 import { useLiveRefresh } from './useLiveRefresh';
+import { notifySocialChanged } from '../lib/socialEvents';
 
 export type AddFriendOutcome = 'PENDING' | 'ACCEPTED' | 'NOT_FOUND' | 'SELF' | 'LIMIT' | 'ERROR';
+export type CodeRequestOutcome = 'SENT' | 'ALREADY_PENDING' | 'TOO_MANY' | 'INVALID' | 'ERROR';
+
+// Codigo devolvido pelo backend (FriendCodeRequestsService) -> resultado.
+const CODE_REQUEST_ERRORS: Record<string, CodeRequestOutcome> = {
+  CODE_REQUEST_PENDING: 'ALREADY_PENDING',
+  CODE_REQUEST_LIMIT: 'TOO_MANY',
+};
+const HTTP_BAD_REQUEST = 400;
 
 export function useSocial() {
   const [data, setData] = useState<SocialOverview | null>(null);
@@ -42,6 +51,7 @@ export function useSocial() {
     async (action: () => Promise<unknown>): Promise<boolean> => {
       try {
         await action();
+        notifySocialChanged();
         await load(true);
         return true;
       } catch {
@@ -71,15 +81,24 @@ export function useSocial() {
     [load],
   );
 
-  // true se o pedido foi criado (o cartao mostra "pendente" a seguir).
+  // O cartao passa logo a "pendente" com a resposta do POST; o recarregar
+  // a seguir e so para ficar em dia (se falhar, o pedido ja esta criado).
   const requestCodeChange = useCallback(
-    async (reason: string): Promise<boolean> => {
+    async (reason: string): Promise<CodeRequestOutcome> => {
       try {
-        await requestFriendCodeChange(reason);
-        await load(true);
-        return true;
-      } catch {
-        return false;
+        const created = await requestFriendCodeChange(reason);
+        setData((prev) => (prev ? { ...prev, codeChangeRequest: created } : prev));
+        void load(true);
+        return 'SENT';
+      } catch (e) {
+        if (!isAxiosError(e)) return 'ERROR';
+        const code = String((e.response?.data as { code?: unknown })?.code ?? '');
+        if (CODE_REQUEST_ERRORS[code]) {
+          // Ja havia um pendente: mostra-o em vez de so dar erro.
+          void load(true);
+          return CODE_REQUEST_ERRORS[code];
+        }
+        return e.response?.status === HTTP_BAD_REQUEST ? 'INVALID' : 'ERROR';
       }
     },
     [load],

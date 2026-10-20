@@ -51,24 +51,26 @@ export default function PushNotificationsCard() {
         </p>
       )}
       {(state === 'off' || state === 'on') && (
-        <button
-          type="button"
-          disabled={isBusy}
-          onClick={() => void (state === 'on' ? disable() : enable())}
-          className="mt-4 rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
-        >
-          {state === 'on' ? t('push.disable') : t('push.enable')}
-        </button>
-      )}
-      {state === 'on' && (
-        <button
-          type="button"
-          disabled={isTesting}
-          onClick={() => void handleTest()}
-          className="mt-4 ml-3 rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
-        >
-          {t('push.test')}
-        </button>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            type="button"
+            disabled={isBusy}
+            onClick={() => void (state === 'on' ? disable() : enable())}
+            className="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+          >
+            {state === 'on' ? t('push.disable') : t('push.enable')}
+          </button>
+          {state === 'on' && (
+            <button
+              type="button"
+              disabled={isTesting}
+              onClick={() => void handleTest()}
+              className="rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+            >
+              {t('push.test')}
+            </button>
+          )}
+        </div>
       )}
       {testMessage && <p className="mt-3 text-sm text-neutral-300">{testMessage}</p>}
     </div>

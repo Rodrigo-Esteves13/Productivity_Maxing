@@ -42,7 +42,7 @@ export const share: Record<string, string> = {
   'sharedEdit.noChanges': "你还没有做任何修改。",
   'sharedEdit.error': "无法发送你的修改，请重试。",
   'push.title': "推送通知",
-  'push.help': "当有人申请访问你分享的课程、提出修改建议，或你的申请有了答复时，收到通知。",
+  'push.help': "在此设备上接收以下通知：临近的截止日期（如已在上方开启）、好友和访问请求、笔记邀请和修改建议，以及你的请求的答复。",
   'push.enable': "开启通知",
   'push.disable': "关闭通知",
   'push.enabled': "此设备已开启通知。",

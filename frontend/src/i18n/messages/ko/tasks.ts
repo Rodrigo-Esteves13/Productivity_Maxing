@@ -59,4 +59,7 @@ export const tasks: Record<string, string> = {
   'taskForm.selectType': "유형 선택...",
   'taskForm.lockedByArea': "\"{area}\" 과목에서 자동으로 설정됐어요.",
   'taskForm.changeArea': "과목 변경",
+  'enum.ACTIVE': "활성",
+  'enum.SUSPENDED': "일시 정지",
+  'enum.BANNED': "이용 정지",
 };

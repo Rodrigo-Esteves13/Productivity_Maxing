@@ -1,16 +1,26 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getSharedWithMe, respondToInvitation, type SharedWithMeItem } from '../api/notebookService';
 import { useLiveRefresh } from './useLiveRefresh';
+import { notifySocialChanged } from '../lib/socialEvents';
+
+/** ok=false se falhou; token da nota quando aceitou (para a abrir logo). */
+export interface InvitationAnswer {
+  ok: boolean;
+  token: string | null;
+}
 
 export interface UseSharedWithMeResult {
   items: SharedWithMeItem[];
   isLoading: boolean;
   hasError: boolean;
-  /** Aceitar/recusar um convite. Devolve true se correu bem. */
-  respond: (requestId: string, accept: boolean) => Promise<boolean>;
+  /** Aceitar/recusar um convite. */
+  respond: (requestId: string, accept: boolean) => Promise<InvitationAnswer>;
 }
 
-export function useSharedWithMe(): UseSharedWithMeResult {
+// Polling de seguranca por omissao (o push e voltar ao separador ja refrescam).
+const DEFAULT_POLL_MS = 15000;
+
+export function useSharedWithMe({ intervalMs = DEFAULT_POLL_MS }: { intervalMs?: number } = {}): UseSharedWithMeResult {
   const [items, setItems] = useState<SharedWithMeItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -32,16 +42,17 @@ export function useSharedWithMe(): UseSharedWithMeResult {
   }, [load]);
 
   // Um pedido pendente passa a aprovado sem F5 (push + polling).
-  useLiveRefresh(() => void load(true), { enabled: true, intervalMs: 15000 });
+  useLiveRefresh(() => void load(true), { enabled: true, intervalMs });
 
   const respond = useCallback(
-    async (requestId: string, accept: boolean): Promise<boolean> => {
+    async (requestId: string, accept: boolean): Promise<InvitationAnswer> => {
       try {
-        await respondToInvitation(requestId, accept);
-        await load(true);
-        return true;
+        const { token } = await respondToInvitation(requestId, accept);
+        notifySocialChanged();
+        void load(true);
+        return { ok: true, token };
       } catch {
-        return false;
+        return { ok: false, token: null };
       }
     },
     [load],
