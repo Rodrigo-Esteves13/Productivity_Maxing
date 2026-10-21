@@ -531,6 +531,7 @@ export const auto: Record<string, string> = {
   "ui.stopAt": "Beenden um {idleSince}",
   "ui.lastDays": "Letzte {days} Tage",
   "ui.showMoreDaysLeft": "Mehr Tage anzeigen (noch {remaining})",
+  "ui.showMoreTasksLeft": "Mehr Aufgaben anzeigen (noch {remaining})",
   "ui.focus5": "Fokus {focusRating}/5",
   "ui.minutesDone": "{focusMinutes} Minuten geschafft",
   "ui.takeAMinBreak": "Mach {breakMinutes} Min. Pause",

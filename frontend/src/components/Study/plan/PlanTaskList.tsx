@@ -7,6 +7,11 @@ import { ESTIMATE_SOURCE_LABEL } from './planCopy';
 import ProgressBar from '../../UI/ProgressBar';
 import ColorDot from '../../UI/ColorDot';
 import { useI18n } from '../../../i18n/useI18n';
+import { useIncrementalReveal } from '../../../hooks/useIncrementalReveal';
+
+// Tarefas visiveis antes do "Show more": com 10+ tarefas a coluna do plano
+// ficava mais alta que o resto do Schedule.
+const TASKS_PER_PAGE = 4;
 
 interface PlanTaskListProps {
   tasks: StudyPlanTask[];
@@ -22,6 +27,10 @@ function coveragePercent(task: StudyPlanTask): number {
 export default function PlanTaskList({ tasks, calibrationFactor, onEstimateSaved }: PlanTaskListProps) {
   const { t } = useI18n();
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const { visibleCount, hasMore, canCollapse, showMore, collapse } = useIncrementalReveal(
+    tasks.length,
+    TASKS_PER_PAGE,
+  );
   if (tasks.length === 0) return null;
 
   return (
@@ -33,7 +42,7 @@ export default function PlanTaskList({ tasks, calibrationFactor, onEstimateSaved
         {t('ui.timeNeededPerTask')}
       </h3>
       <ul className="space-y-2">
-        {tasks.map((task) => {
+        {tasks.slice(0, visibleCount).map((task) => {
           const pct = coveragePercent(task);
           const isShort = task.shortfallMinutes > 0;
           return (
@@ -94,6 +103,20 @@ export default function PlanTaskList({ tasks, calibrationFactor, onEstimateSaved
           );
         })}
       </ul>
+      {(hasMore || canCollapse) && (
+        <div className="mt-2 flex items-center justify-center gap-4 text-sm">
+          {hasMore && (
+            <button type="button" onClick={showMore} className="text-violet-400 hover:text-violet-300">
+              {t('ui.showMoreTasksLeft', { remaining: tasks.length - visibleCount })}
+            </button>
+          )}
+          {canCollapse && (
+            <button type="button" onClick={collapse} className="text-neutral-400 hover:text-neutral-200">
+              {t('ui.showLess')}
+            </button>
+          )}
+        </div>
+      )}
       {calibrationFactor !== null && (
         <p className="text-xs text-neutral-500 mt-2">
           {t('ui.basedOnYourFinishedTasks', { calibrationFactor: calibrationFactor.toFixed(2) })}</p>

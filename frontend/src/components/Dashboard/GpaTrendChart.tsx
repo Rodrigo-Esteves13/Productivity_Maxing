@@ -19,6 +19,12 @@ interface GpaTrendChartProps {
   cumulativeAverage?: number | null;
 }
 
+// Camadas do halo da linha (largura em px e opacidade de cada traco).
+const GLOW_STROKES = [
+  { width: 13, opacity: 0.06 },
+  { width: 8, opacity: 0.14 },
+] as const;
+
 // Parses a "0-20" style scale into its numeric floor/ceiling.
 function parseScale(scale: string): { min: number; max: number } {
   const [min, max] = scale.split('-').map(Number);
@@ -84,10 +90,17 @@ function TrendDot(props: TrendDotRenderProps & { isLast?: boolean }) {
   if (isLast && !archived) {
     return (
       <g>
-        <circle cx={cx} cy={cy} r={7} fill="#a78bfa" opacity={0.22}>
-          <animate attributeName="r" values="7;13;7" dur="2.2s" repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0.3;0.05;0.3" dur="2.2s" repeatCount="indefinite" />
-        </circle>
+        {/* Pulsacao em CSS (escala + opacidade) em vez de SMIL: o SMIL nao
+            respeita o "reduzir movimento" e animava o atributo r, o que
+            obrigava a repintar o SVG inteiro a cada frame. */}
+        <circle
+          cx={cx}
+          cy={cy}
+          r={7}
+          fill="#a78bfa"
+          opacity={0.3}
+          className="origin-center [transform-box:fill-box] animate-ping [animation-duration:2.2s] motion-reduce:animate-none"
+        />
         <circle cx={cx} cy={cy} r={5} fill="#c4b5fd" stroke="#171717" strokeWidth={2} />
       </g>
     );
@@ -107,11 +120,13 @@ function TrendDot(props: TrendDotRenderProps & { isLast?: boolean }) {
 
 // Period-over-period GPA trend. Recharts area chart, zoomed to the data's
 // own range (see computeDomain) so real movement is visible instead of a
-// near-flat line, a crisp violet drop-shadow on the stroke (feDropShadow,
-// not a Gaussian blur merged onto the source - that was making the whole
-// line look blurry instead of glowing), a dashed reference line at the
-// program's cumulative average, and a pulsing "you are here" dot on the
-// latest non-archived period.
+// near-flat line, a soft violet halo under the stroke, a dashed reference
+// line at the program's cumulative average, and a pulsing "you are here" dot
+// on the latest non-archived period.
+// Sem filtros (nem SVG nem CSS blur): o halo e um traco largo e translucido
+// por baixo da linha e o brilho de fundo e um gradiente radial. Os filtros
+// (feDropShadow aplicado pelo recharts tambem a area de preenchimento toda,
+// e um blur de 64px) davam lag no scroll do Dashboard no Firefox.
 // Periods are already ordered by startDate asc (see
 // ProgramsService.getPeriodsComparison on the backend); periods without a
 // graded task yet (average === null) are dropped, a line can't be drawn
@@ -138,7 +153,7 @@ export default function GpaTrendChart({ entries, scale, cumulativeAverage }: Gpa
   return (
     <div className="relative h-72 w-full">
       {/* Soft ambient glow behind the chart, purely decorative */}
-      <div className="pointer-events-none absolute inset-x-8 top-4 h-28 rounded-full bg-violet-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute -inset-x-24 -top-14 h-64 bg-radial-[closest-side] from-violet-500/8 via-violet-500/5 to-transparent" />
 
       {zoomed && (
         <p className="absolute right-1 top-0 text-[10px] text-neutral-600">
@@ -157,11 +172,6 @@ export default function GpaTrendChart({ entries, scale, cumulativeAverage }: Gpa
               <stop offset="0%" stopColor="#8b5cf6" />
               <stop offset="100%" stopColor="#c4b5fd" />
             </linearGradient>
-            {/* Crisp glow: a drop-shadow halo behind the stroke, not a blur
-                merged over it - keeps the line itself sharp. */}
-            <filter id="gpaTrendGlow" x="-20%" y="-30%" width="140%" height="160%">
-              <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor="#a78bfa" floodOpacity="0.55" />
-            </filter>
           </defs>
 
           <CartesianGrid stroke="#262626" strokeDasharray="3 3" vertical={false} />
@@ -204,13 +214,34 @@ export default function GpaTrendChart({ entries, scale, cumulativeAverage }: Gpa
             cursor={{ stroke: '#a78bfa', strokeWidth: 1, strokeOpacity: 0.4 }}
           />
 
+          {/* Halo: a mesma curva com tracos largos e translucidos por baixo
+              da linha (fora do tooltip), do mais largo e tenue ao mais
+              estreito, para o brilho esbater como uma sombra. */}
+          {GLOW_STROKES.map(({ width, opacity }) => (
+            <Area
+              key={width}
+              type="monotone"
+              dataKey="average"
+              stroke="#a78bfa"
+              strokeOpacity={opacity}
+              strokeWidth={width}
+              strokeLinecap="round"
+              fill="none"
+              dot={false}
+              activeDot={false}
+              tooltipType="none"
+              legendType="none"
+              animationDuration={900}
+              animationEasing="ease-out"
+              isAnimationActive
+            />
+          ))}
           <Area
             type="monotone"
             dataKey="average"
             stroke="url(#gpaTrendStroke)"
             strokeWidth={3}
             fill="url(#gpaTrendFill)"
-            filter="url(#gpaTrendGlow)"
             dot={(props: TrendDotRenderProps) => (
               <TrendDot key={props.payload?.periodId} {...props} isLast={props.index === lastIndex} />
             )}

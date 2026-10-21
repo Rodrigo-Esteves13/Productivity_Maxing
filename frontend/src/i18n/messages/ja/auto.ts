@@ -531,6 +531,7 @@ export const auto: Record<string, string> = {
   "ui.stopAt": "{idleSince} に終了",
   "ui.lastDays": "過去 {days} 日間",
   "ui.showMoreDaysLeft": "さらに日数を表示（残り {remaining}）",
+  "ui.showMoreTasksLeft": "さらにタスクを表示（残り {remaining}）",
   "ui.focus5": "集中 {focusRating}/5",
   "ui.minutesDone": "{focusMinutes} 分完了",
   "ui.takeAMinBreak": "{breakMinutes} 分休憩しましょう",
