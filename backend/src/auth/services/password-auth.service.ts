@@ -19,6 +19,7 @@ import {
   EmailVerificationService,
 } from './email-verification.service';
 import { PasswordLinkService } from './password-link.service';
+import { runInBackground } from '../../common/background.util';
 
 // Mesmo URL usado no AuthController para os redirects de OAuth - usado aqui
 // só para o `redirectTo` do email de recuperação de password do Supabase,
@@ -93,7 +94,11 @@ export class PasswordAuthService {
       if (!this.passwordLink.canLink(existingLocal)) {
         throw new ConflictException(ACCOUNT_EXISTS_MESSAGE);
       }
-      await this.passwordLink.send(existingLocal);
+      runInBackground(
+        this.passwordLink.send(existingLocal),
+        this.logger,
+        'Password link email',
+      );
       return { kind: 'password-link-sent', email: data.email };
     }
 
@@ -132,8 +137,14 @@ export class PasswordAuthService {
 
     // Verificação LIGADA: envia o link já agora. O controller não abre
     // sessão enquanto o email não estiver verificado (needsEmailVerification).
+    // Sem esperar pelo SMTP: um envio lento deixava o registo pendurado e um
+    // refresh a meio dava "já existe conta".
     if (this.emailVerification.needsVerification(user)) {
-      await this.emailVerification.sendVerificationEmail(user);
+      runInBackground(
+        this.emailVerification.sendVerificationEmail(user),
+        this.logger,
+        'Verification email',
+      );
     }
     return { kind: 'created', user };
   }
@@ -285,7 +296,11 @@ export class PasswordAuthService {
       where: { email: { equals: email, mode: 'insensitive' } },
     });
     if (local && this.passwordLink.canLink(local)) {
-      await this.passwordLink.send(local);
+      runInBackground(
+        this.passwordLink.send(local),
+        this.logger,
+        'Password link email',
+      );
       return;
     }
 
@@ -302,9 +317,13 @@ export class PasswordAuthService {
       return;
     }
 
-    await this.mailService.sendPasswordResetEmail(
-      email,
-      data.properties.action_link,
+    runInBackground(
+      this.mailService.sendPasswordResetEmail(
+        email,
+        data.properties.action_link,
+      ),
+      this.logger,
+      'Password reset email',
     );
   }
 
