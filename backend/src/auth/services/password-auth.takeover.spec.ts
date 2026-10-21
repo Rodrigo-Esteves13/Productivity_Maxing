@@ -101,6 +101,18 @@ describe('PasswordAuthService account takeover guards', () => {
     expect(clients.anon.auth.signUp).not.toHaveBeenCalled();
   });
 
+  it('answers without waiting for the email to be sent', async () => {
+    const { service, passwordLink } = setup(OAUTH_USER, 1);
+    // SMTP pendurado (ex: porta bloqueada): o registo responde na mesma.
+    passwordLink.send.mockReturnValue(new Promise<void>(() => undefined));
+    await expect(
+      service.registerWithPassword({
+        email: OAUTH_USER.email,
+        password: 'any-password',
+      }),
+    ).resolves.toMatchObject({ kind: 'password-link-sent' });
+  });
+
   it('refuses to register the email of an account that already has a password', async () => {
     const { service, clients, passwordLink } = setup(
       { ...OAUTH_USER, supabaseAuthId: 'sb-owner' },

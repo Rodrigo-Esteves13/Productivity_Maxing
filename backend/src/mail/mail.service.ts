@@ -1,6 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { getFrontendUrl, getMailFromName } from '../config/app.config';
+import { MS_PER_SECOND } from '../common/time.constants';
+
+// Portas com TLS implicito. 2465 e a alternativa da Resend para hosts que
+// bloqueiam as portas SMTP normais (o Render gratuito bloqueia 25/465/587;
+// a 2587 e a alternativa com STARTTLS).
+const IMPLICIT_TLS_PORTS = new Set([465, 2465]);
+// Os defaults do nodemailer esperam ate 2 min pela ligacao: com a porta
+// bloqueada o email so falhava minutos depois, sem nada no log ate la.
+const SMTP_CONNECTION_TIMEOUT_MS = 10 * MS_PER_SECOND;
+const SMTP_GREETING_TIMEOUT_MS = 10 * MS_PER_SECOND;
+const SMTP_SOCKET_TIMEOUT_MS = 30 * MS_PER_SECOND;
 
 // Os logs nunca levam o email completo (dado pessoal): so a 1.a letra e o
 // dominio, o suficiente para distinguir casos ao depurar.
@@ -40,11 +51,14 @@ export class MailService {
     this.transporter = nodemailer.createTransport({
       host: SMTP_HOST,
       port: Number(SMTP_PORT),
-      // Porta 465 = SSL implícito. Qualquer outra (587, a mais comum) usa
-      // STARTTLS, negociado automaticamente pelo nodemailer quando
+      // Porta 465/2465 = SSL implícito. Qualquer outra (587, a mais comum)
+      // usa STARTTLS, negociado automaticamente pelo nodemailer quando
       // secure=false.
-      secure: Number(SMTP_PORT) === 465,
+      secure: IMPLICIT_TLS_PORTS.has(Number(SMTP_PORT)),
       auth: { user: SMTP_USER, pass: SMTP_PASS },
+      connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+      greetingTimeout: SMTP_GREETING_TIMEOUT_MS,
+      socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
     });
 
     return this.transporter;

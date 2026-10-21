@@ -10,6 +10,7 @@ import {
   isEmailVerificationRequired,
 } from '../../config/app.config';
 import { SupabaseClientsService } from './supabase-clients.service';
+import { runInBackground } from '../../common/background.util';
 
 const VERIFY_TOKEN_TTL = '24h';
 // Não reenvia para o mesmo utilizador mais do que 1x por minuto (evita usar
@@ -112,7 +113,11 @@ export class EmailVerificationService {
     const last = this.lastSentAt.get(user.id) ?? 0;
     if (Date.now() - last < RESEND_COOLDOWN_MS) return;
 
-    await this.sendVerificationEmail(user);
+    runInBackground(
+      this.sendVerificationEmail(user),
+      this.logger,
+      'Verification email',
+    );
     this.pruneCooldowns();
   }
 
