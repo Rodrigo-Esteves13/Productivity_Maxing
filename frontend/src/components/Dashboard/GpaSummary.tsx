@@ -29,8 +29,10 @@ const STAT_ACCENTS = {
 } as const;
 type StatAccent = keyof typeof STAT_ACCENTS;
 
-// Glassmorphic stat card: translucent blurred background, soft border,
-// glow blob behind it that picks up the accent color.
+// Glassmorphic stat card: translucent background, soft border, glow blob
+// behind it that picks up the accent color. Sem backdrop-blur: sobre o fundo
+// liso da pagina o blur nao se via, mas o GPU tinha de o refazer a cada
+// frame do scroll (medido: era a causa do Dashboard lento a fazer scroll).
 function StatCard({
   icon,
   label,
@@ -54,7 +56,7 @@ function StatCard({
 }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-900/40 backdrop-blur-xl p-4 shadow-xl shadow-black/40 transition-all duration-500 ease-out ${
+      className={`relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-900/40 p-4 shadow-xl shadow-black/40 transition-all duration-500 ease-out ${
         mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
       }`}
       style={{ transitionDelay: `${delayMs}ms` }}
@@ -188,7 +190,7 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
 
     {comparison.length > 1 && (
       <div
-        className={`relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-900/40 backdrop-blur-xl p-4 mb-4 shadow-xl shadow-black/40 transition-all duration-500 ease-out ${
+        className={`relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-900/40 p-4 mb-4 shadow-xl shadow-black/40 transition-all duration-500 ease-out ${
           mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
         }`}
         style={{ transitionDelay: '160ms' }}

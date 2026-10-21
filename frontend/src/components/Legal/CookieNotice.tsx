@@ -31,7 +31,7 @@ export default function CookieNotice() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 border-t border-neutral-800 bg-neutral-950/95 backdrop-blur px-4 py-4 sm:px-6">
+    <div className="fixed bottom-0 inset-x-0 z-50 border-t border-neutral-800 bg-neutral-950/95 px-4 py-4 sm:px-6">
       <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
         <p className="text-sm text-neutral-300 flex-1">
           {fillNodes(t('ui.cookieNoticeText'), {
