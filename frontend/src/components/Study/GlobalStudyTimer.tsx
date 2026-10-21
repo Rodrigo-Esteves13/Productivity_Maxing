@@ -50,7 +50,7 @@ export default function GlobalStudyTimer() {
         <div
           role="status"
           aria-live="polite"
-          className="print-hide fixed bottom-6 left-6 z-40 flex items-center gap-3 rounded-full border border-violet-500/60 bg-neutral-900/95 py-2 pl-4 pr-2 shadow-lg backdrop-blur-sm"
+          className="print-hide fixed bottom-6 left-6 z-40 flex items-center gap-3 rounded-full border border-violet-500/60 bg-neutral-900/95 py-2 pl-4 pr-2 shadow-lg"
         >
           <ClockIcon className="h-4 w-4 shrink-0 text-violet-400" />
           <div className="flex flex-col leading-tight">
