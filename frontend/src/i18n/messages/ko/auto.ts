@@ -531,6 +531,7 @@ export const auto: Record<string, string> = {
   "ui.stopAt": "{idleSince}에 중지",
   "ui.lastDays": "최근 {days}일",
   "ui.showMoreDaysLeft": "더 많은 날 보기 ({remaining}개 남음)",
+  "ui.showMoreTasksLeft": "더 많은 작업 보기 ({remaining}개 남음)",
   "ui.focus5": "집중 {focusRating}/5",
   "ui.minutesDone": "{focusMinutes}분 완료",
   "ui.takeAMinBreak": "{breakMinutes}분 쉬세요",

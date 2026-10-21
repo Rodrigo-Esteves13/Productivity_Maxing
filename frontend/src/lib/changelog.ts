@@ -7,6 +7,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-21',
+    title: 'Smoother Dashboard and a shorter study plan',
+    items: [
+      'Scrolling the Dashboard is smoother, mostly at the top where the average cards and the period chart are.',
+      'Schedule: the suggested study plan shows one day at a time (pick it in the day tabs) and the first tasks, with Show more for the rest, instead of one very long list.',
+    ],
+  },
+  {
     date: '2026-10-20',
     title: 'Kanban board, attendance and faster task cleanup',
     items: [

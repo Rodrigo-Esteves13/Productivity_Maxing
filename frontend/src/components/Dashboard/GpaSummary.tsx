@@ -22,10 +22,11 @@ function formatAverage(average: number | null, scale: string): string {
 const GpaTrendChart = lazy(() => import('./GpaTrendChart'));
 
 // Cor de cada cartao (linha do sparkline + brilho de fundo), sempre tokens
-// do Tailwind em vez de hex.
+// do Tailwind em vez de hex. O brilho e um gradiente radial (antes era um
+// circulo com filter: blur(40px), com o mesmo aspeto mas pesado no Firefox).
 const STAT_ACCENTS = {
-  violet: { line: 'text-violet-400', glow: 'bg-violet-400/15' },
-  indigo: { line: 'text-indigo-400', glow: 'bg-indigo-400/15' },
+  violet: { line: 'text-violet-400', glow: 'from-violet-400/8' },
+  indigo: { line: 'text-indigo-400', glow: 'from-indigo-400/8' },
 } as const;
 type StatAccent = keyof typeof STAT_ACCENTS;
 
@@ -62,7 +63,7 @@ function StatCard({
       style={{ transitionDelay: `${delayMs}ms` }}
     >
       <div
-        className={`pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full blur-2xl ${STAT_ACCENTS[accent].glow}`}
+        className={`pointer-events-none absolute -right-22 -top-22 h-56 w-56 bg-radial-[closest-side] to-transparent ${STAT_ACCENTS[accent].glow}`}
       />
       <div className="relative flex items-start justify-between gap-3">
         <div>
