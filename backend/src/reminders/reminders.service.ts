@@ -3,6 +3,7 @@ import { UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { PushService } from '../push/push.service';
+import { MedicationsService } from '../wellbeing/medications.service';
 import { getFrontendUrl } from '../config/app.config';
 import { getLisbonNow, toDateKey } from '../common/date-key.util';
 import { lisbonWallClockToUtc } from '../calendar/feed/ics-feed.builder';
@@ -20,6 +21,8 @@ export interface ReminderRunResult {
   usersEmailed: number;
   usersPushed: number;
   remindersSent: number;
+  // Utilizadores avisados de tomas de medicacao nesta execucao.
+  medicationUsersPushed: number;
 }
 
 // Um aviso push por user e por execucao: a primeira task (a mais proxima)
@@ -39,6 +42,7 @@ export class RemindersService {
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
     private readonly pushService: PushService,
+    private readonly medicationsService: MedicationsService,
   ) {}
 
   async run(now = new Date()): Promise<ReminderRunResult> {
@@ -96,6 +100,7 @@ export class RemindersService {
       usersEmailed: 0,
       usersPushed: 0,
       remindersSent: 0,
+      medicationUsersPushed: 0,
     };
     const tasksLink = `${getFrontendUrl()}${TASKS_PATH}`;
 
@@ -135,6 +140,17 @@ export class RemindersService {
         skipDuplicates: true,
       });
       result.remindersSent += userTasks.length;
+    }
+
+    // Falha nos lembretes de medicacao nao pode travar os de prazos (e
+    // vice-versa: estes ja correram).
+    try {
+      result.medicationUsersPushed =
+        await this.medicationsService.sendDueReminders();
+    } catch (error) {
+      this.logger.warn(
+        `Lembretes de medicacao falharam: ${(error as Error).message}`,
+      );
     }
 
     this.logger.log(

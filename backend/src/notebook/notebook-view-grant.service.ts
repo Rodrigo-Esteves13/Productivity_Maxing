@@ -106,7 +106,7 @@ export class NotebookViewGrantService {
   private async ownerAreas(ownerId: string): Promise<OwnerAreaOption[]> {
     const groups = await this.prisma.notebookEntry.groupBy({
       by: ['areaId'],
-      where: { userId: ownerId },
+      where: { userId: ownerId, privateFromFriends: false },
       _count: { _all: true },
     });
     if (groups.length === 0) return [];
@@ -276,7 +276,11 @@ export class NotebookViewGrantService {
         select: { name: true },
       }),
       this.prisma.notebookEntry.findMany({
-        where: { userId: ownerId, areaId: { in: areaIds } },
+        where: {
+          userId: ownerId,
+          areaId: { in: areaIds },
+          privateFromFriends: false,
+        },
         orderBy: { date: 'desc' },
         take: MAX_LIST,
         select: {
@@ -312,7 +316,13 @@ export class NotebookViewGrantService {
   ): Promise<SharedEntryResult> {
     const areaIds = await this.allowedAreas(viewerId, ownerId);
     const entry = await this.prisma.notebookEntry.findFirst({
-      where: { id: entryId, userId: ownerId, areaId: { in: areaIds } },
+      // Entrada privada = 404, igual a uma que nao existe (sem enumeracao).
+      where: {
+        id: entryId,
+        userId: ownerId,
+        areaId: { in: areaIds },
+        privateFromFriends: false,
+      },
       include: {
         area: { select: { name: true, colorHex: true } },
         photos: { orderBy: { position: 'asc' } },

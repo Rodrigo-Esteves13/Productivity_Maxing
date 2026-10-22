@@ -19,6 +19,7 @@ const STUDY_LINKS: FooterLinkItem[] = [
   { label: 'nav.notebook', to: '/notebook' },
   { label: 'nav.areas', to: '/areas' },
   { label: 'nav.review', to: '/review' },
+  { label: 'nav.wellbeing', to: '/wellbeing' },
 ];
 
 const SOCIAL_LINKS: FooterLinkItem[] = [

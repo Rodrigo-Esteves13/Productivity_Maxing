@@ -110,4 +110,13 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   spacedReviewsEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'New notebook entries start hidden from friends who can read your notes.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  notesPrivateByDefault?: boolean;
 }

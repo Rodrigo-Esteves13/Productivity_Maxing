@@ -9,6 +9,7 @@ import { WEEKDAYS } from './shiftText';
 import type { WorkShift } from '../../../types/models';
 import ToggleChip from '../../UI/ToggleChip';
 import { useI18n } from '../../../i18n/useI18n';
+import { todayKey } from '../../../lib/dateKey';
 
 type Repeat = 'weekly' | 'once';
 
@@ -16,6 +17,8 @@ export interface ShiftFormValues {
   repeat: Repeat;
   days: number[];
   date: string;
+  // Semanal: primeiro dia em que conta (YYYY-MM-DD).
+  startsOn: string;
   startMinutes: number;
   endMinutes: number;
 }
@@ -47,6 +50,8 @@ export default function ShiftForm({
   const [repeat, setRepeat] = useState<Repeat>(shift && shift.dayOfWeek === null ? 'once' : 'weekly');
   const [days, setDays] = useState<number[]>(shift?.dayOfWeek != null ? [shift.dayOfWeek] : []);
   const [date, setDate] = useState(shift?.date ? shift.date.slice(0, 10) : '');
+  // Turnos antigos (sem inicio) mostram hoje; criar um novo pergunta sempre.
+  const [startsOn, setStartsOn] = useState(shift?.startsOn ? shift.startsOn.slice(0, 10) : todayKey());
   const [start, setStart] = useState(shift ? formatClock(shift.startMinutes) : DEFAULT_START);
   const [end, setEnd] = useState(shift ? formatClock(shift.endMinutes) : DEFAULT_END);
   const [formError, setFormError] = useState('');
@@ -75,13 +80,17 @@ export default function ShiftForm({
       setFormError(t('ui.thatWeekdayIsAFixed'));
       return;
     }
+    if (repeat === 'weekly' && !startsOn) {
+      setFormError(t('shift.startsOnRequired'));
+      return;
+    }
     if (repeat === 'once' && !date) {
       setFormError(t('ui.pickADate'));
       return;
     }
 
     setFormError('');
-    await onSubmit({ repeat, days, date, startMinutes, endMinutes });
+    await onSubmit({ repeat, days, date, startsOn, startMinutes, endMinutes });
   };
 
   return (
@@ -113,6 +122,15 @@ export default function ShiftForm({
                 {d.label}
               </ToggleChip>
             ))}
+          </div>
+          <div className="mt-3">
+            <Input
+              label={t('shift.startsOn')}
+              type="date"
+              value={startsOn}
+              onChange={(e) => setStartsOn(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-neutral-500">{t('shift.startsOnHelp')}</p>
           </div>
         </fieldset>
       ) : (

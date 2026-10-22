@@ -22,6 +22,7 @@ export const ACCOUNT_NAV: NavItem[] = [
   { to: '/developer', labelKey: 'nav.developer' },
   { to: '/agent', labelKey: 'nav.agent' },
   { to: '/review', labelKey: 'nav.review' },
+  { to: '/wellbeing', labelKey: 'nav.wellbeing' },
   { to: '/changelog', labelKey: 'nav.changelog' },
 ];
 

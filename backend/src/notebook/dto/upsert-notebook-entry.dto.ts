@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsString,
   IsNotEmpty,
   IsOptional,
@@ -453,4 +454,13 @@ export class UpdateNotebookEntryDto {
   @IsOptional()
   @IsDateString()
   date?: string;
+
+  @ApiPropertyOptional({
+    example: true,
+    description:
+      'Hide this entry from friends who can read your notes for this subject.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  privateFromFriends?: boolean;
 }

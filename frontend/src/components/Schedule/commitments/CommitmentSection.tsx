@@ -47,7 +47,7 @@ export default function CommitmentSection({
     };
     const inputs: CreateWorkShiftInput[] =
       values.repeat === 'weekly'
-        ? values.days.map((dayOfWeek) => ({ ...base, dayOfWeek }))
+        ? values.days.map((dayOfWeek) => ({ ...base, dayOfWeek, startsOn: values.startsOn }))
         : [{ ...base, date: values.date }];
     const ok = await onAddShifts(inputs);
     if (ok) setMode('view');

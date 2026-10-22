@@ -1,6 +1,7 @@
 import { formatClock, formatDayLabel, weekdayLabel } from '../../../lib/timeFormat';
 import type { WorkShift } from '../../../types/models';
 import { translateNow } from '../../../i18n/translate';
+import { todayKey } from '../../../lib/dateKey';
 
 export { weekdayLabel };
 
@@ -27,5 +28,10 @@ export function describeShift(shift: WorkShift): string {
       : shift.date
         ? formatDayLabel(shift.date.slice(0, 10))
         : '';
-  return `${when} · ${formatClock(shift.startMinutes)}-${formatClock(shift.endMinutes)}`;
+  const time = `${formatClock(shift.startMinutes)}-${formatClock(shift.endMinutes)}`;
+  // So vale a pena dizer quando comeca se ainda nao comecou.
+  const startsKey = shift.dayOfWeek !== null && shift.startsOn ? shift.startsOn.slice(0, 10) : null;
+  return startsKey && startsKey > todayKey()
+    ? `${when} · ${time} · ${translateNow('shift.startsOnLine', { date: formatDayLabel(startsKey) })}`
+    : `${when} · ${time}`;
 }

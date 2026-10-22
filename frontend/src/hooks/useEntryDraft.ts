@@ -15,6 +15,7 @@ export function useEntryDraft(entry: NotebookEntry) {
   const [tables, setTables] = useState<NotebookTable[]>(entry.tables ?? []);
   const [usefulLinks, setUsefulLinks] = useState<UsefulLink[]>(entry.usefulLinks ?? []);
   const [canvasHeight, setCanvasHeight] = useState<number>(entry.canvasHeight ?? DEFAULT_VIEW_HEIGHT);
+  const [privateFromFriends, setPrivateFromFriends] = useState(entry.privateFromFriends ?? false);
 
   // Trocar de entrada (outro item da lista) tem de repor o editor inteiro -
   // sem isto os campos da entrada anterior "vazavam" para a seguinte.
@@ -30,6 +31,7 @@ export function useEntryDraft(entry: NotebookEntry) {
     setTables(entry.tables ?? []);
     setUsefulLinks(entry.usefulLinks ?? []);
     setCanvasHeight(entry.canvasHeight ?? DEFAULT_VIEW_HEIGHT);
+    setPrivateFromFriends(entry.privateFromFriends ?? false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id]);
 
@@ -50,6 +52,7 @@ export function useEntryDraft(entry: NotebookEntry) {
     tables, setTables,
     usefulLinks, setUsefulLinks,
     canvasHeight,
+    privateFromFriends, setPrivateFromFriends,
     addTable,
     growCanvas,
   };

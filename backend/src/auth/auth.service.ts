@@ -62,6 +62,7 @@ export class AuthService {
       deadlineEmailReminders?: boolean;
       deadlinePushReminders?: boolean;
       spacedReviewsEnabled?: boolean;
+      notesPrivateByDefault?: boolean;
     },
   ): Promise<User> {
     // Cada campo só entra no `data` do Prisma se veio mesmo no pedido -
@@ -97,6 +98,9 @@ export class AuthService {
           : {}),
         ...(data.spacedReviewsEnabled !== undefined
           ? { spacedReviewsEnabled: data.spacedReviewsEnabled }
+          : {}),
+        ...(data.notesPrivateByDefault !== undefined
+          ? { notesPrivateByDefault: data.notesPrivateByDefault }
           : {}),
       },
     });

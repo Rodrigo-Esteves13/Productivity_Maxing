@@ -8,6 +8,19 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-10-21',
+    title: 'Wellbeing page, notebook undo and private notes',
+    items: [
+      'New Wellbeing page: a quick daily check-in (mood, energy, stress), and a comparison of how your mood and energy relate to your study focus. The focus vs grades card is there too.',
+      'Medication reminders: add what you take and when, get a push notification at each time, and tick each dose off. A reminder only, not medical advice.',
+      'Notebook: Undo and Redo for text, title, tables and links (Ctrl+Z, Ctrl+Y or the toolbar). The whiteboard keeps its own undo.',
+      'Notebook: auto save can be turned off from the entry toolbar. Changes are then saved with Ctrl+S, Done, or when you leave the entry.',
+      'Notebook: mark an entry as Private to hide it from friends who can read your notes, and choose in Profile whether new entries start private.',
+      'Schedule: a weekly work shift now asks when it starts, so it only shows up from that day on.',
+      'Fixes: Esc (or F11) now leaves Focus mode instead of only leaving full screen, and the page behind an enlarged photo or Focus mode no longer scrolls.',
+    ],
+  },
+  {
+    date: '2026-10-21',
     title: 'Smoother Dashboard and a shorter study plan',
     items: [
       'Scrolling the Dashboard is smoother, mostly at the top where the average cards and the period chart are.',

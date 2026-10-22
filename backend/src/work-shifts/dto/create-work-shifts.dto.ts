@@ -52,6 +52,17 @@ export class CreateWorkShiftDto {
   @Matches(DATE_KEY_PATTERN, { message: 'date must be formatted YYYY-MM-DD.' })
   date?: string;
 
+  @ApiPropertyOptional({
+    example: '2026-11-02',
+    description:
+      'Weekly shifts only: first day the shift applies. Omit to apply from now on.',
+  })
+  @IsOptional()
+  @Matches(DATE_KEY_PATTERN, {
+    message: 'startsOn must be formatted YYYY-MM-DD.',
+  })
+  startsOn?: string;
+
   @ApiProperty({ example: 540, description: 'Minutes since midnight, Lisbon.' })
   @IsInt()
   @Min(0)

@@ -215,6 +215,8 @@ export class UsersService {
       academicPrograms,
       studySessions,
       notebookEntries,
+      moodLogs,
+      medications,
     ] = await Promise.all([
       // subtasks vão dentro de cada task no export (checklist da task).
       this.prisma.task.findMany({
@@ -252,6 +254,12 @@ export class UsersService {
           },
         },
       }),
+      // Bem-estar (dados de saude): tambem e do utilizador, entra no export.
+      this.prisma.moodLog.findMany({ where: { userId: id } }),
+      this.prisma.medication.findMany({
+        where: { userId: id },
+        include: { doses: true },
+      }),
     ]);
 
     // Area é um catálogo global (ver AreasService.findAll), não tem
@@ -280,6 +288,8 @@ export class UsersService {
       academicPrograms,
       studySessions,
       notebookEntries,
+      moodLogs,
+      medications,
     };
   }
 }

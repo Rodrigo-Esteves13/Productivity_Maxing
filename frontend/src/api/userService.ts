@@ -154,6 +154,7 @@ export const updateUserProfile = async (data: {
   deadlineEmailReminders?: boolean;
   deadlinePushReminders?: boolean;
   spacedReviewsEnabled?: boolean;
+  notesPrivateByDefault?: boolean;
 }): Promise<User> => {
   const response = await api.patch<User>('/auth/me', data);
   return response.data;

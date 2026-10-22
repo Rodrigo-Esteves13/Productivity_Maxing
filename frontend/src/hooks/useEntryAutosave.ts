@@ -11,6 +11,9 @@ const AUTOSAVE_DELAY_MS = 1500;
 interface UseEntryAutosaveOptions {
   // So grava em modo edicao.
   enabled: boolean;
+  // false = o utilizador desligou o auto save: so grava com Ctrl+S, "Done"
+  // ou ao sair da entrada (rede de seguranca contra perder o que escreveu).
+  auto: boolean;
   // Tem de ser memoizado (useMemo): o efeito reage a mudancas da referencia.
   payload: NotebookEntrySavePayload;
   // Impede gravar (ex.: texto acima do limite do backend).
@@ -23,7 +26,7 @@ interface UseEntryAutosaveOptions {
 // gravado (baseline), por isso so vai ao servidor quando algo mudou mesmo.
 // O JSON.stringify so corre quando o temporizador dispara - nunca por cada
 // movimento da caneta no quadro.
-export function useEntryAutosave({ enabled, payload, blocked, textLength, onSave }: UseEntryAutosaveOptions) {
+export function useEntryAutosave({ enabled, auto, payload, blocked, textLength, onSave }: UseEntryAutosaveOptions) {
   const [status, setStatus] = useState<AutosaveStatus>('idle');
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [error, setError] = useState('');
@@ -104,9 +107,10 @@ export function useEntryAutosave({ enabled, payload, blocked, textLength, onSave
       return;
     }
     setStatus((s) => (s === 'saving' ? s : 'pending'));
+    if (!auto) return;
     const timer = setTimeout(() => void flushRef.current(), AUTOSAVE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [enabled, payload]);
+  }, [enabled, auto, payload]);
 
   // Trocar de entrada / sair da pagina: grava o que ficou pendente.
   useEffect(() => () => void flushRef.current(), []);

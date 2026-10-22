@@ -110,13 +110,28 @@ describe('NotebookViewGrantService', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('only entries of the approved subjects are queried', async () => {
+  it('only non-private entries of the approved subjects are queried', async () => {
     const { service, prisma } = setup({ grant: approved });
     await service.listFor('v', 'o');
     const args = (prisma.notebookEntry.findMany as Mock).mock.calls as [
       { where: unknown },
     ][];
-    expect(args[0][0].where).toEqual({ userId: 'o', areaId: { in: ['a1'] } });
+    expect(args[0][0].where).toEqual({
+      userId: 'o',
+      areaId: { in: ['a1'] },
+      privateFromFriends: false,
+    });
+  });
+
+  it('a private entry is a 404 for friends', async () => {
+    const { service, prisma } = setup({ grant: approved });
+    await expect(service.getEntryFor('v', 'o', 'e1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    const args = (prisma.notebookEntry.findFirst as Mock).mock.calls as [
+      { where: { privateFromFriends?: boolean } },
+    ][];
+    expect(args[0][0].where.privateFromFriends).toBe(false);
   });
 
   it('an entry outside the approved subjects is a 404', async () => {

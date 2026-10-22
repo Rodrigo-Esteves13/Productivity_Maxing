@@ -92,6 +92,9 @@ export class WorkShiftCopyService {
             bufferMinutes: draft.bufferMinutes,
             dayOfWeek: draft.dayOfWeek,
             date: draft.dateKey ? parseDateKey(draft.dateKey) : null,
+            // Fixar uma semana: o padrao vale a partir dessa semana, nao
+            // para tras (nao aparece em semanas antigas do horario).
+            startsOn: draft.dayOfWeek !== null ? fromWeekStart : null,
             startMinutes: draft.startMinutes,
             endMinutes: draft.endMinutes,
           },

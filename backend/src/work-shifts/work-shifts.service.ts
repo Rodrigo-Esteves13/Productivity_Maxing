@@ -23,6 +23,7 @@ export const SHIFT_SELECT = {
   id: true,
   dayOfWeek: true,
   date: true,
+  startsOn: true,
   startMinutes: true,
   endMinutes: true,
   bufferMinutes: true,
@@ -47,6 +48,7 @@ export interface WorkShiftView {
   id: string;
   dayOfWeek: number | null;
   date: Date | null;
+  startsOn: Date | null;
   startMinutes: number;
   endMinutes: number;
   commitmentId: string | null;
@@ -65,6 +67,7 @@ export function toShiftView(shift: ShiftRow): WorkShiftView {
     id: shift.id,
     dayOfWeek: shift.dayOfWeek,
     date: shift.date,
+    startsOn: shift.startsOn,
     startMinutes: shift.startMinutes,
     endMinutes: shift.endMinutes,
     commitmentId: shift.commitmentId,
@@ -149,6 +152,10 @@ export class WorkShiftsService {
             commitmentId: shift.commitmentId ?? null,
             dayOfWeek: shift.dayOfWeek ?? null,
             date: shift.date ? parseDateKey(shift.date) : null,
+            startsOn:
+              shift.dayOfWeek !== undefined && shift.startsOn
+                ? parseDateKey(shift.startsOn)
+                : null,
             startMinutes: shift.startMinutes,
             endMinutes: shift.endMinutes,
             bufferMinutes: shift.bufferMinutes ?? 0,
@@ -233,9 +240,14 @@ export class WorkShiftsService {
           dayOfWeek: dto.dayOfWeek,
           date: null,
         }),
+        ...(dto.startsOn !== undefined && {
+          startsOn: dto.startsOn === null ? null : parseDateKey(dto.startsOn),
+        }),
+        // Um turno pontual nao tem inicio de recorrencia.
         ...(dto.date !== undefined && {
           date: parseDateKey(dto.date),
           dayOfWeek: null,
+          startsOn: null,
         }),
       },
     });
@@ -295,8 +307,10 @@ export class WorkShiftsService {
       for (const { row, view } of shifts) {
         // Folga fixa do local: o turno semanal não vale nesse dia (fica
         // guardado, volta a valer se a folga for retirada).
+        // Antes de startsOn o turno semanal ainda nao comecou.
         const matchesRecurring =
           row.dayOfWeek === weekday &&
+          (row.startsOn === null || row.startsOn <= day) &&
           !isDayOff(row.commitment?.daysOff, weekday);
         const matchesOneOff = row.date !== null && toDateKey(row.date) === key;
         if (!matchesRecurring && !matchesOneOff) continue;

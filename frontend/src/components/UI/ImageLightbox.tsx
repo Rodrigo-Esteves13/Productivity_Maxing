@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, XIcon } from './Icons';
 import { useI18n } from '../../i18n/useI18n';
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 export interface LightboxImage {
   id: string;
@@ -34,6 +35,8 @@ export default function ImageLightbox({ images, index, onIndexChange }: ImageLig
   const isOpen = index !== null && index >= 0 && index < images.length;
   const total = images.length;
 
+  useScrollLock(isOpen);
+
   const close = useCallback(() => onIndexChange(null), [onIndexChange]);
   const go = useCallback(
     (delta: number) => {
@@ -51,13 +54,8 @@ export default function ImageLightbox({ images, index, onIndexChange }: ImageLig
       else if (e.key === 'ArrowRight') go(1);
     };
     window.addEventListener('keydown', handleKey);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     closeRef.current?.focus();
-    return () => {
-      window.removeEventListener('keydown', handleKey);
-      document.body.style.overflow = previousOverflow;
-    };
+    return () => window.removeEventListener('keydown', handleKey);
   }, [isOpen, close, go]);
 
   if (!isOpen || index === null) return null;
@@ -69,7 +67,7 @@ export default function ImageLightbox({ images, index, onIndexChange }: ImageLig
       role="dialog"
       aria-modal="true"
       aria-label={t('common.photoOf', { n: index + 1, total })}
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center overscroll-contain bg-black/90 p-4"
       onClick={close}
     >
       <button

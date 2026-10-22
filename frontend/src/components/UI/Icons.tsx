@@ -32,6 +32,7 @@ export {
   // curva com gancho que já usávamos (o "Undo" do lucide é uma curva
   // diferente, mais parecida com um "voltar atrás" de navegador).
   Undo2 as UndoIcon,
+  Redo2 as RedoIcon,
   GraduationCap as GraduationCapIcon,
   TrendingUp as TrendingUpIcon,
   Gauge as GaugeIcon,
