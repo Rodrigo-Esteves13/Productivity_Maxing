@@ -68,7 +68,11 @@ export default function ReplicateShiftPanel({
         : { bufferMinutes: shift.bufferMinutes, ...(shift.label ? { label: shift.label } : {}) }),
     };
     const inputs: CreateWorkShiftInput[] = isWeekly
-      ? weekdays.map((dayOfWeek) => ({ ...base, dayOfWeek }))
+      ? weekdays.map((dayOfWeek) => ({
+          ...base,
+          dayOfWeek,
+          ...(shift.startsOn && { startsOn: shift.startsOn.slice(0, 10) }),
+        }))
       : followingDays.filter((d) => offsets.includes(d.offset)).map((d) => ({ ...base, date: d.key }));
     if (inputs.length === 0) return;
     if (await onReplicate(inputs)) onClose();

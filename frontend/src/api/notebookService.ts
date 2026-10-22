@@ -45,7 +45,10 @@ export interface CreateNotebookEntryPayload {
 
 export type UpdateNotebookEntryPayload = Partial<
   Omit<CreateNotebookEntryPayload, 'areaId' | 'classOccurrenceId'>
->;
+> & {
+  // So na edicao: a criacao segue User.notesPrivateByDefault.
+  privateFromFriends?: boolean;
+};
 
 // A lista da cadeira sem o conteudo das entradas (ver NotebookEntrySummary).
 export const getNotebookEntrySummaries = async (areaId: string): Promise<NotebookEntrySummary[]> => {

@@ -17,6 +17,7 @@ import { share } from './share';
 import { tasks } from './tasks';
 import { auto } from './auto';
 import { extra } from './extra';
+import { fase7 } from './fase7';
 
 export const zh: Record<string, string> = {
   ...packs,
@@ -38,4 +39,5 @@ export const zh: Record<string, string> = {
   ...tasks,
   ...auto,
   ...extra,
+  ...fase7,
 };

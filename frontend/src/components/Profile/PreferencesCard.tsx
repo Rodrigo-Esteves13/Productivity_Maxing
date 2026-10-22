@@ -20,6 +20,7 @@ export default function PreferencesCard({ user, onUserUpdate }: PreferencesCardP
     deadlineEmailReminders?: boolean;
     deadlinePushReminders?: boolean;
     spacedReviewsEnabled?: boolean;
+    notesPrivateByDefault?: boolean;
   }) => {
     setIsSaving(true);
     try {
@@ -55,6 +56,13 @@ export default function PreferencesCard({ user, onUserUpdate }: PreferencesCardP
         checked={user.spacedReviewsEnabled ?? false}
         disabled={isSaving}
         onChange={(value) => void save({ spacedReviewsEnabled: value })}
+      />
+      <ToggleRow
+        label={t('prefs.notesPrivateByDefault')}
+        description={t('prefs.notesPrivateByDefaultHelp')}
+        checked={user.notesPrivateByDefault ?? false}
+        disabled={isSaving}
+        onChange={(value) => void save({ notesPrivateByDefault: value })}
       />
     </Card>
   );

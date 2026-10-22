@@ -313,6 +313,9 @@ model User {
   // Ao concluir uma task académica (não evento), cria 3 tasks leves de
   // revisão a +1/+3/+7 dias (ver TasksService.spawnFollowUps).
   spacedReviewsEnabled Boolean @default(false)
+  // Entradas novas do Notebook nascem escondidas dos amigos com acesso as
+  // notas (NotebookEntry.privateFromFriends). Desligado = tudo visivel.
+  notesPrivateByDefault Boolean @default(false)
 
   // 2FA (TOTP, RFC 6238). Só tem efeito com TWO_FACTOR_ENABLED=true no
   // backend; com a flag desligada nada disto é usado nem exposto.
@@ -344,6 +347,10 @@ model User {
   programs         AcademicProgram[] @relation("UserPrograms")
   classOccurrences ClassOccurrence[]
   workShifts       WorkShift[]
+  // Bem-estar (Fase 7): registo diario do estado mental e medicacao.
+  moodLogs         MoodLog[]
+  medications      Medication[]
+  medicationDoses  MedicationDose[]
   commitments      Commitment[]
   travelTimes      TravelTime[]
   calendarSyncedEvents CalendarSyncedEvent[]
@@ -1107,6 +1114,12 @@ model NotebookEntry {
   // ter de criar uma segunda entrada só para continuar a aula.
   canvasHeight Int?
 
+  // Escondida dos amigos com acesso as notas desta cadeira (NotebookViewGrant).
+  // Nao mexe nos links de partilha nem nos convites: esses sao por entrada e
+  // o dono escolhe-os de proposito. Valor inicial vem de
+  // User.notesPrivateByDefault.
+  privateFromFriends Boolean @default(false)
+
   // Editável pelo utilizador (não é createdAt) - de propósito, para
   // conseguir meter apontamentos antigos no sítio certo da ordem
   // cronológica em vez de tudo cair na data em que foi digitalizado.
@@ -1262,6 +1275,9 @@ model WorkShift {
   dayOfWeek Int?
   // Meia-noite UTC desse dia (hora de Lisboa), como ClassOccurrence.date.
   date      DateTime?
+  // So turnos semanais: primeiro dia em que o turno conta (ex.: comecar o
+  // trabalho daqui a duas semanas). null = desde sempre (turnos antigos).
+  startsOn  DateTime?
 
   startMinutes  Int
   endMinutes    Int
@@ -1659,4 +1675,66 @@ model TravelTime {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, origin, destination, mode])
+}
+
+// Registo diario do estado mental (um por dia). Escalas 1 a 5. Serve para
+// cruzar humor com o foco das sessoes de estudo e o tempo estudado
+// (WellbeingInsightsService). Dados de saude: so o proprio utilizador os ve.
+model MoodLog {
+  id     String @id @default(uuid())
+  userId String
+  // Meia-noite UTC do dia (hora de Lisboa), como WorkShift.date.
+  date   DateTime
+  mood   Int
+  energy Int?
+  stress Int?
+  note   String? @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+// Medicamento com lembrete diario as horas escolhidas. Nao e conselho
+// medico: so um lembrete e um registo de tomas.
+model Medication {
+  id     String  @id @default(uuid())
+  userId String
+  name   String  @db.VarChar(100)
+  dosage String? @db.VarChar(60)
+  // Minutos desde a meia-noite (Lisboa) de cada toma diaria, ordenados.
+  times  Int[]
+  // Desligar o lembrete sem apagar o medicamento nem o historico.
+  remindersEnabled Boolean @default(true)
+  active           Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doses MedicationDose[]
+
+  @@index([userId])
+}
+
+// Uma toma num dia e hora concretos. Criada quando o lembrete sai
+// (remindedAt) ou quando o utilizador marca como tomada (takenAt), o que
+// vier primeiro. O unique impede lembretes repetidos para a mesma toma.
+model MedicationDose {
+  id           String    @id @default(uuid())
+  userId       String
+  medicationId String
+  date         DateTime
+  slotMinutes  Int
+  takenAt      DateTime?
+  remindedAt   DateTime?
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medication Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+
+  @@unique([medicationId, date, slotMinutes])
+  @@index([userId, date])
 }

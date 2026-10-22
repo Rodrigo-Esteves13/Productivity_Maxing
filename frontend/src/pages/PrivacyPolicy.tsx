@@ -6,7 +6,7 @@ import LegalTable from '../components/Legal/LegalTable';
 import useSeo from '../hooks/useSeo';
 import { REPO_URL, CONTACT_EMAIL, APP_DOMAIN } from '../lib/constants';
 
-const LAST_UPDATED = '20/10/2026';
+const LAST_UPDATED = '21/10/2026';
 
 export default function PrivacyPolicy() {
   useSeo({
@@ -92,6 +92,20 @@ export default function PrivacyPolicy() {
           </li>
           <li>
             Addresses you choose to add (home, campus, workplaces and one-off events) and how you travel, only to plan travel time in your schedule and study plan. When you press &quot;Calculate automatically&quot;, or when your day has two places in a row, those addresses are sent to Google Maps (Distance Matrix API) to get the trip time. Trip times between your places are kept in your account so they are not requested again. You can clear any address at any time
+          </li>
+          <li>
+            Wellbeing (optional): if you use the Wellbeing page, I store your daily check-ins (mood, and
+            optionally energy, stress and a short note) and the medication you add (name, optional dose,
+            daily times and which doses you marked as taken). This is health data, processed only with
+            your explicit consent, which you give by adding it. It is visible only to you, never shared with
+            friends or other users, and only used to show your own reminders and the comparison between your
+            mood and your study focus. Medication reminders are sent as push notifications that include the
+            medication name. You can delete any check-in or medication at any time, and deleting your account
+            deletes all of it
+          </li>
+          <li>
+            Notebook privacy: you can mark an entry as private so friends who can read your notes for that
+            subject do not see it, and choose whether new entries start private
           </li>
           <li>Usage data needed to compute your progress and streaks</li>
           <li>
@@ -187,7 +201,10 @@ export default function PrivacyPolicy() {
           following legal bases: <strong>contract necessity</strong>, to provide the core functionality you
           sign up for (task management, calendar sync); and <strong>consent</strong>, for connecting
           optional third-party providers (Google/GitHub/Discord) and for the Calendar scope specifically,
-          which you grant explicitly on the provider's own consent screen.
+          which you grant explicitly on the provider's own consent screen. Wellbeing data (mood check-ins and
+          medication) is health data and is processed only on the basis of your <strong>explicit
+          consent</strong> (GDPR Article 9(2)(a)), given when you choose to add it; you can withdraw it at
+          any time by deleting that data.
         </p>
       </LegalSection>
 

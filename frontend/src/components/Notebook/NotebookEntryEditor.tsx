@@ -7,6 +7,8 @@ import { useCanvasTexts } from '../../hooks/useCanvasTexts';
 import { useTextareaInsertion } from '../../hooks/useTextareaInsertion';
 import { useEntryDraft } from '../../hooks/useEntryDraft';
 import { useEntryAutosave } from '../../hooks/useEntryAutosave';
+import { useUndoHistory } from '../../hooks/useUndoHistory';
+import { useNotebookAutosavePref } from '../../hooks/useNotebookAutosavePref';
 import { useConfirmDelete } from '../../hooks/useConfirmDelete';
 import { useEntryShare } from '../../hooks/useEntryShare';
 import type { UseEntryShareResult } from '../../hooks/useEntryShare';
@@ -140,6 +142,7 @@ function NotebookEntryEditorForm({
       canvasTexts: textLayer.texts,
       usefulLinks: draft.usefulLinks,
       canvasHeight: draft.canvasHeight,
+      privateFromFriends: draft.privateFromFriends,
       date: Number.isNaN(parsedDate.getTime()) ? fallbackDateRef.current : parsedDate.toISOString(),
     };
   }, [
@@ -150,6 +153,7 @@ function NotebookEntryEditorForm({
     draft.tables,
     draft.usefulLinks,
     draft.canvasHeight,
+    draft.privateFromFriends,
     draft.dateValue,
     canvas.strokes,
     shapeLayer.shapes,
@@ -157,8 +161,32 @@ function NotebookEntryEditorForm({
     textLayer.texts,
   ]);
 
+  // Undo/redo do texto, titulo, tabelas e links. O quadro tem o seu proprio
+  // undo (por traco), por isso fica de fora.
+  const undoSnapshot = useMemo(
+    () => ({
+      title: draft.title,
+      textContent: draft.textContent,
+      tables: draft.tables,
+      usefulLinks: draft.usefulLinks,
+    }),
+    [draft.title, draft.textContent, draft.tables, draft.usefulLinks],
+  );
+  const history = useUndoHistory(
+    undoSnapshot,
+    (snap) => {
+      draft.setTitle(snap.title);
+      draft.setTextContent(snap.textContent);
+      draft.setTables(snap.tables);
+      draft.setUsefulLinks(snap.usefulLinks);
+    },
+    entry.id,
+  );
+
+  const { autosaveEnabled, setAutosaveEnabled } = useNotebookAutosavePref();
   const autosave = useEntryAutosave({
     enabled: isEditing,
+    auto: autosaveEnabled,
     payload,
     blocked: draft.textContent.length > MAX_TEXT_CONTENT_LENGTH,
     textLength: draft.textContent.length,
@@ -174,13 +202,26 @@ function NotebookEntryEditorForm({
   // re-registar o listener a cada render.
   const flushRef = useRef(autosave.flush);
   flushRef.current = autosave.flush;
+  const historyRef = useRef(history);
+  historyRef.current = history;
   useEffect(() => {
     if (!isEditing) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const key = e.key.toLowerCase();
+      if (key === 's') {
         e.preventDefault();
         void flushRef.current();
+        return;
       }
+      // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y usam o historico do rascunho (o undo
+      // nativo da textarea perde-se quando se insere texto por codigo). O
+      // quadro marca-se com data-native-undo e fica com o undo dele.
+      const isUndoKey = key === 'z' || key === 'y';
+      if (!isUndoKey || (e.target instanceof Element && e.target.closest('[data-native-undo]'))) return;
+      e.preventDefault();
+      if (key === 'y' || e.shiftKey) historyRef.current.redo();
+      else historyRef.current.undo();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -200,6 +241,14 @@ function NotebookEntryEditorForm({
             autosaveSavedAt={autosave.savedAt}
             autosaveError={autosave.error}
             isDoneDisabled={autosave.status === 'saving'}
+            privateFromFriends={draft.privateFromFriends}
+            onPrivateToggle={() => draft.setPrivateFromFriends(!draft.privateFromFriends)}
+            autosaveEnabled={autosaveEnabled}
+            onAutosaveToggle={() => setAutosaveEnabled(!autosaveEnabled)}
+            canUndo={history.canUndo}
+            canRedo={history.canRedo}
+            onUndo={history.undo}
+            onRedo={history.redo}
             onEntryTypeChange={draft.setEntryType}
             onClassNumberChange={draft.setClassNumber}
             onDateChange={draft.setDateValue}

@@ -7,6 +7,7 @@ import Button from '../../UI/Button';
 import StopSessionPanel from './StopSessionPanel';
 import OpenNotesLink from './OpenNotesLink';
 import { useI18n } from '../../../i18n/useI18n';
+import { useScrollLock } from '../../../hooks/useScrollLock';
 
 interface FocusModeOverlayProps {
   onClose: () => void;
@@ -18,6 +19,7 @@ export default function FocusModeOverlay({ onClose }: FocusModeOverlayProps) {
   const { activeSession, isSubmitting, timerPlan } = useActiveStudySession();
   const { stopSession } = useStopSession();
   const [isStopping, setIsStopping] = useState(false);
+  useScrollLock(true);
 
   const close = () => {
     exitFullscreen();
@@ -33,6 +35,17 @@ export default function FocusModeOverlay({ onClose }: FocusModeOverlayProps) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  // Em ecra inteiro o browser consome o Esc para sair do fullscreen e o
+  // keydown nunca chega a pagina. Sair do fullscreen (Esc ou F11) passa a
+  // fechar tambem o modo foco.
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) onClose();
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
   }, [onClose]);
 
   // Se a sessao acabar (parada aqui ou noutra tab), o modo foco fecha-se.
@@ -52,7 +65,7 @@ export default function FocusModeOverlay({ onClose }: FocusModeOverlayProps) {
       role="dialog"
       aria-modal="true"
       aria-label={t('ui.focusMode')}
-      className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-neutral-950 px-6 text-center"
+      className="fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-y-auto overscroll-contain bg-neutral-950 px-6 text-center"
     >
       <p className="mb-2 max-w-xl truncate text-lg text-neutral-400">{label}</p>
       <p className="font-mono text-6xl font-bold tabular-nums text-violet-400 sm:text-8xl">

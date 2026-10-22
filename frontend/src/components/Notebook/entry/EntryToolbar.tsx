@@ -1,7 +1,8 @@
 import type { NotebookEntryType } from '../../../types/models';
-import { CheckIcon, DownloadIcon, PencilIcon, TrashIcon } from '../../UI/Icons';
+import { CheckIcon, DownloadIcon, EyeOffIcon, PencilIcon, RedoIcon, TrashIcon, UndoIcon } from '../../UI/Icons';
 import Button from '../../UI/Button';
 import IconButton from '../../UI/IconButton';
+import ToggleChip from '../../UI/ToggleChip';
 import SegmentedControl from '../../UI/SegmentedControl';
 import { useI18n } from '../../../i18n/useI18n';
 import { ENTRY_TYPE_ICON, useEntryTypeOptions } from '../../../hooks/useEntryTypeOptions';
@@ -18,6 +19,14 @@ interface EntryToolbarProps {
   autosaveSavedAt: Date | null;
   autosaveError: string;
   isDoneDisabled: boolean;
+  privateFromFriends: boolean;
+  onPrivateToggle: () => void;
+  autosaveEnabled: boolean;
+  onAutosaveToggle: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
   onEntryTypeChange: (type: NotebookEntryType) => void;
   onClassNumberChange: (value: string) => void;
   onDateChange: (value: string) => void;
@@ -80,6 +89,14 @@ export default function EntryToolbar({
   autosaveSavedAt,
   autosaveError,
   isDoneDisabled,
+  privateFromFriends,
+  onPrivateToggle,
+  autosaveEnabled,
+  onAutosaveToggle,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
   onEntryTypeChange,
   onClassNumberChange,
   onDateChange,
@@ -122,6 +139,16 @@ export default function EntryToolbar({
             {t('notebook.date')}
             <input type="date" value={dateValue} onChange={(e) => onDateChange(e.target.value)} className={SMALL_INPUT_CLASS} />
           </label>
+          <ToggleChip
+            size="sm"
+            pressed={privateFromFriends}
+            onClick={onPrivateToggle}
+            title={t('notebook.private.hint')}
+            className="flex items-center gap-1.5 py-1 text-xs"
+          >
+            <EyeOffIcon className="h-3.5 w-3.5" />
+            {t('notebook.private.toggle')}
+          </ToggleChip>
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-400">
@@ -131,6 +158,12 @@ export default function EntryToolbar({
           </span>
           {entryType === 'CLASS' && classNumber && <span>{t('notebook.classLabel', { n: classNumber })}</span>}
           <span>{longDate}</span>
+          {privateFromFriends && (
+            <span className="flex items-center gap-1 text-neutral-500" title={t('notebook.private.hint')}>
+              <EyeOffIcon className="h-3.5 w-3.5" />
+              {t('notebook.private.badge')}
+            </span>
+          )}
         </div>
       )}
 
@@ -138,6 +171,21 @@ export default function EntryToolbar({
         {isEditing ? (
           <>
             <AutosaveIndicator status={autosaveStatus} savedAt={autosaveSavedAt} error={autosaveError} onRetry={onRetry} />
+            <ToggleChip
+              size="sm"
+              pressed={autosaveEnabled}
+              onClick={onAutosaveToggle}
+              title={t('notebook.autosave.toggleHint')}
+              className="py-1 text-xs"
+            >
+              {t('notebook.autosave.toggle')}
+            </ToggleChip>
+            <IconButton label={t('notebook.undo')} className="hover:bg-neutral-800" onClick={onUndo} disabled={!canUndo}>
+              <UndoIcon className="h-4 w-4" />
+            </IconButton>
+            <IconButton label={t('notebook.redo')} className="hover:bg-neutral-800" onClick={onRedo} disabled={!canRedo}>
+              <RedoIcon className="h-4 w-4" />
+            </IconButton>
             <IconButton label={t('notebook.delete')} tone="danger" className="hover:bg-neutral-800" onClick={onRequestDelete}>
               <TrashIcon className="h-4 w-4" />
             </IconButton>

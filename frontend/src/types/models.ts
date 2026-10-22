@@ -263,6 +263,8 @@ export interface WorkShift {
   id: string;
   dayOfWeek: number | null;
   date: string | null;
+  // So semanais: primeiro dia em que o turno conta. null = desde sempre.
+  startsOn: string | null;
   startMinutes: number;
   endMinutes: number;
   commitmentId: string | null;
@@ -298,6 +300,7 @@ export interface CommitmentsOverview {
 export interface UpdateWorkShiftInput {
   dayOfWeek?: number;
   date?: string;
+  startsOn?: string | null;
   startMinutes?: number;
   endMinutes?: number;
   commitmentId?: string | null;
@@ -391,6 +394,7 @@ export interface CreateWorkShiftInput {
   commitmentId?: string;
   dayOfWeek?: number;
   date?: string;
+  startsOn?: string;
   startMinutes: number;
   endMinutes: number;
   bufferMinutes?: number;
@@ -473,6 +477,8 @@ export interface User {
   deadlineEmailReminders?: boolean;
   deadlinePushReminders?: boolean;
   spacedReviewsEnabled?: boolean;
+  // Entradas novas do Notebook nascem escondidas dos amigos.
+  notesPrivateByDefault?: boolean;
   // 2FA: available = flag do backend (false => esconder tudo); enabled = esta conta tem 2FA.
   twoFactorAvailable?: boolean;
   twoFactorEnabled?: boolean;
@@ -1000,6 +1006,8 @@ export interface NotebookEntry {
   // problema de "ficar sem espaço").
   canvasHeight: number | null;
   date: string;
+  // Escondida dos amigos com acesso as notas desta cadeira.
+  privateFromFriends?: boolean;
   photos: NotebookPhoto[];
   attachments: NotebookAttachment[];
 }
@@ -1213,4 +1221,62 @@ export interface FocusScatterPoint {
   avgFocus: number;
   ratedMinutes: number;
   gradePercent: number;
+}
+
+// Bem-estar (Fase 7): registo diario do humor e medicacao.
+export interface MoodLog {
+  date: string; // YYYY-MM-DD
+  mood: number;
+  energy: number | null;
+  stress: number | null;
+  note: string | null;
+}
+
+export interface UpsertMoodInput {
+  mood: number;
+  energy?: number;
+  stress?: number;
+  note?: string;
+}
+
+export interface Medication {
+  id: string;
+  name: string;
+  dosage: string | null;
+  // Minutos desde a meia-noite de cada toma diaria.
+  times: number[];
+  remindersEnabled: boolean;
+  active: boolean;
+}
+
+export interface MedicationInput {
+  name: string;
+  dosage?: string;
+  times: number[];
+  remindersEnabled?: boolean;
+}
+
+export interface MedicationDaySlot {
+  medicationId: string;
+  name: string;
+  dosage: string | null;
+  slotMinutes: number;
+  taken: boolean;
+}
+
+export type CorrelationStrength = 'none' | 'weak' | 'moderate' | 'strong';
+
+export type CorrelationResult =
+  | { kind: 'not_enough_data'; sampleSize: number }
+  | { kind: 'no_variation'; sampleSize: number }
+  | { kind: 'ok'; sampleSize: number; r: number; strength: CorrelationStrength };
+
+export interface WellbeingInsights {
+  windowDays: number;
+  loggedDays: number;
+  averageMood: number | null;
+  moodVsFocus: CorrelationResult;
+  moodVsStudyMinutes: CorrelationResult;
+  energyVsFocus: CorrelationResult;
+  stressVsFocus: CorrelationResult;
 }

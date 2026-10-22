@@ -26,7 +26,9 @@ export type PushMessageKey =
   | 'shareInvited'
   | 'shareInviteAccepted'
   | 'deadlineSoon'
-  | 'deadlinesSoon';
+  | 'deadlinesSoon'
+  | 'medicationDue'
+  | 'medicationsDue';
 
 interface Template {
   title: string;
@@ -92,6 +94,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Deadlines coming up',
       body: '"{title}" and {count} more are due soon.',
     },
+    medicationDue: {
+      title: 'Medication time',
+      body: 'Time to take {title}.',
+    },
+    medicationsDue: {
+      title: 'Medication time',
+      body: 'Time to take {title} and {count} more.',
+    },
   },
   pt: {
     shareAccessRequested: {
@@ -149,6 +159,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     deadlinesSoon: {
       title: 'Prazos a aproximar-se',
       body: '"{title}" e mais {count} terminam em breve.',
+    },
+    medicationDue: {
+      title: 'Hora da medicação',
+      body: 'Está na hora de tomar {title}.',
+    },
+    medicationsDue: {
+      title: 'Hora da medicação',
+      body: 'Está na hora de tomar {title} e mais {count}.',
     },
   },
   es: {
@@ -208,6 +226,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Plazos cercanos',
       body: '"{title}" y {count} más vencen pronto.',
     },
+    medicationDue: {
+      title: 'Hora de la medicación',
+      body: 'Es hora de tomar {title}.',
+    },
+    medicationsDue: {
+      title: 'Hora de la medicación',
+      body: 'Es hora de tomar {title} y {count} más.',
+    },
   },
   zh: {
     shareAccessRequested: {
@@ -249,6 +275,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     deadlineSoon: {
       title: '截止日期临近',
       body: '“{title}”即将截止。',
+    },
+    medicationDue: {
+      title: '服药时间',
+      body: '该服用 {title} 了。',
+    },
+    medicationsDue: {
+      title: '服药时间',
+      body: '该服用 {title} 以及另外 {count} 种药了。',
     },
     deadlinesSoon: {
       title: '截止日期临近',
@@ -308,6 +342,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '締め切りが近づいています',
       body: '「{title}」の締め切りが近づいています。',
     },
+    medicationDue: {
+      title: 'お薬の時間',
+      body: '{title} を飲む時間です。',
+    },
+    medicationsDue: {
+      title: 'お薬の時間',
+      body: '{title} ほか {count} 件を飲む時間です。',
+    },
     deadlinesSoon: {
       title: '締め切りが近づいています',
       body: '「{title}」ほか {count} 件の締め切りが近づいています。',
@@ -365,6 +407,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     deadlineSoon: {
       title: '마감이 다가와요',
       body: '"{title}" 마감이 곧이에요.',
+    },
+    medicationDue: {
+      title: '약 먹을 시간',
+      body: '{title} 복용할 시간이에요.',
+    },
+    medicationsDue: {
+      title: '약 먹을 시간',
+      body: '{title} 외 {count}개를 복용할 시간이에요.',
     },
     deadlinesSoon: {
       title: '마감이 다가와요',
@@ -428,6 +478,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Échéances proches',
       body: '« {title} » et {count} autres arrivent bientôt à échéance.',
     },
+    medicationDue: {
+      title: 'Heure du médicament',
+      body: "C'est l'heure de prendre {title}.",
+    },
+    medicationsDue: {
+      title: 'Heure du médicament',
+      body: "C'est l'heure de prendre {title} et {count} autres.",
+    },
   },
   de: {
     shareAccessRequested: {
@@ -485,6 +543,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     deadlinesSoon: {
       title: 'Fristen nahen',
       body: '„{title}“ und {count} weitere sind bald fällig.',
+    },
+    medicationDue: {
+      title: 'Zeit für Medikamente',
+      body: 'Zeit, {title} zu nehmen.',
+    },
+    medicationsDue: {
+      title: 'Zeit für Medikamente',
+      body: 'Zeit, {title} und {count} weitere zu nehmen.',
     },
   },
 };

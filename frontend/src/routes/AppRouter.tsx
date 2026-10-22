@@ -43,6 +43,7 @@ import {
   Eula,
   DmcaPolicy,
   WeeklyReview,
+  Wellbeing,
   Changelog,
   NotFound,
   ResetPassword,
@@ -81,6 +82,7 @@ export default function AppRouter() {
           <Route path="/set-password" element={<SetPassword />} />
           <Route path="/login/2fa" element={<LoginTwoFactor />} />
           <Route path="/review" element={<PrivateRoute><WeeklyReview /></PrivateRoute>} />
+          <Route path="/wellbeing" element={<PrivateRoute><Wellbeing /></PrivateRoute>} />
           <Route path="/changelog" element={<PrivateRoute><Changelog /></PrivateRoute>} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           {/* Públicas - o consent screen do Google OAuth aponta para estas */}

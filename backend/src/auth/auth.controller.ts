@@ -431,6 +431,7 @@ export class AuthController {
         deadlineEmailReminders: true,
         deadlinePushReminders: true,
         spacedReviewsEnabled: true,
+        notesPrivateByDefault: true,
         // Só para twoFactorEnabled (o segredo nunca sai do backend).
         twoFactorEnabledAt: true,
         // Só usado para derivar hasPassword abaixo - nunca sai do backend.
@@ -477,6 +478,7 @@ export class AuthController {
       deadlineEmailReminders: dto.deadlineEmailReminders,
       deadlinePushReminders: dto.deadlinePushReminders,
       spacedReviewsEnabled: dto.spacedReviewsEnabled,
+      notesPrivateByDefault: dto.notesPrivateByDefault,
     });
     return this.buildProfile(user.id);
   }

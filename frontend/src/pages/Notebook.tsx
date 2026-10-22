@@ -523,7 +523,7 @@ export default function Notebook() {
                       entry={selectedEntry}
                       suggestedClassNumber={nextClassNumber}
                       startInEditMode={selectedEntry.id === justCreatedEntryId}
-                      onSave={({ title, entryType, classNumber, textContent, drawingStrokes, tables, canvasShapes, canvasLinks, canvasTexts, usefulLinks, canvasHeight, date }) =>
+                      onSave={({ title, entryType, classNumber, textContent, drawingStrokes, tables, canvasShapes, canvasLinks, canvasTexts, usefulLinks, canvasHeight, date, privateFromFriends }) =>
                         updateEntry(selectedEntry.id, {
                           title,
                           entryType,
@@ -537,6 +537,7 @@ export default function Notebook() {
                           usefulLinks,
                           canvasHeight,
                           date,
+                          privateFromFriends,
                         })
                       }
                       onDelete={() => removeEntry(selectedEntry.id)}

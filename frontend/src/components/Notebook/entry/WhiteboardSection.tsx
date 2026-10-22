@@ -51,8 +51,9 @@ export default function WhiteboardSection({
     );
   }
 
+  // data-native-undo: Ctrl+Z aqui fica com o undo do quadro, nao o do texto.
   return (
-    <section>
+    <section data-native-undo>
       <EntrySectionHeader
         icon={PenToolIcon}
         title={t('notebook.section.whiteboard')}

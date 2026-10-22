@@ -22,4 +22,5 @@ export interface NotebookEntrySavePayload {
   usefulLinks: UsefulLink[];
   canvasHeight: number;
   date: string;
+  privateFromFriends: boolean;
 }

@@ -34,6 +34,15 @@ export class UpdateWorkShiftDto {
   @Matches(DATE_KEY_PATTERN, { message: 'date must be formatted YYYY-MM-DD.' })
   date?: string;
 
+  // null limpa (o turno semanal passa a contar desde sempre).
+  @ApiPropertyOptional({ example: '2026-11-02', nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @Matches(DATE_KEY_PATTERN, {
+    message: 'startsOn must be formatted YYYY-MM-DD.',
+  })
+  startsOn?: string | null;
+
   @ApiPropertyOptional({ example: 540 })
   @IsOptional()
   @IsInt()

@@ -32,6 +32,7 @@ export const TermsOfService = lazyWithPreload(() => import('../pages/TermsOfServ
 export const Eula = lazyWithPreload(() => import('../pages/Eula'));
 export const DmcaPolicy = lazyWithPreload(() => import('../pages/DmcaPolicy'));
 export const WeeklyReview = lazyWithPreload(() => import('../pages/WeeklyReview'));
+export const Wellbeing = lazyWithPreload(() => import('../pages/Wellbeing'));
 export const Changelog = lazyWithPreload(() => import('../pages/Changelog'));
 export const NotFound = lazyWithPreload(() => import('../pages/NotFound'));
 export const ResetPassword = lazyWithPreload(() => import('../pages/ResetPassword'));
@@ -50,6 +51,7 @@ const BY_SECTION: Record<string, { preload: () => Promise<unknown> }> = {
   social: Social,
   profile: Profile,
   review: WeeklyReview,
+  wellbeing: Wellbeing,
   changelog: Changelog,
   agent: Agent,
   developer: Developer,

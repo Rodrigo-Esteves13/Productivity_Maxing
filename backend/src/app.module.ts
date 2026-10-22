@@ -31,6 +31,7 @@ import { GradeComponentsModule } from './grade-components/grade-components.modul
 import { AreaInterestsModule } from './area-interests/area-interests.module';
 import { BannedIpsModule } from './banned-ips/banned-ips.module';
 import { AppealsModule } from './appeals/appeals.module';
+import { WellbeingModule } from './wellbeing/wellbeing.module';
 import { BannedIpGuard } from './common/guards/banned-ip.guard';
 import { CsrfGuard } from './auth/guards/csrf.guard';
 import { LoggingThrottlerGuard } from './common/guards/logging-throttler.guard';
@@ -78,6 +79,7 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     AreaInterestsModule,
     BannedIpsModule,
     AppealsModule,
+    WellbeingModule,
   ],
   controllers: [AppController],
   providers: [

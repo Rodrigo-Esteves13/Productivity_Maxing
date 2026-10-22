@@ -403,9 +403,16 @@ export class NotebookService {
       }
     }
 
+    // Privacidade inicial para amigos segue a preferencia do utilizador.
+    const owner = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { notesPrivateByDefault: true },
+    });
+
     const entry = await this.prisma.notebookEntry.create({
       data: {
         userId,
+        privateFromFriends: owner?.notesPrivateByDefault ?? false,
         areaId: dto.areaId,
         classOccurrenceId: dto.classOccurrenceId,
         title: dto.title,
@@ -451,6 +458,7 @@ export class NotebookService {
         canvasTexts: dto.canvasTexts,
         usefulLinks: dto.usefulLinks,
         canvasHeight: dto.canvasHeight,
+        privateFromFriends: dto.privateFromFriends,
         date: dto.date ? new Date(dto.date) : undefined,
       } as Prisma.NotebookEntryUpdateArgs['data'],
       include: {

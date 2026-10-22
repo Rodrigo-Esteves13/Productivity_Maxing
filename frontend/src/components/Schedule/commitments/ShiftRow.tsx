@@ -48,7 +48,7 @@ export default function ShiftRow({
       startMinutes: values.startMinutes,
       endMinutes: values.endMinutes,
       ...(values.repeat === 'weekly'
-        ? { dayOfWeek: values.days[0] }
+        ? { dayOfWeek: values.days[0], startsOn: values.startsOn }
         : { date: values.date }),
     });
     if (ok) setIsEditing(false);

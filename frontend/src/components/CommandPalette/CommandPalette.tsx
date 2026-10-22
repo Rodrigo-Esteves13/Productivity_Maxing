@@ -86,10 +86,16 @@ const NAV_COMMANDS: NavCommand[] = [
   },
   { id: 'nav-review', labelKey: 'nav.review', path: '/review' },
   {
+    id: 'nav-wellbeing',
+    labelKey: 'nav.wellbeing',
+    path: '/wellbeing',
+    keywords: ['mood', 'humor', 'mental', 'stress', 'energy', 'energia', 'medication', 'medicine', 'medicacao', 'medicação', 'remedio', 'pills', 'comprimidos', 'pharmacy', 'farmacia'],
+  },
+  {
     id: 'nav-notebook',
     labelKey: 'nav.notebook',
     path: '/notebook',
-    keywords: ['whiteboard', 'quadro', 'photos', 'fotos', 'share', 'shared lesson', 'caderno'],
+    keywords: ['whiteboard', 'quadro', 'photos', 'fotos', 'share', 'shared lesson', 'caderno', 'auto save', 'autosave', 'undo', 'private', 'privado'],
   },
   {
     id: 'nav-profile',
