@@ -1,0 +1,44 @@
+name: "Cron: lembretes e limpeza"
+
+# Chama POST /internal/reminders/run de 15 em 15 minutos: lembretes de
+# prazos e de medicacao, e a limpeza dos pads expirados (ver
+# backend/src/reminders). So corre a partir do branch por omissao (main).
+# O GitHub pode atrasar execucoes agendadas alguns minutos em horas de pico.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  # Botao "Run workflow" no separador Actions, para testar a mao.
+  workflow_dispatch:
+
+# Nao precisa de ler nem escrever nada no repositorio.
+permissions: {}
+
+concurrency:
+  group: reminders-cron
+  cancel-in-progress: false
+
+jobs:
+  run-reminders:
+    name: "POST /internal/reminders/run"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: "Chamar o endpoint dos lembretes"
+        env:
+          # Secrets do repositorio (Settings > Secrets and variables > Actions).
+          # O GitHub mascara-os nos logs; nunca sao impressos aqui.
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          API_URL: ${{ vars.API_URL || 'https://api.pmaxing.pt' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Falta o secret CRON_SECRET no repositorio."
+            exit 1
+          fi
+          # --fail: um 401/404/5xx faz o job falhar (e o GitHub avisa por email).
+          # Retries cobrem o Render a acordar de um sleep.
+          curl --fail --silent --show-error \
+            --retry 3 --retry-delay 20 --retry-all-errors \
+            --max-time 90 \
+            -X POST \
+            -H "x-cron-secret: ${CRON_SECRET}" \
+            "${API_URL}/internal/reminders/run"

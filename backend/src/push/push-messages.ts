@@ -28,7 +28,8 @@ export type PushMessageKey =
   | 'deadlineSoon'
   | 'deadlinesSoon'
   | 'medicationDue'
-  | 'medicationsDue';
+  | 'medicationsDue'
+  | 'turmaAnnouncement';
 
 interface Template {
   title: string;
@@ -102,6 +103,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Medication time',
       body: 'Time to take {title} and {count} more.',
     },
+    turmaAnnouncement: {
+      title: '{name}',
+      body: 'New announcement: {title}',
+    },
   },
   pt: {
     shareAccessRequested: {
@@ -167,6 +172,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     medicationsDue: {
       title: 'Hora da medicação',
       body: 'Está na hora de tomar {title} e mais {count}.',
+    },
+    turmaAnnouncement: {
+      title: '{name}',
+      body: 'New announcement: {title}',
     },
   },
   es: {
@@ -234,6 +243,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Hora de la medicación',
       body: 'Es hora de tomar {title} y {count} más.',
     },
+    turmaAnnouncement: {
+      title: '{name}',
+      body: 'New announcement: {title}',
+    },
   },
   zh: {
     shareAccessRequested: {
@@ -283,6 +296,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     medicationsDue: {
       title: '服药时间',
       body: '该服用 {title} 以及另外 {count} 种药了。',
+    },
+    turmaAnnouncement: {
+      title: '{name}',
+      body: 'New announcement: {title}',
     },
     deadlinesSoon: {
       title: '截止日期临近',
@@ -350,6 +367,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'お薬の時間',
       body: '{title} ほか {count} 件を飲む時間です。',
     },
+    turmaAnnouncement: {
+      title: '{name}',
+      body: 'New announcement: {title}',
+    },
     deadlinesSoon: {
       title: '締め切りが近づいています',
       body: '「{title}」ほか {count} 件の締め切りが近づいています。',
@@ -415,6 +436,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     medicationsDue: {
       title: '약 먹을 시간',
       body: '{title} 외 {count}개를 복용할 시간이에요.',
+    },
+    turmaAnnouncement: {
+      title: '{name}',
+      body: 'New announcement: {title}',
     },
     deadlinesSoon: {
       title: '마감이 다가와요',
@@ -486,6 +511,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Heure du médicament',
       body: "C'est l'heure de prendre {title} et {count} autres.",
     },
+    turmaAnnouncement: {
+      title: '{name}',
+      body: 'New announcement: {title}',
+    },
   },
   de: {
     shareAccessRequested: {
@@ -551,6 +580,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     medicationsDue: {
       title: 'Zeit für Medikamente',
       body: 'Zeit, {title} und {count} weitere zu nehmen.',
+    },
+    turmaAnnouncement: {
+      title: '{name}',
+      body: 'New announcement: {title}',
     },
   },
 };

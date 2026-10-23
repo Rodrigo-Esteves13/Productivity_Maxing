@@ -32,5 +32,7 @@ import { PushModule } from '../push/push.module';
     NotebookInviteService,
     NotebookSocialHubService,
   ],
+  // TurmasModule mostra entradas de cadeiras publicadas (buildSharedEntryView).
+  exports: [NotebookService],
 })
 export class NotebookModule {}

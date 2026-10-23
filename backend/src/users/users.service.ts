@@ -217,6 +217,12 @@ export class UsersService {
       notebookEntries,
       moodLogs,
       medications,
+      pads,
+      turmaMemberships,
+      turmaNotes,
+      turmaFiles,
+      turmaAnnouncements,
+      turmaSharedSubjects,
     ] = await Promise.all([
       // subtasks vão dentro de cada task no export (checklist da task).
       this.prisma.task.findMany({
@@ -260,6 +266,56 @@ export class UsersService {
         where: { userId: id },
         include: { doses: true },
       }),
+      // Pads e turmas: o que esta pessoa escreveu ou enviou. Pads so os que
+      // gravou por ultimo (um pad nao tem dono; o texto e de quem o escreve).
+      this.prisma.pad.findMany({
+        where: { updatedById: id },
+        select: { slug: true, content: true, updatedAt: true },
+      }),
+      this.prisma.turmaMember.findMany({
+        where: { userId: id },
+        select: {
+          role: true,
+          joinedAt: true,
+          turma: { select: { id: true, name: true } },
+        },
+      }),
+      this.prisma.turmaNote.findMany({
+        where: { createdById: id },
+        select: {
+          id: true,
+          turmaId: true,
+          title: true,
+          content: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      this.prisma.turmaFile.findMany({
+        where: { uploadedById: id },
+        select: {
+          id: true,
+          turmaId: true,
+          originalFileName: true,
+          extension: true,
+          sizeBytes: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.turmaAnnouncement.findMany({
+        where: { authorId: id },
+        select: {
+          id: true,
+          turmaId: true,
+          title: true,
+          body: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.turmaLinkedArea.findMany({
+        where: { userId: id },
+        select: { turmaId: true, areaId: true, createdAt: true },
+      }),
     ]);
 
     // Area é um catálogo global (ver AreasService.findAll), não tem
@@ -290,6 +346,14 @@ export class UsersService {
       notebookEntries,
       moodLogs,
       medications,
+      pads,
+      turmas: {
+        memberships: turmaMemberships,
+        notes: turmaNotes,
+        files: turmaFiles,
+        announcements: turmaAnnouncements,
+        sharedSubjects: turmaSharedSubjects,
+      },
     };
   }
 }

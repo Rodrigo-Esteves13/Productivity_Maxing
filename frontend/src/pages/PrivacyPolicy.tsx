@@ -6,7 +6,7 @@ import LegalTable from '../components/Legal/LegalTable';
 import useSeo from '../hooks/useSeo';
 import { REPO_URL, CONTACT_EMAIL, APP_DOMAIN } from '../lib/constants';
 
-const LAST_UPDATED = '21/10/2026';
+const LAST_UPDATED = '23/10/2026';
 
 export default function PrivacyPolicy() {
   useSeo({
@@ -106,6 +106,26 @@ export default function PrivacyPolicy() {
           <li>
             Notebook privacy: you can mark an entry as private so friends who can read your notes for that
             subject do not see it, and choose whether new entries start private
+          </li>
+          <li>
+            Pads: text you write in a pad is stored under the pad's name and can be read and changed by
+            anyone who opens that name, with or without an account. If you save a pad while signed in,
+            the App records your account as the last editor; if you save without an account, it stores a
+            keyed hash of your IP address instead (never the address itself), so administrators can see
+            that one source spammed several pads and block it from saving. Neither is ever shown to other
+            users. Pads nobody edits for 90 days are deleted automatically, except pads locked by an
+            account. Pad pages are not indexed by search engines. Do not write private information in a
+            pad
+          </li>
+          <li>
+            Classes: when you create or join a class, its members see your name and profile photo. Notes,
+            files and announcements you add to a class are visible to every member, and stay in the class
+            if you leave (your name is removed from them if you delete your account). If you delete your
+            account while being the only member of a class, that class is deleted with all its files; if you
+            were its class rep, the longest-standing member takes over. If you share one of
+            your notebook subjects with a class, members can read its entries, except those marked private,
+            until you stop sharing or leave the class. Class files are kept in the same private storage as
+            notebook files and are only opened through short-lived links
           </li>
           <li>Usage data needed to compute your progress and streaks</li>
           <li>

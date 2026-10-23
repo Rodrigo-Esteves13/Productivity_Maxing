@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { createTask, getTaskMetadata, getUserAreas, getUserTasks } from '../../api/userService';
 import { searchNotebook } from '../../api/notebookService';
+import { searchTurmaNotes } from '../../api/turmasService';
+import { turmaNotePath } from '../../lib/appLinks';
 import { setPendingNotebookEntry } from '../../lib/pendingNotebookEntry';
 import {
   matchAreaInText,
@@ -12,7 +14,7 @@ import {
 } from '../../lib/parseQuickAddTask';
 import { getLastUsedAreaId, setLastUsedAreaId } from '../../lib/lastUsedArea';
 import { foldText, snippetAround, type TextSnippet } from '../../lib/textSearch';
-import type { Area, Task, NotebookSearchResult } from '../../types/models';
+import type { Area, Task, NotebookSearchResult, TurmaNoteSearchResult } from '../../types/models';
 import { PlusIcon, SearchIcon } from '../UI/Icons';
 import { ACADEMIC_TASK_TYPE_KEY } from '../../lib/constants';
 import { useI18n } from '../../i18n/useI18n';
@@ -92,6 +94,18 @@ const NAV_COMMANDS: NavCommand[] = [
     keywords: ['mood', 'humor', 'mental', 'stress', 'energy', 'energia', 'medication', 'medicine', 'medicacao', 'medicação', 'remedio', 'pills', 'comprimidos', 'pharmacy', 'farmacia'],
   },
   {
+    id: 'nav-turmas',
+    labelKey: 'nav.turmas',
+    path: '/turmas',
+    keywords: ['turma', 'class', 'classmates', 'colegas', 'delegado', 'group', 'grupo', 'invite code', 'codigo', 'announcements', 'avisos', 'shared files', 'ficheiros'],
+  },
+  {
+    id: 'nav-pads',
+    labelKey: 'nav.pads',
+    path: '/pad',
+    keywords: ['pad', 'dontpad', 'notepad', 'bloco', 'shared text', 'texto partilhado', 'scratch', 'rascunho'],
+  },
+  {
     id: 'nav-notebook',
     labelKey: 'nav.notebook',
     path: '/notebook',
@@ -122,11 +136,13 @@ const NAV_COMMANDS: NavCommand[] = [
   { id: 'nav-task-types', labelKey: 'nav.admin.taskTypes', path: '/task-types', adminOnly: true },
   { id: 'nav-security', labelKey: 'nav.admin.security', path: '/security', adminOnly: true },
   { id: 'nav-appeals', labelKey: 'nav.admin.appeals', path: '/appeals', adminOnly: true },
+  { id: 'nav-pads-admin', labelKey: 'nav.admin.pads', path: '/pads-admin', adminOnly: true, keywords: ['moderation', 'moderacao', 'pads', 'dontpad'] },
   { id: 'nav-feedback', labelKey: 'nav.admin.feedback', path: '/feedback', adminOnly: true },
 ];
 
 const MAX_TASK_RESULTS = 6;
 const MAX_NOTEBOOK_RESULTS = 6;
+const MAX_TURMA_NOTE_RESULTS = 4;
 // Ao contrário das tasks (pré-carregadas de uma vez e filtradas
 // localmente), o notebook pode ter muitas entradas por Area - por isso
 // vai a pedido ao endpoint GET /notebook/search já existente, com debounce
@@ -156,6 +172,7 @@ type PaletteItem =
   // detail: onde apareceu o texto quando nao foi no titulo (notas ou passo).
   | { kind: 'task'; id: string; label: string; task: Task; detail?: { prefix: string; snippet: TextSnippet } }
   | { kind: 'notebook'; id: string; label: string; entry: NotebookSearchResult }
+  | { kind: 'turmaNote'; id: string; label: string; note: TurmaNoteSearchResult }
   | {
       kind: 'quick-add';
       id: 'quick-add';
@@ -187,6 +204,7 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
   const [activeIndex, setActiveIndex] = useState(0);
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [notebookResults, setNotebookResults] = useState<NotebookSearchResult[]>([]);
+  const [turmaNoteResults, setTurmaNoteResults] = useState<TurmaNoteSearchResult[]>([]);
   // null = not fetched yet (lazy, same as tasks); [] = fetched, none exist.
   const [areas, setAreas] = useState<Area[] | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -237,6 +255,7 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
     const q = query.trim();
     if (q === '') {
       setNotebookResults([]);
+      setTurmaNoteResults([]);
       return;
     }
 
@@ -248,6 +267,14 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
         })
         .catch(() => {
           if (!cancelled) setNotebookResults([]);
+        });
+      // Notas das turmas: mesma pesquisa, mesmo debounce.
+      searchTurmaNotes(q)
+        .then((results) => {
+          if (!cancelled) setTurmaNoteResults(results);
+        })
+        .catch(() => {
+          if (!cancelled) setTurmaNoteResults([]);
         });
     }, NOTEBOOK_SEARCH_DEBOUNCE_MS);
 
@@ -359,10 +386,17 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
             .slice(0, MAX_NOTEBOOK_RESULTS)
             .map((entry) => ({ kind: 'notebook', id: entry.id, label: entry.title, entry }));
 
+    const turmaNoteMatches: PaletteItem[] =
+      q === ''
+        ? []
+        : turmaNoteResults
+            .slice(0, MAX_TURMA_NOTE_RESULTS)
+            .map((note) => ({ kind: 'turmaNote', id: note.id, label: `${note.title} (${note.turmaName})`, note }));
+
     // Quick-add goes LAST, never first: Enter on a normal search must keep
     // opening the top match, not creating a task named after the query.
-    return [...navMatches, ...taskMatches, ...notebookMatches, ...quickAddItems];
-  }, [query, taskIndex, notebookResults, user, areas, t]);
+    return [...navMatches, ...taskMatches, ...notebookMatches, ...turmaNoteMatches, ...quickAddItems];
+  }, [query, taskIndex, notebookResults, turmaNoteResults, user, areas, t]);
 
   // Clamp instead of reset-on-every-keystroke - keeps the highlighted row
   // stable when it's still a valid index after the result list shrinks.
@@ -425,6 +459,8 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
       navigate(item.path);
     } else if (item.kind === 'task') {
       navigate(`/tasks?open=${item.task.id}`);
+    } else if (item.kind === 'turmaNote') {
+      navigate(turmaNotePath(item.note.turmaId, item.note.id));
     } else {
       // A página Notebook filtra as entradas por Area selecionada - não
       // dá para "saltar" direto para uma entrada só com o path, por isso

@@ -22,7 +22,7 @@ function secretsMatch(given: string | undefined, expected: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-// Chamado por um Cron Job do Render (de 15 em 15 minutos, por causa dos
+// Chamado pelo workflow .github/workflows/reminders-cron.yml (de 15 em 15 minutos, por causa dos
 // lembretes de medicacao; os de prazos sao idempotentes via SentReminder):
 //   curl -X POST -H "x-cron-secret: $CRON_SECRET" https://<api>/internal/reminders/run
 // Sem CRON_SECRET configurado a rota "não existe" (404).

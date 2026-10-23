@@ -59,3 +59,8 @@ export function formatTaskDate(value: string, locale: string = detectLanguage())
   const date = new Date(value);
   return date.toLocaleDateString(locale, isUtcMidnight(date) ? { timeZone: 'UTC' } : undefined);
 }
+
+/** Data e hora curtas, na lingua da app (ex: avisos e notas da turma). */
+export function formatDateTime(value: string, locale: string = detectLanguage()): string {
+  return new Date(value).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
+}

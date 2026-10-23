@@ -24,7 +24,8 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import type { Options as MulterOptions } from 'multer';
 import 'multer';
-import { NotebookService, ATTACHMENT_MAX_SIZE_BYTES } from './notebook.service';
+import { NotebookService } from './notebook.service';
+import { ATTACHMENT_MAX_SIZE_BYTES } from './attachment-validation.util';
 import {
   CreateNotebookEntryDto,
   UpdateNotebookEntryDto,
@@ -295,7 +296,7 @@ export class NotebookController {
   // notebookService valida o tipo real do ficheiro pelos magic bytes
   // (ou, para texto puro, pela ausência de bytes binários) antes de
   // aceitar - ver ATTACHMENT_BINARY_MIME_TO_EXT/ATTACHMENT_TEXT_EXTENSIONS
-  // em notebook.service.ts.
+  // em attachment-validation.util.ts.
   @Throttle(perMinute(10))
   @Post('entries/:id/attachments')
   @UseInterceptors(

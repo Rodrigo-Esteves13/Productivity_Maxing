@@ -12,6 +12,9 @@ import { useCanvasLinks } from '../hooks/useCanvasLinks';
 import { useCanvasTexts } from '../hooks/useCanvasTexts';
 import NotebookCanvas from '../components/Notebook/NotebookCanvas';
 import NotebookPhotoGrid from '../components/Notebook/entry/NotebookPhotoGrid';
+import AttachmentActions from '../components/Notebook/entry/AttachmentActions';
+import AttachmentPreviewModal from '../components/Notebook/entry/AttachmentPreviewModal';
+import type { PreviewableFile } from '../components/Notebook/entry/attachmentPreview';
 import PageLayout from '../components/Layout/PageLayout';
 import NotebookTableEditor from '../components/Notebook/NotebookTableEditor';
 import EntrySheet from '../components/Notebook/entry/EntrySheet';
@@ -376,6 +379,7 @@ export function SharedNotebookEntryView({
   const { t } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
   const [justProposed, setJustProposed] = useState(false);
+  const [previewing, setPreviewing] = useState<PreviewableFile | null>(null);
   // O dono edita no proprio Notebook; aqui so editor e co-owner editam.
   const canEdit = role === 'EDITOR' || role === 'CO_OWNER';
   const isProposal = role === 'EDITOR';
@@ -501,18 +505,21 @@ export function SharedNotebookEntryView({
             {entry.attachments.map(
               (attachment) =>
                 attachment.url && (
-                  <a
+                  <div
                     key={attachment.id}
-                    href={attachment.url}
-                    className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-300 hover:border-violet-700"
+                    className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-300"
                   >
                     <FileIcon className="h-3.5 w-3.5 shrink-0 text-neutral-500" />
-                    {attachment.originalFileName}
-                  </a>
+                    <span className="min-w-0 flex-1 truncate" title={attachment.originalFileName}>
+                      {attachment.originalFileName}
+                    </span>
+                    <AttachmentActions attachment={attachment} onPreview={setPreviewing} />
+                  </div>
                 ),
             )}
           </div>
         )}
+        <AttachmentPreviewModal attachment={previewing} onClose={() => setPreviewing(null)} />
         </EntrySheet>
     </div>
   );

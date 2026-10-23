@@ -7,6 +7,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-23',
+    title: 'Pads, classes and file previews',
+    items: [
+      'New Pads: open /pad/any-name and write, no account needed. Everyone who opens the same name sees and edits the same text, and it saves on its own, like dontpad. If two people save at once, you choose whose version stays.',
+      'Pads without an account are smaller (20,000 characters). Signed in you get 100,000 and can lock a pad, so everyone reads it but only you edit it. Pads nobody edits for 90 days are deleted, unless they are locked.',
+      'New Classes: create a class (you become its class rep) or join one with an invite code. Inside: announcements from the class rep (with a push notification), notes the whole class can edit, a shared folder of files, and notebook subjects your classmates share with the class.',
+      'Ctrl+K now also finds notes from your classes, and your data export includes your pads and everything you added to classes.',
+      'The class rep can rename the class, choose whether members can edit notes, get a new invite code, remove members, and hand over the role to someone else.',
+      'Notebook files now have a Preview button (eye) and a Download button (arrow). PDFs and text files (Markdown, TXT, Python, JSON, CSV) open right inside the app.',
+      'Fix: Markdown and other text files saved as "Unicode" (UTF-16) by Windows Notepad were refused on upload. They now upload normally.',
+    ],
+  },
+  {
     date: '2026-10-21',
     title: 'Wellbeing page, notebook undo and private notes',
     items: [

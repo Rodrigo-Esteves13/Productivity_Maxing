@@ -73,6 +73,10 @@ enum ApiKeyScope {
 // repetidas) sem migrar a coluna de String para enum mais tarde.
 enum SecurityEventType {
   RATE_LIMIT_EXCEEDED
+  // Um admin apagou um pad (moderacao, ver PadsService.removeAsAdmin).
+  ADMIN_PAD_DELETED
+  // Um admin bloqueou uma origem sem conta de escrever em pads.
+  ADMIN_PAD_SOURCE_BLOCKED
 }
 
 // Estado de progresso aplicável a qualquer tarefa ou projeto.
@@ -351,6 +355,17 @@ model User {
   moodLogs         MoodLog[]
   medications      Medication[]
   medicationDoses  MedicationDose[]
+  // Pads (bloco estilo dontpad) e turmas (Fase 7).
+  padEdits            Pad[]               @relation("PadUpdatedBy")
+  padsLocked          Pad[]               @relation("PadLockedBy")
+  padSourcesBlocked   PadBlockedSource[]  @relation("PadSourceBlockedBy")
+  turmasCreated       Turma[]             @relation("TurmaCreatedBy")
+  turmaMemberships    TurmaMember[]
+  turmaNotesCreated   TurmaNote[]         @relation("TurmaNoteCreatedBy")
+  turmaNotesUpdated   TurmaNote[]         @relation("TurmaNoteUpdatedBy")
+  turmaFiles          TurmaFile[]
+  turmaAnnouncements  TurmaAnnouncement[]
+  turmaLinkedAreas    TurmaLinkedArea[]
   commitments      Commitment[]
   travelTimes      TravelTime[]
   calendarSyncedEvents CalendarSyncedEvent[]
@@ -560,6 +575,8 @@ model Identity {
 
 /// Abstração que representa um "Balde" ou "Área de Vida".
 model Area {
+  // Cadeiras que membros publicaram numa turma (ver TurmaLinkedArea).
+  turmaLinks TurmaLinkedArea[]
   id       String @id @default(uuid())
   name     String
   colorHex String @default("#808080")
@@ -1737,4 +1754,161 @@ model MedicationDose {
 
   @@unique([medicationId, date, slotMinutes])
   @@index([userId, date])
+}
+
+// Bloco de texto partilhado por nome, a ideia do dontpad: /pad/<slug> abre o
+// mesmo texto para qualquer pessoa, com ou sem conta. Nao pertence a
+// ninguem; updatedById so diz que conta escreveu por ultimo (null = sem
+// conta). version serve de controlo de concorrencia otimista (ver
+// PadsService.save).
+model Pad {
+  id          String  @id @default(uuid())
+  slug        String  @unique @db.VarChar(100)
+  content     String  @default("")
+  version     Int     @default(0)
+  updatedById String?
+  // Gravacao sem conta: HMAC do IP (nunca o IP), so para a moderacao ver
+  // que a mesma origem encheu varios pads de lixo.
+  updatedByIpHash String? @db.VarChar(64)
+  // Conta que trancou o pad: todos leem, so ela edita. Apagar a conta
+  // destranca (SetNull). Pads trancados nao expiram.
+  lockedById String?
+  lockedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  updatedBy User? @relation("PadUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  lockedBy  User? @relation("PadLockedBy", fields: [lockedById], references: [id], onDelete: SetNull)
+
+  // Expiracao: pads sem edicoes ha 90 dias (ver PadsService.deleteExpired).
+  @@index([updatedAt])
+  @@index([updatedByIpHash])
+}
+
+// Origem sem conta (hash do IP, ver Pad.updatedByIpHash) que um admin
+// impediu de gravar pads. So bloqueia gravacoes sem conta; ler continua.
+model PadBlockedSource {
+  ipHash      String  @id @db.VarChar(64)
+  blockedById String?
+
+  createdAt DateTime @default(now())
+
+  blockedBy User? @relation("PadSourceBlockedBy", fields: [blockedById], references: [id], onDelete: SetNull)
+}
+
+enum TurmaRole {
+  DELEGADO
+  MEMBER
+}
+
+// Turma: grupo de colegas com notas, ficheiros e avisos em comum. Entra-se
+// com o inviteCode; o DELEGADO gere a turma (ver TurmasService).
+model Turma {
+  id                  String  @id @default(uuid())
+  name                String  @db.VarChar(80)
+  description         String? @db.VarChar(500)
+  inviteCode          String  @unique @db.VarChar(16)
+  // Desligado = so o delegado cria e edita notas da turma.
+  membersCanEditNotes Boolean @default(true)
+  createdById         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdBy     User?               @relation("TurmaCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  members       TurmaMember[]
+  notes         TurmaNote[]
+  files         TurmaFile[]
+  announcements TurmaAnnouncement[]
+  linkedAreas   TurmaLinkedArea[]
+}
+
+model TurmaMember {
+  id      String    @id @default(uuid())
+  turmaId String
+  userId  String
+  role    TurmaRole @default(MEMBER)
+
+  joinedAt DateTime @default(now())
+
+  turma Turma @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([turmaId, userId])
+  @@index([userId])
+}
+
+// Nota da turma (nao de uma pessoa). version: concorrencia otimista, igual
+// ao Pad.
+model TurmaNote {
+  id          String  @id @default(uuid())
+  turmaId     String
+  title       String  @db.VarChar(200)
+  content     String  @default("")
+  version     Int     @default(0)
+  createdById String?
+  updatedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  turma     Turma @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("TurmaNoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("TurmaNoteUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([turmaId, updatedAt])
+}
+
+// Ficheiro da turma. Mesmo bucket privado e mesma validacao dos anexos do
+// Notebook (ver attachment-validation.util), caminho turmas/<turmaId>/...
+model TurmaFile {
+  id               String  @id @default(uuid())
+  turmaId          String
+  uploadedById     String?
+  storagePath      String
+  originalFileName String
+  extension        String
+  sizeBytes        Int
+
+  createdAt DateTime @default(now())
+
+  turma      Turma @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([turmaId, createdAt])
+}
+
+// Aviso do delegado (teste, prazo, mudanca de horario).
+model TurmaAnnouncement {
+  id       String  @id @default(uuid())
+  turmaId  String
+  authorId String?
+  title    String  @db.VarChar(200)
+  body     String  @db.VarChar(5000)
+
+  createdAt DateTime @default(now())
+
+  turma  Turma @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([turmaId, createdAt])
+}
+
+// Cadeira do caderno de um membro publicada na turma: os outros membros leem
+// as entradas dessa cadeira (menos as privadas, privateFromFriends).
+model TurmaLinkedArea {
+  id      String @id @default(uuid())
+  turmaId String
+  userId  String
+  areaId  String
+
+  createdAt DateTime @default(now())
+
+  turma Turma @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area  Area  @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  @@unique([turmaId, userId, areaId])
+  @@index([turmaId])
 }

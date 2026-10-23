@@ -16,6 +16,7 @@ import { EmailVerificationService } from './services/email-verification.service'
 import { TwoFactorService } from './services/two-factor.service';
 import { SessionTokenService } from './services/session-token.service';
 import { SupabaseClientsService } from './services/supabase-clients.service';
+import { releaseTurmasOfDeletedUser } from '../turmas/turma-account-cleanup.util';
 
 /**
  * Fachada do modulo de autenticacao. A implementacao vive em servicos
@@ -126,6 +127,9 @@ export class AuthService {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
     });
+
+    // Antes de tudo o resto: se falhar (storage), nada irreversivel aconteceu.
+    await releaseTurmasOfDeletedUser(this.prisma, this.clients.admin, userId);
 
     if (user.supabaseAuthId) {
       const { error } = await this.clients.admin.auth.admin.deleteUser(

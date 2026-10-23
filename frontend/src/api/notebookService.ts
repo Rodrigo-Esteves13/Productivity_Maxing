@@ -129,6 +129,14 @@ export const uploadNotebookAttachment = async (
   return response.data;
 };
 
+// Conteudo de um anexo para o preview. O URL e um signed URL do Supabase
+// Storage (outro dominio), por isso vai sem o cliente `api`: nem cookies nem
+// cabecalho CSRF devem sair para la.
+export const fetchAttachmentContent = async (signedUrl: string): Promise<Blob> => {
+  const response = await axios.get<Blob>(signedUrl, { responseType: 'blob', withCredentials: false });
+  return response.data;
+};
+
 export const deleteNotebookAttachment = async (
   entryId: string,
   attachmentId: string,

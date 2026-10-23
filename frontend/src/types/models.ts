@@ -74,7 +74,7 @@ export type Difficulty = 'VERY_EASY' | 'EASY' | 'MEDIUM' | 'HARD' | 'VERY_HARD';
 // it became an admin-managed catalog (see AdminPriority/PriorityOption
 // below) - it's just whatever key the admin's Priority rows use, a plain
 // string, same as `type`/`academicType` already were.
-export type SecurityEventType = 'RATE_LIMIT_EXCEEDED';
+export type SecurityEventType = 'RATE_LIMIT_EXCEEDED' | 'ADMIN_PAD_DELETED' | 'ADMIN_PAD_SOURCE_BLOCKED';
 // No longer fixed union types: now they come from the DB (a table the
 // admin can edit), so they're `string` (the "key" returned by /tasks/meta).
 export type TaskType = string;
@@ -1279,4 +1279,123 @@ export interface WellbeingInsights {
   moodVsStudyMinutes: CorrelationResult;
   energyVsFocus: CorrelationResult;
   stressVsFocus: CorrelationResult;
+}
+
+// Pad (bloco estilo dontpad, /pad/<slug>). version 0 = ainda nunca gravado.
+export interface PadView {
+  slug: string;
+  content: string;
+  version: number;
+  updatedAt: string | null;
+  // Trancado: todos leem, so a conta que trancou edita.
+  locked: boolean;
+  lockedByMe: boolean;
+  // Limite de caracteres para quem pergunta (sem conta e menor); null = o normal.
+  maxLength: number | null;
+}
+
+// Turma (Fase 7): grupo com delegado, notas, ficheiros e avisos.
+export type TurmaRole = 'DELEGADO' | 'MEMBER';
+
+export interface TurmaSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  memberCount: number;
+  myRole: TurmaRole;
+}
+
+export interface TurmaMember {
+  userId: string;
+  name: string | null;
+  avatarUrl: string | null;
+  role: TurmaRole;
+  joinedAt: string;
+}
+
+export interface TurmaDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  inviteCode: string;
+  membersCanEditNotes: boolean;
+  myRole: TurmaRole;
+  canEditNotes: boolean;
+  members: TurmaMember[];
+}
+
+export interface TurmaAnnouncement {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  authorName: string | null;
+}
+
+export interface TurmaNoteSummary {
+  id: string;
+  title: string;
+  updatedAt: string;
+  updatedByName: string | null;
+}
+
+export interface TurmaNote extends TurmaNoteSummary {
+  content: string;
+  version: number;
+  createdById: string | null;
+}
+
+// Mesma forma que o preview de anexos do Notebook usa (AttachmentActions).
+export interface TurmaFile {
+  id: string;
+  originalFileName: string;
+  extension: string;
+  sizeBytes: number;
+  createdAt: string;
+  uploadedById: string | null;
+  uploadedByName: string | null;
+  url: string | null;
+}
+
+export interface TurmaLinkedArea {
+  id: string;
+  userId: string;
+  ownerName: string | null;
+  areaId: string;
+  areaName: string;
+  areaColor: string | null;
+  entryCount: number;
+}
+
+export interface TurmaLinkedEntrySummary {
+  id: string;
+  title: string;
+  entryType: NotebookEntryType;
+  classNumber: number | null;
+  date: string;
+}
+
+export interface TurmaLinkedEntry {
+  ownerName: string | null;
+  entry: SharedNotebookEntry;
+}
+
+// Linha da moderacao de pads (so admins veem quem gravou por ultimo).
+export interface AdminPadRow {
+  slug: string;
+  length: number;
+  preview: string;
+  updatedAt: string;
+  updatedBy: { id: string; name: string | null; email: string } | null;
+  // Gravacao sem conta: hash do IP (nunca o IP) para ver spam da mesma origem.
+  updatedByIpHash: string | null;
+  sourceBlocked: boolean;
+  lockedBy: { id: string; name: string | null; email: string } | null;
+}
+
+export interface TurmaNoteSearchResult {
+  id: string;
+  title: string;
+  turmaId: string;
+  turmaName: string;
 }
