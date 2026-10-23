@@ -44,6 +44,12 @@ import {
   DmcaPolicy,
   WeeklyReview,
   Wellbeing,
+  Pad,
+  PadsAdmin,
+  Turmas,
+  TurmaPage,
+  TurmaNote,
+  TurmaSubjectEntry,
   Changelog,
   NotFound,
   ResetPassword,
@@ -83,6 +89,13 @@ export default function AppRouter() {
           <Route path="/login/2fa" element={<LoginTwoFactor />} />
           <Route path="/review" element={<PrivateRoute><WeeklyReview /></PrivateRoute>} />
           <Route path="/wellbeing" element={<PrivateRoute><Wellbeing /></PrivateRoute>} />
+          {/* Publicas, como o dontpad: ler e escrever sem conta. */}
+          <Route path="/pad" element={<Pad />} />
+          <Route path="/pad/:slug" element={<Pad />} />
+          <Route path="/turmas" element={<PrivateRoute><Turmas /></PrivateRoute>} />
+          <Route path="/turmas/:turmaId" element={<PrivateRoute><TurmaPage /></PrivateRoute>} />
+          <Route path="/turmas/:turmaId/notes/:noteId" element={<PrivateRoute><TurmaNote /></PrivateRoute>} />
+          <Route path="/turmas/:turmaId/subjects/:linkId/:entryId" element={<PrivateRoute><TurmaSubjectEntry /></PrivateRoute>} />
           <Route path="/changelog" element={<PrivateRoute><Changelog /></PrivateRoute>} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           {/* Públicas - o consent screen do Google OAuth aponta para estas */}
@@ -166,6 +179,7 @@ export default function AppRouter() {
             <Route path="/feedback" element={<FeedbackAdmin />} />
             <Route path="/friend-code-requests" element={<FriendCodeRequestsAdmin />} />
             <Route path="/task-types" element={<TaskTypes />} />
+            <Route path="/pads-admin" element={<PadsAdmin />} />
           </Route>
 
           {/* O lixo (apenas URLs que não existem nas rotas acima vêm parar aqui).

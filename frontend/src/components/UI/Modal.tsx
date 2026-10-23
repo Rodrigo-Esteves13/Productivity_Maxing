@@ -8,9 +8,18 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   action?: ReactNode;
+  // Largura maxima do painel; 'lg' e o formulario normal, 'wide' para previews.
+  size?: ModalSize;
 }
 
-export default function Modal({ isOpen, onClose, title, children, action }: ModalProps) {
+type ModalSize = 'lg' | 'wide';
+
+const SIZE_CLASS: Record<ModalSize, string> = {
+  lg: 'max-w-lg',
+  wide: 'max-w-4xl',
+};
+
+export default function Modal({ isOpen, onClose, title, children, action, size = 'lg' }: ModalProps) {
   const { t } = useI18n();
   
   // Só ativa o listener se o Modal estiver aberto
@@ -34,7 +43,7 @@ export default function Modal({ isOpen, onClose, title, children, action }: Moda
     >
       {/* Evitamos que o clique no formulário feche o Modal acidentalmente */}
       <div 
-        className="bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+        className={`bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl w-full ${SIZE_CLASS[size]} overflow-hidden flex flex-col max-h-[90vh]`}
         onClick={(e) => e.stopPropagation()} 
       >
         

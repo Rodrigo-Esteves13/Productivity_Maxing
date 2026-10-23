@@ -14,6 +14,7 @@ export const MAIN_NAV: NavItem[] = [
   { to: '/focus', labelKey: 'nav.focus' },
   { to: '/schedule', labelKey: 'nav.schedule' },
   { to: '/notebook', labelKey: 'nav.notebook' },
+  { to: '/turmas', labelKey: 'nav.turmas' },
   { to: '/areas', labelKey: 'nav.areas' },
 ];
 
@@ -23,6 +24,7 @@ export const ACCOUNT_NAV: NavItem[] = [
   { to: '/agent', labelKey: 'nav.agent' },
   { to: '/review', labelKey: 'nav.review' },
   { to: '/wellbeing', labelKey: 'nav.wellbeing' },
+  { to: '/pad', labelKey: 'nav.pads' },
   { to: '/changelog', labelKey: 'nav.changelog' },
 ];
 
@@ -33,6 +35,7 @@ export const ADMIN_NAV: NavItem[] = [
   { to: '/appeals', labelKey: 'nav.admin.appeals' },
   { to: '/feedback', labelKey: 'nav.admin.feedback' },
   { to: '/friend-code-requests', labelKey: 'nav.admin.friendCodes' },
+  { to: '/pads-admin', labelKey: 'nav.admin.pads' },
 ];
 
 export const SOCIAL_PATH = '/social';

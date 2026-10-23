@@ -11,12 +11,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
-import { NotebookEntryType, Prisma } from '@prisma/client';
 import { fileTypeFromBuffer } from 'file-type';
+import { NotebookEntryType, Prisma } from '@prisma/client';
 import { createHmac, randomUUID } from 'crypto';
 import { PushService } from '../push/push.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolveShareAccess } from './share-role.util';
+import {
+  validateAttachmentUpload,
+  withDownloadName,
+} from './attachment-validation.util';
 import { areFriends } from '../social/friendship.util';
 import {
   CreateNotebookEntryDto,
@@ -79,16 +83,6 @@ type WithSignedUrls<T extends SignableEntry> = Omit<
   attachments: (T['attachments'][number] & { url: string | null })[];
 };
 
-// Igual ao que createSignedUrl(path, ttl, { download: name }) devolve: o
-// `download` nao faz parte da assinatura, o storage-js so o junta ao fim
-// do URL (encodeURI de "&download=<nome>"). createSignedUrls so aceita um
-// nome para o lote inteiro, por isso cada anexo recebe o seu aqui.
-function withDownloadName(signedUrl: string, fileName: string): string {
-  if (!fileName) return signedUrl;
-  const query = new URLSearchParams({ download: fileName }).toString();
-  return `${signedUrl}${encodeURI(`&${query}`)}`;
-}
-
 const ALLOWED_MIME_TO_EXT: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
@@ -103,55 +97,7 @@ const ALLOWED_MIME_TO_EXT: Record<string, string> = {
 // browser.
 const ATTACHMENT_BUCKET = getNotebookAttachmentsBucket();
 
-// Formatos com magic bytes reais - detetados pelo conteúdo do ficheiro,
-// nunca pela extensão que o cliente diz que é (mesmo critério das
-// fotos). DOCX/PPTX/XLSX são na prática ficheiros ZIP com uma estrutura
-// interna própria; a `file-type` já sabe distinguir isso do ZIP genérico.
-const ATTACHMENT_BINARY_MIME_TO_EXT: Record<string, string> = {
-  'application/pdf': 'pdf',
-  'application/zip': 'zip',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-    'docx',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-    'pptx',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
-};
-
-// Formatos de texto puro - não têm magic bytes nenhuns para detetar (é
-// só texto), por isso a validação aqui é diferente: sem bytes binários +
-// extensão pedida nesta lista + limite de tamanho (ver
-// ATTACHMENT_MAX_SIZE_BYTES). Nunca são executados em lado nenhum do
-// servidor, só guardados e devolvidos como download.
-const ATTACHMENT_TEXT_EXTENSIONS = new Set(['py', 'txt', 'md', 'json', 'csv']);
-
-export const ATTACHMENT_MAX_SIZE_BYTES = 20 * 1024 * 1024;
 const ATTACHMENT_MAX_PER_ENTRY = 10;
-
-// Só para o nome mostrado/descarregado depois - tira barras e
-// caracteres de controlo/aspas (evita confundir o cabeçalho
-// Content-Disposition do download). O caminho real no bucket nunca usa
-// este valor, é sempre um UUID gerado no servidor (ver `path` em
-// addAttachment), por isso isto não é uma defesa contra path traversal,
-// é só higiene do nome mostrado.
-function sanitizeFileName(name: string): string {
-  return (
-    name
-      .replace(/[\\/]/g, '_')
-      // eslint-disable-next-line no-control-regex -- remover caracteres de controlo é o próprio objetivo desta regex, não uma apanhada sem querer.
-      .replace(/[\x00-\x1F\x7F"]/g, '')
-      .trim()
-  );
-}
-
-// Heurística "isto parece texto ou binário": um NUL byte não aparece em
-// texto normal UTF-8/Latin1, é o sinal clássico de conteúdo binário
-// (o mesmo que o git usa para a mesma decisão). Não é uma prova formal,
-// mas combinada com a extensão pedida e o ficheiro nunca ser executado
-// em lado nenhum, é uma barreira razoável para o que resta depois da
-// deteção por magic bytes.
-function looksLikeBinary(buffer: Buffer): boolean {
-  return buffer.includes(0);
-}
 
 // Margem à volta do início/fim da aula em que ainda consideramos "aula
 // agora" para efeitos de sugestão automática - chegar 10 min atrasado ou
@@ -1076,43 +1022,14 @@ export class NotebookService {
       );
     }
 
-    // Nome tal como o cliente mandou, só para mostrar/descarregar depois -
-    // nunca usado para o caminho no storage (isso é sempre um UUID, ver
-    // `path` abaixo). Cortado a 200 chars para nunca deixar um
-    // Content-Disposition com um nome descontrolado.
-    const originalFileName =
-      sanitizeFileName(file.originalname || 'file').slice(0, 200) || 'file';
-    const claimedExt = originalFileName.includes('.')
-      ? originalFileName.split('.').pop()!.toLowerCase()
-      : '';
-
-    // Nunca confiar na extensão nem no mimetype declarados pelo cliente -
-    // para os formatos com magic bytes reais (PDF/DOCX/PPTX/XLSX/ZIP), o
-    // tipo detetado é que manda, mesmo que a extensão pedida diga outra
-    // coisa. Para texto puro (sem magic bytes), só aceite se a extensão
-    // pedida estiver na lista permitida E o conteúdo não parecer binário.
-    const detected = await fileTypeFromBuffer(file.buffer);
-    let ext: string | undefined;
-    if (detected) {
-      ext = ATTACHMENT_BINARY_MIME_TO_EXT[detected.mime];
-    } else if (
-      ATTACHMENT_TEXT_EXTENSIONS.has(claimedExt) &&
-      !looksLikeBinary(file.buffer)
-    ) {
-      ext = claimedExt;
-    }
-
-    if (!ext) {
-      throw new BadRequestException(
-        'Unsupported file type. Allowed: PDF, DOCX, PPTX, XLSX, ZIP, PY, TXT, MD, JSON, CSV.',
-      );
-    }
+    const { originalFileName, ext, content, contentType } =
+      await validateAttachmentUpload(file);
 
     const path = `${userId}/${entryId}/${randomUUID()}.${ext}`;
     const { error: uploadError } = await this.storage.storage
       .from(ATTACHMENT_BUCKET)
-      .upload(path, file.buffer, {
-        contentType: detected?.mime ?? 'application/octet-stream',
+      .upload(path, content, {
+        contentType,
         upsert: false,
       });
 
@@ -1132,7 +1049,7 @@ export class NotebookService {
         storagePath: path,
         originalFileName,
         extension: ext,
-        sizeBytes: file.size,
+        sizeBytes: content.length,
       },
     });
 

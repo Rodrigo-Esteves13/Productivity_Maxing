@@ -3,6 +3,7 @@ import { UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { PushService } from '../push/push.service';
+import { PadsService } from '../pads/pads.service';
 import { MedicationsService } from '../wellbeing/medications.service';
 import { getFrontendUrl } from '../config/app.config';
 import { getLisbonNow, toDateKey } from '../common/date-key.util';
@@ -23,6 +24,7 @@ export interface ReminderRunResult {
   remindersSent: number;
   // Utilizadores avisados de tomas de medicacao nesta execucao.
   medicationUsersPushed: number;
+  expiredPadsDeleted: number;
 }
 
 // Um aviso push por user e por execucao: a primeira task (a mais proxima)
@@ -43,6 +45,7 @@ export class RemindersService {
     private readonly mailService: MailService,
     private readonly pushService: PushService,
     private readonly medicationsService: MedicationsService,
+    private readonly padsService: PadsService,
   ) {}
 
   async run(now = new Date()): Promise<ReminderRunResult> {
@@ -101,6 +104,7 @@ export class RemindersService {
       usersPushed: 0,
       remindersSent: 0,
       medicationUsersPushed: 0,
+      expiredPadsDeleted: 0,
     };
     const tasksLink = `${getFrontendUrl()}${TASKS_PATH}`;
 
@@ -150,6 +154,16 @@ export class RemindersService {
     } catch (error) {
       this.logger.warn(
         `Lembretes de medicacao falharam: ${(error as Error).message}`,
+      );
+    }
+
+    // Limpeza dos pads sem edicoes ha 90 dias; falhar aqui nao para os
+    // lembretes (ja enviados acima).
+    try {
+      result.expiredPadsDeleted = await this.padsService.deleteExpired(now);
+    } catch (error) {
+      this.logger.warn(
+        `Limpeza de pads expirados falhou: ${(error as Error).message}`,
       );
     }
 

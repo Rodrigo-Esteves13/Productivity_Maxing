@@ -17,3 +17,17 @@ export const notebookEntryPath = (entryId: string, { share = false } = {}): stri
 
 /** Admin: perfil de uma conta (codigo de amigo e ligacoes). */
 export const adminUserPath = (userId: string): string => `/users/${encodeURIComponent(userId)}`;
+
+export const PADS_PATH = '/pad';
+export const PADS_ADMIN_PATH = '/pads-admin';
+export const padPath = (slug: string): string => `${PADS_PATH}/${encodeURIComponent(slug)}`;
+
+export const TURMAS_PATH = '/turmas';
+export const turmaPath = (turmaId: string): string => `${TURMAS_PATH}/${encodeURIComponent(turmaId)}`;
+export const turmaNotePath = (turmaId: string, noteId: string): string =>
+  `${turmaPath(turmaId)}/notes/${encodeURIComponent(noteId)}`;
+export const turmaLinkedEntryPath = (turmaId: string, linkId: string, entryId: string): string =>
+  `${turmaPath(turmaId)}/subjects/${encodeURIComponent(linkId)}/${encodeURIComponent(entryId)}`;
+
+/** Login que volta para `returnTo` depois de entrar (ver Login.tsx). */
+export const loginPathReturningTo = (returnTo: string): string => `/login?redirect=${encodeURIComponent(returnTo)}`;

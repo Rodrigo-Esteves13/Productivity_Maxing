@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ChangeEvent, ComponentType, ReactNode } from 'react';
 import { FileIcon, ImageIcon, UploadIcon } from '../../UI/Icons';
 import EntrySectionHeader from './EntrySectionHeader';
@@ -6,6 +7,9 @@ import { useFileUpload } from '../../../hooks/useFileUpload';
 import type { NotebookAttachment, NotebookPhoto } from '../../../types/models';
 import EntryListRow from './EntryListRow';
 import NotebookPhotoGrid from './NotebookPhotoGrid';
+import AttachmentActions from './AttachmentActions';
+import AttachmentPreviewModal from './AttachmentPreviewModal';
+import type { PreviewableFile } from './attachmentPreview';
 import {
   ACCEPTED_ATTACHMENT_EXTENSIONS,
   ACCEPTED_PHOTO_TYPES,
@@ -63,6 +67,7 @@ export function AttachmentsSection({ isEditing, attachments, onUpload, onDelete 
     onUpload,
     failureMessage: t('ui.couldNotUploadFile'),
   });
+  const [previewing, setPreviewing] = useState<PreviewableFile | null>(null);
 
   return (
     <FileSectionShell
@@ -83,7 +88,12 @@ export function AttachmentsSection({ isEditing, attachments, onUpload, onDelete 
             <EntryListRow
               key={attachment.id}
               icon={<FileIcon className="h-3.5 w-3.5" />}
-              trailing={<span className="shrink-0 text-xs text-neutral-600">{formatFileSize(attachment.sizeBytes)}</span>}
+              trailing={
+                <span className="ml-auto flex shrink-0 items-center gap-1">
+                  <span className="text-xs text-neutral-600">{formatFileSize(attachment.sizeBytes)}</span>
+                  <AttachmentActions attachment={attachment} onPreview={setPreviewing} />
+                </span>
+              }
               removeLabel={isEditing ? t('notebook.files.remove') : undefined}
               onRemove={isEditing ? () => void onDelete(attachment.id) : undefined}
             >
@@ -98,6 +108,7 @@ export function AttachmentsSection({ isEditing, attachments, onUpload, onDelete 
           ))}
         </div>
       )}
+      <AttachmentPreviewModal attachment={previewing} onClose={() => setPreviewing(null)} />
     </FileSectionShell>
   );
 }

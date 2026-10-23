@@ -21,7 +21,7 @@ export default function EntryListRow({ icon, trailing, removeLabel, onRemove, ch
       {children}
       {trailing}
       {onRemove && removeLabel && (
-        <IconButton label={removeLabel} className="ml-auto shrink-0 hover:bg-neutral-800" onClick={onRemove}>
+        <IconButton label={removeLabel} className={`${trailing ? '' : 'ml-auto '}shrink-0 hover:bg-neutral-800`} onClick={onRemove}>
           <XIcon className="h-3.5 w-3.5" />
         </IconButton>
       )}
