@@ -11,6 +11,7 @@ import MonthDayCell from './MonthDayCell';
 import MonthDayDetail from './MonthDayDetail';
 import AgendaLegend from './AgendaLegend';
 import Card from '../UI/Card';
+import ToolbarButton from '../UI/ToolbarButton';
 
 // getUTCDay() de segunda a domingo, pela ordem das colunas.
 const WEEKDAY_COLUMNS = [1, 2, 3, 4, 5, 6, 0];
@@ -73,30 +74,19 @@ export default function MonthGrid({ refreshKey, initialDate, viewToggle, onOpenW
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <div>
-          <h2 className="text-lg font-semibold text-white">{t('ui.schedule')}</h2>
-          <p className="text-sm text-neutral-400">{monthTitle}</p>
-        </div>
+        {/* O titulo "Schedule" ja esta no cabecalho da pagina: aqui so o mes. */}
+        <h2 className="text-lg font-semibold capitalize text-white">{monthTitle}</h2>
         <div className="flex flex-wrap items-center gap-2">
           {viewToggle}
-          <button
-            onClick={goToPreviousMonth}
-            className="text-sm text-neutral-400 hover:text-white px-2 py-1 rounded-lg hover:bg-neutral-800"
-          >
+          <ToolbarButton tone="muted" size="md" onClick={goToPreviousMonth}>
             {t('ui.prev')}
-          </button>
-          <button
-            onClick={goToCurrentMonth}
-            className="text-sm text-neutral-400 hover:text-white px-2 py-1 rounded-lg hover:bg-neutral-800"
-          >
+          </ToolbarButton>
+          <ToolbarButton tone="muted" size="md" onClick={goToCurrentMonth}>
             {t('ui.today')}
-          </button>
-          <button
-            onClick={goToNextMonth}
-            className="text-sm text-neutral-400 hover:text-white px-2 py-1 rounded-lg hover:bg-neutral-800"
-          >
+          </ToolbarButton>
+          <ToolbarButton tone="muted" size="md" onClick={goToNextMonth}>
             {t('ui.next')}
-          </button>
+          </ToolbarButton>
         </div>
       </div>
 

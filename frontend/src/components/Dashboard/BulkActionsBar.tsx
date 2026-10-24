@@ -82,7 +82,7 @@ export default function BulkActionsBar({
     <div className="print-hide flex flex-wrap items-center justify-between gap-3 rounded-lg border border-violet-800/50 bg-violet-900/20 px-4 py-3 mb-4">
       <p className="text-sm text-neutral-200">
         {fillNodes(t('ui.selectedCount'), {
-          count: <span className="font-semibold text-white">{selectedCount}</span>,
+          count: <span className="font-semibold tabular-nums text-white">{selectedCount}</span>,
         })}
       </p>
       <div className="flex flex-wrap items-center gap-2">

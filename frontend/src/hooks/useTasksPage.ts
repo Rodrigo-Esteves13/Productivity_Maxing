@@ -27,6 +27,7 @@ import { isRequestCanceled } from '../lib/abortable';
 import { useAcademic } from '../context/useAcademic';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
+import { celebrateCompletion } from '../lib/completionFeedback';
 
 // /tasks?new=1 (atalho do icone da app) abre o formulario de criar task.
 const NEW_TASK_PARAM = 'new';
@@ -384,6 +385,7 @@ export function useTasksPage() {
       );
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setSelectedTask(updated);
+      celebrateCompletion();
     } catch {
       notify(translateNow('hook.couldNotMarkTheTaskAs'), 'error');
     }

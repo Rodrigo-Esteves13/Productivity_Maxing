@@ -35,7 +35,7 @@ export default function MobileMenu({ currentPath, isAdmin, socialPending, onNavi
     ));
 
   return (
-    <div className="xl:hidden border-t border-neutral-800 bg-neutral-950 px-2 py-3 space-y-1">
+    <div className="motion-panel xl:hidden border-t border-neutral-800 bg-neutral-950 px-2 py-3 space-y-1">
       {renderItems(MAIN_NAV, linkClass)}
       <PrefetchLink
         to={socialNavTarget(socialPending)}

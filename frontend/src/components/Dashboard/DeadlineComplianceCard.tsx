@@ -31,7 +31,7 @@ export default function DeadlineComplianceCard({ tasks }: DeadlineComplianceCard
       </CardHeading>
 
       <div className="flex items-end gap-2 mb-4">
-        <span className="text-2xl font-semibold text-violet-400">{data.ratePct}%</span>
+        <span className="text-2xl font-semibold tabular-nums text-violet-400">{data.ratePct}%</span>
         <span className="text-xs text-neutral-500 pb-1">
           {t('ui.ofFinishedOnTimeLast', { onTime: data.onTime, total: data.total })}</span>
       </div>
@@ -53,7 +53,7 @@ export default function DeadlineComplianceCard({ tasks }: DeadlineComplianceCard
                   m.ratePct === null
                     ? 'bg-neutral-800'
                     : m.ratePct >= 80
-                      ? 'bg-emerald-500'
+                      ? 'bg-violet-500'
                       : m.ratePct >= 50
                         ? 'bg-amber-500'
                         : 'bg-red-500'

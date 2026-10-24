@@ -1,5 +1,6 @@
 import { PencilIcon, TrashIcon, UndoIcon, CheckIcon, PinIcon } from './Icons';
 import { useI18n } from '../../i18n/useI18n';
+import IconButton from './IconButton';
 
 const DuplicateIcon = () => (
   <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,46 +61,45 @@ export default function ModalHeaderActions({
 
       {/* Botão de Marcar como Concluída - antes do Duplicar, só fora de edição */}
       {!isEditing && onComplete && (
-        <button
+        <IconButton
+          label={completeTitle ?? t('ui.markComplete')}
           onClick={onComplete}
-          title={completeTitle ?? t('ui.markComplete')}
-          className="text-neutral-400 hover:text-emerald-400 transition-colors p-1"
+          className="text-neutral-400 hover:text-violet-400"
         >
           <CheckIcon />
-        </button>
+        </IconButton>
       )}
 
       {/* Botão de Duplicar - Aparece antes do Apagar e esconde-se durante a edição */}
       {!isEditing && onDuplicate && (
-        <button
+        <IconButton
+          label={duplicateTitle ?? t('hook.duplicate')}
           onClick={onDuplicate}
-          title={duplicateTitle ?? t('hook.duplicate')}
-          className="text-neutral-400 hover:text-blue-400 transition-colors p-1"
+          className="text-neutral-400"
         >
           <DuplicateIcon />
-        </button>
+        </IconButton>
       )}
 
       {/* Botão de Apagar (mantém o teu estilo original) */}
       {!isEditing && (
-        <button
+        <IconButton
+          label={deleteTitle}
           onClick={onDelete}
-          title={deleteTitle}
-          className="text-neutral-400 hover:text-red-500 transition-colors p-1"
+          className="text-neutral-400 hover:text-red-500"
         >
           <TrashIcon />
-        </button>
+        </IconButton>
       )}
 
       {/* Botão de Editar / Cancelar (mantém o teu estilo original) */}
-      <button
+      <IconButton
+        label={isEditing ? (cancelEditTitle ?? t('ui.cancelEdit')) : (editTitle ?? t('notebook.edit'))}
         onClick={onToggleEdit}
-        aria-label={isEditing ? (cancelEditTitle ?? t('ui.cancelEdit')) : (editTitle ?? t('notebook.edit'))}
-        title={isEditing ? (cancelEditTitle ?? t('ui.cancelEdit')) : (editTitle ?? t('notebook.edit'))}
-        className="text-neutral-400 hover:text-white transition-colors p-1"
+        className="text-neutral-400 hover:text-white"
       >
         {isEditing ? <UndoIcon /> : <PencilIcon />}
-      </button>
+      </IconButton>
     </div>
   );
 }

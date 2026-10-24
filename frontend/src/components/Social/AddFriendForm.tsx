@@ -59,7 +59,7 @@ export default function AddFriendForm({ onAdd }: Props) {
         </button>
       </div>
       {outcome && (
-        <p role="status" className={`mt-2 text-sm ${ok ? 'text-emerald-400' : 'text-red-400'}`}>
+        <p role="status" className={`mt-2 text-sm ${ok ? 'text-violet-400' : 'text-red-400'}`}>
           {t(MESSAGE_KEY[outcome])}
         </p>
       )}

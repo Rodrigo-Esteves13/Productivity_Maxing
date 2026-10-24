@@ -170,11 +170,11 @@ export default function NotebookSubjectPicker({
               +{menuAreas.length}
             </span>
             <span className="hidden sm:inline">{otherLabel}</span>
-            <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
+            <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform duration-[var(--duration-fast)] ease-smooth-out ${isMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {isMenuOpen && (
-            <div className="absolute right-0 top-full z-30 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900 shadow-2xl">
+            <div className="motion-dropdown origin-top-right absolute right-0 top-full z-30 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900 shadow-2xl">
               <div className="relative border-b border-neutral-800 p-2">
                 <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
                 <input

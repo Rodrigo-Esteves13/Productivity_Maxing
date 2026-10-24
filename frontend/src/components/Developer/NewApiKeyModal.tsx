@@ -13,8 +13,8 @@ interface NewApiKeyModalProps {
 export default function NewApiKeyModal({ apiKey, onClose }: NewApiKeyModalProps) {
   const { t } = useI18n();
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+    <div className="motion-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="motion-modal bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
         <div className="p-5 border-b border-neutral-800">
           <h2 className="text-lg font-bold text-white">{t('ui.yourNewApiKey')}</h2>
         </div>

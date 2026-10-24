@@ -67,7 +67,7 @@ export default function ImageLightbox({ images, index, onIndexChange }: ImageLig
       role="dialog"
       aria-modal="true"
       aria-label={t('common.photoOf', { n: index + 1, total })}
-      className="fixed inset-0 z-[60] flex items-center justify-center overscroll-contain bg-black/90 p-4"
+      className="motion-backdrop fixed inset-0 z-[60] flex items-center justify-center overscroll-contain bg-black/90 p-4"
       onClick={close}
     >
       <button
@@ -75,7 +75,7 @@ export default function ImageLightbox({ images, index, onIndexChange }: ImageLig
         type="button"
         aria-label={t('common.closePhoto')}
         onClick={close}
-        className="absolute right-4 top-4 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
+        className="press absolute right-4 top-4 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
       >
         <XIcon className="h-5 w-5" />
       </button>
@@ -88,7 +88,7 @@ export default function ImageLightbox({ images, index, onIndexChange }: ImageLig
             e.stopPropagation();
             go(-1);
           }}
-          className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
+          className="press absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
         >
           <ChevronLeftIcon className="h-6 w-6" />
         </button>
@@ -100,7 +100,7 @@ export default function ImageLightbox({ images, index, onIndexChange }: ImageLig
         referrerPolicy="no-referrer"
         decoding="async"
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[88vh] max-w-full rounded-lg object-contain shadow-2xl"
+        className="motion-modal max-h-[88vh] max-w-full rounded-lg object-contain shadow-2xl outline outline-1 -outline-offset-1 outline-white/10"
       />
 
       {total > 1 && (
@@ -111,14 +111,14 @@ export default function ImageLightbox({ images, index, onIndexChange }: ImageLig
             e.stopPropagation();
             go(1);
           }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
+          className="press absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
         >
           <ChevronRightIcon className="h-6 w-6" />
         </button>
       )}
 
       {total > 1 && (
-        <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs text-neutral-200">
+        <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs tabular-nums text-neutral-200">
           {index + 1} / {total}
         </p>
       )}

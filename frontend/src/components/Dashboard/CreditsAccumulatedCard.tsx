@@ -56,7 +56,7 @@ export default function CreditsAccumulatedCard() {
         <GraduationCapIcon className="shrink-0" />
         {t('ui.ectsCreditsAccumulated')}
       </CardHeading>
-      <p className="text-2xl font-bold text-violet-400">
+      <p className="text-2xl font-bold tabular-nums text-violet-400">
         {summary.earnedCredits} <span className="text-neutral-500 text-lg">/ {summary.attemptedCredits}</span>
       </p>
       <p className="text-xs text-neutral-500">

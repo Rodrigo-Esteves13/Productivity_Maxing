@@ -43,13 +43,13 @@ export default function TimerEndPrompt() {
       <p className="mt-1 text-xs text-neutral-400">{t('ui.goodBlockTakeABreak')}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {timerPlan.breakMinutes > 0 && (
-          <Button variant="primary" className="px-3 py-1.5 text-sm" disabled={isSubmitting} onClick={() => void takeBreak()}>
+          <Button variant="primary" size="sm" disabled={isSubmitting} onClick={() => void takeBreak()}>
             {t('ui.takeAMinBreak', { breakMinutes: timerPlan.breakMinutes })}</Button>
         )}
-        <Button variant="secondary" className="px-3 py-1.5 text-sm" onClick={() => setDismissedFor(activeSession.id)}>
+        <Button variant="secondary" size="sm" onClick={() => setDismissedFor(activeSession.id)}>
           {t('ui.keepGoing')}
         </Button>
-        <Button variant="secondary" className="px-3 py-1.5 text-sm" disabled={isSubmitting} onClick={() => void stopSession()}>
+        <Button variant="secondary" size="sm" disabled={isSubmitting} onClick={() => void stopSession()}>
           {t('ui.stop')}
         </Button>
       </div>

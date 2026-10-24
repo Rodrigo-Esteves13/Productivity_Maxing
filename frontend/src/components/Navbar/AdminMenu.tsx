@@ -53,13 +53,13 @@ export default function AdminMenu({ currentPath }: AdminMenuProps) {
       >
         <ShieldIcon className="h-4 w-4" />
         {t('nav.admin')}
-        <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform duration-[var(--duration-fast)] ease-smooth-out ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
         <div
           role="menu"
-          className="absolute left-0 mt-2 w-max min-w-44 max-w-[min(20rem,calc(100vw-1rem))] overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 shadow-2xl z-50"
+          className="motion-dropdown origin-top-left absolute left-0 mt-2 w-max min-w-44 max-w-[min(20rem,calc(100vw-1rem))] overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 shadow-2xl z-50"
         >
           {ADMIN_NAV.map((link) => {
             const isActive = currentPath.startsWith(link.to);

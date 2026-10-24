@@ -42,7 +42,7 @@ export default function SwipeableRow({
         {...handlers}
         style={offset !== 0 ? { transform: `translateX(${offset}px)` } : undefined}
         className={`relative h-full touch-pan-y ${
-          offset === 0 ? 'transition-transform duration-150 motion-reduce:transition-none' : 'bg-neutral-950'
+          offset === 0 ? 'transition-transform duration-[var(--duration-fast)] ease-smooth-out motion-reduce:transition-none' : 'bg-neutral-950'
         }`}
       >
         {children}

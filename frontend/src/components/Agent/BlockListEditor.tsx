@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { XIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
+import IconButton from '../UI/IconButton';
 
 interface BlockListEditorProps {
   label: string;
@@ -78,14 +79,13 @@ export default function BlockListEditor({
               className="inline-flex items-center gap-1.5 bg-neutral-900 border border-neutral-800 rounded-full pl-3 pr-1.5 py-1 text-sm text-neutral-200"
             >
               {item}
-              <button
-                type="button"
+              <IconButton
+                label={t('ui.removeItem', { item })}
                 onClick={() => handleRemove(item)}
-                className="text-neutral-500 hover:text-red-400 transition-colors p-0.5"
-                title={t('ui.removeItem', { item })}
+                className="-my-2 -mr-2 text-neutral-500 hover:text-red-400"
               >
                 <XIcon className="w-3.5 h-3.5" />
-              </button>
+              </IconButton>
             </span>
           ))}
         </div>

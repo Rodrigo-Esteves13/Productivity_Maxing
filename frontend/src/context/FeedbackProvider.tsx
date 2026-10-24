@@ -9,6 +9,7 @@ import {
   type ToastKind,
 } from './feedback-context';
 import { translateNow } from '../i18n/translate';
+import { TOAST_EXIT_MS } from '../hooks/usePresence';
 
 const TOAST_DURATION_MS = 6000;
 // Com botao (Undo) fica mais tempo, para dar tempo de reagir.
@@ -35,8 +36,10 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   // primeiro promise pendurado para sempre.
   const pendingRef = useRef<PendingConfirm | null>(null);
 
+  // Marca como a sair (anima para fora) e so depois remove da lista.
   const dismiss = useCallback((id: number) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    setToasts((prev) => prev.map((toast) => (toast.id === id ? { ...toast, leaving: true } : toast)));
+    window.setTimeout(() => setToasts((prev) => prev.filter((toast) => toast.id !== id)), TOAST_EXIT_MS);
   }, []);
 
   const notify = useCallback(

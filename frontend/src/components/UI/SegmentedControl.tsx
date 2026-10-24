@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { useActiveIndicator } from '../../hooks/useActiveIndicator';
 
 type SegmentedControlSize = 'sm' | 'md';
 
@@ -30,7 +31,8 @@ const SURFACE_CLASS = {
 } as const;
 
 // Grupo de botoes em que so um esta ativo (tipo de entrada, ordenacao,
-// ferramenta de desenho). Antes havia uma copia em cada um.
+// ferramenta de desenho). Antes havia uma copia em cada um. A pilula do
+// ativo desliza entre opcoes.
 export default function SegmentedControl<T extends string>({
   options,
   value,
@@ -39,23 +41,38 @@ export default function SegmentedControl<T extends string>({
   surface = 'raised',
   className = '',
 }: SegmentedControlProps<T>) {
+  const { containerRef, rect } = useActiveIndicator<HTMLDivElement>(value);
   return (
-    <div className={`flex items-center rounded-md border border-neutral-800 ${SURFACE_CLASS[surface]} p-0.5 ${className}`}>
-      {options.map(({ value: optionValue, label, icon: Icon, title }) => (
-        <button
-          key={optionValue}
-          type="button"
-          title={title}
-          aria-pressed={value === optionValue}
-          onClick={() => onChange(optionValue)}
-          className={`flex items-center gap-1.5 rounded ${SIZE_CLASS[size]} text-xs font-medium transition-colors ${
-            value === optionValue ? 'bg-violet-600 text-white' : 'text-neutral-400 hover:text-neutral-200'
-          }`}
-        >
-          {Icon && <Icon className="h-3.5 w-3.5" />}
-          {label}
-        </button>
-      ))}
+    <div
+      ref={containerRef}
+      className={`relative flex items-center rounded-md border border-neutral-800 ${SURFACE_CLASS[surface]} p-0.5 ${className}`}
+    >
+      {rect && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0.5 left-0 rounded bg-violet-600 transition-[translate,width] duration-[var(--duration-fast)] ease-smooth-out"
+          style={{ width: rect.width, translate: `${rect.x}px 0` }}
+        />
+      )}
+      {options.map(({ value: optionValue, label, icon: Icon, title }) => {
+        const active = value === optionValue;
+        return (
+          <button
+            key={optionValue}
+            type="button"
+            title={title}
+            aria-pressed={active}
+            data-active={active}
+            onClick={() => onChange(optionValue)}
+            className={`press relative flex items-center gap-1.5 rounded ${SIZE_CLASS[size]} text-xs font-medium ${
+              active ? `text-white ${rect ? '' : 'bg-violet-600'}` : 'text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            {Icon && <Icon className="h-3.5 w-3.5" />}
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }

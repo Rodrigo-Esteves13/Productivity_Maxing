@@ -55,7 +55,7 @@ export default function ExamModePanel({ tasks, areas, onTurnOff }: ExamModePanel
                   isNext ? 'border-violet-600 bg-violet-900/30' : 'border-neutral-800 bg-neutral-900/50'
                 }`}
               >
-                <p className={`font-semibold text-violet-300 ${isNext ? 'text-2xl' : 'text-sm'}`}>
+                <p className={`font-semibold tabular-nums text-violet-300 ${isNext ? 'text-2xl' : 'text-sm'}`}>
                   {getRemainingTimeLabel(task)}
                 </p>
                 <p className="mt-0.5 text-sm text-neutral-200 break-words">{task.title}</p>

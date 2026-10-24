@@ -22,12 +22,15 @@ export default function IconButton({
   children,
   ...rest
 }: IconButtonProps) {
+  // Cor base so quando quem chama nao traz a sua (duas cores de texto no
+  // mesmo elemento ficariam a depender da ordem do CSS gerado).
+  const baseColor = /(^|\s)text-(neutral|violet|red|amber|white)/.test(className) ? '' : 'text-neutral-500';
   return (
     <button
       type={type}
       aria-label={label}
       title={label}
-      className={`inline-flex items-center justify-center text-neutral-500 p-1.5 rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 disabled:opacity-50 ${TONE_CLASS[tone]} ${className}`}
+      className={`press inline-flex items-center justify-center ${baseColor} p-2 rounded-md hover:bg-neutral-800/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 disabled:opacity-50 ${TONE_CLASS[tone]} ${className}`}
       {...rest}
     >
       {children}

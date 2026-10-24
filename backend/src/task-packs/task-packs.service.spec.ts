@@ -3,6 +3,13 @@ import { TaskPacksService } from './task-packs.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { TasksService } from '../tasks/tasks.service';
 
+// TasksService -> TaskAttachmentsService puxa o file-type (ESM puro, o jest
+// nao o carrega) e o cliente do Supabase; nenhum e usado aqui.
+jest.mock('file-type', () => ({ fileTypeFromBuffer: jest.fn() }));
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: jest.fn(() => ({})),
+}));
+
 const D = new Date('2026-11-01T10:00:00.000Z');
 
 function task(id: string, ownerId: string | null) {

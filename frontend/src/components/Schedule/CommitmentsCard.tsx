@@ -29,7 +29,7 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
   const { commitments, ungroupedShifts } = overview;
 
   return (
-    <Card className="mt-6">
+    <Card>
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <h2 className="text-lg font-semibold text-white mb-1">{t('ui.workAndOtherCommitments')}</h2>
@@ -43,7 +43,7 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
               type="button"
               onClick={() => { clearError(); clearCopyResult(); setIsCopying((open) => !open); }}
               aria-expanded={isCopying}
-              className="px-3 py-2 text-sm text-neutral-300 hover:text-white border border-neutral-700 rounded-md"
+              className="press px-3 py-2 text-sm text-neutral-300 hover:text-white hover:border-neutral-500 hover:bg-neutral-800/60 border border-neutral-700 rounded-lg"
             >
               {t('ui.copyAWeek')}
             </button>
@@ -86,7 +86,8 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
         <EmptyState variant="inline" message={t('ui.nothingHereYetCreateA')} />
       )}
 
-      <div className="space-y-3">
+      {/* Lado a lado quando o cartao e largo (coluna principal do Schedule). */}
+      <div className="grid gap-3 md:grid-cols-2">
         {commitments.map((commitment) => (
           <CommitmentSection
             key={commitment.id}

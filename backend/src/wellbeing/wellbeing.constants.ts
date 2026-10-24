@@ -13,6 +13,17 @@ export const INSIGHTS_WINDOW_DAYS = 90;
 // Abaixo disto uma correlacao e ruido: devolve "not_enough_data".
 export const MIN_CORRELATION_SAMPLES = 7;
 
+// Alerta de burnout (ver burnout.util.ts): ultima semana vs as 3 antes.
+// Cabe dentro de INSIGHTS_WINDOW_DAYS, por isso reusa a mesma query.
+export const BURNOUT_RECENT_DAYS = 7;
+export const BURNOUT_BASELINE_DAYS = 21;
+export const BURNOUT_MIN_RECENT_LOGS = 3;
+export const BURNOUT_MIN_BASELINE_LOGS = 5;
+// Queda (ou subida, no stress) minima na escala 1-5 para contar.
+export const BURNOUT_DROP_THRESHOLD = 0.75;
+// Estudo por dia recente >= 90% do de base = "a carga nao baixou".
+export const BURNOUT_LOAD_HELD_RATIO = 0.9;
+
 export const MAX_MEDICATIONS_PER_USER = 30;
 export const MAX_MEDICATION_NAME_LENGTH = 100;
 export const MAX_MEDICATION_DOSAGE_LENGTH = 60;

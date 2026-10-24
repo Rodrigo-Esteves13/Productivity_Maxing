@@ -99,6 +99,33 @@ export class ScheduleController {
     );
   }
 
+  // Literal antes de qualquer rota com :id. Mesmo corte em hoje que
+  // /attendance: aulas futuras ainda nao foram dadas.
+  @Get('study-vs-class')
+  @ApiOperation({
+    summary:
+      'Study time per course vs class time held between from and to (never past today), plus timetable subjects not linked to a course.',
+  })
+  @ApiQuery({ name: 'from', example: '2026-09-14' })
+  @ApiQuery({ name: 'to', example: '2027-01-31' })
+  studyVsClass(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    if (!DATE_KEY.test(from ?? '') || !DATE_KEY.test(to ?? '')) {
+      throw new BadRequestException('Send "from" and "to" as YYYY-MM-DD.');
+    }
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const toDate = new Date(`${to}T00:00:00.000Z`);
+    return this.scheduleService.studyVsClass(
+      user.id,
+      new Date(`${from}T00:00:00.000Z`),
+      toDate.getTime() > today.getTime() ? today : toDate,
+    );
+  }
+
   @Patch(':id/attendance')
   @ApiOperation({
     summary:

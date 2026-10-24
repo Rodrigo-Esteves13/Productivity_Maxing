@@ -6,7 +6,7 @@ import { useI18n } from '../../i18n/useI18n';
 
 const STATUS_STYLE: Record<AdminCodeRequest['status'], string> = {
   PENDING: 'border-amber-800/60 bg-amber-900/20 text-amber-300',
-  APPROVED: 'border-emerald-800/60 bg-emerald-900/20 text-emerald-300',
+  APPROVED: 'border-violet-800/60 bg-violet-900/20 text-violet-300',
   REJECTED: 'border-neutral-700 bg-neutral-800 text-neutral-400',
 };
 

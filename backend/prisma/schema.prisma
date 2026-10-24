@@ -355,6 +355,7 @@ model User {
   moodLogs         MoodLog[]
   medications      Medication[]
   medicationDoses  MedicationDose[]
+  taskAttachments  TaskAttachment[]
   // Pads (bloco estilo dontpad) e turmas (Fase 7).
   padEdits            Pad[]               @relation("PadUpdatedBy")
   padsLocked          Pad[]               @relation("PadLockedBy")
@@ -766,6 +767,8 @@ model Task {
   // entra em nenhuma média nem previsão.
   subtasks Subtask[]
   sentReminders SentReminder[]
+  // Ficheiros da task (enunciado em PDF, etc.), ver model TaskAttachment.
+  attachments TaskAttachment[]
 
   // Nenhuma destas é indexada automaticamente só por ser FK no Postgres:
   // - userId: TasksService.findAll/findOne/update/remove filtram sempre
@@ -844,6 +847,30 @@ model Subtask {
 /// LoggingThrottlerGuard sempre que um IP excede o limite de pedidos.
 /// Distinto do RequestUserLoggerInterceptor (esse só imprime no terminal,
 /// não fica gravado - some com o restart do dyno do Render).
+/// Ficheiro anexado a uma task (ex: enunciado em PDF). Mesmo bucket privado
+/// e mesma validacao dos anexos do Notebook (attachment-validation.util.ts),
+/// numa pasta propria (tasks/<userId>/). userId repetido aqui (e nao so via
+/// a task) para todas as queries filtrarem pelo dono diretamente.
+/// Apagar a task apaga as linhas (cascade); o ficheiro no storage e apagado
+/// antes pelo TaskAttachmentsService.
+model TaskAttachment {
+  id               String @id @default(uuid())
+  taskId           String
+  userId           String
+  storagePath      String
+  originalFileName String
+  extension        String
+  sizeBytes        Int
+
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([userId])
+}
+
 model SecurityLog {
   id        String            @id @default(uuid())
   type      SecurityEventType @default(RATE_LIMIT_EXCEEDED)

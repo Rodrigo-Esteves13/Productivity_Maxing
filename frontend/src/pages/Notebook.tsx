@@ -579,7 +579,7 @@ export default function Notebook() {
                   ) : entryError ? (
                     <div className="space-y-3">
                       <ErrorState message={entryError} />
-                      <Button type="button" variant="secondary" onClick={retryEntry} className="px-3 py-1.5 text-sm">
+                      <Button type="button" variant="secondary" onClick={retryEntry} size="sm">
                         {t('common.tryAgain')}
                       </Button>
                     </div>

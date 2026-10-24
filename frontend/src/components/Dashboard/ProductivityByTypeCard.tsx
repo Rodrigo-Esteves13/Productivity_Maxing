@@ -60,7 +60,7 @@ export default function ProductivityByTypeCard({
                     row.onTimePct === null
                       ? 'text-neutral-600'
                       : row.onTimePct >= 80
-                        ? 'text-emerald-400'
+                        ? 'text-violet-400'
                         : row.onTimePct >= 50
                           ? 'text-amber-400'
                           : 'text-red-400'

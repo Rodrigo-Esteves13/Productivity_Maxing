@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { scaleMax } from '../../lib/gradeScale';
 import type { Task, Area } from '../../types/models';
 import { TargetIcon } from '../UI/Icons';
 import { computeWeightCoverage } from '../../utils/weightCoverage';
@@ -13,12 +14,6 @@ interface GradeNeededCalculatorProps {
 }
 
 const WHOLE_PERIOD_VALUE = '__whole_period__';
-
-function scaleMax(scale: string): number {
-  const parts = scale.split('-').map(Number);
-  const max = parts[1];
-  return Number.isFinite(max) && max > 0 ? max : 20;
-}
 
 // Inverts the same math as computeWeightedAverage on the backend
 // (grade-average.util.ts): given a target average and the tasks already

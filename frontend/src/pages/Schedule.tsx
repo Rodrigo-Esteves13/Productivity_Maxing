@@ -6,6 +6,7 @@ import ActionButton from '../components/UI/ActionButton';
 import SegmentedControl, { type SegmentedOption } from '../components/UI/SegmentedControl';
 import WeekGrid from '../components/Schedule/WeekGrid';
 import AttendanceCard from '../components/Schedule/AttendanceCard';
+import StudyVsClassCard from '../components/Schedule/StudyVsClassCard';
 import MonthGrid from '../components/Schedule/MonthGrid';
 import ImportScheduleModal from '../components/Schedule/ImportScheduleModal';
 import StudyPlanCard from '../components/Study/StudyPlanCard';
@@ -97,36 +98,42 @@ export default function Schedule() {
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          {view === 'week' ? (
-            <WeekGrid
-              refreshKey={scheduleVersion}
-              initialDate={anchorDate}
-              viewToggle={viewToggle}
-              onAttendanceChanged={handleAttendanceChanged}
-            />
-          ) : (
-            <MonthGrid
-              refreshKey={scheduleVersion}
-              initialDate={anchorDate}
-              viewToggle={viewToggle}
-              onOpenWeek={openWeek}
-            />
-          )}
-          <CommitmentsCard onChanged={handleScheduleChanged} />
-          {/* Ligacoes ao calendario lado a lado: sao configuracao (mexe-se
-              uma vez) e empilhadas ocupavam mais que a propria semana. */}
-          <div className="mt-6 grid gap-6 md:grid-cols-2">
+      {/* A semana ocupa a largura toda: dentro de 2/3 da pagina cada dia
+          ficava com ~100px e os nomes das cadeiras partiam letra a letra. */}
+      <div className="space-y-6">
+        {view === 'week' ? (
+          <WeekGrid
+            refreshKey={scheduleVersion}
+            initialDate={anchorDate}
+            viewToggle={viewToggle}
+            onAttendanceChanged={handleAttendanceChanged}
+          />
+        ) : (
+          <MonthGrid
+            refreshKey={scheduleVersion}
+            initialDate={anchorDate}
+            viewToggle={viewToggle}
+            onOpenWeek={openWeek}
+          />
+        )}
+        {/* Duas colunas com pesos parecidos, para nenhuma acabar muito antes
+            da outra: a esquerda (larga) tem o que se edita - plano de estudo
+            e compromissos; a direita tem o que se consulta de relance -
+            presencas, estudo vs aulas - e as ligacoes ao calendario, que sao
+            configuracao (mexe-se uma vez). */}
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <div key={scheduleVersion}>
+              <StudyPlanCard />
+            </div>
+            <CommitmentsCard onChanged={handleScheduleChanged} />
+          </div>
+          <div className="space-y-6">
+            <AttendanceCard refreshKey={scheduleVersion + attendanceVersion} />
+            <StudyVsClassCard refreshKey={scheduleVersion} />
             <ScheduleSyncCard />
             <CalendarFeedCard />
           </div>
-        </div>
-        <div>
-          <div key={scheduleVersion}>
-            <StudyPlanCard />
-          </div>
-          <AttendanceCard refreshKey={scheduleVersion + attendanceVersion} />
         </div>
       </div>
 

@@ -84,7 +84,7 @@ export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps
                 </div>
                 <Button
                   variant="secondary"
-                  className="px-3 py-1.5 text-sm"
+                  size="sm"
                   disabled={isSubmitting || activeSession !== null}
                   onClick={() => void handleStart(block)}
                 >

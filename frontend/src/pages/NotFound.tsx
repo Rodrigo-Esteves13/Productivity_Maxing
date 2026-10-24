@@ -35,10 +35,10 @@ export default function NotFound() {
           {t('common.notFound.body')}
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-          <Button className="px-6 py-3 text-base" onClick={() => navigate('/')}>
+          <Button size="lg" onClick={() => navigate('/')}>
             {t('common.notFound.home')}
           </Button>
-          <Button variant="secondary" className="px-6 py-3 text-base" onClick={() => navigate(-1)}>
+          <Button variant="secondary" size="lg" onClick={() => navigate(-1)}>
             {t('common.notFound.back')}
           </Button>
         </div>

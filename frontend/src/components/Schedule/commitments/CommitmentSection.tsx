@@ -55,7 +55,7 @@ export default function CommitmentSection({
   };
 
   return (
-    <section className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
+    <section className="flex flex-col rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
       {mode === 'edit' ? (
         <CommitmentForm
           initial={commitment}
@@ -80,7 +80,7 @@ export default function CommitmentSection({
                 ` · ${t('commitment.daysOffLine', { days: describeDaysOff(commitment.daysOff) })}`}
             </p>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="-my-1.5 -mr-2 flex items-center gap-1 shrink-0">
             <IconButton label={t('ui.editNamed', { name: commitment.name })} onClick={() => setMode('edit')}>
               <PencilIcon />
             </IconButton>
@@ -103,7 +103,7 @@ export default function CommitmentSection({
       )}
 
       <ShiftList
-        className="mt-3"
+        className="mt-3 mb-3"
         shifts={commitment.shifts}
         daysOff={commitment.daysOff}
         isSaving={isSaving}
@@ -127,7 +127,7 @@ export default function CommitmentSection({
           <button
             type="button"
             onClick={() => setMode('add-shift')}
-            className="mt-3 flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300"
+            className="press -mb-1.5 -ml-2 mt-auto flex items-center gap-1.5 self-start rounded-lg px-2 py-1.5 text-sm text-violet-400 hover:bg-violet-500/10 hover:text-violet-300"
           >
             <PlusIcon />
             {t('ui.addShift')}

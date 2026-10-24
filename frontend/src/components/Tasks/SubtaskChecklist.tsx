@@ -119,7 +119,7 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
       {subtasks.length > 0 && (
         <div className="flex items-center gap-2">
           <div className="h-1.5 flex-1 rounded-full bg-neutral-800 overflow-hidden">
-            <div className="h-full bg-violet-500 transition-all" style={{ width: `${percent}%` }} />
+            <div className="h-full bg-violet-500 transition-[width] duration-[var(--duration-fast)] ease-smooth-out" style={{ width: `${percent}%` }} />
           </div>
           <span className="text-xs text-neutral-400 tabular-nums">
             {done}/{subtasks.length}

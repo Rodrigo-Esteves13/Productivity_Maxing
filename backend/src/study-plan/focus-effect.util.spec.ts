@@ -107,7 +107,7 @@ describe('fitInterestEffect', () => {
 
   it('ignora tasks sem interesse classificado', () => {
     const samples = buildByArea(() => 0.5).map((s) => {
-      const rest: Partial<FocusSample> = { ...s };
+      const rest: FocusSample = { ...s };
       delete rest.interest;
       return rest;
     });

@@ -51,6 +51,12 @@ const NAV_COMMANDS: NavCommand[] = [
   },
   { id: 'nav-tasks', labelKey: 'nav.tasks', path: '/tasks' },
   {
+    id: 'nav-task-templates',
+    labelKey: 'taskTemplates.paletteLabel',
+    path: '/tasks?new=1',
+    keywords: ['template', 'templates', 'modelo', 'modelos', 'reuse', 'reutilizar', 'checklist', 'new task'],
+  },
+  {
     id: 'nav-tasks-board',
     labelKey: 'board.paletteLabel',
     path: '/tasks?view=board',
@@ -78,7 +84,13 @@ const NAV_COMMANDS: NavCommand[] = [
     id: 'nav-attendance',
     labelKey: 'attendance.title',
     path: '/schedule',
-    keywords: ['attendance', 'presencas', 'presenças', 'faltas', 'absences', 'missed classes', 'aulas'],
+    keywords: ['attendance', 'presencas', 'presenças', 'faltas', 'absences', 'missed classes', 'aulas', 'absence limit', 'limite de faltas'],
+  },
+  {
+    id: 'nav-study-vs-class',
+    labelKey: 'studyVsClass.title',
+    path: '/schedule',
+    keywords: ['study hours', 'class hours', 'horas de estudo', 'horas letivas', 'estudo vs aulas', 'per course', 'por cadeira'],
   },
   {
     id: 'nav-work-shifts',
@@ -92,6 +104,12 @@ const NAV_COMMANDS: NavCommand[] = [
     labelKey: 'nav.wellbeing',
     path: '/wellbeing',
     keywords: ['mood', 'humor', 'mental', 'stress', 'energy', 'energia', 'medication', 'medicine', 'medicacao', 'medicação', 'remedio', 'pills', 'comprimidos', 'pharmacy', 'farmacia'],
+  },
+  {
+    id: 'nav-report-card',
+    labelKey: 'reportCard.title',
+    path: '/report-card',
+    keywords: ['report card', 'transcript', 'boletim', 'pauta', 'grades', 'notas', 'semester', 'semestre', 'print', 'imprimir', 'pdf', 'credits', 'ects'],
   },
   {
     id: 'nav-turmas',
@@ -489,11 +507,11 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] p-4 bg-black/70 backdrop-blur-sm"
+      className="motion-backdrop fixed inset-0 z-50 flex items-start justify-center pt-[15vh] p-4 bg-black/80 backdrop-blur-sm"
       onClick={() => setIsOpen(false)}
     >
       <div
-        className="w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl overflow-hidden"
+        className="motion-modal w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-800">

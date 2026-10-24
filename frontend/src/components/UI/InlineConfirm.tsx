@@ -26,11 +26,15 @@ export default function InlineConfirm({
         type="button"
         disabled={isBusy}
         onClick={onConfirm}
-        className="px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white disabled:opacity-50"
+        className="press px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white disabled:cursor-not-allowed disabled:opacity-50"
       >
         {confirmLabel}
       </button>
-      <button type="button" onClick={onCancel} className="text-neutral-400 hover:text-white">
+      <button
+        type="button"
+        onClick={onCancel}
+        className="press rounded-lg px-3 py-1.5 text-neutral-400 hover:bg-neutral-800/60 hover:text-white"
+      >
         {t('common.cancel')}
       </button>
     </div>

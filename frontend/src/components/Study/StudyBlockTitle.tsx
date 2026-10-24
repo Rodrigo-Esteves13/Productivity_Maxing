@@ -16,13 +16,20 @@ export default function StudyBlockTitle({ block, className = '' }: StudyBlockTit
       {showArea && (
         <>
           {block.areaColorHex && <ColorDot size="xs" color={block.areaColorHex} />}
-          <span className="max-w-[45%] shrink-0 truncate text-neutral-400">{block.areaName}</span>
+          {/* Encolhe mais depressa que o titulo da task (shrink-[3]) mas so
+              quando falta espaco: antes um max-w de 45% cortava o nome mesmo
+              com a linha meio vazia. */}
+          <span title={block.areaName ?? undefined} className="min-w-0 shrink-[3] truncate text-neutral-400">
+            {block.areaName}
+          </span>
           <span aria-hidden="true" className="shrink-0 text-neutral-600">
             ·
           </span>
         </>
       )}
-      <span className="truncate">{block.taskTitle}</span>
+      <span title={block.taskTitle} className="min-w-16 truncate">
+        {block.taskTitle}
+      </span>
     </span>
   );
 }

@@ -13,7 +13,7 @@ export default function ProfileStat({ label, value, isLoading = false }: Profile
       {isLoading ? (
         <Skeleton className="mt-1.5 h-7 w-10 mx-auto" />
       ) : (
-        <p className="mt-1 text-2xl font-semibold text-white">{value}</p>
+        <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{value}</p>
       )}
     </div>
   );

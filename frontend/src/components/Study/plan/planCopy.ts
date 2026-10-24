@@ -12,7 +12,7 @@ interface BannerContext {
 interface BannerCopy {
   title: string;
   body: (ctx: BannerContext) => string;
-  // Tokens de cor existentes (neutral/amber/red/emerald), nunca hex novos.
+  // Tokens de cor existentes (neutral/amber/red/violet), nunca hex novos.
   containerClass: string;
   titleClass: string;
 }
@@ -30,8 +30,8 @@ export const BANNER_BY_STATUS: Record<CapacityStatus, BannerCopy> = {
     get title() { return translateNow('plan.onTrackTitle'); },
     body: (c) =>
       translateNow('plan.onTrackBody', { needed: formatDuration(c.neededMinutes), limit: formatDuration(c.dailyLimitMinutes) }),
-    containerClass: 'border-emerald-900/50 bg-emerald-950/20',
-    titleClass: 'text-emerald-300',
+    containerClass: 'border-violet-900/50 bg-violet-950/20',
+    titleClass: 'text-violet-300',
   },
   overtime: {
     get title() { return translateNow('plan.overtimeTitle'); },

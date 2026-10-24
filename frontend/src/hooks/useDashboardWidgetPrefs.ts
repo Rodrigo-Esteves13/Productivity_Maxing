@@ -25,7 +25,9 @@ export type DashboardWidgetKey =
   | 'deadlineCompliance'
   | 'weekdayLoad'
   | 'targetVsReal'
-  | 'productivityByType';
+  | 'productivityByType'
+  | 'difficultyVsGrade'
+  | 'failingRisk';
 
 // Chaves i18n (traduzidas com t() em DashboardWidgetToggles).
 export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
@@ -54,6 +56,8 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   weekdayLoad: 'widget.weekdayLoad',
   targetVsReal: 'widget.targetVsReal',
   productivityByType: 'widget.productivityByType',
+  difficultyVsGrade: 'widget.difficultyVsGrade',
+  failingRisk: 'widget.failingRisk',
 };
 
 const STORAGE_KEY = 'dashboard-widget-prefs';
@@ -87,6 +91,8 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   weekdayLoad: true,
   targetVsReal: true,
   productivityByType: true,
+  difficultyVsGrade: true,
+  failingRisk: true,
 };
 
 function loadPrefs(): Record<DashboardWidgetKey, boolean> {

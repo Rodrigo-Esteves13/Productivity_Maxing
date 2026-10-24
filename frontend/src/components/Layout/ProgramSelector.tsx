@@ -7,6 +7,7 @@ import CreateProgramModal from './CreateProgramModal';
 import RenameProgramModal from './RenameProgramModal';
 import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
+import IconButton from '../UI/IconButton';
 
 // Lazy e montado so quando aberto.
 const ManagePeriodsModal = lazy(() => import('./ManagePeriodsModal'));
@@ -95,14 +96,13 @@ export default function ProgramSelector() {
 
       {activeProgram && (
         <>
-          <button
-            type="button"
+          <IconButton
+            label={t('program.rename')}
             onClick={() => setIsRenameModalOpen(true)}
-            title={t('program.rename')}
-            className="text-neutral-500 hover:text-neutral-200 transition-colors p-1.5"
+            className="text-neutral-500 hover:text-neutral-200"
           >
             <PencilIcon />
-          </button>
+          </IconButton>
 
           <button
             type="button"
@@ -112,15 +112,14 @@ export default function ProgramSelector() {
             {t('program.managePeriods')}
           </button>
 
-          <button
-            type="button"
+          <IconButton
+            label={t('program.delete.title')}
             onClick={handleDelete}
             disabled={isDeleting}
-            title={t('program.delete.title')}
-            className="text-neutral-500 hover:text-red-500 transition-colors p-1.5 disabled:opacity-50"
+            className="text-neutral-500 hover:text-red-500 disabled:opacity-50"
           >
             <TrashIcon />
-          </button>
+          </IconButton>
         </>
       )}
 

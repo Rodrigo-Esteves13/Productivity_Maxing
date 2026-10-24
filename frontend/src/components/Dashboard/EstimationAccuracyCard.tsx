@@ -49,7 +49,7 @@ export default function EstimationAccuracyCard() {
       </CardHeading>
 
       <div className="flex items-end gap-2 mb-3">
-        <span className="text-2xl font-semibold text-violet-400">
+        <span className="text-2xl font-semibold tabular-nums text-violet-400">
           {data.avgAbsPercentError}%
         </span>
         <span className="text-xs text-neutral-500 pb-1">

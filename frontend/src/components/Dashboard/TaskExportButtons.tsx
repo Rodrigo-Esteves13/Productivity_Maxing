@@ -4,6 +4,7 @@ import { downloadTextFile } from '../../utils/downloadTextFile';
 import { DownloadIcon } from '../UI/Icons';
 import { todayKey } from '../../lib/dateKey';
 import { useI18n } from '../../i18n/useI18n';
+import ToolbarButton from '../UI/ToolbarButton';
 
 interface TaskExportButtonsProps {
   tasks: Task[];
@@ -31,27 +32,27 @@ export default function TaskExportButtons({ tasks, areas, academicTaskTypes }: T
   };
 
   return (
-    <div className="flex items-center gap-3">
-      <button
-        type="button"
+    <div className="flex items-center gap-1">
+      <ToolbarButton
+        tone="muted"
+        size="md"
         onClick={handleExportCsv}
         disabled={tasks.length === 0}
         title={tasks.length === 0 ? t('ui.noTasksToExport') : t('ui.exportShownAsCsv')}
-        className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200 disabled:opacity-40 disabled:hover:text-neutral-400"
       >
         <DownloadIcon />
         CSV
-      </button>
-      <button
-        type="button"
+      </ToolbarButton>
+      <ToolbarButton
+        tone="muted"
+        size="md"
         onClick={handleExportMarkdown}
         disabled={tasks.length === 0}
         title={tasks.length === 0 ? t('ui.noTasksToExport') : t('ui.exportShownAsMarkdown')}
-        className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200 disabled:opacity-40 disabled:hover:text-neutral-400"
       >
         <DownloadIcon />
         Markdown
-      </button>
+      </ToolbarButton>
     </div>
   );
 }

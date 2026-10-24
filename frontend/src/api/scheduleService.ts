@@ -3,6 +3,7 @@ import api from './client';
 import type {
   ClassOccurrence,
   SubjectAttendance,
+  StudyVsClass,
   CommuteMode,
   ImportScheduleRow,
   ImportScheduleResult,
@@ -47,6 +48,18 @@ export const getAttendanceSummary = async (
   signal?: AbortSignal,
 ): Promise<SubjectAttendance[]> => {
   const response = await api.get<SubjectAttendance[]>('/schedule/attendance', {
+    params: { from, to },
+    signal,
+  });
+  return response.data;
+};
+
+export const getStudyVsClass = async (
+  from: string,
+  to: string,
+  signal?: AbortSignal,
+): Promise<StudyVsClass> => {
+  const response = await api.get<StudyVsClass>('/schedule/study-vs-class', {
     params: { from, to },
     signal,
   });

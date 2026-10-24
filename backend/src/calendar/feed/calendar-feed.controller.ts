@@ -5,16 +5,26 @@ import {
   HttpCode,
   Param,
   Post,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
-import { CalendarFeedService } from './calendar-feed.service';
+import {
+  CalendarFeedService,
+  FEED_SCOPES,
+  parseFeedScope,
+} from './calendar-feed.service';
 import { perMinute } from '../../common/throttle.util';
 
 // Gestão do link (precisa de sessão). O feed em si é o controller abaixo.
@@ -65,9 +75,22 @@ export class CalendarFeedPublicController {
     summary:
       'Read-only .ics feed for calendar subscriptions. :file = <token>.ics',
   })
-  async getFeed(@Param('file') file: string, @Res() res: Response) {
+  @ApiQuery({
+    name: 'only',
+    required: false,
+    enum: FEED_SCOPES,
+    description: 'tasks = only task deadlines (no classes, shifts or study).',
+  })
+  async getFeed(
+    @Param('file') file: string,
+    @Query('only') only: string | undefined,
+    @Res() res: Response,
+  ) {
     const token = file.endsWith('.ics') ? file.slice(0, -4) : file;
-    const body = await this.feedService.buildFeedForToken(token);
+    const body = await this.feedService.buildFeedForToken(
+      token,
+      parseFeedScope(only),
+    );
     res
       .status(200)
       .set({

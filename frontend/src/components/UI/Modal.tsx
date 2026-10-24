@@ -1,5 +1,7 @@
 import { type ReactNode, useEffect } from 'react';
 import { XIcon } from './Icons';
+import IconButton from './IconButton';
+import { MODAL_EXIT_MS, usePresence } from '../../hooks/usePresence';
 import { useI18n } from '../../i18n/useI18n';
 
 interface ModalProps {
@@ -21,7 +23,8 @@ const SIZE_CLASS: Record<ModalSize, string> = {
 
 export default function Modal({ isOpen, onClose, title, children, action, size = 'lg' }: ModalProps) {
   const { t } = useI18n();
-  
+  const { mounted, state } = usePresence(isOpen, MODAL_EXIT_MS);
+
   // Só ativa o listener se o Modal estiver aberto
   useEffect(() => {
     if (!isOpen) return;
@@ -33,17 +36,19 @@ export default function Modal({ isOpen, onClose, title, children, action, size =
     return () => window.removeEventListener('keydown', handleEsc);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!mounted) return null;
 
   return (
     // Clicar no fundo escuro fecha o Modal
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+    <div
+      data-state={state}
+      className="motion-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
       onClick={onClose}
     >
       {/* Evitamos que o clique no formulário feche o Modal acidentalmente */}
-      <div 
-        className={`bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl w-full ${SIZE_CLASS[size]} overflow-hidden flex flex-col max-h-[90vh]`}
+      <div
+        data-state={state}
+        className={`motion-modal bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl w-full ${SIZE_CLASS[size]} overflow-hidden flex flex-col max-h-[90vh]`}
         onClick={(e) => e.stopPropagation()} 
       >
         
@@ -52,13 +57,9 @@ export default function Modal({ isOpen, onClose, title, children, action, size =
           <h2 className="text-lg font-bold text-white">{title}</h2>
           <div className="flex items-center gap-2">
             {action}
-            <button 
-              onClick={onClose}
-              className="text-neutral-400 hover:text-white transition-colors p-1"
-              title={t('common.close')}
-            >
+            <IconButton label={t('common.close')} onClick={onClose} className="text-neutral-400">
               <XIcon />
-            </button>
+            </IconButton>
           </div>
         </div>
 

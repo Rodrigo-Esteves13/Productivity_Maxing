@@ -46,7 +46,7 @@ export default function ProgressRing({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={circumference * (1 - value / 100)}
-          className={`stroke-current ${colorClassName}`}
+          className={`stroke-current transition-[stroke-dashoffset] duration-[var(--duration-slow)] ease-smooth-out ${colorClassName}`}
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center text-center">{children}</div>

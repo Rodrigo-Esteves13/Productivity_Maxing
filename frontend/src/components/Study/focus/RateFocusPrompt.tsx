@@ -61,7 +61,7 @@ export default function RateFocusPrompt() {
             </p>
           )}
           <div className="mt-3">
-            <Button variant="secondary" className="px-3 py-1.5 text-sm" onClick={dismissJustStopped}>
+            <Button variant="secondary" size="sm" onClick={dismissJustStopped}>
               {t('rateFocus.skip')}
             </Button>
           </div>

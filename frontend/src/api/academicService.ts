@@ -7,6 +7,7 @@ import type {
   ProgramAverage,
   PeriodComparisonEntry,
   CreditsSummary,
+  PeriodReportCard,
 } from '../types/models';
 
 // PROGRAMS
@@ -113,6 +114,12 @@ export const archivePeriod = async (id: string, confirm = false): Promise<Academ
 // Average of this period only.
 export const getPeriodAverage = async (periodId: string): Promise<PeriodAverage> => {
   const response = await api.get<PeriodAverage>(`/periods/${periodId}/average`);
+  return response.data;
+};
+
+// Report card of one period: average plus each course with credits/pass.
+export const getPeriodReportCard = async (periodId: string): Promise<PeriodReportCard> => {
+  const response = await api.get<PeriodReportCard>(`/periods/${encodeURIComponent(periodId)}/report-card`);
   return response.data;
 };
 

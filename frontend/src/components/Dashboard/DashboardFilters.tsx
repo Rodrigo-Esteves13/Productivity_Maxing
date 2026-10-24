@@ -13,6 +13,7 @@ import type { TableSortState } from '../../hooks/useTableSort';
 import type { Area, AcademicTaskTypeOption } from '../../types/models';
 import type { DashboardFiltersState } from './dashboardFilters.types';
 import { ACADEMIC_TASK_TYPE_KEY } from '../../lib/constants';
+import { useAreaOrder } from '../../hooks/useAreaOrder';
 
 interface DashboardFiltersProps {
   filters: DashboardFiltersState;
@@ -59,6 +60,7 @@ export default function DashboardFilters({
   onToggleSortDirection,
 }: DashboardFiltersProps) {
   const { t } = useI18n();
+  const { sortAreas } = useAreaOrder();
   const { catalogLabel } = useCatalogLabel();
   const enumLabel = useEnumLabel();
   const update = (patch: Partial<DashboardFiltersState>) => onChange({ ...filters, ...patch });
@@ -82,7 +84,7 @@ export default function DashboardFilters({
               o Dashboard inteiro já é implicitamente "só Académico". */}
           <Select id="filter-area" value={filters.areaId} onChange={(e) => update({ areaId: e.target.value })}>
             <option value="">{t('filters.allAreas')}</option>
-            {areas.map((a) => (
+            {sortAreas(areas).map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
               </option>

@@ -19,6 +19,9 @@ export const disableCalendarFeed = async (): Promise<CalendarFeedStatus> => {
   return response.data;
 };
 
-export const feedUrl = (token: string): string => `${API_BASE_URL}/feed/${token}.ics`;
+// tasksOnly: so os prazos das tasks (?only=tasks), sem aulas/turnos/estudo.
+export const feedUrl = (token: string, tasksOnly = false): string =>
+  `${API_BASE_URL}/feed/${token}.ics${tasksOnly ? '?only=tasks' : ''}`;
 // webcal:// abre direto a app de calendario (Apple/Outlook).
-export const feedWebcalUrl = (token: string): string => feedUrl(token).replace(/^https?:/, 'webcal:');
+export const feedWebcalUrl = (token: string, tasksOnly = false): string =>
+  feedUrl(token, tasksOnly).replace(/^https?:/, 'webcal:');

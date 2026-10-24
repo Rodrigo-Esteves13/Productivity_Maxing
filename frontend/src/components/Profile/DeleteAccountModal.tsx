@@ -21,8 +21,8 @@ export default function DeleteAccountModal({
 }: DeleteAccountModalProps) {
   const { t } = useI18n();
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-      <div className="bg-neutral-900 border border-red-900/40 rounded-xl p-6 max-w-md w-full">
+    <div className="motion-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="motion-modal bg-neutral-900 border border-red-900/40 rounded-xl shadow-2xl p-6 max-w-md w-full">
         <h3 className="text-lg font-bold text-white mb-2">{t('ui.deleteYourAccount')}</h3>
         <p className="text-neutral-400 text-sm mb-4">
           {fillNodes(t('ui.typeDeleteToConfirm'), {

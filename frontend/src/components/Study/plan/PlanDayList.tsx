@@ -76,7 +76,7 @@ export default function PlanDayList({ suggestions, days, dailyLimitMinutes }: Pl
                   : 'bg-neutral-800/60'
               }`}
             >
-              <span className="flex min-w-0 items-center gap-2 text-neutral-200">
+              <span className="flex min-w-0 flex-1 items-center gap-2 text-neutral-200">
                 <StudyBlockTitle block={s} />
                 {s.kind === 'review' && <span className="shrink-0 text-[11px] text-violet-300">{t('ui.reviewLower')}</span>}
               </span>

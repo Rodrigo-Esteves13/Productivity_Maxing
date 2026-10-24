@@ -21,6 +21,8 @@ export default function AccessibilitySettingsCard() {
     toggleColorblind,
     reduceMotion,
     toggleReduceMotion,
+    celebrate,
+    toggleCelebrate,
   } = useAccessibilityPrefs();
   const { t, lang, setLang } = useI18n();
 
@@ -132,6 +134,13 @@ export default function AccessibilitySettingsCard() {
         description={t('prefs.reduceMotionHelp')}
         checked={reduceMotion}
         onChange={toggleReduceMotion}
+      />
+      <ToggleRow
+        variant="inline"
+        label={t('prefs.celebrate')}
+        description={t('prefs.celebrateHelp')}
+        checked={celebrate}
+        onChange={toggleCelebrate}
       />
     </Card>
   );

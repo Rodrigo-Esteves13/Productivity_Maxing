@@ -17,6 +17,8 @@ import { TwoFactorService } from './services/two-factor.service';
 import { SessionTokenService } from './services/session-token.service';
 import { SupabaseClientsService } from './services/supabase-clients.service';
 import { releaseTurmasOfDeletedUser } from '../turmas/turma-account-cleanup.util';
+import { removeTaskAttachmentFiles } from '../tasks/task-attachments.service';
+import { removeNotebookFilesOfDeletedUser } from '../notebook/notebook-account-cleanup.util';
 
 /**
  * Fachada do modulo de autenticacao. A implementacao vive em servicos
@@ -130,6 +132,12 @@ export class AuthService {
 
     // Antes de tudo o resto: se falhar (storage), nada irreversivel aconteceu.
     await releaseTurmasOfDeletedUser(this.prisma, this.clients.admin, userId);
+    await removeTaskAttachmentFiles(this.prisma, this.clients.admin, userId);
+    await removeNotebookFilesOfDeletedUser(
+      this.prisma,
+      this.clients.admin,
+      userId,
+    );
 
     if (user.supabaseAuthId) {
       const { error } = await this.clients.admin.auth.admin.deleteUser(

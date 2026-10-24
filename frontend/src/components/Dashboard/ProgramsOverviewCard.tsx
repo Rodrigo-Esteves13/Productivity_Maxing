@@ -66,7 +66,7 @@ export default function ProgramsOverviewCard() {
               }`}
             >
               <p className="text-sm text-neutral-200 truncate">{program.name}</p>
-              <p className="text-xl font-bold text-white">
+              <p className="text-xl font-bold tabular-nums text-white">
                 {avg?.average !== null && avg?.average !== undefined
                   ? avg.average.toFixed(2)
                   : '-'}

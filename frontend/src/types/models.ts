@@ -153,6 +153,22 @@ export interface ClassOccurrence {
 }
 
 // GET /schedule/attendance: uma linha por disciplina, so aulas ate hoje.
+// GET /schedule/study-vs-class: estudo por cadeira vs aulas dadas.
+export interface StudyVsClassRow {
+  areaId: string;
+  areaName: string;
+  colorHex: string;
+  classMinutes: number;
+  studyMinutes: number;
+  // Study minutes per class minute; null without any class held.
+  ratio: number | null;
+}
+
+export interface StudyVsClass {
+  rows: StudyVsClassRow[];
+  unlinkedSubjects: string[];
+}
+
 export interface SubjectAttendance {
   subject: string;
   attended: number;
@@ -642,6 +658,17 @@ export interface CreditsSummary {
   passThreshold: number;
   earnedCredits: number;
   attemptedCredits: number;
+  areas: CreditsAreaSummary[];
+}
+
+// Returned by GET /periods/:id/report-card (printable report card page).
+export interface PeriodReportCard extends Omit<CreditsSummary, 'areas'> {
+  periodId: string;
+  periodName: string;
+  startDate: string;
+  endDate: string | null;
+  average: number | null;
+  gradedTaskCount: number;
   areas: CreditsAreaSummary[];
 }
 
@@ -1279,7 +1306,23 @@ export interface WellbeingInsights {
   moodVsStudyMinutes: CorrelationResult;
   energyVsFocus: CorrelationResult;
   stressVsFocus: CorrelationResult;
+  burnout: BurnoutResult;
 }
+
+export type BurnoutSignal = 'moodDrop' | 'energyDrop' | 'stressRise' | 'loadHeld';
+
+// Ultima semana vs as 3 antes (ver backend/src/wellbeing/burnout.util.ts).
+export type BurnoutResult =
+  | { kind: 'not_enough_data'; recentLogs: number; baselineLogs: number }
+  | { kind: 'ok'; signals: BurnoutSignal[] }
+  | {
+      kind: 'warning';
+      signals: BurnoutSignal[];
+      recentMood: number;
+      baselineMood: number;
+      recentStudyMinutesPerDay: number;
+      baselineStudyMinutesPerDay: number;
+    };
 
 // Pad (bloco estilo dontpad, /pad/<slug>). version 0 = ainda nunca gravado.
 export interface PadView {
@@ -1346,6 +1389,16 @@ export interface TurmaNote extends TurmaNoteSummary {
 }
 
 // Mesma forma que o preview de anexos do Notebook usa (AttachmentActions).
+// GET /tasks/:taskId/attachments. url = signed download link (short-lived).
+export interface TaskAttachment {
+  id: string;
+  originalFileName: string;
+  extension: string;
+  sizeBytes: number;
+  createdAt: string;
+  url: string | null;
+}
+
 export interface TurmaFile {
   id: string;
   originalFileName: string;

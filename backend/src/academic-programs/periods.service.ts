@@ -12,6 +12,7 @@ import { CreatePeriodDto } from './dto/create-period.dto';
 import { UpdatePeriodDto } from './dto/update-period.dto';
 import {
   computeCreditWeightedAverage,
+  computeCreditsSummary,
   resolveRoundFinalGrade,
 } from './grade-average.util';
 
@@ -232,6 +233,60 @@ export class PeriodsService {
       periodId: period.id,
       periodName: period.name,
       ...result,
+    };
+  }
+
+  /**
+   * Boletim de um periodo (pagina imprimivel): a media do periodo e, por
+   * cadeira, media/creditos/aprovado. Mesmas contas que getAverage e
+   * getCreditsSummary do programa, so que restritas a este periodo.
+   */
+  async getReportCard(userId: string, id: string) {
+    const period = await this.findOwnedOrThrow(userId, id);
+    const program = await this.programsService.findOwnedOrThrow(
+      userId,
+      period.programId,
+    );
+    const [tasks, areas, componentItems] = await Promise.all([
+      this.prisma.task.findMany({
+        where: { userId, periodId: id, realGrade: { not: null } },
+        select: { realGrade: true, weightPercentage: true, areaId: true },
+      }),
+      this.prisma.area.findMany({
+        where: accessibleAreaWhere(userId),
+        select: { id: true, name: true, credits: true },
+      }),
+      loadComponentGradedItems(this.prisma, { userId, periodId: id }),
+    ]);
+    const items = [...tasks, ...componentItems];
+    const shouldRound = resolveRoundFinalGrade(
+      program.roundFinalGrade,
+      period.roundFinalGrade,
+    );
+    const summary = computeCreditsSummary(
+      program.id,
+      program.name,
+      program.gradeScale,
+      items,
+      areas,
+      shouldRound,
+    );
+    const { average, gradedTaskCount } = computeCreditWeightedAverage(
+      items,
+      areas,
+      shouldRound,
+    );
+    return {
+      ...summary,
+      periodId: period.id,
+      periodName: period.name,
+      startDate: period.startDate,
+      endDate: period.endDate,
+      average,
+      gradedTaskCount,
+      areas: [...summary.areas].sort((a, b) =>
+        a.areaName.localeCompare(b.areaName),
+      ),
     };
   }
 

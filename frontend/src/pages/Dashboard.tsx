@@ -44,6 +44,7 @@ import { examModeVisibility, isExamTask } from '../lib/examMode';
 import ExamModePanel from '../components/Dashboard/ExamModePanel';
 import InstallAppCard from '../pwa/InstallAppCard';
 import { useI18n } from '../i18n/useI18n';
+import ToolbarButton from '../components/UI/ToolbarButton';
 
 // Mensagem da tabela vazia: sem tasks nenhumas, so sem exames (modo exame)
 // ou nenhuma a passar nos filtros.
@@ -149,45 +150,43 @@ export default function Dashboard() {
           title={t('ui.analyticsDashboard')}
           description={t('ui.globalViewOfAllYour')}
         />
-        <div className="print-hide flex flex-wrap items-center gap-x-4 gap-y-2">
-          <button
-            type="button"
+        <div className="print-hide flex flex-wrap items-center gap-x-1 gap-y-2">
+          <ToolbarButton
+            tone="muted"
+            size="md"
             onClick={() => setIsImportModalOpen(true)}
-            className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200"
           >
             <UploadIcon />
             {t('ui.import')}
-          </button>
+          </ToolbarButton>
           <TaskExportButtons tasks={filteredTasks} areas={academicAreas} academicTaskTypes={academicTaskTypes} />
-          <button
-            type="button"
+          <ToolbarButton
+            tone="muted"
+            size="md"
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200"
           >
             <PrinterIcon />
             {t('ui.print')}
-          </button>
-          <button
-            type="button"
+          </ToolbarButton>
+          <ToolbarButton
+            tone="muted"
+            size="md"
+            pressed={isExamMode}
             onClick={() => setIsExamMode((prev) => !prev)}
-            aria-pressed={isExamMode}
             title={t('examMode.toggleHelp')}
-            className={`flex items-center gap-1.5 text-sm ${
-              isExamMode ? 'text-violet-300 hover:text-violet-200' : 'text-neutral-400 hover:text-neutral-200'
-            }`}
           >
             <GraduationCapIcon />
             {t('examMode.toggle')}
-          </button>
-          <button
-            type="button"
+          </ToolbarButton>
+          <ToolbarButton
+            tone="muted"
+            size="md"
             onClick={toggleDensity}
             title={t('ui.toggleTableRowDensity')}
-            className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200"
           >
             <SlidersIcon />
             {density === 'compact' ? t('ui.comfortable') : t('ui.compact')}
-          </button>
+          </ToolbarButton>
           {archivedCount > 0 && (
             <label className="flex items-center gap-1.5 text-sm text-neutral-400 select-none cursor-pointer">
               <input
