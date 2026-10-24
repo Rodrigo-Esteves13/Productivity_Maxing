@@ -2,6 +2,7 @@ import FormField from '../../UI/FormField';
 import Input from '../../UI/Input';
 import Select from '../../UI/Select';
 import { useI18n } from '../../../i18n/useI18n';
+import { useAreaOrder } from '../../../hooks/useAreaOrder';
 
 interface AreaOption {
   id: string;
@@ -31,6 +32,7 @@ export default function TitleDateAreaFields({
   onAreaChange,
 }: TitleDateAreaFieldsProps) {
   const { t } = useI18n();
+  const { sortAreas } = useAreaOrder();
   return (
     <>
       <FormField label={t('ui.title')} htmlFor={`${idPrefix}-title`}>
@@ -70,7 +72,7 @@ export default function TitleDateAreaFields({
             <option value="" disabled>
               {t('ui.selectArea')}
             </option>
-            {areas.map((area) => (
+            {sortAreas(areas).map((area) => (
               <option key={area.id} value={area.id}>
                 {area.name}
               </option>

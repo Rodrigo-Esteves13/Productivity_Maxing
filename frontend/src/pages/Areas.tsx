@@ -13,6 +13,7 @@ import AreaProposalsPanel from '../components/Areas/AreaProposalsPanel';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useAreasPage } from '../hooks/useAreasPage';
 import { useI18n } from '../i18n/useI18n';
+import { useAreaOrder } from '../hooks/useAreaOrder';
 
 export default function Areas() {
   const { t } = useI18n();
@@ -47,8 +48,12 @@ export default function Areas() {
     handleReject,
   } = useAreasPage();
 
-  const official = areas.filter((a) => a.isOfficial);
-  const personal = areas.filter((a) => !a.isOfficial);
+  const { sortAreas, moveArea, resetOrder, isCustom } = useAreaOrder();
+  const sorted = sortAreas(areas);
+  const official = sorted.filter((a) => a.isOfficial);
+  const personal = sorted.filter((a) => !a.isOfficial);
+  const reorder = (draggedId: string, targetId: string) =>
+    moveArea(sorted.map((a) => a.id), draggedId, targetId);
 
   return (
     <PageLayout>
@@ -80,7 +85,15 @@ export default function Areas() {
           )}
 
           <section className="mb-8" aria-label={t('ui.myAreas')}>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-400">{t('ui.myAreas')}</h2>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">{t('ui.myAreas')}</h2>
+              {isCustom && (
+                <button type="button" onClick={resetOrder} className="text-xs text-neutral-400 hover:text-white">
+                  {t('areaOrder.reset')}
+                </button>
+              )}
+            </div>
+            <p className="mb-3 text-xs text-neutral-500">{t('areaOrder.hint')}</p>
             {personal.length === 0 ? (
               <EmptyState message={t('ui.youHaveNoPersonalAreas')} />
             ) : (
@@ -90,6 +103,7 @@ export default function Areas() {
                 onSelect={openDetailModal}
                 onEdit={startEditing}
                 onDelete={handleDeleteArea}
+                onReorder={reorder}
               />
             )}
           </section>
@@ -129,6 +143,7 @@ export default function Areas() {
                 onSelect={openDetailModal}
                 onEdit={startEditing}
                 onDelete={handleDeleteArea}
+                onReorder={reorder}
               />
             )}
           </section>

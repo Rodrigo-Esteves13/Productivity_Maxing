@@ -57,7 +57,7 @@ function StatCard({
 }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-900/40 p-4 shadow-xl shadow-black/40 transition-all duration-500 ease-out ${
+      className={`relative overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 shadow-xl transition-[opacity,translate] duration-[var(--duration-slow)] ease-smooth-out ${
         mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
       }`}
       style={{ transitionDelay: `${delayMs}ms` }}
@@ -71,7 +71,7 @@ function StatCard({
             {icon}
             {label}
           </p>
-          <p className={`text-2xl font-bold ${valueClassName}`}>{value}</p>
+          <p className={`text-2xl font-bold tabular-nums ${valueClassName}`}>{value}</p>
           <p className="text-xs text-neutral-500">{sub}</p>
         </div>
         <Sparkline
@@ -191,7 +191,7 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
 
     {comparison.length > 1 && (
       <div
-        className={`relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-900/40 p-4 mb-4 shadow-xl shadow-black/40 transition-all duration-500 ease-out ${
+        className={`relative overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 mb-4 shadow-xl transition-[opacity,translate] duration-[var(--duration-slow)] ease-smooth-out ${
           mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
         }`}
         style={{ transitionDelay: '160ms' }}

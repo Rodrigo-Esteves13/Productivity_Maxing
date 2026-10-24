@@ -3,6 +3,7 @@ import ColorDot from '../UI/ColorDot';
 import AreaStatusBadge from './AreaStatusBadge';
 import type { Area } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import IconButton from '../UI/IconButton';
 
 interface AreaCardProps {
   area: Area;
@@ -45,8 +46,8 @@ export default function AreaCard({ area, canManage, onSelect, onEdit, onDelete, 
           }`}
         >
           <span
-            className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${
-              area.isHidden ? 'left-0.5' : 'left-[1.125rem]'
+            className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform duration-[var(--duration-fast)] ease-smooth-out ${
+              area.isHidden ? 'translate-x-0' : 'translate-x-4'
             }`}
           />
         </button>
@@ -54,20 +55,20 @@ export default function AreaCard({ area, canManage, onSelect, onEdit, onDelete, 
 
       {canManage && (
         <div className="flex items-center gap-1 ml-2">
-          <button
+          <IconButton
+            label={t('ui.editArea')}
             onClick={() => onEdit(area)}
-            className="text-neutral-500 hover:text-white transition-colors p-1.5"
-            title={t('ui.editArea')}
+            className="text-neutral-500 hover:text-white"
           >
             <PencilIcon />
-          </button>
-          <button
+          </IconButton>
+          <IconButton
+            label={t('ui.deleteArea')}
             onClick={() => onDelete(area.id)}
-            className="text-neutral-500 hover:text-red-500 transition-colors p-1.5"
-            title={t('ui.deleteArea')}
+            className="text-neutral-500 hover:text-red-500"
           >
             <TrashIcon />
-          </button>
+          </IconButton>
         </div>
       )}
     </div>

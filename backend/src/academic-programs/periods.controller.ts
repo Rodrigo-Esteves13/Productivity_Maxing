@@ -94,4 +94,16 @@ export class PeriodsController {
   getAverage(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.periodsService.getAverage(user.id, id);
   }
+
+  @Get(':id/report-card')
+  @ApiOperation({
+    summary:
+      'Printable report card of one period: its average and each course with credits and pass/fail',
+  })
+  getReportCard(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
+    return this.periodsService.getReportCard(user.id, id);
+  }
 }

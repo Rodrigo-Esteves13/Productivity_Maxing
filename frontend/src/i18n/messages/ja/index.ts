@@ -18,6 +18,8 @@ import { tasks } from './tasks';
 import { auto } from './auto';
 import { extra } from './extra';
 import { fase7 } from './fase7';
+import { fase7b } from './fase7b';
+import { fase7c } from './fase7c';
 
 export const ja: Record<string, string> = {
   ...packs,
@@ -40,4 +42,6 @@ export const ja: Record<string, string> = {
   ...auto,
   ...extra,
   ...fase7,
+  ...fase7b,
+  ...fase7c,
 };

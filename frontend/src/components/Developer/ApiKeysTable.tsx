@@ -1,6 +1,7 @@
 import type { ApiKeySummary } from '../../types/models';
 import { TrashIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
+import IconButton from '../UI/IconButton';
 
 interface ApiKeysTableProps {
   keys: ApiKeySummary[];
@@ -31,7 +32,7 @@ export default function ApiKeysTable({ keys, onRevoke }: ApiKeysTableProps) {
         </thead>
         <tbody className="divide-y divide-neutral-800">
           {keys.map((key) => (
-            <tr key={key.id} className="hover:bg-neutral-900/30 transition-colors">
+            <tr key={key.id} className="hover:bg-neutral-800/30 transition-colors">
               <td className="px-4 py-3 text-sm font-medium text-white">{key.name}</td>
               <td className="px-4 py-3 text-sm">
                 <span
@@ -49,14 +50,13 @@ export default function ApiKeysTable({ keys, onRevoke }: ApiKeysTableProps) {
                 {key.lastUsed ? formatDate(key.lastUsed) : t('ui.never')}
               </td>
               <td className="px-4 py-3 text-right">
-                <button
-                  type="button"
+                <IconButton
+                  label={t('ui.revokeKey')}
                   onClick={() => onRevoke(key.id)}
-                  className="text-neutral-500 hover:text-red-400 transition-colors p-1"
-                  title={t('ui.revokeKey')}
+                  className="text-neutral-500 hover:text-red-400"
                 >
                   <TrashIcon />
-                </button>
+                </IconButton>
               </td>
             </tr>
           ))}

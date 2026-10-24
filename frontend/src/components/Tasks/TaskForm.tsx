@@ -7,6 +7,8 @@ import { getApiMessage } from '../../lib/httpError';
 import type { Task, TaskTypeOption, AcademicTaskTypeOption, PriorityOption, TaskFormSubmission } from '../../types/models';
 import DayLoadHint from './DayLoadHint';
 import RecurrenceFields from './RecurrenceFields';
+import TaskTemplatePicker from './TaskTemplatePicker';
+import { pickTemplateFields, templateFieldsFor, type TaskTemplate } from '../../lib/taskTemplates';
 import { EMPTY_RECURRENCE, recurrencePayload, type RecurrenceValue } from '../../lib/recurrence';
 import { todayKey } from '../../lib/dateKey';
 import { useI18n } from '../../i18n/useI18n';
@@ -92,6 +94,21 @@ export default function TaskForm({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Modelo: aplica os campos guardados por cima (a data fica a escolhida).
+  const applyTemplate = (template: TaskTemplate) => {
+    const fields = templateFieldsFor(template, new Set(areas.map((a) => a.id)));
+    setFormData((prev) => ({ ...prev, ...fields }));
+    setChecklistText(template.checklist);
+    setRecurrence({ ...EMPTY_RECURRENCE, ...template.recurrence });
+  };
+
+  const buildTemplateDraft = (name: string): Omit<TaskTemplate, 'id'> => ({
+    name,
+    fields: pickTemplateFields({ ...formData }),
+    checklist: checklistText,
+    recurrence: { frequency: recurrence.frequency, interval: recurrence.interval },
+  });
+
   const handleSubmit = async (e: SyntheticEvent) => {
     e.preventDefault();
     setError('');
@@ -130,6 +147,8 @@ export default function TaskForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <FormError message={error} />}
+
+      <TaskTemplatePicker onApply={applyTemplate} buildDraft={buildTemplateDraft} suggestedName={formData.title} />
 
       <TaskFormFields
         idPrefix="create-task"

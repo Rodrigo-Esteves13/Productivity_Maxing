@@ -119,7 +119,7 @@ export default function Agent() {
                 <ActionButton type="button" onClick={handleSave} disabled={isSaving}>
                   {isSaving ? t('common.saving') : t('ui.saveConfiguration')}
                 </ActionButton>
-                {justSaved && <span className="text-sm text-emerald-400">{t('ui.saved')}</span>}
+                {justSaved && <span className="text-sm text-violet-400">{t('ui.saved')}</span>}
                 {saveError && <span className="text-sm text-red-400">{saveError}</span>}
               </div>
             </>

@@ -1,4 +1,5 @@
 import { FULL_PERCENT } from '../../lib/percent';
+import { scaleMax } from '../../lib/gradeScale';
 import { useMemo } from 'react';
 import type { Task, Area } from '../../types/models';
 import { ChartPieIcon } from '../UI/Icons';
@@ -15,12 +16,6 @@ interface AreaBreakdownCardProps {
   tasks: Task[];
   areas: Area[];
   scale: string;
-}
-
-function scaleMax(scale: string): number {
-  const parts = scale.split('-').map(Number);
-  const max = parts[1];
-  return Number.isFinite(max) && max > 0 ? max : 20;
 }
 
 interface AreaRow {

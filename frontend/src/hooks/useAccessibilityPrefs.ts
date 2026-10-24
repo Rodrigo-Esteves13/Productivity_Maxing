@@ -30,6 +30,8 @@ export interface AccessibilityPrefs {
   colorblind: boolean;
   // Forca menos movimento (alem de seguir a definicao do sistema operativo).
   reduceMotion: boolean;
+  // Vibracao + animacao curta ao concluir tasks (ver completionFeedback.ts).
+  celebrate: boolean;
 }
 
 const STORAGE_KEY = 'accessibility-prefs';
@@ -40,6 +42,7 @@ const DEFAULT_PREFS: AccessibilityPrefs = {
   theme: 'nightshade',
   colorblind: false,
   reduceMotion: false,
+  celebrate: true,
 };
 
 const FONT_SCALE_VALUES: Record<FontScale, string> = {
@@ -122,6 +125,7 @@ export function useAccessibilityPrefs() {
   const setTheme = (theme: ThemeId) => setPrefs((prev) => ({ ...prev, theme }));
   const toggleColorblind = () => setPrefs((prev) => ({ ...prev, colorblind: !prev.colorblind }));
   const toggleReduceMotion = () => setPrefs((prev) => ({ ...prev, reduceMotion: !prev.reduceMotion }));
+  const toggleCelebrate = () => setPrefs((prev) => ({ ...prev, celebrate: !prev.celebrate }));
 
-  return { ...prefs, setFontScale, toggleHighContrast, setTheme, toggleColorblind, toggleReduceMotion };
+  return { ...prefs, setFontScale, toggleHighContrast, setTheme, toggleColorblind, toggleReduceMotion, toggleCelebrate };
 }

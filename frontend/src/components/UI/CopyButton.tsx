@@ -15,7 +15,7 @@ interface CopyButtonProps {
 // pulled out so it can be reused anywhere else a "copy this" affordance is
 // useful (e.g. the agent setup command) without re-implementing the
 // clipboard call and the timed "Copied!" state each time.
-export default function CopyButton({ text, label = 'Copy', className = '' }: CopyButtonProps) {
+export default function CopyButton({ text, label, className = '' }: CopyButtonProps) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
@@ -29,10 +29,14 @@ export default function CopyButton({ text, label = 'Copy', className = '' }: Cop
     <button
       type="button"
       onClick={handleCopy}
-      className={`inline-flex items-center gap-1.5 shrink-0 px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-semibold text-neutral-200 transition-colors ${className}`}
+      className={`press inline-flex items-center gap-1.5 shrink-0 px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-semibold text-neutral-200 ${className}`}
     >
-      {copied ? <CheckIcon className="w-3.5 h-3.5 text-emerald-400" /> : <CopyIcon className="w-3.5 h-3.5" />}
-      {copied ? t('ui.copied') : label}
+      {/* Os dois icones ficam montados e trocam com fade/scale/blur. */}
+      <span className="icon-swap" aria-hidden="true">
+        <CopyIcon data-shown={!copied} className="w-3.5 h-3.5" />
+        <CheckIcon data-shown={copied} className="w-3.5 h-3.5 text-violet-400" />
+      </span>
+      {copied ? t('ui.copied') : (label ?? t('ui.copy'))}
     </button>
   );
 }

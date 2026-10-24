@@ -7,6 +7,7 @@ import PriorityBadge from '../UI/PriorityBadge';
 import PostponedIndicator from '../UI/PostponedIndicator';
 import SubtaskProgress from '../UI/SubtaskProgress';
 import RescheduleButton from '../UI/RescheduleButton';
+import IconButton from '../UI/IconButton';
 import { CheckIcon, ClockIcon, PinIcon, RepeatIcon } from '../UI/Icons';
 import SwipeableRow from '../UI/SwipeableRow';
 import { recurrenceLabel } from '../../lib/recurrence';
@@ -92,19 +93,17 @@ function TaskCard({
         </h3>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {onTogglePin && (
-            <button
-              type="button"
+            <IconButton
+              label={task.isPinned ? t('ui.unpinTask') : t('ui.pinTask')}
+              aria-pressed={task.isPinned}
               onClick={(e) => {
                 e.stopPropagation();
                 onTogglePin(task);
               }}
-              title={task.isPinned ? t('ui.unpinTask') : t('ui.pinTask')}
-              className={`p-0.5 transition-colors ${
-                task.isPinned ? 'text-violet-400' : 'text-neutral-600 hover:text-neutral-300'
-              }`}
+              className={`-my-1.5 ${task.isPinned ? 'text-violet-400' : 'text-neutral-600 hover:text-neutral-300'}`}
             >
               <PinIcon />
-            </button>
+            </IconButton>
           )}
           <StatusBadge status={task.progressStatus} />
         </div>

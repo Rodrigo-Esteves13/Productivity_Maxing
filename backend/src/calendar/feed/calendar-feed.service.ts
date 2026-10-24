@@ -38,6 +38,16 @@ interface CachedFeed {
   body: string;
 }
 
+// O que o feed inclui. 'all' = tudo (aulas, turnos, viagens, estudo e
+// tasks); 'tasks' = so os prazos das tasks, para quem nao quer o horario
+// duplicado no calendario. Vem do URL (?only=tasks), nunca da BD.
+export const FEED_SCOPES = ['all', 'tasks'] as const;
+export type FeedScope = (typeof FEED_SCOPES)[number];
+
+export function parseFeedScope(value: unknown): FeedScope {
+  return FEED_SCOPES.find((scope) => scope === value) ?? 'all';
+}
+
 export interface CalendarFeedStatus {
   enabled: boolean;
   token: string | null;
@@ -81,7 +91,7 @@ export class CalendarFeedService {
       data: { calendarFeedToken: token },
     });
     if (previous.calendarFeedToken) {
-      this.cache.delete(previous.calendarFeedToken);
+      this.forgetToken(previous.calendarFeedToken);
     }
     return { enabled: true, token };
   }
@@ -96,7 +106,7 @@ export class CalendarFeedService {
       data: { calendarFeedToken: null },
     });
     if (previous.calendarFeedToken) {
-      this.cache.delete(previous.calendarFeedToken);
+      this.forgetToken(previous.calendarFeedToken);
     }
     return { enabled: false, token: null };
   }
@@ -108,11 +118,15 @@ export class CalendarFeedService {
    * revogado ou de uma conta bloqueada: não confirma a ninguém que um token
    * "quase certo" existiu.
    */
-  async buildFeedForToken(token: string): Promise<string> {
+  async buildFeedForToken(
+    token: string,
+    scope: FeedScope = 'all',
+  ): Promise<string> {
     // Tokens válidos são sempre 64 hex - rejeita lixo sem tocar na BD.
     if (!/^[0-9a-f]{64}$/.test(token)) throw new NotFoundException();
 
-    const cached = this.cache.get(token);
+    const cacheKey = `${token}:${scope}`;
+    const cached = this.cache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) return cached.body;
 
     const user = await this.prisma.user.findUnique({
@@ -127,14 +141,10 @@ export class CalendarFeedService {
     const rangeStart = addUtcDays(today, -PAST_DAYS);
     const rangeEnd = addUtcDays(today, FUTURE_DAYS);
 
-    const [classes, shifts, plan, tasks] = await Promise.all([
-      this.scheduleService.findRange(user.id, rangeStart, rangeEnd),
-      this.workShiftsService.expandRange(
-        user.id,
-        toDateKey(rangeStart),
-        toDateKey(rangeEnd),
-      ),
-      this.studyPlanService.generate(user.id, STUDY_PLAN_DAYS),
+    const [events, tasks] = await Promise.all([
+      scope === 'tasks'
+        ? Promise.resolve<FeedEvent[]>([])
+        : this.buildScheduleEvents(user.id, rangeStart, rangeEnd),
       this.prisma.task.findMany({
         where: {
           userId: user.id,
@@ -152,52 +162,6 @@ export class CalendarFeedService {
         orderBy: { date: 'asc' },
       }),
     ]);
-
-    // Viagens pelo mesmo itinerario do sync, mas so com tempos ja guardados:
-    // o feed e publico (pedido pelos calendarios) e nunca gera custos na
-    // Google.
-    const travel = flattenItinerary(
-      await this.itineraryService.buildRange(
-        user.id,
-        classes.map((c) => ({
-          id: c.id,
-          date: toDateKey(c.date),
-          startMinutes: c.startMinutes,
-          endMinutes: c.endMinutes,
-        })),
-        shifts,
-        { allowLookups: false },
-      ),
-    );
-
-    // Reaproveita o MESMO construtor do sync com o Google Calendar: aulas,
-    // viagens, turnos e blocos de estudo ficam iguais nos dois sítios.
-    const desired = buildDesiredEvents({
-      classes: classes.map((c) => ({
-        id: c.id,
-        date: toDateKey(c.date),
-        startMinutes: c.startMinutes,
-        endMinutes: c.endMinutes,
-        subject: c.subject,
-        location: c.location,
-        professor: c.professor,
-      })),
-      shifts,
-      study: plan.suggestions,
-      travel,
-    });
-
-    const events: FeedEvent[] = desired.map((d) => ({
-      // O sourceKey tem ":" - válido num UID; o domínio evita colisões com
-      // outros calendários subscritos.
-      uid: `${d.sourceKey}@productivitymaxing`,
-      title: d.title,
-      description: d.description,
-      location: d.location,
-      category: d.kind,
-      start: lisbonWallClockToUtc(d.date, d.startMinutes),
-      end: lisbonWallClockToUtc(d.date, d.endMinutes),
-    }));
 
     for (const task of tasks) {
       const description = [
@@ -232,12 +196,80 @@ export class CalendarFeedService {
     }
 
     const body = buildIcsFeed(events, { calendarName: 'Productivity Maxing' });
-    this.cache.set(token, {
+    this.cache.set(cacheKey, {
       body,
       expiresAt: Date.now() + FEED_CACHE_TTL_MS,
     });
     this.pruneCache();
     return body;
+  }
+
+  // Aulas, turnos, viagens e blocos de estudo (tudo menos tasks).
+  private async buildScheduleEvents(
+    userId: string,
+    rangeStart: Date,
+    rangeEnd: Date,
+  ): Promise<FeedEvent[]> {
+    const [classes, shifts, plan] = await Promise.all([
+      this.scheduleService.findRange(userId, rangeStart, rangeEnd),
+      this.workShiftsService.expandRange(
+        userId,
+        toDateKey(rangeStart),
+        toDateKey(rangeEnd),
+      ),
+      this.studyPlanService.generate(userId, STUDY_PLAN_DAYS),
+    ]);
+
+    // Viagens pelo mesmo itinerario do sync, mas so com tempos ja guardados:
+    // o feed e publico (pedido pelos calendarios) e nunca gera custos na
+    // Google.
+    const travel = flattenItinerary(
+      await this.itineraryService.buildRange(
+        userId,
+        classes.map((c) => ({
+          id: c.id,
+          date: toDateKey(c.date),
+          startMinutes: c.startMinutes,
+          endMinutes: c.endMinutes,
+        })),
+        shifts,
+        { allowLookups: false },
+      ),
+    );
+
+    // Reaproveita o MESMO construtor do sync com o Google Calendar: aulas,
+    // viagens, turnos e blocos de estudo ficam iguais nos dois sítios.
+    const desired = buildDesiredEvents({
+      classes: classes.map((c) => ({
+        id: c.id,
+        date: toDateKey(c.date),
+        startMinutes: c.startMinutes,
+        endMinutes: c.endMinutes,
+        subject: c.subject,
+        location: c.location,
+        professor: c.professor,
+      })),
+      shifts,
+      study: plan.suggestions,
+      travel,
+    });
+
+    return desired.map((d) => ({
+      // O sourceKey tem ":" - válido num UID; o domínio evita colisões com
+      // outros calendários subscritos.
+      uid: `${d.sourceKey}@productivitymaxing`,
+      title: d.title,
+      description: d.description,
+      location: d.location,
+      category: d.kind,
+      start: lisbonWallClockToUtc(d.date, d.startMinutes),
+      end: lisbonWallClockToUtc(d.date, d.endMinutes),
+    }));
+  }
+
+  // Um token revogado deixa de servir logo, em todas as variantes (?only=).
+  private forgetToken(token: string): void {
+    for (const scope of FEED_SCOPES) this.cache.delete(`${token}:${scope}`);
   }
 
   private pruneCache(): void {

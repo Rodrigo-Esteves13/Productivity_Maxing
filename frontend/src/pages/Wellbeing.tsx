@@ -4,6 +4,7 @@ import MasonryGrid from '../components/UI/MasonryGrid';
 import MoodCheckInCard from '../components/Wellbeing/MoodCheckInCard';
 import MedicationsCard from '../components/Wellbeing/MedicationsCard';
 import WellbeingInsightsCard from '../components/Wellbeing/WellbeingInsightsCard';
+import BurnoutAlertCard from '../components/Wellbeing/BurnoutAlertCard';
 import FocusEffectCard from '../components/Dashboard/FocusEffectCard';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useMoodToday } from '../hooks/useMoodToday';
@@ -24,6 +25,7 @@ export default function Wellbeing() {
   return (
     <PageLayout>
       <PageHeader title={t('nav.wellbeing')} description={t('wellbeing.description')} />
+      <BurnoutAlertCard burnout={insights?.burnout} />
       <MasonryGrid stretchLast={false}>
         <MoodCheckInCard mood={mood} />
         <MedicationsCard meds={meds} />

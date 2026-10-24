@@ -20,6 +20,7 @@ const STUDY_LINKS: FooterLinkItem[] = [
   { label: 'nav.areas', to: '/areas' },
   { label: 'nav.review', to: '/review' },
   { label: 'nav.wellbeing', to: '/wellbeing' },
+  { label: 'reportCard.title', to: '/report-card' },
 ];
 
 const SOCIAL_LINKS: FooterLinkItem[] = [

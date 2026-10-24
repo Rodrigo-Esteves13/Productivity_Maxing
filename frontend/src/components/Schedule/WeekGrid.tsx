@@ -16,6 +16,7 @@ import WeekDayCell from './WeekDayCell';
 import AgendaLegend from './AgendaLegend';
 import { useI18n } from '../../i18n/useI18n';
 import Card from '../UI/Card';
+import ToolbarButton from '../UI/ToolbarButton';
 
 const NO_DEADLINES: DeadlineChip[] = [];
 
@@ -109,30 +110,19 @@ export default function WeekGrid({ refreshKey, initialDate, viewToggle, onAttend
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <div>
-          <h2 className="text-lg font-semibold text-white">{t('ui.schedule')}</h2>
-          <p className="text-sm text-neutral-400">{formatRangeLabel(weekStart, weekEnd, lang)}</p>
-        </div>
+        {/* O titulo "Schedule" ja esta no cabecalho da pagina: aqui so a semana. */}
+        <h2 className="text-lg font-semibold tabular-nums text-white">{formatRangeLabel(weekStart, weekEnd, lang)}</h2>
         <div className="flex flex-wrap items-center gap-2">
           {viewToggle}
-          <button
-            onClick={goToPreviousWeek}
-            className="text-sm text-neutral-400 hover:text-white px-2 py-1 rounded-lg hover:bg-neutral-800"
-          >
+          <ToolbarButton tone="muted" size="md" onClick={goToPreviousWeek}>
             {t('ui.prev')}
-          </button>
-          <button
-            onClick={goToCurrentWeek}
-            className="text-sm text-neutral-400 hover:text-white px-2 py-1 rounded-lg hover:bg-neutral-800"
-          >
+          </ToolbarButton>
+          <ToolbarButton tone="muted" size="md" onClick={goToCurrentWeek}>
             {t('ui.today')}
-          </button>
-          <button
-            onClick={goToNextWeek}
-            className="text-sm text-neutral-400 hover:text-white px-2 py-1 rounded-lg hover:bg-neutral-800"
-          >
+          </ToolbarButton>
+          <ToolbarButton tone="muted" size="md" onClick={goToNextWeek}>
             {t('ui.next')}
-          </button>
+          </ToolbarButton>
         </div>
       </div>
 

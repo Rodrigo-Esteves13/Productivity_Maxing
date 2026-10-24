@@ -34,6 +34,7 @@ import {
   assertWeightFits,
   loadUsedWeight,
 } from '../grade-components/weight-budget';
+import { TaskAttachmentsService } from './task-attachments.service';
 
 // Limite de caracteres do titulo de uma task (subtasks e revisoes criadas
 // pelo servidor cortam aqui para nunca falhar a validacao ao gravar).
@@ -75,6 +76,7 @@ export class TasksService {
     private prisma: PrismaService,
     private periodsService: PeriodsService,
     private taskMetaCache: TaskMetaCacheService,
+    private taskAttachments: TaskAttachmentsService,
   ) {}
 
   async create(userId: string, dto: CreateTaskDto) {
@@ -683,6 +685,8 @@ export class TasksService {
 
   async remove(userId: string, id: string) {
     await this.findOne(userId, id);
+    // O cascade apaga as linhas dos anexos, nao os ficheiros no bucket.
+    await this.taskAttachments.removeFilesForTasks(userId, [id]);
     // Mesma razão do update() acima: where: { id, userId } em vez de só
     // { id }, para a condição de posse não depender só do findOne() prévio.
     return this.prisma.task.delete({ where: { id, userId } });
@@ -739,6 +743,8 @@ export class TasksService {
 
   /** Bulk delete - same ownership scoping as bulkUpdateStatus() above. */
   async bulkRemove(userId: string, ids: string[]) {
+    // removeFilesForTasks filtra por userId: ids de outra pessoa nao apagam nada.
+    await this.taskAttachments.removeFilesForTasks(userId, ids);
     const result = await this.prisma.task.deleteMany({
       where: { id: { in: ids }, userId },
     });

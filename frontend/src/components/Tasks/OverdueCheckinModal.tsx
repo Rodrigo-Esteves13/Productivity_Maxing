@@ -37,8 +37,8 @@ export default function OverdueCheckinModal({
     (!Number.isFinite(parsedGrade) || parsedGrade < GRADE_MIN || parsedGrade > GRADE_MAX);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div className="motion-backdrop fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="motion-modal bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="p-5 border-b border-neutral-800 flex items-center justify-between">
           <h2 className="text-lg font-bold text-white">{t('ui.overdueCheckIn')}</h2>
           {queueLength > 1 && (

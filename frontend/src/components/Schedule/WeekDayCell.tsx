@@ -60,9 +60,13 @@ function AgendaEntry({ item, markableUntilMinutes, onAttendanceChange }: AgendaE
       markableUntilMinutes !== null &&
       item.startMinutes <= markableUntilMinutes;
     return (
-      <div className={`text-xs rounded-md px-2 py-1 ${tone.card} ${item.occurrence.attended === false ? 'opacity-60' : ''}`}>
-        <p className={`${tone.title} font-medium leading-tight break-words`}>{subject}</p>
-        <p className={`${tone.meta} leading-tight`}>
+      <div className={`text-xs rounded-md px-2 py-1.5 ${tone.card} ${item.occurrence.attended === false ? 'opacity-60' : ''}`}>
+        {/* 2 linhas no maximo, com hifenizacao: nomes de cadeiras longos
+            partiam letra a letra. O nome inteiro fica no title. */}
+        <p title={subject} className={`${tone.title} font-medium leading-snug hyphens-auto line-clamp-2`}>
+          {subject}
+        </p>
+        <p className={`${tone.meta} mt-0.5 leading-tight tabular-nums`}>
           {time}
           {location ? ` · ${location}` : ''}
         </p>
@@ -79,11 +83,11 @@ function AgendaEntry({ item, markableUntilMinutes, onAttendanceChange }: AgendaE
 
   const isEvent = getAgendaTone(item) === 'event';
   return (
-    <div className={`text-xs rounded-md px-2 py-1 ${tone.card}`}>
-      <p className={`${tone.title} font-medium leading-tight break-words`}>
+    <div className={`text-xs rounded-md px-2 py-1.5 ${tone.card}`}>
+      <p className={`${tone.title} font-medium leading-snug hyphens-auto line-clamp-2`}>
         {item.occurrence.label ?? t(isEvent ? 'schedule.fallback.event' : 'schedule.fallback.work')}
       </p>
-      <p className={`${tone.meta} leading-tight`}>{time}</p>
+      <p className={`${tone.meta} mt-0.5 leading-tight tabular-nums`}>{time}</p>
     </div>
   );
 }
@@ -101,15 +105,24 @@ export default function WeekDayCell({
 }: WeekDayCellProps) {
   return (
     <div
-      className={`rounded-lg border p-2 min-h-[6rem] min-w-0 ${
-        isToday ? 'border-violet-600/60 bg-violet-950/20' : 'border-neutral-800'
+      className={`rounded-lg border p-2 min-h-[8rem] min-w-0 ${
+        isToday ? 'border-violet-600/60 bg-violet-950/20' : 'border-neutral-800 bg-neutral-950/30'
       }`}
     >
-      <p className="text-xs font-medium text-neutral-300 mb-2">
-        {label} {dayOfMonth}
+      {/* Dia da semana pequeno, numero em destaque (pilula violeta hoje). */}
+      <p className="mb-2 flex items-center justify-between gap-1 px-0.5">
+        <span className={`text-xs font-medium uppercase tracking-wide ${isToday ? 'text-violet-300' : 'text-neutral-500'}`}>
+          {label}
+        </span>
+        <span
+          className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-sm font-semibold tabular-nums ${
+            isToday ? 'bg-violet-600 text-white' : 'text-neutral-200'
+          }`}
+        >
+          {dayOfMonth}
+        </span>
       </p>
       <div className="space-y-1.5">
-        {deadlines.length === 0 && items.length === 0 && <p className="text-xs text-neutral-600">-</p>}
         {deadlines.map((chip) => (
           <DeadlineEntry key={chip.id} chip={chip} />
         ))}

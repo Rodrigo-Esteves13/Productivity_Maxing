@@ -55,7 +55,12 @@ export default function PageLayout({ children }: PageLayoutProps) {
             <AcademicSelectors />
           </div>
         )}
-        {children}
+        {/* Ao mudar de secao (/tasks -> /schedule) o conteudo entra com um
+            fade curto; mudar so de parametro (/tasks/1 -> /tasks/2) nao
+            remonta nada. */}
+        <div key={pathname.split('/')[1]} className="motion-page">
+          {children}
+        </div>
       </main>
       <Footer />
       <BackToTopButton />

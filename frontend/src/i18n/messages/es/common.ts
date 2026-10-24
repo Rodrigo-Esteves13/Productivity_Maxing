@@ -15,6 +15,7 @@ export const common: Record<string, string> = {
   'common.nextPhoto': "Foto siguiente",
   'common.openTask': "Abrir tarea",
   'common.rescheduleTomorrow': "Reprogramar para mañana",
+  'common.plusOneDay': "+1 día",
   'common.status.overdue': "Vencida",
   'time.left': "quedan {amount}",
   'time.overdue': "{amount} de retraso",

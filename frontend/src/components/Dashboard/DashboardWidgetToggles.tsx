@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { WIDGET_LABELS, type DashboardWidgetKey } from '../../hooks/useDashboardWidgetPrefs';
 import { SlidersIcon } from '../UI/Icons';
+import ToolbarButton from '../UI/ToolbarButton';
 import { useI18n } from '../../i18n/useI18n';
 
 interface DashboardWidgetTogglesProps {
@@ -29,16 +30,18 @@ export function DashboardWidgetToggles({ visibility, toggle }: DashboardWidgetTo
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        type="button"
+      <ToolbarButton
+        tone="muted"
+        size="md"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="text-sm text-neutral-400 hover:text-neutral-200 underline decoration-dotted"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
       >
         {t('ui.customizeWidgets')}
-      </button>
+      </ToolbarButton>
 
       {isOpen && (
-        <div className="absolute right-0 z-10 mt-2 w-64 rounded-lg border border-neutral-800 bg-neutral-900 p-3 shadow-xl">
+        <div className="motion-dropdown origin-top-right absolute right-0 z-10 mt-2 w-64 rounded-lg border border-neutral-800 bg-neutral-900 p-3 shadow-xl">
           <p className="text-xs uppercase tracking-wide text-neutral-500 mb-2 flex items-center gap-1.5">
             <SlidersIcon className="shrink-0" />
             {t('widget.showOnDashboard')}

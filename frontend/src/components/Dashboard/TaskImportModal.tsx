@@ -96,7 +96,7 @@ export default function TaskImportModal({ isOpen, onClose, onImported }: TaskImp
           <div className="space-y-3">
             {outcome.backendResult && (
               <div className="flex items-center gap-2 text-sm">
-                <CheckIcon className="text-emerald-400 shrink-0" />
+                <CheckIcon className="text-violet-400 shrink-0" />
                 <span className="text-neutral-200">
                   {t(outcome.backendResult.created === 1 ? 'ui.tasksCreatedOne' : 'ui.tasksCreatedMany', {
                     count: outcome.backendResult.created,

@@ -20,7 +20,7 @@ export default function EventsSection({ shifts, commitments, isSaving, onAdd, on
   const [isAdding, setIsAdding] = useState(false);
 
   return (
-    <section className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
+    <section className="flex flex-col rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
       <h3 className="text-base font-semibold text-white">{t('ui.oneOffEvents')}</h3>
       <p className="mb-3 text-xs text-neutral-500">
         {t('ui.thingsThatHappenOnceLike')}
@@ -34,6 +34,7 @@ export default function EventsSection({ shifts, commitments, isSaving, onAdd, on
         onReplicate={onAdd}
         moveTargets={commitments}
         showTitle
+        className="mb-3"
       />
 
       {isAdding ? (
@@ -52,7 +53,7 @@ export default function EventsSection({ shifts, commitments, isSaving, onAdd, on
         <button
           type="button"
           onClick={() => setIsAdding(true)}
-          className="mt-3 flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300"
+          className="press -mb-1.5 -ml-2 mt-auto flex items-center gap-1.5 self-start rounded-lg px-2 py-1.5 text-sm text-violet-400 hover:bg-violet-500/10 hover:text-violet-300"
         >
           <PlusIcon />
           {t('ui.addEvent')}

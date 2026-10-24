@@ -15,6 +15,7 @@ export const common: Record<string, string> = {
   'common.nextPhoto': "다음 사진",
   'common.openTask': "작업 열기",
   'common.rescheduleTomorrow': "내일로 미루기",
+  'common.plusOneDay': "+1일",
   'common.status.overdue': "기한 초과",
   'time.left': "{amount} 남음",
   'time.overdue': "{amount} 지남",

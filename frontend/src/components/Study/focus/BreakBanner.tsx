@@ -46,7 +46,7 @@ export default function BreakBanner() {
           </p>
           <p className="mt-1 text-xs text-neutral-400">{t('ui.stepAwayFromTheScreen')}</p>
           <div className="mt-3">
-            <Button variant="secondary" className="px-3 py-1.5 text-sm" onClick={endBreak}>
+            <Button variant="secondary" size="sm" onClick={endBreak}>
               {t('ui.skipBreak')}
             </Button>
           </div>
@@ -59,7 +59,7 @@ export default function BreakBanner() {
             {resume && (
               <Button
                 variant="primary"
-                className="px-3 py-1.5 text-sm"
+                size="sm"
                 disabled={isSubmitting}
                 onClick={() => {
                   requestNotifyPermission();
@@ -69,7 +69,7 @@ export default function BreakBanner() {
                 {t('ui.startNextBlock')}
               </Button>
             )}
-            <Button variant="secondary" className="px-3 py-1.5 text-sm" onClick={endBreak}>
+            <Button variant="secondary" size="sm" onClick={endBreak}>
               {t('ui.doneForNow')}
             </Button>
           </div>

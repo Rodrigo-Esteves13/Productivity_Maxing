@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { scaleMax } from '../../lib/gradeScale';
 import type { ProgramAverage } from '../../types/models';
 import { CalculatorIcon } from '../UI/Icons';
 import DashboardCard from '../UI/DashboardCard';
@@ -8,12 +9,6 @@ import { fillNodes } from '../../i18n/fillNodes';
 interface CreditSimulatorProps {
   programAverage: ProgramAverage;
   scale: string;
-}
-
-function scaleMax(scale: string): number {
-  const parts = scale.split('-').map(Number);
-  const max = parts[1];
-  return Number.isFinite(max) && max > 0 ? max : 20;
 }
 
 // "If I add a course worth X credits with grade Y, what does my cumulative

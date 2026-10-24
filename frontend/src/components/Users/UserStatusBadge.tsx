@@ -8,7 +8,7 @@ interface UserStatusBadgeProps {
 }
 
 const STYLES: Record<UserStatus, string> = {
-  ACTIVE: 'bg-emerald-900/40 text-emerald-400 border-emerald-800',
+  ACTIVE: 'bg-violet-900/40 text-violet-400 border-violet-800',
   SUSPENDED: 'bg-amber-900/50 text-amber-400 border-amber-800',
   BANNED: 'bg-red-900/50 text-red-400 border-red-800',
 };

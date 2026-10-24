@@ -35,10 +35,10 @@ export default function ToggleChip({
       disabled={disabled}
       title={title}
       onClick={onClick}
-      className={`${SIZE_CLASS[size]} py-1.5 rounded-lg text-sm border disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`press ${SIZE_CLASS[size]} py-1.5 rounded-lg text-sm border disabled:cursor-not-allowed disabled:opacity-40 ${
         pressed
           ? 'border-violet-500 bg-violet-600/20 text-white'
-          : 'border-neutral-700 text-neutral-400 hover:text-white'
+          : 'border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white'
       } ${className}`}
     >
       {children}

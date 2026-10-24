@@ -203,7 +203,7 @@ export default function StudyActivityCard() {
                 duration: <span className="text-neutral-300">{formatDuration(lastWeek)}</span>,
               })}
               {deltaPct !== null && (
-                <span className={deltaPct >= 0 ? 'text-emerald-400' : 'text-neutral-400'}>
+                <span className={deltaPct >= 0 ? 'text-violet-400' : 'text-neutral-400'}>
                   {' '}
                   ({deltaPct >= 0 ? '+' : ''}
                   {deltaPct}%)

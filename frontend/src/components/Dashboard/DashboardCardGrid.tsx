@@ -18,6 +18,8 @@ import {
   WeekdayLoadCard,
   TargetVsRealCard,
   ProductivityByTypeCard,
+  DifficultyVsGradeCard,
+  FailingRiskCard,
 } from './lazyCards';
 import type { DashboardWidgetKey } from '../../hooks/useDashboardWidgetPrefs';
 import type { AcademicProgram, AcademicTaskTypeOption, Area, Task } from '../../types/models';
@@ -45,6 +47,9 @@ export default function DashboardCardGrid({
       {visibility.studyCapacity && <StudyCapacityCard />}
       {academicTasks.length > 0 && visibility.upcoming && (
         <UpcomingTasksCard tasks={academicTasks} areas={academicAreas} />
+      )}
+      {academicTasks.length > 0 && activeProgram && visibility.failingRisk && (
+        <FailingRiskCard tasks={academicTasks} areas={academicAreas} scale={activeProgram.gradeScale} />
       )}
       {academicTasks.length > 0 && visibility.atRisk && (
         <AtRiskTasksCard tasks={academicTasks} areas={academicAreas} />
@@ -88,6 +93,9 @@ export default function DashboardCardGrid({
       )}
       {visibility.productivityByType && academicTasks.length > 0 && (
         <ProductivityByTypeCard tasks={academicTasks} academicTaskTypes={academicTaskTypes} />
+      )}
+      {visibility.difficultyVsGrade && academicTasks.length > 0 && activeProgram && (
+        <DifficultyVsGradeCard tasks={academicTasks} scale={activeProgram.gradeScale} />
       )}
     </MasonryGrid>
   );

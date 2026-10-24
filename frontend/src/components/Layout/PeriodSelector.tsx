@@ -69,7 +69,7 @@ export default function PeriodSelector() {
             aria-haspopup="listbox"
             aria-expanded={isOpen}
             onClick={() => setIsOpen((prev) => !prev)}
-            className="flex items-center gap-2 w-auto min-w-[220px] border border-neutral-700 bg-neutral-900 text-white rounded-lg pl-3 pr-9 py-2.5 text-base text-left relative focus:outline-none focus:ring-2 focus:ring-violet-600/50 focus:border-violet-500"
+            className="flex items-center gap-2 w-auto min-w-[220px] border border-neutral-700 bg-neutral-900 text-white rounded-lg pl-3 pr-9 py-2.5 text-base text-left relative transition-[border-color,box-shadow] duration-[var(--duration-quick)] ease-smooth-out hover:border-neutral-600 focus:outline-none focus:ring-2 focus:ring-violet-600/50 focus:border-violet-500"
           >
             {!isViewingAllPeriods && activePeriod?.isPinned && (
               <PinIcon className="text-violet-400 shrink-0" />
@@ -81,7 +81,7 @@ export default function PeriodSelector() {
           {isOpen && (
             <div
               role="listbox"
-              className="absolute left-0 mt-1 w-full min-w-[220px] bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl py-1 z-50 max-h-72 overflow-y-auto"
+              className="motion-dropdown origin-top absolute left-0 mt-1 w-full min-w-[220px] bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl py-1 z-50 max-h-72 overflow-y-auto"
             >
               {visiblePeriods.map((period: AcademicPeriod) => (
                 <button

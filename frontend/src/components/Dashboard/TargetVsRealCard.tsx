@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { scaleMax } from '../../lib/gradeScale';
 import type { Task, Area } from '../../types/models';
 import { computeTargetVsReal } from '../../utils/targetVsReal';
 import { TargetIcon } from '../UI/Icons';
@@ -10,11 +11,6 @@ interface TargetVsRealCardProps {
   tasks: Task[];
   areas: Area[];
   scale: string;
-}
-
-function scaleMax(scale: string): number {
-  const max = Number(scale.split('-')[1]);
-  return Number.isFinite(max) && max > 0 ? max : 20;
 }
 
 // Target vs actual grade per course. AreaBreakdownCard shows where each
@@ -42,7 +38,7 @@ export default function TargetVsRealCard({ tasks, areas, scale }: TargetVsRealCa
               </div>
               <span
                 className={`text-xs shrink-0 ${
-                  row.gap >= 0 ? 'text-emerald-400' : 'text-amber-400'
+                  row.gap >= 0 ? 'text-violet-400' : 'text-amber-400'
                 }`}
               >
                 {row.gap >= 0 ? '+' : ''}

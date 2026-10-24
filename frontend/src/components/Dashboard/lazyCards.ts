@@ -22,5 +22,7 @@ export const DeadlineComplianceCard = lazy(() => import('./DeadlineComplianceCar
 export const WeekdayLoadCard = lazy(() => import('./WeekdayLoadCard'));
 export const TargetVsRealCard = lazy(() => import('./TargetVsRealCard'));
 export const ProductivityByTypeCard = lazy(() => import('./ProductivityByTypeCard'));
+export const DifficultyVsGradeCard = lazy(() => import('./DifficultyVsGradeCard'));
+export const FailingRiskCard = lazy(() => import('./FailingRiskCard'));
 export const GradeNeededCalculator = lazy(() => import('./GradeNeededCalculator'));
 export const TaskImportModal = lazy(() => import('./TaskImportModal'));

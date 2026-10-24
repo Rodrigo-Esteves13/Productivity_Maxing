@@ -6,7 +6,7 @@ import LegalTable from '../components/Legal/LegalTable';
 import useSeo from '../hooks/useSeo';
 import { REPO_URL, CONTACT_EMAIL, APP_DOMAIN } from '../lib/constants';
 
-const LAST_UPDATED = '23/10/2026';
+const LAST_UPDATED = '24/10/2026';
 
 export default function PrivacyPolicy() {
   useSeo({
@@ -62,6 +62,11 @@ export default function PrivacyPolicy() {
           <li>
             Tasks and their metadata (due dates, weight, difficulty, target/actual grades, completion
             status, and the study area you assign each task to)
+          </li>
+          <li>
+            Task files (optional): files you attach to a task, such as an assignment brief. They are kept
+            in the same private storage as notebook files, are only opened through short-lived links, and
+            are deleted with the task or with your account
           </li>
           <li>
             Study areas: a shared list of official subjects/categories that I curate, plus any personal
@@ -140,6 +145,11 @@ export default function PrivacyPolicy() {
           Session cookies (<code>HttpOnly</code>, used only to keep you signed in) and a CSRF protection
           cookie. I don't use tracking or advertising cookies, and I don't use analytics services that
           profile visitors.
+        </p>
+        <p className="mt-3">
+          Display preferences (for example widget visibility, table density, column and area order, or
+          your absence limit) and your task templates are saved only in your browser's local storage and
+          are never sent to me.
         </p>
       </LegalSection>
 

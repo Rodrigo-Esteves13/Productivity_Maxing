@@ -1,4 +1,5 @@
 import { XIcon } from './Icons';
+import IconButton from './IconButton';
 import type { ToastAction, ToastKind } from '../../context/feedback-context';
 import { useI18n } from '../../i18n/useI18n';
 
@@ -7,6 +8,8 @@ export interface ToastItem {
   kind: ToastKind;
   message: string;
   action?: ToastAction;
+  // A animar para fora; sai da lista no fim da animacao.
+  leaving?: boolean;
 }
 
 interface ToastStackProps {
@@ -30,7 +33,8 @@ export default function ToastStack({ toasts, onDismiss }: ToastStackProps) {
         <div
           key={toast.id}
           role={toast.kind === 'error' ? 'alert' : 'status'}
-          className={`pointer-events-auto flex items-start gap-3 rounded-lg border p-3 text-sm shadow-xl ${TONE_CLASS[toast.kind]}`}
+          data-state={toast.leaving ? 'closed' : 'open'}
+          className={`motion-toast pointer-events-auto flex items-start gap-3 rounded-lg border p-3 text-sm shadow-xl ${TONE_CLASS[toast.kind]}`}
         >
           <span className="flex-1">{toast.message}</span>
           {toast.action && (
@@ -40,19 +44,18 @@ export default function ToastStack({ toasts, onDismiss }: ToastStackProps) {
                 toast.action?.onAction();
                 onDismiss(toast.id);
               }}
-              className="shrink-0 rounded-md px-2 py-0.5 font-semibold text-violet-300 hover:bg-violet-900/40 hover:text-white"
+              className="press shrink-0 rounded-md px-2 py-0.5 font-semibold text-violet-300 hover:bg-violet-900/40 hover:text-white"
             >
               {toast.action.label}
             </button>
           )}
-          <button
-            type="button"
+          <IconButton
+            label={t('common.dismissMessage')}
             onClick={() => onDismiss(toast.id)}
-            aria-label={t('common.dismissMessage')}
-            className="text-neutral-400 hover:text-white"
+            className="-my-1.5 -mr-1.5 shrink-0 text-neutral-400"
           >
             <XIcon className="h-4 w-4" />
-          </button>
+          </IconButton>
         </div>
       ))}
     </div>

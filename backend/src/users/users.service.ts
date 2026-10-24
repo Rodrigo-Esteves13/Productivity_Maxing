@@ -224,10 +224,22 @@ export class UsersService {
       turmaAnnouncements,
       turmaSharedSubjects,
     ] = await Promise.all([
-      // subtasks vão dentro de cada task no export (checklist da task).
+      // subtasks e anexos (so metadados, sem o caminho no bucket) vão
+      // dentro de cada task no export.
       this.prisma.task.findMany({
         where: { userId: id },
-        include: { subtasks: true },
+        include: {
+          subtasks: true,
+          attachments: {
+            select: {
+              id: true,
+              originalFileName: true,
+              extension: true,
+              sizeBytes: true,
+              createdAt: true,
+            },
+          },
+        },
       }),
       this.prisma.identity.findMany({
         where: { userId: id },

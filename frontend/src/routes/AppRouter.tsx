@@ -44,6 +44,7 @@ import {
   DmcaPolicy,
   WeeklyReview,
   Wellbeing,
+  ReportCard,
   Pad,
   PadsAdmin,
   Turmas,
@@ -89,6 +90,7 @@ export default function AppRouter() {
           <Route path="/login/2fa" element={<LoginTwoFactor />} />
           <Route path="/review" element={<PrivateRoute><WeeklyReview /></PrivateRoute>} />
           <Route path="/wellbeing" element={<PrivateRoute><Wellbeing /></PrivateRoute>} />
+          <Route path="/report-card" element={<PrivateRoute><ReportCard /></PrivateRoute>} />
           {/* Publicas, como o dontpad: ler e escrever sem conta. */}
           <Route path="/pad" element={<Pad />} />
           <Route path="/pad/:slug" element={<Pad />} />

@@ -2,14 +2,21 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   addUtcDays,
+  diffUtcDays,
   getLisbonNow,
   lisbonDayBounds,
+  parseDateKey,
   toDateKey,
   toLisbonDateKey,
 } from '../common/date-key.util';
 import { MS_PER_MINUTE } from '../common/time.constants';
 import { pearson, type CorrelationResult } from './correlation.util';
-import { INSIGHTS_WINDOW_DAYS } from './wellbeing.constants';
+import { detectBurnout, type BurnoutResult } from './burnout.util';
+import {
+  BURNOUT_BASELINE_DAYS,
+  BURNOUT_RECENT_DAYS,
+  INSIGHTS_WINDOW_DAYS,
+} from './wellbeing.constants';
 
 interface DayStudy {
   minutes: number;
@@ -29,6 +36,8 @@ export interface WellbeingInsights {
   energyVsFocus: CorrelationResult;
   // Stress do dia vs foco medio (so dias com stress registado).
   stressVsFocus: CorrelationResult;
+  // Humor/energia a cair com a carga mantida ou o stress a subir.
+  burnout: BurnoutResult;
 }
 
 // Cruza o registo diario do humor com as sessoes de estudo dos ultimos
@@ -89,6 +98,26 @@ export class WellbeingInsightsService {
         return x !== null && y !== null ? [[x, y]] : [];
       });
 
+    // Minutos de estudo da ultima semana e das 3 antes (por dia de Lisboa).
+    let studyRecent = 0;
+    let studyBaseline = 0;
+    for (const [key, day] of studyByDay) {
+      const daysAgo = diffUtcDays(parseDateKey(key), today);
+      if (daysAgo < BURNOUT_RECENT_DAYS) studyRecent += day.minutes;
+      else if (daysAgo < BURNOUT_RECENT_DAYS + BURNOUT_BASELINE_DAYS)
+        studyBaseline += day.minutes;
+    }
+    const burnout = detectBurnout(
+      logs.map((l) => ({
+        daysAgo: diffUtcDays(l.date, today),
+        mood: l.mood,
+        energy: l.energy,
+        stress: l.stress,
+      })),
+      studyRecent,
+      studyBaseline,
+    );
+
     const averageMood =
       logs.length > 0
         ? Math.round(
@@ -110,6 +139,7 @@ export class WellbeingInsightsService {
       ),
       energyVsFocus: pearson(focusPairs((l) => l.energy)),
       stressVsFocus: pearson(focusPairs((l) => l.stress)),
+      burnout,
     };
   }
 }

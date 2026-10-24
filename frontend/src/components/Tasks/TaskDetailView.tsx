@@ -1,5 +1,6 @@
 import type { Task, TaskTypeOption, AcademicTaskTypeOption, Subtask } from '../../types/models';
 import SubtaskChecklist from './SubtaskChecklist';
+import TaskAttachmentsSection from './TaskAttachmentsSection';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
@@ -56,6 +57,11 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
             onChange={(next) => onSubtasksChange(task.id, next)}
             onConverted={onSubtaskConverted}
           />
+        </DetailRow>
+      )}
+      {onSubtasksChange && (
+        <DetailRow label={t('taskFiles.title')}>
+          <TaskAttachmentsSection taskId={task.id} />
         </DetailRow>
       )}
       {recurrenceLabel(task) && (

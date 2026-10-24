@@ -7,6 +7,29 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-24',
+    title: 'Risk of failing, task templates and a small celebration',
+    items: [
+      'Dashboard: a new Risk of failing card warns early about courses where, with the grades so far, you need a high average on what is left to pass, and says which grade you need.',
+      'New task form: save the current task as a template (area, type, weight, checklist, repeat) and reuse it later. Templates stay on this device.',
+      'Finishing a task now gives a short vibration on phones and a small animation. Turn it off in Profile under "Celebrate completed tasks"; reduced motion skips the animation.',
+    ],
+  },
+  {
+    date: '2026-10-24',
+    title: 'Report card, task files and study vs class time',
+    items: [
+      'New Report card page: pick a semester and see each course with its credits, grade and whether you passed, plus the semester average. Print it or save it as PDF.',
+      'Tasks can now have files (for example the assignment brief as a PDF): open a task and use Add file. Same file types and preview as notebook files.',
+      'Wellbeing: if your mood or energy drops while you keep studying as much (or your stress goes up), a card warns you about signs of burnout.',
+      'Attendance: set your absence limit (25% by default) and see which subjects are close to it or over it.',
+      'Schedule: a new card compares how long you studied each course with the class time already held.',
+      'Dashboard: a new Difficulty vs grade card shows whether the tasks you mark as hard really get lower grades.',
+      'Areas: drag the cards (or use Alt + arrow keys) to put your areas in your own order. The task form and Dashboard filters follow it.',
+      'Calendar feed: a new "Only task deadlines" option gives a link without classes, shifts or study blocks.',
+    ],
+  },
+  {
     date: '2026-10-23',
     title: 'Pads, classes and file previews',
     items: [

@@ -4,6 +4,7 @@ import { bulkDeleteTasks, bulkUpdateTaskStatus, updateTask } from '../api/userSe
 import type { Task } from '../types/models';
 import { useFeedback } from '../context/useFeedback';
 import { useI18n } from '../i18n/useI18n';
+import { celebrateCompletion } from '../lib/completionFeedback';
 
 const COMPLETED_STATUS = 'COMPLETED';
 
@@ -55,6 +56,7 @@ export function useCompleteWithUndo(setTasks: Dispatch<SetStateAction<Task[]>>) 
       if (previous.size === 0) return;
       await bulkUpdateTaskStatus([...previous.keys()], COMPLETED_STATUS);
       applyStatuses(previous, new Date().toISOString());
+      celebrateCompletion(previous.size);
 
       offerUndo(previous.size, async () => {
         const idsByStatus = new Map<Status, string[]>();
@@ -81,6 +83,7 @@ export function useCompleteWithUndo(setTasks: Dispatch<SetStateAction<Task[]>>) 
         return;
       }
       const { spawnedTasks = [], ...updated } = response;
+      celebrateCompletion();
       setTasks((prev) => {
         const known = new Set(prev.map((t) => t.id));
         return [

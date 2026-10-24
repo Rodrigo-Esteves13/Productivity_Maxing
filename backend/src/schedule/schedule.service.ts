@@ -1,5 +1,10 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { accessibleAreaWhere } from '../areas/area-access';
+import {
+  buildStudyVsClass,
+  type StudyVsClassResult,
+} from './study-vs-class.util';
 import { ImportScheduleDto } from './dto/import-schedule.dto';
 import { EstimateCommuteDto } from './dto/estimate-commute.dto';
 import { runWithConcurrencyLimit } from '../common/concurrency.util';
@@ -204,6 +209,49 @@ export class ScheduleService {
       _count: { _all: true },
     });
     return summarizeAttendance(rows);
+  }
+
+  /**
+   * Horas de estudo por cadeira vs horas de aula dadas, entre duas datas
+   * (inclusive). Aulas ligam-se a cadeira por AreaScheduleLink; sessoes de
+   * estudo pelo areaId. Tudo filtrado pelo dono.
+   */
+  async studyVsClass(
+    userId: string,
+    from: Date,
+    to: Date,
+  ): Promise<StudyVsClassResult> {
+    const endOfTo = new Date(to);
+    endOfTo.setUTCHours(23, 59, 59, 999);
+    const [classes, sessions, links, areas] = await Promise.all([
+      this.prisma.classOccurrence.findMany({
+        where: { userId, date: { gte: from, lte: endOfTo } },
+        select: { subject: true, startMinutes: true, endMinutes: true },
+      }),
+      this.prisma.studySession.findMany({
+        where: {
+          userId,
+          areaId: { not: null },
+          startedAt: { gte: from, lte: endOfTo },
+          endedAt: { not: null },
+        },
+        select: { areaId: true, startedAt: true, endedAt: true },
+      }),
+      this.prisma.areaScheduleLink.findMany({
+        where: { userId },
+        select: { scheduleSubject: true, areaId: true },
+      }),
+      this.prisma.area.findMany({
+        where: accessibleAreaWhere(userId),
+        select: { id: true, name: true, colorHex: true },
+      }),
+    ]);
+    return buildStudyVsClass(
+      classes,
+      sessions,
+      new Map(links.map((l) => [l.scheduleSubject, l.areaId])),
+      areas,
+    );
   }
 
   /**

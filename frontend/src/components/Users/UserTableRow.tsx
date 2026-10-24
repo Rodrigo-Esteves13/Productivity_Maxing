@@ -6,6 +6,7 @@ import { PencilIcon, TrashIcon, DownloadIcon, ClockIcon, ShieldIcon, CheckIcon, 
 import { adminUserPath } from '../../lib/appLinks';
 import type { User } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import IconButton from '../UI/IconButton';
 
 interface UserTableRowProps {
   user: User;
@@ -67,63 +68,63 @@ export default function UserTableRow({
         <div className="flex items-center justify-end gap-1">
           {status === 'ACTIVE' ? (
             <>
-              <button
+              <IconButton
+                label={isSelf ? t('ui.youCantSuspendYourOwn') : t('ui.suspendUser')}
                 onClick={() => onSuspend(user)}
-                title={isSelf ? t('ui.youCantSuspendYourOwn') : t('ui.suspendUser')}
                 disabled={isSelf}
-                className="text-neutral-400 hover:text-amber-400 transition-colors p-1.5 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-neutral-400"
+                className="text-neutral-400 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-neutral-400"
               >
                 <ClockIcon className="h-4 w-4" />
-              </button>
-              <button
+              </IconButton>
+              <IconButton
+                label={isSelf ? t('ui.youCantBanYourOwn') : t('ui.banUser')}
                 onClick={() => onBan(user)}
-                title={isSelf ? t('ui.youCantBanYourOwn') : t('ui.banUser')}
                 disabled={isSelf}
-                className="text-neutral-400 hover:text-red-500 transition-colors p-1.5 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-neutral-400"
+                className="text-neutral-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-neutral-400"
               >
                 <ShieldIcon className="h-4 w-4" />
-              </button>
+              </IconButton>
             </>
           ) : (
-            <button
+            <IconButton
+              label={t('ui.restoreToActive')}
               onClick={() => onReactivate(user)}
-              title={t('ui.restoreToActive')}
               disabled={isReactivating}
-              className="text-neutral-400 hover:text-emerald-400 transition-colors p-1.5 disabled:opacity-30"
+              className="text-neutral-400 hover:text-violet-400 disabled:opacity-30"
             >
               <CheckIcon className="h-4 w-4" />
-            </button>
+            </IconButton>
           )}
           <Link
             to={adminUserPath(user.id)}
             title={t('adminSocial.open')}
             aria-label={t('adminSocial.open')}
-            className="text-neutral-400 hover:text-violet-300 transition-colors p-1.5"
+            className="press rounded-md p-2 text-neutral-400 hover:bg-neutral-800/60 hover:text-violet-300"
           >
             <NetworkIcon className="h-4 w-4" />
           </Link>
-          <button
+          <IconButton
+            label={t('ui.exportData')}
             onClick={() => onExport(user)}
-            title={t('ui.exportData')}
-            className="text-neutral-400 hover:text-white transition-colors p-1.5"
+            className="text-neutral-400 hover:text-white"
           >
             <DownloadIcon />
-          </button>
-          <button
+          </IconButton>
+          <IconButton
+            label={t('ui.editUser')}
             onClick={() => onEdit(user)}
-            title={t('ui.editUser')}
-            className="text-neutral-400 hover:text-white transition-colors p-1.5"
+            className="text-neutral-400 hover:text-white"
           >
             <PencilIcon />
-          </button>
-          <button
+          </IconButton>
+          <IconButton
+            label={isSelf ? t('ui.youCantDeleteYourOwn') : t('ui.deleteUser')}
             onClick={() => onDelete(user)}
-            title={isSelf ? t('ui.youCantDeleteYourOwn') : t('ui.deleteUser')}
             disabled={isSelf}
-            className="text-neutral-400 hover:text-red-500 transition-colors p-1.5 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-neutral-400"
+            className="text-neutral-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-neutral-400"
           >
             <TrashIcon />
-          </button>
+          </IconButton>
         </div>
       </td>
     </tr>

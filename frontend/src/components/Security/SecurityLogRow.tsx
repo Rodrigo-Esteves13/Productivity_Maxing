@@ -9,7 +9,7 @@ interface SecurityLogRowProps {
 
 const METHOD_STYLES: Record<string, string> = {
   GET: 'text-sky-400',
-  POST: 'text-emerald-400',
+  POST: 'text-violet-400',
   PATCH: 'text-amber-400',
   PUT: 'text-amber-400',
   DELETE: 'text-red-400',
@@ -18,7 +18,7 @@ const METHOD_STYLES: Record<string, string> = {
 export default function SecurityLogRow({ log, onBanIp, isBanned }: SecurityLogRowProps) {
   const { t } = useI18n();
   return (
-    <tr className="border-b border-neutral-800 last:border-0 hover:bg-neutral-900/40">
+    <tr className="border-b border-neutral-800 last:border-0 hover:bg-neutral-800/30 transition-colors">
       <td className="px-4 py-3 text-neutral-400">
         {new Date(log.createdAt).toLocaleString()}
       </td>

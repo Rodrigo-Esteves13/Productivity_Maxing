@@ -4,6 +4,7 @@ import { AcademicProvider } from './context/AcademicContext';
 import { StudySessionProvider } from './context/StudySessionProvider';
 import OfflineBanner from './pwa/OfflineBanner';
 import AccessibilityEffects from './components/Accessibility/AccessibilityEffects';
+import CompletionBurst from './components/Accessibility/CompletionBurst';
 import MaintenanceGate from './components/Maintenance/MaintenanceGate';
 import AccountBlockedGate from './components/AccountBlocked/AccountBlockedGate';
 import AccountStatusWatcher from './components/AccountBlocked/AccountStatusWatcher';
@@ -14,10 +15,12 @@ import { LucideProvider } from 'lucide-react';
 
 // Tamanho por defeito dos icones (ver components/UI/Icons.tsx).
 const ICON_SIZE_PX = 16;
+// Um pouco mais fino que o 2 do lucide: equilibra com texto de peso normal.
+const ICON_STROKE_WIDTH = 1.75;
 
 function App() {
   return (
-    <LucideProvider size={ICON_SIZE_PX}>
+    <LucideProvider size={ICON_SIZE_PX} strokeWidth={ICON_STROKE_WIDTH}>
     <ErrorBoundary>
       <I18nProvider>
       <FeedbackProvider>
@@ -34,6 +37,7 @@ function App() {
             <StudySessionProvider>
               <AcademicProvider>
                 <AccessibilityEffects />
+                <CompletionBurst />
                 <OfflineBanner />
                 <AppRouter />
               </AcademicProvider>

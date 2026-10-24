@@ -43,7 +43,7 @@ export default function ExamCountdownCard({ tasks, areas }: ExamCountdownCardPro
       </CardHeading>
 
       <div className="mb-3">
-        <p className="text-2xl font-semibold text-violet-400">
+        <p className="text-2xl font-semibold tabular-nums text-violet-400">
           {getRemainingTimeLabel(next)}
         </p>
         <p className="text-sm text-neutral-300 truncate">

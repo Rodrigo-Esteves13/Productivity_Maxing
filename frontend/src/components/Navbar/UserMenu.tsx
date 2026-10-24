@@ -56,7 +56,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-label={t('nav.menu')}
-        className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-neutral-800 transition-colors focus:outline-none"
+        className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-neutral-800 transition-colors"
       >
         <Avatar initials={initials} avatarUrl={user.avatarUrl} alt={firstName} size="sm" />
         <span className="hidden 2xl:inline max-w-[10rem] truncate text-sm font-medium text-neutral-200">
@@ -65,7 +65,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
       </button>
 
       {isOpen && (
-        <div role="menu" className="absolute right-0 mt-2 w-max min-w-48 max-w-[min(20rem,calc(100vw-1rem))] overflow-hidden bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl z-50">
+        <div role="menu" className="motion-dropdown origin-top-right absolute right-0 mt-2 w-max min-w-48 max-w-[min(20rem,calc(100vw-1rem))] overflow-hidden bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl z-50">
           {ACCOUNT_NAV.map((item) => (
             <PrefetchLink
               key={item.to}

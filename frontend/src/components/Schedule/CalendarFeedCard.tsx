@@ -12,6 +12,7 @@ import { useFeedback } from '../../context/useFeedback';
 import type { CalendarFeedStatus } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
 import Card from '../UI/Card';
+import ToggleRow from '../UI/ToggleRow';
 
 // Feed .ics subscrivivel: classes, turnos, viagens, blocos de estudo e tasks
 // no Google/Apple/Outlook Calendar sem OAuth. So leitura.
@@ -21,6 +22,8 @@ export default function CalendarFeedCard() {
   const [status, setStatus] = useState<CalendarFeedStatus | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  // So muda o link mostrado; o mesmo token serve as duas variantes.
+  const [tasksOnly, setTasksOnly] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -69,7 +72,7 @@ export default function CalendarFeedCard() {
   if (loadFailed) return null;
   if (status === null) return null;
 
-  const url = status.token ? feedUrl(status.token) : null;
+  const url = status.token ? feedUrl(status.token, tasksOnly) : null;
 
   return (
     <Card>
@@ -96,6 +99,13 @@ export default function CalendarFeedCard() {
         </button>
       ) : (
         <div className="mt-4 space-y-3">
+          <ToggleRow
+            variant="inline"
+            label={t('calendarFeed.tasksOnly')}
+            description={t('calendarFeed.tasksOnlyHelp')}
+            checked={tasksOnly}
+            onChange={setTasksOnly}
+          />
           <div className="flex items-center gap-2">
             <input
               readOnly
@@ -111,7 +121,7 @@ export default function CalendarFeedCard() {
           </p>
           <div className="flex flex-wrap gap-3 text-sm">
             <a
-              href={feedWebcalUrl(status.token as string)}
+              href={feedWebcalUrl(status.token as string, tasksOnly)}
               className="underline text-violet-400 hover:text-violet-300"
             >
               {t('ui.openInCalendarApp')}

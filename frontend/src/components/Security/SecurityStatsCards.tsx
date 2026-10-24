@@ -11,12 +11,12 @@ export default function SecurityStatsCards({ stats }: SecurityStatsCardsProps) {
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
       <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4">
         <p className="text-xs font-medium text-neutral-400 uppercase">{t('ui.blockedLastHour')}</p>
-        <p className="mt-1 text-2xl font-bold text-white">{stats?.totalLastHour ?? '-'}</p>
+        <p className="mt-1 text-2xl font-bold tabular-nums text-white">{stats?.totalLastHour ?? '-'}</p>
       </div>
 
       <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4">
         <p className="text-xs font-medium text-neutral-400 uppercase">{t('ui.blockedLast24h')}</p>
-        <p className="mt-1 text-2xl font-bold text-white">{stats?.totalLast24h ?? '-'}</p>
+        <p className="mt-1 text-2xl font-bold tabular-nums text-white">{stats?.totalLast24h ?? '-'}</p>
       </div>
 
       <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4">
@@ -30,7 +30,7 @@ export default function SecurityStatsCards({ stats }: SecurityStatsCardsProps) {
             {stats.topOffenders.slice(0, 5).map((offender) => (
               <li key={offender.ip} className="flex items-center justify-between text-sm">
                 <span className="font-mono text-neutral-300">{offender.ip}</span>
-                <span className="text-violet-400 font-semibold">{offender.count}</span>
+                <span className="text-violet-400 font-semibold tabular-nums">{offender.count}</span>
               </li>
             ))}
           </ul>

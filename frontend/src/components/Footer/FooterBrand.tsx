@@ -54,7 +54,7 @@ export default function FooterBrand() {
         >
           <GithubIcon />
           <span>{t('footer.star')}</span>
-          <ArrowUpRightIcon className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+          <ArrowUpRightIcon className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-[opacity,translate] duration-[var(--duration-quick)] ease-smooth-out" />
         </a>
 
         <a

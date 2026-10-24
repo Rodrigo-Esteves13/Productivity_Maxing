@@ -45,7 +45,7 @@ export default function ProgressBar({
       {...accessibility}
     >
       <div
-        className={`h-full ${fillClassName}`}
+        className={`h-full transition-[width] duration-[var(--duration-slow)] ease-smooth-out ${fillClassName}`}
         style={{ width: `${value}%`, ...(fillColor && { backgroundColor: fillColor }) }}
       />
     </div>

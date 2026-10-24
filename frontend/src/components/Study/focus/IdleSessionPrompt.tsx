@@ -27,19 +27,19 @@ export default function IdleSessionPrompt() {
       <p className="text-sm font-medium text-white">{t('ui.stillStudying')}</p>
       <p className="mt-1 text-xs text-neutral-400">{t('ui.noActivitySince', { idleSince: clock(idleSince) })}</p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button variant="primary" className="px-3 py-1.5 text-sm" onClick={stillHere}>
+        <Button variant="primary" size="sm" onClick={stillHere}>
           {t('ui.iMStillHere')}
         </Button>
         {canCutAtLastActivity && (
           <Button
             variant="secondary"
-            className="px-3 py-1.5 text-sm"
+            size="sm"
             disabled={isSubmitting}
             onClick={() => void stopSession({ endedAt: new Date(idleSince).toISOString() })}
           >
             {t('ui.stopAt', { idleSince: clock(idleSince) })}</Button>
         )}
-        <Button variant="secondary" className="px-3 py-1.5 text-sm" disabled={isSubmitting} onClick={() => void stopSession()}>
+        <Button variant="secondary" size="sm" disabled={isSubmitting} onClick={() => void stopSession()}>
           {t('ui.stopNow')}
         </Button>
       </div>

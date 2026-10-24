@@ -50,10 +50,10 @@ export default function Home() {
         </p>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-          <Button className="px-6 py-3 text-base" onClick={() => navigate('/register')}>
+          <Button size="lg" onClick={() => navigate('/register')}>
             {t('ui.getStartedForFree')}
           </Button>
-          <Button variant="secondary" className="px-6 py-3 text-base" onClick={() => navigate('/login')}>
+          <Button variant="secondary" size="lg" onClick={() => navigate('/login')}>
             {t('ui.logIn')}
           </Button>
         </div>

@@ -3,6 +3,7 @@ import ActiveBadge from './ActiveBadge';
 import { PencilIcon, TrashIcon } from '../UI/Icons';
 import type { AdminTaskType } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import IconButton from '../UI/IconButton';
 
 interface TaskTypesTableProps {
   taskTypes: AdminTaskType[];
@@ -34,7 +35,7 @@ export default function TaskTypesTable({ taskTypes, onEdit, onToggleActive }: Ta
               </tr>
             ) : (
               taskTypes.map((type) => (
-                <tr key={type.id} className="border-b border-neutral-800 last:border-0 hover:bg-neutral-800/30">
+                <tr key={type.id} className="border-b border-neutral-800 last:border-0 hover:bg-neutral-800/30 transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <ColorDot color={type.colorHex ?? '#808080'} />
@@ -52,20 +53,20 @@ export default function TaskTypesTable({ taskTypes, onEdit, onToggleActive }: Ta
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      <button
+                      <IconButton
+                        label={t('ui.editTaskType')}
                         onClick={() => onEdit(type)}
-                        title={t('ui.editTaskType')}
-                        className="text-neutral-400 hover:text-white transition-colors p-1.5"
+                        className="text-neutral-400 hover:text-white"
                       >
                         <PencilIcon />
-                      </button>
+                      </IconButton>
                       <button
                         onClick={() => onToggleActive(type)}
                         title={type.isActive ? t('ui.deactivate') : t('ui.reactivate')}
                         className={`transition-colors p-1.5 ${
                           type.isActive
                             ? 'text-neutral-400 hover:text-red-500'
-                            : 'text-emerald-500 hover:text-emerald-400'
+                            : 'text-violet-500 hover:text-violet-400'
                         }`}
                       >
                         {type.isActive ? <TrashIcon /> : <span className="text-xs font-semibold px-1">{t('ui.reactivate')}</span>}
