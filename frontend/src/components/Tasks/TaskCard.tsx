@@ -4,6 +4,7 @@ import type { Task, Area } from '../../types/models';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
+import TaskReadinessBadges from '../UI/TaskReadinessBadges';
 import PostponedIndicator from '../UI/PostponedIndicator';
 import SubtaskProgress from '../UI/SubtaskProgress';
 import RescheduleButton from '../UI/RescheduleButton';
@@ -155,6 +156,7 @@ function TaskCard({
               <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
             )}
             <PostponedIndicator count={task.postponedCount} />
+            <TaskReadinessBadges task={task} />
             {recurrenceLabel(task) && (
               <span
                 title={`${recurrenceLabel(task)}. ${t('ui.nextOneCreatedOnComplete')}`}

@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
+import LegacyPrefixRedirect from './LegacyPrefixRedirect';
 import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
 import RootRedirect from './RootRedirect';
@@ -95,10 +96,13 @@ export default function AppRouter() {
           {/* Publicas, como o dontpad: ler e escrever sem conta. */}
           <Route path="/pad" element={<Pad />} />
           <Route path="/pad/:slug" element={<Pad />} />
-          <Route path="/turmas" element={<PrivateRoute><Turmas /></PrivateRoute>} />
-          <Route path="/turmas/:turmaId" element={<PrivateRoute><TurmaPage /></PrivateRoute>} />
-          <Route path="/turmas/:turmaId/notes/:noteId" element={<PrivateRoute><TurmaNote /></PrivateRoute>} />
-          <Route path="/turmas/:turmaId/subjects/:linkId/:entryId" element={<PrivateRoute><TurmaSubjectEntry /></PrivateRoute>} />
+          <Route path="/classes" element={<PrivateRoute><Turmas /></PrivateRoute>} />
+          <Route path="/classes/:turmaId" element={<PrivateRoute><TurmaPage /></PrivateRoute>} />
+          <Route path="/classes/:turmaId/notes/:noteId" element={<PrivateRoute><TurmaNote /></PrivateRoute>} />
+          <Route path="/classes/:turmaId/subjects/:linkId/:entryId" element={<PrivateRoute><TurmaSubjectEntry /></PrivateRoute>} />
+          {/* Caminhos antigos em portugues (links de convite e avisos ja
+              enviados): reencaminham para o mesmo sitio em /classes. */}
+          <Route path="/turmas/*" element={<LegacyPrefixRedirect from="/turmas" to="/classes" />} />
           <Route path="/changelog" element={<PrivateRoute><Changelog /></PrivateRoute>} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           {/* Públicas - o consent screen do Google OAuth aponta para estas */}

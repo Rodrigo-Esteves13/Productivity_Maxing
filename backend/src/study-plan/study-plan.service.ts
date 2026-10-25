@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Difficulty, Prisma } from '@prisma/client';
+import { DateCertainty, Difficulty, Effort, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import {
@@ -28,6 +28,7 @@ import {
   REVIEW_COURSE_FUTURE_DAYS,
   NEAR_DEADLINE_DAYS,
   LAST_STUDIED_LOOKBACK_DAYS,
+  SURPRISE_READY_WITHIN_DAYS,
 } from './study-plan.constants';
 import {
   buildFreeSlots,
@@ -59,6 +60,7 @@ export interface EstimableTask {
   taskTypeId: string;
   areaId: string;
   difficulty: Difficulty;
+  effort: Effort | null;
   weightPercentage: number | null;
   estimatedMinutes: number | null;
   studySessions: {
@@ -73,6 +75,7 @@ export const ESTIMABLE_TASK_SELECT = {
   id: true,
   title: true,
   difficulty: true,
+  effort: true,
   weightPercentage: true,
   estimatedMinutes: true,
   taskTypeId: true,
@@ -108,6 +111,19 @@ function averageOf(bucket: HistoryBucket | undefined): number | null {
   return bucket && bucket.count > 0
     ? Math.round(bucket.sum / bucket.count)
     : null;
+}
+
+// Ultimo dia para que o plano reparte o estudo. Numa avaliacao surpresa a
+// data e so o limite: o objetivo e estar pronto cedo, por isso usa-se o
+// mais cedo entre essa data e daqui a SURPRISE_READY_WITHIN_DAYS dias.
+function planningDeadlineKey(
+  task: { date: Date; dateCertainty: DateCertainty },
+  today: Date,
+): string {
+  if (task.dateCertainty !== DateCertainty.SURPRISE)
+    return toDateKey(task.date);
+  const readyBy = addUtcDays(today, SURPRISE_READY_WITHIN_DAYS);
+  return toDateKey(task.date < readyBy ? task.date : readyBy);
 }
 
 export interface ResolvedTaskEstimate {
@@ -163,6 +179,8 @@ export class StudyPlanService {
         where: {
           userId,
           progressStatus: { not: 'COMPLETED' },
+          // Bloqueada sem data de abertura: nao ha nada que planear ainda.
+          isBlocked: false,
           // Também prazos longe: entram no ritmo de hoje (ver scheduler).
           date: { lte: lookaheadEnd },
           OR: [{ periodId: null }, { period: { isArchived: false } }],
@@ -173,6 +191,9 @@ export class StudyPlanService {
           date: true,
           academicType: { select: { isEvent: true } },
           difficulty: true,
+          effort: true,
+          dateCertainty: true,
+          availableFrom: true,
           weightPercentage: true,
           estimatedMinutes: true,
           taskTypeId: true,
@@ -258,7 +279,10 @@ export class StudyPlanService {
       taskId: task.id,
       areaId: task.areaId,
       isEvent: task.academicType?.isEvent ?? false,
-      deadlineKey: toDateKey(task.date),
+      deadlineKey: planningDeadlineKey(task, today),
+      firstUsableKey: task.availableFrom
+        ? toDateKey(task.availableFrom)
+        : undefined,
       weightPercentage: task.weightPercentage,
       difficultyRank: DIFFICULTY_WEIGHT[task.difficulty],
       neededMinutes: resolvedByTaskId.get(task.id)?.needed ?? 0,
@@ -586,6 +610,7 @@ export class StudyPlanService {
                 ? averageOf(bucket)
                 : null,
             difficulty: task.difficulty,
+            effort: task.effort,
             isGraded,
           },
           calibrationFactor,

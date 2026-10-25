@@ -17,7 +17,7 @@ import { turmaPath } from '../lib/appLinks';
 import { INVITE_CODE_LENGTH, TURMA_NAME_MAX_LENGTH, TURMA_DESCRIPTION_MAX_LENGTH } from '../components/Turma/turmaConfig';
 
 // Turmas: as minhas, criar uma (fico delegado) ou entrar com um codigo.
-// /turmas?code=XXXX (link de convite) ja traz o codigo preenchido.
+// /classes?code=XXXX (link de convite) ja traz o codigo preenchido.
 export default function Turmas() {
   const { t } = useI18n();
   useDocumentTitle(t('nav.turmas'));

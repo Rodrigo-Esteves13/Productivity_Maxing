@@ -33,8 +33,13 @@ describe('bulkRescheduleTasks', () => {
     expect(updateMany).toHaveBeenCalledTimes(2);
     const [later, earlier] = updateMany.mock.calls.map(([args]) => args);
     expect(later.where.date).toEqual({ lt: date });
+    // So prazos reais contam como adiados (palpites por marcar/surpresa nao).
+    expect(later.where.dateCertainty).toEqual({ in: ['EXACT', 'APPROXIMATE'] });
     expect(later.data).toEqual({ date, postponedCount: { increment: 1 } });
-    expect(earlier.where.date).toEqual({ gte: date });
+    expect(earlier.where.OR).toEqual([
+      { date: { gte: date } },
+      { NOT: { dateCertainty: { in: ['EXACT', 'APPROXIMATE'] } } },
+    ]);
     expect(earlier.data).toEqual({ date });
   });
 

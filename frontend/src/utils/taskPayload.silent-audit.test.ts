@@ -15,6 +15,10 @@ const clearedEdit: TaskFormFieldValues = {
   type: 'ACADEMICO',
   academicType: '',
   difficulty: 'MEDIUM',
+  effort: '',
+  dateCertainty: 'EXACT',
+  isBlocked: false,
+  availableFrom: '',
   priority: '',
   areaId: 'a1',
   topics: '',
@@ -47,7 +51,27 @@ describe('silent-audit b: clearing fields in TaskEditForm', () => {
     'notes',
     'topics',
     'referenceLink',
+    'effort',
+    'availableFrom',
   ])('B-05: an emptied "%s" is sent as null so the backend clears it', (field) => {
     expect(wire).toHaveProperty(field, null);
+  });
+});
+
+describe('readiness fields', () => {
+  it('sends availableFrom as UTC midnight of the chosen day', () => {
+    const payload = buildTaskPayload({
+      ...clearedEdit,
+      effort: 'EXHAUSTIVE',
+      dateCertainty: 'SURPRISE',
+      isBlocked: true,
+      availableFrom: '2026-11-03',
+    });
+    expect(payload).toMatchObject({
+      effort: 'EXHAUSTIVE',
+      dateCertainty: 'SURPRISE',
+      isBlocked: true,
+      availableFrom: '2026-11-03T00:00:00.000Z',
+    });
   });
 });

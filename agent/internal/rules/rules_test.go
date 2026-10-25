@@ -160,3 +160,40 @@ func TestNeedsAllTasks(t *testing.T) {
 		t.Fatal("com MinProgressStatus, devia precisar de GET /tasks")
 	}
 }
+
+func TestEvaluate_HasOverdueTasks_SemPrazoRealOuBloqueadaNaoConta(t *testing.T) {
+	rules := apiclient.TriggerRules{Mode: apiclient.TriggerAny, HasOverdueTasks: true}
+	yesterday := time.Now().AddDate(0, 0, -1)
+
+	snap := Snapshot{
+		All: []apiclient.Task{
+			{Date: yesterday, ProgressStatus: apiclient.OnTrack, DateCertainty: apiclient.DateUnknown},
+			{Date: yesterday, ProgressStatus: apiclient.OnTrack, DateCertainty: apiclient.DateSurprise},
+			{Date: yesterday, ProgressStatus: apiclient.OnTrack, DateCertainty: apiclient.DateExact, IsBlocked: true},
+		},
+	}
+
+	d := Evaluate(rules, snap)
+	if d.ShouldBlock {
+		t.Fatalf("tasks sem prazo real ou bloqueadas nao deviam ativar o bloqueio, veio: %+v", d)
+	}
+
+	snap.All = append(snap.All, apiclient.Task{Date: yesterday, ProgressStatus: apiclient.OnTrack, DateCertainty: apiclient.DateApproximate})
+	if d := Evaluate(rules, snap); !d.ShouldBlock {
+		t.Fatalf("uma data aproximada ja passada devia contar como atraso, veio: %+v", d)
+	}
+}
+
+func TestEvaluate_BlockDuringFocus(t *testing.T) {
+	rules := apiclient.TriggerRules{Mode: apiclient.TriggerAny, BlockDuringFocus: true}
+
+	if d := Evaluate(rules, Snapshot{FocusActive: false}); d.ShouldBlock {
+		t.Fatalf("sem sessao de Focus nao devia bloquear, veio: %+v", d)
+	}
+	if d := Evaluate(rules, Snapshot{FocusActive: true}); !d.ShouldBlock {
+		t.Fatalf("com sessao de Focus devia bloquear, veio: %+v", d)
+	}
+	if !NeedsFocusState(rules) {
+		t.Fatal("NeedsFocusState devia ser true com BlockDuringFocus ligado")
+	}
+}

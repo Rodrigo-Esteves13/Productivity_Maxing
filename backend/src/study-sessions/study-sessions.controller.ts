@@ -8,7 +8,9 @@ import {
   Param,
   Query,
   Res,
+  HttpCode,
   HttpStatus,
+  ParseUUIDPipe,
   UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
@@ -85,6 +87,18 @@ export class StudySessionsController {
     @Body() dto: HeartbeatStudySessionDto,
   ) {
     return this.studySessionsService.heartbeat(user.id, id, dto);
+  }
+
+  // "Got distracted": +1 na sessao ativa. Cada clique e um pedido; 60/min
+  // chega para uso real e trava scripts.
+  @Post(':id/distraction')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(perMinute(60))
+  recordDistraction(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.studySessionsService.recordDistraction(user.id, id);
   }
 
   // Sem sessao ativa responde 204 (sem corpo) em vez de 200 com corpo vazio

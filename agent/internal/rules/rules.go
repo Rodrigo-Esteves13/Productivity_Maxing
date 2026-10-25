@@ -19,6 +19,9 @@ type Snapshot struct {
 	// ativas (ver main.go) - contém o resultado de GET /tasks sem filtro
 	// nenhum.
 	All []apiclient.Task
+	// FocusActive: ha uma sessao de Focus a decorrer. So preenchido quando a
+	// regra BlockDuringFocus esta ligada (ver NeedsFocusState).
+	FocusActive bool
 }
 
 // Decision é o resultado da avaliação: se deve bloquear, e uma explicação
@@ -93,6 +96,13 @@ func Evaluate(rules apiclient.TriggerRules, snap Snapshot) Decision {
 		}
 	}
 
+	if rules.BlockDuringFocus {
+		results = append(results, snap.FocusActive)
+		if snap.FocusActive {
+			reasons = append(reasons, "a Focus session is running")
+		}
+	}
+
 	if len(results) == 0 {
 		// Nenhuma regra ativa na config - por segurança, não bloqueia
 		// nada (evita bloqueio permanente por config mal escrita).
@@ -128,6 +138,11 @@ func hasPastDeadline(tasks []apiclient.Task) bool {
 		if t.ProgressStatus == apiclient.Completed {
 			continue
 		}
+		// Bloqueada (ainda nao da para comecar) ou sem prazo real (data por
+		// marcar/surpresa): nunca esta em atraso.
+		if t.IsBlocked || !t.DateCertainty.HasFirmDate() {
+			continue
+		}
 		if deadlineOf(t.Date).Before(now) {
 			return true
 		}
@@ -153,6 +168,11 @@ func isUtcMidnight(date time.Time) bool {
 // esse pedido extra quando é mesmo preciso.
 func NeedsAllTasks(rules apiclient.TriggerRules) bool {
 	return rules.HasOverdueTasks || rules.MinProgressStatus != nil
+}
+
+// NeedsFocusState diz se e preciso perguntar a API se ha uma sessao de Focus.
+func NeedsFocusState(rules apiclient.TriggerRules) bool {
+	return rules.BlockDuringFocus
 }
 
 func combine(mode apiclient.TriggerMode, results []bool) bool {

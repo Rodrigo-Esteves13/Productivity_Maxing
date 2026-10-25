@@ -13,7 +13,9 @@ import {
   MaxLength,
 } from 'class-validator';
 import {
+  DateCertainty,
   Difficulty,
+  Effort,
   ProgressStatus,
   RecurrenceFrequency,
 } from '@prisma/client';
@@ -144,6 +146,45 @@ export class CreateTaskDto {
   })
   @IsEnum(Difficulty)
   difficulty: Difficulty;
+
+  @ApiPropertyOptional({
+    enum: Effort,
+    nullable: true,
+    description:
+      'How much work the task is, independent of difficulty (an easy task can still be exhausting). Scales the study-time estimate. null = MODERATE.',
+  })
+  @IsOptional()
+  @IsEnum(Effort)
+  effort?: Effort | null;
+
+  @ApiPropertyOptional({
+    enum: DateCertainty,
+    example: DateCertainty.EXACT,
+    description:
+      'How sure the date is. UNKNOWN and SURPRISE tasks never become overdue; `date` is then only a best guess.',
+  })
+  @IsOptional()
+  @IsEnum(DateCertainty)
+  dateCertainty?: DateCertainty;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'The task cannot be started yet (e.g. the assignment is not out). Kept out of the study plan and overdue checks until unblocked.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isBlocked?: boolean;
+
+  @ApiPropertyOptional({
+    example: '2026-11-10T00:00:00Z',
+    nullable: true,
+    description:
+      'First day the task can be started. The study plan schedules nothing before it. null = available now.',
+  })
+  @IsOptional()
+  @IsDateString()
+  availableFrom?: string | null;
 
   @ApiPropertyOptional({
     example: 'HIGH',

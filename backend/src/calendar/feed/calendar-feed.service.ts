@@ -1,3 +1,4 @@
+import { calendarTitle } from '../../common/task-readiness.util';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { UserStatus } from '@prisma/client';
@@ -155,6 +156,7 @@ export class CalendarFeedService {
           id: true,
           title: true,
           date: true,
+          dateCertainty: true,
           topics: true,
           calendarDurationMinutes: true,
           area: { select: { name: true } },
@@ -178,7 +180,7 @@ export class CalendarFeedService {
 
       const base = {
         uid: `task:${task.id}@productivitymaxing`,
-        title: task.title,
+        title: calendarTitle(task.title, task.dateCertainty),
         description: description || null,
         category: 'task',
       };

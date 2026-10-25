@@ -45,10 +45,13 @@ function setup() {
       findUnique: jest.fn(),
       update: jest.fn().mockResolvedValue({}),
     },
-    task: { findMany: jest.fn() },
+    task: {
+      findMany: jest.fn(),
+      update: jest.fn().mockResolvedValue({}),
+    },
     area: { findMany: jest.fn().mockResolvedValue([]) },
   };
-  const tasks = { create: jest.fn().mockResolvedValue({}) };
+  const tasks = { create: jest.fn().mockResolvedValue({ id: 'new-task' }) };
   const service = new TaskPacksService(
     prisma as unknown as PrismaService,
     tasks as unknown as TasksService,

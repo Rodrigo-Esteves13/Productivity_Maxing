@@ -29,6 +29,14 @@ export class AgentConfigController {
     return this.agentConfigService.find(user.id);
   }
 
+  // Literal antes de qualquer rota com parametro. Mesmo limite do GET da
+  // config: o agente faz poll dos dois no mesmo ciclo.
+  @Get('focus')
+  @Throttle(perMinute(20))
+  focus(@CurrentUser() user: AuthenticatedUser) {
+    return this.agentConfigService.focusState(user.id);
+  }
+
   @Put()
   @Throttle(perMinute(10))
   upsert(

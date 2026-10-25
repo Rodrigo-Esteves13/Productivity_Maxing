@@ -20,6 +20,7 @@ import {
   ProductivityByTypeCard,
   DifficultyVsGradeCard,
   FailingRiskCard,
+  PlanScenarioCard,
 } from './lazyCards';
 import type { DashboardWidgetKey } from '../../hooks/useDashboardWidgetPrefs';
 import type { AcademicProgram, AcademicTaskTypeOption, Area, Task } from '../../types/models';
@@ -76,6 +77,7 @@ export default function DashboardCardGrid({
       {visibility.timeByArea && <TimeByAreaCard />}
       {visibility.courseForecast && <CourseForecastCard />}
       {visibility.gradeProjection && <GradeProjectionCard />}
+      {visibility.planScenario && <PlanScenarioCard />}
       {visibility.focusEffect && <FocusEffectCard />}
       {visibility.estimationAccuracy && <EstimationAccuracyCard />}
       {visibility.deadlineCompliance && academicTasks.length > 0 && (

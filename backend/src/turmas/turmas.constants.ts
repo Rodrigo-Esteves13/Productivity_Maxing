@@ -27,4 +27,4 @@ export const TURMA_WRITES_PER_MINUTE = 60;
 export const TURMA_NOTE_SAVES_PER_MINUTE = 120;
 export const TURMA_UPLOADS_PER_MINUTE = 20;
 
-export const turmaPath = (turmaId: string) => `/turmas/${turmaId}`;
+export const turmaPath = (turmaId: string) => `/classes/${turmaId}`;

@@ -290,6 +290,9 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
   );
 
   const dismissJustStopped = useCallback(() => setJustStopped(null), []);
+  const setDistractionCount = useCallback((count: number) => {
+    setActiveSession((current) => (current ? { ...current, distractionCount: count } : current));
+  }, []);
 
   const startBreak = useCallback((minutes: number, resume: ResumeSpec | null) => {
     const rest: RestBreak = { endsAt: Date.now() + minutes * 60_000, resume };
@@ -318,8 +321,9 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
       endBreak,
       justStopped,
       dismissJustStopped,
+      setDistractionCount,
     }),
-    [activeSession, isLoading, isSubmitting, error, start, stop, timerPlan, restBreak, startBreak, endBreak, justStopped, dismissJustStopped],
+    [activeSession, isLoading, isSubmitting, error, start, stop, timerPlan, restBreak, startBreak, endBreak, justStopped, dismissJustStopped, setDistractionCount],
   );
   const clockValue = useMemo(
     () => ({ elapsedSeconds, remainingSeconds: computeRemaining(elapsedSeconds, timerPlan) }),

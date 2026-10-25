@@ -29,7 +29,8 @@ export type PushMessageKey =
   | 'deadlinesSoon'
   | 'medicationDue'
   | 'medicationsDue'
-  | 'turmaAnnouncement';
+  | 'turmaAnnouncement'
+  | 'taskPackUpdated';
 
 interface Template {
   title: string;
@@ -107,6 +108,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '{name}',
       body: 'New announcement: {title}',
     },
+    taskPackUpdated: {
+      title: '{name}',
+      body: 'A task pack you imported changed: {title}. Review the update.',
+    },
   },
   pt: {
     shareAccessRequested: {
@@ -176,6 +181,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     turmaAnnouncement: {
       title: '{name}',
       body: 'New announcement: {title}',
+    },
+    taskPackUpdated: {
+      title: '{name}',
+      body: 'Um pacote de tasks que importaste mudou: {title}. Revê a alteração.',
     },
   },
   es: {
@@ -247,6 +256,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '{name}',
       body: 'New announcement: {title}',
     },
+    taskPackUpdated: {
+      title: '{name}',
+      body: 'Un paquete de tareas que importaste cambió: {title}. Revisa el cambio.',
+    },
   },
   zh: {
     shareAccessRequested: {
@@ -300,6 +313,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     turmaAnnouncement: {
       title: '{name}',
       body: 'New announcement: {title}',
+    },
+    taskPackUpdated: {
+      title: '{name}',
+      body: '你导入的任务包有变化：{title}。请查看更新。',
     },
     deadlinesSoon: {
       title: '截止日期临近',
@@ -371,6 +388,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '{name}',
       body: 'New announcement: {title}',
     },
+    taskPackUpdated: {
+      title: '{name}',
+      body: 'インポートしたタスクパックが変更されました：{title}。更新を確認してください。',
+    },
     deadlinesSoon: {
       title: '締め切りが近づいています',
       body: '「{title}」ほか {count} 件の締め切りが近づいています。',
@@ -440,6 +461,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     turmaAnnouncement: {
       title: '{name}',
       body: 'New announcement: {title}',
+    },
+    taskPackUpdated: {
+      title: '{name}',
+      body: '가져간 과제 팩이 변경되었습니다: {title}. 업데이트를 검토하세요.',
     },
     deadlinesSoon: {
       title: '마감이 다가와요',
@@ -515,6 +540,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '{name}',
       body: 'New announcement: {title}',
     },
+    taskPackUpdated: {
+      title: '{name}',
+      body: 'Un pack de tâches que tu as importé a changé : {title}. Examine la modification.',
+    },
   },
   de: {
     shareAccessRequested: {
@@ -584,6 +613,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     turmaAnnouncement: {
       title: '{name}',
       body: 'New announcement: {title}',
+    },
+    taskPackUpdated: {
+      title: '{name}',
+      body: 'Ein importiertes Aufgabenpaket hat sich geändert: {title}. Prüfe die Änderung.',
     },
   },
 };

@@ -2,6 +2,12 @@
 export type Provider = 'GOOGLE' | 'DISCORD' | 'GITHUB';
 export type Role = 'USER' | 'ADMIN';
 export type ProgressStatus = 'AHEAD' | 'ON_TRACK' | 'BEHIND' | 'VERY_BEHIND' | 'COMPLETED';
+// Quanto trabalho a task da (independente da dificuldade). Ver enum Effort
+// no schema.prisma; null = MODERATE.
+export type Effort = 'LIGHT' | 'MODERATE' | 'HEAVY' | 'EXHAUSTIVE';
+// Quao certa e a data. UNKNOWN/SURPRISE nunca ficam em atraso (a data e so
+// um palpite). Ver enum DateCertainty no schema.prisma.
+export type DateCertainty = 'EXACT' | 'APPROXIMATE' | 'UNKNOWN' | 'SURPRISE';
 // Corpo aceite por POST/PATCH /tasks. Tudo opcional (o PATCH e parcial);
 // `null` limpa um campo opcional. Espelha create-task.dto.ts do backend.
 export interface TaskWriteInput {
@@ -16,6 +22,10 @@ export interface TaskWriteInput {
   referenceLink?: string | null;
   isPinned?: boolean;
   difficulty?: string;
+  effort?: Effort | null;
+  dateCertainty?: DateCertainty;
+  isBlocked?: boolean;
+  availableFrom?: string | null;
   priority?: string;
   progressStatus?: string;
   weightPercentage?: number | null;
@@ -99,6 +109,8 @@ export interface TaskMeta {
   taskTypes: TaskTypeOption[];
   academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
+  efforts?: string[];
+  dateCertainties?: string[];
   priorities: PriorityOption[];
   progressStatuses: string[];
 }
@@ -116,6 +128,7 @@ export interface ImportTaskRow {
   topics?: string;
   weightPercentage?: number;
   difficulty?: Difficulty;
+  effort?: Effort;
   progressStatus?: ProgressStatus;
   targetGrade?: number;
   realGrade?: number;
@@ -370,6 +383,35 @@ export interface BackfillCandidate {
   date: string;
   grade: number;
   gradeMax: number;
+}
+
+// GET /study-plan/plan-scenario - cartao "If all goes according to plan".
+export interface PlanScenarioFill {
+  label: string;
+  kind: 'component' | 'task';
+  weightPercentage: number;
+  grade: number;
+  source: 'course_median' | 'period_median';
+}
+
+export interface PlanScenarioCourse {
+  areaId: string;
+  areaName: string;
+  areaColorHex: string;
+  currentAverage: number | null;
+  projectedFinal: number | null;
+  planFinal: number | null;
+  delta: number | null;
+  plannedWeight: number;
+  missingWeight: number;
+  fills: PlanScenarioFill[];
+}
+
+export interface PlanScenario {
+  gradeMin: number;
+  gradeMax: number;
+  passThreshold: number;
+  courses: PlanScenarioCourse[];
 }
 
 export interface GradeProjection {
@@ -736,6 +778,11 @@ export interface Task {
   // Execution Metadata
   weightPercentage: number | null;
   difficulty: Difficulty;
+  effort: Effort | null;
+  dateCertainty: DateCertainty;
+  // Ainda nao da para comecar: bloqueada sem data, ou abre em availableFrom.
+  isBlocked: boolean;
+  availableFrom: string | null;
   // Nullable, ao contrário de difficulty - ver comentário em priorityId no
   // schema.prisma (opcional de propósito). priorityLabel/priorityColorHex
   // vêm prontos do backend (toResponse) para as badges não precisarem de
@@ -880,6 +927,8 @@ export interface StudySession {
   focusRating: number | null;
   // Sessao escrita depois, nao cronometrada.
   isManual: boolean;
+  // Vezes que carregaste em "Got distracted" durante a sessao.
+  distractionCount?: number;
 }
 
 export interface HeatmapCell {
@@ -897,6 +946,8 @@ export interface AgentConfig {
   hasOverdueCheckins: boolean;
   minDifficultyToday: Difficulty | null;
   anyTaskToday: boolean;
+  // Bloqueia enquanto ha uma sessao de Focus a decorrer.
+  blockDuringFocus: boolean;
   minProgressStatus: ProgressStatus | null;
   blockedProcesses: string[];
   blockedDomains: string[];

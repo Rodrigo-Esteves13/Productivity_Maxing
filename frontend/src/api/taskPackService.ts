@@ -1,3 +1,4 @@
+import type { DateCertainty, Effort } from '../types/models';
 import api from './client';
 
 export interface TaskPackSummary {
@@ -19,6 +20,10 @@ export interface TaskPackPreviewItem {
   fixedAreaId: string | null;
   suggestedAreaId: string | null;
   taskType: string;
+  effort: Effort | null;
+  dateCertainty: DateCertainty;
+  /** Dia em que a task abre (ainda nao da para comecar); null = ja aberta. */
+  availableFrom: string | null;
   alreadyHave: boolean;
 }
 
@@ -60,3 +65,43 @@ export const importTaskPack = async (
   (await api.post<ImportTaskPackResult>(`/task-packs/code/${encodeURIComponent(code)}/import`, { items })).data;
 
 export const packShareUrl = (code: string): string => `${window.location.origin}/packs/${code}`;
+
+/** Campos de um item que o dono pode atualizar (iguais para toda a turma). */
+export interface PackSharedFields {
+  title: string;
+  date: string;
+  weightPercentage: number | null;
+  effort: Effort | null;
+  dateCertainty: DateCertainty;
+  availableFrom: string | null;
+}
+
+export interface PackSyncResult {
+  updatedItems: number;
+  proposalsCreated: number;
+}
+
+export interface PackUpdate {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  packName: string;
+  ownerName: string;
+  changes: Partial<PackSharedFields>;
+  current: PackSharedFields;
+  createdAt: string;
+}
+
+export const publishTaskPack = async (id: string): Promise<PackSyncResult> =>
+  (await api.post<PackSyncResult>(`/task-packs/${id}/publish`)).data;
+
+export const listPackUpdates = async (): Promise<PackUpdate[]> =>
+  (await api.get<PackUpdate[]>('/task-packs/updates')).data;
+
+export const acceptPackUpdate = async (id: string): Promise<void> => {
+  await api.post(`/task-packs/updates/${id}/accept`);
+};
+
+export const rejectPackUpdate = async (id: string): Promise<void> => {
+  await api.post(`/task-packs/updates/${id}/reject`);
+};

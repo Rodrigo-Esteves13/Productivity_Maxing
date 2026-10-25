@@ -42,6 +42,8 @@ type Task struct {
 	WeightPercentage      *float64       `json:"weightPercentage"`
 	Difficulty            Difficulty     `json:"difficulty"`
 	ProgressStatus        ProgressStatus `json:"progressStatus"`
+	DateCertainty         DateCertainty  `json:"dateCertainty"`
+	IsBlocked             bool           `json:"isBlocked"`
 	ReferenceLink         *string        `json:"referenceLink"`
 	TargetGrade           *float64       `json:"targetGrade"`
 	RealGrade             *float64       `json:"realGrade"`

@@ -1,7 +1,11 @@
 import * as XLSX from 'xlsx';
-import type { Area, AcademicPeriod, ImportTaskRow, TaskMeta } from '../types/models';
+import type { Area, AcademicPeriod, Effort, ImportTaskRow, TaskMeta } from '../types/models';
 import { ACADEMIC_TASK_TYPE_KEY } from '../lib/constants';
+import { EFFORTS } from '../lib/taskReadiness';
 import { translateNow } from '../i18n/translate';
+
+// Rotulos da app que nao coincidem com o valor do enum.
+const EFFORT_ALIASES: Record<string, Effort> = { EXHAUSTING: 'EXHAUSTIVE' };
 
 // Accepted column headers, case-insensitive, with a couple of common
 // aliases per column so a spreadsheet built without reading the docs
@@ -20,6 +24,7 @@ const HEADER_ALIASES: Record<string, string[]> = {
   academicType: ['academic type', 'subcategory', 'category'],
   weight: ['weight', 'weight %', 'weight percentage'],
   difficulty: ['difficulty'],
+  effort: ['effort', 'workload'],
   status: ['status', 'progress', 'progress status'],
   targetGrade: ['target grade', 'target'],
   realGrade: ['real grade', 'grade', 'actual grade'],
@@ -220,6 +225,14 @@ export function mapImportRows(
       return;
     }
 
+    const rawEffort = toEnumKey(findColumnValue(rawRow, 'effort'));
+    // O rotulo mostrado na app e "Exhausting"; o valor guardado e EXHAUSTIVE.
+    const effortKey = rawEffort ? (EFFORT_ALIASES[rawEffort] ?? rawEffort) : undefined;
+    if (effortKey && !EFFORTS.includes(effortKey as Effort)) {
+      errors.push({ row: rowNumber, message: translateNow('import.unknownEffort', { value: effortKey }) });
+      return;
+    }
+
     const statusKey = toEnumKey(findColumnValue(rawRow, 'status'));
     if (statusKey && !meta.progressStatuses.includes(statusKey)) {
       errors.push({ row: rowNumber, message: translateNow('import.unknownStatus', { value: statusKey }) });
@@ -238,6 +251,7 @@ export function mapImportRows(
       topics: typeof topicsValue === 'string' ? topicsValue : undefined,
       weightPercentage: toNumber(findColumnValue(rawRow, 'weight')),
       difficulty: difficultyKey as ImportTaskRow['difficulty'],
+      effort: (effortKey || undefined) as ImportTaskRow['effort'],
       progressStatus: statusKey as ImportTaskRow['progressStatus'],
       targetGrade: toNumber(findColumnValue(rawRow, 'targetGrade')),
       realGrade: toNumber(findColumnValue(rawRow, 'realGrade')),

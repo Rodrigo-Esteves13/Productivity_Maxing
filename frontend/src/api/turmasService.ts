@@ -12,15 +12,15 @@ import type {
   TurmaSummary,
 } from '../types/models';
 
-const base = (turmaId: string) => `/turmas/${encodeURIComponent(turmaId)}`;
+const base = (turmaId: string) => `/classes/${encodeURIComponent(turmaId)}`;
 
-export const getMyTurmas = async (): Promise<TurmaSummary[]> => (await api.get<TurmaSummary[]>('/turmas')).data;
+export const getMyTurmas = async (): Promise<TurmaSummary[]> => (await api.get<TurmaSummary[]>('/classes')).data;
 
 export const createTurma = async (input: { name: string; description?: string }): Promise<{ id: string }> =>
-  (await api.post<{ id: string }>('/turmas', input)).data;
+  (await api.post<{ id: string }>('/classes', input)).data;
 
 export const joinTurma = async (code: string): Promise<{ id: string }> =>
-  (await api.post<{ id: string }>('/turmas/join', { code })).data;
+  (await api.post<{ id: string }>('/classes/join', { code })).data;
 
 export const getTurma = async (turmaId: string): Promise<TurmaDetail> =>
   (await api.get<TurmaDetail>(base(turmaId))).data;
@@ -45,7 +45,7 @@ export const removeTurmaMember = async (turmaId: string, userId: string): Promis
 };
 
 export const transferDelegado = async (turmaId: string, userId: string): Promise<TurmaDetail> =>
-  (await api.put<TurmaDetail>(`${base(turmaId)}/delegado`, { userId })).data;
+  (await api.put<TurmaDetail>(`${base(turmaId)}/representative`, { userId })).data;
 
 export const getAnnouncements = async (turmaId: string): Promise<TurmaAnnouncement[]> =>
   (await api.get<TurmaAnnouncement[]>(`${base(turmaId)}/announcements`)).data;
@@ -115,4 +115,4 @@ export const getLinkedEntry = async (turmaId: string, linkId: string, entryId: s
 
 // Pesquisa global (Ctrl+K) nas notas das turmas de que sou membro.
 export const searchTurmaNotes = async (q: string): Promise<TurmaNoteSearchResult[]> =>
-  (await api.get<TurmaNoteSearchResult[]>('/turmas/search', { params: { q } })).data;
+  (await api.get<TurmaNoteSearchResult[]>('/classes/search', { params: { q } })).data;

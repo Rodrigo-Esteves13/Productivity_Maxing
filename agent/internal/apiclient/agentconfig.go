@@ -43,6 +43,24 @@ const (
 	Completed  ProgressStatus = "COMPLETED"
 )
 
+// DateCertainty espelha o enum DateCertainty do schema.prisma. UNKNOWN e
+// SURPRISE guardam so um palpite em Task.Date, por isso nunca contam como
+// prazo passado (mesma regra que ACTIONABLE_DEADLINE_WHERE no backend).
+type DateCertainty string
+
+const (
+	DateExact       DateCertainty = "EXACT"
+	DateApproximate DateCertainty = "APPROXIMATE"
+	DateUnknown     DateCertainty = "UNKNOWN"
+	DateSurprise    DateCertainty = "SURPRISE"
+)
+
+// HasFirmDate diz se a data e um prazo real. Vazio (backend antigo, sem o
+// campo) conta como EXACT para manter o comportamento de sempre.
+func (c DateCertainty) HasFirmDate() bool {
+	return c == "" || c == DateExact || c == DateApproximate
+}
+
 // progressRank ordena da situação melhor para a pior. COMPLETED fica de
 // fora de propósito - não é um "grau de atraso", é a task estar feita, e
 // nunca deve contar para ativar bloqueio (ver rules.hasMinProgressStatus).
@@ -85,6 +103,7 @@ type TriggerRules struct {
 	MinDifficultyToday *Difficulty     `json:"minDifficultyToday"`
 	AnyTaskToday       bool            `json:"anyTaskToday"`
 	MinProgressStatus  *ProgressStatus `json:"minProgressStatus"`
+	BlockDuringFocus   bool            `json:"blockDuringFocus"`
 }
 
 // BlockingConfig lista o que deve ser bloqueado quando as TriggerRules
@@ -116,6 +135,7 @@ func (a *AgentConfig) UnmarshalJSON(data []byte) error {
 		MinDifficultyToday  *Difficulty     `json:"minDifficultyToday"`
 		AnyTaskToday        bool            `json:"anyTaskToday"`
 		MinProgressStatus   *ProgressStatus `json:"minProgressStatus"`
+		BlockDuringFocus    bool            `json:"blockDuringFocus"`
 		BlockedProcesses    []string        `json:"blockedProcesses"`
 		BlockedDomains      []string        `json:"blockedDomains"`
 		FailMode            FailMode        `json:"failMode"`
@@ -133,6 +153,7 @@ func (a *AgentConfig) UnmarshalJSON(data []byte) error {
 		MinDifficultyToday: flat.MinDifficultyToday,
 		AnyTaskToday:       flat.AnyTaskToday,
 		MinProgressStatus:  flat.MinProgressStatus,
+		BlockDuringFocus:   flat.BlockDuringFocus,
 	}
 	a.Blocking = BlockingConfig{
 		Processes: flat.BlockedProcesses,
@@ -181,3 +202,40 @@ func (c *Client) FetchAgentConfig(ctx context.Context) (*AgentConfig, error) {
 
 	return &cfg, nil
 }
+
+// FocusActive chama GET /agent/config/focus: true enquanto houver uma sessao
+// de Focus a decorrer na conta. So e pedido quando a regra BlockDuringFocus
+// esta ligada (ver rules.NeedsFocusState).
+func (c *Client) FocusActive(ctx context.Context) (bool, error) {
+	const path = "/agent/config/focus"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
+	if err != nil {
+		return false, fmt.Errorf("error building request for %s: %w", path, err)
+	}
+	req.Header.Set("x-api-key", c.apiKey)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("network error calling %s: %w", path, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return false, fmt.Errorf("%w (401 on %s)", ErrUnauthorized, path)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("unexpected response from %s: %d", path, resp.StatusCode)
+	}
+
+	var state struct {
+		Active bool `json:"active"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxFocusBodyBytes)).Decode(&state); err != nil {
+		return false, fmt.Errorf("error parsing JSON from %s: %w", path, err)
+	}
+	return state.Active, nil
+}
+
+// A resposta e {"active":true|false}; qualquer coisa maior que isto e lixo.
+const maxFocusBodyBytes = 1024

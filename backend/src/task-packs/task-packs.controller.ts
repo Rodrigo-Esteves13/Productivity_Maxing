@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { TaskPacksService } from './task-packs.service';
+import { TaskPackSyncService } from './task-pack-sync.service';
 import { CreateTaskPackDto, ImportTaskPackDto } from './dto/task-pack.dto';
 import { perMinute } from '../common/throttle.util';
 
@@ -24,7 +25,10 @@ import { perMinute } from '../common/throttle.util';
 @UseGuards(JwtAuthGuard)
 @Controller('task-packs')
 export class TaskPacksController {
-  constructor(private readonly packs: TaskPacksService) {}
+  constructor(
+    private readonly packs: TaskPacksService,
+    private readonly sync: TaskPackSyncService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Task packs you created.' })
@@ -42,6 +46,37 @@ export class TaskPacksController {
     @Body() dto: CreateTaskPackDto,
   ) {
     return this.packs.create(user.id, dto);
+  }
+
+  // Literais (`updates`) antes de qualquer `:id` do mesmo verbo.
+  @Get('updates')
+  @ApiOperation({
+    summary: 'Pending changes to tasks you imported from packs.',
+  })
+  listUpdates(@CurrentUser() user: AuthenticatedUser) {
+    return this.sync.listPending(user.id);
+  }
+
+  @Post('updates/:updateId/accept')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(perMinute(30))
+  @ApiOperation({ summary: 'Applies a pack change to your task.' })
+  acceptUpdate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('updateId', ParseUUIDPipe) updateId: string,
+  ) {
+    return this.sync.accept(user.id, updateId);
+  }
+
+  @Post('updates/:updateId/reject')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle(perMinute(30))
+  @ApiOperation({ summary: 'Keeps your version of the task.' })
+  async rejectUpdate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('updateId', ParseUUIDPipe) updateId: string,
+  ): Promise<void> {
+    await this.sync.reject(user.id, updateId);
   }
 
   // As rotas com `code/` ficam antes das de `:id` por clareza; o código é um
@@ -65,6 +100,20 @@ export class TaskPacksController {
     @Body() dto: ImportTaskPackDto,
   ) {
     return this.packs.import(user.id, code, dto);
+  }
+
+  @Post(':id/publish')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(perMinute(10))
+  @ApiOperation({
+    summary:
+      'Sends the changes you made to the source tasks to everyone who imported the pack. They must approve each one.',
+  })
+  publish(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.sync.publish(user.id, id);
   }
 
   @Delete(':id')

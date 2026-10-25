@@ -49,6 +49,13 @@ export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormP
           label={t('ui.anythingIsDueToday')}
           description={t('ui.theMostAggressiveOptionBlocks')}
         />
+        <ToggleRow
+          variant="card"
+          checked={config.blockDuringFocus ?? false}
+          onChange={(v) => onChange({ blockDuringFocus: v })}
+          label={t('agent.focusRule.label')}
+          description={t('agent.focusRule.help')}
+        />
 
         <div className="p-3 rounded-lg border border-neutral-800 space-y-2">
           <span className="block text-sm font-medium text-white">{t('ui.progressStatusIsAtLeast')}</span>

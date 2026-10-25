@@ -9,7 +9,7 @@ export const packs: Record<string, string> = {
   'packs.create.namePlaceholder': "ネットワーク - 後期",
   'packs.create.pick': "含めるタスク（{count}/{max}）",
   'packs.create.noTasks': "タスクがまだありません。",
-  'packs.create.privacy': "共有されるのはタイトル・日付・配点・科目・種類のみで、メモ・成績・進捗は共有されません。リンクを知っている人は誰でも取り込めます。パックを削除すると無効になります。",
+  'packs.create.privacy': "共有されるのはタイトル、日付、配点、科目、種類、作業量、日付の確かさだけで、メモや成績、進捗は共有されません。リンクを持つ人は誰でもインポートできます。止めるにはパックを削除してください。これらのタスクへの後の変更は、あなたが公開したときだけ他の人に届き、各自の承認が必要です。",
   'packs.create.needName': "パックに名前を付けてください。",
   'packs.create.needTasks': "タスクを1つ以上選んでください。",
   'packs.create.error': "パックを作成できませんでした。もう一度お試しください。",

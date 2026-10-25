@@ -3,6 +3,7 @@ import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
 import { buildTaskPayload } from '../../utils/taskPayload';
+import { DEFAULT_DATE_CERTAINTY } from '../../lib/taskReadiness';
 import { getApiMessage } from '../../lib/httpError';
 import type { Task, TaskTypeOption, AcademicTaskTypeOption, PriorityOption, TaskFormSubmission } from '../../types/models';
 import DayLoadHint from './DayLoadHint';
@@ -63,6 +64,10 @@ export default function TaskForm({
     type: '',
     academicType: '',
     difficulty: difficulties[0] || '',
+    effort: '',
+    dateCertainty: DEFAULT_DATE_CERTAINTY,
+    isBlocked: false,
+    availableFrom: '',
     // priorities[0] (não 'MEDIUM' fixo) - Priority passou a ser um
     // catálogo gerido pelo admin em /task-types, a key 'MEDIUM' do seed
     // inicial pode não existir mais se ele a renomear/apagar. priorities

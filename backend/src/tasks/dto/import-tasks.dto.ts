@@ -14,7 +14,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Difficulty, ProgressStatus } from '@prisma/client';
+import { Difficulty, Effort, ProgressStatus } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
@@ -106,6 +106,16 @@ export class ImportTaskRowDto {
   @IsOptional()
   @IsEnum(Difficulty)
   difficulty?: Difficulty;
+
+  @ApiPropertyOptional({
+    enum: Effort,
+    example: Effort.MODERATE,
+    description:
+      'How much work the task is, independent of difficulty. Empty = not set (counts as MODERATE).',
+  })
+  @IsOptional()
+  @IsEnum(Effort)
+  effort?: Effort;
 
   @ApiPropertyOptional({
     enum: ProgressStatus,

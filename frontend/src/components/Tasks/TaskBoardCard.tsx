@@ -3,6 +3,7 @@ import type { DragEvent, KeyboardEvent } from 'react';
 import type { Task } from '../../types/models';
 import ColorDot from '../UI/ColorDot';
 import PriorityBadge from '../UI/PriorityBadge';
+import TaskReadinessBadges from '../UI/TaskReadinessBadges';
 import SubtaskProgress from '../UI/SubtaskProgress';
 import { getDateStatus } from '../../utils/taskDateStatus';
 import { useEnumLabel } from '../../hooks/useEnumLabel';
@@ -72,6 +73,7 @@ function TaskBoardCard({
           {task.priority && (
             <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
           )}
+          <TaskReadinessBadges task={task} />
         </div>
         <select
           value={task.progressStatus}

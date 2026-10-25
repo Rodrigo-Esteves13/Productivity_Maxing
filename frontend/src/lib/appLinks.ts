@@ -22,7 +22,7 @@ export const PADS_PATH = '/pad';
 export const PADS_ADMIN_PATH = '/pads-admin';
 export const padPath = (slug: string): string => `${PADS_PATH}/${encodeURIComponent(slug)}`;
 
-export const TURMAS_PATH = '/turmas';
+export const TURMAS_PATH = '/classes';
 export const turmaPath = (turmaId: string): string => `${TURMAS_PATH}/${encodeURIComponent(turmaId)}`;
 export const turmaNotePath = (turmaId: string, noteId: string): string =>
   `${turmaPath(turmaId)}/notes/${encodeURIComponent(noteId)}`;

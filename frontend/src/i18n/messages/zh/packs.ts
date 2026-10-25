@@ -9,7 +9,7 @@ export const packs: Record<string, string> = {
   'packs.create.namePlaceholder': "网络 - 第二学期",
   'packs.create.pick': "要包含的任务（{count}/{max}）",
   'packs.create.noTasks': "你还没有任务。",
-  'packs.create.privacy': "只共享标题、日期、权重、科目和类型，绝不包含你的笔记、成绩或进度。任何拥有链接的人都能导入；删除任务包即可停止。",
+  'packs.create.privacy': "只分享标题、日期、权重、科目、类型、工作量和日期确定程度，绝不分享你的笔记、成绩或进度。任何拥有链接的人都可以导入；删除任务包即可停止。之后对这些任务的修改只有在你发布后才会发给别人，而且每个人都需要确认。",
   'packs.create.needName': "请给任务包起个名字。",
   'packs.create.needTasks': "请至少选择一个任务。",
   'packs.create.error': "无法创建任务包，请重试。",

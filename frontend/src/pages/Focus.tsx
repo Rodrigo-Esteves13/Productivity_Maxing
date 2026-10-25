@@ -7,6 +7,7 @@ import TodayBlocks from '../components/Study/focus/TodayBlocks';
 import DayProgressCard from '../components/Study/focus/DayProgressCard';
 import StudyNowHint from '../components/Study/focus/StudyNowHint';
 import SessionHistoryCard from '../components/Study/focus/SessionHistoryCard';
+import AmbientSoundCard from '../components/Study/focus/AmbientSoundCard';
 import { useStudyPlan } from '../hooks/useStudyPlan';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useI18n } from '../i18n/useI18n';
@@ -37,6 +38,7 @@ export default function Focus() {
           (compacto) em vez de ocupar a largura toda no fim da pagina. */}
       <MasonryGrid>
         <StudySessionWidget />
+        <AmbientSoundCard />
         <DayProgressCard dailyLimitMinutes={plan?.dailyLimitMinutes ?? null} />
         <TodayBlocks plan={plan} isLoading={isLoading} error={error} />
         <SessionHistoryCard />

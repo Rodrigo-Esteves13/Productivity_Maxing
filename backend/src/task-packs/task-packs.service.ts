@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
+import type { DateCertainty, Effort } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TasksService } from '../tasks/tasks.service';
 import { accessibleAreaWhere } from '../areas/area-access';
@@ -32,6 +33,10 @@ export interface TaskPackPreviewItem {
   /** Sugestao para areas pessoais: Area do importador com o mesmo nome. */
   suggestedAreaId: string | null;
   taskType: string;
+  effort: Effort | null;
+  dateCertainty: DateCertainty;
+  /** Dia em que a task abre (ainda nao da para comecar); null = ja aberta. */
+  availableFrom: string | null;
   /** O importador ja tem uma task com este titulo e data. */
   alreadyHave: boolean;
 }
@@ -83,6 +88,9 @@ export class TaskPacksService {
         title: true,
         date: true,
         weightPercentage: true,
+        effort: true,
+        dateCertainty: true,
+        availableFrom: true,
         areaId: true,
         area: { select: { name: true, ownerId: true } },
         taskType: { select: { key: true } },
@@ -113,6 +121,15 @@ export class TaskPacksService {
               areaName: t.area.name,
               taskType: t.taskType.key,
               academicType: t.academicType?.key ?? null,
+              // Iguais para toda a turma: quanto trabalho da, se a data ja
+              // esta marcada e quando o enunciado sai. O bloqueio manual
+              // (isBlocked) e pessoal e nao vai no pacote.
+              effort: t.effort,
+              dateCertainty: t.dateCertainty,
+              availableFrom: t.availableFrom,
+              // Para o dono poder publicar alteracoes mais tarde (ver
+              // TaskPackSyncService.publish).
+              sourceTaskId: t.id,
             };
           }),
         },
@@ -168,6 +185,9 @@ export class TaskPacksService {
         suggestedAreaId:
           i.areaId ?? areaByName.get(i.areaName.toLowerCase()) ?? null,
         taskType: i.taskType,
+        effort: i.effort,
+        dateCertainty: i.dateCertainty,
+        availableFrom: i.availableFrom?.toISOString() ?? null,
         alreadyHave: have.has(haveKey(i.title, i.dueDate)),
       })),
     };
@@ -176,8 +196,9 @@ export class TaskPacksService {
   /**
    * Cria as tarefas escolhidas na conta de quem importa, UMA a uma e pela
    * mesma TasksService.create de sempre (posse da Area, limite de 100% de peso,
-   * periodo...). Data, peso, titulo e tipo vêm SEMPRE do pacote, nunca do
-   * pedido; do cliente só vêm o item, a Area (se pessoal) e o período.
+   * periodo...). Data, peso, titulo, tipo, esforco e certeza da data vêm
+   * SEMPRE do pacote, nunca do pedido; do cliente só vêm o item, a Area (se
+   * pessoal) e o período.
    */
   async import(
     userId: string,
@@ -221,9 +242,18 @@ export class TaskPacksService {
         academicType: item.academicType ?? undefined,
         weightPercentage: item.weightPercentage ?? undefined,
         difficulty: 'MEDIUM',
+        effort: item.effort,
+        dateCertainty: item.dateCertainty,
+        availableFrom: item.availableFrom?.toISOString() ?? null,
       };
       try {
-        await this.tasksService.create(userId, taskDto);
+        const created = await this.tasksService.create(userId, taskDto);
+        // Liga a task ao item para receber as atualizacoes do dono (sempre
+        // com pedido de autorizacao, ver TaskPackSyncService).
+        await this.prisma.task.update({
+          where: { id: created.id, userId },
+          data: { packItemId: item.id, packItemVersion: item.version },
+        });
         results.push({ itemId: item.id, ok: true });
       } catch (error) {
         results.push({

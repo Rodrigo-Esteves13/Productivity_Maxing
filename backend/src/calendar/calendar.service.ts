@@ -1,3 +1,5 @@
+import type { DateCertainty } from '@prisma/client';
+import { calendarTitle } from '../common/task-readiness.util';
 import { MS_PER_DAY, MS_PER_MINUTE } from '../common/time.constants';
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { Provider } from '@prisma/client';
@@ -23,6 +25,7 @@ interface TaskForSync {
   id: string;
   title: string;
   date: Date;
+  dateCertainty: DateCertainty;
   topics: string | null;
   difficulty: string;
   progressStatus: string;
@@ -264,7 +267,7 @@ export class CalendarService {
         task.calendarDurationMinutes ?? DEFAULT_TIMED_EVENT_DURATION_MINUTES;
       const end = new Date(date.getTime() + durationMinutes * MS_PER_MINUTE);
       return {
-        summary: task.title,
+        summary: calendarTitle(task.title, task.dateCertainty),
         description,
         start: { dateTime: date.toISOString(), timeZone: 'Europe/Lisbon' },
         end: { dateTime: end.toISOString(), timeZone: 'Europe/Lisbon' },
@@ -280,7 +283,7 @@ export class CalendarService {
     );
 
     return {
-      summary: task.title,
+      summary: calendarTitle(task.title, task.dateCertainty),
       description,
       start: { date: startDate },
       end: { date: endDate },

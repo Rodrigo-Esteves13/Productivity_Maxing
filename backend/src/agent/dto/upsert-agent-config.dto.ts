@@ -65,6 +65,14 @@ export class UpsertAgentConfigDto {
   anyTaskToday?: boolean;
 
   @ApiPropertyOptional({
+    example: false,
+    description: 'Block while a Focus (study) session is running.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  blockDuringFocus?: boolean;
+
+  @ApiPropertyOptional({
     enum: ALLOWED_MIN_PROGRESS_STATUS,
     nullable: true,
     example: ProgressStatus.BEHIND,
