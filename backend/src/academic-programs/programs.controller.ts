@@ -6,8 +6,10 @@ import {
   Param,
   Patch,
   Delete,
+  Query,
   UseGuards,
 } from '@nestjs/common';
+import { GradeScenarioQueryDto } from './grade-scenario';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ProgramsService } from './programs.service';
 import { PeriodsService } from './periods.service';
@@ -79,8 +81,12 @@ export class ProgramsController {
     summary:
       'Cumulative weighted average of all graded tasks in the program (all periods, archived included)',
   })
-  getAverage(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.programsService.getAverage(user.id, id);
+  getAverage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Query() query: GradeScenarioQueryDto,
+  ) {
+    return this.programsService.getAverage(user.id, id, query.scenario);
   }
 
   @Get(':id/credits')
@@ -91,8 +97,9 @@ export class ProgramsController {
   getCreditsSummary(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
+    @Query() query: GradeScenarioQueryDto,
   ) {
-    return this.programsService.getCreditsSummary(user.id, id);
+    return this.programsService.getCreditsSummary(user.id, id, query.scenario);
   }
 
   @Get(':id/periods-comparison')
@@ -103,7 +110,12 @@ export class ProgramsController {
   getPeriodsComparison(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
+    @Query() query: GradeScenarioQueryDto,
   ) {
-    return this.programsService.getPeriodsComparison(user.id, id);
+    return this.programsService.getPeriodsComparison(
+      user.id,
+      id,
+      query.scenario,
+    );
   }
 }

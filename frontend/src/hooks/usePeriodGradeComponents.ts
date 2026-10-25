@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { GradeComponent } from '../types/models';
 import { getGradeComponents } from '../api/gradeComponentsService';
 import { useAcademic } from '../context/useAcademic';
+import { usePlanMode } from './usePlanMode';
 
 // Componentes de nota (seminarios, participacao...) de TODAS as cadeiras do
 // periodo ativo, ou de todos os periodos na vista agregada. Falha em
@@ -27,5 +28,7 @@ export function usePeriodGradeComponents(): GradeComponent[] {
     };
   }, [periodId, isWaitingForPeriod]);
 
-  return components;
+  // Modo plano do Dashboard: as entradas em falta ficam com a mediana.
+  const { planComponents } = usePlanMode();
+  return useMemo(() => planComponents(components), [planComponents, components]);
 }

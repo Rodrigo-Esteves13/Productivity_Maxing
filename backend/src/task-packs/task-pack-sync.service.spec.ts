@@ -14,6 +14,7 @@ const base: PackSharedFields = {
   effort: null,
   dateCertainty: 'UNKNOWN',
   availableFrom: null,
+  isBlocked: false,
 };
 
 describe('diffShared', () => {
@@ -35,6 +36,7 @@ describe('diffShared', () => {
 describe('TaskPackSyncService (posse)', () => {
   const prisma = {
     taskPack: { findFirst: jest.fn() },
+    taskPackItem: { findMany: jest.fn().mockResolvedValue([]) },
     taskPackUpdate: { findFirst: jest.fn() },
   };
   const tasks = { update: jest.fn() };
@@ -51,6 +53,16 @@ describe('TaskPackSyncService (posse)', () => {
     prisma.taskPack.findFirst.mockResolvedValue(null);
     await expect(service.publish('intruso', 'pack-1')).rejects.toBeInstanceOf(
       NotFoundException,
+    );
+    // A ligacao dos pacotes antigos so mexe em itens de pacotes do proprio dono.
+    expect(prisma.taskPackItem.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          packId: 'pack-1',
+          pack: { ownerId: 'intruso' },
+          sourceTaskId: null,
+        },
+      }),
     );
     expect(prisma.taskPack.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({

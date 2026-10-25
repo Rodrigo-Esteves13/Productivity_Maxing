@@ -1688,6 +1688,9 @@ model TaskPackItem {
   sourceTaskId     String?
   // Sobe sempre que o dono publica uma alteracao ao item.
   version          Int           @default(1)
+  // "Ainda nao da para comecar" (o enunciado ainda nao saiu): igual para a
+  // turma, por isso tambem vai no pacote e nas atualizacoes.
+  isBlocked        Boolean       @default(false)
 
   pack          TaskPack         @relation(fields: [packId], references: [id], onDelete: Cascade)
   sourceTask    Task?            @relation("PackItemSource", fields: [sourceTaskId], references: [id], onDelete: SetNull)

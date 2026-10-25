@@ -1,5 +1,6 @@
 import type { Task } from '../types/models';
 import type { DashboardWidgetKey } from '../hooks/useDashboardWidgetPrefs';
+import { hasFirmDate } from './taskReadiness';
 
 // Modo "semana de exames" do Dashboard: so testes e exames na tabela, a
 // contagem decrescente no topo e o resto dos cartoes escondido.
@@ -19,7 +20,7 @@ export function isExamTask(task: Task): boolean {
 export function upcomingExams(tasks: Task[], todayKey: string): Task[] {
   return tasks
     .filter((task) => isExamTask(task) && task.progressStatus !== COMPLETED_STATUS)
-    .filter((task) => task.date.slice(0, 10) >= todayKey)
+    .filter((task) => hasFirmDate(task) && task.date.slice(0, 10) >= todayKey)
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 

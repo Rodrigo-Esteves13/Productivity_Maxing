@@ -1,3 +1,4 @@
+import { loadScenarioGradedItems, type GradeScenario } from './grade-scenario';
 import { accessibleAreaWhere } from '../areas/area-access';
 import {
   Injectable,
@@ -238,16 +239,23 @@ export class PeriodsService {
    * Task.weightPercentage, then those averages weighted by Area.credits
    * (areas without credits set default to weight 1).
    */
-  async getAverage(userId: string, id: string) {
+  async getAverage(
+    userId: string,
+    id: string,
+    scenario: GradeScenario = 'real',
+  ) {
     const period = await this.findOwnedOrThrow(userId, id);
     const program = await this.programsService.findOwnedOrThrow(
       userId,
       period.programId,
     );
-    const tasks = await this.prisma.task.findMany({
-      where: { periodId: id, realGrade: { not: null } },
-      select: GRADED_TASK_SELECT,
-    });
+    // Tasks + seminarios/participacao (GradeComponent), no cenario pedido.
+    const items = await loadScenarioGradedItems(
+      this.prisma,
+      { periodId: id },
+      { periodId: id },
+      scenario,
+    );
     const areas = await this.prisma.area.findMany({
       where: accessibleAreaWhere(userId),
       select: { id: true, credits: true },
@@ -256,15 +264,7 @@ export class PeriodsService {
       program.roundFinalGrade,
       period.roundFinalGrade,
     );
-    // Seminarios/participacao (GradeComponent) contam como tasks avaliadas.
-    const componentItems = await loadComponentGradedItems(this.prisma, {
-      periodId: id,
-    });
-    const result = computeCreditWeightedAverage(
-      [...tasks, ...componentItems],
-      areas,
-      shouldRound,
-    );
+    const result = computeCreditWeightedAverage(items, areas, shouldRound);
     return {
       periodId: period.id,
       periodName: period.name,

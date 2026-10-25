@@ -7,6 +7,7 @@ import ColorDot from '../UI/ColorDot';
 import { useAreaLookup } from '../../hooks/useAreaLookup';
 import { MS_PER_DAY } from '../../lib/timeConstants';
 import { useI18n } from '../../i18n/useI18n';
+import { hasFirmDate } from '../../lib/taskReadiness';
 
 interface UpcomingTasksCardProps {
   tasks: Task[];
@@ -26,7 +27,7 @@ export default function UpcomingTasksCard({ tasks, areas }: UpcomingTasksCardPro
   const windowEnd = now + WINDOW_DAYS * MS_PER_DAY;
 
   const upcoming = tasks
-    .filter((t) => t.progressStatus !== 'COMPLETED')
+    .filter((t) => t.progressStatus !== 'COMPLETED' && hasFirmDate(t))
     .filter((t) => {
       const time = new Date(t.date).getTime();
       return time <= windowEnd; // includes anything already overdue too

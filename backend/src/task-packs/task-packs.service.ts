@@ -37,6 +37,7 @@ export interface TaskPackPreviewItem {
   dateCertainty: DateCertainty;
   /** Dia em que a task abre (ainda nao da para comecar); null = ja aberta. */
   availableFrom: string | null;
+  isBlocked: boolean;
   /** O importador ja tem uma task com este titulo e data. */
   alreadyHave: boolean;
 }
@@ -91,6 +92,7 @@ export class TaskPacksService {
         effort: true,
         dateCertainty: true,
         availableFrom: true,
+        isBlocked: true,
         areaId: true,
         area: { select: { name: true, ownerId: true } },
         taskType: { select: { key: true } },
@@ -122,11 +124,12 @@ export class TaskPacksService {
               taskType: t.taskType.key,
               academicType: t.academicType?.key ?? null,
               // Iguais para toda a turma: quanto trabalho da, se a data ja
-              // esta marcada e quando o enunciado sai. O bloqueio manual
-              // (isBlocked) e pessoal e nao vai no pacote.
+              // esta marcada, quando o enunciado sai e se ainda nao da para
+              // comecar.
               effort: t.effort,
               dateCertainty: t.dateCertainty,
               availableFrom: t.availableFrom,
+              isBlocked: t.isBlocked,
               // Para o dono poder publicar alteracoes mais tarde (ver
               // TaskPackSyncService.publish).
               sourceTaskId: t.id,
@@ -188,6 +191,7 @@ export class TaskPacksService {
         effort: i.effort,
         dateCertainty: i.dateCertainty,
         availableFrom: i.availableFrom?.toISOString() ?? null,
+        isBlocked: i.isBlocked,
         alreadyHave: have.has(haveKey(i.title, i.dueDate)),
       })),
     };
@@ -245,6 +249,7 @@ export class TaskPacksService {
         effort: item.effort,
         dateCertainty: item.dateCertainty,
         availableFrom: item.availableFrom?.toISOString() ?? null,
+        isBlocked: item.isBlocked,
       };
       try {
         const created = await this.tasksService.create(userId, taskDto);

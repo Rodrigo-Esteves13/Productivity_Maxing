@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildDeadlineChips, buildMonthAgenda, chipTones } from './monthAgenda';
+import { buildDeadlineChips, buildMonthAgenda, chipTones, pinDeadlinesToClasses } from './monthAgenda';
+import { mergeAgenda } from './agenda';
 import type { ClassOccurrence, Task, WorkShiftOccurrence } from '../types/models';
 
 function makeTask(overrides: Partial<Task>): Task {
@@ -77,6 +78,28 @@ describe('buildDeadlineChips', () => {
       ['exam', 'exam'],
       ['deadline', 'report'],
     ]);
+  });
+});
+
+describe('pinDeadlinesToClasses', () => {
+  it('puts a deadline inside the first class of its subject that day, the rest stay loose', () => {
+    const chips =
+      buildDeadlineChips([
+        makeTask({ id: 'talk', area: { name: 'Gestão da Segurança' } as Task['area'] }),
+        makeTask({ id: 'other', area: { name: 'Math' } as Task['area'] }),
+        makeTask({ id: 'none' }),
+      ]).get('2026-10-20') ?? [];
+    const items = mergeAgenda(
+      [
+        makeClass({ id: 'late', startMinutes: 1095, subject: 'Gestao da Seguranca - TP' }),
+        makeClass({ id: 'early', startMinutes: 600, subject: 'Gestão da Segurança' }),
+      ],
+      [shift],
+    );
+    const pinned = pinDeadlinesToClasses(chips, items);
+    expect(pinned.byClassId.get('early')?.map((c) => c.taskId)).toEqual(['talk']);
+    expect(pinned.byClassId.has('late')).toBe(false);
+    expect(pinned.loose.map((c) => c.taskId)).toEqual(['other', 'none']);
   });
 });
 

@@ -11,6 +11,7 @@ import { useTaskPackImport } from '../hooks/useTaskPackImport';
 import { useI18n } from '../i18n/useI18n';
 import SelectionToolbar from '../components/UI/SelectionToolbar';
 import TaskReadinessBadges from '../components/UI/TaskReadinessBadges';
+import { formatTaskDue } from '../lib/taskReadiness';
 
 export default function ImportTaskPack() {
   const { t, lang } = useI18n();
@@ -98,13 +99,13 @@ export default function ImportTaskPack() {
               <span className="min-w-0 flex-1">
                 <span className="block font-medium text-white">{item.title}</span>
                 <span className="block text-xs text-neutral-500">
-                  {new Date(item.date).toLocaleDateString(lang)}
+                  {formatTaskDue(item, lang)}
                   {item.weightPercentage != null && ` · ${item.weightPercentage}%`}
                   {` · ${item.areaName}`}
                   {item.alreadyHave && ` · ${t('packs.import.alreadyHave')}`}
                 </span>
                 <TaskReadinessBadges
-                  task={{ ...item, isBlocked: false, progressStatus: 'ON_TRACK' }}
+                  task={{ ...item, progressStatus: 'ON_TRACK' }}
                   className="mt-1"
                 />
               </span>

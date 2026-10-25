@@ -5,8 +5,10 @@ import {
   Body,
   Param,
   Patch,
+  Query,
   UseGuards,
 } from '@nestjs/common';
+import { GradeScenarioQueryDto } from './grade-scenario';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PeriodsService } from './periods.service';
 import { CreatePeriodDto } from './dto/create-period.dto';
@@ -91,8 +93,12 @@ export class PeriodsController {
   @ApiOperation({
     summary: 'Weighted average of the graded tasks in this period only',
   })
-  getAverage(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.periodsService.getAverage(user.id, id);
+  getAverage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Query() query: GradeScenarioQueryDto,
+  ) {
+    return this.periodsService.getAverage(user.id, id, query.scenario);
   }
 
   @Get(':id/report-card')

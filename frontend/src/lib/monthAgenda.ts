@@ -1,7 +1,9 @@
 import type { ClassOccurrence, Task, WorkShiftOccurrence } from '../types/models';
-import { mergeAgenda } from './agenda';
+import { mergeAgenda, type AgendaItem } from './agenda';
 import { AGENDA_TONE_CLASSES, AGENDA_TONE_LABEL_KEY, getAgendaTone, type AgendaTone } from './agendaTone';
 import { formatClock } from './timeFormat';
+import { hasFirmDate } from './taskReadiness';
+import { matchesAreaName } from './subjectMatch';
 
 // Vista mensal do horario: cada dia vira uma lista de "chips". Prazos de
 // tasks vem primeiro (testes e exames a cabeca, e o que interessa ver na
@@ -20,8 +22,9 @@ export interface MonthChip {
   taskId: string | null;
 }
 
-// Chip de um prazo: tem sempre a task de onde veio (para a abrir).
-export type DeadlineChip = MonthChip & { taskId: string };
+// Chip de um prazo: tem sempre a task de onde veio (para a abrir) e a
+// cadeira, para o juntar a aula dessa cadeira no mesmo dia.
+export type DeadlineChip = MonthChip & { taskId: string; areaName: string | null };
 
 // Ordem da legenda e dos pontos no telemovel.
 export const MONTH_CHIP_TONES: MonthChipTone[] = ['exam', 'deadline', 'class', 'work', 'event'];
@@ -72,6 +75,7 @@ function taskChip(task: Task): DeadlineChip {
     time: null,
     done: task.progressStatus === COMPLETED_STATUS,
     taskId: task.id,
+    areaName: task.area?.name ?? null,
   };
 }
 
@@ -85,9 +89,39 @@ const deadlineRank = (chip: MonthChip) => (chip.tone === 'exam' ? 0 : 2) + (chip
  */
 export function buildDeadlineChips(tasks: Task[]): Map<string, DeadlineChip[]> {
   const result = new Map<string, DeadlineChip[]>();
-  for (const task of tasks) pushTo(result, task.date.slice(0, 10), taskChip(task));
+  // Palpites (data por marcar/surpresa) nao ocupam um dia no calendario.
+  for (const task of tasks) {
+    if (hasFirmDate(task)) pushTo(result, task.date.slice(0, 10), taskChip(task));
+  }
   for (const chips of result.values()) chips.sort((a, b) => deadlineRank(a) - deadlineRank(b));
   return result;
+}
+
+export interface PinnedDeadlines {
+  // Prazos que ficam dentro do bloco de uma aula, por id da aula.
+  byClassId: Map<string, DeadlineChip[]>;
+  // O resto (sem cadeira ou sem aula dessa cadeira no dia), soltos no topo.
+  loose: DeadlineChip[];
+}
+
+/**
+ * Um teste ou apresentacao no dia de uma aula da mesma cadeira e quase
+ * sempre feito nessa aula: em vez de dois cartoes separados, o prazo vai
+ * para dentro do bloco da aula. Com varias aulas da cadeira no dia fica na
+ * primeira (items ja vem por hora, ver mergeAgenda).
+ */
+export function pinDeadlinesToClasses(deadlines: DeadlineChip[], items: AgendaItem[]): PinnedDeadlines {
+  const byClassId = new Map<string, DeadlineChip[]>();
+  const loose: DeadlineChip[] = [];
+  for (const chip of deadlines) {
+    const areaName = chip.areaName;
+    const host = areaName
+      ? items.find((item) => item.kind === 'class' && matchesAreaName(item.occurrence.subject, areaName))
+      : undefined;
+    if (host) pushTo(byClassId, host.id, chip);
+    else loose.push(chip);
+  }
+  return { byClassId, loose };
 }
 
 /** Chips por dia ("YYYY-MM-DD"). Dias sem nada nao aparecem no mapa. */

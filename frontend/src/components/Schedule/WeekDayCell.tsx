@@ -1,8 +1,9 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { formatClock } from '../../lib/timeFormat';
 import type { AgendaItem } from '../../lib/agenda';
 import { AGENDA_TONE_CLASSES, getAgendaTone } from '../../lib/agendaTone';
-import { MONTH_CHIP_TONE_CLASSES, type DeadlineChip } from '../../lib/monthAgenda';
+import { MONTH_CHIP_TONE_CLASSES, pinDeadlinesToClasses, type DeadlineChip } from '../../lib/monthAgenda';
 import { GraduationCapIcon } from '../UI/Icons';
 import type { ClassOccurrence } from '../../types/models';
 import AttendanceToggle from './AttendanceToggle';
@@ -22,6 +23,8 @@ interface WeekDayCellProps {
 
 interface AgendaEntryProps {
   item: AgendaItem;
+  // Testes/entregas desta aula (mesma cadeira, mesmo dia).
+  pinned?: DeadlineChip[];
   markableUntilMinutes: number | null;
   onAttendanceChange?: WeekDayCellProps['onAttendanceChange'];
 }
@@ -48,7 +51,29 @@ function DeadlineEntry({ chip }: { chip: DeadlineChip }) {
   );
 }
 
-function AgendaEntry({ item, markableUntilMinutes, onAttendanceChange }: AgendaEntryProps) {
+const NO_PINNED: DeadlineChip[] = [];
+
+// Prazo dentro do bloco de uma aula: pilula compacta, a cadeira ja esta
+// escrita no bloco. Exames a cheio, o resto em contorno, como os chips soltos.
+function PinnedDeadline({ chip }: { chip: DeadlineChip }) {
+  const { t } = useI18n();
+  const title = chip.label ?? '';
+  const isExam = chip.tone === 'exam';
+  return (
+    <Link
+      to={`/tasks?open=${encodeURIComponent(chip.taskId)}`}
+      title={t('common.openTaskNamed', { title })}
+      className={`inline-flex max-w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold leading-tight transition-colors hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+        isExam ? 'bg-violet-600 text-white' : 'border border-violet-500/60 bg-violet-950/60 text-violet-200'
+      }`}
+    >
+      <GraduationCapIcon aria-hidden className="h-3 w-3 shrink-0" />
+      <span className={`truncate ${chip.done ? 'line-through opacity-60' : ''}`}>{title}</span>
+    </Link>
+  );
+}
+
+function AgendaEntry({ item, pinned = NO_PINNED, markableUntilMinutes, onAttendanceChange }: AgendaEntryProps) {
   const { t } = useI18n();
   const tone = AGENDA_TONE_CLASSES[getAgendaTone(item)];
   const time = `${formatClock(item.startMinutes)}-${formatClock(item.endMinutes)}`;
@@ -59,8 +84,22 @@ function AgendaEntry({ item, markableUntilMinutes, onAttendanceChange }: AgendaE
       Boolean(onAttendanceChange) &&
       markableUntilMinutes !== null &&
       item.startMinutes <= markableUntilMinutes;
+    const hasPinned = pinned.length > 0;
     return (
-      <div className={`text-xs rounded-md px-2 py-1.5 ${tone.card} ${item.occurrence.attended === false ? 'opacity-60' : ''}`}>
+      <div
+        className={`text-xs rounded-md px-2 py-1.5 ${tone.card} ${hasPinned ? 'ring-1 ring-violet-500/70' : ''} ${
+          item.occurrence.attended === false ? 'opacity-60' : ''
+        }`}
+      >
+        {/* Avaliacao desta aula no topo do bloco: um so cartao em vez de
+            um chip solto mais a aula, que pareciam dois eventos. */}
+        {hasPinned && (
+          <div className="mb-1 flex flex-wrap gap-1">
+            {pinned.map((chip) => (
+              <PinnedDeadline key={chip.id} chip={chip} />
+            ))}
+          </div>
+        )}
         {/* 2 linhas no maximo, com hifenizacao: nomes de cadeiras longos
             partiam letra a letra. O nome inteiro fica no title. */}
         <p title={subject} className={`${tone.title} font-medium leading-snug hyphens-auto line-clamp-2`}>
@@ -92,8 +131,9 @@ function AgendaEntry({ item, markableUntilMinutes, onAttendanceChange }: AgendaE
   );
 }
 
-// Um dia da grelha semanal: prazos primeiro, depois aulas e turnos
-// misturados por ordem de hora.
+// Um dia da grelha semanal: prazos soltos primeiro, depois aulas e turnos
+// misturados por ordem de hora. Prazos de uma cadeira com aula nesse dia
+// ficam dentro do bloco da aula (ver pinDeadlinesToClasses).
 export default function WeekDayCell({
   label,
   dayOfMonth,
@@ -103,6 +143,7 @@ export default function WeekDayCell({
   markableUntilMinutes = null,
   onAttendanceChange,
 }: WeekDayCellProps) {
+  const { byClassId, loose } = useMemo(() => pinDeadlinesToClasses(deadlines, items), [deadlines, items]);
   return (
     <div
       className={`rounded-lg border p-2 min-h-[8rem] min-w-0 ${
@@ -123,13 +164,14 @@ export default function WeekDayCell({
         </span>
       </p>
       <div className="space-y-1.5">
-        {deadlines.map((chip) => (
+        {loose.map((chip) => (
           <DeadlineEntry key={chip.id} chip={chip} />
         ))}
         {items.map((item) => (
           <AgendaEntry
             key={`${item.kind}-${item.id}`}
             item={item}
+            pinned={byClassId.get(item.id)}
             markableUntilMinutes={markableUntilMinutes}
             onAttendanceChange={onAttendanceChange}
           />

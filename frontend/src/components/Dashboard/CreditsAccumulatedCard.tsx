@@ -5,6 +5,7 @@ import { useAcademic } from '../../context/useAcademic';
 import { GraduationCapIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
+import { usePlanMode } from '../../hooks/usePlanMode';
 
 // Cumulative across ALL periods of the active program (archived included) -
 // same scope as the cumulative average in GpaSummary, since "credits
@@ -15,6 +16,7 @@ import { useI18n } from '../../i18n/useI18n';
 export default function CreditsAccumulatedCard() {
   const { t } = useI18n();
   const { activeProgram } = useAcademic();
+  const { scenario } = usePlanMode();
   const [summary, setSummary] = useState<CreditsSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -28,7 +30,7 @@ export default function CreditsAccumulatedCard() {
     (async () => {
       setIsLoading(true);
       try {
-        const data = await getProgramCredits(activeProgram.id);
+        const data = await getProgramCredits(activeProgram.id, scenario);
         if (!cancelled) setSummary(data);
       } catch (err) {
         console.error('Failed to load credits summary:', err);
@@ -40,7 +42,7 @@ export default function CreditsAccumulatedCard() {
     return () => {
       cancelled = true;
     };
-  }, [activeProgram]);
+  }, [activeProgram, scenario]);
 
   if (!activeProgram || isLoading || !summary) return null;
 

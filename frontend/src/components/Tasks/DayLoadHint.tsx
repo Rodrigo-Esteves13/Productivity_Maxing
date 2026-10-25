@@ -5,6 +5,7 @@ import type { Task } from '../../types/models';
 import { OVERLOAD_THRESHOLD, OVERLOAD_WINDOW_DAYS } from '../../utils/detectOverloadWeek';
 import { AlertTriangleIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
+import { hasFirmDate } from '../../lib/taskReadiness';
 
 interface DayLoadHintProps {
   // "YYYY-MM-DD" escolhido no formulario.
@@ -41,7 +42,10 @@ export default function DayLoadHint({ date, tasks, excludeTaskId }: DayLoadHintP
   const load = useMemo(() => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
     const start = dayIndex(date);
-    const pending = tasks.filter((t) => t.progressStatus !== 'COMPLETED' && t.id !== excludeTaskId);
+    // So prazos reais pesam no dia (um palpite nao enche a semana).
+    const pending = tasks.filter(
+      (t) => t.progressStatus !== 'COMPLETED' && t.id !== excludeTaskId && hasFirmDate(t),
+    );
 
     const sameDay = pending.filter((t) => dayKeyOf(t) === date);
     const inWindow = pending.filter((t) => {
