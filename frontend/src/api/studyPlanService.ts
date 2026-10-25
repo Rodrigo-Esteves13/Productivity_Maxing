@@ -6,6 +6,7 @@ import type {
   FocusScatterPoint,
   FocusTrendWeek,
   GradeProjection,
+  PlanScenario,
   StudyPlanResult,
 } from '../types/models';
 
@@ -29,6 +30,11 @@ export const updateStudyPlanSettings = async (
 
 export const getGradeProjection = async (): Promise<GradeProjection> => {
   const response = await api.get<GradeProjection>('/study-plan/grade-projection');
+  return response.data;
+};
+
+export const getPlanScenario = async (): Promise<PlanScenario> => {
+  const response = await api.get<PlanScenario>('/study-plan/plan-scenario');
   return response.data;
 };
 

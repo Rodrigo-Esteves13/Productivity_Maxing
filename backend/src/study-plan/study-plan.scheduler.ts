@@ -22,6 +22,9 @@ export interface SchedulerTask {
   taskId: string;
   areaId: string;
   deadlineKey: string;
+  // Primeiro dia em que a task pode ser estudada (ainda nao abriu). Ausente
+  // = ja disponivel. Nunca se planeia nada antes disto.
+  firstUsableKey?: string;
   weightPercentage: number | null;
   difficultyRank: number;
   neededMinutes: number;
@@ -312,14 +315,25 @@ export function planStudyBlocks(
   // para além do horizonte) e se cai fora do horizonte.
   const lastUsableKey = new Map<string, string>();
   const lastUsableIndex = new Map<string, number>();
+  // Primeiro dia de estudo (task que ainda nao abriu); 0 = hoje.
+  const firstUsableKeyOf = new Map<string, string>();
+  const firstUsableIndex = new Map<string, number>();
   const beyondHorizon = new Set<string>();
   for (const task of sortedTasks) {
     let key = task.deadlineKey;
     if (task.isEvent && key > firstKey) key = shiftKey(key, -1);
     // Task atrasada continua a precisar de tempo: usa-se hoje.
     if (key < firstKey) key = firstKey;
+    // Abre depois do prazo calculado: estuda-se pelo menos no dia em que abre.
+    const opensKey =
+      task.firstUsableKey && task.firstUsableKey > firstKey
+        ? task.firstUsableKey
+        : firstKey;
+    if (opensKey > key) key = opensKey;
     lastUsableKey.set(task.taskId, key);
     lastUsableIndex.set(task.taskId, dayDiff(key, firstKey));
+    firstUsableKeyOf.set(task.taskId, opensKey);
+    firstUsableIndex.set(task.taskId, dayDiff(opensKey, firstKey));
     if (key > lastKey) beyondHorizon.add(task.taskId);
   }
 
@@ -368,6 +382,7 @@ export function planStudyBlocks(
     for (const task of sortedTasks) {
       const lastIndex = lastUsableIndex.get(task.taskId) ?? 0;
       if (i > lastIndex) continue;
+      if (i < (firstUsableIndex.get(task.taskId) ?? 0)) continue;
       const needed = remaining.get(task.taskId) ?? 0;
       if (needed <= 0) continue;
 
@@ -415,9 +430,11 @@ export function planStudyBlocks(
       // Prazos para lá do horizonte só seguem o ritmo.
       if (beyondHorizon.has(task.taskId)) continue;
       const lastUsable = lastUsableKey.get(task.taskId) ?? firstKey;
+      const firstUsable = firstUsableKeyOf.get(task.taskId) ?? firstKey;
 
       for (const state of states) {
         if (state.day.key > lastUsable) break;
+        if (state.day.key < firstUsable) continue;
         const needed = remaining.get(task.taskId) ?? 0;
         if (needed <= 0) break;
 

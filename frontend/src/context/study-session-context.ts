@@ -26,6 +26,9 @@ export interface ActiveStudySessionContextType {
   // null = nada por classificar.
   justStopped: StudySession | null;
   dismissJustStopped: () => void;
+  // Guarda na sessao ativa o total de distracoes devolvido pelo backend, para
+  // o contador nao voltar atras quando o widget e remontado (mudar de pagina).
+  setDistractionCount: (count: number) => void;
 }
 
 export const StudySessionContext = createContext<

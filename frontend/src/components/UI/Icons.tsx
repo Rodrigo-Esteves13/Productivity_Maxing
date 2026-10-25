@@ -79,6 +79,10 @@ export {
   Share as ShareIcon,
   // Pedido de notificacoes ao entrar na app.
   Bell as BellIcon,
+  Lock as LockIcon,
+  CircleHelp as HelpCircleIcon,
+  Zap as ZapIcon,
+  Dumbbell as DumbbellIcon,
 } from 'lucide-react';
 
 export function GoogleIcon(props: SVGProps<SVGSVGElement>) {

@@ -21,6 +21,7 @@ import { fase7 } from './fase7';
 import { fase7b } from './fase7b';
 import { fase7c } from './fase7c';
 import { meds } from './meds';
+import { readiness } from './readiness';
 
 export const ko: Record<string, string> = {
   ...packs,
@@ -46,4 +47,5 @@ export const ko: Record<string, string> = {
   ...fase7b,
   ...fase7c,
   ...meds,
+  ...readiness,
 };

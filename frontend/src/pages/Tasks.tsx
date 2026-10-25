@@ -24,6 +24,7 @@ import { isTaskArchived } from '../utils/taskArchive';
 import { sortTasks } from '../utils/taskSorting';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../i18n/useI18n';
+import PackUpdatesBanner from '../components/TaskPacks/PackUpdatesBanner';
 
 // ?view=board (ou grid) vem da paleta Ctrl+K.
 const VIEW_PARAM = 'view';
@@ -175,6 +176,8 @@ export default function Tasks() {
           </div>
         }
       />
+
+      <PackUpdatesBanner />
 
       {isLoading ? (
         <CardGridSkeleton cards={6} />

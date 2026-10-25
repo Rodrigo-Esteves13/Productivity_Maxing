@@ -8,6 +8,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { StudyPlanService } from './study-plan.service';
 import { GradeProjectionService } from './grade-projection.service';
+import { PlanScenarioService } from './plan-scenario.service';
 import { FocusEffectService } from './focus-effect.service';
 import { UpdateStudyPlanSettingsDto } from './dto/update-study-plan-settings.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -27,6 +28,7 @@ export class StudyPlanController {
   constructor(
     private readonly studyPlanService: StudyPlanService,
     private readonly gradeProjectionService: GradeProjectionService,
+    private readonly planScenarioService: PlanScenarioService,
     private readonly focusEffectService: FocusEffectService,
   ) {}
 
@@ -70,6 +72,16 @@ export class StudyPlanController {
   })
   gradeProjection(@CurrentUser() user: AuthenticatedUser) {
     return this.gradeProjectionService.project(user.id);
+  }
+
+  @Get('plan-scenario')
+  @Throttle(perMinute(30))
+  @ApiOperation({
+    summary:
+      'Final grade per course of the active period if you reach your target grade in everything left and follow the study plan, next to the current projection. Behaviour components without a target use the median of your grades.',
+  })
+  planScenario(@CurrentUser() user: AuthenticatedUser) {
+    return this.planScenarioService.build(user.id);
   }
 
   @Get('focus-effect')

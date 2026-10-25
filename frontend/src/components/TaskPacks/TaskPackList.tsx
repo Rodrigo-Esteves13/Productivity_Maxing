@@ -1,16 +1,32 @@
 import { useState } from 'react';
-import { packShareUrl, type TaskPackSummary } from '../../api/taskPackService';
+import { packShareUrl, type PackSyncResult, type TaskPackSummary } from '../../api/taskPackService';
 import { useI18n } from '../../i18n/useI18n';
 
 interface Props {
   packs: TaskPackSummary[];
   onDelete: (id: string) => Promise<boolean>;
+  onPublish: (id: string) => Promise<PackSyncResult | null>;
 }
 
-export default function TaskPackList({ packs, onDelete }: Props) {
+export default function TaskPackList({ packs, onDelete, onPublish }: Props) {
   const { t, lang } = useI18n();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+  // Resultado do ultimo "Publish updates" por pacote (texto ja traduzido).
+  const [publishNote, setPublishNote] = useState<Record<string, string>>({});
+
+  const publish = async (pack: TaskPackSummary) => {
+    setPublishingId(pack.id);
+    const result = await onPublish(pack.id);
+    setPublishingId(null);
+    const note = !result
+      ? t('packs.publish.error')
+      : result.updatedItems === 0
+        ? t('packs.publish.nothing')
+        : t('packs.publish.done', { items: result.updatedItems, requests: result.proposalsCreated });
+    setPublishNote((prev) => ({ ...prev, [pack.id]: note }));
+  };
 
   const copy = async (pack: TaskPackSummary) => {
     try {
@@ -47,6 +63,15 @@ export default function TaskPackList({ packs, onDelete }: Props) {
               >
                 {copiedId === pack.id ? t('packs.list.copied') : t('packs.list.copy')}
               </button>
+              <button
+                type="button"
+                onClick={() => void publish(pack)}
+                disabled={publishingId === pack.id}
+                title={t('packs.publish.help')}
+                className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-500 disabled:opacity-50"
+              >
+                {publishingId === pack.id ? t('packs.publish.publishing') : t('packs.publish.button')}
+              </button>
               {confirmId === pack.id ? (
                 <>
                   <button
@@ -76,6 +101,11 @@ export default function TaskPackList({ packs, onDelete }: Props) {
             </div>
           </div>
           <p className="mt-2 break-all text-xs text-neutral-600">{packShareUrl(pack.code)}</p>
+          {publishNote[pack.id] && (
+            <p role="status" className="mt-2 text-xs text-violet-300">
+              {publishNote[pack.id]}
+            </p>
+          )}
         </li>
       ))}
     </ul>

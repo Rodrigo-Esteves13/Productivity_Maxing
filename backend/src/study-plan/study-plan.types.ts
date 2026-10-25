@@ -1,3 +1,4 @@
+import type { CourseScenario } from './plan-scenario.util';
 import type { PredictionMethod } from '../prediction/prediction.types';
 
 export interface StudyPlanBlock {
@@ -207,4 +208,18 @@ export interface FocusScatterPoint {
 
 export interface FocusScatterResult {
   points: FocusScatterPoint[];
+}
+
+// Cartao "If all goes according to plan" (GET /study-plan/plan-scenario).
+export interface PlanScenarioCourse extends CourseScenario {
+  areaName: string;
+  areaColorHex: string;
+}
+
+export interface PlanScenarioResult {
+  gradeMin: number;
+  gradeMax: number;
+  // Nota de passagem da escala (ver getPassThreshold).
+  passThreshold: number;
+  courses: PlanScenarioCourse[];
 }

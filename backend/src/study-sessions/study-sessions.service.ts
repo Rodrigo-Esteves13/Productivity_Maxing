@@ -68,6 +68,9 @@ const MAX_SESSION_MS = MAX_SESSION_MINUTES * MS_PER_MINUTE;
 const AUTO_CLOSE_NOTE =
   'Auto-stopped: the app lost contact with this session (tab closed or device went to sleep).';
 
+// Teto do contador de distracoes de uma sessao (ninguem carrega 500 vezes
+// a serio; acima disto e um script).
+const MAX_DISTRACTIONS_PER_SESSION = 500;
 const HISTORY_DEFAULT_DAYS = 14;
 const HISTORY_MAX_DAYS = 90;
 const HISTORY_MAX_ROWS = 300;
@@ -79,6 +82,7 @@ const SESSION_SELECT = {
   note: true,
   focusRating: true,
   isManual: true,
+  distractionCount: true,
   taskId: true,
   areaId: true,
   task: { select: { id: true, title: true } },
@@ -404,6 +408,37 @@ export class StudySessionsService {
       );
     }
     return { ok: true };
+  }
+
+  /**
+   * +1 distracao na sessao ATIVA do user. Atomico (increment) para dois
+   * cliques seguidos nunca se perderem; limite para um script nao encher o
+   * contador. Devolve o total novo.
+   */
+  async recordDistraction(
+    userId: string,
+    id: string,
+  ): Promise<{ distractionCount: number }> {
+    // Nada atualizado com a sessao ativa = chegou ao teto: devolve o total.
+    await this.prisma.studySession.updateMany({
+      where: {
+        id,
+        userId,
+        endedAt: null,
+        distractionCount: { lt: MAX_DISTRACTIONS_PER_SESSION },
+      },
+      data: { distractionCount: { increment: 1 } },
+    });
+    const session = await this.prisma.studySession.findFirst({
+      where: { id, userId },
+      select: { distractionCount: true, endedAt: true },
+    });
+    if (!session || session.endedAt !== null) {
+      throw new NotFoundException(
+        `Study session not found, not yours, or already stopped.`,
+      );
+    }
+    return { distractionCount: session.distractionCount };
   }
 
   async getActive(userId: string) {

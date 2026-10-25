@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
+import TaskReadinessBadges from '../UI/TaskReadinessBadges';
 import PostponedIndicator from '../UI/PostponedIndicator';
 import DateStatusBadge from '../UI/DateStatusBadge';
 import ColorDot from '../UI/ColorDot';
@@ -98,6 +99,7 @@ function TaskTableRow({
       <>
         <DifficultyBadge difficulty={task.difficulty} />
         <PostponedIndicator count={task.postponedCount} className="mt-1" />
+        <TaskReadinessBadges task={task} className="mt-1" />
       </>
     ),
     priority: task.priority ? (

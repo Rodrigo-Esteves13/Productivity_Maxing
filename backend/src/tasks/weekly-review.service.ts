@@ -1,3 +1,4 @@
+import { ACTIONABLE_DEADLINE_WHERE } from '../common/task-readiness.util';
 import { roundTo } from '../common/round.util';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -80,6 +81,8 @@ export class WeeklyReviewService {
             userId,
             progressStatus: { not: 'COMPLETED' },
             date: { lt: startOfToday },
+            // Mesma regra dos atrasos: sem prazo real ou bloqueada nao conta.
+            ...ACTIONABLE_DEADLINE_WHERE,
           },
         }),
         this.prisma.studySession.findMany({

@@ -3,6 +3,8 @@ import {
   createTaskPack,
   deleteTaskPack,
   listTaskPacks,
+  publishTaskPack,
+  type PackSyncResult,
   type TaskPackSummary,
 } from '../api/taskPackService';
 import { getUserAreas, getUserTasks } from '../api/userService';
@@ -62,5 +64,14 @@ export function useTaskPacks() {
     }
   }, []);
 
-  return { packs, tasks, areas, isLoading, hasError, isSaving, create, remove };
+  // null = falhou (o componente mostra o erro).
+  const publish = useCallback(async (id: string): Promise<PackSyncResult | null> => {
+    try {
+      return await publishTaskPack(id);
+    } catch {
+      return null;
+    }
+  }, []);
+
+  return { packs, tasks, areas, isLoading, hasError, isSaving, create, remove, publish };
 }

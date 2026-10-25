@@ -1,6 +1,6 @@
 // Modelos de task guardados so neste browser (localStorage, ver
 // useTaskTemplates). Guardam o que se repete de task para task (Area, tipo,
-// dificuldade, peso, checklist, repeticao), nunca a data nem a nota.
+// dificuldade, esforco, peso, checklist, repeticao), nunca a data nem a nota.
 export const MAX_TASK_TEMPLATES = 30;
 export const MAX_TEMPLATE_NAME_LENGTH = 60;
 // Mesmo limite da checklist do formulario (TaskForm corta em 100 passos).
@@ -13,6 +13,7 @@ export const TEMPLATE_FIELDS = [
   'type',
   'academicType',
   'difficulty',
+  'effort',
   'priority',
   'areaId',
   'topics',

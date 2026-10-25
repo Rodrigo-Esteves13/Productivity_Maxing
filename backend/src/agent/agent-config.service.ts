@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { StudySessionsService } from '../study-sessions/study-sessions.service';
 import { UpsertAgentConfigDto } from './dto/upsert-agent-config.dto';
 import { AgentFailMode, AgentTriggerMode } from '@prisma/client';
 
@@ -13,6 +14,7 @@ const DEFAULTS = {
   hasOverdueCheckins: false,
   minDifficultyToday: null,
   anyTaskToday: false,
+  blockDuringFocus: false,
   minProgressStatus: null,
   blockedProcesses: [] as string[],
   blockedDomains: [] as string[],
@@ -22,7 +24,20 @@ const DEFAULTS = {
 
 @Injectable()
 export class AgentConfigService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly studySessions: StudySessionsService,
+  ) {}
+
+  /**
+   * Ha uma sessao de Focus a decorrer? So o booleano: o agente nao precisa
+   * de saber em que task/cadeira estas. getActive fecha antes as sessoes
+   * esquecidas (sem heartbeat), para um separador fechado nao deixar o
+   * bloqueio ligado para sempre.
+   */
+  async focusState(userId: string): Promise<{ active: boolean }> {
+    return { active: (await this.studySessions.getActive(userId)) !== null };
+  }
 
   async find(userId: string) {
     const config = await this.prisma.agentConfig.findUnique({

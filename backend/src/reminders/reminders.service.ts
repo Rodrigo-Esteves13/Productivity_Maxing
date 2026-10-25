@@ -1,3 +1,4 @@
+import { FIRM_DATE_WHERE } from '../common/task-readiness.util';
 import { Injectable, Logger } from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -59,6 +60,8 @@ export class RemindersService {
       where: {
         progressStatus: { not: 'COMPLETED' },
         date: { gt: now, lte: new Date(now.getTime() + LOOKAHEAD_MS) },
+        // Data por marcar/surpresa e so um palpite: "falta 1 dia" mentia.
+        ...FIRM_DATE_WHERE,
         user: {
           OR: [
             { deadlineEmailReminders: true },

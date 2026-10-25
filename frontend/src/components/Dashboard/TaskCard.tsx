@@ -2,6 +2,7 @@ import { memo } from 'react';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
+import TaskReadinessBadges from '../UI/TaskReadinessBadges';
 import PostponedIndicator from '../UI/PostponedIndicator';
 import DateStatusBadge from '../UI/DateStatusBadge';
 import ColorDot from '../UI/ColorDot';
@@ -94,6 +95,7 @@ function TaskCard({
         <StatusBadge status={task.progressStatus} />
         <span className="text-[11px] text-neutral-400">{academicTypeLabel}</span>
         <PostponedIndicator count={task.postponedCount} />
+        <TaskReadinessBadges task={task} />
       </div>
 
       {/* Row 2: actions (Sync on the left, Reschedule on the right), its own fixed

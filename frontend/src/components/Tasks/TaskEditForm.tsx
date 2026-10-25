@@ -8,6 +8,7 @@ import { recurrenceFromTask, recurrencePayload, type RecurrenceValue } from '../
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
 import { buildTaskPayload } from '../../utils/taskPayload';
+import { DEFAULT_DATE_CERTAINTY } from '../../lib/taskReadiness';
 import { getApiMessage } from '../../lib/httpError';
 import { useI18n } from '../../i18n/useI18n';
 
@@ -51,6 +52,11 @@ function buildInitialValues(task: Task): TaskFormFieldValues {
     type: task.type,
     academicType: task.academicType ?? '',
     difficulty: task.difficulty,
+    effort: task.effort ?? '',
+    dateCertainty: task.dateCertainty ?? DEFAULT_DATE_CERTAINTY,
+    isBlocked: task.isBlocked ?? false,
+    // Guardado a meia-noite UTC do dia: o dia e a parte da data do ISO.
+    availableFrom: task.availableFrom ? task.availableFrom.split('T')[0] : '',
     // task.priority pode ser null (ver comment em priorityId no
     // schema.prisma - é opcional). '' representa "sem priority definida"
     // de forma honesta, em vez de forçar uma escolha que o utilizador

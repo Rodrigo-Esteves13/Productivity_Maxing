@@ -88,6 +88,31 @@ enum ProgressStatus {
   COMPLETED
 }
 
+// Quanto trabalho a task da, independente de quao dificil e: uma task pode
+// ser facil e ao mesmo tempo exaustiva (muitas paginas, muitos exercicios).
+// Multiplica a estimativa de tempo de estudo (ver EFFORT_MULTIPLIER em
+// study-plan.constants.ts). null = MODERATE.
+enum Effort {
+  LIGHT
+  MODERATE
+  HEAVY
+  EXHAUSTIVE
+}
+
+// Quao certa e a data da task. A coluna `date` continua obrigatoria (e a
+// melhor estimativa), isto so diz como a tratar:
+// - EXACT: prazo real.
+// - APPROXIMATE: "por volta de", conta como prazo mas mostra-se com "~".
+// - UNKNOWN: ainda nao foi marcada. Nunca fica em atraso nem aparece em "Hoje".
+// - SURPRISE: pode calhar em qualquer dia (mini-teste surpresa). Nunca fica
+//   em atraso; o plano de estudo tenta ter-te pronto cedo.
+enum DateCertainty {
+  EXACT
+  APPROXIMATE
+  UNKNOWN
+  SURPRISE
+}
+
 // Escala de dificuldade percebida para a tarefa.
 enum Difficulty {
   VERY_EASY
@@ -204,6 +229,7 @@ model User {
   shareVisits       ShareVisit[]
   feedbackEntries   Feedback[]
   taskPacks         TaskPack[]
+  taskPackUpdates   TaskPackUpdate[]
   // Social: codigo de amigo aleatorio (criado a pedido), amizades e bloqueios.
   friendCode        String?  @unique
   friendCodeRequests  FriendCodeChangeRequest[]
@@ -536,6 +562,11 @@ model AgentConfig {
   // Ativa sempre que houver qualquer task pendente hoje.
   anyTaskToday Boolean @default(false)
 
+  // Ativa enquanto houver uma sessao de Focus a decorrer (StudySession sem
+  // endedAt): o agente bloqueia as distracoes so durante o estudo. O agente
+  // consulta GET /agent/config/focus quando isto esta ligado.
+  blockDuringFocus Boolean @default(false)
+
   // Se definido, ativa quando existir qualquer task não-completada com
   // progressStatus igual ou pior do que este (BEHIND < VERY_BEHIND).
   // Null desativa esta regra.
@@ -707,6 +738,28 @@ model Task {
   progressStatus   ProgressStatus @default(ON_TRACK)
   referenceLink    String?
 
+  // Ver enums Effort e DateCertainty acima.
+  effort        Effort?
+  dateCertainty DateCertainty @default(EXACT)
+
+  // Task que ainda nao da para comecar (o enunciado ainda nao saiu, a
+  // materia ainda nao foi dada). availableFrom = dia em que abre; isBlocked
+  // sem data = bloqueada ate o user a desbloquear. Enquanto bloqueada fica
+  // fora do plano de estudo, dos atrasos e das regras do agente.
+  isBlocked     Boolean   @default(false)
+  availableFrom DateTime?
+
+  // Task importada de um pacote (ver TaskPack): de que item veio e que
+  // versao desse item ja tem aplicada. Quando o dono do pacote o atualiza,
+  // nasce um TaskPackUpdate por task importada, que o user aceita ou recusa;
+  // nunca se muda a task sem autorizacao.
+  packItemId      String?
+  packItem        TaskPackItem? @relation("ImportedFromPackItem", fields: [packItemId], references: [id], onDelete: SetNull)
+  packItemVersion Int?
+  // Itens de pacotes criados a partir desta task (lado do dono).
+  sourceOfPackItems TaskPackItem[] @relation("PackItemSource")
+  packUpdates       TaskPackUpdate[]
+
   // Duração esperada em minutos, escrita manualmente pelo user ao criar/
   // editar a task. Distinto de calendarDurationMinutes (esse só serve o
   // bloco do evento no Google Calendar); este é o "quanto tempo acho que
@@ -789,6 +842,7 @@ model Task {
   //   (?periodId= nos endpoints existentes, fase 2) - mesma lógica dos
   //   índices acima, sem isto degrada para scan à medida que a tabela cresce.
   @@index([userId])
+  @@index([packItemId])
   @@index([spacedReviewOfTaskId])
   @@index([areaId])
   @@index([taskTypeId])
@@ -955,6 +1009,11 @@ model StudySession {
   // True quando a sessao foi escrita depois (esqueci-me de a ligar), em vez
   // de cronometrada. Serve para a mostrar como tal no historico.
   isManual Boolean @default(false)
+
+  // Quantas vezes o user carregou em "Got distracted" durante a sessao.
+  // Notar a distracao (em vez de lhe obedecer) ajuda a voltar ao trabalho,
+  // e o total por sessao mostra quando/onde te distrais mais.
+  distractionCount Int @default(0)
 
   createdAt DateTime  @default(now())
 
@@ -1621,10 +1680,54 @@ model TaskPackItem {
   areaName         String
   taskType         String
   academicType     String?
+  effort           Effort?
+  dateCertainty    DateCertainty @default(EXACT)
+  availableFrom    DateTime?
+  // Task do dono de onde o item foi copiado: "Push updates" volta a ler
+  // dela. null = a task do dono foi apagada (o item fica como estava).
+  sourceTaskId     String?
+  // Sobe sempre que o dono publica uma alteracao ao item.
+  version          Int           @default(1)
 
-  pack TaskPack @relation(fields: [packId], references: [id], onDelete: Cascade)
+  pack          TaskPack         @relation(fields: [packId], references: [id], onDelete: Cascade)
+  sourceTask    Task?            @relation("PackItemSource", fields: [sourceTaskId], references: [id], onDelete: SetNull)
+  importedTasks Task[]           @relation("ImportedFromPackItem")
+  updates       TaskPackUpdate[]
+
+  @@index([sourceTaskId])
 
   @@index([packId, position])
+}
+
+enum TaskPackUpdateStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+/// Alteracao de um item de pacote proposta a quem o importou. `changes` so
+/// tem os campos partilhados que mudaram (title, date, weightPercentage,
+/// effort, dateCertainty, availableFrom) com o valor novo, gerados pelo
+/// servidor. No maximo um PENDING por task: uma alteracao nova junta-se a
+/// que ainda nao foi respondida.
+model TaskPackUpdate {
+  id         String               @id @default(uuid())
+  userId     String
+  taskId     String
+  packItemId String
+  version    Int
+  changes    Json
+  status     TaskPackUpdateStatus @default(PENDING)
+  createdAt  DateTime             @default(now())
+  decidedAt  DateTime?
+
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task     Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  packItem TaskPackItem @relation(fields: [packItemId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([taskId, status])
+  @@index([packItemId])
 }
 
 enum FriendshipStatus {

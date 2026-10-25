@@ -60,6 +60,10 @@ export const heartbeatStudySession = async (id: string, plannedEndAt?: string): 
   await api.post(`/study-sessions/${id}/heartbeat`, plannedEndAt ? { plannedEndAt } : {});
 };
 
+// "Got distracted": +1 na sessao ativa. Devolve o total novo.
+export const recordDistraction = async (id: string): Promise<number> =>
+  (await api.post<{ distractionCount: number }>(`/study-sessions/${id}/distraction`)).data.distractionCount;
+
 export const getSessionHistory = async (days = 14, signal?: AbortSignal): Promise<StudySession[]> => {
   const response = await api.get<StudySession[]>('/study-sessions/history', { params: { days }, signal });
   return response.data;

@@ -1,8 +1,9 @@
-import { Difficulty } from '@prisma/client';
+import { Difficulty, Effort } from '@prisma/client';
 import {
   CALIBRATION_VISIBLE_DELTA,
   DEFAULT_MINUTES_GRADED,
   DEFAULT_MINUTES_UNGRADED,
+  EFFORT_MULTIPLIER,
   MAX_TASK_MINUTES,
   MIN_REMAINING_WHEN_OVER_ESTIMATE,
   MIN_TASK_MINUTES,
@@ -17,6 +18,8 @@ export interface EstimateInput {
   // peso: com nota ou sem nota). null sem histórico.
   courseHistoryMinutes: number | null;
   difficulty: Difficulty;
+  // null = MODERATE (sem escala).
+  effort: Effort | null;
   isGraded: boolean;
 }
 
@@ -68,16 +71,25 @@ const STRATEGIES: EstimateStrategy[] = [
   fromDifficulty,
 ];
 
+// O que o user escreveu ja tem em conta o trabalho que a task da; so os
+// palpites (modelo, historico da cadeira, tabela) levam a escala do esforco.
+const USER_WRITTEN_SOURCES: ReadonlySet<EstimateSource> = new Set([
+  'manual',
+  'manual_calibrated',
+]);
+
 export function resolveEstimate(
   input: EstimateInput,
   calibrationFactor: number | null,
 ): ResolvedEstimate {
+  const effortScale = input.effort ? EFFORT_MULTIPLIER[input.effort] : 1;
   for (const strategy of STRATEGIES) {
     const resolved = strategy(input, calibrationFactor);
     if (resolved) {
+      const scale = USER_WRITTEN_SOURCES.has(resolved.source) ? 1 : effortScale;
       return {
         minutes: Math.round(
-          clamp(resolved.minutes, MIN_TASK_MINUTES, MAX_TASK_MINUTES),
+          clamp(resolved.minutes * scale, MIN_TASK_MINUTES, MAX_TASK_MINUTES),
         ),
         source: resolved.source,
       };

@@ -7,6 +7,7 @@ import { enterFullscreen } from '../../lib/fullscreen';
 import type { TimerPlan } from '../../lib/focusTimer';
 import TimerModePicker from './focus/TimerModePicker';
 import StopSessionPanel from './focus/StopSessionPanel';
+import DistractionButton from './focus/DistractionButton';
 import FocusModeOverlay from './focus/FocusModeOverlay';
 import OpenNotesLink from './focus/OpenNotesLink';
 import SessionClock, { BlockFinishedSwitch } from './focus/SessionClock';
@@ -155,6 +156,11 @@ export default function StudySessionWidget() {
             <div className="mt-2">
               <OpenNotesLink areaId={activeSession.areaId} />
             </div>
+            <DistractionButton
+              key={activeSession.id}
+              sessionId={activeSession.id}
+              initialCount={activeSession.distractionCount ?? 0}
+            />
           </div>
 
           {isStopping ? (

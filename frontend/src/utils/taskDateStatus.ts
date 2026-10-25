@@ -2,6 +2,7 @@ import type { Task } from '../types/models';
 import { MS_PER_HOUR, MS_PER_DAY } from '../lib/timeConstants';
 import { isUtcMidnight, taskDayKey, todayKey as localTodayKey } from '../lib/dateKey';
 import { translateNow } from '../i18n/translate';
+import { hasFirmDate } from '../lib/taskReadiness';
 
 export type DateStatus = 'completed' | 'overdue' | 'today' | 'upcoming';
 
@@ -11,6 +12,9 @@ export type DateStatus = 'completed' | 'overdue' | 'today' | 'upcoming';
 // - otherwise, compares the task's `date` to today.
 export function getDateStatus(task: Task, now: Date = new Date()): DateStatus {
   if (task.progressStatus === 'COMPLETED') return 'completed';
+  // Data por marcar ou surpresa: a data e so um palpite, nunca fica em atraso
+  // nem e "hoje" (mesma regra que ACTIONABLE_DEADLINE_WHERE no backend).
+  if (!hasFirmDate(task)) return 'upcoming';
 
   // "Hoje" e o dia local da pessoa (regra em lib/dateKey.ts). Uma task sem
   // hora vale pelo dia guardado (meia-noite UTC), uma com hora pelo dia local
@@ -37,8 +41,16 @@ export function getDeadlineMs(task: Pick<Task, 'date'>): number {
 // date, to complement DateStatusBadge (which only says "Overdue"/"Upcoming",
 // without quantifying how much). Completed tasks don't show a count -
 // "how much is left" no longer matters for something that's done.
+const NO_COUNTDOWN_LABEL: Partial<Record<Task['dateCertainty'], string>> = {
+  UNKNOWN: 'readiness.badge.unknown',
+  SURPRISE: 'readiness.badge.surprise',
+};
+
 export function getRemainingTimeLabel(task: Task, now: Date = new Date()): string {
   if (task.progressStatus === 'COMPLETED') return 'N/A';
+  // Sem prazo real nao ha contagem: dizer "3d left" a um palpite enganava.
+  const noCountdownKey = NO_COUNTDOWN_LABEL[task.dateCertainty];
+  if (noCountdownKey) return translateNow(noCountdownKey);
 
   const diffMs = getDeadlineMs(task) - now.getTime();
   const absMs = Math.abs(diffMs);

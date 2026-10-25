@@ -396,6 +396,14 @@ func (a *agentState) decide(ctx context.Context, triggerRules apiclient.TriggerR
 		snap.All = all
 	}
 
+	if rules.NeedsFocusState(triggerRules) {
+		active, err := a.client.FocusActive(ctx)
+		if err != nil {
+			return rules.Decision{}, err
+		}
+		snap.FocusActive = active
+	}
+
 	return rules.Evaluate(triggerRules, snap), nil
 }
 

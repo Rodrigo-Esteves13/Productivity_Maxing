@@ -1,3 +1,4 @@
+import { FIRM_DATE_WHERE } from '../common/task-readiness.util';
 import type { Prisma, PrismaClient } from '@prisma/client';
 
 type TaskDelegateClient = Pick<PrismaClient, '$transaction'> & {
@@ -23,13 +24,18 @@ export async function bulkRescheduleTasks(
     userId,
     progressStatus: { not: 'COMPLETED' as const },
   };
+  // So adiar um prazo real conta como adiamento: mexer no palpite de uma
+  // data por marcar/surpresa nao (mesma regra de TasksService.update).
   const [postponed, movedEarlier] = await prisma.$transaction([
     prisma.task.updateMany({
-      where: { ...scope, date: { lt: date } },
+      where: { ...scope, date: { lt: date }, ...FIRM_DATE_WHERE },
       data: { date, postponedCount: { increment: 1 } },
     }),
     prisma.task.updateMany({
-      where: { ...scope, date: { gte: date } },
+      where: {
+        ...scope,
+        OR: [{ date: { gte: date } }, { NOT: FIRM_DATE_WHERE }],
+      },
       data: { date },
     }),
   ]);

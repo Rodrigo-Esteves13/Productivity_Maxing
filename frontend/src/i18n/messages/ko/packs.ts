@@ -9,7 +9,7 @@ export const packs: Record<string, string> = {
   'packs.create.namePlaceholder': "네트워크 - 2학기",
   'packs.create.pick': "포함할 작업 ({count}/{max})",
   'packs.create.noTasks': "아직 작업이 없습니다.",
-  'packs.create.privacy': "제목, 날짜, 비중, 과목, 유형만 공유되며 메모, 성적, 진행 상황은 절대 공유되지 않습니다. 링크가 있는 사람은 누구나 가져갈 수 있고, 묶음을 삭제하면 중단됩니다.",
+  'packs.create.privacy': "제목, 날짜, 비중, 과목, 유형, 작업량, 날짜 확실성만 공유되며 메모, 성적, 진행 상황은 절대 공유되지 않습니다. 링크가 있는 누구나 가져갈 수 있으니 중단하려면 팩을 삭제하세요. 이후 이 과제들의 변경 사항은 내가 게시할 때만 다른 사람에게 전달되며, 각자가 승인해야 합니다.",
   'packs.create.needName': "묶음에 이름을 지어 주세요.",
   'packs.create.needTasks': "작업을 하나 이상 고르세요.",
   'packs.create.error': "묶음을 만들 수 없습니다. 다시 시도해 주세요.",

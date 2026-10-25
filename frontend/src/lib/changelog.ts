@@ -8,6 +8,21 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-10-25',
+    title: 'Effort, unsure dates and tasks you cannot start yet',
+    items: [
+      'Tasks now have an Effort level, apart from difficulty. An easy task can still be exhausting, and a heavy or exhausting one gets more estimated study time in the study plan.',
+      'Dates can be marked as approximate, not set yet or a surprise. Tasks without a set date or with a surprise date never show as overdue, and the study plan gets you ready for a surprise early.',
+      'Mark a task as "Cannot start yet", or set the day it opens. Until then it stays out of the study plan, overdue alerts and the desktop agent rules.',
+      'Task packs carry the effort, date certainty and opening day to everyone who imports them. The spreadsheet import accepts an Effort column.',
+      'Task packs: after changing your tasks, press "Publish updates". Everyone who imported the pack is asked to accept or keep their version, and nothing changes without their approval.',
+      'Desktop agent: a new rule blocks your distractions only while a Focus session is running.',
+      'Focus: a "Got distracted" button counts distractions without leaving the session, and a background sound (brown, pink or white noise) covers the noise around you.',
+      'Classes now live at /classes. Old /turmas links and invites still work.',
+      'Dashboard: a new "If all goes according to plan" card shows the final grade of each course if you reach your targets and follow the study plan, next to where you are heading now. Parts without a target, like participation, count at the median of your grades.',
+    ],
+  },
+  {
+    date: '2026-10-25',
     title: 'Many quiet failures fixed',
     items: [
       'Medication reminders: doses just before midnight are now reminded, and ticking then unticking a dose no longer cancels its reminder. The card warns you when no device of yours can receive reminders, and the form says times are Lisbon time.',

@@ -59,7 +59,7 @@ type MulterLimitsWithFieldNestingDepth = NonNullable<
 @ApiTags('Turmas')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('turmas')
+@Controller('classes')
 export class TurmasController {
   constructor(
     private readonly turmas: TurmasService,
@@ -171,7 +171,7 @@ export class TurmasController {
     return this.turmas.removeMember(user.id, id, targetUserId);
   }
 
-  @Put(':id/delegado')
+  @Put(':id/representative')
   @Throttle(perMinute(TURMA_WRITES_PER_MINUTE))
   @ApiOperation({ summary: 'Makes another member the delegado (delegado).' })
   transferDelegado(

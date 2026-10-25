@@ -1,4 +1,4 @@
-import { Difficulty } from '@prisma/client';
+import { Difficulty, Effort } from '@prisma/client';
 
 export const MINUTES_PER_DAY = 1440;
 
@@ -76,3 +76,17 @@ export const DEFAULT_MINUTES_GRADED: Record<Difficulty, number> = {
   HARD: 600,
   VERY_HARD: 780,
 };
+
+// Esforco (quanto trabalho, nao quao dificil) escala as estimativas que nao
+// foram escritas pelo user: uma task facil mas exaustiva pede bem mais tempo
+// do que a tabela por dificuldade sugere. Task sem esforco = MODERATE (1x).
+export const EFFORT_MULTIPLIER: Record<Effort, number> = {
+  LIGHT: 0.6,
+  MODERATE: 1,
+  HEAVY: 1.6,
+  EXHAUSTIVE: 2.5,
+};
+
+// Avaliacao surpresa: a data guardada e so o limite. O plano tenta ter-te
+// pronto dentro destes dias em vez de espalhar o estudo ate esse limite.
+export const SURPRISE_READY_WITHIN_DAYS = 7;

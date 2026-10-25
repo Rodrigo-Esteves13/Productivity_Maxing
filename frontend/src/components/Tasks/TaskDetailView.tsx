@@ -2,7 +2,9 @@ import type { Task, TaskTypeOption, AcademicTaskTypeOption, Subtask } from '../.
 import SubtaskChecklist from './SubtaskChecklist';
 import TaskAttachmentsSection from './TaskAttachmentsSection';
 import StatusBadge from '../UI/StatusBadge';
+import { useEnumLabel } from '../../hooks/useEnumLabel';
 import DifficultyBadge from '../UI/DifficultyBadge';
+import TaskReadinessBadges from '../UI/TaskReadinessBadges';
 import PriorityBadge from '../UI/PriorityBadge';
 import DetailRow from '../UI/DetailRow';
 import { recurrenceLabel } from '../../lib/recurrence';
@@ -23,6 +25,7 @@ interface TaskDetailViewProps {
 
 export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes = [], onSubtasksChange, onSubtaskConverted }: TaskDetailViewProps) {
   const { t, lang } = useI18n();
+  const enumLabel = useEnumLabel();
   const { optionLabel } = useCatalogLabel();
   const typeLabel = optionLabel('taskType', task.type, taskTypes);
   const academicTypeLabel = optionLabel('academicType', task.academicType, academicTaskTypes);
@@ -44,6 +47,7 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       <DetailRow label={t('ui.date')}>
         <div className="flex items-center gap-2">
           <span>{formatTaskDate(task.date, lang)}</span>
+          <TaskReadinessBadges task={{ ...task, effort: null }} />
           {task.postponedCount > 0 && (
             <span className="text-xs text-amber-500/80">
               {t('ui.postponedX', { postponedCount: task.postponedCount })}</span>
@@ -79,6 +83,9 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       </DetailRow>
       <DetailRow label={t('ui.difficulty')}>
         <DifficultyBadge difficulty={task.difficulty} />
+      </DetailRow>
+      <DetailRow label={t('readiness.effort')}>
+        {task.effort ? enumLabel(task.effort) : t('readiness.effortNotSet')}
       </DetailRow>
       {task.priority && (
         <DetailRow label={t('ui.priority')}>

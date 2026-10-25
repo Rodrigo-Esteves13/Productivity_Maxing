@@ -14,7 +14,7 @@ export const MAIN_NAV: NavItem[] = [
   { to: '/focus', labelKey: 'nav.focus' },
   { to: '/schedule', labelKey: 'nav.schedule' },
   { to: '/notebook', labelKey: 'nav.notebook' },
-  { to: '/turmas', labelKey: 'nav.turmas' },
+  { to: '/classes', labelKey: 'nav.turmas' },
   { to: '/areas', labelKey: 'nav.areas' },
 ];
 

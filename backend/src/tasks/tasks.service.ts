@@ -6,7 +6,13 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { Difficulty, ProgressStatus, Prisma } from '@prisma/client';
+import {
+  DateCertainty,
+  Difficulty,
+  Effort,
+  ProgressStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   accessibleAreaWhere,
@@ -35,6 +41,10 @@ import {
   loadUsedWeight,
 } from '../grade-components/weight-budget';
 import { TaskAttachmentsService } from './task-attachments.service';
+import {
+  ACTIONABLE_DEADLINE_WHERE,
+  hasFirmDate,
+} from '../common/task-readiness.util';
 
 // Limite de caracteres do titulo de uma task (subtasks e revisoes criadas
 // pelo servidor cortam aqui para nunca falhar a validacao ao gravar).
@@ -51,6 +61,8 @@ const REQUIRED_TASK_FIELDS = [
   'progressStatus',
   'isPinned',
   'recurrenceInterval',
+  'dateCertainty',
+  'isBlocked',
 ] as const;
 
 const TASK_INCLUDE = {
@@ -98,6 +110,7 @@ export class TasksService {
       periodId,
       priority,
       recurrenceUntil,
+      availableFrom,
       ...rest
     } = dto;
     // A Area tem de ser oficial ou privada DESTE user: o FK sozinho aceita
@@ -150,6 +163,7 @@ export class TasksService {
           ...(recurrenceUntil
             ? { recurrenceUntil: new Date(recurrenceUntil) }
             : {}),
+          ...(availableFrom ? { availableFrom: new Date(availableFrom) } : {}),
         },
         include: TASK_INCLUDE,
       });
@@ -256,6 +270,8 @@ export class TasksService {
         userId,
         date: { gte: start, lt: end },
         progressStatus: { not: 'COMPLETED' },
+        // Data por marcar/surpresa ou task bloqueada: nao e "para hoje".
+        ...ACTIONABLE_DEADLINE_WHERE,
         // Um período arquivado (semestre antigo já fechado) nunca deve
         // gerar alertas/plano do dia - ver regra de negócio da Fase 4.
         period: { isArchived: false },
@@ -284,7 +300,14 @@ export class TasksService {
     return this.toResponse(task);
   }
 
-  async update(userId: string, id: string, dto: UpdateTaskDto) {
+  // countPostpone=false: a data mudou por outra pessoa (atualizacao de um
+  // pacote aceite), nao foi o user a adiar.
+  async update(
+    userId: string,
+    id: string,
+    dto: UpdateTaskDto,
+    { countPostpone = true }: { countPostpone?: boolean } = {},
+  ) {
     const existing = await this.prisma.task.findFirst({
       where: { id, userId },
       include: TASK_INCLUDE,
@@ -299,6 +322,7 @@ export class TasksService {
       periodId,
       priority,
       recurrenceUntil,
+      availableFrom,
       ...rest
     } = dto;
 
@@ -425,7 +449,8 @@ export class TasksService {
     // de string, para não depender do formato exato que o date-string do
     // DTO vier a assumir.
     let postponedCountUpdate: { postponedCount?: { increment: number } } = {};
-    if (date) {
+    // Mexer no palpite de uma data por marcar/surpresa nao e adiar.
+    if (date && countPostpone && hasFirmDate(existing.dateCertainty)) {
       const newDate = new Date(date);
       if (newDate.getTime() > existing.date.getTime()) {
         postponedCountUpdate = { postponedCount: { increment: 1 } };
@@ -455,6 +480,10 @@ export class TasksService {
                 ? new Date(recurrenceUntil)
                 : null,
             }
+          : {}),
+        // undefined = não mexe; null = já está disponível.
+        ...(availableFrom !== undefined
+          ? { availableFrom: availableFrom ? new Date(availableFrom) : null }
           : {}),
       },
       include: TASK_INCLUDE,
@@ -499,6 +528,8 @@ export class TasksService {
           areaId: parent.areaId,
           title: subtask.title.slice(0, TASK_TITLE_MAX_LENGTH),
           date: parent.date,
+          // A data vem da task-mae, por isso a certeza sobre ela tambem.
+          dateCertainty: parent.dateCertainty,
           sortOrder: (maxSortOrder._max.sortOrder ?? 0) + 1,
           taskTypeId: parent.taskTypeId,
           academicTypeId: parent.academicTypeId,
@@ -579,6 +610,9 @@ export class TasksService {
         periodId: task.periodId,
         weightPercentage: task.weightPercentage,
         difficulty: task.difficulty,
+        // O esforco repete-se; a certeza da data e o bloqueio nao (a proxima
+        // ocorrencia tem data calculada e comeca disponivel).
+        effort: task.effort,
         priorityId: task.priorityId,
         referenceLink: task.referenceLink,
         estimatedMinutes: task.estimatedMinutes,
@@ -665,6 +699,8 @@ export class TasksService {
         userId,
         date: { lt: overdueCutoff },
         progressStatus: { not: 'COMPLETED' },
+        // Sem prazo real (por marcar/surpresa) ou bloqueada: nunca atrasada.
+        ...ACTIONABLE_DEADLINE_WHERE,
         // Testes/exames (isEvent) nao sao entregas: ninguem "marca como feito"
         // no proprio dia, por isso nunca geram a pergunta de atraso.
         NOT: { academicType: { isEvent: true } },
@@ -973,6 +1009,7 @@ export class TasksService {
             areaId: area.id,
             periodId: resolvedPeriodId,
             difficulty: row.difficulty ?? 'MEDIUM',
+            effort: row.effort ?? null,
             progressStatus,
             weightPercentage: row.weightPercentage ?? null,
             targetGrade: row.targetGrade ?? null,
@@ -1087,6 +1124,8 @@ export class TasksService {
         isEvent: a.isEvent,
       })),
       difficulties: Object.values(Difficulty),
+      efforts: Object.values(Effort),
+      dateCertainties: Object.values(DateCertainty),
       priorities,
       progressStatuses: Object.values(ProgressStatus),
     };

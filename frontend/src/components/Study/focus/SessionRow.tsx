@@ -63,6 +63,13 @@ export default function SessionRow({ session, isSaving, serverError, onEdit, onD
             {start}-{end} · {formatDuration(minutes)}
             {session.focusRating !== null && <span className="ml-2 text-violet-300">{t('ui.focus5', { focusRating: session.focusRating })}</span>}
             {session.isManual && <span className="ml-2 text-neutral-500">{t('ui.addedByHand')}</span>}
+            {(session.distractionCount ?? 0) > 0 && (
+              <span className="ml-2 text-neutral-400">
+                {session.distractionCount === 1
+                  ? t('focus.distractions.countOne')
+                  : t('focus.distractions.count', { count: session.distractionCount ?? 0 })}
+              </span>
+            )}
           </p>
           {session.note && <p className="mt-1 break-words text-xs text-neutral-500">{session.note}</p>}
         </div>

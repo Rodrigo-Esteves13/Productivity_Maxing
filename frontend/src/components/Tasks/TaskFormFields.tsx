@@ -4,6 +4,7 @@ import { useCalendarStatus } from '../../hooks/useCalendarStatus';
 import { useDurationPrediction } from '../../hooks/useDurationPrediction';
 import TitleDateAreaFields from './fields/TitleDateAreaFields';
 import DifficultyTypeFields from './fields/DifficultyTypeFields';
+import ReadinessFields from './fields/ReadinessFields';
 import AcademicFields from './fields/AcademicFields';
 import GradingFields from './fields/GradingFields';
 import OptionalInfoFields from './fields/OptionalInfoFields';
@@ -21,6 +22,12 @@ export interface TaskFormFieldValues {
   type: string;
   academicType: string;
   difficulty: string;
+  // '' = esforco por definir (MODERATE no backend).
+  effort: string;
+  dateCertainty: string;
+  isBlocked: boolean;
+  // "YYYY-MM-DD" ou "" (ja disponivel).
+  availableFrom: string;
   priority: string;
   areaId: string;
   topics: string;
@@ -148,6 +155,18 @@ export default function TaskFormFields({
         // trancado (useTaskTypeLogic) e fica livre para escolher outra
         // Area compatível, ou nenhuma.
         onClearArea={isTypeLockedByArea ? () => onChange('areaId', '') : undefined}
+      />
+
+      <ReadinessFields
+        idPrefix={idPrefix}
+        effort={values.effort}
+        dateCertainty={values.dateCertainty}
+        isBlocked={values.isBlocked}
+        availableFrom={values.availableFrom}
+        onEffortChange={(v) => onChange('effort', v)}
+        onDateCertaintyChange={(v) => onChange('dateCertainty', v)}
+        onIsBlockedChange={(v) => onChange('isBlocked', v)}
+        onAvailableFromChange={(v) => onChange('availableFrom', v)}
       />
 
       {isAcademic && (

@@ -113,7 +113,7 @@ const NAV_COMMANDS: NavCommand[] = [
   {
     id: 'nav-turmas',
     labelKey: 'nav.turmas',
-    path: '/turmas',
+    path: '/classes',
     keywords: ['turma', 'class', 'classmates', 'colegas', 'delegado', 'group', 'grupo', 'invite code', 'codigo', 'announcements', 'avisos', 'shared files', 'ficheiros'],
   },
   {

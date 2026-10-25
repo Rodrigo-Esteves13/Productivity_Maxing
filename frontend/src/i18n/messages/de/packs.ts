@@ -9,7 +9,7 @@ export const packs: Record<string, string> = {
   'packs.create.namePlaceholder': "Netzwerke - 2. Semester",
   'packs.create.pick': "Aufzunehmende Aufgaben ({count}/{max})",
   'packs.create.noTasks': "Du hast noch keine Aufgaben.",
-  'packs.create.privacy': "Geteilt werden nur Titel, Termin, Gewicht, Fach und Typ - nie deine Notizen, Noten oder dein Fortschritt. Jeder mit dem Link kann importieren; lösche das Paket, um das zu beenden.",
+  'packs.create.privacy': "Geteilt werden nur Titel, Datum, Gewicht, Fach, Typ, Aufwand und wie sicher das Datum ist - nie deine Notizen, Noten oder dein Fortschritt. Wer den Link hat, kann es importieren; lösche das Paket, um das zu stoppen. Spätere Änderungen an diesen Aufgaben erreichen andere nur, wenn du sie veröffentlichst, und jede Person muss zustimmen.",
   'packs.create.needName': "Gib dem Paket einen Namen.",
   'packs.create.needTasks': "Wähle mindestens eine Aufgabe.",
   'packs.create.error': "Das Paket konnte nicht erstellt werden. Bitte versuche es erneut.",

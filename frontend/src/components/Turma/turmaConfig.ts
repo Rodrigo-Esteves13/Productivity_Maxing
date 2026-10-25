@@ -24,7 +24,7 @@ export function isTurmaTab(value: string | null): value is TurmaTab {
   return value !== null && (TURMA_TABS as string[]).includes(value);
 }
 
-/** Link de convite: abre /turmas com o codigo ja preenchido. */
+/** Link de convite: abre /classes com o codigo ja preenchido. */
 export function turmaInviteLink(code: string): string {
-  return `${window.location.origin}/turmas?code=${encodeURIComponent(code)}`;
+  return `${window.location.origin}/classes?code=${encodeURIComponent(code)}`;
 }
