@@ -12,6 +12,7 @@ import {
   computeCreditWeightedAverage,
   computeCreditsSummary,
   resolveRoundFinalGrade,
+  GRADED_TASK_SELECT,
 } from './grade-average.util';
 
 @Injectable()
@@ -104,7 +105,7 @@ export class ProgramsService {
     const program = await this.findOwnedOrThrow(userId, id);
     const tasks = await this.prisma.task.findMany({
       where: { period: { programId: id }, realGrade: { not: null } },
-      select: { realGrade: true, weightPercentage: true, areaId: true },
+      select: GRADED_TASK_SELECT,
     });
     const areas = await this.prisma.area.findMany({
       where: accessibleAreaWhere(userId),
@@ -139,7 +140,7 @@ export class ProgramsService {
     const program = await this.findOwnedOrThrow(userId, id);
     const tasks = await this.prisma.task.findMany({
       where: { period: { programId: id }, realGrade: { not: null } },
-      select: { realGrade: true, weightPercentage: true, areaId: true },
+      select: GRADED_TASK_SELECT,
     });
     const areas = await this.prisma.area.findMany({
       where: accessibleAreaWhere(userId),
@@ -171,7 +172,7 @@ export class ProgramsService {
       include: {
         tasks: {
           where: { realGrade: { not: null } },
-          select: { realGrade: true, weightPercentage: true, areaId: true },
+          select: GRADED_TASK_SELECT,
         },
       },
     });

@@ -107,24 +107,36 @@ export class SecurityLogsService {
     const last1h = new Date(now - WINDOW_TO_MS['1h']);
     const last24h = new Date(now - WINDOW_TO_MS['24h']);
 
-    const [totalLastHour, totalLast24h, topOffenders] = await Promise.all([
-      this.prisma.securityLog.count({ where: { createdAt: { gte: last1h } } }),
-      this.prisma.securityLog.count({ where: { createdAt: { gte: last24h } } }),
+    // E-07/E-08: cada linha agrega `count` pedidos bloqueados (ver
+    // LoggingThrottlerGuard), por isso soma-se o count em vez de contar
+    // linhas; e só entram bloqueios de rate limit, não as ações de
+    // moderação de pads do próprio admin (que faziam o IP do admin
+    // aparecer como "top offender").
+    const rateLimited = { type: SecurityEventType.RATE_LIMIT_EXCEEDED };
+    const [lastHour, last24hSum, topOffenders] = await Promise.all([
+      this.prisma.securityLog.aggregate({
+        where: { ...rateLimited, createdAt: { gte: last1h } },
+        _sum: { count: true },
+      }),
+      this.prisma.securityLog.aggregate({
+        where: { ...rateLimited, createdAt: { gte: last24h } },
+        _sum: { count: true },
+      }),
       this.prisma.securityLog.groupBy({
         by: ['ip'],
-        where: { createdAt: { gte: last24h } },
-        _count: { ip: true },
-        orderBy: { _count: { ip: 'desc' } },
+        where: { ...rateLimited, createdAt: { gte: last24h } },
+        _sum: { count: true },
+        orderBy: { _sum: { count: 'desc' } },
         take: TOP_IPS_LIMIT,
       }),
     ]);
 
     return {
-      totalLastHour,
-      totalLast24h,
+      totalLastHour: lastHour._sum.count ?? 0,
+      totalLast24h: last24hSum._sum.count ?? 0,
       topOffenders: topOffenders.map((row) => ({
         ip: row.ip,
-        count: row._count.ip,
+        count: row._sum.count ?? 0,
       })),
     };
   }

@@ -12,6 +12,7 @@ import {
   parseDateKey,
   toDateKey,
   toLisbonDateKey,
+  toLisbonWeekdayHour,
 } from '../common/date-key.util';
 import {
   BadRequestException,
@@ -25,7 +26,11 @@ import { StartStudySessionDto } from './dto/start-study-session.dto';
 import { StopStudySessionDto } from './dto/stop-study-session.dto';
 import { CreateManualSessionDto } from './dto/create-manual-session.dto';
 import { UpdateStudySessionDto } from './dto/update-study-session.dto';
-import { validateSessionWindow } from './session-window.util';
+import { HeartbeatStudySessionDto } from './dto/heartbeat-study-session.dto';
+import {
+  MAX_SESSION_MINUTES,
+  validateSessionWindow,
+} from './session-window.util';
 
 // Meio-termo entre "recalcular tudo em memória a cada pedido" (o que
 // tínhamos antes - um findMany() à tabela toda do utilizador em CADA
@@ -50,6 +55,13 @@ const HEATMAP_CACHE_TTL_MS = 5 * 60 * 1000;
 // browser, e isto tem de tolerar perder alguns heartbeats seguidos sem
 // fechar uma sessão que ainda está genuinamente a decorrer.
 const STALE_SESSION_THRESHOLD_MS = 10 * 60 * 1000;
+
+// Bloco de foco mais longo que o frontend deixa planear (MAX_FOCUS_MINUTES
+// em lib/focusTimer.ts). O fim de bloco que o heartbeat traz nunca e aceite
+// para alem de startedAt + isto: e o proprio utilizador a dize-lo, mas um
+// valor absurdo nao pode manter uma sessao viva horas sem contacto.
+const MAX_PLANNED_FOCUS_MS = 240 * MS_PER_MINUTE;
+const MAX_SESSION_MS = MAX_SESSION_MINUTES * MS_PER_MINUTE;
 
 // Só usada quando a sessão fechada automaticamente não tinha nenhuma nota
 // já escrita pelo utilizador - nunca substitui uma nota real.
@@ -212,8 +224,14 @@ export class StudySessionsService {
 
     // endedAt opcional: "parei de estudar as 14:32 e so agora me lembrei".
     // Validado contra o inicio real e nunca no futuro.
+    // Uma sessao esquecida aberta mais de MAX_SESSION_MINUTES (heartbeats a
+    // mante-la viva toda a noite) e fechada no limite em vez de dar 400 para
+    // sempre: antes nunca mais se conseguia parar.
     const now = new Date();
-    const endedAt = dto.endedAt ? new Date(dto.endedAt) : now;
+    const endedAt = clampToMaxSession(
+      existing.startedAt,
+      dto.endedAt ? new Date(dto.endedAt) : now,
+    );
     const problem = validateSessionWindow(existing.startedAt, endedAt, now);
     if (problem) throw new BadRequestException(problem);
 
@@ -339,13 +357,43 @@ export class StudySessionsService {
   /**
    * Chamado pelo frontend a cada HEARTBEAT_INTERVAL_MS (ver
    * StudySessionProvider.tsx) enquanto uma sessão está ativa - é só um
-   * "ainda aqui" que atualiza lastHeartbeatAt. updateMany com
-   * where: { id, userId, endedAt: null } em vez de findFirst + update
-   * separados: uma única query, já protegida contra IDOR (nunca atualiza
-   * uma sessão de outro utilizador) e contra reanimar uma sessão já
-   * fechada por engano.
+   * "ainda aqui" que atualiza lastHeartbeatAt. Sempre filtrado por
+   * { id, userId, endedAt: null } (nunca toca numa sessão de outro
+   * utilizador nem reanima uma já fechada).
+   *
+   * Uma sessão já "esquecida" (sem contacto há mais do que
+   * STALE_SESSION_THRESHOLD_MS) NÃO é reanimada por um heartbeat atrasado:
+   * fecha-se aqui e responde 404, tal como getActive() faria. Antes o
+   * resultado dependia de qual dos dois pedidos chegava primeiro ao voltar
+   * de um telemóvel bloqueado. Exceção: se o frontend diz que ainda está
+   * dentro de um bloco de foco planeado (plannedEndAt, mais uma margem), a
+   * sessão continua - é o caso "liguei um Pomodoro e bloqueei o ecrã".
    */
-  async heartbeat(userId: string, id: string): Promise<{ ok: true }> {
+  async heartbeat(
+    userId: string,
+    id: string,
+    dto: HeartbeatStudySessionDto = {},
+  ): Promise<{ ok: true }> {
+    const active = await this.prisma.studySession.findFirst({
+      where: { id, userId, endedAt: null },
+      select: { id: true, startedAt: true, lastHeartbeatAt: true, note: true },
+    });
+    if (!active) {
+      throw new NotFoundException(
+        `Study session not found, not yours, or already stopped.`,
+      );
+    }
+
+    const plannedEnd = dto.plannedEndAt
+      ? clampPlannedEnd(active.startedAt, new Date(dto.plannedEndAt))
+      : null;
+    if (this.isStale(active, plannedEnd)) {
+      await this.closeStale(userId, active);
+      throw new NotFoundException(
+        `Study session not found, not yours, or already stopped.`,
+      );
+    }
+
     const result = await this.prisma.studySession.updateMany({
       where: { id, userId, endedAt: null },
       data: { lastHeartbeatAt: new Date() },
@@ -409,10 +457,10 @@ export class StudySessionsService {
 
     for (const session of sessions) {
       if (!session.endedAt) continue; // já filtrado pelo where, é só para o TS
-      const dayOfWeek = session.startedAt.getDay();
-      const hourBucket = Math.floor(
-        session.startedAt.getHours() / HOUR_BUCKET_SIZE,
-      );
+      // Hora de Lisboa, como a streak e os totais diarios (getDay()/
+      // getHours() davam a hora UTC do servidor no Render).
+      const { dayOfWeek, hour } = toLisbonWeekdayHour(session.startedAt);
+      const hourBucket = Math.floor(hour / HOUR_BUCKET_SIZE);
       const minutes =
         (session.endedAt.getTime() - session.startedAt.getTime()) /
         MS_PER_MINUTE;
@@ -654,16 +702,42 @@ export class StudySessionsService {
       where: { userId, endedAt: null },
       select: { id: true, startedAt: true, lastHeartbeatAt: true, note: true },
     });
-    if (!active) return;
+    if (!active || !this.isStale(active, null)) return;
+    await this.closeStale(userId, active);
+  }
 
+  // Sem contacto ha mais do que STALE_SESSION_THRESHOLD_MS e, se houver um
+  // bloco planeado, ja passou o fim dele mais a mesma margem.
+  private isStale(
+    active: { startedAt: Date; lastHeartbeatAt: Date | null },
+    plannedEnd: Date | null,
+  ): boolean {
+    const now = Date.now();
     const lastSeenAt = active.lastHeartbeatAt ?? active.startedAt;
-    const staleForMs = Date.now() - lastSeenAt.getTime();
-    if (staleForMs < STALE_SESSION_THRESHOLD_MS) return;
+    if (now - lastSeenAt.getTime() < STALE_SESSION_THRESHOLD_MS) return false;
+    if (plannedEnd && now - plannedEnd.getTime() < STALE_SESSION_THRESHOLD_MS) {
+      return false;
+    }
+    return true;
+  }
 
+  // Fecha no ultimo instante em que se sabia que a sessao estava a correr
+  // (nao "agora", nem o fim do bloco planeado: esse so mantem a sessao viva),
+  // nunca alem do limite de MAX_SESSION_MINUTES das outras escritas.
+  private async closeStale(
+    userId: string,
+    active: {
+      id: string;
+      startedAt: Date;
+      lastHeartbeatAt: Date | null;
+      note: string | null;
+    },
+  ): Promise<void> {
+    const lastSeenAt = active.lastHeartbeatAt ?? active.startedAt;
     await this.prisma.studySession.update({
       where: { id: active.id },
       data: {
-        endedAt: lastSeenAt,
+        endedAt: clampToMaxSession(active.startedAt, lastSeenAt),
         note: active.note ?? AUTO_CLOSE_NOTE,
       },
     });
@@ -723,4 +797,20 @@ export class StudySessionsService {
 
     return { ...session, durationSeconds };
   }
+}
+
+function clampToMaxSession(startedAt: Date, endedAt: Date): Date {
+  return new Date(
+    Math.min(endedAt.getTime(), startedAt.getTime() + MAX_SESSION_MS),
+  );
+}
+
+// Fim de bloco dito pelo frontend: invalido ou antes do inicio = ignorado;
+// nunca alem do bloco mais longo que se pode planear.
+function clampPlannedEnd(startedAt: Date, plannedEnd: Date): Date | null {
+  if (Number.isNaN(plannedEnd.getTime())) return null;
+  if (plannedEnd.getTime() <= startedAt.getTime()) return null;
+  return new Date(
+    Math.min(plannedEnd.getTime(), startedAt.getTime() + MAX_PLANNED_FOCUS_MS),
+  );
 }

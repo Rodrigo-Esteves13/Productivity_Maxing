@@ -6,12 +6,14 @@ interface UseFileUploadParams {
   validate: (file: File) => string | null;
   onUpload: (file: File) => Promise<void>;
   failureMessage: string;
+  // Mensagem quando remover um ficheiro falha (aparece no mesmo sitio).
+  removeFailureMessage?: string;
 }
 
 // Escolha de ficheiro num <input type="file">: limpa o input (para poder
 // escolher o mesmo ficheiro outra vez), valida, envia e guarda o erro.
 // Fotos e anexos do Notebook faziam exatamente isto, cada um a sua maneira.
-export function useFileUpload({ validate, onUpload, failureMessage }: UseFileUploadParams) {
+export function useFileUpload({ validate, onUpload, failureMessage, removeFailureMessage }: UseFileUploadParams) {
   const [error, setError] = useState('');
 
   const handleChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -33,5 +35,15 @@ export function useFileUpload({ validate, onUpload, failureMessage }: UseFileUpl
     }
   };
 
-  return { error, handleChange };
+  // Remover: antes a promessa rejeitada escapava e o ficheiro ficava sem aviso.
+  const handleRemove = async (remove: () => Promise<void>) => {
+    setError('');
+    try {
+      await remove();
+    } catch {
+      setError(removeFailureMessage ?? failureMessage);
+    }
+  };
+
+  return { error, handleChange, handleRemove };
 }

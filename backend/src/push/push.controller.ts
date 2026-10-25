@@ -28,6 +28,15 @@ export class PushController {
     return this.push.getPublicKey();
   }
 
+  @Get('status')
+  @ApiOperation({
+    summary:
+      'Whether push is configured and how many devices this user has registered.',
+  })
+  status(@CurrentUser() user: AuthenticatedUser) {
+    return this.push.getStatus(user.id);
+  }
+
   @Post('subscribe')
   @HttpCode(200)
   @Throttle(perMinute(10))

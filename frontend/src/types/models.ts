@@ -834,6 +834,8 @@ export interface SecurityLog {
   method: string;
   path: string;
   userAgent: string | null;
+  // Quantos pedidos bloqueados esta linha agrega (LoggingThrottlerGuard).
+  count: number;
   createdAt: string;
   userId: string | null;
   user: { id: string; email: string; name: string | null } | null;
@@ -1037,6 +1039,8 @@ export interface NotebookEntry {
   privateFromFriends?: boolean;
   photos: NotebookPhoto[];
   attachments: NotebookAttachment[];
+  // Versao (Prisma @updatedAt): vai como baseUpdatedAt ao gravar.
+  updatedAt?: string;
 }
 
 // Linha da lista de uma cadeira (GET /notebook/entry-summaries): sem o
@@ -1075,6 +1079,8 @@ export interface SharedNotebookEntry {
   canvasHeight: number | null;
   usefulLinks: UsefulLink[] | null;
   date: string;
+  // Versao lida: o co-owner grava sobre ela (409 se o dono mudou entretanto).
+  updatedAt?: string;
   area: { name: string; colorHex: string };
   photos: NotebookPhoto[];
   attachments: NotebookAttachment[];
@@ -1194,7 +1200,7 @@ export interface GradeComponentInput {
   weightPercentage: number;
   aggregation: GradeAggregation;
   bestOfCount?: number;
-  expectedEntries?: number;
+  expectedEntries?: number | null;
 }
 
 // Alteracao proposta por um EDITOR a uma entrada partilhada (so texto).
@@ -1266,11 +1272,16 @@ export interface UpsertMoodInput {
   note?: string;
 }
 
+// DAILY = horas fixas com lembrete; AS_NEEDED = "se necessario", registado
+// por toma. Espelha os enums do Prisma.
+export type MedicationSchedule = 'DAILY' | 'AS_NEEDED';
+
 export interface Medication {
   id: string;
   name: string;
   dosage: string | null;
-  // Minutos desde a meia-noite de cada toma diaria.
+  schedule: MedicationSchedule;
+  // Minutos desde a meia-noite de cada toma diaria (vazio em AS_NEEDED).
   times: number[];
   remindersEnabled: boolean;
   active: boolean;
@@ -1279,9 +1290,37 @@ export interface Medication {
 export interface MedicationInput {
   name: string;
   dosage?: string;
+  schedule?: MedicationSchedule;
   times: number[];
   remindersEnabled?: boolean;
 }
+
+// Toma "se necessario" registada pelo utilizador.
+export interface MedicationIntake {
+  id: string;
+  medicationId: string;
+  name: string;
+  takenAt: string;
+  dose: string | null;
+  note: string | null;
+}
+
+export interface MedicationIntakeInput {
+  medicationId: string;
+  takenAt: string;
+  dose?: string;
+  note?: string;
+}
+
+// Aviso legal da medicacao: tem de ser aceite (versao atual) antes de usar.
+export interface MedicationDisclaimerStatus {
+  version: number;
+  acceptedVersion: number | null;
+  acceptedAt: string | null;
+  acceptedLocale: string | null;
+  accepted: boolean;
+}
+
 
 export interface MedicationDaySlot {
   medicationId: string;

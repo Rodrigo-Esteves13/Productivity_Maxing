@@ -40,6 +40,54 @@ async function getActiveRegistration(): Promise<ServiceWorkerRegistration> {
 
 export type PushError = 'generic' | 'noWorker';
 
+// Ultima subscricao enviada ao backend neste separador (conta|endpoint|lingua).
+// Evita repetir o POST a cada ecra que monta o hook.
+let lastSyncedKey: string | null = null;
+
+const syncKey = (userId: string, endpoint: string, lang: string) => `${userId}|${endpoint}|${lang}`;
+
+async function currentSubscription(): Promise<PushSubscription | null> {
+  const registration = await navigator.serviceWorker.getRegistration();
+  return (await registration?.pushManager.getSubscription()) ?? null;
+}
+
+/**
+ * Volta a enviar ao backend a subscricao que o browser ja tem. A linha no
+ * backend passa a ser desta conta (o mesmo browser pode ter estado noutra
+ * conta), fica com a lingua atual da app e e recriada se o backend a apagou
+ * (404/410 passageiro, troca de chave do browser, pushsubscriptionchange).
+ * Sem isto o cartao dizia "ligado" e nenhum aviso chegava.
+ */
+export async function syncPushSubscription(userId: string, lang: string, force = false): Promise<void> {
+  if (!isSupported() || Notification.permission !== 'granted') return;
+  const subscription = await currentSubscription();
+  if (!subscription) return;
+  const key = syncKey(userId, subscription.endpoint, lang);
+  if (!force && key === lastSyncedKey) return;
+  await subscribePush(subscription.toJSON(), lang);
+  lastSyncedKey = key;
+}
+
+/**
+ * Ao terminar sessao: este dispositivo deixa de receber os avisos desta
+ * conta (titulos de prazos, nomes de amigos, lembretes). Remove a linha no
+ * backend (precisa da sessao, por isso corre antes do logout) e cancela a
+ * subscricao no browser mesmo que o pedido falhe: o endpoint morto da 410 e
+ * o backend apaga-o no proximo envio. Devolve se havia subscricao.
+ */
+export async function unsubscribeThisDevice(): Promise<boolean> {
+  lastSyncedKey = null;
+  if (!isSupported()) return false;
+  const subscription = await currentSubscription();
+  if (!subscription) return false;
+  try {
+    await unsubscribePush(subscription.endpoint);
+  } finally {
+    await subscription.unsubscribe();
+  }
+  return true;
+}
+
 export function usePushNotifications() {
   const { lang } = useI18n();
   const [state, setState] = useState<PushState>('loading');
@@ -87,6 +135,7 @@ export function usePushNotifications() {
           applicationServerKey: urlBase64ToUint8Array(key),
         }));
       await subscribePush(subscription.toJSON(), lang);
+      lastSyncedKey = null;
       return finish('on');
     } catch (err) {
       console.error('Falha ao ativar notificacoes:', err);
@@ -107,6 +156,7 @@ export function usePushNotifications() {
         await unsubscribePush(subscription.endpoint);
         await subscription.unsubscribe();
       }
+      lastSyncedKey = null;
       setState('off');
     } catch (err) {
       console.error('Falha ao desativar notificacoes:', err);

@@ -20,6 +20,7 @@ import {
 } from './email-verification.service';
 import { PasswordLinkService } from './password-link.service';
 import { runInBackground } from '../../common/background.util';
+import { emailEquals, normalizeEmail } from '../email.util';
 
 // Mesmo URL usado no AuthController para os redirects de OAuth - usado aqui
 // só para o `redirectTo` do email de recuperação de password do Supabase,
@@ -39,6 +40,9 @@ const SIGNUP_ERROR_MESSAGES: Record<string, string> = {
 };
 const PASSWORD_UPDATE_FAILED_MESSAGE =
   'Could not update the password. Please try again.';
+export const RESET_LINK_INVALID_CODE = 'RESET_LINK_INVALID';
+const RESET_LINK_INVALID_MESSAGE =
+  'This reset link is invalid or has expired. Request a new one.';
 const CURRENT_PASSWORD_REQUIRED_MESSAGE = 'Enter your current password.';
 const CURRENT_PASSWORD_WRONG_MESSAGE = 'Your current password is incorrect.';
 const SIGNUP_FALLBACK_MESSAGE =
@@ -88,7 +92,8 @@ export class PasswordAuthService {
     //   dois logins. A password deste pedido é descartada.
     // - Conta que já tem password: 409, é só fazer login.
     const existingLocal = await this.prisma.user.findFirst({
-      where: { email: { equals: data.email, mode: 'insensitive' } },
+      where: { email: emailEquals(data.email) },
+      orderBy: { createdAt: 'asc' },
     });
     if (existingLocal) {
       if (!this.passwordLink.canLink(existingLocal)) {
@@ -216,7 +221,18 @@ export class PasswordAuthService {
     name?: string,
     supabaseAuthId?: string,
   ): Promise<User> {
-    const existing = await this.prisma.user.findUnique({ where: { email } });
+    // Email sem distinguir maiusculas (E-01): uma conta registada como
+    // "Rodrigo@x.pt" tem de abrir com "rodrigo@x.pt". Primeiro pela
+    // credencial do Supabase (ligacao exata, cobre duplicados antigos que so
+    // diferem nas maiusculas), depois pelo email.
+    const existing =
+      (supabaseAuthId
+        ? await this.prisma.user.findUnique({ where: { supabaseAuthId } })
+        : null) ??
+      (await this.prisma.user.findFirst({
+        where: { email: emailEquals(email) },
+        orderBy: { createdAt: 'asc' },
+      }));
     if (existing) {
       // Direto à BD (não à cache do AccountStatusService) - login é raro
       // o suficiente para não valer a pena otimizar, e é o momento em
@@ -264,7 +280,7 @@ export class PasswordAuthService {
     return this.prisma.user.create({
       data: {
         id: randomUUID(),
-        email,
+        email: normalizeEmail(email),
         name,
         supabaseAuthId,
         emailVerifiedAt: null,
@@ -293,7 +309,8 @@ export class PasswordAuthService {
     // ou tem uma credencial orfa que nao abre a conta (SCR-002). Manda o
     // nosso link para escolher a password.
     const local = await this.prisma.user.findFirst({
-      where: { email: { equals: email, mode: 'insensitive' } },
+      where: { email: emailEquals(email) },
+      orderBy: { createdAt: 'asc' },
     });
     if (local && this.passwordLink.canLink(local)) {
       runInBackground(
@@ -325,6 +342,56 @@ export class PasswordAuthService {
       this.logger,
       'Password reset email',
     );
+  }
+
+  /**
+   * Fim do "esqueci-me da password" (E-02). Antes, ResetPassword.tsx chamava
+   * supabase.auth.updateUser direto do browser e o backend nunca sabia: as
+   * sessoes antigas (cookie de 7 dias) continuavam vivas. Agora o browser
+   * manda o access token da sessao de recovery; o Supabase valida-o
+   * (getUser), a password muda pela admin API e devolvemos o id do User
+   * local para o chamador terminar todas as sessoes. So o dono do email
+   * consegue esse token (o login por password nunca entrega tokens do
+   * Supabase ao browser).
+   *
+   * Devolve null quando a credencial nao esta ligada a nenhum User local
+   * (credencial orfa, SCR-002): a password muda na mesma, nao ha sessoes
+   * nossas a terminar.
+   */
+  async completePasswordReset(
+    accessToken: string,
+    newPassword: string,
+  ): Promise<string | null> {
+    const { data, error } = await this.clients.admin.auth.getUser(accessToken);
+    if (error || !data.user) {
+      // 400 (nao 401): o interceptor do frontend trata 401 como "sessao
+      // expirada" e mandava para /login sem mostrar nada.
+      throw new BadRequestException({
+        code: RESET_LINK_INVALID_CODE,
+        message: RESET_LINK_INVALID_MESSAGE,
+      });
+    }
+    const { error: updateError } =
+      await this.clients.admin.auth.admin.updateUserById(data.user.id, {
+        password: newPassword,
+      });
+    if (updateError) {
+      this.logger.warn(
+        `Supabase updateUserById failed on reset: ${updateError.code ?? 'no code'}`,
+      );
+      throw new BadRequestException(
+        SIGNUP_ERROR_MESSAGES[updateError.code ?? ''] ??
+          PASSWORD_UPDATE_FAILED_MESSAGE,
+      );
+    }
+    const local = await this.prisma.user.findUnique({
+      where: { supabaseAuthId: data.user.id },
+      select: { id: true },
+    });
+    this.logger.log(
+      `Password redefinida por recovery: ${local ? `user ${local.id}` : 'sem User local'}`,
+    );
+    return local?.id ?? null;
   }
 
   /**

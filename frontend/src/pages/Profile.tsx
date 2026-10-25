@@ -24,7 +24,7 @@ import { useI18n } from '../i18n/useI18n';
 
 export default function Profile() {
   const { t } = useI18n();
-  useDocumentTitle('Profile');
+  useDocumentTitle(t('nav.profile'));
   const { user, isLoadingUser, updateUser } = useAuth();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const stats = useProfileStats();

@@ -8,7 +8,12 @@ import * as webpush from 'web-push';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubscribePushDto } from './dto/subscribe-push.dto';
 import { buildPushText, type PushMessageKey } from './push-messages';
-import { MS_PER_DAY } from '../common/time.constants';
+import {
+  MS_PER_DAY,
+  MS_PER_MINUTE,
+  MS_PER_SECOND,
+} from '../common/time.constants';
+import { MEDICATION_REMINDER_WINDOW_MINUTES } from '../wellbeing/wellbeing.constants';
 
 const MAX_SUBSCRIPTIONS_PER_USER = 10;
 
@@ -51,6 +56,21 @@ export interface PushNotifyOptions {
   url: string;
 }
 
+// Quanto tempo o serviço de push guarda um aviso para um telemóvel offline.
+// Por omissão um dia; um lembrete de medicação velho de horas podia levar a
+// uma toma fora de horas, por isso expira com a janela do lembrete.
+export const DEFAULT_PUSH_TTL_SECONDS = MS_PER_DAY / MS_PER_SECOND;
+const MEDICATION_PUSH_TTL_SECONDS =
+  (MEDICATION_REMINDER_WINDOW_MINUTES * MS_PER_MINUTE) / MS_PER_SECOND;
+const PUSH_TTL_SECONDS: Partial<Record<PushMessageKey, number>> = {
+  medicationDue: MEDICATION_PUSH_TTL_SECONDS,
+  medicationsDue: MEDICATION_PUSH_TTL_SECONDS,
+};
+
+export function pushTtlSeconds(key: PushMessageKey): number {
+  return PUSH_TTL_SECONDS[key] ?? DEFAULT_PUSH_TTL_SECONDS;
+}
+
 // Caminho relativo da app: começa por uma só barra.
 const APP_PATH_PATTERN = /^\/(?!\/)/;
 
@@ -78,6 +98,19 @@ export class PushService implements OnModuleInit {
 
   getPublicKey(): { publicKey: string | null } {
     return { publicKey: this.enabled ? process.env.VAPID_PUBLIC_KEY! : null };
+  }
+
+  /**
+   * Para avisar no ecra (ex: lembretes de medicacao ligados sem nenhum
+   * dispositivo com push, que de outra forma nunca chegavam). So conta os
+   * dispositivos do proprio utilizador.
+   */
+  async getStatus(userId: string): Promise<PushStatus> {
+    if (!this.enabled) return { configured: false, devices: 0 };
+    const devices = await this.prisma.pushSubscription.count({
+      where: { userId },
+    });
+    return { configured: true, devices };
   }
 
   async subscribe(userId: string, dto: SubscribePushDto) {
@@ -213,6 +246,8 @@ export class PushService implements OnModuleInit {
           // Só caminhos da app ('/x'); '//host' seria um URL externo.
           url: APP_PATH_PATTERN.test(options.url) ? options.url : '/',
           tag: key,
+          // Hora do envio: o SW mostra-a em vez da hora a que chegou.
+          sentAt: Date.now(),
         });
         try {
           await webpush.sendNotification(
@@ -221,7 +256,7 @@ export class PushService implements OnModuleInit {
               keys: { p256dh: sub.p256dh, auth: sub.auth },
             },
             payload,
-            { TTL: 60 * 60 * 24, urgency: 'high' },
+            { TTL: pushTtlSeconds(key), urgency: 'high' },
           );
           return true;
         } catch (error) {
@@ -240,6 +275,11 @@ export class PushService implements OnModuleInit {
     );
     return { devices: subs.length, delivered: results.filter(Boolean).length };
   }
+}
+
+export interface PushStatus {
+  configured: boolean;
+  devices: number;
 }
 
 export interface PushTestResult {

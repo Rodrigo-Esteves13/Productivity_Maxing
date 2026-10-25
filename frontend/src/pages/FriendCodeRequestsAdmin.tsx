@@ -6,7 +6,12 @@ import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
 import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import useDocumentTitle from '../hooks/useDocumentTitle';
-import { decideFriendCodeRequest, getFriendCodeRequests, type FriendCodeRequestRow } from '../api/socialService';
+import {
+  decideFriendCodeRequest,
+  FRIEND_CODE_QUEUE_LIMIT,
+  getFriendCodeRequests,
+  type FriendCodeRequestRow,
+} from '../api/socialService';
 import { useI18n } from '../i18n/useI18n';
 import { adminUserPath } from '../lib/appLinks';
 
@@ -58,6 +63,12 @@ export default function FriendCodeRequestsAdmin() {
       ) : rows.length === 0 ? (
         <EmptyState message={t('friendCodes.empty')} />
       ) : (
+        <>
+        {rows.length >= FRIEND_CODE_QUEUE_LIMIT && (
+          <p className="mb-3 text-sm text-amber-400/80">
+            {t('ui.adminListCapped', { count: FRIEND_CODE_QUEUE_LIMIT })}
+          </p>
+        )}
         <ul className="space-y-3">
           {rows.map((row) => (
             <li key={row.id} className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
@@ -103,6 +114,7 @@ export default function FriendCodeRequestsAdmin() {
             </li>
           ))}
         </ul>
+        </>
       )}
     </PageLayout>
   );

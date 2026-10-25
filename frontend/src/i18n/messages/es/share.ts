@@ -41,6 +41,7 @@ export const share: Record<string, string> = {
   'sharedEdit.titleRequired': "Ponle un título a la clase.",
   'sharedEdit.noChanges': "Aún no has cambiado nada.",
   'sharedEdit.error': "No se pudieron enviar los cambios. Inténtalo de nuevo.",
+  'sharedEdit.conflict': "Otra persona cambió esta lección mientras tanto. Copia tu texto, recarga la página y edita de nuevo.",
   'push.title': "Notificaciones push",
   'push.help': "Recibe avisos en este dispositivo sobre plazos cercanos (si lo activaste arriba), solicitudes de amistad y de acceso, invitaciones a notas y cambios sugeridos, y las respuestas a tus solicitudes.",
   'push.enable': "Activar notificaciones",

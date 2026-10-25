@@ -5,6 +5,7 @@ import {
   toDateKey,
 } from '../common/date-key.util';
 import { isDayOff } from './days-off.util';
+import type { CommuteMode } from '@prisma/client';
 import type { CopyWeekMode } from './work-shifts.constants';
 
 // Campos de um turno que interessam para copiar (sem ids nem donos).
@@ -15,6 +16,10 @@ export interface ShiftSource {
   date: Date;
   startMinutes: number;
   endMinutes: number;
+  // Morada e transporte proprios de um evento pontual (sem local): usados
+  // pelo itinerario para as viagens. Perdiam-se ao copiar a semana.
+  address: string | null;
+  commuteMode: CommuteMode | null;
 }
 
 // Um turno por criar: ou semanal (dayOfWeek) ou pontual (dateKey).
@@ -26,6 +31,10 @@ export interface ShiftDraft {
   dateKey: string | null;
   startMinutes: number;
   endMinutes: number;
+  // Morada e transporte proprios de um evento pontual (sem local): usados
+  // pelo itinerario para as viagens. Perdiam-se ao copiar a semana.
+  address: string | null;
+  commuteMode: CommuteMode | null;
 }
 
 interface CopyContext {
@@ -61,6 +70,8 @@ function baseFields(source: ShiftSource) {
     bufferMinutes: source.bufferMinutes,
     startMinutes: source.startMinutes,
     endMinutes: source.endMinutes,
+    address: source.address,
+    commuteMode: source.commuteMode,
   };
 }
 

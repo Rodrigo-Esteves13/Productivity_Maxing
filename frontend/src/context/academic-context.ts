@@ -39,7 +39,13 @@ export interface AcademicContextType {
   // deleted program was the active one, falls back to another remaining
   // program automatically, same idea as switchProgram.
   removeProgram: (programId: string) => Promise<void>;
-  refresh: () => Promise<void>;
+  refresh: (options?: AcademicRefreshOptions) => Promise<void>;
+}
+
+export interface AcademicRefreshOptions {
+  // The active period was just archived: do not pick it again, move to
+  // another active period and persist that choice.
+  leavePeriodId?: string;
 }
 
 export const AcademicContext = createContext<AcademicContextType | undefined>(undefined);

@@ -20,6 +20,8 @@ type AreaRow = Prisma.AreaGetPayload<{ include: typeof AREA_INCLUDE }>;
 export const MAX_PRIVATE_AREAS_PER_USER = 50;
 /** Máximo de propostas pendentes ao mesmo tempo por user. */
 export const MAX_PENDING_PROPOSALS_PER_USER = 5;
+/** Código do 409 ao apagar uma Area que ainda tem dados (ver remove()). */
+export const AREA_IN_USE_CODE = 'AREA_IN_USE';
 
 @Injectable()
 export class AreasService {
@@ -252,12 +254,23 @@ export class AreasService {
     await this.findManageableOrThrow(user, id);
 
     // Task.area é Restrict: sem isto, o delete rebentava com um erro de FK
-    // do Prisma (500). Responde com um 409 claro.
-    const taskCount = await this.prisma.task.count({ where: { areaId: id } });
-    if (taskCount > 0) {
-      throw new ConflictException(
-        'This area still has tasks. Move or delete them first.',
-      );
+    // do Prisma (500). NotebookEntry e GradeComponent são onDelete: Cascade
+    // (schema.prisma): apagar a Area apagava em silêncio as notas do caderno
+    // e os componentes/entradas de nota. Contamos as três sem filtro de user
+    // (numa Area oficial contam as de TODOS os users) e recusamos com 409 e
+    // um código estável que o frontend traduz, com os números.
+    const [tasks, notebookEntries, gradeComponents] = await Promise.all([
+      this.prisma.task.count({ where: { areaId: id } }),
+      this.prisma.notebookEntry.count({ where: { areaId: id } }),
+      this.prisma.gradeComponent.count({ where: { areaId: id } }),
+    ]);
+    if (tasks + notebookEntries + gradeComponents > 0) {
+      throw new ConflictException({
+        code: AREA_IN_USE_CODE,
+        message:
+          'This area still has tasks, notebook notes or grade components. Move or delete them first.',
+        counts: { tasks, notebookEntries, gradeComponents },
+      });
     }
     await this.prisma.area.delete({ where: { id } });
   }

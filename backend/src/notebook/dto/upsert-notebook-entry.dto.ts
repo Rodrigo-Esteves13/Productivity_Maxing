@@ -463,4 +463,13 @@ export class UpdateNotebookEntryDto {
   @IsOptional()
   @IsBoolean()
   privateFromFriends?: boolean;
+
+  @ApiPropertyOptional({
+    example: '2026-09-18T10:31:02.123Z',
+    description:
+      'updatedAt of the version being edited. If the entry changed since, nothing is saved and the API answers 409 with the current entry.',
+  })
+  @IsOptional()
+  @IsDateString()
+  baseUpdatedAt?: string;
 }

@@ -126,6 +126,8 @@ function splitIntoVEvents(lines: string[]): string[][] {
   return events;
 }
 
+const ICS_STATUS_CANCELLED = 'CANCELLED';
+
 function parseVEvent(
   lines: string[],
   opts: IcsImportOptions,
@@ -162,6 +164,9 @@ function parseVEvent(
   if (!dtendRaw) throw new Error('Missing DTEND.');
   if (!summaryRaw) throw new Error('Missing SUMMARY.');
 
+  // Aula cancelada no portal: nao e aula (nao bloqueia o plano, nao conta
+  // como presenca por marcar, nao vai para o Google).
+  if (props.get('STATUS')?.trim().toUpperCase() === ICS_STATUS_CANCELLED) return null;
   if (!passesKeywordFilters(summaryRaw, opts)) return null;
 
   const start = toLisbonWallClock(dtstartRaw, params.get('DTSTART'));

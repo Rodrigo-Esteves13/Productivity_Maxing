@@ -29,3 +29,14 @@ export async function sendTestPush(): Promise<PushTestResult> {
   const response = await api.post<PushTestResult>('/push/test');
   return response.data;
 }
+
+export interface PushStatus {
+  configured: boolean;
+  /** Dispositivos desta conta com push registado (todos, nao so este). */
+  devices: number;
+}
+
+export async function getPushStatus(): Promise<PushStatus> {
+  const response = await api.get<PushStatus>('/push/status');
+  return response.data;
+}

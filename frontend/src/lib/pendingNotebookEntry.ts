@@ -1,30 +1,14 @@
-import type { NotebookSearchResult } from '../types/models';
-
-// Usado só para passar "abre esta entrada" do CommandPalette (global, fora
-// da página Notebook) para a página Notebook depois do navigate() - não é
-// nada sensível (é a mesma entrada que o /notebook/search já devolveu ao
-// utilizador autenticado), ao contrário do csrfToken em csrfStore.ts, que
-// nunca pode ir para sessionStorage/localStorage.
+// O Command Palette passava a entrada escolhida ao Notebook por
+// sessionStorage, lida so no mount: ja em /notebook nada acontecia e o
+// snapshot ficava para abrir mais tarde, velho. Agora navega para
+// ?entry=<id> (notebookEntryPath). Isto so limpa o que um separador com a
+// versao antiga possa ter deixado.
 const KEY = 'pmaxing:pending-notebook-entry';
 
-export function setPendingNotebookEntry(entry: NotebookSearchResult): void {
+export function clearPendingNotebookEntry(): void {
   try {
-    sessionStorage.setItem(KEY, JSON.stringify(entry));
-  } catch {
-    // Sem sessionStorage disponível (modo privado restrito, etc.) - a
-    // pior consequência é o Notebook abrir na Area errada, nada crítico.
-  }
-}
-
-// Consome (lê + apaga) o valor pendente - só deve ser aplicado uma vez,
-// no primeiro render da página Notebook depois do navigate().
-export function consumePendingNotebookEntry(): NotebookSearchResult | null {
-  try {
-    const raw = sessionStorage.getItem(KEY);
-    if (!raw) return null;
     sessionStorage.removeItem(KEY);
-    return JSON.parse(raw) as NotebookSearchResult;
   } catch {
-    return null;
+    // sem sessionStorage: nada a limpar
   }
 }

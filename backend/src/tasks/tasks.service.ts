@@ -41,6 +41,17 @@ import { TaskAttachmentsService } from './task-attachments.service';
 const TASK_TITLE_MAX_LENGTH = 200;
 // Peso estimado (em %) por ponto de dificuldade quando a task nao tem peso.
 const DIFFICULTY_TO_WEIGHT_PERCENT = 10;
+// Campos do PATCH que nunca podem ser limpos com null (colunas obrigatórias).
+const REQUIRED_TASK_FIELDS = [
+  'areaId',
+  'title',
+  'date',
+  'type',
+  'difficulty',
+  'progressStatus',
+  'isPinned',
+  'recurrenceInterval',
+] as const;
 
 const TASK_INCLUDE = {
   area: true,
@@ -189,7 +200,7 @@ export class TasksService {
    * conjunto de tasks do próprio user - taskIds é a sequência completa
    * tal como veio do frontend, sortOrder de cada uma vira o seu índice
    * nessa lista. Tasks fora da lista (ex: arquivadas, escondidas da
-   * grid) não são tocadas.
+   * grid) vão para depois delas, pela mesma ordem relativa.
    */
   async reorder(userId: string, taskIds: string[]): Promise<void> {
     const owned = await this.prisma.task.findMany({
@@ -207,14 +218,22 @@ export class TasksService {
       );
     }
 
-    await this.prisma.$transaction(
-      taskIds.map((id, index) =>
+    // As tasks fora da lista (filtro ativo, arquivadas) passam para DEPOIS
+    // das reordenadas, mantendo a ordem relativa entre elas - é o que o
+    // frontend mostra. Sem isto, uma escondida com sortOrder 1 ficava
+    // intercalada entre as reordenadas depois de recarregar.
+    await this.prisma.$transaction([
+      this.prisma.task.updateMany({
+        where: { userId, id: { notIn: taskIds } },
+        data: { sortOrder: { increment: taskIds.length } },
+      }),
+      ...taskIds.map((id, index) =>
         this.prisma.task.update({
           where: { id },
           data: { sortOrder: index },
         }),
       ),
-    );
+    ]);
   }
 
   /**
@@ -283,6 +302,18 @@ export class TasksService {
       ...rest
     } = dto;
 
+    // null no PATCH = "limpar o campo" (o formulário de edição manda null
+    // para campos esvaziados). Só faz sentido em colunas opcionais: nas
+    // obrigatórias devolvemos 400 em vez de deixar o Prisma rebentar (500).
+    const clearedRequired = REQUIRED_TASK_FIELDS.filter(
+      (key) => (dto as Record<string, unknown>)[key] === null,
+    );
+    if (clearedRequired.length > 0) {
+      throw new BadRequestException(
+        `These fields cannot be empty: ${clearedRequired.join(', ')}.`,
+      );
+    }
+
     // Mesmo padrão condicional que periodIdUpdate/typeIds acima: só mexe
     // em priorityId se `priority` vier explicitamente no PATCH. Sem isto,
     // um PATCH que só muda o título, por exemplo, ia (por causa do
@@ -290,9 +321,15 @@ export class TasksService {
     // sempre que o campo não fosse enviado - o Prisma trata um campo
     // ausente no objeto `data` como "não mexer", mas só porque este bloco
     // o retira explicitamente do objeto antes disso importar.
+    // `priority: ''` ou `null` (opção "Sem prioridade" do formulário) limpa
+    // a prioridade; antes caía em undefined e o valor antigo ficava.
     const priorityIdUpdate =
       priority !== undefined
-        ? { priorityId: await this.resolvePriorityId(priority) }
+        ? {
+            priorityId: priority
+              ? await this.resolvePriorityId(priority)
+              : null,
+          }
         : {};
 
     // Só mexemos em periodId se vier explicitamente no PATCH - e, tal como
@@ -316,7 +353,11 @@ export class TasksService {
     // Peso: so se valida quando sobe, ou quando a task muda de cadeira/
     // periodo - editar o titulo de uma task numa cadeira ja cheia nao pode
     // falhar por causa de pesos antigos.
-    const effectiveWeight = rest.weightPercentage ?? existing.weightPercentage;
+    // null = o user limpou o peso (nada a validar).
+    const effectiveWeight =
+      rest.weightPercentage !== undefined
+        ? rest.weightPercentage
+        : existing.weightPercentage;
     const newPeriodId =
       'periodId' in periodIdUpdate ? periodIdUpdate.periodId : undefined;
     const movedScope =
@@ -324,6 +365,7 @@ export class TasksService {
       (newPeriodId !== undefined && newPeriodId !== existing.periodId);
     const weightIncreased =
       rest.weightPercentage !== undefined &&
+      rest.weightPercentage !== null &&
       rest.weightPercentage > (existing.weightPercentage ?? 0);
     if (weightIncreased || (movedScope && effectiveWeight)) {
       await assertWeightFits(
@@ -340,14 +382,20 @@ export class TasksService {
 
     // Só mexemos em taskType/academicType se um dos dois vier no PATCH.
     // Se só vier um dos dois, usamos o valor atual da task para o outro,
-    // para não apagar sem querer uma subcategoria já definida.
+    // para não apagar sem querer uma subcategoria já definida. Exceções:
+    // `academicType: null`/'' limpa a subcategoria, e se o tipo MUDA a
+    // subcategoria antiga nunca é reaproveitada (pertence ao tipo antigo e
+    // o resolveTypes rejeitava a troca com 400).
     let typeIds = {};
     if (type !== undefined || academicType !== undefined) {
       const effectiveType = type ?? existing.taskType.key;
+      const typeChanged = effectiveType !== existing.taskType.key;
       const effectiveAcademic =
         academicType !== undefined
-          ? academicType
-          : (existing.academicType?.key ?? undefined);
+          ? (academicType ?? undefined)
+          : typeChanged
+            ? undefined
+            : (existing.academicType?.key ?? undefined);
       typeIds = await this.resolveTypes(effectiveType, effectiveAcademic);
     }
 
@@ -680,7 +728,19 @@ export class TasksService {
       },
       include: TASK_INCLUDE,
     });
-    return this.toResponse(task);
+
+    // Concluir pelo check-in tem de fazer o mesmo que concluir pelo PATCH
+    // normal: próxima ocorrência (se repete) e revisões espaçadas. Sem isto
+    // a série acabava em silêncio (as recorrentes são as que mais atrasam).
+    const justCompleted =
+      dto.isCompleted && existing.progressStatus !== 'COMPLETED';
+    const spawnedTasks = justCompleted
+      ? await this.spawnFollowUps(userId, task)
+      : [];
+    return {
+      ...this.toResponse(task),
+      ...(spawnedTasks.length > 0 ? { spawnedTasks } : {}),
+    };
   }
 
   async remove(userId: string, id: string) {
@@ -1040,7 +1100,7 @@ export class TasksService {
   // priority definida, undefined passa direto para o Prisma como "não
   // mexer neste campo".
   private async resolvePriorityId(
-    priorityKey: string | undefined,
+    priorityKey: string | null | undefined,
   ): Promise<string | null | undefined> {
     if (!priorityKey) return undefined;
 
@@ -1058,7 +1118,7 @@ export class TasksService {
   // Resolve as keys ("ACADEMICO", "TRABALHO_PRATICO", ...) vindas do frontend
   // para os IDs reais na BD, e valida que existem, estão ativas, e que a
   // subcategoria académica pertence mesmo ao tipo indicado.
-  private async resolveTypes(typeKey: string, academicTypeKey?: string) {
+  private async resolveTypes(typeKey: string, academicTypeKey?: string | null) {
     const taskType = await this.prisma.taskType.findUnique({
       where: { key: typeKey },
     });

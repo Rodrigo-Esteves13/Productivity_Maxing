@@ -11,8 +11,12 @@ interface BulkActionsBarProps {
   onMarkDone: () => Promise<void>;
   // Recebe o dia ("YYYY-MM-DD") e devolve quantas tasks mudaram de data.
   onReschedule: (dateKey: string) => Promise<number>;
-  onDelete: () => Promise<void>;
+  // removeFromCalendar: true quando o user aceitou remover tambem os eventos
+  // ligados no Google Calendar.
+  onDelete: (removeFromCalendar: boolean) => Promise<void>;
   onClear: () => void;
+  // Quantas das selecionadas estao sincronizadas com o Google Calendar.
+  syncedCount?: number;
 }
 
 // Shows up in place of nothing whenever at least one task is checked in
@@ -31,6 +35,7 @@ export default function BulkActionsBar({
   onReschedule,
   onDelete,
   onClear,
+  syncedCount = 0,
 }: BulkActionsBarProps) {
   const { t } = useI18n();
   const { confirm, notify } = useFeedback();
@@ -57,6 +62,8 @@ export default function BulkActionsBar({
     setIsMarkingDone(true);
     try {
       await onMarkDone();
+    } catch {
+      notify(t('bulkActions.markDoneFailed'), 'error');
     } finally {
       setIsMarkingDone(false);
     }
@@ -70,9 +77,21 @@ export default function BulkActionsBar({
       tone: 'danger',
     });
     if (!confirmed) return;
+    // Mesmo comportamento do apagar individual: so pergunta se houver
+    // eventos ligados, e "remover" e a resposta por omissao.
+    const removeFromCalendar =
+      syncedCount > 0 &&
+      (await confirm({
+        title: t('hook.googleCalendar'),
+        message: t('bulkActions.removeEventsMessage', { count: syncedCount }),
+        confirmLabel: t('hook.removeEvent'),
+        cancelLabel: t('hook.keepEvent'),
+      }));
     setIsDeleting(true);
     try {
-      await onDelete();
+      await onDelete(removeFromCalendar);
+    } catch {
+      notify(t('bulkActions.deleteFailed'), 'error');
     } finally {
       setIsDeleting(false);
     }

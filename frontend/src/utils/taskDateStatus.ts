@@ -1,6 +1,6 @@
 import type { Task } from '../types/models';
 import { MS_PER_HOUR, MS_PER_DAY } from '../lib/timeConstants';
-import { isUtcMidnight, toDateKey } from '../lib/dateKey';
+import { isUtcMidnight, taskDayKey, todayKey as localTodayKey } from '../lib/dateKey';
 import { translateNow } from '../i18n/translate';
 
 export type DateStatus = 'completed' | 'overdue' | 'today' | 'upcoming';
@@ -12,12 +12,15 @@ export type DateStatus = 'completed' | 'overdue' | 'today' | 'upcoming';
 export function getDateStatus(task: Task, now: Date = new Date()): DateStatus {
   if (task.progressStatus === 'COMPLETED') return 'completed';
 
-  const taskDate = new Date(task.date);
-  const todayKey = toDateKey(now);
-  const taskKey = toDateKey(taskDate);
+  // "Hoje" e o dia local da pessoa (regra em lib/dateKey.ts). Uma task sem
+  // hora vale pelo dia guardado (meia-noite UTC), uma com hora pelo dia local
+  // do instante. Comparar em UTC punha "today" no dia errado entre 00:00 e
+  // 01:00 em Lisboa no verao e todas as noites a oeste de UTC (F-09).
+  const todayKey = localTodayKey(now);
+  const taskKey = taskDayKey(new Date(task.date));
 
   if (taskKey === todayKey) return 'today';
-  return taskDate.getTime() < now.getTime() ? 'overdue' : 'upcoming';
+  return taskKey < todayKey ? 'overdue' : 'upcoming';
 }
 
 

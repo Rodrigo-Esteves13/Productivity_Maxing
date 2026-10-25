@@ -18,6 +18,8 @@ function source(dateKey: string, overrides: Partial<ShiftSource> = {}) {
     date: parseDateKey(dateKey),
     startMinutes: 540,
     endMinutes: 1020,
+    address: null,
+    commuteMode: null,
     ...overrides,
   } satisfies ShiftSource;
 }
@@ -52,6 +54,8 @@ describe('planWeekCopy', () => {
         dateKey: '2026-10-05',
         startMinutes: 540,
         endMinutes: 1020,
+        address: null,
+        commuteMode: null,
       },
     ];
     const plan = planWeekCopy(

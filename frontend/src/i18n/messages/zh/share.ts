@@ -41,6 +41,7 @@ export const share: Record<string, string> = {
   'sharedEdit.titleRequired': "请给这节课起个标题。",
   'sharedEdit.noChanges': "你还没有做任何修改。",
   'sharedEdit.error': "无法发送你的修改，请重试。",
+  'sharedEdit.conflict': "在此期间其他人修改了这节课。请复制你的文本，刷新页面后重新编辑。",
   'push.title': "推送通知",
   'push.help': "在此设备上接收以下通知：临近的截止日期（如已在上方开启）、好友和访问请求、笔记邀请和修改建议，以及你的请求的答复。",
   'push.enable': "开启通知",

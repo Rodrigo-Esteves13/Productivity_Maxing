@@ -18,6 +18,7 @@ import type { FriendHub } from '../api/socialHubService';
 import { friendNotesPath, notebookEntryPath, sharedNotePath, socialTabPath } from '../lib/appLinks';
 import { notifySocialChanged } from '../lib/socialEvents';
 import { useI18n } from '../i18n/useI18n';
+import { useFeedback } from '../context/useFeedback';
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
@@ -66,6 +67,7 @@ function NoteLink({
 // abre-se cada nota, pede-se acesso e partilha-se uma nota nova.
 export default function FriendProfile() {
   const { t, lang } = useI18n();
+  const { notify } = useFeedback();
   const navigate = useNavigate();
   const { userId } = useParams<{ userId: string }>();
   const { hub, state, reload } = useFriendHub(userId);
@@ -112,14 +114,21 @@ export default function FriendProfile() {
     try {
       await requestNotesAccess(hub.friend.userId);
       void reload();
+    } catch {
+      notify(t('social.actionError'), 'error');
     } finally {
       setIsAsking(false);
     }
   };
 
   const leave = async (action: 'remove' | 'block') => {
-    if (action === 'remove') await removeFriendship(hub.friend.friendshipId);
-    else await blockUser(hub.friend.userId);
+    try {
+      if (action === 'remove') await removeFriendship(hub.friend.friendshipId);
+      else await blockUser(hub.friend.userId);
+    } catch {
+      notify(t('social.actionError'), 'error');
+      return;
+    }
     notifySocialChanged();
     navigate(socialTabPath('friends'));
   };

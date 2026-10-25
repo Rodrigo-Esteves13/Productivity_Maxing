@@ -1,6 +1,9 @@
-import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
 import { getUserProfile, fetchCsrfToken, logoutRequest } from '../api/userService';
-import { setCsrfToken } from '../api/csrfStore';
+import { setCsrfToken, setSessionUserId } from '../api/csrfStore';
+import { unsubscribeThisDevice } from '../hooks/usePushNotifications';
+import { clearPushPromptAnswered } from '../pwa/pushPromptStorage';
+import { resetCalendarStatus } from '../hooks/useCalendarStatus';
 import type { User } from '../types/models';
 import { AuthContext } from './auth-context';
 
@@ -15,6 +18,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // toda a app (Navbar, Profile, ...) para não andarmos a repetir fetches.
   const [user, setUser] = useState<User | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState<boolean>(false);
+  // Lido no logout sem o pôr nas deps (o logout tem de ficar estável).
+  const userIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    userIdRef.current = user?.id ?? null;
+    // O cliente HTTP usa-o para nao repetir pedidos noutra conta (F-05).
+    setSessionUserId(user?.id ?? null);
+  }, [user]);
 
   const refreshUser = useCallback(async () => {
     setIsLoadingUser(true);
@@ -66,18 +76,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // com auth. É isto que dava a sensação de "a app inteira faz rebuild"
   // sempre que alguém entra na conta.
   const login = useCallback((csrfToken: string) => {
+    // Caches de modulo sao de um utilizador: nova sessao, cache limpa (F-07).
+    resetCalendarStatus();
     setCsrfToken(csrfToken);
     setIsAuthenticated(true);
     refreshUser();
   }, [refreshUser]);
 
   const logout = useCallback(async () => {
+    // Antes do logout (precisa da sessão): o dispositivo deixa de receber os
+    // avisos desta conta. Melhor esforço, nunca impede o logout.
+    try {
+      const hadPush = await unsubscribeThisDevice();
+      if (hadPush && userIdRef.current) clearPushPromptAnswered(userIdRef.current);
+    } catch (err) {
+      console.error('Push unsubscribe on logout failed:', err);
+    }
     try {
       await logoutRequest();
     } catch (err) {
       console.error('Logout request failed (clearing local state anyway):', err);
     } finally {
       setCsrfToken(null);
+      resetCalendarStatus();
       setIsAuthenticated(false);
       setUser(null);
     }

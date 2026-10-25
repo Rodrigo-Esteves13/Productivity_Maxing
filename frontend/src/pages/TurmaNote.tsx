@@ -21,8 +21,8 @@ export default function TurmaNote() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { turmaId = '', noteId = '' } = useParams<{ turmaId: string; noteId: string }>();
-  const { data: turma } = useTurmaDetail(turmaId);
-  const note = useTurmaNote(turmaId, noteId, t('turma.notes.untitled'));
+  const { data: turma, reload: reloadTurma } = useTurmaDetail(turmaId);
+  const note = useTurmaNote(turmaId, noteId, t('turma.notes.untitled'), reloadTurma);
   const confirm = useConfirmAction(t('turma.actionError'));
   const canEdit = turma?.canEditNotes ?? false;
   useDocumentTitle(note.doc?.title || t('turma.tab.notes'));

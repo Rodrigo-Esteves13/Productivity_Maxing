@@ -20,6 +20,7 @@ import { extra } from './extra';
 import { fase7 } from './fase7';
 import { fase7b } from './fase7b';
 import { fase7c } from './fase7c';
+import { meds } from './meds';
 
 export const en: Record<string, string> = {
   ...packs,
@@ -44,4 +45,5 @@ export const en: Record<string, string> = {
   ...fase7,
   ...fase7b,
   ...fase7c,
+  ...meds,
 };

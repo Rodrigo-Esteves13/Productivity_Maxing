@@ -6,6 +6,7 @@ import { CheckIcon, XIcon, PencilIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
 import { getApiMessage } from '../../lib/httpError';
 import { editSharedEntry } from '../../api/notebookService';
+import { parseEntryConflict } from '../../lib/notebookEntryConflict';
 import CaseTransformBar from './CaseTransformBar';
 import EntrySectionHeader from './entry/EntrySectionHeader';
 import NotesCounter from './entry/NotesCounter';
@@ -20,6 +21,8 @@ interface SharedEntryEditFormProps {
   isProposal: boolean;
   initialTitle: string;
   initialText: string;
+  // Versao lida: um co-owner nao grava por cima de alteracoes feitas depois.
+  baseUpdatedAt?: string;
   // `applied` = true quando a alteracao ja foi aplicada (co-owner).
   onDone: (applied: boolean) => void;
   onCancel: () => void;
@@ -32,6 +35,7 @@ export default function SharedEntryEditForm({
   isProposal,
   initialTitle,
   initialText,
+  baseUpdatedAt,
   onDone,
   onCancel,
 }: SharedEntryEditFormProps) {
@@ -39,6 +43,9 @@ export default function SharedEntryEditForm({
   const [title, setTitle] = useState(initialTitle);
   const [text, setText] = useState(initialText);
   const [note, setNote] = useState('');
+  // Versao de quando o formulario abriu: um refresh da pagina em segundo
+  // plano nao a pode avancar (senao gravava por cima sem 409).
+  const [openedAt] = useState(baseUpdatedAt);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -55,10 +62,13 @@ export default function SharedEntryEditForm({
         title: title.trim(),
         textContent: text,
         note: isProposal ? note.trim() || undefined : undefined,
+        baseUpdatedAt: isProposal ? undefined : openedAt,
       });
       onDone(result.applied);
     } catch (err) {
-      setError(getApiMessage(err, t('sharedEdit.error')));
+      // 409: o dono (ou outro co-owner) mudou a licao entretanto. O texto
+      // escrito fica no formulario para o copiar antes de recarregar.
+      setError(parseEntryConflict(err) ? t('sharedEdit.conflict') : getApiMessage(err, t('sharedEdit.error')));
       setIsSaving(false);
     }
   };

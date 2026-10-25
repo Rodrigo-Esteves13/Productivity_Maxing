@@ -61,6 +61,17 @@ func isWildcard(target string) bool {
 	return strings.ContainsAny(target, "*?")
 }
 
+// normalizeProcessName limpa um nome vindo da config remota. O tasklist
+// mostra sempre o nome com extensão ("steam.exe"), por isso "steam" escrito
+// na página /agent nunca dava match (E-15): sem extensão, junta ".exe".
+func normalizeProcessName(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" || isWildcard(name) || filepath.Ext(name) != "" {
+		return name
+	}
+	return name + ".exe"
+}
+
 // ProcessBlocker mata repetidamente os processos cujo nome de executável
 // esteja na lista configurada. Usamos os binários nativos do Windows
 // (tasklist/taskkill) via os/exec em vez de uma dependência tipo
@@ -91,7 +102,7 @@ func (p *ProcessBlocker) Enforce(processNames []string) ([]string, error) {
 
 	var killed []string
 	for _, target := range processNames {
-		target = strings.TrimSpace(target)
+		target = normalizeProcessName(target)
 		if target == "" {
 			continue
 		}
@@ -113,11 +124,14 @@ func (p *ProcessBlocker) Enforce(processNames []string) ([]string, error) {
 		}
 		cmd := exec.Command("taskkill", "/IM", target, "/F", "/T")
 		cmd.SysProcAttr = hideWindow
-		// Ignoramos o erro aqui de propósito: taskkill devolve exit code
-		// != 0 se o processo já tiver morrido entre o tasklist e agora
-		// (condição de corrida benigna), o que não é um erro real do
-		// agente.
-		_ = cmd.Run()
+		// taskkill devolve exit code != 0 se o processo já tiver morrido
+		// entre o tasklist e agora (corrida benigna) ou se não tiver
+		// permissão (processo elevado). Nos dois casos não foi "terminado"
+		// por nós: fica no log e fora da lista (E-15).
+		if err := cmd.Run(); err != nil {
+			log.Printf("blocker: taskkill failed for %q: %v", target, err)
+			continue
+		}
 		killed = append(killed, target)
 	}
 	return killed, nil

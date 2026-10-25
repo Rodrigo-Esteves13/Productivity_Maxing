@@ -53,7 +53,15 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
   };
 
   const handleRemove = async () => {
-    await removeScheduleLink(areaId);
+    setError('');
+    try {
+      await removeScheduleLink(areaId);
+    } catch {
+      // Fica em edicao para o erro aparecer junto do botao.
+      setError(t('notebook.scheduleLink.removeError'));
+      setIsEditing(true);
+      return;
+    }
     setLinkedSubject(null);
     setDraft('');
     setIsEditing(false);

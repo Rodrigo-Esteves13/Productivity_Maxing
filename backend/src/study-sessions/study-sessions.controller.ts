@@ -19,6 +19,7 @@ import { StartStudySessionDto } from './dto/start-study-session.dto';
 import { StopStudySessionDto } from './dto/stop-study-session.dto';
 import { CreateManualSessionDto } from './dto/create-manual-session.dto';
 import { UpdateStudySessionDto } from './dto/update-study-session.dto';
+import { HeartbeatStudySessionDto } from './dto/heartbeat-study-session.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
@@ -78,8 +79,12 @@ export class StudySessionsController {
   // headroom, not a tight limit.
   @Post(':id/heartbeat')
   @Throttle(perMinute(10))
-  heartbeat(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.studySessionsService.heartbeat(user.id, id);
+  heartbeat(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: HeartbeatStudySessionDto,
+  ) {
+    return this.studySessionsService.heartbeat(user.id, id, dto);
   }
 
   // Sem sessao ativa responde 204 (sem corpo) em vez de 200 com corpo vazio

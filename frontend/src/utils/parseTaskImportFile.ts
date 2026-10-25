@@ -112,10 +112,19 @@ function findAcademicTypeKeyByLabel(label: string, taskTypeKey: string, meta: Ta
 export interface MapImportRowsResult {
   rows: ImportTaskRow[];
   // 1-based, matching the row's position in the spreadsheet (header row
-  // excluded) - same numbering scheme the backend uses in its response,
-  // so a single error list can describe both parse-time and create-time
-  // failures without the user having to reconcile two different row counts.
+  // excluded).
   errors: { row: number; message: string }[];
+  // Spreadsheet row number of each entry in `rows` (same index). The backend
+  // numbers its results by position in the array it received (rows that
+  // failed parsing are not sent), so its numbers must be mapped back with
+  // toSheetRowNumbers() before showing them next to the parse errors.
+  sheetRows: number[];
+}
+
+// Maps the backend's per-row results (1-based position in the sent array)
+// back to spreadsheet row numbers, so "Row 7" means row 7 of the sheet.
+export function toSheetRowNumbers<T extends { row: number }>(results: T[], sheetRows: number[]): T[] {
+  return results.map((r) => ({ ...r, row: sheetRows[r.row - 1] ?? r.row }));
 }
 
 // Phase 2: turn the raw sheet rows into typed, backend-ready ImportTaskRow
@@ -137,6 +146,7 @@ export function mapImportRows(
 
   const rows: ImportTaskRow[] = [];
   const errors: { row: number; message: string }[] = [];
+  const sheetRows: number[] = [];
 
   rawRows.forEach((rawRow, index) => {
     const rowNumber = index + 1;
@@ -232,7 +242,8 @@ export function mapImportRows(
       targetGrade: toNumber(findColumnValue(rawRow, 'targetGrade')),
       realGrade: toNumber(findColumnValue(rawRow, 'realGrade')),
     });
+    sheetRows.push(rowNumber);
   });
 
-  return { rows, errors };
+  return { rows, errors, sheetRows };
 }

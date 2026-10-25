@@ -139,7 +139,7 @@ export default function Dashboard() {
 
   const {
     selectedIds, toggleSelect, toggleSelectAll, markSelectedDone, rescheduleSelected, deleteSelected,
-    clearSelection,
+    selectedSyncedCount, clearSelection,
   } = useTaskSelection(filteredTasks, setTasks, filters);
   const { completeOne } = useCompleteWithUndo(setTasks);
 
@@ -288,6 +288,7 @@ export default function Dashboard() {
                 onMarkDone={markSelectedDone}
                 onReschedule={rescheduleSelected}
                 onDelete={deleteSelected}
+                syncedCount={selectedSyncedCount}
                 onClear={clearSelection}
               />
               <TasksTable

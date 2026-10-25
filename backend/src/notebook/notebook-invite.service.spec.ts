@@ -1,5 +1,8 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { NotebookInviteService } from './notebook-invite.service';
+import {
+  INVITE_CONFLICT_CODE,
+  NotebookInviteService,
+} from './notebook-invite.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { PushService } from '../push/push.service';
 
@@ -77,6 +80,11 @@ describe('NotebookInviteService', () => {
     await expect(
       service.invite('o', 'e1', 'x', 'EDITOR'),
     ).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      service.invite('o', 'e1', 'x', 'EDITOR'),
+    ).rejects.toMatchObject({
+      response: { code: INVITE_CONFLICT_CODE.needsAuthorized },
+    });
   });
 
   it('sem partilha: cria AUTHORIZED, convite PENDING e avisa o convidado', async () => {
@@ -114,6 +122,11 @@ describe('NotebookInviteService', () => {
     await expect(
       service.invite('o', 'e1', 'x', 'EDITOR'),
     ).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      service.invite('o', 'e1', 'x', 'EDITOR'),
+    ).rejects.toMatchObject({
+      response: { code: INVITE_CONFLICT_CODE.declinedRecently },
+    });
   });
 
   it('limite de pessoas por nota', async () => {
@@ -124,6 +137,11 @@ describe('NotebookInviteService', () => {
     await expect(
       service.invite('o', 'e1', 'x', 'EDITOR'),
     ).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      service.invite('o', 'e1', 'x', 'EDITOR'),
+    ).rejects.toMatchObject({
+      response: { code: INVITE_CONFLICT_CODE.noteFull },
+    });
   });
 
   it('responder: so o convidado, so convite pendente', async () => {

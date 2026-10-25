@@ -23,6 +23,10 @@ import UsefulLinksSection from './entry/UsefulLinksSection';
 import { AttachmentsSection, PhotosSection } from './entry/EntryFilesSection';
 import { MAX_TEXT_CONTENT_LENGTH } from './entry/notebookEntryConfig';
 import type { NotebookEntrySavePayload } from './entry/entryTypes';
+import Button from '../UI/Button';
+import { useI18n } from '../../i18n/useI18n';
+import { useFeedback } from '../../context/useFeedback';
+import { clearUnsavedEntryDraft, readUnsavedEntryDraft, saveUnsavedEntryDraft } from '../../lib/unsavedEntryDrafts';
 
 interface NotebookEntryEditorProps {
   entry: NotebookEntry;
@@ -43,6 +47,12 @@ interface NotebookEntryEditorProps {
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
   // Descarrega a entrada (como esta gravada) em Markdown. So em leitura.
   onExport?: () => void;
+  // Passa a usar esta versao do servidor como base (conflito resolvido).
+  onAdoptServerVersion: (entry: NotebookEntry) => void;
+  // Remonta o editor com a entrada atual (versao dos outros, copia reposta).
+  onReopen: () => void;
+  // Uma proposta aprovada mudou a entrada no servidor: atualizar a cache.
+  onProposalApplied?: () => void;
 }
 
 // Wrapper fino: só gere leitura vs edição. Abre sempre em leitura (medo de
@@ -54,15 +64,17 @@ export default function NotebookEntryEditor({
   suggestedClassNumber,
   startInEditMode = false,
   onSave,
+  onProposalApplied,
   ...handlers
 }: NotebookEntryEditorProps) {
   const [isEditing, setIsEditing] = useState(startInEditMode);
   // Uma proposta de um editor aprovada muda titulo/notas no servidor: o
   // formulario recebe-as aqui para o rascunho (e o auto save) as manter.
   const [applied, setApplied] = useState<{ seq: number; fields: ChangeProposalFields } | null>(null);
-  const share = useEntryShare(entry.id, (fields) =>
-    setApplied((prev) => ({ seq: (prev?.seq ?? 0) + 1, fields })),
-  );
+  const share = useEntryShare(entry.id, (fields) => {
+    setApplied((prev) => ({ seq: (prev?.seq ?? 0) + 1, fields }));
+    onProposalApplied?.();
+  });
 
   return (
     <NotebookEntryEditorForm
@@ -79,7 +91,7 @@ export default function NotebookEntryEditor({
   );
 }
 
-interface NotebookEntryEditorFormProps extends Omit<NotebookEntryEditorProps, 'startInEditMode'> {
+interface NotebookEntryEditorFormProps extends Omit<NotebookEntryEditorProps, 'startInEditMode' | 'onProposalApplied'> {
   share: UseEntryShareResult;
   appliedChanges: { seq: number; fields: ChangeProposalFields } | null;
   isEditing: boolean;
@@ -102,14 +114,18 @@ function NotebookEntryEditorForm({
   onUploadAttachment,
   onDeleteAttachment,
   onExport,
+  onAdoptServerVersion,
+  onReopen,
 }: NotebookEntryEditorFormProps) {
+  const { t } = useI18n();
+  const { notify } = useFeedback();
   const draft = useEntryDraft(entry);
   const canvas = useDrawingCanvas(entry.drawingStrokes ?? []);
   const shapeLayer = useCanvasShapes(entry.canvasShapes ?? []);
   const linkLayer = useCanvasLinks(entry.canvasLinks ?? []);
   const textLayer = useCanvasTexts(entry.canvasTexts ?? []);
   const { textareaRef, insertAtCursor } = useTextareaInsertion(draft.textContent, draft.setTextContent);
-  const deletion = useConfirmDelete(onDelete);
+  const deletion = useConfirmDelete(onDelete, () => notify(t('notebook.deleteError'), 'error'));
 
   // Aplica ao rascunho o que uma proposta aprovada mudou no servidor.
   useEffect(() => {
@@ -126,14 +142,15 @@ function NotebookEntryEditorForm({
   const fallbackDateRef = useRef(entry.date);
 
   const payload = useMemo<NotebookEntrySavePayload>(() => {
-    const parsedClassNumber = draft.classNumber.trim() ? Number(draft.classNumber) : undefined;
+    // null (nao undefined) para o backend limpar o numero antigo.
+    const parsedClassNumber = draft.classNumber.trim() ? Number(draft.classNumber) : null;
     // Meio-dia local evita a data saltar um dia por causa do arredondamento
     // UTC - o utilizador escolheu um DIA, não uma hora.
     const parsedDate = new Date(`${draft.dateValue}T12:00:00`);
     return {
       title: draft.title,
       entryType: draft.entryType,
-      classNumber: draft.entryType === 'CLASS' ? parsedClassNumber : undefined,
+      classNumber: draft.entryType === 'CLASS' ? parsedClassNumber : null,
       textContent: draft.textContent,
       drawingStrokes: canvas.strokes,
       tables: draft.tables,
@@ -191,7 +208,50 @@ function NotebookEntryEditorForm({
     blocked: draft.textContent.length > MAX_TEXT_CONTENT_LENGTH,
     textLength: draft.textContent.length,
     onSave,
+    // Sair da entrada com a gravacao a falhar: guarda a copia neste separador
+    // e avisa (o editor ja nao esta no ecra para mostrar o erro).
+    onLeaveSaveFailed: (unsavedPayload) => {
+      saveUnsavedEntryDraft(entry.id, unsavedPayload);
+      notify(t('notebook.unsaved.leaveFailed', { title: unsavedPayload.title }), 'error');
+    },
   });
+
+  // Copia que ficou por gravar da ultima vez que saiu desta entrada.
+  const [unsaved, setUnsaved] = useState(() => readUnsavedEntryDraft<NotebookEntrySavePayload>(entry.id));
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreError, setRestoreError] = useState('');
+  const restoreUnsaved = async () => {
+    if (!unsaved) return;
+    setIsRestoring(true);
+    setRestoreError('');
+    try {
+      await onSave(unsaved);
+      clearUnsavedEntryDraft(entry.id);
+      onReopen();
+    } catch {
+      setRestoreError(t('notebook.unsaved.restoreError'));
+      setIsRestoring(false);
+    }
+  };
+  const discardUnsaved = () => {
+    clearUnsavedEntryDraft(entry.id);
+    setUnsaved(null);
+  };
+
+  // Conflito: alguem gravou esta entrada depois de ela abrir aqui.
+  const keepMine = () => {
+    if (!autosave.conflict) return;
+    onAdoptServerVersion(autosave.conflict);
+    void autosave.keepMine();
+  };
+  const useTheirs = () => {
+    const current = autosave.conflict;
+    if (!current) return;
+    autosave.discard();
+    clearUnsavedEntryDraft(entry.id);
+    onAdoptServerVersion(current);
+    onReopen();
+  };
 
   const handleDone = async () => {
     const ok = await autosave.flush();
@@ -229,6 +289,33 @@ function NotebookEntryEditorForm({
 
   return (
     <>
+      {autosave.status === 'conflict' && autosave.conflict && (
+        <div role="alert" className="mb-3 space-y-2 rounded-lg border border-amber-800/60 bg-amber-950/20 p-3 text-sm text-amber-200">
+          <p>{t('notebook.conflict.message')}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" onClick={keepMine}>
+              {t('notebook.conflict.keepMine')}
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={useTheirs}>
+              {t('notebook.conflict.useTheirs')}
+            </Button>
+          </div>
+        </div>
+      )}
+      {unsaved && (
+        <div role="status" className="mb-3 space-y-2 rounded-lg border border-violet-800/60 bg-violet-950/20 p-3 text-sm text-violet-200">
+          <p>{t('notebook.unsaved.found')}</p>
+          {restoreError && <p className="text-xs text-red-400">{restoreError}</p>}
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" disabled={isRestoring} onClick={() => void restoreUnsaved()}>
+              {t('notebook.unsaved.restore')}
+            </Button>
+            <Button type="button" size="sm" variant="secondary" disabled={isRestoring} onClick={discardUnsaved}>
+              {t('notebook.unsaved.discard')}
+            </Button>
+          </div>
+        </div>
+      )}
       <EntrySheet
         toolbar={
           <EntryToolbar

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { getFrontendUrl, getMailFromName } from '../config/app.config';
 import { MS_PER_SECOND } from '../common/time.constants';
+import { deadlineEmailText, fillMailTemplate } from './mail-messages';
 
 // Portas com TLS implicito. 2465 e a alternativa da Resend para hosts que
 // bloqueiam as portas SMTP normais (o Render gratuito bloqueia 25/465/587;
@@ -185,9 +186,11 @@ export class MailService {
     to: string,
     items: { title: string; dueLabel: string; areaName: string | null }[],
     tasksLink: string,
+    lang = 'en',
   ): Promise<boolean> {
     const transporter = this.getTransporter();
     if (!transporter) return false;
+    const text = deadlineEmailText(lang);
 
     const fromEmail = process.env.SMTP_FROM_EMAIL ?? process.env.SMTP_USER;
     const fromName = getMailFromName();
@@ -206,15 +209,14 @@ export class MailService {
         to,
         subject:
           items.length === 1
-            ? `Due soon: ${items[0].title}`
-            : `${items.length} tasks due soon`,
+            ? fillMailTemplate(text.subjectOne, { title: items[0].title })
+            : fillMailTemplate(text.subjectMany, { count: items.length }),
         html: renderActionEmail({
-          title: items.length === 1 ? 'A task is due soon' : 'Tasks due soon',
+          title: items.length === 1 ? text.titleOne : text.titleMany,
           intro: lines,
-          buttonLabel: 'Open my tasks',
+          buttonLabel: text.button,
           link: tasksLink,
-          footer:
-            'You get this because deadline reminders are on. Turn them off any time in Profile > Preferences.',
+          footer: text.footer,
           frontendUrl: getFrontendUrl(),
         }),
       });

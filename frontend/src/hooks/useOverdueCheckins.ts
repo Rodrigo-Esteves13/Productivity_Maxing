@@ -2,48 +2,57 @@ import { useCallback, useEffect, useState } from 'react';
 import { getOverdueCheckins, confirmOverdueTask, type OverdueAnswer } from '../api/userService';
 import type { Task } from '../types/models';
 import { todayKey } from '../lib/dateKey';
+import { readOverdueCheckDay, writeOverdueCheckDay } from '../lib/overdueCheckKey';
 
-// Chave de localStorage usada só para evitar disparar o pedido de rede a
-// cada mudança de página no mesmo dia - o backend é sempre quem decide de
-// facto quais tasks ainda faltam confirmar (lastOverdueCheckAt), isto é só
-// uma otimização client-side.
-const LAST_CHECK_KEY = 'pmaxing:lastOverdueCheckDate';
+// O backend e sempre quem decide quais tasks ainda faltam confirmar
+// (lastOverdueCheckAt). A marca do dia em localStorage (por utilizador) so
+// evita pedir outra vez depois de a fila ficar respondida ou adiada hoje.
+// So e gravada nesse momento: antes era gravada mal chegava a resposta
+// (mesmo com o pedido cancelado por mudar de pagina) e o resto da fila
+// desaparecia ate ao dia seguinte.
 
 interface UseOverdueCheckinsReturn {
   pendingTasks: Task[];
   currentTask: Task | null;
   isAnswering: boolean;
+  // true quando a ultima resposta falhou (offline, erro do servidor).
+  hasError: boolean;
   answer: (response: OverdueAnswer) => Promise<void>;
+  // "Perguntar mais tarde": fecha a fila por hoje neste browser. As tasks
+  // continuam por responder no backend e voltam amanha.
+  dismiss: () => void;
 }
 
-export function useOverdueCheckins(isEnabled: boolean): UseOverdueCheckinsReturn {
+export function useOverdueCheckins(userId: string | null | undefined): UseOverdueCheckinsReturn {
   const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
   const [isAnswering, setIsAnswering] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    if (!isEnabled) return;
-
-    // Já verificámos hoje neste browser - não vale a pena pedir outra vez
-    // até o dia mudar (o utilizador pode ter respondido a tudo na sessão
-    // anterior).
-    if (localStorage.getItem(LAST_CHECK_KEY) === todayKey()) return;
+    if (!userId) {
+      setPendingTasks([]);
+      return;
+    }
+    if (readOverdueCheckDay(userId) === todayKey()) return;
 
     let cancelled = false;
     getOverdueCheckins()
       .then((tasks) => {
-        if (!cancelled) setPendingTasks(tasks);
-        localStorage.setItem(LAST_CHECK_KEY, todayKey());
+        if (cancelled) return;
+        setPendingTasks(tasks);
+        // Nada a perguntar: nao vale a pena pedir de novo hoje.
+        if (tasks.length === 0) writeOverdueCheckDay(userId, todayKey());
       })
       .catch((error: unknown) => {
         // Falhar aqui nunca deve impedir o resto da app de funcionar -
-        // fica só sem o prompt até ao próximo carregamento.
+        // tenta outra vez na proxima pagina.
         console.error('Failed to load overdue check-ins:', error);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [isEnabled]);
+  }, [userId]);
 
   const answer = useCallback(
     async (response: OverdueAnswer) => {
@@ -53,22 +62,34 @@ export function useOverdueCheckins(isEnabled: boolean): UseOverdueCheckinsReturn
       setIsAnswering(true);
       try {
         await confirmOverdueTask(current.id, response);
-        setPendingTasks((prev) => prev.slice(1));
+        setHasError(false);
+        const rest = pendingTasks.slice(1);
+        setPendingTasks(rest);
+        if (rest.length === 0 && userId) writeOverdueCheckDay(userId, todayKey());
       } catch (error: unknown) {
         console.error('Failed to confirm overdue task:', error);
-        // Mantemos a task na fila para tentar de novo, em vez de a
-        // avançar silenciosamente como se tivesse sido respondida.
+        // Mantemos a task na fila e mostramos o erro no modal (com a
+        // opcao "Perguntar mais tarde" para nao ficar preso).
+        setHasError(true);
       } finally {
         setIsAnswering(false);
       }
     },
-    [pendingTasks, isAnswering],
+    [pendingTasks, isAnswering, userId],
   );
+
+  const dismiss = useCallback(() => {
+    setPendingTasks([]);
+    setHasError(false);
+    if (userId) writeOverdueCheckDay(userId, todayKey());
+  }, [userId]);
 
   return {
     pendingTasks,
     currentTask: pendingTasks[0] ?? null,
     isAnswering,
+    hasError,
     answer,
+    dismiss,
   };
 }

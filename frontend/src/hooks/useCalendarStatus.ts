@@ -9,6 +9,8 @@ import { getCalendarStatus } from '../api/calendarService';
 // desligar o Calendar no Profile).
 let cachedStatus: boolean | null = null;
 let pendingRequest: Promise<boolean> | null = null;
+// True quando o ultimo pedido falhou (o valor mostrado e provisorio).
+let lastFetchFailed = false;
 
 // Subscritores = todos os componentes com useCalendarStatus() montados
 // neste momento. Sem isto, refreshCalendarStatus() só limpava a cache a
@@ -23,17 +25,23 @@ function notifySubscribers(value: boolean | null) {
   subscribers.forEach((listener) => listener(value));
 }
 
-async function fetchStatus(): Promise<boolean> {
+/** Estado partilhado (pede uma vez, reutiliza a resposta boa). Exportado para os testes. */
+export async function fetchStatus(): Promise<boolean> {
   if (cachedStatus !== null) return cachedStatus;
   if (!pendingRequest) {
     pendingRequest = getCalendarStatus()
       .then((res) => {
         cachedStatus = res.connected;
+        lastFetchFailed = false;
         notifySubscribers(res.connected);
         return res.connected;
       })
       .catch(() => {
-        cachedStatus = false;
+        // Falha temporaria (ex: arranque a frio do Render) NAO fica em cache
+        // como "nao ligado": cachedStatus continua null e o proximo mount ou
+        // o voltar a app tenta outra vez. Antes ficava false ate um reload
+        // (a-09 / F-07). Para ja os componentes tratam-no como nao ligado.
+        lastFetchFailed = true;
         notifySubscribers(false);
         return false;
       })
@@ -52,6 +60,15 @@ export function refreshCalendarStatus(): void {
   cachedStatus = null;
   notifySubscribers(null);
   fetchStatus();
+}
+
+/** Chamar no logout/login: a cache e de UM utilizador. Sem isto, depois de
+ * sair e entrar com outra conta (SPA, sem reload) via-se o estado da conta
+ * anterior (F-07). Nao faz pedido: o proximo componente montado pede. */
+export function resetCalendarStatus(): void {
+  cachedStatus = null;
+  lastFetchFailed = false;
+  notifySubscribers(null);
 }
 
 /** null = a carregar, true/false = resultado. Partilhado entre todos os
@@ -73,8 +90,19 @@ export function useCalendarStatus(): boolean | null {
 
     fetchStatus().then(setConnected);
 
+    // Se o ultimo pedido falhou, tenta outra vez ao voltar a app.
+    const retryIfFailed = () => {
+      if (lastFetchFailed && cachedStatus === null && document.visibilityState === 'visible') {
+        void fetchStatus();
+      }
+    };
+    document.addEventListener('visibilitychange', retryIfFailed);
+    window.addEventListener('focus', retryIfFailed);
+
     return () => {
       subscribers.delete(setConnected);
+      document.removeEventListener('visibilitychange', retryIfFailed);
+      window.removeEventListener('focus', retryIfFailed);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

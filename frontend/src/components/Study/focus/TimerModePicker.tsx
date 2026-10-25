@@ -8,6 +8,7 @@ import {
   normalizePlan,
   type TimerPlan,
 } from '../../../lib/focusTimer';
+import NotifyPermissionHint from './NotifyPermissionHint';
 import { useI18n } from '../../../i18n/useI18n';
 
 interface TimerModePickerProps {
@@ -109,6 +110,7 @@ export default function TimerModePicker({ value, onChange }: TimerModePickerProp
           ? t('ui.freeCountsUpUntilYou')
           : t('ui.countsDownThenBreak', { focus: value.focusMinutes, rest: value.breakMinutes })}
       </p>
+      {value !== null && <NotifyPermissionHint />}
     </div>
   );
 }

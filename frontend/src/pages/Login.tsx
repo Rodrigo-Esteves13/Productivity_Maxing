@@ -5,6 +5,7 @@ import { loginRequest, resendVerificationRequest } from '../api/userService';
 import TwoFactorCodeForm from '../components/Auth/TwoFactorCodeForm';
 import { useI18n } from '../i18n/useI18n';
 import { isSafeRedirectPath } from '../lib/safeRedirect';
+import { getHttpStatus } from '../lib/httpError';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
@@ -97,7 +98,15 @@ export default function Login() {
         setNeedsVerification(true);
         return;
       }
-      setError(t('auth.invalidCredentials'));
+      // E-16: 429 e servidor/rede em baixo deixam de parecer password errada.
+      const status = getHttpStatus(err);
+      if (status === 429) {
+        setError(t('auth.tooManyAttempts'));
+      } else if (status === undefined || status >= 500) {
+        setError(t('auth.serverUnavailable'));
+      } else {
+        setError(t('auth.invalidCredentials'));
+      }
     }
   };
 

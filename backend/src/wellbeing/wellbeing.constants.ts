@@ -35,3 +35,21 @@ export const MINUTES_PER_DAY = 1440;
 // marcada; mais tarde que isso ja nao faz sentido apitar.
 export const MEDICATION_REMINDER_WINDOW_MINUTES = 60;
 export const MEDICATION_PATH = '/wellbeing';
+
+// Medicacao "se necessario": registo por toma.
+export const MAX_INTAKES_PER_DAY = 30;
+export const MAX_INTAKE_NOTE_LENGTH = 200;
+// Nao deixa registar tomas muito antigas nem no futuro.
+export const MAX_INTAKE_PAST_DAYS = 30;
+export const MAX_INTAKE_FUTURE_MINUTES = 5;
+// Janela maxima de GET /wellbeing/medications/intakes.
+export const MAX_INTAKE_RANGE_DAYS = 62;
+
+// Versao do aviso legal da medicacao. Mudar o texto do aviso (frontend,
+// wellbeing.meds.disclaimer.*) obriga a subir este numero: todos voltam a
+// ter de o aceitar antes de adicionar medicamentos ou registar tomas.
+// v2: finalidade, uso pessoal, maior de idade, janela de 24 horas.
+// v3: ninguem vigia os registos; numeros de emergencia e apoio.
+// v4: a app deixou de dar avisos de combinacoes, limites ou dependencia.
+export const MEDICATION_DISCLAIMER_VERSION = 4;
+export const LOCALE_PATTERN = /^[a-z]{2}(-[A-Z]{2})?$/;

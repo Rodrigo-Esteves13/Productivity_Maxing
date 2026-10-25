@@ -260,7 +260,10 @@ export default function NotebookEntryShare({ share, currentTitle, currentText }:
         </p>
       )}
 
-      {token && visibility === 'AUTHORIZED' && (
+      {/* Pedidos/propostas que ficaram pendentes antes de passar a Publico
+          continuam aqui para se poderem decidir (senao o badge "waiting"
+          nunca limpava). Convidar continua so em Autorizado. */}
+      {token && (visibility === 'AUTHORIZED' || pendingCount > 0 || proposals.length > 0) && (
         <>
           {proposals.length > 0 && (
             <div className="mt-3 border-t border-neutral-800 pt-2">
@@ -285,7 +288,7 @@ export default function NotebookEntryShare({ share, currentTitle, currentText }:
             </div>
           )}
 
-          <NotebookEntryInvite share={share} />
+          {visibility === 'AUTHORIZED' && <NotebookEntryInvite share={share} />}
 
           <div className="mt-3 border-t border-neutral-800 pt-2">
             <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-neutral-300">

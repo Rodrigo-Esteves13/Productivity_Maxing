@@ -101,11 +101,15 @@ export default function PrivacyPolicy() {
           <li>
             Wellbeing (optional): if you use the Wellbeing page, I store your daily check-ins (mood, and
             optionally energy, stress and a short note) and the medication you add (name, optional dose,
-            daily times and which doses you marked as taken). This is health data, processed only with
-            your explicit consent, which you give by adding it. It is visible only to you, never shared with
-            friends or other users, and only used to show your own reminders and the comparison between your
-            mood and your study focus. Medication reminders are sent as push notifications that include the
-            medication name. You can delete any check-in or medication at any time, and deleting your account
+            daily times or &quot;as needed&quot;, and which doses you marked as taken). For &quot;as
+            needed&quot; medication, I store each intake you log (date and time, optional dose and a short
+            note). This is health data, processed only with your explicit consent, which you
+            give by adding it. It is visible only to you, never shared with friends or other users, and only
+            used to show your own reminders, your log and the comparison between your mood and your study
+            focus. Before you use medication tracking I also store the version of
+            the medication notice you accepted, the language it was shown in and when you accepted it.
+            Medication reminders are sent as push notifications that do not include the medication name,
+            because they can appear on a locked screen. You can delete any check-in or medication at any time, and deleting your account
             deletes all of it
           </li>
           <li>

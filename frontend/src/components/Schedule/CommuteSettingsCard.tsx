@@ -102,8 +102,10 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
     setError('');
     setSuccessMessage('');
 
-    const parsedCommute = commuteMinutes.trim() ? Number(commuteMinutes) : undefined;
-    if (parsedCommute !== undefined && (Number.isNaN(parsedCommute) || parsedCommute < 0)) {
+    // Campo vazio -> null (limpa o valor guardado), nao undefined (que o
+    // backend trata como "nao mexer" e o "Saved." mentia).
+    const parsedCommute = commuteMinutes.trim() ? Number(commuteMinutes) : null;
+    if (parsedCommute !== null && (Number.isNaN(parsedCommute) || parsedCommute < 0)) {
       setError(t('ui.commuteTimeMustBeA'));
       return;
     }
@@ -120,14 +122,14 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
       const updated = await updateUserProfile({
         commuteMinutes: parsedCommute,
         commuteMode,
-        homeAddress: homeAddress.trim() || undefined,
-        campusAddress: campusAddress.trim() || undefined,
-        ...(startMinutes != null && endMinutes != null
-          ? { quietHoursStart: startMinutes, quietHoursEnd: endMinutes }
-          : {}),
+        homeAddress: homeAddress.trim() || null,
+        campusAddress: campusAddress.trim() || null,
+        // Os dois vazios (validado acima) -> null nos dois, remove a janela.
+        quietHoursStart: startMinutes,
+        quietHoursEnd: endMinutes,
       });
       onUserUpdate(updated);
-      setSuccessMessage('Saved.');
+      setSuccessMessage(t('ui.saved'));
     } catch (err) {
       console.error('Failed to save schedule settings:', err);
       setError(t('ui.couldNotSaveYourChanges'));
@@ -225,6 +227,7 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
             />
           </FormField>
         </div>
+        <p className="text-xs text-neutral-500">{t('ui.quietHoursLisbonNote')}</p>
 
         {error && <FormError message={error} />}
         {successMessage && !error && <p className="text-sm text-violet-300">{successMessage}</p>}

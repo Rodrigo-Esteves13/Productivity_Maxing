@@ -10,7 +10,7 @@ import {
 import { ActivityIcon, FlameIcon } from '../UI/Icons';
 import ProgressBar from '../UI/ProgressBar';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
-import { todayKey } from '../../lib/dateKey';
+import { lisbonTodayKey } from '../../lib/dateKey';
 import { useI18n } from '../../i18n/useI18n';
 import { fillNodes } from '../../i18n/fillNodes';
 
@@ -93,7 +93,8 @@ export default function StudyActivityCard() {
   if (!hasAnyData) return null;
 
   const maxMinutes = Math.max(0, ...days.map((d) => d.totalMinutes));
-  const today = todayKey();
+  // Os totais diarios vem do backend por dia de Lisboa (regra 2 em lib/dateKey.ts).
+  const today = lisbonTodayKey();
   const todayMinutes = days.find((d) => d.date === today)?.totalMinutes ?? 0;
   const goalPct = Math.min((todayMinutes / goalMinutes) * FULL_PERCENT, FULL_PERCENT);
 

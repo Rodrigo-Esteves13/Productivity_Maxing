@@ -12,3 +12,17 @@ export function setCsrfToken(token: string | null) {
 export function getCsrfToken(): string | null {
   return csrfToken;
 }
+
+// Id do utilizador que ESTA tab mostra (posto pelo AuthProvider). O cliente
+// HTTP compara-o com o dono da sessao antes de repetir um pedido apos um 403
+// de CSRF: se outra tab entrou com outra conta, o pedido desta tab nao pode
+// ser gravado nessa conta (F-05).
+let sessionUserId: string | null = null;
+
+export function setSessionUserId(id: string | null) {
+  sessionUserId = id;
+}
+
+export function getSessionUserId(): string | null {
+  return sessionUserId;
+}

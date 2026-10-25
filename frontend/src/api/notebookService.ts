@@ -44,10 +44,16 @@ export interface CreateNotebookEntryPayload {
 }
 
 export type UpdateNotebookEntryPayload = Partial<
-  Omit<CreateNotebookEntryPayload, 'areaId' | 'classOccurrenceId'>
+  Omit<CreateNotebookEntryPayload, 'areaId' | 'classOccurrenceId' | 'classNumber'>
 > & {
+  // null limpa o numero (campo vazio ou tipo diferente de CLASS); undefined
+  // desaparecia no JSON e o numero antigo ficava gravado.
+  classNumber?: number | null;
   // So na edicao: a criacao segue User.notesPrivateByDefault.
   privateFromFriends?: boolean;
+  // updatedAt da versao aberta: se a entrada mudou entretanto (co-owner,
+  // outro separador) o backend responde 409 com a versao atual.
+  baseUpdatedAt?: string;
 };
 
 // A lista da cadeira sem o conteudo das entradas (ver NotebookEntrySummary).
@@ -264,7 +270,7 @@ export const decideChangeProposal = async (
 // CO_OWNER aplica logo; EDITOR cria/substitui a sua proposta pendente.
 export const editSharedEntry = async (
   token: string,
-  payload: { title?: string; textContent?: string; note?: string },
+  payload: { title?: string; textContent?: string; note?: string; baseUpdatedAt?: string },
 ): Promise<{ applied: boolean; proposalId?: string }> => {
   const response = await api.post<{ applied: boolean; proposalId?: string }>(
     `/notebook/shared/${token}/edit`,

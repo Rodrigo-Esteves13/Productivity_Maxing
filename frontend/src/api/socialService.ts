@@ -59,6 +59,9 @@ export interface FriendCodeRequestRow {
   user: { id: string; name: string | null; email: string };
 }
 
+// Igual ao take de FriendCodeRequestsService.listPending no backend (E-14).
+export const FRIEND_CODE_QUEUE_LIMIT = 200;
+
 export const getFriendCodeRequests = async (): Promise<FriendCodeRequestRow[]> =>
   (await api.get<FriendCodeRequestRow[]>('/friend-code-requests')).data;
 

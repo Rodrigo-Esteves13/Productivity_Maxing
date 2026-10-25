@@ -12,6 +12,10 @@ export async function sendFeedback(input: {
 }
 
 // Admin
+// Igual ao take de FeedbackService.list no backend: com este numero de
+// itens a lista pode estar cortada e a pagina avisa (E-14).
+export const FEEDBACK_LIST_LIMIT = 300;
+
 export async function getFeedbackList(): Promise<FeedbackItem[]> {
   const response = await api.get<FeedbackItem[]>('/feedback');
   return response.data;

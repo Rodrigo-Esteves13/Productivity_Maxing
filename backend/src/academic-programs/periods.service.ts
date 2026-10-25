@@ -14,6 +14,7 @@ import {
   computeCreditWeightedAverage,
   computeCreditsSummary,
   resolveRoundFinalGrade,
+  GRADED_TASK_SELECT,
 } from './grade-average.util';
 
 @Injectable()
@@ -141,9 +142,44 @@ export class PeriodsService {
       );
     }
 
-    return this.prisma.academicPeriod.update({
+    const archived = await this.prisma.academicPeriod.update({
       where: { id },
       data: { isArchived: true, archivedAt: new Date() },
+    });
+    await this.moveActiveOffArchived(userId, archived);
+    return archived;
+  }
+
+  /**
+   * Se o periodo arquivado era o ativo do user, passa o ativo para o
+   * periodo ativo mais recente (de preferencia do mesmo programa). Sem
+   * isto, as tasks criadas sem periodId (TaskForm, quick add, import, task
+   * packs) iam para um periodo arquivado e ficavam fora do plano do dia,
+   * do check-in de atraso e do plano de estudo, sem aviso.
+   */
+  private async moveActiveOffArchived(
+    userId: string,
+    archived: { id: string; programId: string },
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { activePeriodId: true },
+    });
+    if (user?.activePeriodId !== archived.id) return;
+
+    const candidates = await this.prisma.academicPeriod.findMany({
+      where: { program: { userId }, isArchived: false },
+      orderBy: { startDate: 'desc' },
+      select: { id: true, programId: true },
+    });
+    const next =
+      candidates.find((p) => p.programId === archived.programId) ??
+      candidates[0];
+    // archive() ja garante que existe pelo menos outro periodo ativo.
+    if (!next) return;
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { activeProgramId: next.programId, activePeriodId: next.id },
     });
   }
 
@@ -210,7 +246,7 @@ export class PeriodsService {
     );
     const tasks = await this.prisma.task.findMany({
       where: { periodId: id, realGrade: { not: null } },
-      select: { realGrade: true, weightPercentage: true, areaId: true },
+      select: GRADED_TASK_SELECT,
     });
     const areas = await this.prisma.area.findMany({
       where: accessibleAreaWhere(userId),
@@ -250,7 +286,7 @@ export class PeriodsService {
     const [tasks, areas, componentItems] = await Promise.all([
       this.prisma.task.findMany({
         where: { userId, periodId: id, realGrade: { not: null } },
-        select: { realGrade: true, weightPercentage: true, areaId: true },
+        select: GRADED_TASK_SELECT,
       }),
       this.prisma.area.findMany({
         where: accessibleAreaWhere(userId),

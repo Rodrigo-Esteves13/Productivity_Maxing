@@ -19,6 +19,9 @@ import {
 } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+// Campos opcionais aceitam `null` (o @IsOptional deixa passar): no PATCH
+// (UpdateTaskDto) null quer dizer "limpar este campo", undefined/ausente quer
+// dizer "nao mexer". Ver TasksService.update.
 export class CreateTaskDto {
   @ApiProperty({
     example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
@@ -74,7 +77,7 @@ export class CreateTaskDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)
-  academicType?: string;
+  academicType?: string | null;
 
   @ApiPropertyOptional({
     example: 'Limits, Derivatives',
@@ -83,7 +86,7 @@ export class CreateTaskDto {
   @IsOptional()
   @IsString()
   @MaxLength(5000)
-  topics?: string;
+  topics?: string | null;
 
   @ApiPropertyOptional({
     example: false,
@@ -100,7 +103,7 @@ export class CreateTaskDto {
   @IsOptional()
   @IsString()
   @MaxLength(5000)
-  notes?: string;
+  notes?: string | null;
 
   @ApiPropertyOptional({
     example: 25.5,
@@ -110,7 +113,7 @@ export class CreateTaskDto {
   @IsNumber()
   @Min(0)
   @Max(100)
-  weightPercentage?: number;
+  weightPercentage?: number | null;
 
   @ApiPropertyOptional({
     example: 90,
@@ -121,7 +124,7 @@ export class CreateTaskDto {
   @IsInt()
   @Min(0)
   @Max(30 * 24 * 60)
-  estimatedMinutes?: number;
+  estimatedMinutes?: number | null;
 
   @ApiPropertyOptional({
     example: 480,
@@ -132,7 +135,7 @@ export class CreateTaskDto {
   @IsInt()
   @Min(0)
   @Max(200 * 60)
-  recalledStudyMinutes?: number;
+  recalledStudyMinutes?: number | null;
 
   @ApiProperty({
     enum: Difficulty,
@@ -150,7 +153,7 @@ export class CreateTaskDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)
-  priority?: string;
+  priority?: string | null;
 
   @ApiPropertyOptional({
     enum: ProgressStatus,
@@ -168,14 +171,14 @@ export class CreateTaskDto {
   @IsOptional()
   @IsUrl()
   @MaxLength(2048)
-  referenceLink?: string;
+  referenceLink?: string | null;
 
   @ApiPropertyOptional({ example: 16.0, description: 'Target grade (0-20)' })
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(20)
-  targetGrade?: number;
+  targetGrade?: number | null;
 
   @ApiPropertyOptional({
     example: 14.5,
@@ -185,7 +188,7 @@ export class CreateTaskDto {
   @IsNumber()
   @Min(0)
   @Max(20)
-  realGrade?: number;
+  realGrade?: number | null;
 
   @ApiPropertyOptional({
     example: 60,
@@ -196,7 +199,7 @@ export class CreateTaskDto {
   @IsInt()
   @Min(5)
   @Max(30 * 24 * 60)
-  calendarDurationMinutes?: number;
+  calendarDurationMinutes?: number | null;
 
   // Recorrência: ao CONCLUIR a task cria-se a próxima ocorrência. `null`
   // (no PATCH) desliga. Ver TasksService.spawnFollowUps.

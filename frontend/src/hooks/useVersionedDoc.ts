@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { HTTP_CONFLICT, getHttpStatus } from '../lib/httpError';
+
+const HTTP_FORBIDDEN = 403;
 import { useLiveRefresh } from './useLiveRefresh';
 
 // Texto editado por varias pessoas (Pad, nota da turma) com concorrencia
@@ -20,6 +22,10 @@ interface UseVersionedDocOptions<D> {
   // Extrai a versao atual do corpo de um 409.
   parseConflict: (body: unknown) => VersionedSnapshot<D> | null;
   enabled?: boolean;
+  // 403 ao gravar: perdeu a permissao (pad trancado por outra conta, nota
+  // da turma fechada pelo delegado). Quem chama recarrega as permissoes para
+  // o editor passar a so leitura em vez de "continua a escrever".
+  onForbidden?: () => void;
 }
 
 export const VERSIONED_SAVE_DEBOUNCE_MS = 800;
@@ -29,7 +35,7 @@ function conflictBody(error: unknown): unknown {
   return (error as { response?: { data?: unknown } } | null)?.response?.data;
 }
 
-export function useVersionedDoc<D>({ key, load, save, parseConflict, enabled = true }: UseVersionedDocOptions<D>) {
+export function useVersionedDoc<D>({ key, load, save, parseConflict, enabled = true, onForbidden }: UseVersionedDocOptions<D>) {
   const [doc, setDoc] = useState<D | null>(null);
   const [status, setStatus] = useState<VersionedDocStatus>('loading');
   const [remote, setRemote] = useState<VersionedSnapshot<D> | null>(null);
@@ -40,6 +46,10 @@ export function useVersionedDoc<D>({ key, load, save, parseConflict, enabled = t
   const statusRef = useRef<VersionedDocStatus>('loading');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fns = useRef({ load, save, parseConflict });
+  const onForbiddenRef = useRef(onForbidden);
+  onForbiddenRef.current = onForbidden;
+  // Definido mais abaixo; em ref para o cleanup do load o poder chamar.
+  const flushOnLeaveRef = useRef<() => void>(() => undefined);
   useEffect(() => {
     fns.current = { load, save, parseConflict };
   }, [load, save, parseConflict]);
@@ -75,6 +85,10 @@ export function useVersionedDoc<D>({ key, load, save, parseConflict, enabled = t
     return () => {
       cancelled = true;
       if (timerRef.current) clearTimeout(timerRef.current);
+      // Sair (ou trocar de documento) com texto por gravar: grava ja, sem
+      // esperar pelo debounce. Antes os ultimos 800 ms (ou um erro por
+      // repetir) perdiam-se sem aviso.
+      flushOnLeaveRef.current();
     };
   }, [key, enabled, apply, setStatusBoth]);
 
@@ -96,6 +110,7 @@ export function useVersionedDoc<D>({ key, load, save, parseConflict, enabled = t
           setStatusBoth('conflict');
         } else {
           setStatusBoth('error');
+          if (getHttpStatus(error) === HTTP_FORBIDDEN) onForbiddenRef.current?.();
         }
       }
     },
@@ -121,6 +136,33 @@ export function useVersionedDoc<D>({ key, load, save, parseConflict, enabled = t
     },
     [setStatusBoth],
   );
+
+  // Gravacao "dispara e esquece" ao sair: o componente pode ja nao existir,
+  // por isso nao mexe em estado. Conflito fica de fora (gravar seria por
+  // cima da versao dos outros sem o utilizador escolher).
+  flushOnLeaveRef.current = () => {
+    const draft = docRef.current;
+    if (draft === null || (statusRef.current !== 'dirty' && statusRef.current !== 'error')) return;
+    fns.current.save(draft, versionRef.current).catch(() => undefined);
+  };
+
+  // Fechar o separador / app em segundo plano (pagehide cobre o iOS, onde o
+  // beforeunload nao corre): grava o pendente e avisa se ainda ha algo.
+  const hasUnsaved = status === 'dirty' || status === 'saving' || status === 'error' || status === 'conflict';
+  useEffect(() => {
+    if (!hasUnsaved) return undefined;
+    const onPageHide = () => flushOnLeaveRef.current();
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [hasUnsaved]);
 
   // Polling: so traz alteracoes de outros quando nao ha nada por gravar aqui.
   const refresh = useCallback(() => {

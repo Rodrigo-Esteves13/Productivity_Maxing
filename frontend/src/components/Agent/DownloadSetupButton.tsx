@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { createApiKey } from '../../api/userService';
 import { DownloadIcon } from '../UI/Icons';
-import { AGENT_EXE_DOWNLOAD_PATH } from '../../lib/agentConstants';
+import {
+  AGENT_EMBED_MARKER_END,
+  AGENT_EMBED_MARKER_START,
+  AGENT_EXE_DOWNLOAD_PATH,
+  exeSupportsEmbeddedConfig,
+} from '../../lib/agentConstants';
 import { todayKey } from '../../lib/dateKey';
 import { useI18n } from '../../i18n/useI18n';
 import { API_BASE_URL } from '../../api/apiBaseUrl';
@@ -30,8 +35,8 @@ const VANILLA_EXE_URL = AGENT_EXE_DOWNLOAD_PATH;
 // A defesa forte (ideal a prazo) é ligar a key a um device id validado no
 // servidor em vez de um bearer token estático embutido no binário - ver a
 // nota em agent-config.controller.ts sobre o mesmo tema.
-const MARKER_START = '\n#--PMAXING-AGENT-EMBEDDED-CONFIG-V2-START--#\n';
-const MARKER_END = '\n#--PMAXING-AGENT-EMBEDDED-CONFIG-V2-END--#\n';
+const MARKER_START = AGENT_EMBED_MARKER_START;
+const MARKER_END = AGENT_EMBED_MARKER_END;
 
 export default function DownloadSetupButton() {
   const { t } = useI18n();
@@ -42,8 +47,9 @@ export default function DownloadSetupButton() {
     setIsGenerating(true);
     setError(null);
     try {
-      // Buscamos o .exe vanilla e criamos a key em paralelo - são
-      // pedidos independentes.
+      // Primeiro o .exe vanilla, só depois a key: se o download falhar (ou o
+      // binário for antigo e não souber ler a config embutida), não fica
+      // uma API key órfã criada a cada clique.
       //
       // fetch(VANILLA_EXE_URL) fica de propósito fora de `api` (axios) e
       // de `rawFetch` (api/client.ts): VANILLA_EXE_URL é um caminho
@@ -51,18 +57,19 @@ export default function DownloadSetupButton() {
       // (public/downloads/), não um endpoint do backend - rawFetch
       // prefixa sempre a base URL da API, o que apontaria isto para o
       // sítio errado.
-      const [exeResponse, keyResult] = await Promise.all([
-        fetch(VANILLA_EXE_URL),
-        // Explicit 'TASKS' - this key ends up embedded (base64-only, not
-        // encrypted) in a downloadable .exe, so it must never be able to
-        // reach admin routes, regardless of what the default might be.
-        createApiKey(`agent-desktop-${todayKey()}`, 'TASKS'),
-      ]);
-
+      const exeResponse = await fetch(VANILLA_EXE_URL);
       if (!exeResponse.ok) {
         throw new Error(`Failed to download base executable (HTTP ${exeResponse.status})`);
       }
       const exeBytes = await exeResponse.arrayBuffer();
+      if (!exeSupportsEmbeddedConfig(exeBytes)) {
+        throw new Error('Base executable does not support the embedded config format');
+      }
+
+      // Explicit 'TASKS' - this key ends up embedded (base64-only, not
+      // encrypted) in a downloadable .exe, so it must never be able to
+      // reach admin routes, regardless of what the default might be.
+      const keyResult = await createApiKey(`agent-desktop-${todayKey()}`, 'TASKS');
 
       const configJson = JSON.stringify({
         api: {

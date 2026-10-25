@@ -12,6 +12,8 @@ import {
 } from '../api/socialService';
 import { useLiveRefresh } from './useLiveRefresh';
 import { notifySocialChanged } from '../lib/socialEvents';
+import { useFeedback } from '../context/useFeedback';
+import { translateNow } from '../i18n/translate';
 
 export type AddFriendOutcome = 'PENDING' | 'ACCEPTED' | 'NOT_FOUND' | 'SELF' | 'LIMIT' | 'ERROR';
 export type CodeRequestOutcome = 'SENT' | 'ALREADY_PENDING' | 'TOO_MANY' | 'INVALID' | 'ERROR';
@@ -27,6 +29,7 @@ export function useSocial() {
   const [data, setData] = useState<SocialOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const { notify } = useFeedback();
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true);
@@ -55,10 +58,13 @@ export function useSocial() {
         await load(true);
         return true;
       } catch {
+        // Aceitar/recusar/remover/bloquear: o botao fica igual, por isso a
+        // falha tem de se ver (antes o false era ignorado em todo o lado).
+        notify(translateNow('social.actionError'), 'error');
         return false;
       }
     },
-    [load],
+    [load, notify],
   );
 
   const addFriend = useCallback(

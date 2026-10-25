@@ -1,4 +1,9 @@
-import { isAllowedPushEndpoint, PushService } from './push.service';
+import {
+  DEFAULT_PUSH_TTL_SECONDS,
+  isAllowedPushEndpoint,
+  PushService,
+  pushTtlSeconds,
+} from './push.service';
 import { buildPushText } from './push-messages';
 
 describe('isAllowedPushEndpoint', () => {
@@ -120,5 +125,44 @@ describe('PushService.notifyUserOnce', () => {
       DAY,
     );
     expect(notify).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('pushTtlSeconds', () => {
+  it('medication reminders expire with the reminder window (D-09)', () => {
+    expect(pushTtlSeconds('medicationDue')).toBe(60 * 60);
+    expect(pushTtlSeconds('medicationsDue')).toBe(60 * 60);
+  });
+
+  it('other notifications keep one day', () => {
+    expect(pushTtlSeconds('deadlineSoon')).toBe(DEFAULT_PUSH_TTL_SECONDS);
+    expect(DEFAULT_PUSH_TTL_SECONDS).toBe(24 * 60 * 60);
+  });
+});
+
+describe('PushService.getStatus', () => {
+  it('counts only the current user devices', async () => {
+    const count = jest.fn().mockResolvedValue(2);
+    const service = new PushService({
+      pushSubscription: { count },
+    } as never);
+    (service as unknown as { enabled: boolean }).enabled = true;
+    await expect(service.getStatus('u1')).resolves.toEqual({
+      configured: true,
+      devices: 2,
+    });
+    expect(count).toHaveBeenCalledWith({ where: { userId: 'u1' } });
+  });
+
+  it('reports not configured without touching the database', async () => {
+    const count = jest.fn();
+    const service = new PushService({
+      pushSubscription: { count },
+    } as never);
+    await expect(service.getStatus('u1')).resolves.toEqual({
+      configured: false,
+      devices: 0,
+    });
+    expect(count).not.toHaveBeenCalled();
   });
 });

@@ -12,6 +12,16 @@ import OAuthProviderList from '../components/Auth/OAuthProviderList';
 import AuthSwitchLink from '../components/Auth/AuthSwitchLink';
 import useSeo from '../hooks/useSeo';
 import { fillNodes } from '../i18n/fillNodes';
+import { getHttpStatus, HTTP_CONFLICT } from '../lib/httpError';
+
+// Mesmo minimo do backend (auth-limits.ts PASSWORD_MIN_LENGTH).
+const PASSWORD_MIN_LENGTH = 8;
+const HTTP_TOO_MANY_REQUESTS = 429;
+// Mensagem por codigo HTTP (E-16); o resto cai no generico.
+const REGISTER_ERROR_KEYS: Record<number, string> = {
+  [HTTP_CONFLICT]: 'auth.accountExists',
+  [HTTP_TOO_MANY_REQUESTS]: 'auth.tooManyAttempts',
+};
 
 export default function Register() {
   const { t } = useI18n();
@@ -45,6 +55,11 @@ export default function Register() {
       setError(t('auth.passwordsMismatch'));
       return;
     }
+    // Mesmo minimo do backend (RegisterDto), dito antes de enviar (E-16).
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      setError(t('auth.reset.tooShort'));
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -62,8 +77,9 @@ export default function Register() {
       // Mesmo comportamento do Login: guarda o csrf token e entra logo na conta
       login(csrfToken);
       navigate('/dashboard', { replace: true });
-    } catch {
-      setError(t('auth.registerFailed'));
+    } catch (err) {
+      const status = getHttpStatus(err);
+      setError(t(REGISTER_ERROR_KEYS[status ?? 0] ?? 'auth.registerFailed'));
     } finally {
       setIsSubmitting(false);
     }

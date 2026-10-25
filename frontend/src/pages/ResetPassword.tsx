@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { completePasswordResetRequest, RESET_LINK_INVALID_CODE } from '../api/userService';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
@@ -77,18 +78,28 @@ export default function ResetPassword() {
 
     setIsSubmitting(true);
     try {
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) {
-        setError(updateError.message);
+      // A password muda pelo backend (nao por supabase.auth.updateUser), para
+      // as sessoes antigas da conta terminarem tambem: um reset costuma vir
+      // de uma suspeita de conta comprometida.
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data.session?.access_token;
+      if (!accessToken) {
+        setLinkInvalid(true);
         return;
       }
+      await completePasswordResetRequest(accessToken, password);
 
       // Não queremos deixar uma sessão Supabase viva no browser - a app
       // usa sempre o nosso cookie HttpOnly, nunca a sessão do Supabase.
       await supabase.auth.signOut();
       setSuccess(true);
       setTimeout(() => navigate('/login', { replace: true }), 2500);
-    } catch {
+    } catch (err) {
+      const code = (err as { response?: { data?: { code?: unknown } } })?.response?.data?.code;
+      if (code === RESET_LINK_INVALID_CODE) {
+        setLinkInvalid(true);
+        return;
+      }
       setError(t('auth.reset.error'));
     } finally {
       setIsSubmitting(false);

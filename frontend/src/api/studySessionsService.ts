@@ -1,8 +1,6 @@
 // src/api/studySessionsService.ts
 import api from './client';
-import { getCsrfToken } from './csrfStore';
 import type { StudySession, HeatmapCell, Task } from '../types/models';
-import { API_BASE_URL } from './apiBaseUrl';
 
 export interface StartStudySessionInput {
   taskId?: string;
@@ -56,8 +54,10 @@ export const stopStudySession = async (
 // genuinely-running session apart from one that was left open by
 // accident. Fire-and-forget from the caller's side: a missed beat here
 // and there is fine, see the comment on the backend constant.
-export const heartbeatStudySession = async (id: string): Promise<void> => {
-  await api.post(`/study-sessions/${id}/heartbeat`);
+// `plannedEndAt` (fim do bloco de foco planeado, ISO): enquanto estiver
+// dentro dele, uma sessao sem contacto (telemovel bloqueado) nao e fechada.
+export const heartbeatStudySession = async (id: string, plannedEndAt?: string): Promise<void> => {
+  await api.post(`/study-sessions/${id}/heartbeat`, plannedEndAt ? { plannedEndAt } : {});
 };
 
 export const getSessionHistory = async (days = 14, signal?: AbortSignal): Promise<StudySession[]> => {
@@ -84,39 +84,6 @@ export const getActiveStudySession = async (): Promise<StudySession | null> => {
   // 204 (sem sessao ativa) chega como corpo vazio.
   return response.data || null;
 };
-
-// Fired from a `pagehide` listener (see StudySessionProvider.tsx) when the
-// tab is closing or navigating away with an active session still running.
-// Deliberately bypasses the axios `api` instance and calls `fetch`
-// directly: axios' browser adapter has no `keepalive` option, and without
-// it the browser is free to cancel the request the instant the page
-// starts unloading. `fetch(..., { keepalive: true })` is the documented
-// way to send a request that survives unload when it also needs a custom
-// header - `navigator.sendBeacon` can't set X-CSRF-Token, which is why
-// that's not used here instead.
-//
-// Best-effort only, and that's fine: if it doesn't land (browser killed
-// outright, no network, CSRF token not loaded yet), the session isn't
-// left "running forever" - the heartbeat above means the backend
-// auto-closes it a few minutes later regardless, see
-// StudySessionsService.autoCloseIfStale.
-export function stopStudySessionOnUnload(id: string): void {
-  const csrfToken = getCsrfToken();
-  const baseUrl = API_BASE_URL;
-
-  void fetch(`${baseUrl}/study-sessions/${id}/stop`, {
-    method: 'PATCH',
-    credentials: 'include',
-    keepalive: true,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-    },
-    body: JSON.stringify({}),
-  }).catch(() => {
-    // Nothing to do here - see the comment above.
-  });
-}
 
 export const getStudyHeatmap = async (): Promise<HeatmapCell[]> => {
   const response = await api.get<HeatmapCell[]>('/study-sessions/heatmap');

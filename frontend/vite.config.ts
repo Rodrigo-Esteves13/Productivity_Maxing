@@ -103,7 +103,8 @@ export default defineConfig({
       importScripts: ['push-sw.js'],
       // Só JS/CSS/fontes/ícones do build entram no precache (imutáveis,
       // têm hash no nome). NUNCA HTML aqui - o index.html é sempre
-      // pedido à rede para apanhar deploys novos.
+      // pedido à rede para apanhar deploys novos (ver a regra de
+      // navegação em runtimeCaching: rede primeiro, cache só offline).
       globPatterns: ['**/*.{js,css,woff2,png,svg,ico}'],
       navigateFallback: null,
       runtimeCaching: [
@@ -116,6 +117,39 @@ export default defineConfig({
           url
         }) => url.pathname.startsWith('/auth/') || url.pathname.startsWith('/agent/') || url.hostname === 'api.pmaxing.pt' || url.hostname === 'localhost',
         handler: 'NetworkOnly'
+      },
+      // Navegações da própria app (abrir/recarregar uma página): rede
+      // PRIMEIRO, para apanhar sempre o index.html de um deploy novo. Só
+      // sem rede é que serve a última cópia guardada, para a PWA instalada
+      // abrir offline (com o OfflineBanner) em vez da página de erro do
+      // browser (F-10). Sem networkTimeoutSeconds de propósito: uma rede
+      // lenta continua a ir à rede. Todas as rotas guardam-se na mesma
+      // chave ('/'), porque o Netlify serve o mesmo index.html para todas
+      // (_redirects) e assim qualquer rota abre offline. Só HTML da app
+      // (sem dados de utilizador): a API está noutro domínio e /auth/ é
+      // apanhado antes pela regra NetworkOnly acima.
+      {
+        // Inline de propósito: esta função é copiada para o sw.js, não
+        // pode usar constantes deste ficheiro. /privacy e /terms são HTML
+        // estático próprio (_redirects), não o index.html da app.
+        urlPattern: ({
+          request,
+          url,
+          sameOrigin
+        }) => sameOrigin && request.mode === 'navigate' && !/^\/(privacy|terms)(\/|$)/.test(url.pathname),
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'pmaxing-app-shell',
+          cacheableResponse: {
+            statuses: [200]
+          },
+          expiration: {
+            maxEntries: 1
+          },
+          plugins: [{
+            cacheKeyWillBeUsed: async () => '/'
+          }]
+        }
       },
       // Ícones/imagens estáticas servidas pelo Netlify: podem ser
       // cache-first agressivo, mudam raramente.

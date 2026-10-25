@@ -11,6 +11,7 @@ import { SharedEditDto } from './dto/shared-edit.dto';
 import { PushService } from '../push/push.service';
 import { resolveShareAccess, type SharedRole } from './share-role.util';
 import { notebookEntrySharePath } from '../common/app-links.util';
+import { NOTEBOOK_ENTRY_CONFLICT_CODE } from './notebook.service';
 
 export type { SharedRole };
 
@@ -107,10 +108,39 @@ export class NotebookCollabService {
     }
 
     if (role === 'OWNER' || role === 'CO_OWNER') {
-      await this.prisma.notebookEntry.update({
-        where: { id: share.notebookEntryId },
+      // Com baseUpdatedAt so grava se ninguem mudou a entrada desde que o
+      // formulario abriu (o dono pode estar a escrever no caderno); senao
+      // 409 com o texto atual, em vez de o substituir sem aviso.
+      const { count } = await this.prisma.notebookEntry.updateMany({
+        where: {
+          id: share.notebookEntryId,
+          ...(dto.baseUpdatedAt
+            ? { updatedAt: new Date(dto.baseUpdatedAt) }
+            : {}),
+        },
         data: toEntryData(fields),
       });
+      if (count === 0) {
+        const current = await this.prisma.notebookEntry.findUnique({
+          where: { id: share.notebookEntryId },
+          select: {
+            title: true,
+            textContent: true,
+            usefulLinks: true,
+            updatedAt: true,
+          },
+        });
+        if (!current) {
+          throw new NotFoundException(
+            'This share link is invalid or was removed.',
+          );
+        }
+        throw new ConflictException({
+          code: NOTEBOOK_ENTRY_CONFLICT_CODE,
+          message: 'This lesson was changed by someone else.',
+          current,
+        });
+      }
       return { applied: true as const };
     }
 

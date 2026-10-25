@@ -1,4 +1,4 @@
-import { Injectable, ExecutionContext } from '@nestjs/common';
+import { Injectable, ExecutionContext, OnModuleDestroy } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import {
@@ -45,7 +45,10 @@ const FLUSH_INTERVAL_MS = 5000;
  * tokens e o arranque falha com "Nest can't resolve dependencies".
  */
 @Injectable()
-export class LoggingThrottlerGuard extends ThrottlerGuard {
+export class LoggingThrottlerGuard
+  extends ThrottlerGuard
+  implements OnModuleDestroy
+{
   // chave = `${ip}:${path}` - agrega por quem+onde, não por pedido individual.
   // Em memória de propósito: perde-se com o restart do processo, o que é
   // aceitável (isto é telemetria operacional, não o registo definitivo -
@@ -53,6 +56,12 @@ export class LoggingThrottlerGuard extends ThrottlerGuard {
   // restart no meio de um ataque).
   private readonly pending = new Map<string, PendingBucket>();
   private readonly lastFlush = new Map<string, number>();
+  // Timer do flush atrasado (E-07): antes, os 429 que chegavam dentro dos 5s
+  // a seguir a um flush ficavam em `pending` até haver OUTRO 429 para a
+  // mesma chave; se a rajada parasse ali, nunca chegavam à BD (e o Map
+  // crescia para sempre). Agora, enquanto houver algo pendente, um timer
+  // grava tudo ao fim de FLUSH_INTERVAL_MS. Parado quando não há nada.
+  private flushTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
     @InjectThrottlerOptions() options: ThrottlerModuleOptions,
@@ -102,8 +111,39 @@ export class LoggingThrottlerGuard extends ThrottlerGuard {
         void this.securityLogsService.recordEvent(bucket);
       }
     }
+    if (this.pending.size > 0) this.scheduleFlush();
 
     await super.throwThrottlingException(context, throttlerLimitDetail);
+  }
+
+  onModuleDestroy(): void {
+    if (this.flushTimer) clearTimeout(this.flushTimer);
+    this.flushTimer = undefined;
+    this.flushAll();
+  }
+
+  private scheduleFlush(): void {
+    if (this.flushTimer) return;
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = undefined;
+      this.flushAll();
+    }, FLUSH_INTERVAL_MS);
+    // Não segura o processo vivo só por causa disto (shutdown, testes).
+    this.flushTimer.unref?.();
+  }
+
+  // Grava todos os buckets pendentes e esquece as chaves sem atividade
+  // recente, para os dois Maps não crescerem sem limite.
+  private flushAll(): void {
+    const now = Date.now();
+    for (const [key, bucket] of this.pending) {
+      this.lastFlush.set(key, now);
+      void this.securityLogsService.recordEvent(bucket);
+    }
+    this.pending.clear();
+    for (const [key, at] of this.lastFlush) {
+      if (now - at >= FLUSH_INTERVAL_MS) this.lastFlush.delete(key);
+    }
   }
 
   // O "tracker" do throttler já é o identificador que ele próprio usou

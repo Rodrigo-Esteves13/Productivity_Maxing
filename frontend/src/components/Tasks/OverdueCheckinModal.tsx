@@ -14,18 +14,24 @@ interface OverdueCheckinModalProps {
   queueLength: number;
   isAnswering: boolean;
   onAnswer: (answer: OverdueAnswer) => void;
+  // A ultima resposta falhou: mostra o erro e a saida "Perguntar mais tarde".
+  hasError?: boolean;
+  onDismiss?: () => void;
 }
 
 // Prompt para tasks já fora de prazo: pergunta se já está feita, para não
 // depender de o utilizador se lembrar de marcar cada task manualmente.
 // Avaliações (tasks com peso) pedem logo a nota, que é o que de facto se
 // quer registar depois de um teste. Deliberadamente não tem X nem fecha com
-// Escape/clique no fundo: responder (ou adiar) é a única saída.
+// Escape/clique no fundo: responder (ou adiar) é a única saída. Se a
+// resposta falhar, aparece o erro e "Perguntar mais tarde".
 export default function OverdueCheckinModal({
   task,
   queueLength,
   isAnswering,
   onAnswer,
+  hasError = false,
+  onDismiss,
 }: OverdueCheckinModalProps) {
   const { t } = useI18n();
   const isGraded = (task.weightPercentage ?? 0) > 0;
@@ -109,6 +115,22 @@ export default function OverdueCheckinModal({
           <p className="text-xs text-neutral-500 mt-3">
             {t('ui.stillPendingAsksAgainTomorrow')}
           </p>
+
+          {hasError && (
+            <div role="alert" className="mt-4 rounded-lg border border-red-900/60 bg-red-950/40 p-3">
+              <p className="text-sm text-red-300">{t('overdue.saveFailed')}</p>
+              {onDismiss && (
+                <button
+                  type="button"
+                  disabled={isAnswering}
+                  onClick={onDismiss}
+                  className="mt-2 text-sm font-medium text-neutral-200 underline decoration-dotted hover:text-white disabled:opacity-50"
+                >
+                  {t('overdue.askLater')}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

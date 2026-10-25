@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { inviteFriendToEntry, searchNotebook } from '../../api/notebookService';
-import { getHttpStatus } from '../../lib/httpError';
+import { getApiCode, getHttpStatus } from '../../lib/httpError';
 import { notebookEntryPath } from '../../lib/appLinks';
 import { notifySocialChanged } from '../../lib/socialEvents';
 import { areaColorOf } from '../SharedWithMe/sharedWithMeLabels';
@@ -11,6 +11,12 @@ import { useI18n } from '../../i18n/useI18n';
 const SEARCH_DEBOUNCE_MS = 250;
 const MAX_RESULTS = 8;
 const HTTP_CONFLICT = 409;
+// Codigos que o backend poe nos 409 do convite (notebook-invite.service.ts).
+// Sem codigo (backend antigo) assume-se o caso do link publico.
+const INVITE_CONFLICT_KEY: Record<string, string> = {
+  INVITE_NOTE_FULL: 'friend.share.noteFull',
+  INVITE_DECLINED_RECENTLY: 'friend.share.declinedRecently',
+};
 const ROLES: ShareAccessRole[] = ['EDITOR', 'CO_OWNER', 'VIEWER'];
 const ROLE_KEY: Record<ShareAccessRole, string> = {
   VIEWER: 'share.role.viewer',
@@ -75,12 +81,16 @@ export default function ShareNoteWithFriend({ friendId, friendName, alreadyShare
       notifySocialChanged();
       onInvited();
     } catch (caught) {
-      // 409: o link desta nota e publico (os papeis so existem em Autorizado).
-      setError(
-        getHttpStatus(caught) === HTTP_CONFLICT
-          ? { text: t('friend.share.publicLink'), entryId: entry.id }
-          : { text: t('friend.share.error'), entryId: null },
-      );
+      // 409: link publico (os papeis so existem em Autorizado), nota cheia ou
+      // recusou ha pouco. So o primeiro caso leva o link para o caderno.
+      const conflictKey = INVITE_CONFLICT_KEY[getApiCode(caught) ?? ''];
+      if (getHttpStatus(caught) !== HTTP_CONFLICT) {
+        setError({ text: t('friend.share.error'), entryId: null });
+      } else if (conflictKey) {
+        setError({ text: t(conflictKey), entryId: null });
+      } else {
+        setError({ text: t('friend.share.publicLink'), entryId: entry.id });
+      }
     } finally {
       setBusyId(null);
     }

@@ -1,3 +1,4 @@
+import { pushDisplayName } from '../common/display-name.util';
 import {
   BadRequestException,
   Injectable,
@@ -91,13 +92,13 @@ export class NotebookViewGrantService {
     await this.prisma.notebookViewGrant.create({ data: { ownerId, viewerId } });
     const viewer = await this.prisma.user.findUnique({
       where: { id: viewerId },
-      select: { name: true },
+      select: { name: true, email: true },
     });
     // Cancelar e voltar a pedir nao volta a apitar no mesmo dia.
     void this.push.notifyUserOnce(
       ownerId,
       'notesRequested',
-      { name: viewer?.name ?? '', url: SOCIAL_REQUESTS_PATH },
+      { name: pushDisplayName(viewer), url: SOCIAL_REQUESTS_PATH },
       `notesRequested:${ownerId}:${viewerId}`,
     );
     return { status: 'PENDING' };
@@ -188,10 +189,10 @@ export class NotebookViewGrantService {
     if (grant.status !== 'APPROVED') {
       const owner = await this.prisma.user.findUnique({
         where: { id: ownerId },
-        select: { name: true },
+        select: { name: true, email: true },
       });
       void this.push.notifyUser(grant.viewerId, 'notesGranted', {
-        name: owner?.name ?? '',
+        name: pushDisplayName(owner),
         url: `/social/notes/${ownerId}`,
       });
     }

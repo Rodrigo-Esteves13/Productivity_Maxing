@@ -22,6 +22,13 @@ import type {
   ShareAccessRole,
 } from '../types/models';
 import { translateNow } from '../i18n/translate';
+import { getApiCode } from '../lib/httpError';
+
+// 409 do convite com causa conhecida (notebook-invite.service.ts).
+const INVITE_CONFLICT_KEY: Record<string, string> = {
+  INVITE_NOTE_FULL: 'friend.share.noteFull',
+  INVITE_DECLINED_RECENTLY: 'friend.share.declinedRecently',
+};
 
 export interface UseEntryShareResult {
   isOpen: boolean;
@@ -150,7 +157,9 @@ export function useEntryShare(
       setToken(status.token);
       setVisibility(status.visibility);
       if (status.token) void loadVisits();
-      if (status.token && status.visibility === 'AUTHORIZED') await loadRequests();
+      // Carrega mesmo em Publico: pedidos/propostas antigos continuam
+      // pendentes e contam nos badges, por isso tem de se poder decidir.
+      if (status.token) await loadRequests();
     } catch {
       setError(translateNow('hook.couldNotCheckTheShareStatus'));
     } finally {
@@ -171,7 +180,7 @@ export function useEntryShare(
 
   // Novos pedidos/propostas aparecem sem F5 (push + polling de seguranca).
   useLiveRefresh(() => void loadRequests(true), {
-    enabled: isOpen && visibility === 'AUTHORIZED' && token !== null,
+    enabled: isOpen && token !== null,
     intervalMs: 15000,
   });
 
@@ -214,7 +223,7 @@ export function useEntryShare(
       try {
         const status = await updateShareVisibility(entryId, next);
         setVisibility(status.visibility);
-        if (status.visibility === 'AUTHORIZED') await loadRequests();
+        await loadRequests();
       } catch {
         setError(translateNow('hook.couldNotChangeWhoCanAccess'));
       } finally {
@@ -249,8 +258,8 @@ export function useEntryShare(
         await inviteFriendToEntry(entryId, friendId, role);
         await loadRequests(true);
         return true;
-      } catch {
-        setError(translateNow('hook.couldNotInviteThatFriendThey'));
+      } catch (caught) {
+        setError(translateNow(INVITE_CONFLICT_KEY[getApiCode(caught) ?? ''] ?? 'hook.couldNotInviteThatFriendThey'));
         return false;
       }
     },

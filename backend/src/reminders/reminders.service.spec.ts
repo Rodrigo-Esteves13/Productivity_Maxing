@@ -161,3 +161,40 @@ describe('RemindersService.run', () => {
     expect(result.remindersSent).toBe(0);
   });
 });
+
+// D-12: the deadline email uses the app language saved on the user's push
+// subscription; without one it stays English.
+describe('RemindersService email language', () => {
+  const prefs = { deadlineEmailReminders: true, deadlinePushReminders: false };
+
+  it('writes the email in the language of the push subscription', async () => {
+    const t = task('a', 'u1', prefs);
+    const withLang = {
+      ...t,
+      user: { ...t.user, pushSubscriptions: [{ lang: 'pt' }] },
+    };
+    const { service, mail } = setup([withLang]);
+    await service.run(NOW);
+    const [, items, , lang] = mail.sendDeadlineReminderEmail.mock.calls[0] as [
+      string,
+      { dueLabel: string }[],
+      string,
+      string,
+    ];
+    expect(lang).toBe('pt');
+    expect(items[0].dueLabel).toBe('prazo daqui a cerca de 2h');
+  });
+
+  it('falls back to English without a subscription', async () => {
+    const { service, mail } = setup([task('a', 'u1', prefs)]);
+    await service.run(NOW);
+    const [, items, , lang] = mail.sendDeadlineReminderEmail.mock.calls[0] as [
+      string,
+      { dueLabel: string }[],
+      string,
+      string,
+    ];
+    expect(lang).toBe('en');
+    expect(items[0].dueLabel).toBe('due in about 2h');
+  });
+});

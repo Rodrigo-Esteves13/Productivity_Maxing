@@ -23,6 +23,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -272,6 +273,14 @@ func (a *agentState) tick(parentCtx context.Context) {
 	remote, err := a.client.FetchAgentConfig(ctx)
 	if err != nil {
 		log.Printf("error fetching remote configuration: %v", err)
+		if errors.Is(err, apiclient.ErrUnauthorized) {
+			var blocking apiclient.BlockingConfig
+			if previousRemote != nil {
+				blocking = previousRemote.Blocking
+			}
+			a.stopForRevokedKey(blocking)
+			return
+		}
 		if previousRemote == nil {
 			log.Println("no known configuration yet - waiting for next cycle")
 			return
@@ -296,6 +305,10 @@ func (a *agentState) tick(parentCtx context.Context) {
 	decision, err := a.decide(ctx, remote.TriggerRules)
 	if err != nil {
 		log.Printf("error fetching tasks: %v", err)
+		if errors.Is(err, apiclient.ErrUnauthorized) {
+			a.stopForRevokedKey(remote.Blocking)
+			return
+		}
 		switch remote.Blocking.FailMode {
 		case apiclient.FailOpen:
 			decision = rules.Decision{ShouldBlock: false, Reason: "tasks API unreachable, failMode=OPEN"}
@@ -323,6 +336,26 @@ func (a *agentState) tick(parentCtx context.Context) {
 
 	log.Printf("decision: block=%v (%s)", decision.ShouldBlock, decision.Reason)
 	a.applyDecision(remote.Blocking, decision)
+}
+
+// revokedKeyDecision: key revogada/apagada (401). Ao contrário de uma API
+// em baixo, isto não passa sozinho, por isso o agente desbloqueia e diz
+// porquê no tray ("View status") em vez de manter o último bloqueio para
+// sempre (E-13).
+func revokedKeyDecision() rules.Decision {
+	return rules.Decision{
+		ShouldBlock: false,
+		Reason:      "API key invalid or revoked - download the agent again from the /agent page",
+	}
+}
+
+func (a *agentState) stopForRevokedKey(blocking apiclient.BlockingConfig) {
+	decision := revokedKeyDecision()
+	a.mu.Lock()
+	a.lastDecision = decision
+	a.mu.Unlock()
+	log.Printf("decision: block=%v (%s)", decision.ShouldBlock, decision.Reason)
+	a.applyDecision(blocking, decision)
 }
 
 // buildKeptDecision constrói a Decision usada quando a API de tasks está
