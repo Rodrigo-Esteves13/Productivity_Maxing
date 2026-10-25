@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { bulkDeleteTasks, bulkRescheduleTasks } from '../api/userService';
-import { syncTaskToCalendar } from '../api/calendarService';
+import { syncTaskToCalendar, unsyncTaskFromCalendar } from '../api/calendarService';
 import type { Task } from '../types/models';
 import { useCompleteWithUndo } from './useCompleteWithUndo';
 
@@ -82,12 +82,34 @@ export function useTaskSelection(
     [selectedIds, setTasks, visibleTasks],
   );
 
-  const deleteSelected = useCallback(async () => {
+  // Quantas das selecionadas tem evento no Google Calendar: a barra so
+  // pergunta "remover tambem os eventos?" quando ha algum (como o apagar
+  // individual em useTasksPage).
+  const selectedSyncedCount = useMemo(
+    () => visibleTasks.filter((t) => selectedIds.has(t.id) && t.googleCalendarEventId).length,
+    [selectedIds, visibleTasks],
+  );
+
+  // removeFromCalendar: remove primeiro os eventos ligados (antes do delete,
+  // depois ja nao ha task para o backend encontrar o evento). Uma falha no
+  // Calendar nao impede apagar, tal como no apagar individual.
+  const deleteSelected = useCallback(async (removeFromCalendar = false) => {
     const ids = Array.from(selectedIds);
+    if (removeFromCalendar) {
+      const synced = visibleTasks.filter((t) => selectedIds.has(t.id) && t.googleCalendarEventId);
+      for (const task of synced) {
+        try {
+          await unsyncTaskFromCalendar(task.id);
+        } catch (unsyncError: unknown) {
+          console.error('Error removing task event from Google Calendar:', unsyncError);
+        }
+      }
+    }
     await bulkDeleteTasks(ids);
-    setTasks((prev) => prev.filter((t) => !ids.includes(t.id)));
+    const deleted = new Set(ids);
+    setTasks((prev) => prev.filter((t) => !deleted.has(t.id)));
     setSelectedIds(new Set());
-  }, [selectedIds, setTasks]);
+  }, [selectedIds, setTasks, visibleTasks]);
 
   return {
     selectedIds,
@@ -96,6 +118,7 @@ export function useTaskSelection(
     markSelectedDone,
     rescheduleSelected,
     deleteSelected,
+    selectedSyncedCount,
     clearSelection,
   };
 }

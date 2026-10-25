@@ -7,6 +7,8 @@ import { translateNow } from '../i18n/translate';
 interface UseAgentConfigReturn {
   config: AgentConfig | null;
   isLoading: boolean;
+  // Falha a carregar (E-11): sem isto a página ficava no skeleton para sempre.
+  loadError: boolean;
   isSaving: boolean;
   saveError: string | null;
   // O componente vai editando um rascunho local (draft) e só chama save()
@@ -49,6 +51,7 @@ function clampPollInterval(value: number): number {
 export function useAgentConfig(): UseAgentConfigReturn {
   const [config, setConfig] = useState<AgentConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -60,6 +63,7 @@ export function useAgentConfig(): UseAgentConfigReturn {
         setConfig(data);
       } catch (error: unknown) {
         console.error('Failed to load agent config:', error);
+        setLoadError(true);
       } finally {
         setIsLoading(false);
       }
@@ -90,5 +94,5 @@ export function useAgentConfig(): UseAgentConfigReturn {
     }
   }, [config]);
 
-  return { config, isLoading, isSaving, saveError, updateDraft, save };
+  return { config, isLoading, loadError, isSaving, saveError, updateDraft, save };
 }

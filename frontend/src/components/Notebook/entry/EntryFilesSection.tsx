@@ -62,10 +62,11 @@ interface AttachmentsSectionProps {
 
 export function AttachmentsSection({ isEditing, attachments, onUpload, onDelete }: AttachmentsSectionProps) {
   const { t } = useI18n();
-  const { error, handleChange } = useFileUpload({
+  const { error, handleChange, handleRemove } = useFileUpload({
     validate: (file) => validateAttachment(file, attachments.length),
     onUpload,
     failureMessage: t('ui.couldNotUploadFile'),
+    removeFailureMessage: t('notebook.files.removeError'),
   });
   const [previewing, setPreviewing] = useState<PreviewableFile | null>(null);
 
@@ -95,7 +96,7 @@ export function AttachmentsSection({ isEditing, attachments, onUpload, onDelete 
                 </span>
               }
               removeLabel={isEditing ? t('notebook.files.remove') : undefined}
-              onRemove={isEditing ? () => void onDelete(attachment.id) : undefined}
+              onRemove={isEditing ? () => void handleRemove(() => onDelete(attachment.id)) : undefined}
             >
               {attachment.url ? (
                 <a href={attachment.url} className="truncate text-sm text-violet-400 hover:underline" title={attachment.originalFileName}>
@@ -122,10 +123,11 @@ interface PhotosSectionProps {
 
 export function PhotosSection({ isEditing, photos, onUpload, onDelete }: PhotosSectionProps) {
   const { t } = useI18n();
-  const { error, handleChange } = useFileUpload({
+  const { error, handleChange, handleRemove } = useFileUpload({
     validate: validatePhoto,
     onUpload,
     failureMessage: t('ui.couldNotUploadPhoto'),
+    removeFailureMessage: t('notebook.files.removeError'),
   });
 
   return (
@@ -139,7 +141,7 @@ export function PhotosSection({ isEditing, photos, onUpload, onDelete }: PhotosS
       error={error}
       onFileChange={handleChange}
     >
-      <NotebookPhotoGrid photos={photos} onRemove={isEditing ? (photoId) => void onDelete(photoId) : undefined} />
+      <NotebookPhotoGrid photos={photos} onRemove={isEditing ? (photoId) => void handleRemove(() => onDelete(photoId)) : undefined} />
     </FileSectionShell>
   );
 }

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { dedupeGets } from './dedupeGets';
-import { getCsrfToken, setCsrfToken } from './csrfStore';
+import { getCsrfToken, getSessionUserId, setCsrfToken } from './csrfStore';
 import { MAINTENANCE_EVENT } from '../lib/maintenanceEvents';
 import { ACCOUNT_BLOCKED_EVENT } from '../lib/accountBlockedEvents';
 import { API_BASE_URL } from './apiBaseUrl';
@@ -31,19 +31,27 @@ const RETRIED_AFTER_CSRF_REFRESH = '_retriedAfterCsrfRefresh';
 
 // Varias chamadas podem falhar ao mesmo tempo (ex: duas tabs, ou varios
 // pedidos em paralelo): partilham UM so pedido de token novo.
-let pendingCsrfRefresh: Promise<boolean> | null = null;
+// 'refreshed': token novo, pode repetir. 'failed': sem sessao ou erro.
+// 'other-account': a sessao do browser e agora de OUTRO utilizador (login
+// noutra tab); o pedido desta tab nao pode ser repetido (F-05).
+type CsrfRefreshResult = 'refreshed' | 'failed' | 'other-account';
 
-function refreshCsrfToken(): Promise<boolean> {
+let pendingCsrfRefresh: Promise<CsrfRefreshResult> | null = null;
+
+function refreshCsrfToken(): Promise<CsrfRefreshResult> {
   if (!pendingCsrfRefresh) {
     pendingCsrfRefresh = api
-      .get<{ authenticated: boolean; csrfToken?: string }>('/auth/csrf')
-      .then((response) => {
-        const token = response.data.csrfToken;
-        if (!response.data.authenticated || !token) return false;
+      .get<{ authenticated: boolean; csrfToken?: string; userId?: string }>('/auth/csrf')
+      .then((response): CsrfRefreshResult => {
+        const { authenticated, csrfToken: token, userId } = response.data;
+        if (!authenticated || !token) return 'failed';
+        const tabUserId = getSessionUserId();
+        // Backend antigo sem userId: mantem o comportamento anterior.
+        if (tabUserId && userId && userId !== tabUserId) return 'other-account';
         setCsrfToken(token);
-        return true;
+        return 'refreshed';
       })
-      .catch(() => false)
+      .catch((): CsrfRefreshResult => 'failed')
       .finally(() => {
         pendingCsrfRefresh = null;
       });
@@ -80,6 +88,18 @@ const AUTH_CHECK_ENDPOINTS = ['/auth/csrf', '/auth/me'];
 function isAuthCheckRequest(url?: string): boolean {
   if (!url) return false;
   return AUTH_CHECK_ENDPOINTS.some((endpoint) => url.includes(endpoint));
+}
+
+// Endpoints de LOGIN: um 401 aqui e "credenciais/codigo errados", nao uma
+// sessao expirada. A pagina mostra o erro e deixa tentar outra vez. Sem isto,
+// um codigo 2FA errado em /login/2fa (pathname != '/login') mandava para
+// /login, perdia o token do desafio no fragmento e nunca mostrava "Invalid
+// code" (E-03 / F-02).
+const LOGIN_ENDPOINTS = new Set(['/auth/login', '/auth/2fa/login']);
+
+function isLoginRequest(url?: string): boolean {
+  if (!url) return false;
+  return LOGIN_ENDPOINTS.has(url.split('?')[0]);
 }
 
 // Listens to API responses. If the backend says the token expired (401)
@@ -130,14 +150,21 @@ api.interceptors.response.use(
       !SAFE_METHODS.has(method) &&
       !alreadyRetried
     ) {
-      return refreshCsrfToken().then((refreshed) => {
-        if (!refreshed) return Promise.reject(error);
+      return refreshCsrfToken().then((result) => {
+        if (result === 'other-account') {
+          // Esta tab ainda mostra a conta antiga: recarrega para mostrar a
+          // conta que esta realmente com sessao, sem gravar nada nela.
+          console.warn('Signed in as another account in a different tab. Reloading...');
+          window.location.reload();
+          return Promise.reject(error);
+        }
+        if (result !== 'refreshed') return Promise.reject(error);
         error.config[RETRIED_AFTER_CSRF_REFRESH] = true;
         return api.request(error.config);
       });
     }
 
-    if (status === 401 && !isAuthCheckRequest(url)) {
+    if (status === 401 && !isAuthCheckRequest(url) && !isLoginRequest(url)) {
       console.warn('Session expired or unauthorized. Logging out...');
       setCsrfToken(null);
 

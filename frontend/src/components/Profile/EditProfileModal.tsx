@@ -35,6 +35,9 @@ export default function EditProfileModal({ isOpen, onClose, user, onSaved, onUse
   const passwordForm = usePasswordForm({ user, onUserUpdate });
 
   // Sempre que o modal abre, repõe tudo com os dados atuais do user.
+  // Depende de user.id e não do objeto user: mudar a password chama
+  // onUserUpdate (novo objeto) e o reset apagava logo a mensagem de
+  // sucesso (E-10).
   useEffect(() => {
     if (isOpen) {
       setName(user.name ?? '');
@@ -43,7 +46,7 @@ export default function EditProfileModal({ isOpen, onClose, user, onSaved, onUse
       passwordForm.reset(user.hasPassword);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, user]);
+  }, [isOpen, user.id]);
 
   useEffect(() => {
     if (avatar.error) setError(avatar.error);

@@ -7,8 +7,11 @@ import { useI18n } from '../i18n/useI18n';
  * Importante: a app não faz cache de dados de utilizador (tasks, etc. são
  * sempre NetworkOnly no service worker), por isso "offline" aqui significa
  * mesmo "sem acesso à API" - não há dados stale escondidos, só a UI
- * estática (shell) que continua a carregar do cache do SW. Este banner
- * existe para o user perceber porque é que as ações estão a falhar.
+ * estática (shell). O SW guarda a última cópia do index.html (regra de
+ * navegação NetworkFirst em vite.config.ts) e os JS/CSS do build
+ * (precache), por isso a app abre e recarrega offline depois de pelo menos
+ * uma visita com rede desde o último deploy. Este banner existe para o user
+ * perceber porque é que as ações estão a falhar.
  */
 export default function OfflineBanner() {
   const isOnline = useOnlineStatus();

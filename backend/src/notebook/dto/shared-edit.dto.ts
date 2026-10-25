@@ -1,6 +1,7 @@
 import {
   ArrayMaxSize,
   IsArray,
+  IsDateString,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -44,4 +45,12 @@ export class SharedEditDto {
   @IsString()
   @MaxLength(300)
   note?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'updatedAt of the version being edited (co-owner direct edits). If the entry changed since, the API answers 409.',
+  })
+  @IsOptional()
+  @IsDateString()
+  baseUpdatedAt?: string;
 }

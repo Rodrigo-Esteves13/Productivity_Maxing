@@ -115,6 +115,13 @@ export const forgotPasswordRequest = async (email: string): Promise<void> => {
   await api.post('/auth/forgot-password', { email });
 };
 
+// Fim do "esqueci-me da password": o backend valida o token da sessao de
+// recovery do Supabase, muda a password e termina todas as sessoes da conta.
+export const RESET_LINK_INVALID_CODE = 'RESET_LINK_INVALID';
+export const completePasswordResetRequest = async (accessToken: string, password: string): Promise<void> => {
+  await api.post('/auth/reset-password', { accessToken, password });
+};
+
 // Define ou muda a password da conta autenticada (funciona tanto para
 // contas só-OAuth a adicionar a primeira password, como para contas que já
 // tinham uma). Se a conta ja tem password, a atual e obrigatoria (o backend
@@ -145,12 +152,13 @@ export const getUserProfile = async (): Promise<User> => {
 // Atualiza o nome do utilizador autenticado.
 export const updateUserProfile = async (data: {
   name?: string;
-  commuteMinutes?: number;
+  // null limpa o valor guardado (undefined = nao mexer).
+  commuteMinutes?: number | null;
   commuteMode?: CommuteMode;
-  homeAddress?: string;
-  campusAddress?: string;
-  quietHoursStart?: number;
-  quietHoursEnd?: number;
+  homeAddress?: string | null;
+  campusAddress?: string | null;
+  quietHoursStart?: number | null;
+  quietHoursEnd?: number | null;
   deadlineEmailReminders?: boolean;
   deadlinePushReminders?: boolean;
   spacedReviewsEnabled?: boolean;
@@ -344,27 +352,55 @@ export async function reorderTasks(taskIds: string[]): Promise<void> {
 }
 
 // BULK ACTIONS (multi-select on the Dashboard table)
+// O backend aceita no maximo 200 ids por pedido (@ArrayMaxSize nos DTOs de
+// bulk). "Selecionar tudo" numa tabela maior falhava sempre, por isso as
+// listas vao em lotes sequenciais e as contagens somam-se.
+export const BULK_TASK_BATCH_SIZE = 200;
+
+export function chunkIds(ids: string[], size = BULK_TASK_BATCH_SIZE): string[][] {
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += size) chunks.push(ids.slice(i, i + size));
+  return chunks;
+}
+
+async function inBatches(
+  ids: string[],
+  send: (batch: string[]) => Promise<{ count: number }>,
+): Promise<{ count: number }> {
+  let count = 0;
+  for (const batch of chunkIds(ids)) {
+    count += (await send(batch)).count;
+  }
+  return { count };
+}
+
 export async function bulkUpdateTaskStatus(
   ids: string[],
   progressStatus: Task['progressStatus'],
 ): Promise<{ count: number }> {
-  const response = await api.patch<{ count: number }>('/tasks/bulk-status', {
-    ids,
-    progressStatus,
+  return inBatches(ids, async (batch) => {
+    const response = await api.patch<{ count: number }>('/tasks/bulk-status', {
+      ids: batch,
+      progressStatus,
+    });
+    return response.data;
   });
-  return response.data;
 }
 
 // "Mover para" da selecao: date em ISO (meia-noite UTC do dia escolhido).
 // Tasks ja concluidas ficam onde estao (ver bulk-reschedule.util.ts).
 export async function bulkRescheduleTasks(ids: string[], date: string): Promise<{ count: number }> {
-  const response = await api.patch<{ count: number }>('/tasks/bulk-reschedule', { ids, date });
-  return response.data;
+  return inBatches(ids, async (batch) => {
+    const response = await api.patch<{ count: number }>('/tasks/bulk-reschedule', { ids: batch, date });
+    return response.data;
+  });
 }
 
 export async function bulkDeleteTasks(ids: string[]): Promise<{ count: number }> {
-  const response = await api.post<{ count: number }>('/tasks/bulk-delete', { ids });
-  return response.data;
+  return inBatches(ids, async (batch) => {
+    const response = await api.post<{ count: number }>('/tasks/bulk-delete', { ids: batch });
+    return response.data;
+  });
 }
 
 // Excel/CSV import - see hooks/useTaskImport.ts, which parses the file

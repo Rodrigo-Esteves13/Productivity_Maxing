@@ -1,29 +1,59 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  acceptMedicationDisclaimer,
   createMedication,
+  createMedicationIntake,
   deleteMedication,
+  deleteMedicationIntake,
   getMedicationDay,
+  getMedicationDisclaimer,
+  getMedicationIntakes,
   getMedications,
   setMedicationDose,
   updateMedication,
 } from '../api/wellbeingService';
-import { todayKey } from '../lib/dateKey';
-import type { Medication, MedicationDaySlot, MedicationInput } from '../types/models';
+import { toDateKey } from '../lib/dateKey';
+import { useLisbonToday } from './useLisbonToday';
+import { MS_PER_DAY } from '../lib/timeConstants';
+import type {
+  Medication,
+  MedicationDaySlot,
+  MedicationDisclaimerStatus,
+  MedicationInput,
+  MedicationIntake,
+  MedicationIntakeInput,
+} from '../types/models';
 
-// Medicamentos do utilizador + checklist das tomas de hoje.
+// Tomas "se necessario" mostradas no cartao: os ultimos 7 dias.
+const RECENT_INTAKE_DAYS = 7;
+
+// Medicamentos do utilizador, checklist das tomas de hoje, tomas "se
+// necessario" recentes e o estado do aviso legal.
 export function useMedications() {
-  const [today] = useState(todayKey);
+  // Dia de Lisboa (o do backend), atualizado a meia-noite e ao voltar a app.
+  // Quando muda, `load` muda e o efeito abaixo volta a carregar (D-05).
+  const today = useLisbonToday();
   const [medications, setMedications] = useState<Medication[]>([]);
   const [slots, setSlots] = useState<MedicationDaySlot[]>([]);
+  const [intakes, setIntakes] = useState<MedicationIntake[]>([]);
+  const [disclaimer, setDisclaimer] = useState<MedicationDisclaimerStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [list, day] = await Promise.all([getMedications(), getMedicationDay(today)]);
+      const from = toDateKey(new Date(Date.parse(today) - (RECENT_INTAKE_DAYS - 1) * MS_PER_DAY));
+      const [list, day, recent, notice] = await Promise.all([
+        getMedications(),
+        getMedicationDay(today),
+        getMedicationIntakes(from, today),
+        getMedicationDisclaimer(),
+      ]);
+      setDisclaimer(notice);
       setMedications(list);
       setSlots(day);
+      setIntakes(recent);
       setError(false);
     } catch {
       setError(true);
@@ -76,6 +106,8 @@ export function useMedications() {
   return {
     medications,
     slots,
+    intakes,
+    disclaimer,
     isLoading,
     error,
     isSaving,
@@ -85,5 +117,9 @@ export function useMedications() {
     update: (id: string, changes: Partial<MedicationInput> & { active?: boolean }) =>
       run(() => updateMedication(id, changes)),
     remove: (id: string) => run(() => deleteMedication(id)),
+    logIntake: (input: MedicationIntakeInput) => run(() => createMedicationIntake(input)),
+    removeIntake: (id: string) => run(() => deleteMedicationIntake(id)),
+    // So chamado depois de o utilizador marcar as duas caixas (aviso e maioridade).
+    acceptDisclaimer: (version: number, locale: string) => run(() => acceptMedicationDisclaimer(version, locale)),
   };
 }

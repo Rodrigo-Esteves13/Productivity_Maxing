@@ -660,11 +660,9 @@ export class StudyPlanService {
     };
   }
 
-  // NOTA: StudySessionsService.getHeatmap() deriva dayOfWeek/hourBucket de
-  // `session.startedAt.getDay()`/`.getHours()` (fuso do PROCESSO, UTC no
-  // Render). Aqui usa-se o mesmo sistema de coordenadas para não comparar
-  // dois relógios diferentes. Pré-existente e sem grande impacto: é só um
-  // desempate entre slots, não um limite rígido.
+  // StudySessionsService.getHeatmap() deriva dayOfWeek/hourBucket em hora
+  // de Lisboa (toLisbonWeekdayHour), o mesmo relógio dos minutos dos slots
+  // aqui. É só um desempate entre slots, não um limite rígido.
   private scoreSlot(
     dayOfWeek: number,
     slot: Interval,

@@ -24,7 +24,7 @@ interface PageLayoutProps {
 }
 
 export default function PageLayout({ children }: PageLayoutProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { pathname } = useLocation();
   const showAcademicSelectors =
     isAuthenticated && ROUTES_WITH_ACADEMIC_SELECTORS.includes(pathname);
@@ -33,8 +33,8 @@ export default function PageLayout({ children }: PageLayoutProps) {
   // o PageLayout é o único ponto comum a todas as páginas autenticadas -
   // garante que o check-in de tasks fora de prazo dispara sempre, seja
   // qual for a página em que o dia mudou para o utilizador.
-  const { currentTask, pendingTasks, isAnswering, answer } =
-    useOverdueCheckins(isAuthenticated);
+  const { currentTask, pendingTasks, isAnswering, hasError, answer, dismiss } =
+    useOverdueCheckins(isAuthenticated ? user?.id : null);
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex flex-col">
@@ -73,6 +73,8 @@ export default function PageLayout({ children }: PageLayoutProps) {
             queueLength={pendingTasks.length}
             isAnswering={isAnswering}
             onAnswer={answer}
+            hasError={hasError}
+            onDismiss={dismiss}
           />
         </Suspense>
       )}

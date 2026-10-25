@@ -65,7 +65,7 @@ export default function StudySessionWidget() {
   const handleStart = async () => {
     // O aviso de fim de bloco pode vir com a tab em segundo plano: pede-se
     // a permissao agora, dentro do clique, que e quando o browser deixa.
-    if (plan) requestNotifyPermission();
+    if (plan) void requestNotifyPermission();
     const started = await start(
       {
         taskId: taskId || undefined,

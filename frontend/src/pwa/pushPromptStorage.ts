@@ -21,3 +21,14 @@ export function markPushPromptAnswered(userId: string): void {
     // Ignorado: ver wasPushPromptAnswered.
   }
 }
+
+// Ao terminar sessao a subscricao deste dispositivo e cancelada (ver
+// unsubscribeThisDevice): na proxima entrada desta conta volta a perguntar,
+// em vez de deixar os avisos desligados sem a pessoa saber.
+export function clearPushPromptAnswered(userId: string): void {
+  try {
+    window.localStorage.removeItem(KEY_PREFIX + userId);
+  } catch {
+    // Ignorado: ver wasPushPromptAnswered.
+  }
+}

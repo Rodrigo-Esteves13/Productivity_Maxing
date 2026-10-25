@@ -10,7 +10,7 @@ import {
 } from '../api/academicService';
 import type { AcademicProgram, AcademicPeriod } from '../types/models';
 import { useAuth } from './useAuth';
-import { AcademicContext } from './academic-context';
+import { AcademicContext, type AcademicRefreshOptions } from './academic-context';
 
 export function AcademicProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, user } = useAuth();
@@ -49,14 +49,21 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
   // reused in the initial load(), in switchProgram(), and right after
   // creating a new program.
   const loadPeriodsFor = useCallback(
-    async (program: AcademicProgram, preferredPeriodId?: string | null, syncIfChanged = false) => {
+    async (
+      program: AcademicProgram,
+      preferredPeriodId?: string | null,
+      syncIfChanged = false,
+      // Periodo que acabou de ser arquivado: nunca e escolhido por
+      // preferencia (ver refresh({ leavePeriodId }) em load()).
+      excludePeriodId?: string,
+    ) => {
       const periodsData = await getProgramPeriods(program.id);
       setPeriods(periodsData);
       const sorted = [...periodsData].sort(
         (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
       );
       const period =
-        sorted.find((p) => p.id === preferredPeriodId) ??
+        sorted.find((p) => p.id === preferredPeriodId && p.id !== excludePeriodId) ??
         sorted.find((p) => p.isPinned && !p.isArchived) ??
         sorted.find((p) => !p.isArchived) ??
         sorted[0] ??
@@ -85,7 +92,13 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const load = useCallback(async () => {
+  // options.leavePeriodId: o periodo ativo acabou de ser arquivado
+  // (ArchivePeriodButton). Sem isto, o refresh voltava a escolher o periodo
+  // arquivado (activePeriodIdRef) e as tasks novas iam para la, ficando fora
+  // do plano do dia e do check-in. O backend ja muda User.activePeriodId;
+  // aqui escolhe-se outro periodo ativo e grava-se essa escolha.
+  const load = useCallback(async (options?: AcademicRefreshOptions) => {
+    const leavePeriodId = options?.leavePeriodId;
     setIsLoading(true);
     try {
       const programsData = await getPrograms();
@@ -115,7 +128,24 @@ export function AcademicProvider({ children }: { children: ReactNode }) {
           resolvedProgram: program.name,
           preferredPeriodId,
         });
-        await loadPeriodsFor(program, preferredPeriodId, true);
+        const picked = await loadPeriodsFor(program, preferredPeriodId, true, leavePeriodId);
+        // O programa atual so tem periodos arquivados: passa para o primeiro
+        // outro programa que ainda tenha um periodo ativo.
+        if (leavePeriodId && leavePeriodId === preferredPeriodId && picked?.isArchived) {
+          for (const other of programsData.filter((p) => p.id !== program.id)) {
+            const otherPeriods = await getProgramPeriods(other.id);
+            if (!otherPeriods.some((p) => !p.isArchived)) continue;
+            setActiveProgram(other);
+            activeProgramIdRef.current = other.id;
+            const next = await loadPeriodsFor(other, null, false, leavePeriodId);
+            if (next) {
+              activatePeriod(next.id).catch((err) => {
+                console.error('Failed to sync resolved active period:', err);
+              });
+            }
+            break;
+          }
+        }
       } else {
         setPeriods([]);
         setActivePeriod(null);

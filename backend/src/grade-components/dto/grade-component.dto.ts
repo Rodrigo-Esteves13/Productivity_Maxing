@@ -63,13 +63,15 @@ export class CreateGradeComponentDto {
   bestOfCount?: number;
 
   @ApiPropertyOptional({
-    description: 'How many entries are expected in total.',
+    description:
+      'How many entries are expected in total. null (on update) clears it.',
+    nullable: true,
   })
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(200)
-  expectedEntries?: number;
+  expectedEntries?: number | null;
 }
 
 // Area e periodo nunca mudam depois de criado (apagar e criar de novo).

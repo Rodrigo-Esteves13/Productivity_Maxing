@@ -37,3 +37,19 @@ func TestProtectedProcesses_CoversCriticalSystemProcesses(t *testing.T) {
 		}
 	}
 }
+
+func TestNormalizeProcessName(t *testing.T) {
+	cases := map[string]string{
+		"steam":       "steam.exe",
+		" steam.exe ": "steam.exe",
+		"Discord.EXE": "Discord.EXE",
+		"chrome*":     "chrome*",
+		"":            "",
+		"   ":         "",
+	}
+	for in, want := range cases {
+		if got := normalizeProcessName(in); got != want {
+			t.Errorf("normalizeProcessName(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

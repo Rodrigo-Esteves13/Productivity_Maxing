@@ -8,6 +8,12 @@ import { MedicationsService } from '../wellbeing/medications.service';
 import { getFrontendUrl } from '../config/app.config';
 import { getLisbonNow, toDateKey } from '../common/date-key.util';
 import { lisbonWallClockToUtc } from '../calendar/feed/ics-feed.builder';
+import {
+  deadlineEmailText,
+  fillMailTemplate,
+  MAIL_DATE_LOCALE,
+  resolveMailLanguage,
+} from '../mail/mail-messages';
 
 const HOUR_MS = 3_600_000;
 // Task com hora: avisa 24h antes. Task só com dia: avisa na manhã do dia
@@ -74,6 +80,12 @@ export class RemindersService {
             quietHoursEnd: true,
             deadlineEmailReminders: true,
             deadlinePushReminders: true,
+            // Lingua da app (a das subscricoes push), para o email.
+            pushSubscriptions: {
+              select: { lang: true },
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+            },
           },
         },
         sentReminders: { select: { taskDate: true } },
@@ -110,6 +122,7 @@ export class RemindersService {
 
     for (const [userId, userTasks] of byUser) {
       const { user } = userTasks[0];
+      const lang = resolveMailLanguage((user.pushSubscriptions ?? [])[0]?.lang);
       const emailed =
         user.deadlineEmailReminders &&
         (await this.mailService.sendDeadlineReminderEmail(
@@ -117,9 +130,10 @@ export class RemindersService {
           userTasks.map((t) => ({
             title: t.title,
             areaName: t.area?.name ?? null,
-            dueLabel: this.dueLabel(t.date, now),
+            dueLabel: this.dueLabel(t.date, now, lang),
           })),
           tasksLink,
+          lang,
         ));
       const pushed =
         user.deadlinePushReminders &&
@@ -191,20 +205,20 @@ export class RemindersService {
     );
   }
 
-  private dueLabel(date: Date, now: Date): string {
+  private dueLabel(date: Date, now: Date, lang = 'en'): string {
+    const text = deadlineEmailText(lang);
     if (this.isDateOnly(date)) {
-      return `due ${new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'UTC',
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-      }).format(date)}`;
+      const formatted = new Intl.DateTimeFormat(
+        MAIL_DATE_LOCALE[resolveMailLanguage(lang)],
+        { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' },
+      ).format(date);
+      return fillMailTemplate(text.dueOn, { date: formatted });
     }
     const hours = Math.max(
       1,
       Math.round((date.getTime() - now.getTime()) / HOUR_MS),
     );
-    return `due in about ${hours}h`;
+    return fillMailTemplate(text.dueInHours, { hours });
   }
 
   private isQuietHour(

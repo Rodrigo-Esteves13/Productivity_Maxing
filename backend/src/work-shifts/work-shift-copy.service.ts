@@ -37,6 +37,8 @@ const COPY_FIELDS = {
   dayOfWeek: true,
   startMinutes: true,
   endMinutes: true,
+  address: true,
+  commuteMode: true,
 } as const;
 
 @Injectable()
@@ -97,6 +99,8 @@ export class WorkShiftCopyService {
             startsOn: draft.dayOfWeek !== null ? fromWeekStart : null,
             startMinutes: draft.startMinutes,
             endMinutes: draft.endMinutes,
+            address: draft.address,
+            commuteMode: draft.commuteMode,
           },
           select: SHIFT_SELECT,
         }),
@@ -161,6 +165,8 @@ export class WorkShiftCopyService {
       dateKey: row.date ? toDateKey(row.date) : null,
       startMinutes: row.startMinutes,
       endMinutes: row.endMinutes,
+      address: row.address,
+      commuteMode: row.commuteMode,
     }));
   }
 

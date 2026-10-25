@@ -34,7 +34,6 @@ export const fase7: Record<string, string> = {
   'wellbeing.mood.saveError': "Could not save the check-in.",
   'wellbeing.meds.title': "Medication",
   'wellbeing.meds.add': "Add medication",
-  'wellbeing.meds.disclaimer': "A reminder and a log only. This is not medical advice. Follow your doctor or pharmacist.",
   'wellbeing.meds.loadError': "Could not load your medication.",
   'wellbeing.meds.empty': "No medication yet. Add one to get a daily reminder.",
   'wellbeing.meds.today': "Today",

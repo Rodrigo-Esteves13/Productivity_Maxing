@@ -6,6 +6,7 @@ import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ActionButton from '../components/UI/ActionButton';
 import EmptyState from '../components/UI/EmptyState';
+import FormError from '../components/UI/FormError';
 import TableSkeleton from '../components/UI/TableSkeleton';
 import ApiKeysTable from '../components/Developer/ApiKeysTable';
 import NewApiKeyModal from '../components/Developer/NewApiKeyModal';
@@ -16,10 +17,19 @@ import { useI18n } from '../i18n/useI18n';
 export default function Developer() {
   const { t } = useI18n();
   const { confirm } = useFeedback();
-  useDocumentTitle('Developer');
+  useDocumentTitle(t('ui.developer'));
   const { user } = useAuth();
-  const { keys, isLoading, isCreating, newlyCreatedKey, createKey, removeKey, clearNewKey } =
-    useApiKeys();
+  const {
+    keys,
+    isLoading,
+    loadError,
+    isCreating,
+    createError,
+    newlyCreatedKey,
+    createKey,
+    removeKey,
+    clearNewKey,
+  } = useApiKeys();
   const [name, setName] = useState('');
   const [scope, setScope] = useState<ApiKeyScope>('TASKS');
 
@@ -32,7 +42,7 @@ export default function Developer() {
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim() || isCreating) return;
-    await createKey(name.trim(), isAdmin ? scope : 'TASKS');
+    if (!(await createKey(name.trim(), isAdmin ? scope : 'TASKS'))) return;
     setName('');
     setScope('TASKS');
   };
@@ -80,9 +90,16 @@ export default function Developer() {
           {isCreating ? t('ui.generating') : t('ui.generateNewKey')}
         </ActionButton>
       </form>
+      {createError && (
+        <div className="-mt-5 mb-8">
+          <FormError message={t('ui.couldNotCreateApiKey')} />
+        </div>
+      )}
 
       {isLoading ? (
         <TableSkeleton rows={3} columns={4} />
+      ) : loadError ? (
+        <FormError message={t('ui.couldNotLoadApiKeys')} />
       ) : keys.length === 0 ? (
         <EmptyState message={t('ui.youDonTHaveAny')} />
       ) : (

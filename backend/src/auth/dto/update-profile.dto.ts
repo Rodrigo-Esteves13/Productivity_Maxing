@@ -39,7 +39,7 @@ export class UpdateProfileDto {
   @IsInt()
   @Min(0)
   @Max(300)
-  commuteMinutes?: number;
+  commuteMinutes?: number | null;
 
   // Nem todo o estudante tem carro - guardado separadamente para o
   // CommuteSettingsCard lembrar a escolha mesmo quando o commute é
@@ -53,17 +53,19 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   @MaxLength(300)
-  homeAddress?: string;
+  homeAddress?: string | null;
 
   @ApiPropertyOptional({ example: 'Instituto XYZ, Maia' })
   @IsOptional()
   @IsString()
   @MaxLength(300)
-  campusAddress?: string;
+  campusAddress?: string | null;
 
   // Minutos desde a meia-noite (hora de Lisboa). Só fazem efeito quando
   // os dois são enviados juntos - ver comentário em
-  // User.quietHoursStart/quietHoursEnd no schema.prisma.
+  // User.quietHoursStart/quietHoursEnd no schema.prisma. Nestes cinco
+  // campos opcionais (deslocação, moradas, quiet hours), `null` limpa o
+  // valor guardado (@IsOptional deixa passar null e undefined).
   @ApiPropertyOptional({
     example: 1380,
     description:
@@ -73,7 +75,7 @@ export class UpdateProfileDto {
   @IsInt()
   @Min(0)
   @Max(1439)
-  quietHoursStart?: number;
+  quietHoursStart?: number | null;
 
   @ApiPropertyOptional({
     example: 420,
@@ -83,7 +85,7 @@ export class UpdateProfileDto {
   @IsInt()
   @Min(0)
   @Max(1439)
-  quietHoursEnd?: number;
+  quietHoursEnd?: number | null;
 
   @ApiPropertyOptional({
     example: true,

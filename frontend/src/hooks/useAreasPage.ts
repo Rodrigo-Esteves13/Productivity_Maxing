@@ -19,8 +19,24 @@ import type { AreaFormValues } from '../components/Areas/AreaForm';
 import { useFeedback } from '../context/useFeedback';
 import { useAuth } from '../context/useAuth';
 import { translateNow } from '../i18n/translate';
+import { getApiCode } from '../lib/httpError';
 
 export type CreateMode = 'personal' | 'official';
+
+// Codigo do 409 do backend quando a Area ainda tem tasks, notas do caderno
+// ou componentes de nota (ver AreasService.remove).
+const AREA_IN_USE_CODE = 'AREA_IN_USE';
+
+// Mensagem traduzida do 409 AREA_IN_USE, com as contagens que o backend manda.
+function areaInUseMessage(err: unknown): string {
+  const counts = (err as { response?: { data?: { counts?: Record<string, unknown> } } })?.response?.data?.counts ?? {};
+  const num = (value: unknown) => (typeof value === 'number' ? value : 0);
+  return translateNow('areas.deleteInUse', {
+    tasks: num(counts.tasks),
+    notes: num(counts.notebookEntries),
+    components: num(counts.gradeComponents),
+  });
+}
 
 function errorMessage(err: unknown, fallback: string): string {
   const msg = (err as { response?: { data?: { message?: unknown } } })?.response?.data?.message;
@@ -126,7 +142,7 @@ export function useAreasPage() {
   const handleDeleteArea = async (id: string) => {
     const confirmed = await confirm({
       title: translateNow('hook.deleteArea'),
-      message: translateNow('hook.areYouSureAnAreaWith'),
+      message: translateNow('areas.deleteConfirm'),
       confirmLabel: translateNow('hook.delete'),
       tone: 'danger',
     });
@@ -136,6 +152,10 @@ export function useAreasPage() {
       setAreas((prev) => prev.filter((a) => a.id !== id));
       if (selectedArea?.id === id) closeDetailModal();
     } catch (err) {
+      if (getApiCode(err) === AREA_IN_USE_CODE) {
+        notify(areaInUseMessage(err), 'error');
+        return;
+      }
       notify(errorMessage(err, translateNow('hook.errorDeletingArea')), 'error');
     }
   };

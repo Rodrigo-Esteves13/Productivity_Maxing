@@ -99,6 +99,7 @@ export default function TaskFormFields({
       difficulty: values.difficulty,
       weightPercentage: values.weightPercentage,
       taskId,
+      areaId: values.areaId,
     });
 
   return (

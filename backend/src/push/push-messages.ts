@@ -96,12 +96,12 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '"{title}" and {count} more are due soon.',
     },
     medicationDue: {
-      title: 'Medication time',
-      body: 'Time to take {title}.',
+      title: 'Medication reminder',
+      body: 'Time for a dose you planned. Check that you have not already taken it.',
     },
     medicationsDue: {
-      title: 'Medication time',
-      body: 'Time to take {title} and {count} more.',
+      title: 'Medication reminder',
+      body: 'Time for a dose you planned. Check that you have not already taken it.',
     },
     turmaAnnouncement: {
       title: '{name}',
@@ -166,12 +166,12 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '"{title}" e mais {count} terminam em breve.',
     },
     medicationDue: {
-      title: 'Hora da medicação',
-      body: 'Está na hora de tomar {title}.',
+      title: 'Lembrete de medicação',
+      body: 'Está na hora de uma toma que planeaste. Confirma que ainda não a tomaste.',
     },
     medicationsDue: {
-      title: 'Hora da medicação',
-      body: 'Está na hora de tomar {title} e mais {count}.',
+      title: 'Lembrete de medicação',
+      body: 'Está na hora de uma toma que planeaste. Confirma que ainda não a tomaste.',
     },
     turmaAnnouncement: {
       title: '{name}',
@@ -236,12 +236,12 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '"{title}" y {count} más vencen pronto.',
     },
     medicationDue: {
-      title: 'Hora de la medicación',
-      body: 'Es hora de tomar {title}.',
+      title: 'Recordatorio de medicación',
+      body: 'Es la hora de una toma que planificaste. Comprueba que no la has tomado ya.',
     },
     medicationsDue: {
-      title: 'Hora de la medicación',
-      body: 'Es hora de tomar {title} y {count} más.',
+      title: 'Recordatorio de medicación',
+      body: 'Es la hora de una toma que planificaste. Comprueba que no la has tomado ya.',
     },
     turmaAnnouncement: {
       title: '{name}',
@@ -290,12 +290,12 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '“{title}”即将截止。',
     },
     medicationDue: {
-      title: '服药时间',
-      body: '该服用 {title} 了。',
+      title: '用药提醒',
+      body: '到了你计划的服药时间。请先确认你还没有服用过。',
     },
     medicationsDue: {
-      title: '服药时间',
-      body: '该服用 {title} 以及另外 {count} 种药了。',
+      title: '用药提醒',
+      body: '到了你计划的服药时间。请先确认你还没有服用过。',
     },
     turmaAnnouncement: {
       title: '{name}',
@@ -360,12 +360,12 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '「{title}」の締め切りが近づいています。',
     },
     medicationDue: {
-      title: 'お薬の時間',
-      body: '{title} を飲む時間です。',
+      title: '服薬リマインダー',
+      body: '予定していた服薬の時間です。すでに服用していないか確認してください。',
     },
     medicationsDue: {
-      title: 'お薬の時間',
-      body: '{title} ほか {count} 件を飲む時間です。',
+      title: '服薬リマインダー',
+      body: '予定していた服薬の時間です。すでに服用していないか確認してください。',
     },
     turmaAnnouncement: {
       title: '{name}',
@@ -430,12 +430,12 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '"{title}" 마감이 곧이에요.',
     },
     medicationDue: {
-      title: '약 먹을 시간',
-      body: '{title} 복용할 시간이에요.',
+      title: '복약 알림',
+      body: '계획한 복용 시간입니다. 이미 복용하지 않았는지 확인하세요.',
     },
     medicationsDue: {
-      title: '약 먹을 시간',
-      body: '{title} 외 {count}개를 복용할 시간이에요.',
+      title: '복약 알림',
+      body: '계획한 복용 시간입니다. 이미 복용하지 않았는지 확인하세요.',
     },
     turmaAnnouncement: {
       title: '{name}',
@@ -504,12 +504,12 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '« {title} » et {count} autres arrivent bientôt à échéance.',
     },
     medicationDue: {
-      title: 'Heure du médicament',
-      body: "C'est l'heure de prendre {title}.",
+      title: 'Rappel de médicament',
+      body: "C'est l'heure d'une prise prévue. Vérifie que tu ne l'as pas déjà prise.",
     },
     medicationsDue: {
-      title: 'Heure du médicament',
-      body: "C'est l'heure de prendre {title} et {count} autres.",
+      title: 'Rappel de médicament',
+      body: "C'est l'heure d'une prise prévue. Vérifie que tu ne l'as pas déjà prise.",
     },
     turmaAnnouncement: {
       title: '{name}',
@@ -574,12 +574,12 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '„{title}“ und {count} weitere sind bald fällig.',
     },
     medicationDue: {
-      title: 'Zeit für Medikamente',
-      body: 'Zeit, {title} zu nehmen.',
+      title: 'Medikamenten-Erinnerung',
+      body: 'Zeit für eine geplante Einnahme. Prüfe, ob du sie nicht schon genommen hast.',
     },
     medicationsDue: {
-      title: 'Zeit für Medikamente',
-      body: 'Zeit, {title} und {count} weitere zu nehmen.',
+      title: 'Medikamenten-Erinnerung',
+      body: 'Zeit für eine geplante Einnahme. Prüfe, ob du sie nicht schon genommen hast.',
     },
     turmaAnnouncement: {
       title: '{name}',

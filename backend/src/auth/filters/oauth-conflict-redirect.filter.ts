@@ -1,9 +1,29 @@
-import { ExceptionFilter, Catch, ArgumentsHost, Logger } from '@nestjs/common';
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  Logger,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { OAuthAccountConflictException } from '../exceptions/oauth-account-conflict.exception';
 import { getFrontendUrl } from '../../config/app.config';
 
 const FRONTEND_URL = getFrontendUrl();
+
+// Mesmo code que o AccountGuardService devolve a uma conta banida/suspensa.
+const ACCOUNT_BLOCKED_CODE = 'ACCOUNT_BLOCKED';
+
+// Token de recurso (appeal) de uma conta bloqueada, se for esse o erro.
+function blockedAppealToken(exception: unknown): string | null {
+  if (!(exception instanceof HttpException)) return null;
+  const body = exception.getResponse();
+  if (typeof body !== 'object' || body === null) return null;
+  const { code, appealToken } = body as Record<string, unknown>;
+  return code === ACCOUNT_BLOCKED_CODE && typeof appealToken === 'string'
+    ? appealToken
+    : null;
+}
 
 /**
  * Sem este filtro, qualquer exceção lançada dentro de uma Passport strategy
@@ -34,6 +54,19 @@ export class OAuthConflictRedirectFilter implements ExceptionFilter {
         email: exception.conflictEmail,
       });
       response.redirect(`${FRONTEND_URL}/auth/callback?${params.toString()}`);
+      return;
+    }
+
+    // Conta banida/suspensa (E-06): o mesmo ecra de bloqueio + recurso do
+    // login por password, em vez de um "algo correu mal". O token vai no
+    // fragmento (#), que o browser nunca manda a nenhum servidor nem fica
+    // nos logs de acesso.
+    const appealToken = blockedAppealToken(exception);
+    if (appealToken) {
+      const fragment = new URLSearchParams({ appeal: appealToken });
+      response.redirect(
+        `${FRONTEND_URL}/auth/callback?error=account_blocked#${fragment.toString()}`,
+      );
       return;
     }
 

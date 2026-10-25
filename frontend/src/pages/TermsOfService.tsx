@@ -5,7 +5,7 @@ import LegalLink from '../components/Legal/LegalLink';
 import useSeo from '../hooks/useSeo';
 import { REPO_URL, REPO_LICENSE_URL, CONTACT_EMAIL, APP_DOMAIN } from '../lib/constants';
 
-const LAST_UPDATED = '08/10/2026';
+const LAST_UPDATED = '24/10/2026';
 
 export default function TermsOfService() {
   useSeo({
@@ -119,6 +119,45 @@ export default function TermsOfService() {
           for verifying your own academic deadlines and grades through your institution's official
           channels.
         </p>
+        <p>
+          <strong>Medication and health information.</strong> The Wellbeing medication feature is a
+          reminder and a personal log only. It is not a medical device and it does not give medical
+          advice, diagnosis, treatment or prevention of any condition. Its intended purpose is only a
+          personal reminder and log for medication you already take as prescribed or as the leaflet
+          says; it is not intended to diagnose, prevent, monitor, predict, treat or alleviate any disease,
+          and it does not check doses, interactions or dependence. It is for your own personal use, not for managing
+          medication for another person, and only for adults (18 or older, or the age of majority where
+          you live). Before you can use it you must read and accept a separate medication notice in the
+          App and confirm you are an adult; the version, language and date you accepted are stored in
+          your account.
+        </p>
+        <p>
+          The App never tells you whether a medicine, a dose or a combination is safe. Mixing medicines,
+          or medicines with alcohol or other substances, can be dangerous, and some medicines can cause
+          dependence even when taken as prescribed; the App does not check any of this. It does not know
+          your health, your doses, your allergies or everything you take. Reminders may fail, arrive late
+          or not show at all.
+        </p>
+        <p>
+          Never start, stop, combine or change any medicine, or drink alcohol with it, because of
+          something the App shows or does not show. Always follow your doctor or pharmacist and the
+          leaflet. In an emergency, call your local emergency number (112 in the EU, 911 in the US).
+        </p>
+        <p>
+          Nobody monitors what you log: the App does not alert any doctor, relative or emergency service,
+          even when an entry looks dangerous. The emergency and support numbers shown in the App are
+          provided only for convenience; they can change, be wrong or not apply where you are, and those
+          services are run by third parties I do not control and am not responsible for. Always use your
+          local emergency number when in doubt.
+        </p>
+        <p>
+          You use the medication feature at your own risk and you remain solely responsible for your
+          health decisions. To the maximum extent permitted by the law that applies to you, I'm not liable
+          for any harm, adverse effect, health condition, injury or death related to medication, alcohol
+          or any other substance, or to relying on (or not receiving) a reminder or any other information
+          in the App. Nothing in these Terms limits liability that cannot be limited under the
+          law that applies to you. If you do not agree, do not use the medication feature.
+        </p>
       </LegalSection>
 
       <LegalSection number={11} title="Termination">
@@ -139,6 +178,11 @@ export default function TermsOfService() {
 
       <LegalSection number={13} title="Governing law">
         <p>These terms are governed by the laws of Portugal, without regard to conflict-of-law principles.</p>
+        <p>
+          Nothing in these terms removes rights you have under mandatory consumer protection law where
+          you live. If any part of these terms is found invalid or unenforceable, it is limited to the
+          minimum extent necessary and the rest of these terms stays in full effect.
+        </p>
       </LegalSection>
 
       <LegalSection number={14} title="Contact">

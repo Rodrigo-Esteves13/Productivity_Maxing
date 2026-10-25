@@ -7,6 +7,7 @@ package apiclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,11 @@ import (
 
 	"pmaxing-agent/internal/config"
 )
+
+// ErrUnauthorized marca um 401 da API (key revogada ou apagada). O main.go
+// distingue-o de uma falha de rede: com a key morta nao faz sentido manter
+// o ultimo bloqueio para sempre (E-13).
+var ErrUnauthorized = errors.New("invalid or revoked API key")
 
 // Area espelha o objeto Area tal como vem embutido em cada Task
 // (TASK_INCLUDE inclui a relação "area" completa no backend).
@@ -110,7 +116,7 @@ func (c *Client) getTasks(ctx context.Context, path string) ([]Task, error) {
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("invalid or revoked API key (401 on %s) - generate a new one at /auth/api-keys", path)
+		return nil, fmt.Errorf("%w (401 on %s) - generate a new one on the /agent page of the site", ErrUnauthorized, path)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected response from %s: %d %s", path, resp.StatusCode, string(body))

@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getMoodLogs, saveMoodLog } from '../api/wellbeingService';
-import { todayKey } from '../lib/dateKey';
+import { useLisbonToday } from './useLisbonToday';
 import type { MoodLog, UpsertMoodInput } from '../types/models';
 
 // Registo do humor de hoje: carrega o que ja existe e grava (upsert).
 export function useMoodToday() {
-  const [today] = useState(todayKey);
+  // Dia de Lisboa (o do backend). Muda a meia-noite e ao voltar a app, para
+  // nao gravar o humor de hoje por cima do de ontem (D-05).
+  const today = useLisbonToday();
   const [log, setLog] = useState<MoodLog | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -13,6 +15,10 @@ export function useMoodToday() {
 
   useEffect(() => {
     let cancelled = false;
+    // Dia novo: o registo de ontem deixa de ser o de hoje.
+    setLog(null);
+    setIsLoading(true);
+    setError(false);
     getMoodLogs(today, today)
       .then((logs) => {
         if (!cancelled) setLog(logs[0] ?? null);

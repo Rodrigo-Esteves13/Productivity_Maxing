@@ -10,7 +10,6 @@ import {
   getActiveStudySession,
   startStudySession,
   stopStudySession,
-  stopStudySessionOnUnload,
   heartbeatStudySession,
   type StartStudySessionInput,
   type StopStudySessionInput,
@@ -18,9 +17,8 @@ import {
 import type { StudySession } from '../types/models';
 import { useAuth } from './useAuth';
 import { StudyClockContext, StudySessionContext } from './study-session-context';
-import { getHttpStatus } from '../lib/httpError';
+import { getApiMessage, getHttpStatus, HTTP_CONFLICT } from '../lib/httpError';
 import { announceSessionChanged, onSessionChangedElsewhere } from '../lib/focusChannel';
-import { isAnotherTabOpen, registerTab } from '../lib/tabPresence';
 import { startActivityTracking } from '../lib/idleClock';
 import {
   clearBreak,
@@ -35,8 +33,19 @@ import {
   type TimerPlan,
 } from '../lib/focusTimer';
 import { translateNow } from '../i18n/translate';
+import { useFeedback } from './useFeedback';
 
 const HTTP_NOT_FOUND = 404;
+// Ao parar: a sessao ja nao existe ou ja foi parada (auto-close, outra tab
+// ou outro dispositivo). O ecra ressincroniza em vez de ficar parado.
+const STALE_STOP_STATUSES = new Set([HTTP_NOT_FOUND, HTTP_CONFLICT]);
+
+// Fim do bloco de foco planeado (ISO), para o heartbeat: enquanto estiver
+// dentro dele o servidor nao fecha a sessao por falta de contacto.
+function plannedEndOf(session: StudySession | null, plan: TimerPlan | null): string | undefined {
+  if (!session || !plan) return undefined;
+  return new Date(new Date(session.startedAt).getTime() + plan.focusMinutes * 60_000).toISOString();
+}
 
 // How often we tell the backend "still here" while a session is running.
 // Kept well under StudySessionsService's STALE_SESSION_THRESHOLD_MS
@@ -52,6 +61,7 @@ const HEARTBEAT_INTERVAL_MS = 60 * 1000;
 // out of sync with each other.
 export function StudySessionProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
+  const { notify } = useFeedback();
 
   const [activeSession, setActiveSession] = useState<StudySession | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -72,6 +82,10 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     activeSessionRef.current = activeSession;
   }, [activeSession]);
+  const timerPlanRef = useRef<TimerPlan | null>(null);
+  useEffect(() => {
+    timerPlanRef.current = timerPlan;
+  }, [timerPlan]);
 
   const fetchActive = useCallback(async () => {
     try {
@@ -88,13 +102,25 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
 
   // Volta a perguntar ao servidor qual e a sessao ativa, SEM mostrar
   // "a carregar" nem erro: usado para as tabs concordarem entre si.
-  const syncActive = useCallback(async () => {
-    try {
-      setActiveSession(await getActiveStudySession());
-    } catch {
-      // Falhou um sync em segundo plano: fica o estado que ja temos.
-    }
-  }, []);
+  // `notifyIfEnded`: se a sessao que este ecra mostrava desapareceu sem a
+  // pessoa a parar aqui (fechada por falta de contacto, ou noutro
+  // dispositivo), diz-se isso num toast em vez de o cronometro sumir.
+  const syncActive = useCallback(
+    async (notifyIfEnded = false) => {
+      const previous = activeSessionRef.current;
+      try {
+        const current = await getActiveStudySession();
+        if (previous && previous.id !== current?.id) {
+          clearPlan(previous.id);
+          if (notifyIfEnded) notify(translateNow('ui.sessionEndedElsewhere'), 'info');
+        }
+        setActiveSession(current);
+      } catch {
+        // Falhou um sync em segundo plano: fica o estado que ja temos.
+      }
+    },
+    [notify],
+  );
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -112,8 +138,19 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated) return;
     const stopListening = onSessionChangedElsewhere(() => void syncActive());
+    // Ao voltar (ex: telemovel desbloqueado), primeiro um heartbeat com o fim
+    // do bloco planeado e so depois o sync: se o GET /active chegasse antes,
+    // o servidor fechava como "esquecida" uma sessao ainda dentro do bloco.
     const handleVisible = () => {
-      if (document.visibilityState === 'visible') void syncActive();
+      if (document.visibilityState !== 'visible') return;
+      const session = activeSessionRef.current;
+      if (!session) {
+        void syncActive(true);
+        return;
+      }
+      void heartbeatStudySession(session.id, plannedEndOf(session, timerPlanRef.current))
+        .catch(() => undefined)
+        .finally(() => void syncActive(true));
     };
     document.addEventListener('visibilitychange', handleVisible);
     return () => {
@@ -133,12 +170,6 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated || !activeSession) return;
     return startActivityTracking();
   }, [isAuthenticated, activeSession]);
-
-  // Regista esta tab para as outras saberem que existe (ver pagehide abaixo).
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    return registerTab();
-  }, [isAuthenticated]);
 
   // Local timer - recalculated from startedAt on every tick (not a naive
   // increment), so it doesn't drift if the tab sits in the background and
@@ -182,13 +213,14 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
 
     const sessionId = activeSession.id;
     const ping = () => {
-      void heartbeatStudySession(sessionId).catch((error: unknown) => {
+      const plannedEndAt = plannedEndOf(activeSessionRef.current, timerPlanRef.current);
+      void heartbeatStudySession(sessionId, plannedEndAt).catch((error: unknown) => {
         // Best-effort - a missed beat or two doesn't matter, see
         // STALE_SESSION_THRESHOLD_MS on the backend. A 404 e diferente:
         // a sessao ja nao esta ativa no servidor (parada noutra tab ou
         // fechada por inatividade), por isso corrige-se o ecra em vez de
         // continuar a mostrar um cronometro de uma sessao que ja acabou.
-        if (getHttpStatus(error) === HTTP_NOT_FOUND) void syncActive();
+        if (getHttpStatus(error) === HTTP_NOT_FOUND) void syncActive(true);
       });
     };
     heartbeatRef.current = setInterval(ping, HEARTBEAT_INTERVAL_MS);
@@ -198,25 +230,11 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
     };
   }, [activeSession, syncActive]);
 
-  // Best-effort clean stop when the tab actually closes or navigates away
-  // with a session still running. `pagehide` (not `beforeunload`/`unload`,
-  // both effectively deprecated for this) is the current recommendation
-  // for "the user is truly leaving" - it also reliably fires on tab
-  // close, unlike `visibilitychange`, which would also fire on every
-  // ordinary tab switch and wrongly stop the session then.
-  useEffect(() => {
-    const handlePageHide = () => {
-      const session = activeSessionRef.current;
-      // So pára a sessão se esta for a ÚLTIMA tab aberta. Com outra tab
-      // aberta a sessão continua a ser dela (mantém o heartbeat), e fechar
-      // uma tab duplicada não pode parar a sessão da outra.
-      if (session && !isAnotherTabOpen()) {
-        stopStudySessionOnUnload(session.id);
-      }
-    };
-    window.addEventListener('pagehide', handlePageHide);
-    return () => window.removeEventListener('pagehide', handlePageHide);
-  }, []);
+  // Sem stop no `pagehide`: disparava tambem no F5, no reload automatico do
+  // service worker depois de um deploy e ao seguir o link "Ligar Google
+  // Calendar", e parava a sessao em curso sem aviso. Uma tab fechada de
+  // vez fica sem heartbeat e o servidor fecha a sessao no ultimo contacto
+  // (StudySessionsService.autoCloseIfStale), com precisao de ~1 minuto.
 
   const start = useCallback(
     async (input: StartStudySessionInput, plan: TimerPlan | null = null) => {
@@ -231,14 +249,19 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
         setActiveSession(session);
         announceSessionChanged();
         return true;
-      } catch {
-        setError(translateNow('ui.couldNotStartSession'));
+      } catch (err) {
+        // Toast tambem: o erro inline so aparece no widget da pagina Focus,
+        // e o pill global / prompt de fim de bloco / pausa ficavam calados.
+        const message = getApiMessage(err, translateNow('ui.couldNotStartSession'));
+        setError(message);
+        notify(message, 'error');
+        if (getHttpStatus(err) === HTTP_CONFLICT) void syncActive();
         return false;
       } finally {
         setIsSubmitting(false);
       }
     },
-    [],
+    [notify, syncActive],
   );
 
   const stop = useCallback(
@@ -253,14 +276,17 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
         setActiveSession(null);
         announceSessionChanged();
         return true;
-      } catch {
-        setError(translateNow('ui.couldNotStopSession'));
+      } catch (err) {
+        const message = getApiMessage(err, translateNow('ui.couldNotStopSession'));
+        setError(message);
+        notify(message, 'error');
+        if (STALE_STOP_STATUSES.has(getHttpStatus(err) ?? 0)) void syncActive();
         return false;
       } finally {
         setIsSubmitting(false);
       }
     },
-    [activeSession],
+    [activeSession, notify, syncActive],
   );
 
   const dismissJustStopped = useCallback(() => setJustStopped(null), []);

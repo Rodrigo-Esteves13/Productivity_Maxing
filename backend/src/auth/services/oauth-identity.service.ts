@@ -16,6 +16,7 @@ import {
   trustedProviderAvatar,
 } from '../provider-avatar.util';
 import { AccountGuardService } from './account-guard.service';
+import { emailEquals, normalizeEmail } from '../email.util';
 import type { OAuthProfileData } from './oauth-profile.interface';
 import { SupabaseClientsService } from './supabase-clients.service';
 
@@ -48,7 +49,9 @@ export class OAuthIdentityService {
    * através do fluxo explícito de "Ligar conta" (linkIdentity), que exige
    * já estar autenticada.
    */
-  async resolveIdentity(data: OAuthProfileData): Promise<User> {
+  async resolveIdentity(profile: OAuthProfileData): Promise<User> {
+    // E-01: o mesmo email com outras maiusculas nao cria uma segunda conta.
+    const data = { ...profile, email: normalizeEmail(profile.email) };
     const existingIdentity = await this.prisma.identity.findUnique({
       where: {
         provider_providerAccountId: {
@@ -104,7 +107,10 @@ export class OAuthIdentityService {
     }
 
     let user = data.emailVerified
-      ? await this.prisma.user.findUnique({ where: { email: data.email } })
+      ? await this.prisma.user.findFirst({
+          where: { email: emailEquals(data.email) },
+          orderBy: { createdAt: 'asc' },
+        })
       : null;
     // Funde-se numa conta que ja existia (em vez de criar uma nova).
     const mergedIntoExisting = user !== null;
@@ -122,8 +128,8 @@ export class OAuthIdentityService {
       // método original e ligar esta conta manualmente depois, a partir
       // das definições do perfil (fluxo linkIdentity(), que exige sessão
       // válida antes de associar o provider).
-      const emailTaken = await this.prisma.user.findUnique({
-        where: { email: data.email },
+      const emailTaken = await this.prisma.user.findFirst({
+        where: { email: emailEquals(data.email) },
         select: { id: true },
       });
 

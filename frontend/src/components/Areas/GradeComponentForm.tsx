@@ -52,7 +52,8 @@ export default function GradeComponentForm({ initial, onSubmit, onCancel }: Grad
         weightPercentage: weightValue,
         aggregation,
         bestOfCount: aggregation === 'BEST_OF' ? bestOfValue : undefined,
-        expectedEntries: expected ? Number(expected) : undefined,
+        // null (nao undefined) para limpar ao editar: o JSON deita fora o undefined.
+        expectedEntries: expected ? Number(expected) : null,
       });
     } catch (err) {
       setError(getApiMessage(err, t('grades.error.generic')));

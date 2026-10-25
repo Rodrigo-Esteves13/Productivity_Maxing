@@ -18,6 +18,14 @@ const REINVITE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 // nao revelar quem e (ou deixou de ser) amigo, nem se bloqueou.
 const NOT_INVITABLE = 'Friend not found.';
 
+// Codigos estaveis nos 409 do convite: o frontend mostra a causa certa em
+// vez de tratar todos como "link publico".
+export const INVITE_CONFLICT_CODE = {
+  needsAuthorized: 'INVITE_NEEDS_AUTHORIZED',
+  noteFull: 'INVITE_NOTE_FULL',
+  declinedRecently: 'INVITE_DECLINED_RECENTLY',
+} as const;
+
 @Injectable()
 export class NotebookInviteService {
   constructor(
@@ -56,9 +64,11 @@ export class NotebookInviteService {
       where: { notebookEntryId: entryId },
     });
     if (share && share.visibility !== 'AUTHORIZED') {
-      throw new ConflictException(
-        'Switch this share link to "Authorized" before inviting friends with a role.',
-      );
+      throw new ConflictException({
+        code: INVITE_CONFLICT_CODE.needsAuthorized,
+        message:
+          'Switch this share link to "Authorized" before inviting friends with a role.',
+      });
     }
     share ??= await this.prisma.notebookShare.create({
       data: {
@@ -83,9 +93,10 @@ export class NotebookInviteService {
         where: { notebookShareId: share.id },
       });
       if (count >= MAX_PEOPLE_PER_ENTRY) {
-        throw new ConflictException(
-          'This note already has the maximum number of people.',
-        );
+        throw new ConflictException({
+          code: INVITE_CONFLICT_CODE.noteFull,
+          message: 'This note already has the maximum number of people.',
+        });
       }
     }
 
@@ -121,9 +132,10 @@ export class NotebookInviteService {
       existing.decidedAt &&
       Date.now() - existing.decidedAt.getTime() < REINVITE_COOLDOWN_MS
     ) {
-      throw new ConflictException(
-        'This person declined recently. Try again later.',
-      );
+      throw new ConflictException({
+        code: INVITE_CONFLICT_CODE.declinedRecently,
+        message: 'This person declined recently. Try again later.',
+      });
     }
 
     const row = await this.prisma.notebookShareAccessRequest.upsert({

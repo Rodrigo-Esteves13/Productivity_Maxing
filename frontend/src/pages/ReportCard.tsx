@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
+import Breadcrumbs from '../components/UI/Breadcrumbs';
 import Select from '../components/UI/Select';
 import EmptyState from '../components/UI/EmptyState';
 import ErrorState from '../components/UI/ErrorState';
@@ -123,6 +124,10 @@ export default function ReportCard() {
 
   return (
     <PageLayout>
+      <Breadcrumbs
+        className="print-hide mb-3"
+        items={[{ label: t('nav.areas'), to: '/areas' }, { label: t('reportCard.title') }]}
+      />
       <div className="print-ink">
         <PageHeader title={t('reportCard.title')} description={t('reportCard.description')} action={action} />
         {body}

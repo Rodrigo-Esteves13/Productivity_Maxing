@@ -117,17 +117,35 @@ func Evaluate(rules apiclient.TriggerRules, snap Snapshot) Decision {
 // 23:00 UTC de ontem conta como overdue mal esse instante passe, mesmo
 // que localmente isso ainda caia "dentro do dia de hoje" - é assim que a
 // própria app já trata isto (ver o badge "Xh overdue" no dashboard).
+//
+// Exceção (E-12): uma task só com data (sem hora) é guardada às 00:00 UTC
+// do dia e o prazo é o FIM desse dia, como no frontend (getDeadlineMs /
+// isUtcMidnight em utils/taskDateStatus.ts). Sem isto o agente bloqueava
+// desde as 00:00 UTC do próprio dia do exame.
 func hasPastDeadline(tasks []apiclient.Task) bool {
 	now := time.Now()
 	for _, t := range tasks {
 		if t.ProgressStatus == apiclient.Completed {
 			continue
 		}
-		if t.Date.Before(now) {
+		if deadlineOf(t.Date).Before(now) {
 			return true
 		}
 	}
 	return false
+}
+
+// deadlineOf devolve o instante em que a task passa a estar em atraso.
+func deadlineOf(date time.Time) time.Time {
+	if isUtcMidnight(date) {
+		return date.Add(24 * time.Hour)
+	}
+	return date
+}
+
+func isUtcMidnight(date time.Time) bool {
+	u := date.UTC()
+	return u.Hour() == 0 && u.Minute() == 0 && u.Second() == 0 && u.Nanosecond() == 0
 }
 
 // NeedsAllTasks diz se a config atual precisa de GET /tasks (histórico

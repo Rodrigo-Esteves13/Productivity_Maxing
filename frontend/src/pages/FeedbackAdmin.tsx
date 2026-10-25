@@ -5,7 +5,7 @@ import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
 import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import useDocumentTitle from '../hooks/useDocumentTitle';
-import { getFeedbackList, setFeedbackResolved } from '../api/feedbackService';
+import { FEEDBACK_LIST_LIMIT, getFeedbackList, setFeedbackResolved } from '../api/feedbackService';
 import type { FeedbackItem } from '../types/models';
 import { translateNow } from '../i18n/translate';
 import { useI18n } from '../i18n/useI18n';
@@ -46,6 +46,12 @@ export default function FeedbackAdmin() {
       ) : items.length === 0 ? (
         <EmptyState message={t('ui.noFeedbackYet')} />
       ) : (
+        <>
+        {items.length >= FEEDBACK_LIST_LIMIT && (
+          <p className="mb-3 text-sm text-amber-400/80">
+            {t('ui.adminListCapped', { count: FEEDBACK_LIST_LIMIT })}
+          </p>
+        )}
         <ul className="space-y-3">
           {items.map((item) => (
             <li
@@ -74,6 +80,7 @@ export default function FeedbackAdmin() {
             </li>
           ))}
         </ul>
+        </>
       )}
     </PageLayout>
   );

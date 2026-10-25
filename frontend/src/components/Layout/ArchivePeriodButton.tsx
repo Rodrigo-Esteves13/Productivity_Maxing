@@ -29,7 +29,8 @@ export default function ArchivePeriodButton() {
     setIsArchiving(true);
     try {
       await archivePeriod(activePeriod.id, forceConfirm);
-      await refresh();
+      // Era o periodo ativo: o refresh tem de passar para outro periodo ativo.
+      await refresh({ leavePeriodId: activePeriod.id });
     } catch (err: unknown) {
       const status = getHttpStatus(err);
       if (status === 409) {

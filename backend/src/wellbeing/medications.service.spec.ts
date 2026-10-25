@@ -1,7 +1,17 @@
-import { NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
+import { MedicationSchedule } from '@prisma/client';
 import { findDueDoses, MedicationsService } from './medications.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { PushService } from '../push/push.service';
+import type { MedicationDisclaimerService } from './medication-disclaimer.service';
+
+const acceptedDisclaimer = {
+  assertAccepted: jest.fn().mockResolvedValue(undefined),
+} as unknown as MedicationDisclaimerService;
 
 describe('findDueDoses', () => {
   const med = (times: number[], handled: number[] = []) => ({
@@ -38,6 +48,7 @@ describe('MedicationsService ownership', () => {
     const service = new MedicationsService(
       prisma as unknown as PrismaService,
       { notifyUser: jest.fn() } as unknown as PushService,
+      acceptedDisclaimer,
     );
     return { service, prisma };
   };
@@ -50,9 +61,10 @@ describe('MedicationsService ownership', () => {
     await expect(service.remove('u1', 'm1')).rejects.toBeInstanceOf(
       NotFoundException,
     );
-    expect(prisma.medication.updateMany).toHaveBeenCalledWith(
+    expect(prisma.medication.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'm1', userId: 'u1' } }),
     );
+    expect(prisma.medication.updateMany).not.toHaveBeenCalled();
     expect(prisma.medication.deleteMany).toHaveBeenCalledWith({
       where: { id: 'm1', userId: 'u1' },
     });
@@ -68,5 +80,56 @@ describe('MedicationsService ownership', () => {
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.medicationDose.upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe('MedicationsService schedule', () => {
+  const setup = () => {
+    const prisma = {
+      medication: {
+        count: jest.fn().mockResolvedValue(0),
+        create: jest
+          .fn()
+          .mockImplementation(({ data }: { data: unknown }) => data),
+      },
+    };
+    const service = new MedicationsService(
+      prisma as unknown as PrismaService,
+      { notifyUser: jest.fn() } as unknown as PushService,
+      acceptedDisclaimer,
+    );
+    return { service, prisma };
+  };
+
+  it('"as needed" drops times and reminders', async () => {
+    const { service } = setup();
+    const created = await service.create('u1', {
+      name: 'Ibuprofen',
+      schedule: MedicationSchedule.AS_NEEDED,
+      times: [480],
+    });
+    expect(created).toMatchObject({ times: [], remindersEnabled: false });
+  });
+
+  it('daily medication needs at least one time', async () => {
+    const { service } = setup();
+    await expect(
+      service.create('u1', { name: 'Vitamin D', times: [] }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('nothing is created before the notice is accepted', async () => {
+    const prisma = { medication: { count: jest.fn(), create: jest.fn() } };
+    const service = new MedicationsService(
+      prisma as unknown as PrismaService,
+      { notifyUser: jest.fn() } as unknown as PushService,
+      {
+        assertAccepted: jest.fn().mockRejectedValue(new ForbiddenException()),
+      } as unknown as MedicationDisclaimerService,
+    );
+    await expect(
+      service.create('u1', { name: 'Vitamin D', times: [480] }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.medication.create).not.toHaveBeenCalled();
   });
 });

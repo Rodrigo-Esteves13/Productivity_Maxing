@@ -36,7 +36,21 @@ export function usePad(slug: string) {
     },
     [slug],
   );
-  const doc = useVersionedDoc<string>({ key: slug, load, save, parseConflict: parsePadConflict, enabled: slug !== '' });
+  // Trancado por outra conta enquanto se escrevia: recarrega a tranca para o
+  // editor ficar so leitura (o texto escrito fica visivel para copiar).
+  const refreshMeta = useCallback(() => {
+    getPad(slug)
+      .then((pad) => setMeta(toMeta(pad)))
+      .catch(() => undefined);
+  }, [slug]);
+  const doc = useVersionedDoc<string>({
+    key: slug,
+    load,
+    save,
+    parseConflict: parsePadConflict,
+    enabled: slug !== '',
+    onForbidden: refreshMeta,
+  });
 
   const setLocked = useCallback(
     async (locked: boolean) => {

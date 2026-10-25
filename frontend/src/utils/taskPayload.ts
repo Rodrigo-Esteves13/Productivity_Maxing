@@ -3,8 +3,12 @@ import type { TaskFormSubmission } from '../types/models';
 
 // TaskForm (criação) e TaskEditForm (edição) tinham a mesma conversão de
 // formData -> payload da API copiada nos dois sítios (parse de números,
-// campos vazios -> undefined para o backend não os gravar como string
-// vazia, date -> ISO). Centralizado aqui para os dois deixarem de poder
+// campos vazios -> null, date -> ISO).
+//
+// Campos opcionais vazios vão como `null`, nunca `undefined`: o JSON.stringify
+// deita fora o undefined e o PATCH do TaskEditForm tratava um campo esvaziado
+// como "não mexer" (a nota real/peso antigos ficavam gravados). O backend
+// trata null como "limpar" e, na criação, como "sem valor". Centralizado aqui para os dois deixarem de poder
 // divergir sem querer - ex: se um dia se mudar como um número vazio é
 // tratado, só há um sítio para corrigir.
 //
@@ -46,17 +50,17 @@ export function buildTaskPayload(
     // Só faz sentido gravar duração quando há mesmo uma hora definida -
     // um evento dia inteiro não tem "fim" configurável, e mandar um
     // número aqui sem hora só poluiria a BD sem propósito nenhum.
-    calendarDurationMinutes: calendarTime ? parseInt(calendarDurationMinutes, 10) : undefined,
-    targetGrade: targetGrade ? parseFloat(targetGrade) : undefined,
-    weightPercentage: weightPercentage ? parseFloat(weightPercentage) : undefined,
-    estimatedMinutes: estimatedMinutes ? parseInt(estimatedMinutes, 10) : undefined,
-    recalledStudyMinutes: recalledStudyMinutes ? parseInt(recalledStudyMinutes, 10) : undefined,
+    calendarDurationMinutes: calendarTime ? parseInt(calendarDurationMinutes, 10) : null,
+    targetGrade: targetGrade ? parseFloat(targetGrade) : null,
+    weightPercentage: weightPercentage ? parseFloat(weightPercentage) : null,
+    estimatedMinutes: estimatedMinutes ? parseInt(estimatedMinutes, 10) : null,
+    recalledStudyMinutes: recalledStudyMinutes ? parseInt(recalledStudyMinutes, 10) : null,
     progressStatus: progressStatus || undefined,
-    ...(includeRealGrade ? { realGrade: realGrade ? parseFloat(realGrade) : undefined } : {}),
-    topics: topics || undefined,
-    referenceLink: referenceLink || undefined,
-    notes: notes || undefined,
-    academicType: academicType || undefined,
+    ...(includeRealGrade ? { realGrade: realGrade ? parseFloat(realGrade) : null } : {}),
+    topics: topics || null,
+    referenceLink: referenceLink || null,
+    notes: notes || null,
+    academicType: academicType || null,
   };
 }
 

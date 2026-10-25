@@ -7,6 +7,40 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-25',
+    title: 'Many quiet failures fixed',
+    items: [
+      'Medication reminders: doses just before midnight are now reminded, and ticking then unticking a dose no longer cancels its reminder. The card warns you when no device of yours can receive reminders, and the form says times are Lisbon time.',
+      'Notifications: a new reminder now alerts again instead of silently replacing the previous one. Logging out turns off notifications on that device, and the app keeps your device registered when the browser renews it.',
+      'Wellbeing and dates: mood and doses go to the right day around midnight, and "today" is the same everywhere in the app.',
+      'Focus: reloading the page or an app update no longer ends a running session, very long sessions can always be stopped, and errors show on every page.',
+      'Tasks: clearing a field when editing now really clears it, finishing a repeating task from the overdue check-in keeps the series going, and bulk actions tell you when they fail.',
+      'Areas with notes or grades can no longer be deleted by accident. Archiving the active period now switches to another one.',
+      'Notebook: edits from a co-owner or an approved suggestion are no longer overwritten, unsaved edits are kept when a save fails, and failed actions show a message.',
+      'Accounts: email addresses work in any letter case, resetting your password signs out your other devices, and the pre-configured desktop agent download works again.',
+      'Many texts that were still in English are now translated.',
+    ],
+  },
+  {
+    date: '2026-10-24',
+    title: 'Focus break notifications and more breadcrumbs',
+    items: [
+      'Focus: the end of a block and of a break now also notify you on phones and in the installed app. Clicking the notification opens Focus.',
+      'Focus: when you pick a timer, you are told if notifications are off or blocked, with a button to turn them on.',
+      'Weekly review, Report card, Task packs and pack import now show breadcrumbs back to the page they belong to.',
+    ],
+  },
+  {
+    date: '2026-10-24',
+    title: 'Medication: as needed intakes, safety notice and support numbers',
+    items: [
+      'Wellbeing: medication can now be "as needed". Instead of daily times, log each intake (time, dose and a note) when you take it.',
+      'Before using medication tracking you now read and accept a notice: the app only reminds you and keeps a log, it never says whether a medicine, dose or combination is safe. Always talk to your doctor or pharmacist first.',
+      'The medication card shows emergency, mental health and poison numbers for your country.',
+      'Medication reminders no longer show the medicine name on the lock screen, and remind you to check you have not already taken the dose.',
+    ],
+  },
+  {
     date: '2026-10-24',
     title: 'Risk of failing, task templates and a small celebration',
     items: [

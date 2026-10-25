@@ -168,7 +168,7 @@ func (c *Client) FetchAgentConfig(ctx context.Context) (*AgentConfig, error) {
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("invalid or revoked API key (401 on /agent/config) - generate a new one on the /agent page of the site")
+		return nil, fmt.Errorf("%w (401 on /agent/config) - generate a new one on the /agent page of the site", ErrUnauthorized)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected response from /agent/config: %d %s", resp.StatusCode, string(body))

@@ -6,11 +6,19 @@ import { WellbeingController } from './wellbeing.controller';
 import { MoodService } from './mood.service';
 import { WellbeingInsightsService } from './wellbeing-insights.service';
 import { MedicationsService } from './medications.service';
+import { MedicationIntakesService } from './medication-intakes.service';
+import { MedicationDisclaimerService } from './medication-disclaimer.service';
 
 @Module({
   imports: [PrismaModule, AuthModule, PushModule],
   controllers: [WellbeingController],
-  providers: [MoodService, WellbeingInsightsService, MedicationsService],
+  providers: [
+    MoodService,
+    WellbeingInsightsService,
+    MedicationsService,
+    MedicationIntakesService,
+    MedicationDisclaimerService,
+  ],
   // RemindersModule chama os lembretes de medicacao no mesmo cron.
   exports: [MedicationsService],
 })

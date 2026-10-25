@@ -4,8 +4,7 @@ import { useAuth } from '../../context/useAuth';
 import { createTask, getTaskMetadata, getUserAreas, getUserTasks } from '../../api/userService';
 import { searchNotebook } from '../../api/notebookService';
 import { searchTurmaNotes } from '../../api/turmasService';
-import { turmaNotePath } from '../../lib/appLinks';
-import { setPendingNotebookEntry } from '../../lib/pendingNotebookEntry';
+import { notebookEntryPath, turmaNotePath } from '../../lib/appLinks';
 import {
   matchAreaInText,
   parseQuickAddTask,
@@ -103,7 +102,7 @@ const NAV_COMMANDS: NavCommand[] = [
     id: 'nav-wellbeing',
     labelKey: 'nav.wellbeing',
     path: '/wellbeing',
-    keywords: ['mood', 'humor', 'mental', 'stress', 'energy', 'energia', 'medication', 'medicine', 'medicacao', 'medicação', 'remedio', 'pills', 'comprimidos', 'pharmacy', 'farmacia'],
+    keywords: ['mood', 'humor', 'mental', 'stress', 'energy', 'energia', 'medication', 'medicine', 'medicacao', 'medicação', 'remedio', 'pills', 'comprimidos', 'pharmacy', 'farmacia', 'as needed', 'se necessario', 'sos', 'emergency', 'emergencia', 'emergência', 'crisis', 'crise', 'helpline', 'linha de apoio'],
   },
   {
     id: 'nav-report-card',
@@ -228,6 +227,13 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  // Listas pedidas no primeiro open. Uma falha (ex: arranque a frio do
+  // Render) ja nao fica como resposta final: volta a pedir no open seguinte.
+  // E de quem sao: depois de logout + login com outra conta (SPA, sem
+  // reload) as listas da conta anterior nao podem ser usadas (F-07).
+  const tasksFailedRef = useRef(false);
+  const areasFailedRef = useRef(false);
+  const listsUserIdRef = useRef<string | null>(null);
 
   // O Ctrl+K e o evento do botao da Navbar vivem no CommandPaletteHost.
 
@@ -246,18 +252,34 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
     // re-fetched on subsequent opens in the same session; the task list
     // rarely changes fast enough within one sitting to matter here, and
     // this avoids hammering the API every time someone hits Cmd+K.
-    if (tasks === null) {
+    const currentUserId = user?.id ?? null;
+    const otherUser = listsUserIdRef.current !== currentUserId;
+    listsUserIdRef.current = currentUserId;
+    if (otherUser) {
+      setTasks(null);
+      setAreas(null);
+    }
+
+    if (tasks === null || otherUser || tasksFailedRef.current) {
+      tasksFailedRef.current = false;
       getUserTasks()
         .then(setTasks)
-        .catch(() => setTasks([]));
+        .catch(() => {
+          tasksFailedRef.current = true;
+          setTasks([]);
+        });
     }
 
     // Same lazy approach for Areas - only needed by quick-add, so it is
     // fetched on first open, not on every page load.
-    if (areas === null) {
+    if (areas === null || otherUser || areasFailedRef.current) {
+      areasFailedRef.current = false;
       getUserAreas()
         .then(setAreas)
-        .catch(() => setAreas([]));
+        .catch(() => {
+          areasFailedRef.current = true;
+          setAreas([]);
+        });
     }
 
     return () => window.clearTimeout(id);
@@ -480,12 +502,11 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
     } else if (item.kind === 'turmaNote') {
       navigate(turmaNotePath(item.note.turmaId, item.note.id));
     } else {
-      // A página Notebook filtra as entradas por Area selecionada - não
-      // dá para "saltar" direto para uma entrada só com o path, por isso
-      // deixamos a entrada pronta a consumir e o próprio Notebook.tsx
-      // trata de selecionar a Area certa e abrir a entrada no mount.
-      setPendingNotebookEntry(item.entry);
-      navigate('/notebook');
+      // ?entry=<id>: o Notebook reage ao parametro mesmo quando ja esta
+      // aberto (antes ia por sessionStorage, lido so no mount: ja em
+      // /notebook nada acontecia e um snapshot antigo abria mais tarde) e
+      // pede a versao atual da entrada ao servidor.
+      navigate(notebookEntryPath(item.entry.id));
     }
   };
 

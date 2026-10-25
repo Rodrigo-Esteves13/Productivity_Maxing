@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLiveRefresh } from '../hooks/useLiveRefresh';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -37,6 +37,13 @@ const noop = () => {};
 // não um ecrã solto. É a única página pensada para alguém sem conta.
 type ShareGateStatus = 'login_required' | 'not_requested' | 'pending' | 'invited' | 'denied';
 
+// Os links das fotos/anexos expiram em 1 h (backend). Numa pagina aberta
+// muito tempo recarrega-se a entrada antes disso; a verificacao e barata e
+// so pede ao servidor quando a copia ja tem 50 min (cada leitura conta como
+// visita, por isso nunca a cada foco).
+const SIGNED_URL_REFRESH_MS = 50 * 60 * 1000;
+const SIGNED_URL_CHECK_MS = 60 * 1000;
+
 export default function SharedNotebookEntry() {
   const { t } = useI18n();
   const { token } = useParams<{ token: string }>();
@@ -57,6 +64,7 @@ export default function SharedNotebookEntry() {
   // momentarily disabled right when someone would use it.
   const [hasSession, setHasSession] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
+  const loadedAtRef = useRef(0);
 
   // silent = refresh em segundo plano (polling/push): sem spinner e sem
   // mostrar erro por uma falha de rede passageira.
@@ -69,6 +77,7 @@ export default function SharedNotebookEntry() {
     getSharedNotebookEntry(token)
       .then((result) => {
         if (result.status === 'ok') {
+          loadedAtRef.current = Date.now();
           setEntry(result.entry);
           setRole(result.role);
           setHasPendingProposal(result.hasPendingProposal);
@@ -94,6 +103,12 @@ export default function SharedNotebookEntry() {
   // Pedido pendente/negado: atualiza sozinho quando o dono decide (antes era
   // preciso F5 para ver a aprovacao).
   useLiveRefresh(() => load(true), { enabled: gateStatus === 'pending', intervalMs: 8000 });
+  useLiveRefresh(
+    () => {
+      if (Date.now() - loadedAtRef.current > SIGNED_URL_REFRESH_MS) load(true);
+    },
+    { enabled: entry !== null, intervalMs: SIGNED_URL_CHECK_MS },
+  );
 
   useEffect(() => {
     // This page has no AuthProvider around it (see comment below) so
@@ -428,6 +443,7 @@ export function SharedNotebookEntryView({
             isProposal={isProposal}
             initialTitle={entry.title}
             initialText={entry.textContent ?? ''}
+            baseUpdatedAt={entry.updatedAt}
             onCancel={() => setIsEditing(false)}
             onDone={(applied) => {
               setIsEditing(false);

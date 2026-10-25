@@ -12,7 +12,8 @@ import type {
 export interface NotebookEntrySavePayload {
   title: string;
   entryType: NotebookEntryType;
-  classNumber?: number;
+  // null = sem numero (campo vazio ou tipo diferente de CLASS).
+  classNumber: number | null;
   textContent: string;
   drawingStrokes: Stroke[];
   tables: NotebookTable[];

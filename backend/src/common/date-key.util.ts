@@ -69,6 +69,34 @@ export function toLisbonDateKey(at: Date): string {
   }).format(at);
 }
 
+// Dia da semana (0=Domingo..6=Sabado) e hora (0-23) de um instante em hora
+// de Lisboa. getDay()/getHours() leem o fuso do processo (UTC no Render).
+const LISBON_WEEKDAY_INDEX: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
+const lisbonWeekdayHourFormat = new Intl.DateTimeFormat('en-US', {
+  timeZone: APP_TIME_ZONE,
+  weekday: 'short',
+  hour: '2-digit',
+  hourCycle: 'h23',
+});
+
+export function toLisbonWeekdayHour(at: Date): {
+  dayOfWeek: number;
+  hour: number;
+} {
+  const parts = lisbonWeekdayHourFormat.formatToParts(at);
+  const weekday = parts.find((p) => p.type === 'weekday')?.value ?? 'Sun';
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '0');
+  return { dayOfWeek: LISBON_WEEKDAY_INDEX[weekday] ?? 0, hour };
+}
+
 // Inicio e fim (exclusivo) de um dia de Lisboa como instantes UTC, para
 // filtrar "hoje" sem depender do fuso do servidor (UTC no Render).
 export function lisbonDayBounds(dateKey: string): { start: Date; end: Date } {

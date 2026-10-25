@@ -122,7 +122,8 @@ export default function Social() {
                 onUpdateAreas={notes.updateAreas}
                 onRevoke={notes.remove}
               />
-              {requestsCount === 0 && <EmptyState message={t('social.requests.empty')} />}
+              {notes.hasError && <ErrorState message={t('social.notes.loadError')} />}
+              {requestsCount === 0 && !notes.hasError && <EmptyState message={t('social.requests.empty')} />}
               {lists(['outgoing'])}
             </>
           )}
@@ -159,7 +160,10 @@ export default function Social() {
           ) : sharedItems.length === 0 ? (
             <EmptyState message={t('sharedWithMe.empty')} />
           ) : (
-            <SharedWithMeList items={sharedItems} onRespond={shared.respond} />
+            <>
+              <SharedWithMeList items={sharedItems} onRespond={shared.respond} />
+              {sharedItems.length >= SOCIAL_LIST_LIMIT && <ListLimitNote />}
+            </>
           )}
         </section>
       )}
@@ -178,7 +182,10 @@ export default function Social() {
             ) : mine.items.length === 0 ? (
               <EmptyState message={t('social.mine.empty')} />
             ) : (
-              <MySharesList items={mine.items} />
+              <>
+                <MySharesList items={mine.items} />
+                {mine.items.length >= SOCIAL_LIST_LIMIT && <ListLimitNote />}
+              </>
             )}
           </section>
           <NotesAccessPanel
@@ -193,4 +200,15 @@ export default function Social() {
       )}
     </PageLayout>
   );
+}
+
+// O backend devolve no maximo MAX_ITEMS (100) por lista
+// (notebook-social-hub.service.ts, notebook-shared-with-me.service.ts).
+// Chegando ao limite diz-se que ha mais, em vez de as mais antigas
+// desaparecerem sem aviso.
+const SOCIAL_LIST_LIMIT = 100;
+
+function ListLimitNote() {
+  const { t } = useI18n();
+  return <p className="text-xs text-neutral-500">{t('social.listLimit', { count: SOCIAL_LIST_LIMIT })}</p>;
 }

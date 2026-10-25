@@ -7,6 +7,13 @@ interface SecurityLogRowProps {
   isBanned: boolean;
 }
 
+// Linhas que não são bloqueios de rate limit (moderação de pads pelo
+// admin, E-08): mostradas com um rótulo em vez de parecerem um ataque.
+const TYPE_LABEL_KEYS: Partial<Record<SecurityLog['type'], string>> = {
+  ADMIN_PAD_DELETED: 'ui.securityTypeAdminPadDeleted',
+  ADMIN_PAD_SOURCE_BLOCKED: 'ui.securityTypeAdminPadSourceBlocked',
+};
+
 const METHOD_STYLES: Record<string, string> = {
   GET: 'text-sky-400',
   POST: 'text-violet-400',
@@ -17,6 +24,7 @@ const METHOD_STYLES: Record<string, string> = {
 
 export default function SecurityLogRow({ log, onBanIp, isBanned }: SecurityLogRowProps) {
   const { t } = useI18n();
+  const typeLabelKey = TYPE_LABEL_KEYS[log.type];
   return (
     <tr className="border-b border-neutral-800 last:border-0 hover:bg-neutral-800/30 transition-colors">
       <td className="px-4 py-3 text-neutral-400">
@@ -42,7 +50,20 @@ export default function SecurityLogRow({ log, onBanIp, isBanned }: SecurityLogRo
         {log.method}
       </td>
       <td className="px-4 py-3 font-mono text-neutral-300 max-w-xs truncate" title={log.path}>
+        {typeLabelKey && (
+          <span className="mr-2 rounded bg-neutral-800 px-1.5 py-0.5 font-sans text-xs text-neutral-400">
+            {t(typeLabelKey)}
+          </span>
+        )}
         {log.path}
+        {log.count > 1 && (
+          <span
+            className="ml-2 font-sans text-xs text-amber-400"
+            title={t('ui.securityBlockedCount', { count: log.count })}
+          >
+            x{log.count}
+          </span>
+        )}
       </td>
       <td className="px-4 py-3 text-neutral-300">
         {log.user ? (log.user.name || log.user.email) : <span className="text-neutral-600">{t('ui.anonymousLower')}</span>}

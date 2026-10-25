@@ -3,6 +3,7 @@ import type { IncomingGrant, IncomingGrantsView } from '../../api/socialNotesSer
 import { useI18n } from '../../i18n/useI18n';
 import { friendPath } from '../../lib/appLinks';
 import PersonRow from './PersonRow';
+import { selectableGrantAreaIds } from '../../lib/notesAccess';
 
 interface Props {
   view: IncomingGrantsView;
@@ -130,7 +131,10 @@ export default function NotesAccessPanel({ view, status, title, onDecide, onUpda
       {open === g.grantId && (
         <AreaPicker
           view={view}
-          initial={g.status === 'APPROVED' ? g.areaIds : []}
+          // So ids que ainda aparecem como opcao: uma cadeira que deixou de
+          // ter notas visiveis ficava marcada sem se ver, impossivel de
+          // desmarcar, e o backend recusava a gravacao.
+          initial={g.status === 'APPROVED' ? selectableGrantAreaIds(g.areaIds, view) : []}
           submitLabel={g.status === 'APPROVED' ? t('common.save') : t('social.notes.allow')}
           onSubmit={(ids) =>
             g.status === 'APPROVED' ? onUpdateAreas(g.grantId, ids) : onDecide(g.grantId, true, ids)

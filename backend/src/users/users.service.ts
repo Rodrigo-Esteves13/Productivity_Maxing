@@ -205,8 +205,101 @@ export class UsersService {
         avatarUrl: true,
         role: true,
         createdAt: true,
+        // Definicoes guardadas no perfil (E-09). Nunca segredos (2FA,
+        // tokens de feed/sessao, supabaseAuthId).
+        status: true,
+        suspendedUntil: true,
+        statusReason: true,
+        emailVerifiedAt: true,
+        friendCode: true,
+        activeProgramId: true,
+        activePeriodId: true,
+        commuteMinutes: true,
+        commuteMode: true,
+        homeAddress: true,
+        campusAddress: true,
+        quietHoursStart: true,
+        quietHoursEnd: true,
+        dailyStudyLimitMinutes: true,
+        deadlineEmailReminders: true,
+        deadlinePushReminders: true,
+        spacedReviewsEnabled: true,
+        notesPrivateByDefault: true,
+        twoFactorEnabledAt: true,
+        medicationDisclaimerVersion: true,
+        medicationDisclaimerAcceptedAt: true,
       },
     });
+
+    // E-09: o resto do que esta pessoa criou ou configurou. Segredos de
+    // fora (tokens de partilha, chaves de push, codigos de pack so os que
+    // ela propria ve na app).
+    const [
+      workShifts,
+      commitments,
+      classOccurrences,
+      gradeComponents,
+      taskPacks,
+      friendships,
+      blocks,
+      notesViewGrants,
+      notebookShares,
+      feedback,
+      appeals,
+      agentConfig,
+      pushSubscriptions,
+      ownedAreas,
+      travelTimes,
+    ] = await Promise.all([
+      this.prisma.workShift.findMany({ where: { userId: id } }),
+      this.prisma.commitment.findMany({ where: { userId: id } }),
+      this.prisma.classOccurrence.findMany({ where: { userId: id } }),
+      this.prisma.gradeComponent.findMany({
+        where: { userId: id },
+        include: { entries: true },
+      }),
+      this.prisma.taskPack.findMany({
+        where: { ownerId: id },
+        include: { items: true },
+      }),
+      this.prisma.friendship.findMany({
+        where: { OR: [{ requesterId: id }, { addresseeId: id }] },
+      }),
+      this.prisma.userBlock.findMany({ where: { blockerId: id } }),
+      this.prisma.notebookViewGrant.findMany({
+        where: { OR: [{ ownerId: id }, { viewerId: id }] },
+      }),
+      this.prisma.notebookShare.findMany({
+        where: { createdByUserId: id },
+        select: {
+          id: true,
+          notebookEntryId: true,
+          visibility: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.feedback.findMany({ where: { userId: id } }),
+      this.prisma.userAppeal.findMany({
+        where: { userId: id },
+        select: {
+          id: true,
+          statusAtSubmission: true,
+          reasonAtSubmission: true,
+          message: true,
+          createdAt: true,
+          resolution: true,
+          resolutionNote: true,
+          resolvedAt: true,
+        },
+      }),
+      this.prisma.agentConfig.findUnique({ where: { userId: id } }),
+      this.prisma.pushSubscription.findMany({
+        where: { userId: id },
+        select: { id: true, lang: true, createdAt: true },
+      }),
+      this.prisma.area.findMany({ where: { ownerId: id } }),
+      this.prisma.travelTime.findMany({ where: { userId: id } }),
+    ]);
 
     const [
       tasks,
@@ -217,6 +310,7 @@ export class UsersService {
       notebookEntries,
       moodLogs,
       medications,
+      medicationIntakes,
       pads,
       turmaMemberships,
       turmaNotes,
@@ -255,7 +349,10 @@ export class UsersService {
           lastUsed: true,
         },
       }),
-      this.prisma.academicProgram.findMany({ where: { userId: id } }),
+      this.prisma.academicProgram.findMany({
+        where: { userId: id },
+        include: { periods: true },
+      }),
       this.prisma.studySession.findMany({ where: { userId: id } }),
       this.prisma.notebookEntry.findMany({
         where: { userId: id },
@@ -278,6 +375,8 @@ export class UsersService {
         where: { userId: id },
         include: { doses: true },
       }),
+      // Tomas "se necessario" e registos de alcool.
+      this.prisma.medicationIntake.findMany({ where: { userId: id } }),
       // Pads e turmas: o que esta pessoa escreveu ou enviou. Pads so os que
       // gravou por ultimo (um pad nao tem dono; o texto e de quem o escreve).
       this.prisma.pad.findMany({
@@ -342,6 +441,9 @@ export class UsersService {
         .filter((areaId): areaId is string => areaId !== null),
       ...notebookEntries.map((n) => n.areaId),
     ]);
+    // + as Areas privadas que a pessoa criou (Area.ownerId), mesmo sem
+    // tasks/sessoes/entradas.
+    for (const area of ownedAreas) usedAreaIds.add(area.id);
     const areas = await this.prisma.area.findMany({
       where: { id: { in: Array.from(usedAreaIds) } },
     });
@@ -358,6 +460,7 @@ export class UsersService {
       notebookEntries,
       moodLogs,
       medications,
+      medicationIntakes,
       pads,
       turmas: {
         memberships: turmaMemberships,
@@ -366,6 +469,18 @@ export class UsersService {
         announcements: turmaAnnouncements,
         sharedSubjects: turmaSharedSubjects,
       },
+      workShifts,
+      commitments,
+      classOccurrences,
+      gradeComponents,
+      travelTimes,
+      taskPacks,
+      social: { friendships, blocks, notesViewGrants },
+      notebookShares,
+      feedback,
+      appeals,
+      agentConfig,
+      pushSubscriptions,
     };
   }
 }

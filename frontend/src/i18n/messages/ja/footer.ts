@@ -12,7 +12,7 @@ export const footer: Record<string, string> = {
   'footer.status.checking': "状態を確認中...",
   'footer.status.ok': "すべてのシステムが正常に稼働中",
   'footer.status.down': "バックエンドに接続できません",
-  'footer.rights': "© {year} Productivity Maxing. All rights reserved.",
+  'footer.rights': "© {year} Productivity Maxing. 無断転載を禁じます。",
   'footer.madeBy': "Rodrigo が {heart} と大量のコーヒーで制作",
   'footer.tagline': "タスクを管理し、締め切りを乗り越え、努力が実を結ぶのを実感しましょう。",
   'footer.star': "GitHubでスターを付ける",

@@ -1,5 +1,6 @@
 import type { NotebookTable } from '../../../types/models';
 import { translateNow } from '../../../i18n/translate';
+import { toLocalDateKey } from '../../../lib/dateKey';
 
 // Tem de bater certo com @MaxLength(50000) em textContent no DTO do
 // backend (upsert-notebook-entry.dto.ts) - usado aqui só para mostrar o
@@ -37,8 +38,18 @@ export const MAX_TABLE_COLS = 12;
 export const SMALL_INPUT_CLASS =
   'rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none';
 
+// Dia LOCAL da entrada (o que a lista mostra). Cortar o ISO dava o dia UTC:
+// uma nota das 22:30 em Sao Paulo ou das 08:00 em Toquio ficava no dia errado
+// e o primeiro autosave gravava esse dia errado (C-05).
 export function toDateInputValue(iso: string): string {
-  return iso.slice(0, 10);
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? iso.slice(0, 10) : toLocalDateKey(date);
+}
+
+// Data de uma entrada nova: meio-dia local de hoje, igual ao que o editor
+// grava (`${dia}T12:00:00`), para o dia nao saltar com o arredondamento UTC.
+export function newEntryDateIso(now: Date = new Date()): string {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12).toISOString();
 }
 
 export function formatFileSize(bytes: number): string {

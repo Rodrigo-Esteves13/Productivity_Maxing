@@ -25,13 +25,13 @@ export default function MoodCheckInCard({ mood }: MoodCheckInCardProps) {
   const [note, setNote] = useState('');
 
   // O registo de hoje chega depois do primeiro render.
+  // Num dia novo (mood.today mudou) sem registo, limpa os valores de ontem.
   useEffect(() => {
-    if (!mood.log) return;
-    setValue(mood.log.mood);
-    setEnergy(mood.log.energy);
-    setStress(mood.log.stress);
-    setNote(mood.log.note ?? '');
-  }, [mood.log]);
+    setValue(mood.log?.mood ?? null);
+    setEnergy(mood.log?.energy ?? null);
+    setStress(mood.log?.stress ?? null);
+    setNote(mood.log?.note ?? '');
+  }, [mood.log, mood.today]);
 
   const handleSave = async () => {
     if (value === null) return;

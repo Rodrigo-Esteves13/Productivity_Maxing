@@ -48,6 +48,10 @@ const SIGNED_URL_TTL_SECONDS = 60 * 60;
 // O frontend tira o markdown e mostra no maximo ~220, por isso sobra margem.
 const SUMMARY_PREVIEW_CHARS = 400;
 
+// Codigo estavel do 409 de gravar sobre uma versao antiga (update e
+// editShared). O frontend usa-o para mostrar o aviso de conflito.
+export const NOTEBOOK_ENTRY_CONFLICT_CODE = 'NOTEBOOK_ENTRY_CONFLICT';
+
 export interface NotebookEntrySummary {
   id: string;
   areaId: string;
@@ -390,29 +394,76 @@ export class NotebookService {
   async update(userId: string, id: string, dto: UpdateNotebookEntryDto) {
     await this.findOwnedEntryOrThrow(userId, id);
 
+    const data = {
+      title: dto.title,
+      entryType: dto.entryType,
+      classNumber: dto.classNumber,
+      textContent: dto.textContent,
+      drawingStrokes: dto.drawingStrokes,
+      tables: dto.tables,
+      canvasShapes: dto.canvasShapes,
+      canvasLinks: dto.canvasLinks,
+      canvasTexts: dto.canvasTexts,
+      usefulLinks: dto.usefulLinks,
+      canvasHeight: dto.canvasHeight,
+      privateFromFriends: dto.privateFromFriends,
+      date: dto.date ? new Date(dto.date) : undefined,
+    };
+
+    // Concorrencia otimista (como nos pads): o editor manda o updatedAt da
+    // versao que tem aberta. Se um co-owner (ou outro separador) gravou
+    // entretanto, nada e escrito e o 409 leva a versao atual para o
+    // utilizador escolher, em vez de a substituir sem aviso. Sem
+    // baseUpdatedAt (cliente antigo) grava como antes.
+    if (dto.baseUpdatedAt) {
+      const { count } = await this.prisma.notebookEntry.updateMany({
+        where: { id, userId, updatedAt: new Date(dto.baseUpdatedAt) },
+        data: data as Prisma.NotebookEntryUpdateManyMutationInput,
+      });
+      if (count === 0) {
+        throw new ConflictException({
+          code: NOTEBOOK_ENTRY_CONFLICT_CODE,
+          message: 'This note was changed somewhere else.',
+          current: await this.findOne(userId, id),
+        });
+      }
+      return this.findOne(userId, id);
+    }
+
     const entry = await this.prisma.notebookEntry.update({
       where: { id },
-      data: {
-        title: dto.title,
-        entryType: dto.entryType,
-        classNumber: dto.classNumber,
-        textContent: dto.textContent,
-        drawingStrokes: dto.drawingStrokes,
-        tables: dto.tables,
-        canvasShapes: dto.canvasShapes,
-        canvasLinks: dto.canvasLinks,
-        canvasTexts: dto.canvasTexts,
-        usefulLinks: dto.usefulLinks,
-        canvasHeight: dto.canvasHeight,
-        privateFromFriends: dto.privateFromFriends,
-        date: dto.date ? new Date(dto.date) : undefined,
-      } as Prisma.NotebookEntryUpdateArgs['data'],
+      data: data as Prisma.NotebookEntryUpdateArgs['data'],
       include: {
         photos: { orderBy: { position: 'asc' } },
         attachments: { orderBy: { createdAt: 'asc' } },
       },
     });
     return this.attachSignedUrls(entry);
+  }
+
+  // supabase-js storage nao rejeita quando o Storage falha: resolve
+  // { data: null, error }. Por isso o erro tem de ser lido do resultado,
+  // senao a falha nunca chega ao log e os ficheiros ficam orfaos sem rasto.
+  private removeFromStorageBestEffort(
+    bucket: string,
+    paths: string[],
+    label: string,
+  ): void {
+    this.storage.storage
+      .from(bucket)
+      .remove(paths)
+      .then(({ error }) => {
+        if (error) {
+          this.logger.warn(
+            `Could not delete notebook ${label} from storage: ${error.message}`,
+          );
+        }
+      })
+      .catch((err) =>
+        this.logger.warn(
+          `Could not delete notebook ${label} from storage: ${err}`,
+        ),
+      );
   }
 
   async remove(userId: string, id: string) {
@@ -424,26 +475,12 @@ export class NotebookService {
     // um ficheiro órfão no bucket a uma entrada que o user não consegue apagar.
     if (entry.photos.length > 0) {
       const paths = entry.photos.map((p) => p.storagePath);
-      this.storage.storage
-        .from(NOTEBOOK_BUCKET)
-        .remove(paths)
-        .catch((err) =>
-          this.logger.warn(
-            `Could not delete notebook photos from storage: ${err}`,
-          ),
-        );
+      this.removeFromStorageBestEffort(NOTEBOOK_BUCKET, paths, 'photos');
     }
 
     if (entry.attachments.length > 0) {
       const paths = entry.attachments.map((a) => a.storagePath);
-      this.storage.storage
-        .from(ATTACHMENT_BUCKET)
-        .remove(paths)
-        .catch((err) =>
-          this.logger.warn(
-            `Could not delete notebook attachments from storage: ${err}`,
-          ),
-        );
+      this.removeFromStorageBestEffort(ATTACHMENT_BUCKET, paths, 'attachments');
     }
 
     await this.prisma.notebookEntry.delete({ where: { id } });
@@ -909,6 +946,8 @@ export class NotebookService {
     canvasHeight: number | null;
     usefulLinks: unknown;
     date: Date;
+    // Versao lida: o formulario de co-owner devolve-a ao gravar (409 se mudou).
+    updatedAt?: Date;
     area: { name: string; colorHex: string | null };
     photos: { id: string; storagePath: string }[];
     attachments: {
@@ -931,6 +970,7 @@ export class NotebookService {
       canvasHeight: withUrls.canvasHeight,
       usefulLinks: withUrls.usefulLinks,
       date: withUrls.date,
+      updatedAt: withUrls.updatedAt,
       area: entry.area,
       photos: withUrls.photos,
       attachments: withUrls.attachments,

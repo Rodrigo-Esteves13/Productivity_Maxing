@@ -22,14 +22,19 @@ import { perMinute } from '../common/throttle.util';
 import { MoodService } from './mood.service';
 import { WellbeingInsightsService } from './wellbeing-insights.service';
 import { MedicationsService } from './medications.service';
+import { MedicationIntakesService } from './medication-intakes.service';
+import { MedicationDisclaimerService } from './medication-disclaimer.service';
 import {
   DateKeyParamDto,
   MoodRangeQueryDto,
   UpsertMoodDto,
 } from './dto/mood.dto';
 import {
+  AcceptMedicationDisclaimerDto,
   CreateMedicationDto,
+  CreateMedicationIntakeDto,
   MedicationDayQueryDto,
+  MedicationIntakeRangeQueryDto,
   MedicationDoseDto,
   UpdateMedicationDto,
 } from './dto/medication.dto';
@@ -46,6 +51,8 @@ export class WellbeingController {
     private readonly mood: MoodService,
     private readonly insights: WellbeingInsightsService,
     private readonly medications: MedicationsService,
+    private readonly intakes: MedicationIntakesService,
+    private readonly disclaimer: MedicationDisclaimerService,
   ) {}
 
   @Get('mood')
@@ -107,6 +114,62 @@ export class WellbeingController {
     @Query() query: MedicationDayQueryDto,
   ) {
     return this.medications.day(user.id, query.date);
+  }
+
+  @Get('medications/disclaimer')
+  @ApiOperation({
+    summary:
+      'Whether you accepted the current version of the medication notice.',
+  })
+  disclaimerStatus(@CurrentUser() user: AuthenticatedUser) {
+    return this.disclaimer.status(user.id);
+  }
+
+  @Post('medications/disclaimer')
+  @Throttle(perMinute(WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary:
+      'Accepts the medication notice (not medical advice, reminders only). Required before adding medication or logging intakes.',
+  })
+  acceptDisclaimer(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: AcceptMedicationDisclaimerDto,
+  ) {
+    return this.disclaimer.accept(user.id, dto.version, dto.locale);
+  }
+
+  @Get('medications/intakes')
+  @ApiOperation({
+    summary: 'Your "as needed" intakes between two dates (inclusive).',
+  })
+  listIntakes(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: MedicationIntakeRangeQueryDto,
+  ) {
+    return this.intakes.list(user.id, query);
+  }
+
+  @Post('medications/intakes')
+  @Throttle(perMinute(WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary: 'Logs one "as needed" intake.',
+  })
+  createIntake(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateMedicationIntakeDto,
+  ) {
+    return this.intakes.create(user.id, dto);
+  }
+
+  @Delete('medications/intakes/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle(perMinute(WRITES_PER_MINUTE))
+  @ApiOperation({ summary: 'Deletes one logged intake.' })
+  removeIntake(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.intakes.remove(user.id, id);
   }
 
   @Post('medications')

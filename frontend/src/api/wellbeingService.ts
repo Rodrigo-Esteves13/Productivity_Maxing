@@ -2,7 +2,10 @@ import api from './client';
 import type {
   Medication,
   MedicationDaySlot,
+  MedicationDisclaimerStatus,
   MedicationInput,
+  MedicationIntake,
+  MedicationIntakeInput,
   MoodLog,
   UpsertMoodInput,
   WellbeingInsights,
@@ -45,3 +48,21 @@ export const setMedicationDose = async (
 ): Promise<void> => {
   await api.put(`/wellbeing/medications/${id}/doses`, dose);
 };
+
+export const getMedicationIntakes = async (from: string, to: string): Promise<MedicationIntake[]> =>
+  (await api.get<MedicationIntake[]>('/wellbeing/medications/intakes', { params: { from, to } })).data;
+
+export const createMedicationIntake = async (input: MedicationIntakeInput): Promise<MedicationIntake> =>
+  (await api.post<MedicationIntake>('/wellbeing/medications/intakes', input)).data;
+
+export const deleteMedicationIntake = async (id: string): Promise<void> => {
+  await api.delete(`/wellbeing/medications/intakes/${id}`);
+};
+
+
+export const getMedicationDisclaimer = async (): Promise<MedicationDisclaimerStatus> =>
+  (await api.get<MedicationDisclaimerStatus>('/wellbeing/medications/disclaimer')).data;
+
+export const acceptMedicationDisclaimer = async (version: number, locale: string): Promise<MedicationDisclaimerStatus> =>
+  (await api.post<MedicationDisclaimerStatus>('/wellbeing/medications/disclaimer', { version, adultConfirmed: true, locale }))
+    .data;

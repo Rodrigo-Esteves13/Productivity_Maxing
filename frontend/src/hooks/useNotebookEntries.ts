@@ -10,6 +10,7 @@ import {
 import type { NotebookEntry, NotebookEntrySummary } from '../types/models';
 import { translateNow } from '../i18n/translate';
 import { toEntrySummary } from '../lib/notebookOverview';
+import { EntryConflictError, parseEntryConflict } from '../lib/notebookEntryConflict';
 
 function byDateDesc(a: { date: string }, b: { date: string }): number {
   return new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -18,6 +19,12 @@ function byDateDesc(a: { date: string }, b: { date: string }): number {
 // Entradas completas ja abertas ficam em memoria: voltar a uma (anterior/
 // seguinte) e imediato. Expira bem antes dos signed URLs das fotos (1 h).
 const ENTRY_CACHE_MS = 10 * 60 * 1000;
+
+// Os signed URLs das fotos/anexos duram 1 h (SIGNED_URL_TTL_SECONDS no
+// backend). Numa entrada aberta muito tempo (uma aula de 90 min) renovam-se
+// antes disso, ao voltar ao separador ou numa verificacao periodica.
+const SIGNED_URL_REFRESH_MS = 50 * 60 * 1000;
+const SIGNED_URL_CHECK_MS = 60 * 1000;
 
 // Resultados de pesquisa e links trazem a entrada completa; a lista so o resumo.
 function isFullEntry(entry: NotebookEntry | NotebookEntrySummary): entry is NotebookEntry {
@@ -37,8 +44,13 @@ export interface UseNotebookEntriesResult {
   // Pede a entrada antes do clique (passar o rato/foco na lista).
   prefetchEntry: (id: string) => void;
   retryEntry: () => void;
-  // Troca a entrada aberta por uma versao nova (ex.: depois de juntar uma foto).
+  // Troca a entrada aberta pela versao do servidor (conflito, proposta aprovada).
   replaceEntry: (entry: NotebookEntry) => void;
+  // Muda a versao MAIS RECENTE da entrada em memoria (fotos/anexos). Nunca
+  // parte de uma copia antiga apanhada num closure.
+  patchEntry: (id: string, update: (latest: NotebookEntry) => NotebookEntry) => void;
+  // Volta a pedir a entrada ao servidor e troca-a (cache incluida).
+  reloadEntry: (id: string) => Promise<NotebookEntry | null>;
   createEntry: (payload: CreateNotebookEntryPayload) => Promise<NotebookEntry>;
   updateEntry: (id: string, payload: UpdateNotebookEntryPayload) => Promise<void>;
   removeEntry: (id: string) => Promise<void>;
@@ -56,6 +68,8 @@ export function useNotebookEntries(areaId: string | null): UseNotebookEntriesRes
   const selectedIdRef = useRef<string | null>(null);
   const cacheRef = useRef(new Map<string, { entry: NotebookEntry; at: number }>());
   const pendingRef = useRef(new Map<string, Promise<NotebookEntry>>());
+  // Quando os signed URLs de cada entrada foram gerados pelo servidor.
+  const signedAtRef = useRef(new Map<string, number>());
 
   useEffect(() => {
     if (!areaId) {
@@ -88,8 +102,10 @@ export function useNotebookEntries(areaId: string | null): UseNotebookEntriesRes
     };
   }, [areaId]);
 
-  const remember = useCallback((entry: NotebookEntry) => {
+  // fromServer = a entrada acabou de vir do backend (URLs acabados de assinar).
+  const remember = useCallback((entry: NotebookEntry, fromServer = true) => {
     cacheRef.current.set(entry.id, { entry, at: Date.now() });
+    if (fromServer) signedAtRef.current.set(entry.id, Date.now());
   }, []);
 
   const cachedEntry = useCallback((id: string): NotebookEntry | null => {
@@ -167,15 +183,71 @@ export function useNotebookEntries(areaId: string | null): UseNotebookEntriesRes
     if (selectedIdRef.current) openById(selectedIdRef.current);
   }, [openById]);
 
-  const replaceEntry = useCallback(
-    (entry: NotebookEntry) => {
-      remember(entry);
+  const applyEntry = useCallback(
+    (entry: NotebookEntry, fromServer: boolean) => {
+      remember(entry, fromServer);
       setLoadedEntry((prev) => (prev?.id === entry.id ? entry : prev));
       // A lista mostra quantas fotos/ficheiros ha: tem de acompanhar.
       setEntries((prev) => prev.map((e) => (e.id === entry.id ? toEntrySummary(entry) : e)));
     },
     [remember],
   );
+
+  const replaceEntry = useCallback((entry: NotebookEntry) => applyEntry(entry, true), [applyEntry]);
+
+  // A cache tem sempre a versao mais recente (cada gravacao faz remember):
+  // um upload lento ja nao repoe o texto de antes do ultimo auto save, e dois
+  // uploads seguidos ficam os dois.
+  const patchEntry = useCallback(
+    (id: string, update: (latest: NotebookEntry) => NotebookEntry) => {
+      const latest = cacheRef.current.get(id)?.entry;
+      if (latest) applyEntry(update(latest), false);
+    },
+    [applyEntry],
+  );
+
+  const reloadEntry = useCallback(
+    async (id: string): Promise<NotebookEntry | null> => {
+      try {
+        const fresh = await getNotebookEntry(id);
+        replaceEntry(fresh);
+        return fresh;
+      } catch {
+        return null;
+      }
+    },
+    [replaceEntry],
+  );
+
+  // Renova so os URLs das fotos/anexos (nao o texto nem a versao: trocar a
+  // versao sem o conteudo deixava a proxima gravacao apagar o que mudou).
+  const refreshSignedUrls = useCallback(
+    (id: string) => {
+      signedAtRef.current.set(id, Date.now());
+      getNotebookEntry(id)
+        .then((fresh) => {
+          signedAtRef.current.set(id, Date.now());
+          patchEntry(id, (latest) => ({ ...latest, photos: fresh.photos, attachments: fresh.attachments }));
+        })
+        .catch(() => signedAtRef.current.delete(id));
+    },
+    [patchEntry],
+  );
+
+  useEffect(() => {
+    if (!selectedId) return undefined;
+    const check = () => {
+      if (document.visibilityState !== 'visible') return;
+      const signedAt = signedAtRef.current.get(selectedId);
+      if (signedAt !== undefined && Date.now() - signedAt > SIGNED_URL_REFRESH_MS) refreshSignedUrls(selectedId);
+    };
+    const interval = window.setInterval(check, SIGNED_URL_CHECK_MS);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', check);
+    };
+  }, [selectedId, refreshSignedUrls]);
 
   const createEntry = useCallback(
     async (payload: CreateNotebookEntryPayload) => {
@@ -189,7 +261,16 @@ export function useNotebookEntries(areaId: string | null): UseNotebookEntriesRes
 
   const updateEntry = useCallback(
     async (id: string, payload: UpdateNotebookEntryPayload) => {
-      const updated = await updateNotebookEntry(id, payload);
+      // Grava sobre a versao que este ecra conhece; se outra pessoa gravou
+      // entretanto, o backend recusa (409) em vez de apagar a alteracao dela.
+      const baseUpdatedAt = cacheRef.current.get(id)?.entry.updatedAt;
+      let updated: NotebookEntry;
+      try {
+        updated = await updateNotebookEntry(id, baseUpdatedAt ? { ...payload, baseUpdatedAt } : payload);
+      } catch (err) {
+        const current = parseEntryConflict(err);
+        throw current ? new EntryConflictError(current) : err;
+      }
       remember(updated);
       setEntries((prev) =>
         prev.map((e) => (e.id === updated.id ? toEntrySummary(updated) : e)).sort(byDateDesc),
@@ -225,6 +306,8 @@ export function useNotebookEntries(areaId: string | null): UseNotebookEntriesRes
     prefetchEntry,
     retryEntry,
     replaceEntry,
+    patchEntry,
+    reloadEntry,
     createEntry,
     updateEntry,
     removeEntry,

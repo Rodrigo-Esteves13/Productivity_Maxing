@@ -16,3 +16,21 @@ export class CompletePasswordLinkDto {
   @MaxLength(PASSWORD_MAX_LENGTH)
   password: string;
 }
+
+// POST /auth/reset-password - fim do "esqueci-me da password". O accessToken
+// e o da sessao de recovery que o Supabase abre no browser ao seguir o link
+// do email; o backend valida-o junto do Supabase antes de mudar a password
+// e de terminar as outras sessoes (E-02).
+export class CompletePasswordResetDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(4000)
+  accessToken: string;
+
+  @IsString()
+  @MinLength(PASSWORD_MIN_LENGTH, {
+    message: 'Password must be at least 8 characters long.',
+  })
+  @MaxLength(PASSWORD_MAX_LENGTH)
+  password: string;
+}

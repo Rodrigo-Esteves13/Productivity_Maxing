@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { getUserAreas, getTaskMetadata, importTasks } from '../api/userService';
 import { getPrograms, getProgramPeriods } from '../api/academicService';
-import { parseSpreadsheetFile, mapImportRows } from '../utils/parseTaskImportFile';
+import { parseSpreadsheetFile, mapImportRows, toSheetRowNumbers } from '../utils/parseTaskImportFile';
 import type { AcademicPeriod, ImportTasksResult } from '../types/models';
 import { translateNow } from '../i18n/translate';
 
@@ -64,7 +64,7 @@ export function useTaskImport() {
         return;
       }
 
-      const { rows, errors: parseErrors } = mapImportRows(rawRows, areas, meta, periods);
+      const { rows, errors: parseErrors, sheetRows } = mapImportRows(rawRows, areas, meta, periods);
 
       if (rows.length === 0) {
         setOutcome({ parseErrors, backendResult: null });
@@ -81,7 +81,10 @@ export function useTaskImport() {
       }
 
       setStage('importing');
-      const backendResult = await importTasks(rows);
+      const sent = await importTasks(rows);
+      // Numeros de linha do backend = posicao no array enviado; converte
+      // para a linha da folha (as linhas com erro de parse nao foram enviadas).
+      const backendResult = { ...sent, results: toSheetRowNumbers(sent.results, sheetRows) };
       setOutcome({ parseErrors, backendResult });
       setStage('done');
     } catch (err) {

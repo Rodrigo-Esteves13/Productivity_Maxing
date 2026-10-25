@@ -1,10 +1,26 @@
 import { MS_PER_MINUTE } from './timeConstants';
 import type { HeatmapCell } from '../types/models';
+import { APP_TIME_ZONE } from './dateKey';
 
 // "Agora e uma boa hora para estudar?", a partir do heatmap. O heatmap
-// agrupa por dia da semana e blocos de 4h na hora do SERVIDOR (ver
-// getHeatmap no backend, normalmente UTC), por isso aqui usa-se a mesma
-// referencia (UTC) para o bloco de "agora" bater certo com os dados.
+// agrupa por dia da semana e blocos de 4h em hora de Lisboa (ver
+// getHeatmap no backend), por isso o bloco de "agora" usa a mesma
+// referencia para bater certo com os dados.
+
+const WEEKDAY_INDEX: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+const lisbonWeekdayHour = new Intl.DateTimeFormat('en-US', {
+  timeZone: APP_TIME_ZONE,
+  weekday: 'short',
+  hour: '2-digit',
+  hourCycle: 'h23',
+});
+
+/** Dia da semana (0=Domingo) e hora (0-23) de um instante em hora de Lisboa. */
+export function toLisbonWeekdayHour(at: Date): { dayOfWeek: number; hour: number } {
+  const parts = lisbonWeekdayHour.formatToParts(at);
+  const weekday = parts.find((p) => p.type === 'weekday')?.value ?? 'Sun';
+  return { dayOfWeek: WEEKDAY_INDEX[weekday] ?? 0, hour: Number(parts.find((p) => p.type === 'hour')?.value ?? 0) };
+}
 
 export const HOUR_BUCKET_SIZE = 4;
 // Abaixo disto o heatmap e ruido: nao se dizem coisas com 3 sessoes.
@@ -26,8 +42,8 @@ export function suggestStudyWindow(cells: HeatmapCell[], now: Date): StudyHint |
   if (sessions < MIN_SESSIONS_FOR_HINT) return null;
 
   const ranked = rank(cells);
-  const dayOfWeek = now.getUTCDay();
-  const bucket = Math.floor(now.getUTCHours() / HOUR_BUCKET_SIZE);
+  const { dayOfWeek, hour } = toLisbonWeekdayHour(now);
+  const bucket = Math.floor(hour / HOUR_BUCKET_SIZE);
 
   const nowIndex = ranked.findIndex((cell) => cell.dayOfWeek === dayOfWeek && cell.hourBucket === bucket);
   if (nowIndex !== -1 && nowIndex < TOP_NOW) {

@@ -175,6 +175,8 @@ export class AreasController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Deletes a personal area (owner) or an official one (Admin)',
+    description:
+      '409 with code AREA_IN_USE and counts { tasks, notebookEntries, gradeComponents } while the area still has any of them (notes and grade components would be deleted in cascade).',
   })
   async remove(
     @CurrentUser() user: AuthenticatedUser,

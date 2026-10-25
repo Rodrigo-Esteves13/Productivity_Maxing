@@ -26,6 +26,8 @@ export class FeedbackService {
 
   /** Admin: mais recentes primeiro; por resolver antes. */
   list() {
+    // Limite fixo; o frontend (FEEDBACK_LIST_LIMIT em feedbackService.ts)
+    // avisa quando a lista chega a ele (E-14).
     return this.prisma.feedback.findMany({
       orderBy: [{ isResolved: 'asc' }, { createdAt: 'desc' }],
       take: 300,

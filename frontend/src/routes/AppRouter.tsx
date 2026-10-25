@@ -13,6 +13,7 @@ import GlobalStudyTimerHost from '../components/Study/GlobalStudyTimerHost';
 import RoutePrefetcher from './RoutePrefetcher';
 import CalendarSyncReviewModal from '../components/Schedule/CalendarSyncReviewModal';
 import PushPermissionPrompt from '../pwa/PushPermissionPrompt';
+import PushSubscriptionSync from '../pwa/PushSubscriptionSync';
 import RouteSkeleton from '../components/UI/RouteSkeleton';
 import {
   Dashboard,
@@ -213,6 +214,9 @@ export default function AppRouter() {
       {/* Pede as notificacoes uma vez, logo ao entrar com sessao iniciada
           (gated por dentro). Depois a escolha vive no Profile. */}
       <PushPermissionPrompt />
+      {/* Reenvia a subscricao push deste dispositivo ao abrir a app, ao
+          trocar de conta ou de lingua (gated por dentro). */}
+      <PushSubscriptionSync />
     </BrowserRouter>
   );
 }

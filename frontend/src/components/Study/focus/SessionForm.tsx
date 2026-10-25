@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { getUserTasks } from '../../../api/userService';
 import { useLoadOnce } from '../../../hooks/useLoadOnce';
 import { buildSessionWindow, toLocalParts } from '../../../lib/sessionWindow';
-import { toDateKey } from '../../../lib/dateKey';
+import { todayKey } from '../../../lib/dateKey';
 import type { StudySession } from '../../../types/models';
 import ActionButton from '../../UI/ActionButton';
 import ErrorState from '../../UI/ErrorState';
@@ -51,7 +51,7 @@ export default function SessionForm({ session, isSaving, serverError, onSubmit, 
   const start = session ? toLocalParts(session.startedAt) : null;
   const end = session?.endedAt ? toLocalParts(session.endedAt) : null;
 
-  const [date, setDate] = useState(start?.date ?? toDateKey(new Date()));
+  const [date, setDate] = useState(start?.date ?? todayKey());
   const [startTime, setStartTime] = useState(start?.time ?? '09:00');
   const [endTime, setEndTime] = useState(end?.time ?? '10:00');
   const [taskId, setTaskId] = useState('');

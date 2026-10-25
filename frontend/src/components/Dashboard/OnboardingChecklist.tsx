@@ -6,6 +6,7 @@ import { CheckIcon, XIcon } from '../UI/Icons';
 import { getSchedule } from '../../api/scheduleService';
 import { getSessionHistory } from '../../api/studySessionsService';
 import { useCalendarStatus } from '../../hooks/useCalendarStatus';
+import { todayKey } from '../../lib/dateKey';
 import { useI18n } from '../../i18n/useI18n';
 
 const DISMISSED_KEY = 'pmaxing:onboarding-dismissed';
@@ -19,7 +20,8 @@ function readDismissed(): boolean {
 }
 
 function dateKey(offsetDays: number): string {
-  return new Date(Date.now() + offsetDays * MS_PER_DAY).toISOString().slice(0, 10);
+  // Dia local (regra 1 em lib/dateKey.ts), nao o dia UTC.
+  return todayKey(new Date(Date.now() + offsetDays * MS_PER_DAY));
 }
 
 interface OnboardingChecklistProps {

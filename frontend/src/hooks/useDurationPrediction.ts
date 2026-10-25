@@ -12,6 +12,9 @@ interface UseDurationPredictionArgs {
   difficulty: string;
   weightPercentage: string;
   taskId?: string;
+  // Area escolhida: o backend usa o tempo medio nessa cadeira (sem isto a
+  // estimativa caia sempre na media global).
+  areaId?: string;
 }
 
 // Debounced para que trocar Type/Difficulty/Weight rapidamente enquanto se
@@ -26,6 +29,7 @@ export function useDurationPrediction({
   difficulty,
   weightPercentage,
   taskId,
+  areaId,
 }: UseDurationPredictionArgs) {
   const [prediction, setPrediction] = useState<DurationPrediction | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +50,7 @@ export function useDurationPrediction({
           difficulty: difficulty as Difficulty,
           weightPercentage: weightPercentage ? parseFloat(weightPercentage) : undefined,
           taskId,
+          areaId: areaId || undefined,
         },
         controller.signal,
       )
@@ -64,7 +69,7 @@ export function useDurationPrediction({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [type, academicType, difficulty, weightPercentage, taskId]);
+  }, [type, academicType, difficulty, weightPercentage, taskId, areaId]);
 
   return { prediction, isLoading };
 }

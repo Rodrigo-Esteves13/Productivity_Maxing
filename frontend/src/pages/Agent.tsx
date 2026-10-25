@@ -6,6 +6,7 @@ import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ActionButton from '../components/UI/ActionButton';
 import FormSkeleton from '../components/UI/FormSkeleton';
+import FormError from '../components/UI/FormError';
 import SetupInstructions from '../components/Agent/SetupInstructions';
 import TriggerRulesForm from '../components/Agent/TriggerRulesForm';
 import BlockListEditor from '../components/Agent/BlockListEditor';
@@ -45,9 +46,9 @@ function normalizeDomain(raw: string): string | null {
 
 export default function Agent() {
   const { t } = useI18n();
-  useDocumentTitle('Agent');
+  useDocumentTitle(t('ui.agent'));
 
-  const { config, isLoading: configLoading, isSaving, saveError, updateDraft, save } =
+  const { config, isLoading: configLoading, loadError, isSaving, saveError, updateDraft, save } =
     useAgentConfig();
   const [justSaved, setJustSaved] = useState(false);
 
@@ -87,7 +88,9 @@ export default function Agent() {
           title={t('ui.3BlockingRules')}
           description={t('ui.changesHereApplyOnThe')}
         >
-          {configLoading || !config ? (
+          {loadError ? (
+            <FormError message={t('ui.couldNotLoadAgentConfig')} />
+          ) : configLoading || !config ? (
             <FormSkeleton sections={1} />
           ) : (
             <>

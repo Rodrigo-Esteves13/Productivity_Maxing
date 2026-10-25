@@ -35,7 +35,8 @@ import { rememberSharePanelOpen } from '../hooks/useEntryShare';
 import { useMyShares } from '../hooks/useMyShares';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, PlusIcon, SearchIcon, XIcon } from '../components/UI/Icons';
-import { consumePendingNotebookEntry } from '../lib/pendingNotebookEntry';
+import { newEntryDateIso } from '../components/Notebook/entry/notebookEntryConfig';
+import { clearPendingNotebookEntry } from '../lib/pendingNotebookEntry';
 import type { NotebookEntry, NotebookSearchResult } from '../types/models';
 
 const MARKDOWN_MIME = 'text/markdown;charset=utf-8';
@@ -101,6 +102,8 @@ export default function Notebook() {
     prefetchEntry,
     retryEntry,
     replaceEntry,
+    patchEntry,
+    reloadEntry,
     createEntry,
     updateEntry,
     removeEntry,
@@ -113,6 +116,9 @@ export default function Notebook() {
   // manualmente, para não voltar a abrir em edição se regressar a esta
   // mais tarde na mesma sessão.
   const [justCreatedEntryId, setJustCreatedEntryId] = useState<string | null>(null);
+  // Remontar o editor da entrada aberta (conflito resolvido com a versao dos
+  // outros, copia por gravar reposta), sem sair da edicao.
+  const [reopened, setReopened] = useState<{ id: string; seq: number } | null>(null);
 
   // Maior classNumber já usado nesta Area (entre entradas CLASS) + 1 - só
   // uma sugestão, nunca bloqueia o utilizador de repetir ou saltar um
@@ -223,7 +229,7 @@ export default function Notebook() {
         entryType: isClassNow ? 'CLASS' : 'NOTE',
         classNumber: isClassNow ? nextClassNumber : undefined,
         title: buildFallbackTitle(lang),
-        date: new Date().toISOString(),
+        date: newEntryDateIso(),
       }).then((created) => setJustCreatedEntryId(created.id));
     } catch {
       setCreateError(t('notebook.createError'));
@@ -284,13 +290,11 @@ export default function Notebook() {
     setJustCreatedEntryId(null);
   };
 
-  // Vinda do Command Palette global (Cmd/Ctrl+K -> resultado de notebook):
-  // consome a entrada deixada em sessionStorage e abre-a, uma única vez,
-  // logo ao entrar na página - ver lib/pendingNotebookEntry.ts.
+  // Sobra de versoes antigas: o Command Palette deixava a entrada em
+  // sessionStorage. Agora usa ?entry=<id>; limpa um snapshot que tenha
+  // ficado para nunca abrir uma copia velha.
   useEffect(() => {
-    const pending = consumePendingNotebookEntry();
-    if (pending) handleSelectSearchResult(pending);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    clearPendingNotebookEntry();
   }, []);
 
   // ?entry=<id>(&share=1): vindo do Social, de uma nota partilhada ou de um
@@ -519,10 +523,18 @@ export default function Notebook() {
                   )}
                   {selectedEntry ? (
                     <NotebookEntryEditor
-                      key={selectedEntry.id}
+                      key={`${selectedEntry.id}:${reopened?.id === selectedEntry.id ? reopened.seq : 0}`}
                       entry={selectedEntry}
                       suggestedClassNumber={nextClassNumber}
-                      startInEditMode={selectedEntry.id === justCreatedEntryId}
+                      startInEditMode={selectedEntry.id === justCreatedEntryId || reopened?.id === selectedEntry.id}
+                      onAdoptServerVersion={replaceEntry}
+                      onReopen={() =>
+                        setReopened((prev) => ({
+                          id: selectedEntry.id,
+                          seq: prev?.id === selectedEntry.id ? prev.seq + 1 : 1,
+                        }))
+                      }
+                      onProposalApplied={() => void reloadEntry(selectedEntry.id)}
                       onSave={({ title, entryType, classNumber, textContent, drawingStrokes, tables, canvasShapes, canvasLinks, canvasTexts, usefulLinks, canvasHeight, date, privateFromFriends }) =>
                         updateEntry(selectedEntry.id, {
                           title,
@@ -542,33 +554,32 @@ export default function Notebook() {
                       }
                       onDelete={() => removeEntry(selectedEntry.id)}
                       onExport={() => exportEntry(selectedEntry)}
+                      // patchEntry parte sempre da versao mais recente em memoria: um
+                      // upload lento nao repoe o texto antigo nem perde outra foto.
                       onUploadPhoto={async (file) => {
                         const photo = await uploadNotebookPhoto(selectedEntry.id, file);
-                        replaceEntry({
-                          ...selectedEntry,
-                          photos: [...selectedEntry.photos, photo],
-                        });
+                        patchEntry(selectedEntry.id, (latest) => ({ ...latest, photos: [...latest.photos, photo] }));
                       }}
                       onDeletePhoto={async (photoId) => {
                         await deleteNotebookPhoto(selectedEntry.id, photoId);
-                        replaceEntry({
-                          ...selectedEntry,
-                          photos: selectedEntry.photos.filter((p) => p.id !== photoId),
-                        });
+                        patchEntry(selectedEntry.id, (latest) => ({
+                          ...latest,
+                          photos: latest.photos.filter((p) => p.id !== photoId),
+                        }));
                       }}
                       onUploadAttachment={async (file) => {
                         const attachment = await uploadNotebookAttachment(selectedEntry.id, file);
-                        replaceEntry({
-                          ...selectedEntry,
-                          attachments: [...selectedEntry.attachments, attachment],
-                        });
+                        patchEntry(selectedEntry.id, (latest) => ({
+                          ...latest,
+                          attachments: [...latest.attachments, attachment],
+                        }));
                       }}
                       onDeleteAttachment={async (attachmentId) => {
                         await deleteNotebookAttachment(selectedEntry.id, attachmentId);
-                        replaceEntry({
-                          ...selectedEntry,
-                          attachments: selectedEntry.attachments.filter((a) => a.id !== attachmentId),
-                        });
+                        patchEntry(selectedEntry.id, (latest) => ({
+                          ...latest,
+                          attachments: latest.attachments.filter((a) => a.id !== attachmentId),
+                        }));
                       }}
                     />
                   ) : isLoadingEntry ? (

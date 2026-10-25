@@ -66,7 +66,9 @@ export class FriendCodeRequestsService {
     };
   }
 
-  /** Fila do admin: so pendentes, mais antigos primeiro. */
+  /** Fila do admin: so pendentes, mais antigos primeiro. Limite de 200;
+   * o frontend (FRIEND_CODE_QUEUE_LIMIT em socialService.ts) avisa quando
+   * a fila chega a ele (E-14). */
   async listPending(): Promise<FriendCodeRequestAdminRow[]> {
     const rows = await this.prisma.friendCodeChangeRequest.findMany({
       where: { status: 'PENDING' },

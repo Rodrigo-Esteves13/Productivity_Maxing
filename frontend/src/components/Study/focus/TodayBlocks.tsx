@@ -41,7 +41,7 @@ export default function TodayBlocks({ plan, isLoading, error }: TodayBlocksProps
     .sort((a, b) => a.startMinutes - b.startMinutes);
 
   const handleStart = async (block: StudyPlanSuggestion) => {
-    requestNotifyPermission();
+    void requestNotifyPermission();
     const minutes = Math.min(Math.max(blockMinutes(block), MIN_FOCUS_MINUTES), MAX_FOCUS_MINUTES);
     // Bloco de revisao: sessao ligada a cadeira (nao ha task).
     const target = block.kind === 'review' && block.areaId ? { areaId: block.areaId } : { taskId: block.taskId };

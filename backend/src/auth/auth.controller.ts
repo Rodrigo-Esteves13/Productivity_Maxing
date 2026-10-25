@@ -42,7 +42,10 @@ import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResendVerificationDto, VerifyEmailDto } from './dto/verify-email.dto';
-import { CompletePasswordLinkDto } from './dto/password-link.dto';
+import {
+  CompletePasswordLinkDto,
+  CompletePasswordResetDto,
+} from './dto/password-link.dto';
 import { TwoFactorCodeDto, TwoFactorLoginDto } from './dto/two-factor.dto';
 import { SkipCsrf } from '../common/decorators/skip-csrf.decorator';
 import { SetPasswordDto } from './dto/set-password.dto';
@@ -269,6 +272,17 @@ export class AuthController {
     };
   }
 
+  // Pública: chamada pela página /reset-password com o access token da
+  // sessão de recovery do Supabase (validado no servidor). Muda a password e
+  // termina todas as sessões da conta, como o PATCH /auth/me/password (E-02).
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(perMinute(5))
+  async completePasswordReset(@Body() dto: CompletePasswordResetDto) {
+    await this.authService.completePasswordReset(dto.accessToken, dto.password);
+    return { message: 'Password updated successfully.' };
+  }
+
   // Chamado pelo frontend logo a seguir a um redirect de OAuth (o cookie já
   // foi definido pelo backend nesse redirect, mas o corpo de um redirect não
   // consegue transportar o csrfToken - por isso o frontend pede-o aqui,
@@ -302,7 +316,11 @@ export class AuthController {
       : this.authService.generateCsrfToken();
     // Reescreve sempre o cookie: renova a validade (maxAge) do token reutilizado.
     res.cookie(CSRF_COOKIE, csrfToken, csrfCookieOptions());
-    return { authenticated: true, csrfToken };
+    // userId: a tab antiga compara-o com o utilizador que mostra antes de
+    // repetir um pedido apos um 403 de CSRF. Se outra tab entrou com outra
+    // conta, o pedido nao e repetido nessa conta (F-05). E o id do proprio
+    // utilizador da sessao, nada de novo e exposto.
+    return { authenticated: true, csrfToken, userId: payload.sub };
   }
   // GOOGLE
 

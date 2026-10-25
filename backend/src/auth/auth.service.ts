@@ -56,12 +56,12 @@ export class AuthService {
     userId: string,
     data: {
       name?: string;
-      commuteMinutes?: number;
+      commuteMinutes?: number | null;
       commuteMode?: CommuteMode;
-      homeAddress?: string;
-      campusAddress?: string;
-      quietHoursStart?: number;
-      quietHoursEnd?: number;
+      homeAddress?: string | null;
+      campusAddress?: string | null;
+      quietHoursStart?: number | null;
+      quietHoursEnd?: number | null;
       deadlineEmailReminders?: boolean;
       deadlinePushReminders?: boolean;
       spacedReviewsEnabled?: boolean;
@@ -70,7 +70,10 @@ export class AuthService {
   ): Promise<User> {
     // Cada campo só entra no `data` do Prisma se veio mesmo no pedido -
     // um PATCH parcial (ex: só { quietHoursStart: 1380 }) nunca pode
-    // apagar os outros campos que não foram enviados.
+    // apagar os outros campos que não foram enviados. `null` explícito nos
+    // campos opcionais (deslocação, moradas, quiet hours) limpa o valor
+    // (E-05); nos campos obrigatórios (booleanos, commuteMode) é ignorado,
+    // em vez de rebentar no Prisma.
     return this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -78,9 +81,7 @@ export class AuthService {
         ...(data.commuteMinutes !== undefined
           ? { commuteMinutes: data.commuteMinutes }
           : {}),
-        ...(data.commuteMode !== undefined
-          ? { commuteMode: data.commuteMode }
-          : {}),
+        ...(data.commuteMode != null ? { commuteMode: data.commuteMode } : {}),
         ...(data.homeAddress !== undefined
           ? { homeAddress: data.homeAddress }
           : {}),
@@ -93,16 +94,16 @@ export class AuthService {
         ...(data.quietHoursEnd !== undefined
           ? { quietHoursEnd: data.quietHoursEnd }
           : {}),
-        ...(data.deadlineEmailReminders !== undefined
+        ...(data.deadlineEmailReminders != null
           ? { deadlineEmailReminders: data.deadlineEmailReminders }
           : {}),
-        ...(data.deadlinePushReminders !== undefined
+        ...(data.deadlinePushReminders != null
           ? { deadlinePushReminders: data.deadlinePushReminders }
           : {}),
-        ...(data.spacedReviewsEnabled !== undefined
+        ...(data.spacedReviewsEnabled != null
           ? { spacedReviewsEnabled: data.spacedReviewsEnabled }
           : {}),
-        ...(data.notesPrivateByDefault !== undefined
+        ...(data.notesPrivateByDefault != null
           ? { notesPrivateByDefault: data.notesPrivateByDefault }
           : {}),
       },
@@ -256,6 +257,20 @@ export class AuthService {
 
   forgotPassword(email: string): Promise<void> {
     return this.password.forgotPassword(email);
+  }
+
+  // Muda a password pelo token de recovery do Supabase e termina todas as
+  // sessoes da conta (E-02). Nao abre sessao: o utilizador entra a seguir
+  // pelo login normal (que continua a passar pelo 2FA).
+  async completePasswordReset(
+    accessToken: string,
+    newPassword: string,
+  ): Promise<void> {
+    const userId = await this.password.completePasswordReset(
+      accessToken,
+      newPassword,
+    );
+    if (userId) await this.tokens.revokeAllSessions(userId);
   }
 
   setPassword(

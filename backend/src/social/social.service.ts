@@ -1,3 +1,4 @@
+import { pushDisplayName } from '../common/display-name.util';
 import {
   BadRequestException,
   Injectable,
@@ -264,10 +265,10 @@ export class SocialService {
     });
     const me = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { name: true },
+      select: { name: true, email: true },
     });
     void this.push.notifyUser(target.id, 'friendRequest', {
-      name: me?.name ?? '',
+      name: pushDisplayName(me),
       url: SOCIAL_REQUESTS_PATH,
     });
     return { status: 'PENDING' };

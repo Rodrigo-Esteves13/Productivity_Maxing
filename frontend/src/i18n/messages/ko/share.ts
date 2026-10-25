@@ -41,6 +41,7 @@ export const share: Record<string, string> = {
   'sharedEdit.titleRequired': "수업 노트의 제목을 입력하세요.",
   'sharedEdit.noChanges': "변경한 내용이 없습니다.",
   'sharedEdit.error': "변경 사항을 보내지 못했습니다. 다시 시도해 주세요.",
+  'sharedEdit.conflict': "그사이 다른 사람이 이 수업을 변경했어요. 텍스트를 복사하고 페이지를 새로고침한 뒤 다시 편집하세요.",
   'push.title': "푸시 알림",
   'push.help': "이 기기에서 다가오는 마감(위에서 켠 경우), 친구 및 접근 요청, 노트 초대와 수정 제안, 내 요청에 대한 답변 알림을 받아요.",
   'push.enable': "알림 켜기",

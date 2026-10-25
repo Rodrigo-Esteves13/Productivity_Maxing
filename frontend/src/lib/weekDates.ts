@@ -1,4 +1,4 @@
-import { toDateKey } from './dateKey';
+import { isUtcMidnight, toDateKey } from './dateKey';
 // Datas de semana partilhadas (horário, turnos, copiar semana). Tudo em UTC:
 // ver o comentário histórico em useSchedule.ts sobre o bug do dia errado.
 
@@ -15,6 +15,20 @@ export function todayUtcAnchored(now: Date = new Date()): Date {
 export function addUtcDays(date: Date, days: number): Date {
   const result = new Date(date);
   result.setUTCDate(result.getUTCDate() + days);
+  return result;
+}
+
+/**
+ * Nova data de uma task movida para amanha ("+1 Day" e swipe). Uma task sem
+ * hora (meia-noite UTC) continua sem hora: meia-noite UTC de amanha. Uma com
+ * hora fica amanha (dia local) a mesma hora local. Antes usava a meia-noite
+ * LOCAL, que em Lisboa no verao e 23:00 UTC do dia anterior: a task ganhava
+ * a hora 00:00 e algumas vistas punham-na hoje (B-09).
+ */
+export function tomorrowForTask(taskDate: Date, now: Date = new Date()): Date {
+  if (isUtcMidnight(taskDate)) return addUtcDays(todayUtcAnchored(now), 1);
+  const result = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  result.setHours(taskDate.getHours(), taskDate.getMinutes(), taskDate.getSeconds(), taskDate.getMilliseconds());
   return result;
 }
 

@@ -1,18 +1,68 @@
 // Avisos de fim de bloco/pausa: som curto e, se a pessoa deixou, notificacao
 // do sistema (funciona com a tab em segundo plano).
 
-export function requestNotifyPermission(): void {
-  if (typeof Notification === 'undefined' || Notification.permission !== 'default') return;
-  void Notification.requestPermission();
+export type NotifyPermission = NotificationPermission | 'unsupported';
+
+export function notifyPermission(): NotifyPermission {
+  return typeof Notification === 'undefined' ? 'unsupported' : Notification.permission;
 }
 
-export function notify(title: string, body: string): void {
-  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+export async function requestNotifyPermission(): Promise<NotifyPermission> {
+  if (notifyPermission() !== 'default') return notifyPermission();
   try {
-    new Notification(title, { body });
+    return await Notification.requestPermission();
   } catch {
-    // Alguns browsers moveis so deixam notificar via service worker.
+    return notifyPermission();
   }
+}
+
+// Mesma tag para os avisos do Focus: o novo substitui o anterior em vez de
+// empilhar. O clique abre /focus (ver notificationclick em public/push-sw.js).
+const FOCUS_NOTIFICATION_TAG = 'pmaxing-focus';
+const FOCUS_PATH = '/focus';
+
+// `renotify` ainda nao esta no lib.dom do TypeScript, mas os browsers aceitam.
+type AlertOptions = NotificationOptions & { renotify?: boolean };
+
+function notifyViaConstructor(title: string, body: string): void {
+  try {
+    const options: AlertOptions = { body, tag: FOCUS_NOTIFICATION_TAG, renotify: true };
+    const notification = new Notification(title, options);
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+  } catch {
+    // Sem forma de notificar: ficam o som e o cartao no ecra.
+  }
+}
+
+// Primeiro pelo service worker: em Android e na app instalada, `new
+// Notification` lanca erro e o aviso perdia-se em silencio.
+export function notify(title: string, body: string): void {
+  if (notifyPermission() !== 'granted') return;
+  // renotify: o aviso do fim da pausa substitui o do fim do bloco (mesma
+  // tag, requireInteraction mantem-no na bandeja); sem isto vinha sem som.
+  const options: AlertOptions = {
+    body,
+    tag: FOCUS_NOTIFICATION_TAG,
+    renotify: true,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/badge-96.png',
+    requireInteraction: true,
+    data: { url: FOCUS_PATH },
+  };
+  if (!('serviceWorker' in navigator)) {
+    notifyViaConstructor(title, body);
+    return;
+  }
+  navigator.serviceWorker
+    .getRegistration()
+    .then((registration) => {
+      if (!registration?.active) throw new Error('no-service-worker');
+      return registration.showNotification(title, options);
+    })
+    .catch(() => notifyViaConstructor(title, body));
 }
 
 // Som do aviso: dois toques de 880 Hz (A5), o segundo 0,25 s depois.

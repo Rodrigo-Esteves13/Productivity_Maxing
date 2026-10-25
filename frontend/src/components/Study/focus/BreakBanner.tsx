@@ -62,7 +62,7 @@ export default function BreakBanner() {
                 size="sm"
                 disabled={isSubmitting}
                 onClick={() => {
-                  requestNotifyPermission();
+                  void requestNotifyPermission();
                   void start({ taskId: resume.taskId, areaId: resume.areaId }, resume.plan);
                 }}
               >

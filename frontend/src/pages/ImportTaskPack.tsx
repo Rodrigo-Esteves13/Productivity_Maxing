@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
+import Breadcrumbs from '../components/UI/Breadcrumbs';
 import ActionButton from '../components/UI/ActionButton';
 import ErrorState from '../components/UI/ErrorState';
 import TableSkeleton from '../components/UI/TableSkeleton';
@@ -19,12 +20,23 @@ export default function ImportTaskPack() {
     toggle, selectAll, selectNone, chooseArea, runImport,
   } = useTaskPackImport(code);
 
+  const crumbs = (
+    <Breadcrumbs
+      items={[
+        { label: t('nav.tasks'), to: '/tasks' },
+        { label: t('nav.taskPacks'), to: '/task-packs' },
+        { label: preview?.name ?? t('packs.import.docTitle') },
+      ]}
+    />
+  );
+
   if (state === 'loading') {
     return <PageLayout><TableSkeleton rows={4} columns={3} /></PageLayout>;
   }
   if (state === 'not-found' || state === 'error' || !preview) {
     return (
       <PageLayout>
+        {crumbs}
         <ErrorState message={state === 'not-found' ? t('packs.import.notFound') : t('packs.import.error')} />
       </PageLayout>
     );
@@ -34,6 +46,7 @@ export default function ImportTaskPack() {
     const errorById = new Map(result.results.filter((r) => !r.ok).map((r) => [r.itemId, r.error ?? '']));
     return (
       <PageLayout>
+        {crumbs}
         <PageHeader title={t('packs.import.doneTitle')} description={t('packs.import.doneSummary', { created: result.created, failed: result.failed })} />
         {errorById.size > 0 && (
           <ul className="mb-6 space-y-2 text-sm text-red-300">
@@ -51,6 +64,7 @@ export default function ImportTaskPack() {
 
   return (
     <PageLayout>
+      {crumbs}
       <PageHeader
         title={preview.name}
         description={t('packs.import.from', { name: preview.ownerName })}

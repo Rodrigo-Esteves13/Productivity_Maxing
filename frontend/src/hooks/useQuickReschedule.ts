@@ -4,6 +4,7 @@ import { syncTaskToCalendar } from '../api/calendarService';
 import type { Task } from '../types/models';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
+import { tomorrowForTask } from '../lib/weekDates';
 
 interface UseQuickRescheduleReturn {
   reschedulingId: string | null;
@@ -27,9 +28,8 @@ export function useQuickReschedule(
       setReschedulingId(task.id);
       
       try {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(0, 0, 0, 0); // Limpa as horas para alinhar com o formato YYYY-MM-DD
+        // Sem hora continua sem hora (meia-noite UTC), com hora mantem a hora (B-09).
+        const tomorrow = tomorrowForTask(new Date(task.date));
 
         // Usa o endpoint PATCH que já validaste ser seguro contra IDOR
         const updated = await updateTask(task.id, { date: tomorrow.toISOString() });

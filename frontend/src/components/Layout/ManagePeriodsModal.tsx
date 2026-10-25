@@ -106,7 +106,9 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
         await archivePeriod(period.id, forceConfirm);
       }
       await loadPeriods();
-      await refreshContext();
+      // Arquivar o periodo ativo: o contexto passa para outro periodo ativo
+      // (se nao for o ativo, leavePeriodId nao muda nada).
+      await refreshContext(period.isArchived ? undefined : { leavePeriodId: period.id });
     } catch (err: unknown) {
       const status = getHttpStatus(err);
       if (status === 409 && !forceConfirm) {

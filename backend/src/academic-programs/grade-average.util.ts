@@ -7,6 +7,60 @@
 export interface GradedTaskLike {
   realGrade: number | null;
   weightPercentage: number | null;
+  // Optional, only tasks have them: occurrences of the same recurring series
+  // (same title + area + period, recurrenceFrequency set) are collapsed into
+  // ONE item - see collapseRecurringSeries below.
+  title?: string;
+  recurrenceFrequency?: string | null;
+  areaId?: string;
+  periodId?: string | null;
+}
+
+// Prisma `select` for graded tasks fed into the functions below. Includes
+// what collapseRecurringSeries needs to recognise a recurring series.
+export const GRADED_TASK_SELECT = {
+  realGrade: true,
+  weightPercentage: true,
+  areaId: true,
+  periodId: true,
+  title: true,
+  recurrenceFrequency: true,
+} as const;
+
+// A recurring series ("Weekly quiz 10%") is worth its weight ONCE, the same
+// rule the weight budget uses (grade-components/weight-budget.ts): every new
+// occurrence copies the weight, so counting each one at full weight made 10
+// quizzes weigh 100 against a 90% exam. The series enters as a single item
+// with the mean of its graded occurrences and the largest weight among them.
+function collapseRecurringSeries<
+  T extends GradedTaskLike & { realGrade: number },
+>(graded: T[]): GradedTaskLike[] {
+  const result: GradedTaskLike[] = [];
+  const series = new Map<
+    string,
+    { gradeSum: number; count: number; weight: number | null }
+  >();
+  for (const item of graded) {
+    if (!item.recurrenceFrequency || item.title === undefined) {
+      result.push(item);
+      continue;
+    }
+    const key = `${item.areaId ?? ''}|${item.periodId ?? ''}|${item.title}`;
+    const entry = series.get(key) ?? { gradeSum: 0, count: 0, weight: null };
+    entry.gradeSum += item.realGrade;
+    entry.count += 1;
+    if (item.weightPercentage != null) {
+      entry.weight = Math.max(entry.weight ?? 0, item.weightPercentage);
+    }
+    series.set(key, entry);
+  }
+  for (const entry of series.values()) {
+    result.push({
+      realGrade: entry.gradeSum / entry.count,
+      weightPercentage: entry.weight,
+    });
+  }
+  return result;
 }
 
 export interface WeightedAverageResult {
@@ -32,9 +86,9 @@ export function computeWeightedAverage(
 
   let weightedSum = 0;
   let totalWeight = 0;
-  for (const t of graded) {
+  for (const t of collapseRecurringSeries(graded)) {
     const weight = t.weightPercentage ?? 1;
-    weightedSum += t.realGrade * weight;
+    weightedSum += (t.realGrade as number) * weight;
     totalWeight += weight;
   }
 

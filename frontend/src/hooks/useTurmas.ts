@@ -89,7 +89,8 @@ function parseNoteConflict(body: unknown): VersionedSnapshot<TurmaNoteDraft> | n
 
 // Nota da turma aberta: titulo e texto com gravacao automatica e versoes.
 // untitledTitle: o backend exige titulo; um titulo apagado grava este.
-export function useTurmaNote(turmaId: string, noteId: string, untitledTitle: string) {
+// onForbidden: o delegado tirou a permissao de editar notas (recarregar a turma).
+export function useTurmaNote(turmaId: string, noteId: string, untitledTitle: string, onForbidden?: () => void) {
   const load = useCallback(async () => toSnapshot(await getTurmaNote(turmaId, noteId)), [turmaId, noteId]);
   const save = useCallback(
     async (draft: TurmaNoteDraft, baseVersion: number) =>
@@ -107,5 +108,6 @@ export function useTurmaNote(turmaId: string, noteId: string, untitledTitle: str
     load,
     save,
     parseConflict: parseNoteConflict,
+    onForbidden,
   });
 }

@@ -36,6 +36,7 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
     difficulty: task.difficulty,
     weightPercentage: task.weightPercentage != null ? String(task.weightPercentage) : '',
     taskId: task.id,
+    areaId: task.areaId,
   });
   return (
     <div>

@@ -1,10 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { fetchCsrfToken } from '../../api/userService';
 import { refreshCalendarStatus } from '../../hooks/useCalendarStatus';
 import { useI18n } from '../../i18n/useI18n';
 import { fillNodes } from '../../i18n/fillNodes';
+
+const AccountBlockedPage = lazy(() => import('../AccountBlocked/AccountBlockedPage'));
+
+// Token de recurso que o OAuthConflictRedirectFilter poe no fragmento
+// (#appeal=...) quando a conta esta banida/suspensa. Lido uma vez e tirado
+// da barra de endereco, para nao ficar no historico.
+function takeAppealTokenFromHash(): string | null {
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const token = params.get('appeal');
+  if (token) {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+  return token;
+}
 
 export default function AuthCallback() {
   const { t } = useI18n();
@@ -14,6 +28,7 @@ export default function AuthCallback() {
   // Evita disparar o pedido duas vezes no StrictMode (dev) / re-renders.
   const hasRun = useRef(false);
   const [conflictEmail, setConflictEmail] = useState<string | null>(null);
+  const [appealToken, setAppealToken] = useState<string | null>(null);
   const [genericError, setGenericError] = useState<{ stillAuthenticated: boolean } | null>(
     null,
   );
@@ -29,6 +44,17 @@ export default function AuthCallback() {
     const error = searchParams.get('error');
     if (error === 'account_conflict') {
       setConflictEmail(searchParams.get('email'));
+      return;
+    }
+    // Conta banida/suspensa: mesmo ecra de bloqueio + recurso do login por
+    // password (Login.tsx). Sem token cai no erro generico abaixo.
+    if (error === 'account_blocked') {
+      const token = takeAppealTokenFromHash();
+      if (token) {
+        setAppealToken(token);
+      } else {
+        setGenericError({ stillAuthenticated: false });
+      }
       return;
     }
 
@@ -66,6 +92,14 @@ export default function AuthCallback() {
       }
     })();
   }, [navigate, login, searchParams]);
+
+  if (appealToken) {
+    return (
+      <Suspense fallback={null}>
+        <AccountBlockedPage bearerToken={appealToken} />
+      </Suspense>
+    );
+  }
 
   if (genericError) {
     return (
