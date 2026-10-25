@@ -16,6 +16,9 @@ interface TitleDateAreaFieldsProps {
   date: string;
   areaId: string;
   areas: AreaOption[];
+  // Rotulo do campo de data (ex: "palpite" quando a data ainda nao esta
+  // marcada). Sem isto: "Date".
+  dateLabel?: string;
   onTitleChange: (value: string) => void;
   onDateChange: (value: string) => void;
   onAreaChange: (areaId: string, defaultTaskType: string | null) => void;
@@ -27,6 +30,7 @@ export default function TitleDateAreaFields({
   date,
   areaId,
   areas,
+  dateLabel,
   onTitleChange,
   onDateChange,
   onAreaChange,
@@ -47,7 +51,7 @@ export default function TitleDateAreaFields({
       </FormField>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <FormField label={t('ui.date')} htmlFor={`${idPrefix}-date`}>
+        <FormField label={dateLabel ?? t('ui.date')} htmlFor={`${idPrefix}-date`}>
           <Input
             id={`${idPrefix}-date`}
             required

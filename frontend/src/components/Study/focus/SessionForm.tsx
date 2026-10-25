@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { getUserTasks } from '../../../api/userService';
 import { useLoadOnce } from '../../../hooks/useLoadOnce';
 import { buildSessionWindow, toLocalParts } from '../../../lib/sessionWindow';
 import { todayKey } from '../../../lib/dateKey';
+import { formatTaskDue } from '../../../lib/taskReadiness';
+import { groupTasksByArea } from '../../../lib/taskGroups';
 import type { StudySession } from '../../../types/models';
 import ActionButton from '../../UI/ActionButton';
 import ErrorState from '../../UI/ErrorState';
@@ -31,16 +33,23 @@ interface SessionFormProps {
 }
 
 // So se carrega a lista de tasks quando se abre o formulario de nova sessao.
+// Agrupadas por cadeira e com a data, como no widget de sessao: duas
+// "Apresentacao 1" de cadeiras diferentes eram impossiveis de distinguir.
 function TaskPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
   const { t } = useI18n();
   const { data: tasks } = useLoadOnce(getUserTasks);
+  const groups = useMemo(() => groupTasksByArea(tasks ?? [], t('ui.noSubject')), [tasks, t]);
   return (
     <Select label={t('ui.taskOptional')} value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">{t('ui.noTask')}</option>
-      {(tasks ?? []).map((task) => (
-        <option key={task.id} value={task.id}>
-          {task.title}
-        </option>
+      {groups.map(({ label, tasks: groupTasks }) => (
+        <optgroup key={label} label={label}>
+          {groupTasks.map((task) => (
+            <option key={task.id} value={task.id}>
+              {task.title} ({formatTaskDue(task)})
+            </option>
+          ))}
+        </optgroup>
       ))}
     </Select>
   );

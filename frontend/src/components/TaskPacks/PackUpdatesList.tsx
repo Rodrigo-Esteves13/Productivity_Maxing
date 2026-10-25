@@ -24,12 +24,14 @@ const FIELD_LABEL: Record<FieldKey, string> = {
   effort: 'readiness.effort',
   dateCertainty: 'readiness.dateCertainty',
   availableFrom: 'readiness.availableFrom',
+  isBlocked: 'readiness.blocked',
 };
 
 function useFormatValue() {
   const { t, lang } = useI18n();
   const enumLabel = useEnumLabel();
   return (key: FieldKey, value: PackSharedFields[FieldKey] | undefined): string => {
+    if (key === 'isBlocked') return value ? t('packs.updates.yes') : t('packs.updates.no');
     if (value === null || value === undefined || value === '') return t('packs.updates.none');
     const formatters: Record<FieldKey, () => string> = {
       title: () => String(value),
@@ -38,6 +40,7 @@ function useFormatValue() {
       weightPercentage: () => `${value}%`,
       effort: () => enumLabel(String(value)),
       dateCertainty: () => enumLabel(String(value)),
+      isBlocked: () => String(value),
     };
     return formatters[key]();
   };

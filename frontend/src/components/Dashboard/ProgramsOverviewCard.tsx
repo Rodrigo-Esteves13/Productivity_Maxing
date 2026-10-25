@@ -5,12 +5,14 @@ import type { ProgramAverage } from '../../types/models';
 import { BookOpenIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
+import { usePlanMode } from '../../hooks/usePlanMode';
 
 // Only makes sense with more than one program (e.g. "High School" +
 // "Bachelor's") - each program keeps its own grade scale, this never
 // merges them into a single number, just lays the cards side by side.
 export default function ProgramsOverviewCard() {
   const { programs, activeProgram, switchProgram } = useAcademic();
+  const { scenario } = usePlanMode();
   const { t } = useI18n();
   const [averages, setAverages] = useState<Record<string, ProgramAverage>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -27,7 +29,7 @@ export default function ProgramsOverviewCard() {
       setIsLoading(true);
       try {
         const entries = await Promise.all(
-          visiblePrograms.map(async (p) => [p.id, await getProgramAverage(p.id)] as const),
+          visiblePrograms.map(async (p) => [p.id, await getProgramAverage(p.id, scenario)] as const),
         );
         if (!cancelled) setAverages(Object.fromEntries(entries));
       } catch (err) {
@@ -40,7 +42,7 @@ export default function ProgramsOverviewCard() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [programs.map((p) => p.id).join(',')]);
+  }, [programs.map((p) => p.id).join(','), scenario]);
 
   if (visiblePrograms.length < 2 || isLoading) return null;
 

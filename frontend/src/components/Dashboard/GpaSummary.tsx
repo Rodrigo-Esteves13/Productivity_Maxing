@@ -11,6 +11,7 @@ import Skeleton from '../UI/Skeleton';
 import CreditSimulator from './CreditSimulator';
 import { ClockIcon, GraduationCapIcon, TrendingUpIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
+import { usePlanMode } from '../../hooks/usePlanMode';
 
 function formatAverage(average: number | null, scale: string): string {
   if (average === null) return '-';
@@ -96,6 +97,8 @@ interface GpaSummaryProps {
 
 export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryProps) {
   const { activeProgram, activePeriod, isViewingAllPeriods } = useAcademic();
+  // Modo plano: medias como se tudo corresse segundo o plano.
+  const { scenario } = usePlanMode();
   const { t } = useI18n();
 
   const [periodAverage, setPeriodAverage] = useState<PeriodAverage | null>(null);
@@ -115,13 +118,13 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
       setIsLoading(true);
       try {
         const [programAvg, comparisonData, periodAvg] = await Promise.all([
-          getProgramAverage(activeProgram.id),
-          getPeriodsComparison(activeProgram.id),
+          getProgramAverage(activeProgram.id, scenario),
+          getPeriodsComparison(activeProgram.id, scenario),
           // "View all periods" doesn't have a single period to show its
           // own average for - only the program cumulative makes sense in
           // that case.
           !isViewingAllPeriods && activePeriod
-            ? getPeriodAverage(activePeriod.id)
+            ? getPeriodAverage(activePeriod.id, scenario)
             : Promise.resolve(null),
         ]);
         if (cancelled) return;
@@ -138,7 +141,7 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
     return () => {
       cancelled = true;
     };
-  }, [activeProgram, activePeriod, isViewingAllPeriods]);
+  }, [activeProgram, activePeriod, isViewingAllPeriods, scenario]);
 
   // Triggers the cards' fade/slide-in on next paint, after data is ready.
   useEffect(() => {

@@ -7,6 +7,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-26',
+    title: 'Plan mode and clearer unsure dates',
+    items: [
+      'Dashboard: a new Plan mode button shows every grade, average, credit count and chart as if you got your target grade in everything left. Parts without a target use the median of your grades. Nothing is saved, and the task table keeps your real grades.',
+      'Tasks with a date that is not set yet or a surprise no longer show a date anywhere. They show "Date TBD" or "Surprise" instead, and they stay out of the calendar, deadline overlaps, the exam countdown and the busy-day hint.',
+      'Task packs: "Cannot start yet" is now shared too, and packs created before the update can publish changes. The first publish links them to your tasks and to the copies your classmates imported.',
+    ],
+  },
+  {
     date: '2026-10-25',
     title: 'Effort, unsure dates and tasks you cannot start yet',
     items: [

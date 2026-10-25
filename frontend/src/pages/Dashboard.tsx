@@ -35,7 +35,12 @@ import { useDashboardWidgetPrefs } from '../hooks/useDashboardWidgetPrefs';
 import { useTableDensity } from '../hooks/useTableDensity';
 import { useShowArchivedTasks } from '../hooks/useShowArchivedTasks';
 import { isTaskArchived } from '../utils/taskArchive';
-import { PrinterIcon, UploadIcon, SlidersIcon, GraduationCapIcon } from '../components/UI/Icons';
+import { PrinterIcon, UploadIcon, SlidersIcon, GraduationCapIcon, TargetIcon } from '../components/UI/Icons';
+import PlanModeBanner from '../components/Dashboard/PlanModeBanner';
+import { PlanModeContext, type PlanModeContextValue } from '../context/plan-mode-context';
+import { usePlanModePref } from '../hooks/usePlanMode';
+import { usePeriodGradeComponents } from '../hooks/usePeriodGradeComponents';
+import { applyPlanToComponents, applyPlanToTasks, buildPlanFill } from '../lib/planScenario';
 import BulkActionsBar from '../components/Dashboard/BulkActionsBar';
 import TaskExportButtons from '../components/Dashboard/TaskExportButtons';
 import { ACADEMIC_TASK_TYPE_KEY } from '../lib/constants';
@@ -57,6 +62,8 @@ function emptyMessageKey(academicTaskCount: number, isExamMode: boolean): string
 // ?exam=on / ?exam=off (paleta Ctrl+K) liga ou desliga o modo exame.
 const EXAM_MODE_PARAM = 'exam';
 const EXAM_MODE_OFF = 'off';
+// ?plan=on / ?plan=off (Ctrl+K), mesmo formato do modo exame.
+const PLAN_MODE_PARAM = 'plan';
 
 export default function Dashboard() {
   const { t } = useI18n();
@@ -93,6 +100,19 @@ export default function Dashboard() {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const examParam = searchParams.get(EXAM_MODE_PARAM);
+  const { isPlanMode, setIsPlanMode } = usePlanModePref();
+  const planParam = searchParams.get(PLAN_MODE_PARAM);
+  useEffect(() => {
+    if (planParam === null) return;
+    setIsPlanMode(planParam !== EXAM_MODE_OFF);
+    setSearchParams(
+      (params) => {
+        params.delete(PLAN_MODE_PARAM);
+        return params;
+      },
+      { replace: true },
+    );
+  }, [planParam, setIsPlanMode, setSearchParams]);
   useEffect(() => {
     if (examParam === null) return;
     setIsExamMode(examParam !== EXAM_MODE_OFF);
@@ -108,6 +128,24 @@ export default function Dashboard() {
   const academicTasks = useMemo(
     () => tasks.filter((task) => task.type === ACADEMIC_TASK_TYPE_KEY),
     [tasks],
+  );
+
+  // Modo plano: os cartoes veem as notas "se tudo correr como planeado"
+  // (alvos + medianas, ver lib/planScenario.ts). A tabela e as acoes usam
+  // SEMPRE as tasks reais, para nunca se gravar uma nota inventada.
+  // Fora do PlanModeContext, este hook devolve os componentes reais.
+  const realComponents = usePeriodGradeComponents();
+  const planFill = useMemo(() => buildPlanFill(academicTasks, realComponents), [academicTasks, realComponents]);
+  const cardTasks = useMemo(
+    () => (isPlanMode ? applyPlanToTasks(academicTasks, planFill) : academicTasks),
+    [isPlanMode, academicTasks, planFill],
+  );
+  const planModeValue = useMemo<PlanModeContextValue>(
+    () => ({
+      isPlanMode,
+      planComponents: isPlanMode ? (components) => applyPlanToComponents(components, planFill) : (components) => components,
+    }),
+    [isPlanMode, planFill],
   );
 
   const academicAreas = useMemo(() => {
@@ -144,6 +182,7 @@ export default function Dashboard() {
   const { completeOne } = useCompleteWithUndo(setTasks);
 
   return (
+    <PlanModeContext.Provider value={planModeValue}>
     <PageLayout>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <PageHeader
@@ -181,6 +220,16 @@ export default function Dashboard() {
           <ToolbarButton
             tone="muted"
             size="md"
+            pressed={isPlanMode}
+            onClick={() => setIsPlanMode((prev) => !prev)}
+            title={t('planMode.toggleHelp')}
+          >
+            <TargetIcon />
+            {t('planMode.toggle')}
+          </ToolbarButton>
+          <ToolbarButton
+            tone="muted"
+            size="md"
             onClick={toggleDensity}
             title={t('ui.toggleTableRowDensity')}
           >
@@ -204,6 +253,8 @@ export default function Dashboard() {
 
       <InstallAppCard />
 
+      {isPlanMode && <PlanModeBanner onTurnOff={() => setIsPlanMode(false)} />}
+
       {isExamMode && !isLoading && !error && (
         <ExamModePanel tasks={academicTasks} areas={academicAreas} onTurnOff={() => setIsExamMode(false)} />
       )}
@@ -225,7 +276,7 @@ export default function Dashboard() {
       )}
 
       {cardVisibility.overloadAlert && !isLoading && !error && academicTasks.length > 0 && (
-        <OverloadAlertCard tasks={academicTasks} areas={academicAreas} />
+        <OverloadAlertCard tasks={cardTasks} areas={academicAreas} />
       )}
 
       {/*
@@ -238,7 +289,7 @@ export default function Dashboard() {
       */}
       {!isLoading && !error && (
         <DashboardCardGrid
-          academicTasks={academicTasks}
+          academicTasks={cardTasks}
           academicAreas={academicAreas}
           academicTaskTypes={academicTaskTypes}
           activeProgram={activeProgram}
@@ -319,5 +370,6 @@ export default function Dashboard() {
         </Suspense>
       )}
     </PageLayout>
+    </PlanModeContext.Provider>
   );
 }

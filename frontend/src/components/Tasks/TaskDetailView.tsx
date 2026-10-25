@@ -11,7 +11,7 @@ import { recurrenceLabel } from '../../lib/recurrence';
 import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 import { useDurationPrediction } from '../../hooks/useDurationPrediction';
 import { useI18n } from '../../i18n/useI18n';
-import { formatTaskDate } from '../../lib/timeFormat';
+import { formatTaskDue } from '../../lib/taskReadiness';
 
 interface TaskDetailViewProps {
   task: Task;
@@ -46,7 +46,7 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       <DetailRow label={t('ui.title')}>{task.title}</DetailRow>
       <DetailRow label={t('ui.date')}>
         <div className="flex items-center gap-2">
-          <span>{formatTaskDate(task.date, lang)}</span>
+          <span>{formatTaskDue(task, lang)}</span>
           <TaskReadinessBadges task={{ ...task, effort: null }} />
           {task.postponedCount > 0 && (
             <span className="text-xs text-amber-500/80">

@@ -1,3 +1,4 @@
+import { loadScenarioGradedItems, type GradeScenario } from './grade-scenario';
 import { accessibleAreaWhere } from '../areas/area-access';
 import {
   Injectable,
@@ -5,14 +6,12 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { loadComponentGradedItems } from '../grade-components/grade-component-items';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { UpdateProgramDto } from './dto/update-program.dto';
 import {
   computeCreditWeightedAverage,
   computeCreditsSummary,
   resolveRoundFinalGrade,
-  GRADED_TASK_SELECT,
 } from './grade-average.util';
 
 @Injectable()
@@ -101,22 +100,20 @@ export class ProgramsService {
    * weighted by Task.weightPercentage, then those averages weighted by
    * Area.credits.
    */
-  async getAverage(userId: string, id: string) {
+  async getAverage(
+    userId: string,
+    id: string,
+    scenario: GradeScenario = 'real',
+  ) {
     const program = await this.findOwnedOrThrow(userId, id);
-    const tasks = await this.prisma.task.findMany({
-      where: { period: { programId: id }, realGrade: { not: null } },
-      select: GRADED_TASK_SELECT,
-    });
+    // Tasks + seminarios/participacao (GradeComponent), no cenario pedido.
+    const items = await this.programItems(id, scenario);
     const areas = await this.prisma.area.findMany({
       where: accessibleAreaWhere(userId),
       select: { id: true, credits: true },
     });
-    // Seminarios/participacao (GradeComponent) contam como tasks avaliadas.
-    const componentItems = await loadComponentGradedItems(this.prisma, {
-      period: { programId: id },
-    });
     const result = computeCreditWeightedAverage(
-      [...tasks, ...componentItems],
+      items,
       areas,
       program.roundFinalGrade,
     );
@@ -136,24 +133,22 @@ export class ProgramsService {
    * for the exact rule - there's no explicit "passing grade" concept
    * stored anywhere yet, so this uses the scale's midpoint as the mark.
    */
-  async getCreditsSummary(userId: string, id: string) {
+  async getCreditsSummary(
+    userId: string,
+    id: string,
+    scenario: GradeScenario = 'real',
+  ) {
     const program = await this.findOwnedOrThrow(userId, id);
-    const tasks = await this.prisma.task.findMany({
-      where: { period: { programId: id }, realGrade: { not: null } },
-      select: GRADED_TASK_SELECT,
-    });
+    const items = await this.programItems(id, scenario);
     const areas = await this.prisma.area.findMany({
       where: accessibleAreaWhere(userId),
       select: { id: true, name: true, credits: true },
-    });
-    const componentItems = await loadComponentGradedItems(this.prisma, {
-      period: { programId: id },
     });
     return computeCreditsSummary(
       program.id,
       program.name,
       program.gradeScale,
-      [...tasks, ...componentItems],
+      items,
       areas,
       program.roundFinalGrade,
     );
@@ -164,26 +159,22 @@ export class ProgramsService {
    * program, never cross-program (comparing a secondary school grade to
    * a university GPA makes no sense, different scales/contexts).
    */
-  async getPeriodsComparison(userId: string, id: string) {
+  async getPeriodsComparison(
+    userId: string,
+    id: string,
+    scenario: GradeScenario = 'real',
+  ) {
     const program = await this.findOwnedOrThrow(userId, id);
     const periods = await this.prisma.academicPeriod.findMany({
       where: { programId: id },
       orderBy: { startDate: 'asc' },
-      include: {
-        tasks: {
-          where: { realGrade: { not: null } },
-          select: GRADED_TASK_SELECT,
-        },
-      },
     });
     const areas = await this.prisma.area.findMany({
       where: accessibleAreaWhere(userId),
       select: { id: true, credits: true },
     });
 
-    const componentItems = await loadComponentGradedItems(this.prisma, {
-      period: { programId: id },
-    });
+    const items = await this.programItems(id, scenario);
 
     return periods.map((period) => {
       const shouldRound = resolveRoundFinalGrade(
@@ -191,10 +182,7 @@ export class ProgramsService {
         period.roundFinalGrade,
       );
       const result = computeCreditWeightedAverage(
-        [
-          ...period.tasks,
-          ...componentItems.filter((item) => item.periodId === period.id),
-        ],
+        items.filter((item) => item.periodId === period.id),
         areas,
         shouldRound,
       );
@@ -206,5 +194,16 @@ export class ProgramsService {
         ...result,
       };
     });
+  }
+
+  // Tasks + componentes de todos os periodos deste programa (o chamador ja
+  // validou a posse com findOwnedOrThrow).
+  private programItems(programId: string, scenario: GradeScenario) {
+    return loadScenarioGradedItems(
+      this.prisma,
+      { period: { programId } },
+      { period: { programId } },
+      scenario,
+    );
   }
 }

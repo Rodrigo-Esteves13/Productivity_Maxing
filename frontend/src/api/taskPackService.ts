@@ -24,6 +24,7 @@ export interface TaskPackPreviewItem {
   dateCertainty: DateCertainty;
   /** Dia em que a task abre (ainda nao da para comecar); null = ja aberta. */
   availableFrom: string | null;
+  isBlocked: boolean;
   alreadyHave: boolean;
 }
 
@@ -74,6 +75,7 @@ export interface PackSharedFields {
   effort: Effort | null;
   dateCertainty: DateCertainty;
   availableFrom: string | null;
+  isBlocked: boolean;
 }
 
 export interface PackSyncResult {

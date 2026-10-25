@@ -17,7 +17,7 @@ import type { Task, AcademicTaskTypeOption } from '../../types/models';
 import type { TableDensity } from '../../hooks/useTableDensity';
 import type { TasksTableColumnId } from '../../lib/tasksTableColumns';
 import { useI18n } from '../../i18n/useI18n';
-import { formatTaskDate } from '../../lib/timeFormat';
+import { formatTaskDue } from '../../lib/taskReadiness';
 
 interface TaskTableRowProps {
   task: Task;
@@ -59,7 +59,7 @@ function TaskTableRow({
   const cellContent: Record<TasksTableColumnId, ReactNode> = {
     date: (
       <>
-        <div>{formatTaskDate(task.date, lang)}</div>
+        <div>{formatTaskDue(task, lang)}</div>
         {!isCompact && (
           <div className="mt-1 flex flex-col items-start gap-1">
             <span className="-ml-0.5">

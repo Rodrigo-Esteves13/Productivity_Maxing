@@ -19,6 +19,7 @@ export interface PackSharedFields {
   effort: Effort | null;
   dateCertainty: DateCertainty;
   availableFrom: string | null;
+  isBlocked: boolean;
 }
 
 export type PackChanges = Partial<PackSharedFields>;
@@ -46,6 +47,7 @@ const SHARED_KEYS: readonly (keyof PackSharedFields)[] = [
   'effort',
   'dateCertainty',
   'availableFrom',
+  'isBlocked',
 ];
 
 const iso = (d: Date | null): string | null => (d ? d.toISOString() : null);
@@ -56,6 +58,7 @@ interface SharedRow {
   effort: Effort | null;
   dateCertainty: DateCertainty;
   availableFrom: Date | null;
+  isBlocked: boolean;
 }
 
 const fromTask = (t: SharedRow & { date: Date }): PackSharedFields => ({
@@ -65,6 +68,7 @@ const fromTask = (t: SharedRow & { date: Date }): PackSharedFields => ({
   effort: t.effort,
   dateCertainty: t.dateCertainty,
   availableFrom: iso(t.availableFrom),
+  isBlocked: t.isBlocked,
 });
 
 const fromItem = (i: SharedRow & { dueDate: Date }): PackSharedFields =>
@@ -100,6 +104,7 @@ const SHARED_TASK_SELECT = {
   effort: true,
   dateCertainty: true,
   availableFrom: true,
+  isBlocked: true,
 } satisfies Prisma.TaskSelect;
 
 @Injectable()
@@ -117,6 +122,7 @@ export class TaskPackSyncService {
    * sem eles aceitarem.
    */
   async publish(ownerId: string, packId: string): Promise<PackSyncResult> {
+    await this.linkLegacyItems(ownerId, packId);
     const pack = await this.prisma.taskPack.findFirst({
       where: { id: packId, ownerId },
       select: {
@@ -136,6 +142,7 @@ export class TaskPackSyncService {
             effort: true,
             dateCertainty: true,
             availableFrom: true,
+            isBlocked: true,
             sourceTask: { select: SHARED_TASK_SELECT },
           },
         },
@@ -181,6 +188,7 @@ export class TaskPackSyncService {
             availableFrom: next.availableFrom
               ? new Date(next.availableFrom)
               : null,
+            isBlocked: next.isBlocked,
           },
         }),
       ];
@@ -237,6 +245,64 @@ export class TaskPackSyncService {
       );
     }
     return { updatedItems, proposalsCreated };
+  }
+
+  /**
+   * Pacotes criados antes de haver sync nao sabem de que task do dono veio
+   * cada item, nem que tasks dos colegas vieram dele. Liga-os uma vez, antes
+   * do primeiro "Publish updates":
+   * - origem: task do DONO com o mesmo titulo (e a mesma Area oficial, se o
+   *   item a tiver); varias candidatas -> a de data mais perto da do item.
+   * - importadas: tasks de outros com o mesmo titulo e EXATAMENTE a data do
+   *   item (o import copia-a ao milissegundo), ainda sem ligacao, e na mesma
+   *   Area oficial quando a ha. Cada uma so recebe um pedido para aprovar.
+   */
+  private async linkLegacyItems(ownerId: string, packId: string) {
+    const items = await this.prisma.taskPackItem.findMany({
+      where: { packId, pack: { ownerId }, sourceTaskId: null },
+      select: {
+        id: true,
+        title: true,
+        dueDate: true,
+        areaId: true,
+        version: true,
+      },
+    });
+    for (const item of items) {
+      const candidates = await this.prisma.task.findMany({
+        where: {
+          userId: ownerId,
+          title: item.title,
+          ...(item.areaId ? { areaId: item.areaId } : {}),
+        },
+        select: { id: true, date: true },
+      });
+      const distance = (d: Date) =>
+        Math.abs(d.getTime() - item.dueDate.getTime());
+      const source = candidates.sort(
+        (a, b) => distance(a.date) - distance(b.date),
+      )[0];
+      await this.prisma.$transaction([
+        ...(source
+          ? [
+              this.prisma.taskPackItem.update({
+                where: { id: item.id },
+                data: { sourceTaskId: source.id },
+              }),
+            ]
+          : []),
+        this.prisma.task.updateMany({
+          where: {
+            userId: { not: ownerId },
+            packItemId: null,
+            title: item.title,
+            date: item.dueDate,
+            ...(item.areaId ? { areaId: item.areaId } : {}),
+          },
+          data: { packItemId: item.id, packItemVersion: item.version },
+        }),
+      ]);
+    }
   }
 
   async listPending(userId: string): Promise<PackUpdateView[]> {

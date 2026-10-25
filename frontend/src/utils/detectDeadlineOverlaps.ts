@@ -1,5 +1,6 @@
 import type { Task } from '../types/models';
 import { getDateStatus } from './taskDateStatus';
+import { hasFirmDate } from '../lib/taskReadiness';
 
 export interface DeadlineOverlapGroup {
   // YYYY-MM-DD, taken from the ISO date shared by every task in the group.
@@ -27,6 +28,8 @@ function toDayKey(isoDate: string): string {
 export function detectDeadlineOverlaps(tasks: Task[]): DeadlineOverlapGroup[] {
   const candidates = tasks.filter((task) => {
     if (task.weightPercentage === null) return false;
+    // Data por marcar/surpresa e so um palpite: nao "choca" com nada.
+    if (!hasFirmDate(task)) return false;
     const status = getDateStatus(task);
     return status === 'today' || status === 'upcoming';
   });

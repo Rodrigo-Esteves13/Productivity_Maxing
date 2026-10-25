@@ -8,7 +8,7 @@ import SubtaskProgress from '../UI/SubtaskProgress';
 import { getDateStatus } from '../../utils/taskDateStatus';
 import { useEnumLabel } from '../../hooks/useEnumLabel';
 import { useI18n } from '../../i18n/useI18n';
-import { formatTaskDate } from '../../lib/timeFormat';
+import { formatTaskDue } from '../../lib/taskReadiness';
 
 interface TaskBoardCardProps {
   task: Task;
@@ -68,7 +68,7 @@ function TaskBoardCard({
           {task.area?.colorHex && <ColorDot color={task.area.colorHex} />}
           <span className="max-w-[9rem] truncate">{task.area?.name || t('ui.noArea2')}</span>
           <span className={isOverdue ? 'whitespace-nowrap font-medium text-red-400' : 'whitespace-nowrap'}>
-            {formatTaskDate(task.date, lang)}
+            {formatTaskDue(task, lang)}
           </span>
           {task.priority && (
             <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />

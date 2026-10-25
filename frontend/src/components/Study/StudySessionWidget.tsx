@@ -19,6 +19,7 @@ import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
 import { useI18n } from '../../i18n/useI18n';
 import Card from '../UI/Card';
+import { formatTaskDue, hasFirmDate } from '../../lib/taskReadiness';
 
 // Data curta para o rótulo da task no dropdown (ex: "20 Set") - timeZone
 // UTC de propósito: Task.date vem do backend como meia-noite UTC do dia
@@ -207,7 +208,7 @@ export default function StudySessionWidget() {
                   <optgroup key={label} label={label}>
                     {(tasksByArea.get(label) ?? []).map((task) => (
                       <option key={task.id} value={task.id}>
-                        {task.title} ({formatTaskDate(task.date)})
+                        {task.title} ({hasFirmDate(task) ? formatTaskDate(task.date) : formatTaskDue(task)})
                       </option>
                     ))}
                   </optgroup>

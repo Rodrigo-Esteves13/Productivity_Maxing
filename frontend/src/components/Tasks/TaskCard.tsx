@@ -14,7 +14,7 @@ import SwipeableRow from '../UI/SwipeableRow';
 import { recurrenceLabel } from '../../lib/recurrence';
 import { getDateStatus } from '../../utils/taskDateStatus';
 import { useI18n } from '../../i18n/useI18n';
-import { formatTaskDate } from '../../lib/timeFormat';
+import { formatTaskDue } from '../../lib/taskReadiness';
 
 interface TaskCardProps {
   task: Task;
@@ -145,7 +145,7 @@ function TaskCard({
           )}
           <span>•</span>
           <span className={status === 'overdue' ? 'text-red-400 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>
-            {formatTaskDate(task.date, lang)}
+            {formatTaskDue(task, lang)}
           </span>
         </div>
 

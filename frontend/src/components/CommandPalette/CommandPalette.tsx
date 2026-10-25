@@ -48,6 +48,12 @@ const NAV_COMMANDS: NavCommand[] = [
     path: '/dashboard?exam=on',
     keywords: ['exam', 'exams', 'exame', 'exames', 'tests', 'testes', 'countdown', 'semana de exames', 'focus'],
   },
+  {
+    id: 'nav-plan-mode',
+    labelKey: 'planMode.paletteLabel',
+    path: '/dashboard?plan=on',
+    keywords: ['plan', 'plano', 'what if', 'e se', 'target', 'alvo', 'projection', 'projecao', 'expected grade', 'nota esperada'],
+  },
   { id: 'nav-tasks', labelKey: 'nav.tasks', path: '/tasks' },
   {
     id: 'nav-task-templates',

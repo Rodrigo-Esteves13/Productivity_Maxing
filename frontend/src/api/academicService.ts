@@ -53,15 +53,19 @@ export const getProgramPeriods = async (programId: string): Promise<AcademicPeri
 };
 
 // Cumulative average of the WHOLE program (archived periods included).
-export const getProgramAverage = async (programId: string): Promise<ProgramAverage> => {
-  const response = await api.get<ProgramAverage>(`/programs/${programId}/average`);
+// 'plan' = modo plano do Dashboard (ver GradeScenario no backend).
+export type GradeScenario = 'real' | 'plan';
+const scenarioParams = (scenario: GradeScenario) => (scenario === 'plan' ? { params: { scenario } } : undefined);
+
+export const getProgramAverage = async (programId: string, scenario: GradeScenario = 'real'): Promise<ProgramAverage> => {
+  const response = await api.get<ProgramAverage>(`/programs/${programId}/average`, scenarioParams(scenario));
   return response.data;
 };
 
 // ECTS (or equivalent) credits accumulated so far in the WHOLE program
 // (archived periods included) - see CreditsSummary for the shape.
-export const getProgramCredits = async (programId: string): Promise<CreditsSummary> => {
-  const response = await api.get<CreditsSummary>(`/programs/${programId}/credits`);
+export const getProgramCredits = async (programId: string, scenario: GradeScenario = 'real'): Promise<CreditsSummary> => {
+  const response = await api.get<CreditsSummary>(`/programs/${programId}/credits`, scenarioParams(scenario));
   return response.data;
 };
 
@@ -69,9 +73,11 @@ export const getProgramCredits = async (programId: string): Promise<CreditsSumma
 // (never cross-program).
 export const getPeriodsComparison = async (
   programId: string,
+  scenario: GradeScenario = 'real',
 ): Promise<PeriodComparisonEntry[]> => {
   const response = await api.get<PeriodComparisonEntry[]>(
     `/programs/${programId}/periods-comparison`,
+    scenarioParams(scenario),
   );
   return response.data;
 };
@@ -112,8 +118,8 @@ export const archivePeriod = async (id: string, confirm = false): Promise<Academ
 };
 
 // Average of this period only.
-export const getPeriodAverage = async (periodId: string): Promise<PeriodAverage> => {
-  const response = await api.get<PeriodAverage>(`/periods/${periodId}/average`);
+export const getPeriodAverage = async (periodId: string, scenario: GradeScenario = 'real'): Promise<PeriodAverage> => {
+  const response = await api.get<PeriodAverage>(`/periods/${periodId}/average`, scenarioParams(scenario));
   return response.data;
 };
 

@@ -5,6 +5,9 @@ import { useDurationPrediction } from '../../hooks/useDurationPrediction';
 import TitleDateAreaFields from './fields/TitleDateAreaFields';
 import DifficultyTypeFields from './fields/DifficultyTypeFields';
 import ReadinessFields from './fields/ReadinessFields';
+import { hasFirmDate } from '../../lib/taskReadiness';
+import { useI18n } from '../../i18n/useI18n';
+import type { DateCertainty } from '../../types/models';
 import AcademicFields from './fields/AcademicFields';
 import GradingFields from './fields/GradingFields';
 import OptionalInfoFields from './fields/OptionalInfoFields';
@@ -95,6 +98,11 @@ export default function TaskFormFields({
       academicTaskTypes,
     });
 
+  const { t } = useI18n();
+  // Data por marcar/surpresa: o campo continua obrigatorio (o plano precisa
+  // de um limite), mas diz claramente que e so um palpite.
+  const dateIsGuess = !hasFirmDate({ dateCertainty: values.dateCertainty as DateCertainty });
+
   // null enquanto carrega - tratado como "não conectado" para o checkbox
   // não aparecer disponível antes de sabermos ao certo.
   const calendarConnected = useCalendarStatus() === true;
@@ -117,6 +125,7 @@ export default function TaskFormFields({
         date={values.date}
         areaId={values.areaId}
         areas={filteredAreas}
+        dateLabel={dateIsGuess ? t('readiness.dateGuess') : undefined}
         onTitleChange={(v) => onChange('title', v)}
         onDateChange={(v) => onChange('date', v)}
         onAreaChange={(areaId, defaultTaskType) => {

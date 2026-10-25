@@ -5,6 +5,7 @@ import { GraduationCapIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { useAreaLookup } from '../../hooks/useAreaLookup';
 import { useI18n } from '../../i18n/useI18n';
+import { hasFirmDate } from '../../lib/taskReadiness';
 
 interface ExamCountdownCardProps {
   tasks: Task[];
@@ -26,7 +27,7 @@ export default function ExamCountdownCard({ tasks, areas }: ExamCountdownCardPro
   const graded = tasks
     .filter((t) => t.progressStatus !== 'COMPLETED')
     .filter((t) => t.weightPercentage !== null && t.weightPercentage > 0)
-    .filter((t) => new Date(t.date).getTime() >= Date.now())
+    .filter((t) => hasFirmDate(t) && new Date(t.date).getTime() >= Date.now())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, MAX_SHOWN);
 

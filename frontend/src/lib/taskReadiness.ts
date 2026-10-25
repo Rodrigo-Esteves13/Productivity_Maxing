@@ -1,5 +1,7 @@
 import type { DateCertainty, Effort, Task } from '../types/models';
 import { toDateKey, todayKey } from './dateKey';
+import { formatTaskDate } from './timeFormat';
+import { translateNow } from '../i18n/translate';
 
 // Valores fixos dos enums Effort/DateCertainty do schema.prisma, na ordem em
 // que aparecem nos selects. Listas locais (em vez de virem de /tasks/meta
@@ -30,4 +32,22 @@ export function isLocked(task: Pick<Task, 'isBlocked' | 'availableFrom'>, now: D
 
 export function isNotableEffort(effort: Effort | null | undefined): effort is Effort {
   return !!effort && NOTABLE_EFFORTS.has(effort);
+}
+
+// Datas que nao se mostram: sao so um palpite (guardado para o plano).
+const HIDDEN_DATE_LABEL: Partial<Record<DateCertainty, string>> = {
+  UNKNOWN: 'readiness.badge.unknown',
+  SURPRISE: 'readiness.badge.surprise',
+};
+
+/**
+ * Texto do prazo de uma task em qualquer lista: a data normal, "~ data" se
+ * aproximada, e "Date TBD"/"Surprise" (sem data nenhuma) quando a data e so
+ * um palpite. Usar isto em vez de formatTaskDate(task.date) nas tasks.
+ */
+export function formatTaskDue(task: Pick<Task, 'date' | 'dateCertainty'>, lang?: string): string {
+  const hiddenKey = HIDDEN_DATE_LABEL[task.dateCertainty];
+  if (hiddenKey) return translateNow(hiddenKey);
+  const date = formatTaskDate(task.date, lang);
+  return task.dateCertainty === 'APPROXIMATE' ? `~ ${date}` : date;
 }
