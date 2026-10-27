@@ -10,6 +10,7 @@ import { TurmaNotesService } from './turma-notes.service';
 import { TurmaFilesService } from './turma-files.service';
 import { TurmaAnnouncementsService } from './turma-announcements.service';
 import { TurmaLinkedAreasService } from './turma-linked-areas.service';
+import { TurmaPacksService } from './turma-packs.service';
 
 @Module({
   imports: [PrismaModule, AuthModule, PushModule, NotebookModule],
@@ -21,6 +22,7 @@ import { TurmaLinkedAreasService } from './turma-linked-areas.service';
     TurmaFilesService,
     TurmaAnnouncementsService,
     TurmaLinkedAreasService,
+    TurmaPacksService,
   ],
 })
 export class TurmasModule {}

@@ -1500,6 +1500,18 @@ export interface TurmaFile {
   url: string | null;
 }
 
+// GET /classes/:id/packs: pacotes de tasks partilhados com a turma.
+export interface TurmaPack {
+  id: string;
+  packId: string;
+  name: string;
+  code: string;
+  itemCount: number;
+  ownerName: string | null;
+  sharedById: string;
+  createdAt: string;
+}
+
 export interface TurmaLinkedArea {
   id: string;
   userId: string;

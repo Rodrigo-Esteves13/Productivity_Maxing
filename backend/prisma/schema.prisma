@@ -400,6 +400,7 @@ model User {
   turmaFiles          TurmaFile[]
   turmaAnnouncements  TurmaAnnouncement[]
   turmaLinkedAreas    TurmaLinkedArea[]
+  turmaPacks          TurmaPack[]
   commitments      Commitment[]
   travelTimes      TravelTime[]
   calendarSyncedEvents CalendarSyncedEvent[]
@@ -1659,8 +1660,9 @@ model TaskPack {
   importCount Int      @default(0)
   createdAt   DateTime @default(now())
 
-  owner User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  items TaskPackItem[]
+  owner  User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items  TaskPackItem[]
+  turmas TurmaPack[]
 
   @@index([ownerId])
 }
@@ -1991,6 +1993,7 @@ model Turma {
   files         TurmaFile[]
   announcements TurmaAnnouncement[]
   linkedAreas   TurmaLinkedArea[]
+  packs         TurmaPack[]
 }
 
 model TurmaMember {
@@ -2066,6 +2069,24 @@ model TurmaAnnouncement {
 
 // Cadeira do caderno de um membro publicada na turma: os outros membros leem
 // as entradas dessa cadeira (menos as privadas, privateFromFriends).
+// Pacote de tasks que um membro (dono do pacote) partilhou com a turma. Os
+// outros membros veem-no na turma e importam pelo fluxo normal (/packs/:code).
+model TurmaPack {
+  id         String @id @default(uuid())
+  turmaId    String
+  packId     String
+  sharedById String
+
+  createdAt DateTime @default(now())
+
+  turma    Turma    @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  pack     TaskPack @relation(fields: [packId], references: [id], onDelete: Cascade)
+  sharedBy User     @relation(fields: [sharedById], references: [id], onDelete: Cascade)
+
+  @@unique([turmaId, packId])
+  @@index([turmaId])
+}
+
 model TurmaLinkedArea {
   id      String @id @default(uuid())
   turmaId String

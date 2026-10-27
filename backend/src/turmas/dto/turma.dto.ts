@@ -141,6 +141,12 @@ export class LinkAreaDto {
   areaId: string;
 }
 
+export class SharePackDto {
+  @ApiProperty({ description: 'One of YOUR task packs.' })
+  @IsUUID()
+  packId: string;
+}
+
 export class SearchTurmaNotesQueryDto {
   @ApiProperty({ example: 'resumo' })
   @Transform(trim)

@@ -13,6 +13,10 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Dashboard: a new Plan mode button shows every grade, average, credit count and chart as if you got your target grade in everything left. Parts without a target use the median of your grades. Nothing is saved, and the task table keeps your real grades.',
       'Tasks with a date that is not set yet or a surprise no longer show a date anywhere. They show "Date TBD" or "Surprise" instead, and they stay out of the calendar, deadline overlaps, the exam countdown and the busy-day hint.',
       'Task packs: "Cannot start yet" is now shared too, and packs created before the update can publish changes. The first publish links them to your tasks and to the copies your classmates imported.',
+      'Importing a task pack can now replace your current tasks in the same subjects and period. Graded and completed tasks are kept and linked to the pack, and you confirm before anything is deleted.',
+      'Classes have a new Task packs tab. Share one of your packs and classmates import it in one click. Members are notified.',
+      'Schedule week view: a test or deadline on the day of a class of the same subject now shows inside that class.',
+      'The Classes menu item and other class, wellbeing and pad labels are now translated.',
     ],
   },
   {

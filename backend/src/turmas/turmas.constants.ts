@@ -6,6 +6,7 @@ export const MAX_MEMBERS_PER_TURMA = 200;
 export const MAX_NOTES_PER_TURMA = 500;
 export const MAX_FILES_PER_TURMA = 300;
 export const MAX_LINKED_AREAS_PER_MEMBER = 20;
+export const MAX_PACKS_PER_TURMA = 50;
 
 export const TURMA_NOTE_TITLE_MAX_LENGTH = 200;
 export const TURMA_NOTE_MAX_CONTENT_LENGTH = 50_000;

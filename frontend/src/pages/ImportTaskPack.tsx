@@ -12,6 +12,8 @@ import { useI18n } from '../i18n/useI18n';
 import SelectionToolbar from '../components/UI/SelectionToolbar';
 import TaskReadinessBadges from '../components/UI/TaskReadinessBadges';
 import { formatTaskDue } from '../lib/taskReadiness';
+import ConfirmActionDialog from '../components/Turma/ConfirmActionDialog';
+import { useConfirmAction } from '../hooks/useConfirmAction';
 
 export default function ImportTaskPack() {
   const { t, lang } = useI18n();
@@ -19,8 +21,24 @@ export default function ImportTaskPack() {
   const { code } = useParams<{ code: string }>();
   const {
     state, preview, areas, selected, areaChoice, isImporting, result, importError, missingArea,
-    toggle, selectAll, selectNone, chooseArea, runImport,
+    replaceExisting, setReplaceExisting, toggle, selectAll, selectNone, chooseArea, runImport,
   } = useTaskPackImport(code);
+  const confirm = useConfirmAction(t('packs.import.error'));
+
+  // Substituir apaga tasks: pede sempre confirmacao antes.
+  const handleImport = () => {
+    if (!replaceExisting) {
+      void runImport();
+      return;
+    }
+    confirm.request({
+      title: t('packs.import.replaceConfirmTitle'),
+      message: t('packs.import.replaceConfirmBody'),
+      confirmLabel: t('packs.import.replaceConfirmButton'),
+      tone: 'danger',
+      run: runImport,
+    });
+  };
 
   const crumbs = (
     <Breadcrumbs
@@ -50,6 +68,11 @@ export default function ImportTaskPack() {
       <PageLayout>
         {crumbs}
         <PageHeader title={t('packs.import.doneTitle')} description={t('packs.import.doneSummary', { created: result.created, failed: result.failed })} />
+        {(result.replaced > 0 || result.kept > 0) && (
+          <p className="mb-4 text-sm text-neutral-400">
+            {t('packs.import.replacedSummary', { replaced: result.replaced, kept: result.kept })}
+          </p>
+        )}
         {errorById.size > 0 && (
           <ul className="mb-6 space-y-2 text-sm text-red-300">
             {preview.items.filter((i) => errorById.has(i.id)).map((i) => (
@@ -71,7 +94,7 @@ export default function ImportTaskPack() {
         title={preview.name}
         description={t('packs.import.from', { name: preview.ownerName })}
         action={
-          <ActionButton onClick={() => void runImport()} disabled={isImporting || selected.size === 0 || missingArea}>
+          <ActionButton onClick={handleImport} disabled={isImporting || selected.size === 0 || missingArea}>
             {isImporting ? t('packs.import.importing') : t('packs.import.submit', { count: selected.size })}
           </ActionButton>
         }
@@ -79,6 +102,22 @@ export default function ImportTaskPack() {
       <p className="mb-4 text-sm text-neutral-400">{t('packs.import.intro')}</p>
       {importError && <ErrorState message={t('packs.import.error')} />}
       {missingArea && <p className="mb-3 text-sm text-amber-300">{t('packs.import.pickSubject')}</p>}
+      <label
+        className={`mb-4 flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+          replaceExisting ? 'border-red-800 bg-red-950/30' : 'border-neutral-800 bg-neutral-900/30'
+        }`}
+      >
+        <input
+          type="checkbox"
+          className="mt-1 accent-violet-500"
+          checked={replaceExisting}
+          onChange={(e) => setReplaceExisting(e.target.checked)}
+        />
+        <span className="min-w-0">
+          <span className="block text-sm font-medium text-white">{t('packs.import.replaceLabel')}</span>
+          <span className="block text-xs text-neutral-400">{t('packs.import.replaceHint')}</span>
+        </span>
+      </label>
       <SelectionToolbar
         className="mb-3"
         selectedCount={selected.size}
@@ -126,6 +165,7 @@ export default function ImportTaskPack() {
           </li>
         ))}
       </ul>
+      <ConfirmActionDialog state={confirm} />
     </PageLayout>
   );
 }

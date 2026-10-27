@@ -9,6 +9,7 @@ import type {
   TurmaNote,
   TurmaNoteSearchResult,
   TurmaNoteSummary,
+  TurmaPack,
   TurmaSummary,
 } from '../types/models';
 
@@ -89,6 +90,17 @@ export const uploadTurmaFile = async (turmaId: string, file: File): Promise<void
 
 export const deleteTurmaFile = async (turmaId: string, fileId: string): Promise<void> => {
   await api.delete(`${base(turmaId)}/files/${encodeURIComponent(fileId)}`);
+};
+
+export const getTurmaPacks = async (turmaId: string): Promise<TurmaPack[]> =>
+  (await api.get<TurmaPack[]>(`${base(turmaId)}/packs`)).data;
+
+export const shareTurmaPack = async (turmaId: string, packId: string): Promise<void> => {
+  await api.post(`${base(turmaId)}/packs`, { packId });
+};
+
+export const unshareTurmaPack = async (turmaId: string, linkId: string): Promise<void> => {
+  await api.delete(`${base(turmaId)}/packs/${encodeURIComponent(linkId)}`);
 };
 
 export const getLinkedAreas = async (turmaId: string): Promise<TurmaLinkedArea[]> =>

@@ -28,6 +28,7 @@ import { TurmaNotesService } from './turma-notes.service';
 import { TurmaFilesService } from './turma-files.service';
 import { TurmaAnnouncementsService } from './turma-announcements.service';
 import { TurmaLinkedAreasService } from './turma-linked-areas.service';
+import { TurmaPacksService } from './turma-packs.service';
 import {
   CreateAnnouncementDto,
   CreateTurmaDto,
@@ -36,6 +37,7 @@ import {
   LinkAreaDto,
   SaveTurmaNoteDto,
   SearchTurmaNotesQueryDto,
+  SharePackDto,
   TransferDelegadoDto,
   UpdateTurmaDto,
 } from './dto/turma.dto';
@@ -67,6 +69,7 @@ export class TurmasController {
     private readonly files: TurmaFilesService,
     private readonly announcements: TurmaAnnouncementsService,
     private readonly linkedAreas: TurmaLinkedAreasService,
+    private readonly packs: TurmaPacksService,
   ) {}
 
   @Get()
@@ -323,6 +326,45 @@ export class TurmasController {
     @Param('fileId', ParseUUIDPipe) fileId: string,
   ) {
     return this.files.remove(user.id, id, fileId);
+  }
+
+  // Pacotes de tasks partilhados com a turma
+
+  @Get(':id/packs')
+  @ApiOperation({ summary: 'Task packs shared with the turma.' })
+  listPacks(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.packs.list(user.id, id);
+  }
+
+  @Post(':id/packs')
+  @Throttle(perMinute(TURMA_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary:
+      'Shares one of your task packs with the turma. Members import it like any pack link.',
+  })
+  sharePack(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SharePackDto,
+  ) {
+    return this.packs.share(user.id, id, dto.packId);
+  }
+
+  @Delete(':id/packs/:linkId')
+  @Throttle(perMinute(TURMA_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary:
+      'Removes a pack from the turma (who shared it or the delegado). The pack itself is kept.',
+  })
+  unsharePack(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('linkId', ParseUUIDPipe) linkId: string,
+  ) {
+    return this.packs.unshare(user.id, id, linkId);
   }
 
   // Cadeiras do caderno publicadas pelos membros

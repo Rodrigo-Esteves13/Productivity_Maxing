@@ -262,8 +262,11 @@ export class TurmasService {
     turmaId: string,
     userId: string,
   ): Promise<boolean> {
-    const [, removed] = await this.prisma.$transaction([
+    const [, , removed] = await this.prisma.$transaction([
       this.prisma.turmaLinkedArea.deleteMany({ where: { turmaId, userId } }),
+      this.prisma.turmaPack.deleteMany({
+        where: { turmaId, sharedById: userId },
+      }),
       this.prisma.turmaMember.deleteMany({ where: { turmaId, userId } }),
     ]);
     return removed.count > 0;

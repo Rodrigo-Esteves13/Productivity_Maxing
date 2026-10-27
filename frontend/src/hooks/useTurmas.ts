@@ -3,6 +3,7 @@ import {
   createTurma,
   getAnnouncements,
   getLinkedAreas,
+  getTurmaPacks,
   getMyTurmas,
   getTurma,
   getTurmaFiles,
@@ -64,6 +65,11 @@ export function useTurmaNotes(turmaId: string) {
 
 export function useTurmaFiles(turmaId: string) {
   const fetcher = useCallback(() => getTurmaFiles(turmaId), [turmaId]);
+  return useLoadOnce(fetcher);
+}
+
+export function useTurmaPacks(turmaId: string) {
+  const fetcher = useCallback(() => getTurmaPacks(turmaId), [turmaId]);
   return useLoadOnce(fetcher);
 }
 

@@ -317,6 +317,7 @@ export class UsersService {
       turmaFiles,
       turmaAnnouncements,
       turmaSharedSubjects,
+      turmaSharedPacks,
     ] = await Promise.all([
       // subtasks e anexos (so metadados, sem o caminho no bucket) vão
       // dentro de cada task no export.
@@ -427,6 +428,10 @@ export class UsersService {
         where: { userId: id },
         select: { turmaId: true, areaId: true, createdAt: true },
       }),
+      this.prisma.turmaPack.findMany({
+        where: { sharedById: id },
+        select: { turmaId: true, packId: true, createdAt: true },
+      }),
     ]);
 
     // Area é um catálogo global (ver AreasService.findAll), não tem
@@ -468,6 +473,7 @@ export class UsersService {
         files: turmaFiles,
         announcements: turmaAnnouncements,
         sharedSubjects: turmaSharedSubjects,
+        sharedPacks: turmaSharedPacks,
       },
       workShifts,
       commitments,

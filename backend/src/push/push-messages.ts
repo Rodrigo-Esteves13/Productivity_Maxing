@@ -30,6 +30,7 @@ export type PushMessageKey =
   | 'medicationDue'
   | 'medicationsDue'
   | 'turmaAnnouncement'
+  | 'turmaPackShared'
   | 'taskPackUpdated';
 
 interface Template {
@@ -108,6 +109,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '{name}',
       body: 'New announcement: {title}',
     },
+    turmaPackShared: {
+      title: '{name}',
+      body: 'New task pack: {title}',
+    },
     taskPackUpdated: {
       title: '{name}',
       body: 'A task pack you imported changed: {title}. Review the update.',
@@ -181,6 +186,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     turmaAnnouncement: {
       title: '{name}',
       body: 'New announcement: {title}',
+    },
+    turmaPackShared: {
+      title: '{name}',
+      body: 'Novo pacote de tasks: {title}',
     },
     taskPackUpdated: {
       title: '{name}',
@@ -256,6 +265,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '{name}',
       body: 'New announcement: {title}',
     },
+    turmaPackShared: {
+      title: '{name}',
+      body: 'Nuevo paquete de tareas: {title}',
+    },
     taskPackUpdated: {
       title: '{name}',
       body: 'Un paquete de tareas que importaste cambió: {title}. Revisa el cambio.',
@@ -313,6 +326,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     turmaAnnouncement: {
       title: '{name}',
       body: 'New announcement: {title}',
+    },
+    turmaPackShared: {
+      title: '{name}',
+      body: '新任务包：{title}',
     },
     taskPackUpdated: {
       title: '{name}',
@@ -388,6 +405,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '{name}',
       body: 'New announcement: {title}',
     },
+    turmaPackShared: {
+      title: '{name}',
+      body: '新しいタスクパック：{title}',
+    },
     taskPackUpdated: {
       title: '{name}',
       body: 'インポートしたタスクパックが変更されました：{title}。更新を確認してください。',
@@ -461,6 +482,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     turmaAnnouncement: {
       title: '{name}',
       body: 'New announcement: {title}',
+    },
+    turmaPackShared: {
+      title: '{name}',
+      body: '새 과제 팩: {title}',
     },
     taskPackUpdated: {
       title: '{name}',
@@ -540,6 +565,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '{name}',
       body: 'New announcement: {title}',
     },
+    turmaPackShared: {
+      title: '{name}',
+      body: 'Nouveau pack de tâches : {title}',
+    },
     taskPackUpdated: {
       title: '{name}',
       body: 'Un pack de tâches que tu as importé a changé : {title}. Examine la modification.',
@@ -613,6 +642,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     turmaAnnouncement: {
       title: '{name}',
       body: 'New announcement: {title}',
+    },
+    turmaPackShared: {
+      title: '{name}',
+      body: 'Neues Aufgabenpaket: {title}',
     },
     taskPackUpdated: {
       title: '{name}',
