@@ -134,8 +134,8 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '{name} invited you to {title}.',
     },
     selfReminder: {
-      title: "Reminder",
-      body: "{title}",
+      title: 'Reminder',
+      body: '{title}',
     },
   },
   pt: {
@@ -228,8 +228,8 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '{name} convidou-te para {title}.',
     },
     selfReminder: {
-      title: "Lembrete",
-      body: "{title}",
+      title: 'Lembrete',
+      body: '{title}',
     },
   },
   es: {
@@ -322,8 +322,8 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '{name} te invitó a {title}.',
     },
     selfReminder: {
-      title: "Recordatorio",
-      body: "{title}",
+      title: 'Recordatorio',
+      body: '{title}',
     },
   },
   zh: {
@@ -404,8 +404,8 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '“{title}”和另外 {count} 项即将截止。',
     },
     selfReminder: {
-      title: "提醒",
-      body: "{title}",
+      title: '提醒',
+      body: '{title}',
     },
   },
   ja: {
@@ -498,8 +498,8 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '「{title}」ほか {count} 件の締め切りが近づいています。',
     },
     selfReminder: {
-      title: "リマインダー",
-      body: "{title}",
+      title: 'リマインダー',
+      body: '{title}',
     },
   },
   ko: {
@@ -592,8 +592,8 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '"{title}" 외 {count}개의 마감이 곧이에요.',
     },
     selfReminder: {
-      title: "알림",
-      body: "{title}",
+      title: '알림',
+      body: '{title}',
     },
   },
   fr: {
@@ -686,8 +686,8 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: "{name} t'a invité dans {title}.",
     },
     selfReminder: {
-      title: "Rappel",
-      body: "{title}",
+      title: 'Rappel',
+      body: '{title}',
     },
   },
   de: {
@@ -780,8 +780,8 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       body: '{name} hat dich zu {title} eingeladen.',
     },
     selfReminder: {
-      title: "Erinnerung",
-      body: "{title}",
+      title: 'Erinnerung',
+      body: '{title}',
     },
   },
 };

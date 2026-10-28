@@ -40,9 +40,11 @@ describe('MedicationHistoryService', () => {
         findMany: jest.fn().mockResolvedValue([{ ...daily, name: 'A' }]),
       },
       medicationDose: {
-        findMany: jest.fn().mockResolvedValue([
-          { medicationId: 'm1', date: new Date('2026-10-11T00:00:00Z') },
-        ]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { medicationId: 'm1', date: new Date('2026-10-11T00:00:00Z') },
+          ]),
       },
       medicationIntake: { groupBy: jest.fn().mockResolvedValue([]) },
     };
@@ -65,7 +67,10 @@ describe('MedicationHistoryService', () => {
   it('adds up planned and taken doses for the owner only', async () => {
     const { service, prisma } = setup();
     const result = await service.get('me', '2026-10-10', '2026-10-11');
-    expect(prisma.medication.findMany.mock.calls[0][0].where).toEqual({
+    const [{ where }] = prisma.medication.findMany.mock.calls[0] as [
+      { where: unknown },
+    ];
+    expect(where).toEqual({
       userId: 'me',
     });
     expect(result.days).toEqual([
@@ -84,7 +89,11 @@ describe('MedicationHistoryService', () => {
       { medicationId: 'm1', date: day },
     ]);
     const result = await service.get('me', '2026-10-10', '2026-10-11');
-    expect(result.days[1]).toEqual({ date: '2026-10-11', scheduled: 2, taken: 2 });
+    expect(result.days[1]).toEqual({
+      date: '2026-10-11',
+      scheduled: 2,
+      taken: 2,
+    });
     expect(result.medications[0].taken).toBe(2);
   });
 });

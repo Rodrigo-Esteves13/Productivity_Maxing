@@ -37,7 +37,8 @@ describe('PasswordAuthService.resolveLoginEmail', () => {
     await expect(service.resolveLoginEmail('A047610')).resolves.toBe(
       'a047610@uni.pt',
     );
-    expect(prisma.user.findMany.mock.calls[0][0].where).toEqual({
+    const [args] = prisma.user.findMany.mock.calls[0] as [{ where: unknown }];
+    expect(args.where).toEqual({
       email: { startsWith: 'A047610@', mode: 'insensitive' },
     });
   });

@@ -23,7 +23,10 @@ async function isRetryable(res: Response): Promise<boolean> {
   if (res.status >= HTTP_SERVER_ERROR_MIN) return true;
   if (res.status !== HTTP_FORBIDDEN) return false;
   // clone(): quem chama ainda pode ler o corpo da resposta final.
-  const body = await res.clone().text().catch(() => '');
+  const body = await res
+    .clone()
+    .text()
+    .catch(() => '');
   return RATE_LIMIT_REASONS.some((reason) => body.includes(reason));
 }
 
@@ -38,7 +41,10 @@ export function retryDelayMs(
   }
   const exponential = GOOGLE_RETRY_BASE_MS * 2 ** attempt;
   // Jitter: pedidos em paralelo nao voltam a bater todos ao mesmo tempo.
-  return Math.min(exponential + random() * GOOGLE_RETRY_BASE_MS, GOOGLE_RETRY_MAX_MS);
+  return Math.min(
+    exponential + random() * GOOGLE_RETRY_BASE_MS,
+    GOOGLE_RETRY_MAX_MS,
+  );
 }
 
 export async function googleFetch(

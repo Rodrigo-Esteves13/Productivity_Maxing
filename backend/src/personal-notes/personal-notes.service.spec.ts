@@ -29,7 +29,10 @@ describe('PersonalNotesService', () => {
   it('every query is scoped to the owner', async () => {
     const { service, prisma } = setup();
     await service.update('me', 'n1', { title: 'x' });
-    expect(prisma.personalNote.updateMany.mock.calls[0][0].where).toEqual({
+    const [{ where }] = prisma.personalNote.updateMany.mock.calls[0] as [
+      { where: unknown },
+    ];
+    expect(where).toEqual({
       id: 'n1',
       userId: 'me',
     });
@@ -50,7 +53,9 @@ describe('PersonalNotesService', () => {
   it('a new reminder time clears remindedAt so it can fire again', async () => {
     const { service, prisma } = setup();
     await service.update('me', 'n1', { remindAt: '2026-11-01T10:00:00.000Z' });
-    const data = prisma.personalNote.updateMany.mock.calls[0][0].data;
+    const [{ data }] = prisma.personalNote.updateMany.mock.calls[0] as [
+      { data: Record<string, unknown> },
+    ];
     expect(data.remindAt).toEqual(new Date('2026-11-01T10:00:00.000Z'));
     expect(data.remindedAt).toBeNull();
   });

@@ -96,11 +96,10 @@ export class FeedbackController {
   @RequireApiKeyScope(ApiKeyScope.ADMIN)
   @Throttle(perMinute(30))
   @Post(':id/reply')
-  @ApiOperation({ summary: 'Replies to the author, optionally resolving (Admin)' })
-  reply(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: ReplyFeedbackDto,
-  ) {
+  @ApiOperation({
+    summary: 'Replies to the author, optionally resolving (Admin)',
+  })
+  reply(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ReplyFeedbackDto) {
     return this.feedback.reply(id, dto);
   }
 
@@ -109,7 +108,9 @@ export class FeedbackController {
   @RequireApiKeyScope(ApiKeyScope.ADMIN)
   @Throttle(perMinute(30))
   @Post(':id/reject')
-  @ApiOperation({ summary: 'Declines the feedback with an optional reason (Admin)' })
+  @ApiOperation({
+    summary: 'Declines the feedback with an optional reason (Admin)',
+  })
   reject(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RejectFeedbackDto,

@@ -45,7 +45,9 @@ describe('FeedbackService', () => {
   it('lists only the caller own feedback', async () => {
     const { service, prisma } = setup();
     await service.listMine(AUTHOR_ID);
-    const args = prisma.feedback.findMany.mock.calls[0][0];
+    const [args] = prisma.feedback.findMany.mock.calls[0] as [
+      { where: unknown; select: { user?: unknown } },
+    ];
     expect(args.where).toEqual({ userId: AUTHOR_ID });
     // Nunca expor dados do autor/moderador ao proprio.
     expect(args.select.user).toBeUndefined();
@@ -54,7 +56,9 @@ describe('FeedbackService', () => {
   it('reply stores the text, resolves when asked and notifies the author', async () => {
     const { service, prisma, push } = setup();
     await service.reply('f1', { message: '  Done!  ', resolve: true });
-    const data = prisma.feedback.update.mock.calls[0][0].data;
+    const [{ data }] = prisma.feedback.update.mock.calls[0] as [
+      { data: Record<string, unknown> },
+    ];
     expect(data.adminReply).toBe('Done!');
     expect(data.isResolved).toBe(true);
     expect(data.resolution).toBe('DONE');
@@ -68,7 +72,9 @@ describe('FeedbackService', () => {
   it('reject closes as REJECTED and keeps an empty reason out', async () => {
     const { service, prisma, push } = setup();
     await service.reject('f1', '   ');
-    const data = prisma.feedback.update.mock.calls[0][0].data;
+    const [{ data }] = prisma.feedback.update.mock.calls[0] as [
+      { data: Record<string, unknown> },
+    ];
     expect(data.resolution).toBe('REJECTED');
     expect(data.isResolved).toBe(true);
     expect(data.adminReply).toBeUndefined();

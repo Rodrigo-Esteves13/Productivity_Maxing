@@ -30,7 +30,9 @@ describe('googleFetch', () => {
 
   it('retries a 403 only when it is a rate limit', async () => {
     fetchMock
-      .mockResolvedValueOnce(response(403, '{"reason":"userRateLimitExceeded"}'))
+      .mockResolvedValueOnce(
+        response(403, '{"reason":"userRateLimitExceeded"}'),
+      )
       .mockResolvedValueOnce(response(403, '{"reason":"forbidden"}'));
     const res = await googleFetch('https://x', {}, sleep);
     expect(res.status).toBe(403);
