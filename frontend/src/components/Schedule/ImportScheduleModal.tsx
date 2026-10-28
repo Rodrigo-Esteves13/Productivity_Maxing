@@ -1,4 +1,5 @@
 import { useRef, useState, type ChangeEvent } from 'react';
+import { Link } from 'react-router-dom';
 import Modal from '../UI/Modal';
 import { useScheduleImport } from '../../hooks/useScheduleImport';
 import { CheckIcon, AlertTriangleIcon, TrashIcon } from '../UI/Icons';
@@ -93,6 +94,13 @@ export default function ImportScheduleModal({
           </p>
           <p>
             {t('ui.theExportOnlyCoversA')}
+          </p>
+          {/* Sem .ics: um colega da turma pode partilhar o horario. */}
+          <p>
+            {t('schedule.import.noFile')}{' '}
+            <Link to="/classes" onClick={handleClose} className="text-violet-400 hover:text-violet-300">
+              {t('schedule.import.fromClass')}
+            </Link>
           </p>
         </div>
 

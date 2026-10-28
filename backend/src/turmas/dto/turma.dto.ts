@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
+  IsEmail,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -11,6 +12,7 @@ import {
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { NormalizeEmail } from '../../auth/email.util';
 import {
   ANNOUNCEMENT_BODY_MAX_LENGTH,
   ANNOUNCEMENT_TITLE_MAX_LENGTH,
@@ -76,6 +78,20 @@ export class JoinTurmaDto {
   code: string;
 }
 
+// Convite direto: um amigo por id; um admin pode usar o email de qualquer conta.
+export class InviteToTurmaDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  userId?: string;
+
+  @ApiPropertyOptional({ example: 'colega@example.com' })
+  @IsOptional()
+  @NormalizeEmail()
+  @IsEmail()
+  email?: string;
+}
+
 export class TransferDelegadoDto {
   @ApiProperty({ description: 'Member who becomes the new delegado.' })
   @IsUUID()
@@ -133,6 +149,26 @@ export class SaveTurmaNoteDto {
   @IsInt()
   @Min(1)
   baseVersion: number;
+}
+
+export class ShareProgramDto {
+  @ApiProperty({ description: 'One of your programs (Grades).' })
+  @IsUUID()
+  programId: string;
+}
+
+export class ShareTurmaScheduleDto {
+  @ApiProperty({ description: 'Share your class timetable with this class.' })
+  @IsBoolean()
+  share: boolean;
+}
+
+export class CopyTurmaSubjectDto {
+  @ApiProperty({ example: 'Computacao Movel' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  subject: string;
 }
 
 export class LinkAreaDto {

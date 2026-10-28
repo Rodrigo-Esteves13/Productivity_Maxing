@@ -4,6 +4,7 @@ import {
   createNotebookEntry,
   deleteNotebookEntry,
   getNotebookEntry,
+  getNotebookEntryMediaIds,
   getNotebookEntrySummaries,
   updateNotebookEntry,
 } from '../api/notebookService';
@@ -25,6 +26,12 @@ const ENTRY_CACHE_MS = 10 * 60 * 1000;
 // antes disso, ao voltar ao separador ou numa verificacao periodica.
 const SIGNED_URL_REFRESH_MS = 50 * 60 * 1000;
 const SIGNED_URL_CHECK_MS = 60 * 1000;
+
+// Uma foto ou anexo carregado noutro dispositivo (ou noutra tab) aparece
+// sozinho na entrada aberta: pergunta-se so pelos ids de tempos a tempos.
+const MEDIA_SYNC_MS = 15 * 1000;
+
+const sameIds = (a: string[], b: string[]) => a.length === b.length && a.every((id, i) => id === b[i]);
 
 // Resultados de pesquisa e links trazem a entrada completa; a lista so o resumo.
 function isFullEntry(entry: NotebookEntry | NotebookEntrySummary): entry is NotebookEntry {
@@ -246,6 +253,30 @@ export function useNotebookEntries(areaId: string | null): UseNotebookEntriesRes
     return () => {
       window.clearInterval(interval);
       document.removeEventListener('visibilitychange', check);
+    };
+  }, [selectedId, refreshSignedUrls]);
+
+  useEffect(() => {
+    if (!selectedId) return undefined;
+    const sync = () => {
+      if (document.visibilityState !== 'visible') return;
+      getNotebookEntryMediaIds(selectedId)
+        .then(({ photoIds, attachmentIds }) => {
+          const latest = cacheRef.current.get(selectedId)?.entry;
+          if (!latest) return;
+          const changed =
+            !sameIds(photoIds, latest.photos.map((p) => p.id)) ||
+            !sameIds(attachmentIds, latest.attachments.map((a) => a.id));
+          if (changed) refreshSignedUrls(selectedId);
+        })
+        // Sem rede: tenta outra vez no proximo intervalo.
+        .catch(() => undefined);
+    };
+    const interval = window.setInterval(sync, MEDIA_SYNC_MS);
+    document.addEventListener('visibilitychange', sync);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', sync);
     };
   }, [selectedId, refreshSignedUrls]);
 

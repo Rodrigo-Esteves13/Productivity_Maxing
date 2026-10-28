@@ -32,6 +32,8 @@ import { AreaInterestsModule } from './area-interests/area-interests.module';
 import { BannedIpsModule } from './banned-ips/banned-ips.module';
 import { AppealsModule } from './appeals/appeals.module';
 import { WellbeingModule } from './wellbeing/wellbeing.module';
+import { PersonalNotesModule } from './personal-notes/personal-notes.module';
+import { FinanceModule } from './finance/finance.module';
 import { PadsModule } from './pads/pads.module';
 import { TurmasModule } from './turmas/turmas.module';
 import { BannedIpGuard } from './common/guards/banned-ip.guard';
@@ -84,6 +86,8 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     WellbeingModule,
     PadsModule,
     TurmasModule,
+    PersonalNotesModule,
+    FinanceModule,
   ],
   controllers: [AppController],
   providers: [

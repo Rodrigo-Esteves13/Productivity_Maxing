@@ -17,6 +17,9 @@ export interface UseCanvasLinksResult {
   removeLink: (id: string) => void;
   /** Drops every link touching a shape that's about to be deleted. */
   removeLinksForShape: (shapeId: string) => void;
+  addLinks: (links: CanvasLink[]) => void;
+  /** Drops every link touching any of these shapes. */
+  removeLinksForShapes: (shapeIds: string[]) => void;
 }
 
 /**
@@ -79,6 +82,15 @@ export function useCanvasLinks(initialLinks: CanvasLink[] = []): UseCanvasLinksR
     setLinks((prev) => prev.filter((link) => link.fromShapeId !== shapeId && link.toShapeId !== shapeId));
   }, []);
 
+  const addLinks = useCallback((added: CanvasLink[]) => {
+    setLinks((prev) => [...prev, ...added]);
+  }, []);
+
+  const removeLinksForShapes = useCallback((shapeIds: string[]) => {
+    const drop = new Set(shapeIds);
+    setLinks((prev) => prev.filter((link) => !drop.has(link.fromShapeId) && !drop.has(link.toShapeId)));
+  }, []);
+
   return {
     links,
     connectMode,
@@ -91,5 +103,7 @@ export function useCanvasLinks(initialLinks: CanvasLink[] = []): UseCanvasLinksR
     relabelLink,
     removeLink,
     removeLinksForShape,
+    addLinks,
+    removeLinksForShapes,
   };
 }

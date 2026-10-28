@@ -311,6 +311,12 @@ export class UsersService {
       moodLogs,
       medications,
       medicationIntakes,
+      bloodDonations,
+      personalNotes,
+      financeSettings,
+      financeEntries,
+      financeGoals,
+      turmaInvites,
       pads,
       turmaMemberships,
       turmaNotes,
@@ -378,6 +384,20 @@ export class UsersService {
       }),
       // Tomas "se necessario" e registos de alcool.
       this.prisma.medicationIntake.findMany({ where: { userId: id } }),
+      this.prisma.bloodDonation.findMany({ where: { userId: id } }),
+      this.prisma.personalNote.findMany({ where: { userId: id } }),
+      this.prisma.financeSettings.findUnique({ where: { userId: id } }),
+      this.prisma.financeEntry.findMany({ where: { userId: id } }),
+      this.prisma.financeGoal.findMany({ where: { userId: id } }),
+      // Convites diretos pendentes que recebeu (turma e quem convidou).
+      this.prisma.turmaInvite.findMany({
+        where: { userId: id },
+        select: {
+          createdAt: true,
+          turma: { select: { id: true, name: true } },
+          invitedBy: { select: { name: true } },
+        },
+      }),
       // Pads e turmas: o que esta pessoa escreveu ou enviou. Pads so os que
       // gravou por ultimo (um pad nao tem dono; o texto e de quem o escreve).
       this.prisma.pad.findMany({
@@ -466,6 +486,14 @@ export class UsersService {
       moodLogs,
       medications,
       medicationIntakes,
+      bloodDonations,
+      personalNotes,
+      finance: {
+        settings: financeSettings,
+        entries: financeEntries,
+        goals: financeGoals,
+      },
+      turmaInvites,
       pads,
       turmas: {
         memberships: turmaMemberships,

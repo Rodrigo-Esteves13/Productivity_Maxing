@@ -8,7 +8,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { fillNodes } from '../../i18n/fillNodes';
 
 interface UserStatusModalProps {
-  target: User;
+  target: Pick<User, 'name' | 'email'>;
   mode: 'ban' | 'suspend';
   isSubmitting: boolean;
   onSubmit: (payload: { reason: string; until?: string }) => Promise<void> | void;

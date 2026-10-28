@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
+import RelatedLinks from '../components/Layout/RelatedLinks';
 import ActionButton from '../components/UI/ActionButton';
 import SegmentedControl, { type SegmentedOption } from '../components/UI/SegmentedControl';
 import WeekGrid from '../components/Schedule/WeekGrid';
@@ -96,6 +97,12 @@ export default function Schedule() {
             {t('ui.importIcs')}
           </ActionButton>
         }
+      />
+      <RelatedLinks
+        links={[
+          { to: '/classes', labelKey: 'related.schedule.classes' },
+          { to: '/notebook', labelKey: 'related.schedule.notebook' },
+        ]}
       />
 
       {/* A semana ocupa a largura toda: dentro de 2/3 da pagina cada dia

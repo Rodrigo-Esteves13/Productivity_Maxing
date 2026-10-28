@@ -11,7 +11,14 @@ import CanvasShapesToolbar from './canvas/CanvasShapesToolbar';
 import CanvasStrokesLayer from './canvas/CanvasStrokesLayer';
 import CanvasLinksLayer from './canvas/CanvasLinksLayer';
 import TextEditOverlay from './canvas/TextEditOverlay';
-import { CANVAS_PAPER_COLOR, DEFAULT_VIEW_HEIGHT, MAX_VIEW_HEIGHT, VIEW_WIDTH } from './canvas/canvasConstants';
+import CanvasSelectionBar from './canvas/CanvasSelectionBar';
+import {
+  CANVAS_PAPER_COLOR,
+  DEFAULT_VIEW_HEIGHT,
+  MAX_VIEW_HEIGHT,
+  SELECTION_STROKE_COLOR,
+  VIEW_WIDTH,
+} from './canvas/canvasConstants';
 import type { DrawTool } from './canvas/canvasConstants';
 import { useI18n } from '../../i18n/useI18n';
 
@@ -33,10 +40,14 @@ interface NotebookCanvasProps {
   onGrowCanvas?: () => void;
 }
 
+// Folga entre o que esta seleccionado e o contorno desenhado a volta.
+const SELECTION_PADDING = 6;
+
 function cursorClassFor(tool: DrawTool, readOnly: boolean): string {
   if (readOnly) return '';
   if (tool === 'eraser') return 'touch-none cursor-cell';
   if (tool === 'text') return 'touch-none cursor-text';
+  if (tool === 'select') return 'touch-none cursor-default';
   return 'touch-none cursor-crosshair';
 }
 
@@ -53,8 +64,8 @@ export default function NotebookCanvas({
   const viewHeight = canvasHeight ?? DEFAULT_VIEW_HEIGHT;
   const [tool, setTool] = useState<DrawTool>('pen');
 
-  const { svgRef, toSvgPoint, selectedShape, selectedLink, selectedText, deleteSelectedShape, svgHandlers } =
-    useCanvasInteraction({ canvas, shapes, links, texts, tool, readOnly, viewHeight });
+  const { svgRef, toSvgPoint, selectedShape, selectedLink, selectedText, deleteSelectedShape, selection, svgHandlers } =
+    useCanvasInteraction({ canvas, shapes, links, texts, tool, onToolChange: setTool, readOnly, viewHeight });
 
   const shapesById = new Map(shapes.shapes.map((shape) => [shape.id, shape]));
   const editingText = texts.texts.find((item) => item.id === texts.editingId) ?? null;
@@ -63,7 +74,13 @@ export default function NotebookCanvas({
     <div className="space-y-2">
       {!readOnly && (
         <>
-          <CanvasDrawToolbar canvas={canvas} texts={texts} selectedText={selectedText} tool={tool} onToolChange={setTool} />
+          <CanvasDrawToolbar
+            canvas={canvas}
+            texts={texts}
+            selectedText={selectedText}
+            tool={tool}
+            onToolChange={setTool}
+          />
           <CanvasShapesToolbar
             shapes={shapes}
             links={links}
@@ -123,7 +140,36 @@ export default function NotebookCanvas({
               onStartEdit={() => texts.startEditing(item.id)}
             />
           ))}
+
+          {/* Selecao por caixa: a caixa a ser arrastada e o contorno do
+              que ficou seleccionado. Nao recebem cliques. */}
+          {selection.marquee && (
+            <rect
+              {...selection.marquee}
+              fill={SELECTION_STROKE_COLOR}
+              fillOpacity={0.08}
+              stroke={SELECTION_STROKE_COLOR}
+              strokeDasharray="4 3"
+              pointerEvents="none"
+            />
+          )}
+          {selection.bounds && !selection.marquee && (
+            <rect
+              x={selection.bounds.x - SELECTION_PADDING}
+              y={selection.bounds.y - SELECTION_PADDING}
+              width={selection.bounds.width + SELECTION_PADDING * 2}
+              height={selection.bounds.height + SELECTION_PADDING * 2}
+              fill="none"
+              stroke={SELECTION_STROKE_COLOR}
+              strokeDasharray="6 4"
+              pointerEvents="none"
+            />
+          )}
         </svg>
+
+        {!readOnly && (tool === 'select' || selection.hasSelection) && (
+          <CanvasSelectionBar selection={selection} onPasted={() => setTool('select')} />
+        )}
 
         {editingText && (
           <TextEditOverlay

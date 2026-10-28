@@ -89,6 +89,17 @@ export class NotebookController {
     return this.notebookService.listSummariesForArea(user.id, areaId);
   }
 
+  // Barato (sem URLs assinados): o editor aberto noutro dispositivo/tab
+  // pergunta isto de tempos a tempos e so busca a entrada inteira quando
+  // apareceu ou desapareceu uma foto ou anexo.
+  @Get('entries/:id/media-ids')
+  mediaIds(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.notebookService.mediaIds(user.id, id);
+  }
+
   @Get('entries/:id')
   findOne(
     @CurrentUser() user: AuthenticatedUser,

@@ -71,6 +71,12 @@ export const getNotebookEntriesFull = async (areaId: string): Promise<NotebookEn
   return response.data;
 };
 
+// Ids das fotos e anexos de uma entrada (barato, sem URLs assinados).
+export const getNotebookEntryMediaIds = async (
+  id: string,
+): Promise<{ photoIds: string[]; attachmentIds: string[] }> =>
+  (await api.get<{ photoIds: string[]; attachmentIds: string[] }>(`/notebook/entries/${id}/media-ids`)).data;
+
 export const getNotebookEntry = async (id: string): Promise<NotebookEntry> => {
   const response = await api.get<NotebookEntry>(`/notebook/entries/${id}`);
   return response.data;

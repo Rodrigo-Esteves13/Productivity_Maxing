@@ -3,7 +3,9 @@ name: "Cron: lembretes e limpeza"
 # Chama POST /internal/reminders/run de 15 em 15 minutos: lembretes de
 # prazos e de medicacao, e a limpeza dos pads expirados (ver
 # backend/src/reminders). So corre a partir do branch por omissao (main).
-# O GitHub pode atrasar execucoes agendadas alguns minutos em horas de pico.
+# O GitHub nao cumpre este horario: na pratica corre de 4 em 4 a 6 em 6
+# horas. O chamador principal e um cron externo (ver
+# docs/adr/0006-external-cron-for-reminders.md); este fica como reserva.
 on:
   schedule:
     - cron: "*/15 * * * *"

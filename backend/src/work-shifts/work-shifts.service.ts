@@ -36,6 +36,7 @@ export const SHIFT_SELECT = {
       name: true,
       commuteMinutes: true,
       daysOff: true,
+      endsOn: true,
       address: true,
       commuteMode: true,
     },
@@ -311,7 +312,9 @@ export class WorkShiftsService {
         const matchesRecurring =
           row.dayOfWeek === weekday &&
           (row.startsOn === null || row.startsOn <= day) &&
-          !isDayOff(row.commitment?.daysOff, weekday);
+          !isDayOff(row.commitment?.daysOff, weekday) &&
+          // Depois do ultimo dia do contrato o turno semanal acaba.
+          !(row.commitment?.endsOn && row.commitment.endsOn < day);
         const matchesOneOff = row.date !== null && toDateKey(row.date) === key;
         if (!matchesRecurring && !matchesOneOff) continue;
 

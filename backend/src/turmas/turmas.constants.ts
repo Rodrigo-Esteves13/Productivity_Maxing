@@ -29,3 +29,6 @@ export const TURMA_NOTE_SAVES_PER_MINUTE = 120;
 export const TURMA_UPLOADS_PER_MINUTE = 20;
 
 export const turmaPath = (turmaId: string) => `/classes/${turmaId}`;
+export const TURMAS_PATH = '/classes';
+// Convites diretos pendentes por pessoa (evita spam de convites).
+export const MAX_PENDING_INVITES_PER_USER = 50;

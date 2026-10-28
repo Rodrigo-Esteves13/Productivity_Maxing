@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { socialTabPath } from '../lib/appLinks';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
+import RelatedLinks from '../components/Layout/RelatedLinks';
 import Button from '../components/UI/Button';
 import EmptyState from '../components/UI/EmptyState';
 import { useI18n } from '../i18n/useI18n';
@@ -330,6 +331,13 @@ export default function Notebook() {
   return (
     <PageLayout>
       <PageHeader title={t('notebook.title')} description={t('notebook.description')} />
+      <RelatedLinks
+        links={[
+          { to: '/schedule', labelKey: 'related.notebook.schedule' },
+          { to: '/classes', labelKey: 'related.notebook.classes' },
+          { to: socialTabPath('friends'), labelKey: 'related.notebook.social' },
+        ]}
+      />
 
       <NotebookSharedPanel />
 

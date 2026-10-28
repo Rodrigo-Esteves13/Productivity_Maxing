@@ -8,7 +8,7 @@ import ErrorState from '../UI/ErrorState';
 import LinesSkeleton from '../UI/LinesSkeleton';
 import IconButton from '../UI/IconButton';
 import ColorDot from '../UI/ColorDot';
-import { XIcon } from '../UI/Icons';
+import { ChevronDownIcon, XIcon } from '../UI/Icons';
 import ConfirmActionDialog from './ConfirmActionDialog';
 import { getLinkedEntries, linkArea, unlinkArea } from '../../api/turmasService';
 import { useTurmaAction, useTurmaLinkedAreas } from '../../hooks/useTurmas';
@@ -37,7 +37,11 @@ export default function TurmaSubjectsTab({ turmaId, isDelegado }: TurmaSubjectsT
 
   return (
     <div className="space-y-4">
-      <ShareSubjectForm turmaId={turmaId} onShared={reload} />
+      <ShareSubjectForm
+        turmaId={turmaId}
+        sharedAreaIds={(data ?? []).filter((link) => link.userId === user?.id).map((link) => link.areaId)}
+        onShared={reload}
+      />
       {isLoading ? (
         <LinesSkeleton lines={4} />
       ) : error ? (
@@ -73,11 +77,42 @@ export default function TurmaSubjectsTab({ turmaId, isDelegado }: TurmaSubjectsT
   );
 }
 
-function ShareSubjectForm({ turmaId, onShared }: { turmaId: string; onShared: () => void }) {
+interface ShareSubjectFormProps {
+  turmaId: string;
+  /** Cadeiras minhas que ja estao partilhadas nesta turma. */
+  sharedAreaIds: string[];
+  onShared: () => void;
+}
+
+// Partilhar tudo de uma vez e o caminho principal (as entradas privadas
+// ficam sempre escondidas); escolher uma a uma fica como alternativa.
+function ShareSubjectForm({ turmaId, sharedAreaIds, onShared }: ShareSubjectFormProps) {
   const { t } = useI18n();
   const { areas } = useNotebookAreas();
   const [areaId, setAreaId] = useState('');
   const share = useTurmaAction(linkArea, t('turma.actionError'));
+  const [isSharingAll, setIsSharingAll] = useState(false);
+  const notShared = areas.filter((area) => !sharedAreaIds.includes(area.id));
+
+  const shareAll = async () => {
+    setIsSharingAll(true);
+    for (const area of notShared) {
+      if ((await share.execute(turmaId, area.id)) === null) break;
+    }
+    setIsSharingAll(false);
+    onShared();
+  };
+
+  if (areas.length === 0) {
+    return (
+      <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-4 text-sm">
+        <p className="text-neutral-200">{t('turma.subjects.noAreas')}</p>
+        <Link to="/notebook" className="mt-2 inline-block font-medium text-violet-400 hover:text-violet-300">
+          {t('turma.subjects.createArea')}
+        </Link>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -87,19 +122,27 @@ function ShareSubjectForm({ turmaId, onShared }: { turmaId: string; onShared: ()
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 rounded-xl border border-neutral-800 bg-neutral-900/30 p-4">
+    <form onSubmit={handleSubmit} className="space-y-3 rounded-xl border border-violet-500/30 bg-violet-500/5 p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="button" onClick={() => void shareAll()} disabled={notShared.length === 0 || isSharingAll}>
+          {notShared.length === 0
+            ? t('turma.subjects.allShared')
+            : t('turma.subjects.shareAll', { count: notShared.length })}
+        </Button>
+        <p className="text-xs text-neutral-400">{t('turma.subjects.shareAllHint')}</p>
+      </div>
       <div className="flex flex-wrap items-end gap-2">
         <div className="min-w-[12rem] flex-1">
           <Select label={t('turma.subjects.shareLabel')} value={areaId} onChange={(e) => setAreaId(e.target.value)}>
             <option value="">{t('turma.subjects.pick')}</option>
-            {areas.map((area) => (
+            {notShared.map((area) => (
               <option key={area.id} value={area.id}>
                 {area.name}
               </option>
             ))}
           </Select>
         </div>
-        <Button type="submit" disabled={!areaId || share.isBusy}>
+        <Button type="submit" variant="secondary" disabled={!areaId || share.isBusy}>
           {t('turma.subjects.share')}
         </Button>
       </div>
@@ -133,6 +176,10 @@ function LinkedSubject({ turmaId, link, canUnlink, onUnlink }: LinkedSubjectProp
           <span className="min-w-0 truncate text-sm font-medium text-white">{link.areaName}</span>
           <span className="shrink-0 text-xs text-neutral-500">
             {link.ownerName ?? t('social.anonymous')} · {t('turma.subjects.entryCount', { count: link.entryCount })}
+          </span>
+          <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border border-violet-500/40 px-2.5 py-0.5 text-xs font-medium text-violet-300">
+            {isOpen ? t('turma.subjects.hideNotes') : t('turma.subjects.viewNotes')}
+            <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </span>
         </button>
         {canUnlink && (

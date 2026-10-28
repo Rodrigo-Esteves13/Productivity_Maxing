@@ -2,6 +2,7 @@ export const auth: Record<string, string> = {
   'auth.loginTitle': "계정에 로그인",
   'auth.registerTitle': "계정 만들기",
   'auth.email': "이메일",
+  'auth.emailOrHandle': "이메일 또는 사용자 이름(@ 앞부분)",
   'auth.password': "비밀번호",
   'auth.name': "이름",
   'auth.namePlaceholder': "이름을 입력하세요",

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import Button from '../UI/Button';
 import Input from '../UI/Input';
 import Textarea from '../UI/Textarea';
@@ -14,6 +14,7 @@ import { useTurmaAction, useTurmaAnnouncements } from '../../hooks/useTurmas';
 import { useConfirmAction } from '../../hooks/useConfirmAction';
 import { useI18n } from '../../i18n/useI18n';
 import { formatDateTime } from '../../lib/timeFormat';
+import { markAnnouncementsSeen } from '../../lib/turmaSeen';
 import { ANNOUNCEMENT_BODY_MAX_LENGTH, ANNOUNCEMENT_TITLE_MAX_LENGTH } from './turmaConfig';
 
 interface TurmaTabProps {
@@ -26,6 +27,11 @@ export default function TurmaAnnouncementsTab({ turmaId, isDelegado }: TurmaTabP
   const { t } = useI18n();
   const { data, isLoading, error, reload } = useTurmaAnnouncements(turmaId);
   const confirm = useConfirmAction(t('turma.actionError'));
+
+  // Abrir os avisos conta como "visto" (tira o "novo aviso" da lista).
+  useEffect(() => {
+    if (data) markAnnouncementsSeen(turmaId);
+  }, [data, turmaId]);
 
   return (
     <div className="space-y-4">

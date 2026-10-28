@@ -18,6 +18,9 @@ export interface UseCanvasTextsResult {
   /** Closes editing; an item left empty (nothing typed) is dropped instead of saved. */
   stopEditing: () => void;
   removeText: (id: string) => void;
+  addTexts: (texts: CanvasTextItem[]) => void;
+  removeTexts: (ids: string[]) => void;
+  translateTexts: (ids: string[], dx: number, dy: number) => void;
 }
 
 export const DEFAULT_TEXT_FONT_SIZE = 14;
@@ -94,6 +97,21 @@ export function useCanvasTexts(initialTexts: CanvasTextItem[] = []): UseCanvasTe
     setEditingId((current) => (current === id ? null : current));
   }, []);
 
+  const addTexts = useCallback((added: CanvasTextItem[]) => {
+    setTexts((prev) => [...prev, ...added]);
+  }, []);
+
+  const removeTexts = useCallback((ids: string[]) => {
+    const drop = new Set(ids);
+    setTexts((prev) => prev.filter((item) => !drop.has(item.id)));
+    setSelectedId((current) => (current && drop.has(current) ? null : current));
+  }, []);
+
+  const translateTexts = useCallback((ids: string[], dx: number, dy: number) => {
+    const move = new Set(ids);
+    setTexts((prev) => prev.map((item) => (move.has(item.id) ? { ...item, x: item.x + dx, y: item.y + dy } : item)));
+  }, []);
+
   return {
     texts,
     selectedId,
@@ -107,5 +125,8 @@ export function useCanvasTexts(initialTexts: CanvasTextItem[] = []): UseCanvasTe
     startEditing,
     stopEditing,
     removeText,
+    addTexts,
+    removeTexts,
+    translateTexts,
   };
 }

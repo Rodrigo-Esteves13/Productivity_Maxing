@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Modal from '../UI/Modal';
 import { sendFeedback } from '../../api/feedbackService';
 import { useI18n } from '../../i18n/useI18n';
 import { useFeedback } from '../../context/useFeedback';
 import type { FeedbackCategory } from '../../types/models';
+import { getHttpStatus, HTTP_FORBIDDEN } from '../../lib/httpError';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -57,8 +58,9 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
       setRating(null);
       setCategory('OTHER');
       onClose();
-    } catch {
-      setError(t('feedback.error'));
+    } catch (err) {
+      // 403: o admin bloqueou o feedback desta conta.
+      setError(getHttpStatus(err) === HTTP_FORBIDDEN ? t('feedback.muted') : t('feedback.error'));
     } finally {
       setIsSending(false);
     }
@@ -67,7 +69,12 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={t('feedback.title')}>
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
-        <p className="text-sm text-neutral-400">{t('feedback.intro')}</p>
+        <p className="text-sm text-neutral-400">
+          {t('feedback.intro')}{' '}
+          <Link to="/my-feedback" onClick={handleClose} className="text-violet-300 hover:text-violet-200">
+            {t('feedback.mine.link')}
+          </Link>
+        </p>
 
         <fieldset>
           <legend className="mb-1.5 text-xs font-medium text-neutral-300">{t('feedback.category')}</legend>

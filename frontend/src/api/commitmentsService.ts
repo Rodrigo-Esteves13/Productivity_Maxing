@@ -1,6 +1,6 @@
 // src/api/commitmentsService.ts
 import api from './client';
-import type { Commitment, CommitmentsOverview, CommuteMode } from '../types/models';
+import type { Commitment, CommitmentsOverview, CommuteMode, ContractType } from '../types/models';
 
 export const getCommitments = async (): Promise<CommitmentsOverview> => {
   const response = await api.get<CommitmentsOverview>('/commitments');
@@ -11,6 +11,9 @@ export interface CommitmentInput {
   name: string;
   commuteMinutes: number;
   daysOff?: number[];
+  contractType?: ContractType | null;
+  /** YYYY-MM-DD do ultimo dia de trabalho. */
+  endsOn?: string | null;
   address?: string;
   commuteMode?: CommuteMode;
 }

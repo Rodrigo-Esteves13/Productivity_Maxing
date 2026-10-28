@@ -10,7 +10,10 @@ import { TurmaNotesService } from './turma-notes.service';
 import { TurmaFilesService } from './turma-files.service';
 import { TurmaAnnouncementsService } from './turma-announcements.service';
 import { TurmaLinkedAreasService } from './turma-linked-areas.service';
+import { TurmaScheduleService } from './turma-schedule.service';
+import { TurmaProgramsService } from './turma-programs.service';
 import { TurmaPacksService } from './turma-packs.service';
+import { TurmaInvitesService } from './turma-invites.service';
 
 @Module({
   imports: [PrismaModule, AuthModule, PushModule, NotebookModule],
@@ -22,7 +25,10 @@ import { TurmaPacksService } from './turma-packs.service';
     TurmaFilesService,
     TurmaAnnouncementsService,
     TurmaLinkedAreasService,
+    TurmaScheduleService,
+    TurmaProgramsService,
     TurmaPacksService,
+    TurmaInvitesService,
   ],
 })
 export class TurmasModule {}

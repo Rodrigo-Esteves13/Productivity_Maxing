@@ -4,6 +4,8 @@ import {
   IsArray,
   IsEnum,
   IsInt,
+  Matches,
+  ValidateIf,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -12,7 +14,7 @@ import {
   Min,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { CommuteMode } from '@prisma/client';
+import { ContractType, CommuteMode } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   MAX_BUFFER_MINUTES,
@@ -63,6 +65,24 @@ export class CreateCommitmentDto {
   @Min(0, { each: true })
   @Max(6, { each: true })
   daysOff?: number[];
+
+  @ApiPropertyOptional({ enum: ContractType, nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsEnum(ContractType)
+  contractType?: ContractType | null;
+
+  @ApiPropertyOptional({
+    example: '2027-06-30',
+    nullable: true,
+    description: 'Last working day. Weekly shifts stop counting after it.',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'endsOn must be formatted YYYY-MM-DD.',
+  })
+  endsOn?: string | null;
 }
 
 export class UpdateCommitmentDto {
@@ -106,6 +126,24 @@ export class UpdateCommitmentDto {
   @Min(0, { each: true })
   @Max(6, { each: true })
   daysOff?: number[];
+
+  @ApiPropertyOptional({ enum: ContractType, nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsEnum(ContractType)
+  contractType?: ContractType | null;
+
+  @ApiPropertyOptional({
+    example: '2027-06-30',
+    nullable: true,
+    description: 'Last working day. Weekly shifts stop counting after it.',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'endsOn must be formatted YYYY-MM-DD.',
+  })
+  endsOn?: string | null;
 }
 
 // Calcula (e guarda) o trajeto casa -> morada deste local. A origem e SEMPRE

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { fetchCsrfToken } from '../../api/userService';
+import { takePostAuthRedirect } from '../../lib/postAuthRedirect';
 import { refreshCalendarStatus } from '../../hooks/useCalendarStatus';
 import { useI18n } from '../../i18n/useI18n';
 import { fillNodes } from '../../i18n/fillNodes';
@@ -86,7 +87,7 @@ export default function AuthCallback() {
         // (nada muda) como o regresso do fluxo /auth/google/link-calendar
         // (aqui sim, o estado real mudou de "not connected" para "connected").
         refreshCalendarStatus();
-        navigate('/dashboard', { replace: true });
+        navigate(takePostAuthRedirect() ?? '/dashboard', { replace: true });
       } catch {
         navigate('/login', { replace: true });
       }

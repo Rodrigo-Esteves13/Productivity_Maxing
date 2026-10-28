@@ -53,3 +53,11 @@ export const MAX_INTAKE_RANGE_DAYS = 62;
 // v4: a app deixou de dar avisos de combinacoes, limites ou dependencia.
 export const MEDICATION_DISCLAIMER_VERSION = 4;
 export const LOCALE_PATTERN = /^[a-z]{2}(-[A-Z]{2})?$/;
+
+// Historico de adesao (GET /wellbeing/medications/history): semana a 3 meses.
+export const MAX_MEDICATION_HISTORY_DAYS = 92;
+
+// Dadivas de sangue: so registo do proprio, a app nao decide se pode doar.
+export const MAX_BLOOD_DONATIONS_PER_USER = 300;
+export const MAX_BLOOD_DONATION_LOCATION_LENGTH = 120;
+export const MAX_BLOOD_DONATION_NOTE_LENGTH = 300;

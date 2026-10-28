@@ -315,7 +315,13 @@ export interface Commitment {
   commuteMode: CommuteMode;
   // Folgas fixas: dias da semana (0=Dom..6=Sab) em que nunca se trabalha aqui.
   daysOff: number[];
+  // Trabalho: tipo de contrato (null = nao e trabalho / nao dito) e ultimo
+  // dia (ISO, meia-noite UTC). Depois dele os turnos semanais acabam.
+  contractType: ContractType | null;
+  endsOn: string | null;
 }
+
+export type ContractType = 'PERMANENT' | 'FIXED_TERM' | 'INTERNSHIP';
 
 export interface CommitmentWithShifts extends Commitment {
   shifts: WorkShift[];
@@ -1175,6 +1181,18 @@ export interface ShareVisits {
 
 export type FeedbackCategory = 'BUG' | 'IDEA' | 'TRANSLATION' | 'CONFUSING' | 'OTHER';
 
+// Como um feedback fechado acabou (null enquanto aberto).
+export type FeedbackResolution = 'DONE' | 'REJECTED';
+
+export interface FeedbackAuthor {
+  id: string;
+  name: string | null;
+  email: string;
+  status: UserStatus;
+  // Com valor, o user nao pode enviar feedback (bloqueado so aqui).
+  feedbackMutedAt: string | null;
+}
+
 export interface FeedbackItem {
   id: string;
   category: FeedbackCategory;
@@ -1184,8 +1202,18 @@ export interface FeedbackItem {
   page: string | null;
   createdAt: string;
   isResolved: boolean;
-  user: { name: string | null } | null;
+  resolution: FeedbackResolution | null;
+  adminReply: string | null;
+  repliedAt: string | null;
+  // null quando a conta foi apagada.
+  user: FeedbackAuthor | null;
 }
+
+// O que o autor ve do seu proprio feedback (GET /feedback/mine).
+export type MyFeedbackItem = Pick<
+  FeedbackItem,
+  'id' | 'category' | 'message' | 'createdAt' | 'isResolved' | 'resolution' | 'adminReply' | 'repliedAt'
+>;
 
 // Mirrors SharedEntryResult in the backend's notebook.service.ts - a
 // visitor to /shared/:token can be in one of 5 states, not just
@@ -1436,6 +1464,17 @@ export interface TurmaSummary {
   description: string | null;
   memberCount: number;
   myRole: TurmaRole;
+  // Aviso mais recente (ISO) ou null; ver lib/turmaSeen.ts.
+  latestAnnouncementAt: string | null;
+}
+
+// Convite direto pendente (GET /classes/invites).
+export interface TurmaInvite {
+  id: string;
+  createdAt: string;
+  turmaName: string;
+  memberCount: number;
+  invitedByName: string | null;
 }
 
 export interface TurmaMember {
@@ -1553,4 +1592,43 @@ export interface TurmaNoteSearchResult {
   title: string;
   turmaId: string;
   turmaName: string;
+}
+
+// GET /wellbeing/medications/history: tomas marcadas vs tomadas.
+export interface MedicationHistory {
+  from: string;
+  to: string;
+  days: { date: string; scheduled: number; taken: number }[];
+  medications: {
+    id: string;
+    name: string;
+    schedule: 'DAILY' | 'AS_NEEDED';
+    scheduled: number;
+    taken: number;
+    asNeeded: number;
+  }[];
+  totals: { scheduled: number; taken: number; asNeeded: number };
+}
+
+export type BloodDonationType = 'WHOLE_BLOOD' | 'PLASMA' | 'PLATELETS';
+
+export interface BloodDonation {
+  id: string;
+  date: string; // YYYY-MM-DD
+  type: BloodDonationType;
+  location: string | null;
+  note: string | null;
+}
+
+// Nota pessoal (/notes), com lembrete opcional.
+export interface PersonalNote {
+  id: string;
+  title: string;
+  body: string;
+  pinned: boolean;
+  remindAt: string | null;
+  remindedAt: string | null;
+  doneAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

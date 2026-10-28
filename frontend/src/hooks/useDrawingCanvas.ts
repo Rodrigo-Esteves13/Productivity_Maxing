@@ -15,6 +15,11 @@ export interface UseDrawingCanvasResult {
   undo: () => void;
   clear: () => void;
   canUndo: boolean;
+  // Em massa, para a selecao por caixa (colar, mover, apagar). Indices =
+  // posicao na lista strokes.
+  addStrokes: (strokes: Stroke[]) => void;
+  removeStrokes: (indices: number[]) => void;
+  translateStrokes: (indices: number[], dx: number, dy: number) => void;
 }
 
 // Preto por default - é o que a maioria escreve à mão num papel real (ver
@@ -106,6 +111,24 @@ export function useDrawingCanvas(initialStrokes: Stroke[] = []): UseDrawingCanva
     setCurrentStroke(null);
   }, []);
 
+  const addStrokes = useCallback((added: Stroke[]) => {
+    setStrokes((prev) => [...prev, ...added]);
+  }, []);
+
+  const removeStrokes = useCallback((indices: number[]) => {
+    const drop = new Set(indices);
+    setStrokes((prev) => prev.filter((_, i) => !drop.has(i)));
+  }, []);
+
+  const translateStrokes = useCallback((indices: number[], dx: number, dy: number) => {
+    const move = new Set(indices);
+    setStrokes((prev) =>
+      prev.map((stroke, i) =>
+        move.has(i) ? { ...stroke, points: stroke.points.map((p) => ({ ...p, x: p.x + dx, y: p.y + dy })) } : stroke,
+      ),
+    );
+  }, []);
+
   return {
     strokes,
     currentStroke,
@@ -120,5 +143,8 @@ export function useDrawingCanvas(initialStrokes: Stroke[] = []): UseDrawingCanva
     undo,
     clear,
     canUndo: strokes.length > 0,
+    addStrokes,
+    removeStrokes,
+    translateStrokes,
   };
 }

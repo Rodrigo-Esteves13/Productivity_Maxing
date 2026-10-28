@@ -6,6 +6,7 @@ import { MailService } from '../mail/mail.service';
 import { PushService } from '../push/push.service';
 import { PadsService } from '../pads/pads.service';
 import { MedicationsService } from '../wellbeing/medications.service';
+import { PersonalNotesService } from '../personal-notes/personal-notes.service';
 import { getFrontendUrl } from '../config/app.config';
 import { getLisbonNow, toDateKey } from '../common/date-key.util';
 import { lisbonWallClockToUtc } from '../calendar/feed/ics-feed.builder';
@@ -31,6 +32,8 @@ export interface ReminderRunResult {
   remindersSent: number;
   // Utilizadores avisados de tomas de medicacao nesta execucao.
   medicationUsersPushed: number;
+  // Lembretes de notas pessoais enviados nesta execucao.
+  personalRemindersSent: number;
   expiredPadsDeleted: number;
 }
 
@@ -53,6 +56,7 @@ export class RemindersService {
     private readonly pushService: PushService,
     private readonly medicationsService: MedicationsService,
     private readonly padsService: PadsService,
+    private readonly personalNotesService: PersonalNotesService,
   ) {}
 
   async run(now = new Date()): Promise<ReminderRunResult> {
@@ -119,6 +123,7 @@ export class RemindersService {
       usersPushed: 0,
       remindersSent: 0,
       medicationUsersPushed: 0,
+      personalRemindersSent: 0,
       expiredPadsDeleted: 0,
     };
     const tasksLink = `${getFrontendUrl()}${TASKS_PATH}`;
@@ -171,6 +176,15 @@ export class RemindersService {
     } catch (error) {
       this.logger.warn(
         `Lembretes de medicacao falharam: ${(error as Error).message}`,
+      );
+    }
+
+    try {
+      result.personalRemindersSent =
+        await this.personalNotesService.sendDueReminders(now);
+    } catch (error) {
+      this.logger.warn(
+        `Lembretes pessoais falharam: ${(error as Error).message}`,
       );
     }
 

@@ -24,6 +24,9 @@ import { WellbeingInsightsService } from './wellbeing-insights.service';
 import { MedicationsService } from './medications.service';
 import { MedicationIntakesService } from './medication-intakes.service';
 import { MedicationDisclaimerService } from './medication-disclaimer.service';
+import { MedicationHistoryService } from './medication-history.service';
+import { BloodDonationsService } from './blood-donations.service';
+import { CreateBloodDonationDto } from './dto/blood-donation.dto';
 import {
   DateKeyParamDto,
   MoodRangeQueryDto,
@@ -36,6 +39,7 @@ import {
   MedicationDayQueryDto,
   MedicationIntakeRangeQueryDto,
   MedicationDoseDto,
+  MedicationHistoryQueryDto,
   UpdateMedicationDto,
 } from './dto/medication.dto';
 
@@ -53,6 +57,8 @@ export class WellbeingController {
     private readonly medications: MedicationsService,
     private readonly intakes: MedicationIntakesService,
     private readonly disclaimer: MedicationDisclaimerService,
+    private readonly history: MedicationHistoryService,
+    private readonly bloodDonations: BloodDonationsService,
   ) {}
 
   @Get('mood')
@@ -114,6 +120,45 @@ export class WellbeingController {
     @Query() query: MedicationDayQueryDto,
   ) {
     return this.medications.day(user.id, query.date);
+  }
+
+  @Get('medications/history')
+  @ApiOperation({
+    summary:
+      'Doses planned vs taken per day and per medication, plus "as needed" counts, between two dates (up to 92 days).',
+  })
+  medicationHistory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: MedicationHistoryQueryDto,
+  ) {
+    return this.history.get(user.id, query.from, query.to);
+  }
+
+  @Get('blood-donations')
+  @ApiOperation({ summary: 'Your recorded blood donations, newest first.' })
+  listBloodDonations(@CurrentUser() user: AuthenticatedUser) {
+    return this.bloodDonations.list(user.id);
+  }
+
+  @Post('blood-donations')
+  @Throttle(perMinute(WRITES_PER_MINUTE))
+  @ApiOperation({ summary: 'Records one blood donation.' })
+  createBloodDonation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateBloodDonationDto,
+  ) {
+    return this.bloodDonations.create(user.id, dto);
+  }
+
+  @Delete('blood-donations/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle(perMinute(WRITES_PER_MINUTE))
+  @ApiOperation({ summary: 'Deletes one recorded blood donation.' })
+  removeBloodDonation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.bloodDonations.remove(user.id, id);
   }
 
   @Get('medications/disclaimer')

@@ -4,7 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, type CommuteMode } from '@prisma/client';
+import { Prisma, type CommuteMode, type ContractType } from '@prisma/client';
+import { parseDateKey } from '../common/date-key.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { SHIFT_SELECT, toShiftView } from './work-shifts.service';
 import type { WorkShiftView } from './work-shifts.service';
@@ -26,6 +27,8 @@ const COMMITMENT_SELECT = {
   address: true,
   commuteMode: true,
   daysOff: true,
+  contractType: true,
+  endsOn: true,
 } satisfies Prisma.CommitmentSelect;
 
 export interface CommitmentView {
@@ -35,6 +38,8 @@ export interface CommitmentView {
   address: string | null;
   commuteMode: CommuteMode;
   daysOff: number[];
+  contractType: ContractType | null;
+  endsOn: Date | null;
 }
 
 export interface CommitmentWithShifts extends CommitmentView {
@@ -97,6 +102,8 @@ export class CommitmentsService {
         address: c.address,
         commuteMode: c.commuteMode,
         daysOff: sortedDaysOff(c.daysOff),
+        contractType: c.contractType,
+        endsOn: c.endsOn,
         shifts: c.shifts.map(toShiftView),
       })),
       ungroupedShifts: ungrouped.map(toShiftView),
@@ -125,6 +132,8 @@ export class CommitmentsService {
             commuteMode: dto.commuteMode,
           }),
           daysOff: dto.daysOff ?? [],
+          contractType: dto.contractType ?? null,
+          endsOn: dto.endsOn ? parseDateKey(dto.endsOn) : null,
         },
         select: COMMITMENT_SELECT,
       });
@@ -151,6 +160,12 @@ export class CommitmentsService {
             commuteMode: dto.commuteMode,
           }),
           ...(dto.daysOff !== undefined && { daysOff: dto.daysOff }),
+          ...(dto.contractType !== undefined && {
+            contractType: dto.contractType,
+          }),
+          ...(dto.endsOn !== undefined && {
+            endsOn: dto.endsOn === null ? null : parseDateKey(dto.endsOn),
+          }),
         },
       });
       if (count === 0) throw this.notFound();

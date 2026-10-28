@@ -1,6 +1,9 @@
 import api from './client';
 import type {
+  BloodDonation,
+  BloodDonationType,
   Medication,
+  MedicationHistory,
   MedicationDaySlot,
   MedicationDisclaimerStatus,
   MedicationInput,
@@ -66,3 +69,20 @@ export const getMedicationDisclaimer = async (): Promise<MedicationDisclaimerSta
 export const acceptMedicationDisclaimer = async (version: number, locale: string): Promise<MedicationDisclaimerStatus> =>
   (await api.post<MedicationDisclaimerStatus>('/wellbeing/medications/disclaimer', { version, adultConfirmed: true, locale }))
     .data;
+
+export const getMedicationHistory = async (from: string, to: string): Promise<MedicationHistory> =>
+  (await api.get<MedicationHistory>('/wellbeing/medications/history', { params: { from, to } })).data;
+
+export const getBloodDonations = async (): Promise<BloodDonation[]> =>
+  (await api.get<BloodDonation[]>('/wellbeing/blood-donations')).data;
+
+export const createBloodDonation = async (input: {
+  date: string;
+  type: BloodDonationType;
+  location?: string;
+  note?: string;
+}): Promise<BloodDonation> => (await api.post<BloodDonation>('/wellbeing/blood-donations', input)).data;
+
+export const deleteBloodDonation = async (id: string): Promise<void> => {
+  await api.delete(`/wellbeing/blood-donations/${encodeURIComponent(id)}`);
+};

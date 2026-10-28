@@ -12,6 +12,8 @@ import TurmaFilesTab from '../components/Turma/TurmaFilesTab';
 import TurmaSubjectsTab from '../components/Turma/TurmaSubjectsTab';
 import TurmaMembersTab from '../components/Turma/TurmaMembersTab';
 import TurmaPacksTab from '../components/Turma/TurmaPacksTab';
+import TurmaScheduleTab from '../components/Turma/TurmaScheduleTab';
+import TurmaProgramsTab from '../components/Turma/TurmaProgramsTab';
 import { TURMA_TABS, TURMA_TAB_LABEL_KEY, isTurmaTab, type TurmaTab } from '../components/Turma/turmaConfig';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useTurmaDetail } from '../hooks/useTurmas';
@@ -56,6 +58,8 @@ export default function TurmaPage() {
             className="mb-4"
           />
           {tab === 'announcements' && <TurmaAnnouncementsTab turmaId={turma.id} isDelegado={turma.myRole === 'DELEGADO'} />}
+          {tab === 'programs' && <TurmaProgramsTab turmaId={turma.id} isDelegado={turma.myRole === 'DELEGADO'} />}
+          {tab === 'schedule' && <TurmaScheduleTab turmaId={turma.id} />}
           {tab === 'packs' && <TurmaPacksTab turmaId={turma.id} isDelegado={turma.myRole === 'DELEGADO'} />}
           {tab === 'notes' && <TurmaNotesTab turmaId={turma.id} canEdit={turma.canEditNotes} />}
           {tab === 'files' && <TurmaFilesTab turmaId={turma.id} isDelegado={turma.myRole === 'DELEGADO'} />}

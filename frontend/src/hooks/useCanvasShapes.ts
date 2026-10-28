@@ -12,6 +12,9 @@ export interface UseCanvasShapesResult {
   relabelShape: (id: string, label: string) => void;
   removeShape: (id: string) => void;
   clear: () => void;
+  addShapes: (shapes: CanvasShape[]) => void;
+  removeShapes: (ids: string[]) => void;
+  translateShapes: (ids: string[], dx: number, dy: number) => void;
 }
 
 // Espalha as novas formas em vez de as empilhar sempre no mesmo canto -
@@ -77,6 +80,21 @@ export function useCanvasShapes(initialShapes: CanvasShape[] = []): UseCanvasSha
     setSelectedId(null);
   }, []);
 
+  const addShapes = useCallback((added: CanvasShape[]) => {
+    setShapes((prev) => [...prev, ...added]);
+  }, []);
+
+  const removeShapes = useCallback((ids: string[]) => {
+    const drop = new Set(ids);
+    setShapes((prev) => prev.filter((shape) => !drop.has(shape.id)));
+    setSelectedId((current) => (current && drop.has(current) ? null : current));
+  }, []);
+
+  const translateShapes = useCallback((ids: string[], dx: number, dy: number) => {
+    const move = new Set(ids);
+    setShapes((prev) => prev.map((shape) => (move.has(shape.id) ? { ...shape, x: shape.x + dx, y: shape.y + dy } : shape)));
+  }, []);
+
   return {
     shapes,
     selectedId,
@@ -87,5 +105,8 @@ export function useCanvasShapes(initialShapes: CanvasShape[] = []): UseCanvasSha
     relabelShape,
     removeShape,
     clear,
+    addShapes,
+    removeShapes,
+    translateShapes,
   };
 }

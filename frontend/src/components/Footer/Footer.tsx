@@ -20,6 +20,8 @@ const STUDY_LINKS: FooterLinkItem[] = [
   { label: 'nav.areas', to: '/areas' },
   { label: 'nav.review', to: '/review' },
   { label: 'nav.wellbeing', to: '/wellbeing' },
+  { label: 'notes.title', to: '/notes' },
+  { label: 'finance.title', to: '/finance' },
   { label: 'reportCard.title', to: '/report-card' },
 ];
 
@@ -53,7 +55,12 @@ export default function Footer() {
 
   const helpLinks: FooterLinkItem[] = [
     { label: 'nav.changelog', to: '/changelog' },
-    ...(isAuthenticated ? [{ label: 'feedback.open', onClick: () => setIsFeedbackOpen(true) }] : []),
+    ...(isAuthenticated
+      ? [
+          { label: 'feedback.open', onClick: () => setIsFeedbackOpen(true) },
+          { label: 'feedback.mine.title', to: '/my-feedback' },
+        ]
+      : []),
     { label: 'footer.issue', href: REPO_ISSUES_URL },
     { label: 'footer.repo', href: REPO_URL },
     ...(isAuthenticated

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { rememberCurrentPage } from '../../lib/postAuthRedirect';
 import { Link } from 'react-router-dom';
 import { CalendarIcon, CheckIcon } from '../UI/Icons';
 import DisconnectCalendarModal from './DisconnectCalendarModal';
@@ -68,6 +69,7 @@ export default function GoogleCalendarCard() {
           {connected === false && (
             <a
               href={`${apiUrl}/auth/google/link-calendar`}
+              onClick={rememberCurrentPage}
               className="w-full sm:w-auto text-center rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 transition-colors"
             >
               {t('ui.connect')}

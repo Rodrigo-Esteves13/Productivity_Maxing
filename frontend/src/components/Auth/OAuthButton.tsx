@@ -5,6 +5,7 @@ import { useI18n } from '../../i18n/useI18n';
 interface OAuthButtonProps {
   provider: Provider;
   href: string;
+  onClick?: () => void;
 }
 
 const PROVIDER_CONFIG: Record<Provider, { label: string; Icon: typeof GoogleIcon }> = {
@@ -13,13 +14,14 @@ const PROVIDER_CONFIG: Record<Provider, { label: string; Icon: typeof GoogleIcon
   GITHUB: { label: 'GitHub', Icon: GithubIcon },
 };
 
-export default function OAuthButton({ provider, href }: OAuthButtonProps) {
+export default function OAuthButton({ provider, href, onClick }: OAuthButtonProps) {
   const { label, Icon } = PROVIDER_CONFIG[provider];
   const { t } = useI18n();
 
   return (
     <a
       href={href}
+      onClick={onClick}
       className="border border-neutral-700 rounded p-2 text-center text-neutral-200 hover:border-neutral-500 flex items-center justify-center gap-2"
     >
       <Icon />

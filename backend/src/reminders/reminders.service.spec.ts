@@ -1,3 +1,4 @@
+import type { PersonalNotesService } from '../personal-notes/personal-notes.service';
 import type { PadsService } from '../pads/pads.service';
 import type { MedicationsService } from '../wellbeing/medications.service';
 import { RemindersService } from './reminders.service';
@@ -55,6 +56,9 @@ function setup(
     {
       deleteExpired: jest.fn().mockResolvedValue(0),
     } as unknown as PadsService,
+    {
+      sendDueReminders: jest.fn().mockResolvedValue(0),
+    } as unknown as PersonalNotesService,
   );
   return { service, prisma, mail, push };
 }
@@ -96,6 +100,7 @@ describe('RemindersService.run', () => {
       usersPushed: 1,
       remindersSent: 1,
       medicationUsersPushed: 0,
+      personalRemindersSent: 0,
       expiredPadsDeleted: 0,
     });
   });
@@ -144,6 +149,7 @@ describe('RemindersService.run', () => {
       usersPushed: 1,
       remindersSent: 1,
       medicationUsersPushed: 0,
+      personalRemindersSent: 0,
       expiredPadsDeleted: 0,
     });
   });

@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -28,13 +29,20 @@ import { TurmaNotesService } from './turma-notes.service';
 import { TurmaFilesService } from './turma-files.service';
 import { TurmaAnnouncementsService } from './turma-announcements.service';
 import { TurmaLinkedAreasService } from './turma-linked-areas.service';
+import { TurmaScheduleService } from './turma-schedule.service';
+import { TurmaProgramsService } from './turma-programs.service';
 import { TurmaPacksService } from './turma-packs.service';
+import { TurmaInvitesService } from './turma-invites.service';
 import {
+  InviteToTurmaDto,
   CreateAnnouncementDto,
   CreateTurmaDto,
   CreateTurmaNoteDto,
   JoinTurmaDto,
   LinkAreaDto,
+  ShareTurmaScheduleDto,
+  ShareProgramDto,
+  CopyTurmaSubjectDto,
   SaveTurmaNoteDto,
   SearchTurmaNotesQueryDto,
   SharePackDto,
@@ -69,7 +77,10 @@ export class TurmasController {
     private readonly files: TurmaFilesService,
     private readonly announcements: TurmaAnnouncementsService,
     private readonly linkedAreas: TurmaLinkedAreasService,
+    private readonly schedule: TurmaScheduleService,
+    private readonly programs: TurmaProgramsService,
     private readonly packs: TurmaPacksService,
+    private readonly invites: TurmaInvitesService,
   ) {}
 
   @Get()
@@ -103,6 +114,48 @@ export class TurmasController {
   @ApiOperation({ summary: 'Joins a turma with its invite code.' })
   join(@CurrentUser() user: AuthenticatedUser, @Body() dto: JoinTurmaDto) {
     return this.turmas.join(user.id, dto.code);
+  }
+
+  // Convites diretos: rotas literais antes de ':id'.
+  @Get('invites')
+  @ApiOperation({ summary: 'Your pending class invites.' })
+  listInvites(@CurrentUser() user: AuthenticatedUser) {
+    return this.invites.listMine(user.id);
+  }
+
+  @Post('invites/:inviteId/accept')
+  @Throttle(perMinute(JOIN_PER_MINUTE))
+  @ApiOperation({ summary: 'Accepts a class invite and joins the class.' })
+  acceptInvite(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('inviteId', ParseUUIDPipe) inviteId: string,
+  ) {
+    return this.invites.accept(user.id, inviteId);
+  }
+
+  @Delete('invites/:inviteId')
+  @Throttle(perMinute(TURMA_WRITES_PER_MINUTE))
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Declines a class invite.' })
+  declineInvite(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('inviteId', ParseUUIDPipe) inviteId: string,
+  ) {
+    return this.invites.decline(user.id, inviteId);
+  }
+
+  @Post(':id/invites')
+  @Throttle(perMinute(TURMA_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary:
+      'Invites a friend to the class (members). Admins can invite any account by email.',
+  })
+  invite(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: InviteToTurmaDto,
+  ) {
+    return this.invites.invite({ id: user.id, role: user.role }, id, dto);
   }
 
   @Get(':id')
@@ -365,6 +418,96 @@ export class TurmasController {
     @Param('linkId', ParseUUIDPipe) linkId: string,
   ) {
     return this.packs.unshare(user.id, id, linkId);
+  }
+
+  // Licenciatura partilhada (estrutura do Grades, sem notas)
+
+  @Get(':id/programs')
+  @ApiOperation({ summary: 'Degree programs shared with the class.' })
+  listPrograms(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.programs.list(user.id, id);
+  }
+
+  @Post(':id/programs')
+  @Throttle(perMinute(TURMA_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary:
+      'Shares a copy of one of your programs (periods, courses, weights; never grades).',
+  })
+  shareProgram(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ShareProgramDto,
+  ) {
+    return this.programs.share(user.id, id, dto.programId);
+  }
+
+  @Delete(':id/programs/:linkId')
+  @HttpCode(204)
+  @Throttle(perMinute(TURMA_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary: 'Stops sharing a program (who shared it or the rep).',
+  })
+  removeProgram(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('linkId', ParseUUIDPipe) linkId: string,
+  ) {
+    return this.programs.remove(user.id, id, linkId);
+  }
+
+  @Post(':id/programs/:linkId/import')
+  @Throttle(perMinute(TURMA_WRITES_PER_MINUTE))
+  @ApiOperation({ summary: 'Copies a shared program into your own Grades.' })
+  importProgram(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('linkId', ParseUUIDPipe) linkId: string,
+  ) {
+    return this.programs.import(user.id, id, linkId);
+  }
+
+  // Horario partilhado (cada membro escolhe; desligado por defeito)
+
+  @Get(':id/schedule')
+  @ApiOperation({
+    summary: 'Classes of the next 2 weeks shared by members who opted in.',
+  })
+  getSchedule(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.schedule.get(user.id, id);
+  }
+
+  @Patch(':id/schedule/sharing')
+  @Throttle(perMinute(TURMA_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary: 'Turns sharing your timetable with the class on/off.',
+  })
+  setScheduleSharing(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ShareTurmaScheduleDto,
+  ) {
+    return this.schedule.setSharing(user.id, id, dto.share);
+  }
+
+  @Post(':id/schedule/copy')
+  @Throttle(perMinute(TURMA_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary:
+      'Copies the next classes of one shared subject into your schedule.',
+  })
+  copyScheduleSubject(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CopyTurmaSubjectDto,
+  ) {
+    return this.schedule.copySubject(user.id, id, dto.subject);
   }
 
   // Cadeiras do caderno publicadas pelos membros
