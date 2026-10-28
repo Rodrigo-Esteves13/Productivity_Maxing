@@ -6,7 +6,7 @@ import LegalTable from '../components/Legal/LegalTable';
 import useSeo from '../hooks/useSeo';
 import { REPO_URL, CONTACT_EMAIL, APP_DOMAIN } from '../lib/constants';
 
-const LAST_UPDATED = '24/10/2026';
+const LAST_UPDATED = '28/10/2026';
 
 export default function PrivacyPolicy() {
   useSeo({
@@ -103,7 +103,8 @@ export default function PrivacyPolicy() {
             optionally energy, stress and a short note) and the medication you add (name, optional dose,
             daily times or &quot;as needed&quot;, and which doses you marked as taken). For &quot;as
             needed&quot; medication, I store each intake you log (date and time, optional dose and a short
-            note). This is health data, processed only with your explicit consent, which you
+            note). If you record blood donations, I store the date, the type (whole blood, plasma or
+            platelets) and an optional place. This is health data, processed only with your explicit consent, which you
             give by adding it. It is visible only to you, never shared with friends or other users, and only
             used to show your own reminders, your log and the comparison between your mood and your study
             focus. Before you use medication tracking I also store the version of
@@ -111,6 +112,17 @@ export default function PrivacyPolicy() {
             Medication reminders are sent as push notifications that do not include the medication name,
             because they can appear on a locked screen. You can delete any check-in or medication at any time, and deleting your account
             deletes all of it
+          </li>
+          <li>
+            Notes and reminders (optional): personal notes you write on the Notes page (title, text, whether
+            it is pinned or done) and the time you ask to be reminded. Only you can see them. At that time
+            the App sends a push notification with the note title to your own devices
+          </li>
+          <li>
+            Money (optional): the balance, currency and monthly limits you type on the Money page, each income
+            or expense you record (amount, category, date, optional note, whether it repeats monthly) and your
+            savings, investment, wishlist and long-term goals. Only you can see them. The App is not connected
+            to any bank and only adds up what you write; it is not financial advice
           </li>
           <li>
             Notebook privacy: you can mark an entry as private so friends who can read your notes for that
@@ -125,6 +137,16 @@ export default function PrivacyPolicy() {
             users. Pads nobody edits for 90 days are deleted automatically, except pads locked by an
             account. Pad pages are not indexed by search engines. Do not write private information in a
             pad
+          </li>
+          <li>
+            Shared degree (optional): if you share a program with a class, its members see a copy of its
+            semesters, course names, credits and grading weights, and your name as who shared it. Your grades
+            are never included. You or the class rep can remove it at any time
+          </li>
+          <li>
+            Class timetable (off by default): if you turn on sharing in a class, its members see the subject,
+            day, time and room of your classes for the next two weeks, merged with other members and never
+            with your name, and can copy a subject into their own schedule. Turning it off stops sharing at once
           </li>
           <li>
             Classes: when you create or join a class, its members see your name and profile photo. Notes,
@@ -152,8 +174,9 @@ export default function PrivacyPolicy() {
         </p>
         <p className="mt-3">
           Display preferences (for example widget visibility, table density, column and area order, or
-          your absence limit) and your task templates are saved only in your browser's local storage and
-          are never sent to me.
+          your absence limit), which class announcements you have already seen, and your task templates are saved only in your browser's local storage and
+          are never sent to me. When you sign in with Google, Discord or GitHub, or connect Google Calendar, the page you
+          came from is kept there for up to 15 minutes so you land back on it, and is deleted once you do.
         </p>
       </LegalSection>
 
@@ -235,8 +258,8 @@ export default function PrivacyPolicy() {
           following legal bases: <strong>contract necessity</strong>, to provide the core functionality you
           sign up for (task management, calendar sync); and <strong>consent</strong>, for connecting
           optional third-party providers (Google/GitHub/Discord) and for the Calendar scope specifically,
-          which you grant explicitly on the provider's own consent screen. Wellbeing data (mood check-ins and
-          medication) is health data and is processed only on the basis of your <strong>explicit
+          which you grant explicitly on the provider's own consent screen. Wellbeing data (mood check-ins,
+          medication and blood donations) is health data and is processed only on the basis of your <strong>explicit
           consent</strong> (GDPR Article 9(2)(a)), given when you choose to add it; you can withdraw it at
           any time by deleting that data.
         </p>

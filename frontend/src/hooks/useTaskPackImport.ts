@@ -20,6 +20,8 @@ export function useTaskPackImport(code: string | undefined) {
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<ImportTaskPackResult | null>(null);
   const [importError, setImportError] = useState(false);
+  // Substituir: apaga as tasks atuais nas mesmas cadeiras antes de importar.
+  const [replaceExisting, setReplaceExisting] = useState(false);
 
   useEffect(() => {
     if (!code) {
@@ -88,13 +90,13 @@ export function useTaskPackImport(code: string | undefined) {
       const items = preview.items
         .filter((i) => selected.has(i.id))
         .map((i) => ({ itemId: i.id, ...(i.fixedAreaId === null ? { areaId: areaChoice[i.id] } : {}) }));
-      setResult(await importTaskPack(code, items));
+      setResult(await importTaskPack(code, items, replaceExisting));
     } catch {
       setImportError(true);
     } finally {
       setIsImporting(false);
     }
-  }, [code, preview, selected, areaChoice]);
+  }, [code, preview, selected, areaChoice, replaceExisting]);
 
   return {
     state,
@@ -106,6 +108,8 @@ export function useTaskPackImport(code: string | undefined) {
     result,
     importError,
     missingArea,
+    replaceExisting,
+    setReplaceExisting,
     toggle,
     selectAll,
     selectNone,

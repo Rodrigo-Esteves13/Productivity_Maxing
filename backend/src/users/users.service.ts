@@ -311,12 +311,19 @@ export class UsersService {
       moodLogs,
       medications,
       medicationIntakes,
+      bloodDonations,
+      personalNotes,
+      financeSettings,
+      financeEntries,
+      financeGoals,
+      turmaInvites,
       pads,
       turmaMemberships,
       turmaNotes,
       turmaFiles,
       turmaAnnouncements,
       turmaSharedSubjects,
+      turmaSharedPacks,
     ] = await Promise.all([
       // subtasks e anexos (so metadados, sem o caminho no bucket) vão
       // dentro de cada task no export.
@@ -377,6 +384,20 @@ export class UsersService {
       }),
       // Tomas "se necessario" e registos de alcool.
       this.prisma.medicationIntake.findMany({ where: { userId: id } }),
+      this.prisma.bloodDonation.findMany({ where: { userId: id } }),
+      this.prisma.personalNote.findMany({ where: { userId: id } }),
+      this.prisma.financeSettings.findUnique({ where: { userId: id } }),
+      this.prisma.financeEntry.findMany({ where: { userId: id } }),
+      this.prisma.financeGoal.findMany({ where: { userId: id } }),
+      // Convites diretos pendentes que recebeu (turma e quem convidou).
+      this.prisma.turmaInvite.findMany({
+        where: { userId: id },
+        select: {
+          createdAt: true,
+          turma: { select: { id: true, name: true } },
+          invitedBy: { select: { name: true } },
+        },
+      }),
       // Pads e turmas: o que esta pessoa escreveu ou enviou. Pads so os que
       // gravou por ultimo (um pad nao tem dono; o texto e de quem o escreve).
       this.prisma.pad.findMany({
@@ -427,6 +448,10 @@ export class UsersService {
         where: { userId: id },
         select: { turmaId: true, areaId: true, createdAt: true },
       }),
+      this.prisma.turmaPack.findMany({
+        where: { sharedById: id },
+        select: { turmaId: true, packId: true, createdAt: true },
+      }),
     ]);
 
     // Area é um catálogo global (ver AreasService.findAll), não tem
@@ -461,6 +486,14 @@ export class UsersService {
       moodLogs,
       medications,
       medicationIntakes,
+      bloodDonations,
+      personalNotes,
+      finance: {
+        settings: financeSettings,
+        entries: financeEntries,
+        goals: financeGoals,
+      },
+      turmaInvites,
       pads,
       turmas: {
         memberships: turmaMemberships,
@@ -468,6 +501,7 @@ export class UsersService {
         files: turmaFiles,
         announcements: turmaAnnouncements,
         sharedSubjects: turmaSharedSubjects,
+        sharedPacks: turmaSharedPacks,
       },
       workShifts,
       commitments,

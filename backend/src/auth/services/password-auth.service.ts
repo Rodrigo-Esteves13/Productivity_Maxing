@@ -22,6 +22,9 @@ import { PasswordLinkService } from './password-link.service';
 import { runInBackground } from '../../common/background.util';
 import { emailEquals, normalizeEmail } from '../email.util';
 
+// Parte local de um email, sem caracteres que mexam no LIKE do Prisma.
+const LOGIN_HANDLE_PATTERN = /^[a-z0-9.+-]{1,64}$/i;
+
 // Mesmo URL usado no AuthController para os redirects de OAuth - usado aqui
 // só para o `redirectTo` do email de recuperação de password do Supabase,
 // que tem de apontar para uma página nossa (ResetPassword.tsx) capaz de
@@ -177,7 +180,32 @@ export class PasswordAuthService {
     return { email: user.email };
   }
 
-  async loginWithPassword(email: string, password: string): Promise<User> {
+  /**
+   * O login aceita o email ou so a parte antes do @ (ex: "A047610" em vez
+   * de "a047610@universidade.pt"). Sem @ so entra se houver exatamente uma
+   * conta com esse inicio de email; caso contrario e o mesmo "Invalid
+   * credentials." de uma password errada, para nao revelar contas.
+   */
+  async resolveLoginEmail(identifier: string): Promise<string> {
+    if (identifier.includes('@')) return identifier;
+    if (!LOGIN_HANDLE_PATTERN.test(identifier)) {
+      throw new UnauthorizedException('Invalid credentials.');
+    }
+    const matches = await this.prisma.user.findMany({
+      where: {
+        email: { startsWith: `${identifier}@`, mode: 'insensitive' },
+      },
+      select: { email: true },
+      take: 2,
+    });
+    if (matches.length !== 1) {
+      throw new UnauthorizedException('Invalid credentials.');
+    }
+    return matches[0].email;
+  }
+
+  async loginWithPassword(identifier: string, password: string): Promise<User> {
+    const email = await this.resolveLoginEmail(identifier);
     const { data, error } = await this.clients.anon.auth.signInWithPassword({
       email,
       password,

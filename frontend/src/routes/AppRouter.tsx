@@ -36,6 +36,9 @@ import {
   Security,
   Appeals,
   FeedbackAdmin,
+  MyFeedback,
+  PersonalNotes,
+  Finance,
   FriendCodeRequestsAdmin,
   AdminUserProfile,
   TaskTypes,
@@ -104,6 +107,9 @@ export default function AppRouter() {
               enviados): reencaminham para o mesmo sitio em /classes. */}
           <Route path="/turmas/*" element={<LegacyPrefixRedirect from="/turmas" to="/classes" />} />
           <Route path="/changelog" element={<PrivateRoute><Changelog /></PrivateRoute>} />
+          <Route path="/my-feedback" element={<PrivateRoute><MyFeedback /></PrivateRoute>} />
+          <Route path="/notes" element={<PrivateRoute><PersonalNotes /></PrivateRoute>} />
+          <Route path="/finance" element={<PrivateRoute><Finance /></PrivateRoute>} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           {/* Públicas - o consent screen do Google OAuth aponta para estas */}
           <Route path="/privacy" element={<PrivacyPolicy />} />

@@ -24,4 +24,7 @@ export const COLOR_SWATCHES = [
 // Cor do "papel" do canvas; as legendas das ligações usam-na como contorno.
 export const CANVAS_PAPER_COLOR = '#F5F1E8';
 
-export type DrawTool = 'pen' | 'eraser' | 'text';
+export type DrawTool = 'pen' | 'eraser' | 'text' | 'select';
+
+// Contorno da caixa de selecao (violeta da app, por cima do papel).
+export const SELECTION_STROKE_COLOR = '#7C3AED';

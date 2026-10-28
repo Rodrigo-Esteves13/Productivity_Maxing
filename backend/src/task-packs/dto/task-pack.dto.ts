@@ -3,6 +3,7 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -56,6 +57,14 @@ export class ImportTaskPackDto {
   @IsOptional()
   @IsUUID()
   periodId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Deletes your current tasks in the same subjects and period first. Graded or completed tasks are kept (and linked to the matching pack task).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  replaceExisting?: boolean;
 
   @ApiProperty({ type: [ImportPackItemDto] })
   @IsArray()

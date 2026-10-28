@@ -30,7 +30,12 @@ export type PushMessageKey =
   | 'medicationDue'
   | 'medicationsDue'
   | 'turmaAnnouncement'
-  | 'taskPackUpdated';
+  | 'turmaPackShared'
+  | 'taskPackUpdated'
+  | 'feedbackReplied'
+  | 'feedbackRejected'
+  | 'turmaInvited'
+  | 'selfReminder';
 
 interface Template {
   title: string;
@@ -108,9 +113,29 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '{name}',
       body: 'New announcement: {title}',
     },
+    turmaPackShared: {
+      title: '{name}',
+      body: 'New task pack: {title}',
+    },
     taskPackUpdated: {
       title: '{name}',
       body: 'A task pack you imported changed: {title}. Review the update.',
+    },
+    feedbackReplied: {
+      title: 'Reply to your feedback',
+      body: 'Your feedback "{title}" got a reply.',
+    },
+    feedbackRejected: {
+      title: 'Feedback declined',
+      body: 'Your feedback "{title}" was declined.',
+    },
+    turmaInvited: {
+      title: 'Class invite',
+      body: '{name} invited you to {title}.',
+    },
+    selfReminder: {
+      title: 'Reminder',
+      body: '{title}',
     },
   },
   pt: {
@@ -180,11 +205,31 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     turmaAnnouncement: {
       title: '{name}',
-      body: 'New announcement: {title}',
+      body: 'Novo anúncio: {title}',
+    },
+    turmaPackShared: {
+      title: '{name}',
+      body: 'Novo pacote de tasks: {title}',
     },
     taskPackUpdated: {
       title: '{name}',
       body: 'Um pacote de tasks que importaste mudou: {title}. Revê a alteração.',
+    },
+    feedbackReplied: {
+      title: 'Resposta ao teu feedback',
+      body: 'O teu feedback "{title}" recebeu uma resposta.',
+    },
+    feedbackRejected: {
+      title: 'Feedback recusado',
+      body: 'O teu feedback "{title}" foi recusado.',
+    },
+    turmaInvited: {
+      title: 'Convite para turma',
+      body: '{name} convidou-te para {title}.',
+    },
+    selfReminder: {
+      title: 'Lembrete',
+      body: '{title}',
     },
   },
   es: {
@@ -254,11 +299,31 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     turmaAnnouncement: {
       title: '{name}',
-      body: 'New announcement: {title}',
+      body: 'Nuevo anuncio: {title}',
+    },
+    turmaPackShared: {
+      title: '{name}',
+      body: 'Nuevo paquete de tareas: {title}',
     },
     taskPackUpdated: {
       title: '{name}',
       body: 'Un paquete de tareas que importaste cambió: {title}. Revisa el cambio.',
+    },
+    feedbackReplied: {
+      title: 'Respuesta a tu comentario',
+      body: 'Tu comentario "{title}" recibió una respuesta.',
+    },
+    feedbackRejected: {
+      title: 'Comentario rechazado',
+      body: 'Tu comentario "{title}" fue rechazado.',
+    },
+    turmaInvited: {
+      title: 'Invitación a una clase',
+      body: '{name} te invitó a {title}.',
+    },
+    selfReminder: {
+      title: 'Recordatorio',
+      body: '{title}',
     },
   },
   zh: {
@@ -312,15 +377,35 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     turmaAnnouncement: {
       title: '{name}',
-      body: 'New announcement: {title}',
+      body: '新公告：{title}',
+    },
+    turmaPackShared: {
+      title: '{name}',
+      body: '新任务包：{title}',
     },
     taskPackUpdated: {
       title: '{name}',
       body: '你导入的任务包有变化：{title}。请查看更新。',
     },
+    feedbackReplied: {
+      title: '反馈已回复',
+      body: '你的反馈“{title}”收到了回复。',
+    },
+    feedbackRejected: {
+      title: '反馈未被采纳',
+      body: '你的反馈“{title}”未被采纳。',
+    },
+    turmaInvited: {
+      title: '班级邀请',
+      body: '{name} 邀请你加入 {title}。',
+    },
     deadlinesSoon: {
       title: '截止日期临近',
       body: '“{title}”和另外 {count} 项即将截止。',
+    },
+    selfReminder: {
+      title: '提醒',
+      body: '{title}',
     },
   },
   ja: {
@@ -386,15 +471,35 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     turmaAnnouncement: {
       title: '{name}',
-      body: 'New announcement: {title}',
+      body: '新しいお知らせ：{title}',
+    },
+    turmaPackShared: {
+      title: '{name}',
+      body: '新しいタスクパック：{title}',
     },
     taskPackUpdated: {
       title: '{name}',
       body: 'インポートしたタスクパックが変更されました：{title}。更新を確認してください。',
     },
+    feedbackReplied: {
+      title: 'フィードバックへの返信',
+      body: 'フィードバック「{title}」に返信がありました。',
+    },
+    feedbackRejected: {
+      title: 'フィードバックは見送られました',
+      body: 'フィードバック「{title}」は見送られました。',
+    },
+    turmaInvited: {
+      title: 'クラスへの招待',
+      body: '{name} さんが {title} に招待しました。',
+    },
     deadlinesSoon: {
       title: '締め切りが近づいています',
       body: '「{title}」ほか {count} 件の締め切りが近づいています。',
+    },
+    selfReminder: {
+      title: 'リマインダー',
+      body: '{title}',
     },
   },
   ko: {
@@ -460,15 +565,35 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     turmaAnnouncement: {
       title: '{name}',
-      body: 'New announcement: {title}',
+      body: '새 공지: {title}',
+    },
+    turmaPackShared: {
+      title: '{name}',
+      body: '새 과제 팩: {title}',
     },
     taskPackUpdated: {
       title: '{name}',
       body: '가져간 과제 팩이 변경되었습니다: {title}. 업데이트를 검토하세요.',
     },
+    feedbackReplied: {
+      title: '피드백 답변',
+      body: '피드백 "{title}"에 답변이 도착했습니다.',
+    },
+    feedbackRejected: {
+      title: '피드백 거절됨',
+      body: '피드백 "{title}"이(가) 거절되었습니다.',
+    },
+    turmaInvited: {
+      title: '반 초대',
+      body: '{name} 님이 {title}에 초대했습니다.',
+    },
     deadlinesSoon: {
       title: '마감이 다가와요',
       body: '"{title}" 외 {count}개의 마감이 곧이에요.',
+    },
+    selfReminder: {
+      title: '알림',
+      body: '{title}',
     },
   },
   fr: {
@@ -538,11 +663,31 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     turmaAnnouncement: {
       title: '{name}',
-      body: 'New announcement: {title}',
+      body: 'Nouvelle annonce : {title}',
+    },
+    turmaPackShared: {
+      title: '{name}',
+      body: 'Nouveau pack de tâches : {title}',
     },
     taskPackUpdated: {
       title: '{name}',
       body: 'Un pack de tâches que tu as importé a changé : {title}. Examine la modification.',
+    },
+    feedbackReplied: {
+      title: 'Réponse à ton avis',
+      body: 'Ton avis "{title}" a reçu une réponse.',
+    },
+    feedbackRejected: {
+      title: 'Avis refusé',
+      body: 'Ton avis "{title}" a été refusé.',
+    },
+    turmaInvited: {
+      title: 'Invitation à une classe',
+      body: "{name} t'a invité dans {title}.",
+    },
+    selfReminder: {
+      title: 'Rappel',
+      body: '{title}',
     },
   },
   de: {
@@ -612,11 +757,31 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     turmaAnnouncement: {
       title: '{name}',
-      body: 'New announcement: {title}',
+      body: 'Neue Ankündigung: {title}',
+    },
+    turmaPackShared: {
+      title: '{name}',
+      body: 'Neues Aufgabenpaket: {title}',
     },
     taskPackUpdated: {
       title: '{name}',
       body: 'Ein importiertes Aufgabenpaket hat sich geändert: {title}. Prüfe die Änderung.',
+    },
+    feedbackReplied: {
+      title: 'Antwort auf dein Feedback',
+      body: 'Dein Feedback "{title}" hat eine Antwort erhalten.',
+    },
+    feedbackRejected: {
+      title: 'Feedback abgelehnt',
+      body: 'Dein Feedback "{title}" wurde abgelehnt.',
+    },
+    turmaInvited: {
+      title: 'Einladung in eine Klasse',
+      body: '{name} hat dich zu {title} eingeladen.',
+    },
+    selfReminder: {
+      title: 'Erinnerung',
+      body: '{title}',
     },
   },
 };

@@ -187,3 +187,13 @@ export class MedicationIntakeRangeQueryDto {
   @Matches(DATE_KEY_PATTERN, { message: 'to must be formatted YYYY-MM-DD.' })
   to: string;
 }
+
+export class MedicationHistoryQueryDto {
+  @ApiProperty({ example: '2026-10-01' })
+  @Matches(DATE_KEY_PATTERN, { message: 'from must be formatted YYYY-MM-DD.' })
+  from: string;
+
+  @ApiProperty({ example: '2026-10-31' })
+  @Matches(DATE_KEY_PATTERN, { message: 'to must be formatted YYYY-MM-DD.' })
+  to: string;
+}

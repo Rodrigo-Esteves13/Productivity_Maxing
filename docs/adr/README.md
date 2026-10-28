@@ -35,3 +35,4 @@ What this makes easier, what it makes harder, what was traded away.
 - [0003](0003-enumoption-table-over-postgres-enums.md) - EnumOption table over native Postgres enums
 - [0004](0004-native-fetch-over-googleapis-sdk.md) - Native fetch over the googleapis SDK for Calendar
 - [0005](0005-structured-logging-no-telemetry-table.md) - Structured JSON logs instead of a telemetry DB table
+- [0006](0006-external-cron-for-reminders.md) - External cron service for reminders, GitHub Actions as a fallback

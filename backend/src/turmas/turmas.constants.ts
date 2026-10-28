@@ -6,6 +6,7 @@ export const MAX_MEMBERS_PER_TURMA = 200;
 export const MAX_NOTES_PER_TURMA = 500;
 export const MAX_FILES_PER_TURMA = 300;
 export const MAX_LINKED_AREAS_PER_MEMBER = 20;
+export const MAX_PACKS_PER_TURMA = 50;
 
 export const TURMA_NOTE_TITLE_MAX_LENGTH = 200;
 export const TURMA_NOTE_MAX_CONTENT_LENGTH = 50_000;
@@ -28,3 +29,6 @@ export const TURMA_NOTE_SAVES_PER_MINUTE = 120;
 export const TURMA_UPLOADS_PER_MINUTE = 20;
 
 export const turmaPath = (turmaId: string) => `/classes/${turmaId}`;
+export const TURMAS_PATH = '/classes';
+// Convites diretos pendentes por pessoa (evita spam de convites).
+export const MAX_PENDING_INVITES_PER_USER = 50;

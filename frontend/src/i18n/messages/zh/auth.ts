@@ -2,6 +2,7 @@ export const auth: Record<string, string> = {
   'auth.loginTitle': "登录你的账户",
   'auth.registerTitle': "创建账户",
   'auth.email': "邮箱",
+  'auth.emailOrHandle': "邮箱或用户名（@ 前面的部分）",
   'auth.password': "密码",
   'auth.name': "姓名",
   'auth.namePlaceholder': "你的名字",

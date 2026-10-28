@@ -331,6 +331,25 @@ export class NotebookService {
     }));
   }
 
+  /** Ids das fotos e anexos (por ordem), so do dono. */
+  async mediaIds(userId: string, id: string) {
+    const entry = await this.prisma.notebookEntry.findFirst({
+      where: { id, userId },
+      select: {
+        photos: { orderBy: { position: 'asc' }, select: { id: true } },
+        attachments: { orderBy: { createdAt: 'asc' }, select: { id: true } },
+      },
+    });
+    if (!entry)
+      throw new NotFoundException(
+        `Notebook entry not found or you don't have access.`,
+      );
+    return {
+      photoIds: entry.photos.map((p) => p.id),
+      attachmentIds: entry.attachments.map((a) => a.id),
+    };
+  }
+
   async findOne(userId: string, id: string) {
     const entry = await this.findOwnedEntryOrThrow(userId, id);
     return this.attachSignedUrls(entry);

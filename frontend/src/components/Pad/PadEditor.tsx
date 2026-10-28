@@ -49,7 +49,8 @@ export default function PadEditor({ slug }: { slug: string }) {
             {text.length.toLocaleString()} / {maxLength.toLocaleString()}
           </span>
           <CopyButton text={link} label={t('pad.copyLink')} />
-          {isAuthenticated && meta && (!meta.locked || meta.lockedByMe || isAdmin) && (
+          {/* Trancar e so de admin; quem trancou antes disso ainda destranca. */}
+          {isAuthenticated && meta && (isAdmin || (meta.locked && meta.lockedByMe)) && (
             <Button
               variant="secondary"
               className="px-2.5 py-1 text-xs"

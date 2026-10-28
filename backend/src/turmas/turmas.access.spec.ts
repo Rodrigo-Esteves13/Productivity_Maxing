@@ -26,6 +26,7 @@ const setup = () => {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     turmaLinkedArea: { deleteMany: jest.fn() },
+    turmaPack: { deleteMany: jest.fn() },
     turmaNote: {
       count: jest.fn().mockResolvedValue(0),
       create: jest.fn(),
@@ -33,7 +34,9 @@ const setup = () => {
       delete: jest.fn(),
     },
     turma: { delete: jest.fn() },
-    $transaction: jest.fn().mockResolvedValue([{ count: 0 }, { count: 1 }]),
+    $transaction: jest
+      .fn()
+      .mockResolvedValue([{ count: 0 }, { count: 0 }, { count: 1 }]),
   };
   const access = new TurmaAccessService(prisma as unknown as PrismaService);
   const notes = new TurmaNotesService(

@@ -38,6 +38,7 @@ export default function Login() {
   // instead of the generic dashboard. Only ever trusted after
   // isSafeRedirectPath() below - see that helper for why.
   const redirectParam = searchParams.get('redirect');
+  const safeRedirect = redirectParam && isSafeRedirectPath(redirectParam) ? redirectParam : null;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -159,8 +160,10 @@ export default function Login() {
           )}
 
           <Input
-            label={t('auth.email')}
-            type="email"
+            label={t('auth.emailOrHandle')}
+            type="text"
+            autoComplete="username"
+            autoCapitalize="none"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -183,9 +186,13 @@ export default function Login() {
           </Button>
         </form>
 
-        <AuthSwitchLink question={t('auth.noAccount')} linkText={t('auth.signUp')} to="/register" />
+        <AuthSwitchLink
+          question={t('auth.noAccount')}
+          linkText={t('auth.signUp')}
+          to={safeRedirect ? `/register?redirect=${encodeURIComponent(safeRedirect)}` : '/register'}
+        />
 
-        <OAuthProviderList message={t('auth.oauthLogin')} />
+        <OAuthProviderList message={t('auth.oauthLogin')} returnTo={safeRedirect} />
       </AuthCard>
     </PageLayout>
   );

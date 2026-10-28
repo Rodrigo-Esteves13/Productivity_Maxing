@@ -1,7 +1,7 @@
 import type { UseDrawingCanvasResult } from '../../../hooks/useDrawingCanvas';
 import type { UseCanvasTextsResult } from '../../../hooks/useCanvasTexts';
 import type { CanvasTextItem } from '../../../types/models';
-import { EraserIcon, PencilIcon, TrashIcon, TypeIcon, UndoIcon } from '../../UI/Icons';
+import { EraserIcon, PencilIcon, SelectAreaIcon, TrashIcon, TypeIcon, UndoIcon } from '../../UI/Icons';
 import ColorSwatches from '../../UI/ColorSwatches';
 import SegmentedControl from '../../UI/SegmentedControl';
 import type { SegmentedOption } from '../../UI/SegmentedControl';
@@ -25,6 +25,12 @@ const TOOL_OPTIONS: SegmentedOption<DrawTool>[] = [
     icon: TypeIcon,
     get title() { return translateNow('ui.textToolHint'); },
   },
+  {
+    value: 'select',
+    get label() { return translateNow('canvas.selectTool'); },
+    icon: SelectAreaIcon,
+    get title() { return translateNow('canvas.selectToolHint'); },
+  },
 ];
 
 interface CanvasDrawToolbarProps {
@@ -37,7 +43,13 @@ interface CanvasDrawToolbarProps {
 
 // Barra de traco/apagador/texto: cor, espessura, ferramenta, controlos do
 // texto selecionado e desfazer/limpar.
-export default function CanvasDrawToolbar({ canvas, texts, selectedText, tool, onToolChange }: CanvasDrawToolbarProps) {
+export default function CanvasDrawToolbar({
+  canvas,
+  texts,
+  selectedText,
+  tool,
+  onToolChange,
+}: CanvasDrawToolbarProps) {
   const { t } = useI18n();
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg bg-neutral-900 px-3 py-2">
@@ -65,6 +77,7 @@ export default function CanvasDrawToolbar({ canvas, texts, selectedText, tool, o
       <SegmentedControl size="sm" surface="sunken" options={TOOL_OPTIONS} value={tool} onChange={onToolChange} />
 
       {selectedText && !texts.editingId && <SelectedTextControls item={selectedText} texts={texts} />}
+
 
       <div className="ml-auto flex items-center gap-2">
         <ToolbarButton onClick={canvas.undo} disabled={!canvas.canUndo}>

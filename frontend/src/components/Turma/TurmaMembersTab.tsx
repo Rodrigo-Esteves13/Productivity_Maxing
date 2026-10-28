@@ -8,6 +8,7 @@ import CopyButton from '../UI/CopyButton';
 import PersonAvatar from '../Social/PersonAvatar';
 import TurmaRoleBadge from './TurmaRoleBadge';
 import ConfirmActionDialog from './ConfirmActionDialog';
+import TurmaDirectInvite from './TurmaDirectInvite';
 import {
   deleteTurma,
   leaveTurma,
@@ -174,6 +175,7 @@ function InviteSection({ turma, onChanged }: TurmaMembersTabProps) {
         )}
       </div>
       {regenerate.error && <FormError message={regenerate.error} />}
+      <TurmaDirectInvite turma={turma} />
     </section>
   );
 }

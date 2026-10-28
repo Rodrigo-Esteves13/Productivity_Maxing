@@ -8,6 +8,8 @@ import { WellbeingInsightsService } from './wellbeing-insights.service';
 import { MedicationsService } from './medications.service';
 import { MedicationIntakesService } from './medication-intakes.service';
 import { MedicationDisclaimerService } from './medication-disclaimer.service';
+import { MedicationHistoryService } from './medication-history.service';
+import { BloodDonationsService } from './blood-donations.service';
 
 @Module({
   imports: [PrismaModule, AuthModule, PushModule],
@@ -18,6 +20,8 @@ import { MedicationDisclaimerService } from './medication-disclaimer.service';
     MedicationsService,
     MedicationIntakesService,
     MedicationDisclaimerService,
+    MedicationHistoryService,
+    BloodDonationsService,
   ],
   // RemindersModule chama os lembretes de medicacao no mesmo cron.
   exports: [MedicationsService],

@@ -58,6 +58,13 @@ export class TurmasService {
             name: true,
             description: true,
             _count: { select: { members: true } },
+            // So o mais recente: o frontend compara com o ultimo que a
+            // pessoa viu e mostra "novo aviso" (quem nao tem push tambem ve).
+            announcements: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: { createdAt: true },
+            },
           },
         },
       },
@@ -68,6 +75,8 @@ export class TurmasService {
       description: turma.description,
       memberCount: turma._count.members,
       myRole: role,
+      latestAnnouncementAt:
+        turma.announcements[0]?.createdAt.toISOString() ?? null,
     }));
   }
 
@@ -95,9 +104,19 @@ export class TurmasService {
   async join(userId: string, code: string) {
     const turma = await this.prisma.turma.findUnique({
       where: { inviteCode: code },
-      select: { id: true, _count: { select: { members: true } } },
+      select: { id: true },
     });
     if (!turma) throw new NotFoundException('Invalid invite code.');
+    return this.addMember(turma.id, userId);
+  }
+
+  /** Entra numa turma (por codigo ou convite aceite), com os limites. */
+  async addMember(turmaId: string, userId: string) {
+    const turma = await this.prisma.turma.findUnique({
+      where: { id: turmaId },
+      select: { id: true, _count: { select: { members: true } } },
+    });
+    if (!turma) throw new NotFoundException('Turma not found.');
 
     const existing = await this.prisma.turmaMember.findUnique({
       where: { turmaId_userId: { turmaId: turma.id, userId } },
@@ -262,8 +281,11 @@ export class TurmasService {
     turmaId: string,
     userId: string,
   ): Promise<boolean> {
-    const [, removed] = await this.prisma.$transaction([
+    const [, , removed] = await this.prisma.$transaction([
       this.prisma.turmaLinkedArea.deleteMany({ where: { turmaId, userId } }),
+      this.prisma.turmaPack.deleteMany({
+        where: { turmaId, sharedById: userId },
+      }),
       this.prisma.turmaMember.deleteMany({ where: { turmaId, userId } }),
     ]);
     return removed.count > 0;

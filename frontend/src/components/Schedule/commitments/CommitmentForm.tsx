@@ -8,7 +8,7 @@ import { WEEKDAYS } from './shiftText';
 import AddressTravelFields from './AddressTravelFields';
 import type { CommitmentInput } from '../../../api/commitmentsService';
 import { useI18n } from '../../../i18n/useI18n';
-import type { Commitment, CommuteMode } from '../../../types/models';
+import type { Commitment, CommuteMode, ContractType } from '../../../types/models';
 
 const MAX_NAME_LENGTH = 80;
 const MAX_COMMUTE_MINUTES = 240;
@@ -16,12 +16,24 @@ const DEFAULT_COMMUTE = '20';
 // Tem de haver pelo menos um dia de trabalho possivel (igual ao backend).
 const MAX_DAYS_OFF = 6;
 
+// '' = nao e um trabalho (ou nao interessa dizer).
+const CONTRACT_OPTIONS: ('' | ContractType)[] = ['', 'PERMANENT', 'FIXED_TERM', 'INTERNSHIP'];
+const CONTRACT_LABEL_KEYS = {
+  '': 'commitment.contract.none',
+  PERMANENT: 'commitment.contract.permanent',
+  FIXED_TERM: 'commitment.contract.fixedTerm',
+  INTERNSHIP: 'commitment.contract.internship',
+} as const;
+
 // Tudo o que o formulario devolve, no formato que a API aceita.
 export type CommitmentFormValues = Required<CommitmentInput>;
 
 interface CommitmentFormProps {
   /** Local existente a editar; sem isto o formulario abre em branco. */
-  initial?: Pick<Commitment, 'name' | 'commuteMinutes' | 'daysOff' | 'address' | 'commuteMode'>;
+  initial?: Pick<
+    Commitment,
+    'name' | 'commuteMinutes' | 'daysOff' | 'address' | 'commuteMode' | 'contractType' | 'endsOn'
+  >;
   submitLabel: string;
   isSaving: boolean;
   onSubmit: (values: CommitmentFormValues) => Promise<boolean>;
@@ -37,7 +49,11 @@ export default function CommitmentForm({ initial, submitLabel, isSaving, onSubmi
     initial === undefined ? DEFAULT_COMMUTE : String(initial.commuteMinutes),
   );
   const [daysOff, setDaysOff] = useState<number[]>(initial?.daysOff ?? []);
+  const [contract, setContract] = useState<'' | ContractType>(initial?.contractType ?? '');
+  const [endsOn, setEndsOn] = useState(initial?.endsOn?.slice(0, 10) ?? '');
   const [formError, setFormError] = useState('');
+  // Contrato a prazo e estagio acabam num dia: a data final e obrigatoria.
+  const needsEndDate = contract === 'FIXED_TERM' || contract === 'INTERNSHIP';
 
   const toggleDayOff = (value: number) =>
     setDaysOff((prev) => (prev.includes(value) ? prev.filter((d) => d !== value) : [...prev, value]));
@@ -59,8 +75,15 @@ export default function CommitmentForm({ initial, submitLabel, isSaving, onSubmi
       return;
     }
 
+    if (needsEndDate && !endsOn) {
+      setFormError(t('commitment.contract.endRequired'));
+      return;
+    }
+
     setFormError('');
     await onSubmit({
+      contractType: contract || null,
+      endsOn: contract && endsOn ? endsOn : null,
       name: name.trim(),
       commuteMinutes,
       daysOff,
@@ -78,6 +101,24 @@ export default function CommitmentForm({ initial, submitLabel, isSaving, onSubmi
         placeholder={t('commitment.form.namePlaceholder')}
         onChange={(e) => setName(e.target.value)}
       />
+      <fieldset>
+        <legend className="block text-sm font-medium text-neutral-300 mb-1">{t('commitment.contract.label')}</legend>
+        <div className="flex flex-wrap gap-1.5">
+          {CONTRACT_OPTIONS.map((option) => (
+            <ToggleChip key={option || 'none'} size="sm" pressed={contract === option} onClick={() => setContract(option)}>
+              {t(CONTRACT_LABEL_KEYS[option])}
+            </ToggleChip>
+          ))}
+        </div>
+      </fieldset>
+      {contract && (
+        <Input
+          label={needsEndDate ? t('commitment.contract.endsOn') : t('commitment.contract.endsOnOptional')}
+          type="date"
+          value={endsOn}
+          onChange={(e) => setEndsOn(e.target.value)}
+        />
+      )}
       <AddressTravelFields
         address={address}
         onAddressChange={setAddress}

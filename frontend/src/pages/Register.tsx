@@ -1,5 +1,6 @@
 import { useState, type SyntheticEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { isSafeRedirectPath } from '../lib/safeRedirect';
 import { useAuth } from '../context/useAuth';
 import { registerRequest, resendVerificationRequest } from '../api/userService';
 import { useI18n } from '../i18n/useI18n';
@@ -32,6 +33,12 @@ export default function Register() {
   });
   const navigate = useNavigate();
   const { login } = useAuth();
+  // Vem do Login quando havia ?redirect= (ex: link de convite para uma
+  // turma): o registo tambem tem de levar a pessoa de volta para la.
+  const [searchParams] = useSearchParams();
+  const redirectParam = searchParams.get('redirect');
+  const safeRedirect = redirectParam && isSafeRedirectPath(redirectParam) ? redirectParam : null;
+  const loginPath = safeRedirect ? `/login?redirect=${encodeURIComponent(safeRedirect)}` : '/login';
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -76,7 +83,7 @@ export default function Register() {
 
       // Mesmo comportamento do Login: guarda o csrf token e entra logo na conta
       login(csrfToken);
-      navigate('/dashboard', { replace: true });
+      navigate(safeRedirect ?? '/dashboard', { replace: true });
     } catch (err) {
       const status = getHttpStatus(err);
       setError(t(REGISTER_ERROR_KEYS[status ?? 0] ?? 'auth.registerFailed'));
@@ -105,7 +112,7 @@ export default function Register() {
               email: <strong>{linkSentEmail}</strong>,
             })}
           </p>
-          <AuthSwitchLink question={t('auth.alreadyHaveAccount')} linkText={t('auth.login')} to="/login" />
+          <AuthSwitchLink question={t('auth.alreadyHaveAccount')} linkText={t('auth.login')} to={loginPath} />
         </AuthCard>
       </PageLayout>
     );
@@ -124,7 +131,7 @@ export default function Register() {
             {t('auth.resendEmail')}
           </Button>
           {resendMessage && <p className="mt-3 text-xs text-neutral-400">{resendMessage}</p>}
-          <AuthSwitchLink question={t('auth.alreadyConfirmed')} linkText={t('auth.login')} to="/login" />
+          <AuthSwitchLink question={t('auth.alreadyConfirmed')} linkText={t('auth.login')} to={loginPath} />
         </AuthCard>
       </PageLayout>
     );
@@ -170,9 +177,9 @@ export default function Register() {
           </Button>
         </form>
 
-        <AuthSwitchLink question={t('auth.alreadyHaveAccount')} linkText={t('auth.login')} to="/login" />
+        <AuthSwitchLink question={t('auth.alreadyHaveAccount')} linkText={t('auth.login')} to={loginPath} />
 
-        <OAuthProviderList message={t('auth.oauthRegister')} />
+        <OAuthProviderList message={t('auth.oauthRegister')} returnTo={safeRedirect} />
       </AuthCard>
     </PageLayout>
   );

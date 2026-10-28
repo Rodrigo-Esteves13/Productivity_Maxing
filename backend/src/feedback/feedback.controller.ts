@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   HttpCode,
   Param,
@@ -9,9 +10,8 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { IsBoolean } from 'class-validator';
 import { ApiKeyScope, Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
@@ -23,12 +23,13 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { FeedbackService } from './feedback.service';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
+import {
+  MuteFeedbackDto,
+  RejectFeedbackDto,
+  ReplyFeedbackDto,
+  ResolveFeedbackDto,
+} from './dto/moderate-feedback.dto';
 import { perMinute } from '../common/throttle.util';
-
-class ResolveFeedbackDto {
-  @IsBoolean()
-  isResolved: boolean;
-}
 
 @ApiTags('Feedback')
 @ApiBearerAuth()
@@ -47,6 +48,14 @@ export class FeedbackController {
     return this.feedback.create(user.id, dto);
   }
 
+  // Rotas literais antes das que tem :id.
+  @UseGuards(JwtAuthGuard)
+  @Get('mine')
+  @ApiOperation({ summary: 'Feedback sent by the current user, with replies' })
+  listMine(@CurrentUser() user: AuthenticatedUser) {
+    return this.feedback.listMine(user.id);
+  }
+
   @UseGuards(JwtOrApiKeyAuthGuard, RolesGuard, ApiKeyScopeGuard)
   @Roles(Role.ADMIN)
   @RequireApiKeyScope(ApiKeyScope.ADMIN)
@@ -58,11 +67,54 @@ export class FeedbackController {
   @UseGuards(JwtOrApiKeyAuthGuard, RolesGuard, ApiKeyScopeGuard)
   @Roles(Role.ADMIN)
   @RequireApiKeyScope(ApiKeyScope.ADMIN)
+  @Patch('users/:userId/muted')
+  @ApiOperation({ summary: 'Blocks or allows a user sending feedback (Admin)' })
+  setMuted(
+    @CurrentUser() me: AuthenticatedUser,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() dto: MuteFeedbackDto,
+  ) {
+    if (me.id === userId) {
+      throw new ForbiddenException('You cannot mute your own account.');
+    }
+    return this.feedback.setMuted(userId, dto.muted);
+  }
+
+  @UseGuards(JwtOrApiKeyAuthGuard, RolesGuard, ApiKeyScopeGuard)
+  @Roles(Role.ADMIN)
+  @RequireApiKeyScope(ApiKeyScope.ADMIN)
   @Patch(':id/resolved')
   setResolved(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ResolveFeedbackDto,
   ) {
     return this.feedback.setResolved(id, dto.isResolved);
+  }
+
+  @UseGuards(JwtOrApiKeyAuthGuard, RolesGuard, ApiKeyScopeGuard)
+  @Roles(Role.ADMIN)
+  @RequireApiKeyScope(ApiKeyScope.ADMIN)
+  @Throttle(perMinute(30))
+  @Post(':id/reply')
+  @ApiOperation({
+    summary: 'Replies to the author, optionally resolving (Admin)',
+  })
+  reply(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ReplyFeedbackDto) {
+    return this.feedback.reply(id, dto);
+  }
+
+  @UseGuards(JwtOrApiKeyAuthGuard, RolesGuard, ApiKeyScopeGuard)
+  @Roles(Role.ADMIN)
+  @RequireApiKeyScope(ApiKeyScope.ADMIN)
+  @Throttle(perMinute(30))
+  @Post(':id/reject')
+  @ApiOperation({
+    summary: 'Declines the feedback with an optional reason (Admin)',
+  })
+  reject(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RejectFeedbackDto,
+  ) {
+    return this.feedback.reject(id, dto.reason);
   }
 }

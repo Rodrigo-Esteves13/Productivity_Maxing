@@ -22,6 +22,8 @@ import { fase7b } from './fase7b';
 import { fase7c } from './fase7c';
 import { meds } from './meds';
 import { readiness } from './readiness';
+import { finance } from './finance';
+import { integration } from './integration';
 
 export const ja: Record<string, string> = {
   ...packs,
@@ -48,4 +50,6 @@ export const ja: Record<string, string> = {
   ...fase7c,
   ...meds,
   ...readiness,
+  ...finance,
+  ...integration,
 };

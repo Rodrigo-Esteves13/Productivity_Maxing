@@ -102,6 +102,13 @@ export class TasksService {
     private taskAttachments: TaskAttachmentsService,
   ) {}
 
+  /** periodId explicito (com posse verificada) ou o periodo ativo do user. */
+  async resolvePeriodId(userId: string, periodId?: string): Promise<string> {
+    return periodId
+      ? (await this.periodsService.findOwnedOrThrow(userId, periodId)).id
+      : this.periodsService.resolveActivePeriodId(userId);
+  }
+
   async create(userId: string, dto: CreateTaskDto) {
     const {
       date,
@@ -124,9 +131,7 @@ export class TasksService {
     // zero breaking change enquanto a UI da Fase 2 não existe. Se mandar
     // um periodId explícito, validamos posse primeiro (defesa contra IDOR,
     // mesmo padrão do resto do service).
-    const resolvedPeriodId = periodId
-      ? (await this.periodsService.findOwnedOrThrow(userId, periodId)).id
-      : await this.periodsService.resolveActivePeriodId(userId);
+    const resolvedPeriodId = await this.resolvePeriodId(userId, periodId);
 
     // Cadeira nunca passa dos 100% (tasks + componentes de nota).
     await assertWeightFits(

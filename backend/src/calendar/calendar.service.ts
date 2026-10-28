@@ -13,6 +13,7 @@ import {
 } from '../auth/google-oauth.constants';
 import { CALENDAR_TIME_ZONE } from './schedule-sync.constants';
 import { HTTP_GONE, HTTP_NOT_FOUND } from './http-codes';
+import { googleFetch } from './google-fetch.util';
 
 const CALENDAR_SCOPE = GOOGLE_CALENDAR_APP_SCOPE;
 // Fallback quando a Task não tem calendarDurationMinutes definido (tasks
@@ -121,7 +122,7 @@ export class CalendarService {
     userId: string,
     accessToken: string,
   ): Promise<string> {
-    const res = await fetch(`${GOOGLE_CALENDAR_API_URL}/calendars`, {
+    const res = await googleFetch(`${GOOGLE_CALENDAR_API_URL}/calendars`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -356,7 +357,7 @@ export class CalendarService {
     accessToken: string,
     payload: unknown,
   ): Promise<Response> {
-    return fetch(url, {
+    return googleFetch(url, {
       method,
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -380,7 +381,7 @@ export class CalendarService {
     const accessToken = await this.getValidAccessToken(userId);
     const calendarId = await this.getCalendarId(userId, accessToken);
 
-    const res = await fetch(
+    const res = await googleFetch(
       `${this.eventsUrl(calendarId)}/${googleCalendarEventId}`,
       {
         method: 'DELETE',

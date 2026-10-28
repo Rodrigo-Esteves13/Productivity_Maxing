@@ -15,6 +15,12 @@ import type {
 import IconButton from '../../UI/IconButton';
 import InlineConfirm from '../../UI/InlineConfirm';
 
+const CONTRACT_LINE_KEYS = {
+  PERMANENT: 'commitment.contract.permanent',
+  FIXED_TERM: 'commitment.contract.fixedTerm',
+  INTERNSHIP: 'commitment.contract.internship',
+} as const;
+
 type Mode = 'view' | 'edit' | 'add-shift' | 'confirm-delete';
 
 interface CommitmentSectionProps {
@@ -79,6 +85,15 @@ export default function CommitmentSection({
               {commitment.daysOff.length > 0 &&
                 ` · ${t('commitment.daysOffLine', { days: describeDaysOff(commitment.daysOff) })}`}
             </p>
+            {commitment.contractType && (
+              <p className="text-xs text-neutral-500">
+                {t(CONTRACT_LINE_KEYS[commitment.contractType])}
+                {commitment.endsOn &&
+                  ` · ${t('commitment.contract.until', {
+                    date: new Date(commitment.endsOn).toLocaleDateString(undefined, { timeZone: 'UTC' }),
+                  })}`}
+              </p>
+            )}
           </div>
           <div className="-my-1.5 -mr-2 flex items-center gap-1 shrink-0">
             <IconButton label={t('ui.editNamed', { name: commitment.name })} onClick={() => setMode('edit')}>

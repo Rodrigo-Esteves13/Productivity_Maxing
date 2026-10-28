@@ -43,6 +43,10 @@ export interface ImportItemResult {
 export interface ImportTaskPackResult {
   created: number;
   failed: number;
+  /** Modo substituir: tasks tuas apagadas antes do import. */
+  replaced: number;
+  /** Modo substituir: tasks com nota/concluidas que ficaram (ligadas ao pacote). */
+  kept: number;
   results: ImportItemResult[];
 }
 
@@ -62,8 +66,14 @@ export const previewTaskPack = async (code: string): Promise<TaskPackPreview> =>
 export const importTaskPack = async (
   code: string,
   items: { itemId: string; areaId?: string }[],
+  replaceExisting = false,
 ): Promise<ImportTaskPackResult> =>
-  (await api.post<ImportTaskPackResult>(`/task-packs/code/${encodeURIComponent(code)}/import`, { items })).data;
+  (
+    await api.post<ImportTaskPackResult>(`/task-packs/code/${encodeURIComponent(code)}/import`, {
+      items,
+      replaceExisting,
+    })
+  ).data;
 
 export const packShareUrl = (code: string): string => `${window.location.origin}/packs/${code}`;
 

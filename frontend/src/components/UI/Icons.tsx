@@ -72,6 +72,7 @@ export {
   File as FileIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  ArrowRight as ArrowRightIcon,
   ZoomIn as ZoomInIcon,
   PenTool as PenToolIcon,
   // Botao Partilhar do Safari (quadrado com seta para cima), para os passos
@@ -83,6 +84,10 @@ export {
   CircleHelp as HelpCircleIcon,
   Zap as ZapIcon,
   Dumbbell as DumbbellIcon,
+  // Ferramenta Selecionar do quadro e as acoes da selecao.
+  SquareDashedMousePointer as SelectAreaIcon,
+  ClipboardPaste as PasteIcon,
+  CopyPlus as DuplicateIcon,
 } from 'lucide-react';
 
 export function GoogleIcon(props: SVGProps<SVGSVGElement>) {

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
+import RelatedLinks from '../components/Layout/RelatedLinks';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
@@ -10,10 +11,12 @@ import EmptyState from '../components/UI/EmptyState';
 import ErrorState from '../components/UI/ErrorState';
 import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import TurmaRoleBadge from '../components/Turma/TurmaRoleBadge';
+import TurmaInvitesCard from '../components/Turma/TurmaInvitesCard';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useCreateTurma, useJoinTurma, useMyTurmas } from '../hooks/useTurmas';
 import { useI18n } from '../i18n/useI18n';
 import { turmaPath } from '../lib/appLinks';
+import { hasUnseenAnnouncement } from '../lib/turmaSeen';
 import { INVITE_CODE_LENGTH, TURMA_NAME_MAX_LENGTH, TURMA_DESCRIPTION_MAX_LENGTH } from '../components/Turma/turmaConfig';
 
 // Turmas: as minhas, criar uma (fico delegado) ou entrar com um codigo.
@@ -26,6 +29,13 @@ export default function Turmas() {
   return (
     <PageLayout>
       <PageHeader title={t('nav.turmas')} description={t('turma.description')} />
+      <RelatedLinks
+        links={[
+          { to: '/schedule', labelKey: 'related.turmas.schedule' },
+          { to: '/notebook', labelKey: 'related.turmas.notebook' },
+        ]}
+      />
+      <TurmaInvitesCard />
       <div className="mb-6 grid gap-4 md:grid-cols-2">
         <JoinTurmaCard />
         <CreateTurmaCard />
@@ -50,7 +60,14 @@ export default function Turmas() {
                   <TurmaRoleBadge role={turma.myRole} />
                 </div>
                 {turma.description && <p className="mb-2 line-clamp-2 text-sm text-neutral-400">{turma.description}</p>}
-                <p className="text-xs text-neutral-500">{t('turma.memberCount', { count: turma.memberCount })}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs text-neutral-500">{t('turma.memberCount', { count: turma.memberCount })}</p>
+                  {hasUnseenAnnouncement(turma.id, turma.latestAnnouncementAt) && (
+                    <span className="rounded-full bg-violet-600/20 px-2 py-0.5 text-xs text-violet-200">
+                      {t('turma.announcements.new')}
+                    </span>
+                  )}
+                </div>
               </Link>
             </li>
           ))}

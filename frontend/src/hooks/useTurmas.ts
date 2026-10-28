@@ -3,7 +3,9 @@ import {
   createTurma,
   getAnnouncements,
   getLinkedAreas,
+  getTurmaPacks,
   getMyTurmas,
+  getTurmaInvites,
   getTurma,
   getTurmaFiles,
   getTurmaNote,
@@ -18,6 +20,7 @@ import { useVersionedDoc, type VersionedSnapshot } from './useVersionedDoc';
 
 // Lista das minhas turmas.
 export const useMyTurmas = () => useLoadOnce(getMyTurmas);
+export const useTurmaInvites = () => useLoadOnce(getTurmaInvites);
 
 // Acao com estado de "a correr" e mensagem de erro do backend. Usado pelos
 // formularios e botoes da Turma.
@@ -64,6 +67,11 @@ export function useTurmaNotes(turmaId: string) {
 
 export function useTurmaFiles(turmaId: string) {
   const fetcher = useCallback(() => getTurmaFiles(turmaId), [turmaId]);
+  return useLoadOnce(fetcher);
+}
+
+export function useTurmaPacks(turmaId: string) {
+  const fetcher = useCallback(() => getTurmaPacks(turmaId), [turmaId]);
   return useLoadOnce(fetcher);
 }
 

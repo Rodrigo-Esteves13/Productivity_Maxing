@@ -86,7 +86,24 @@ export const syncSchedule = async (): Promise<ScheduleSyncResult> => {
   return response.data;
 };
 
-export const removeSyncedSchedule = async (): Promise<RemoveAllResult> => {
+const removeSyncedScheduleBatch = async (): Promise<RemoveAllResult> => {
   const response = await api.delete<RemoveAllResult>('/calendar/schedule');
   return response.data;
+};
+
+// Limite de lotes por clique: o backend apaga ate 500 por pedido.
+const MAX_REMOVE_BATCHES = 20;
+
+// "Remover tudo" de uma vez: repete lotes enquanto houver eventos e o lote
+// anterior tiver apagado algum (sem progresso, para e mostra o que falta).
+export const removeSyncedSchedule = async (): Promise<RemoveAllResult> => {
+  const total: RemoveAllResult = { deleted: 0, failed: 0, remaining: 0 };
+  for (let batch = 0; batch < MAX_REMOVE_BATCHES; batch++) {
+    const result = await removeSyncedScheduleBatch();
+    total.deleted += result.deleted;
+    total.failed = result.failed;
+    total.remaining = result.remaining;
+    if (result.remaining === 0 || result.deleted === 0) break;
+  }
+  return total;
 };

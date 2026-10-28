@@ -7,12 +7,54 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-28',
+    title: 'Money page, sign in with your username and job contracts',
+    items: [
+      'Classes: new Degree tab. Share a copy of your degree (every semester, course, credits and how each course is graded, never your grades) and classmates add it to their own with one click.',
+      'Classes: new Timetable tab. Each member can choose to share their class timetable (off by default, since people can take different subjects), and anyone without the .ics file can add a subject to their own schedule in one click.',
+      'Classes, Shared subjects: one button shares all your notebook subjects at once (entries marked Private stay hidden), each subject has a clear View notes button, and if you have no subjects yet it tells you how to create one.',
+      'Schedule, Notebook and Classes now show what they connect to at the top, so it is easier to jump between your timetable, your notes and your class.',
+      'New Money page: write your current balance, record income and expenses (also ones that repeat every month), set a monthly spending limit and a leisure limit, and track savings, investments, a wishlist and long-term plans. It only adds up what you write: it is not financial advice and is not connected to any bank.',
+      'Sign in with only the part of your email before the @ (for example your student number) instead of the full address.',
+      'Jobs: say if a place is a permanent contract, a fixed-term contract or an internship, and set the last working day. Weekly shifts stop after it.',
+      'Joining a class from an invite link now works when you sign up or sign in with Google, Discord or GitHub: you land on the class instead of the dashboard.',
+      'Connecting Google Calendar brings you back to the page you started from (Profile or Schedule).',
+    ],
+  },
+  {
+    date: '2026-10-27',
+    title: 'Notes and reminders, medication history and whiteboard selection',
+    items: [
+      'New Notes & reminders page: write notes about anything, pin them, tick them off, and add a time to get a notification to yourself.',
+      'Wellbeing: a medication history card shows the planned doses you marked as taken this week, month or last 3 months, plus your "as needed" doses.',
+      'Wellbeing: record your blood donations (whole blood, plasma or platelets) and see how many you made this year and how long ago the last one was.',
+      'Whiteboard: the new Select tool lets you drag a box around drawings, shapes and text, then copy, paste (also into another entry), duplicate, move or delete them together. Ctrl+C, Ctrl+V, Ctrl+D and Delete work too.',
+      'Notebook: a photo or file added on another device now shows up by itself in the entry you have open.',
+    ],
+  },
+  {
+    date: '2026-10-27',
+    title: 'Class invites, replies to your feedback and steadier calendar sync',
+    items: [
+      'Invite a friend straight into a class from the Members tab. The invite waits on their Classes page until they join or decline, even without notifications turned on.',
+      'Classes with an announcement you have not opened yet show "New announcement". Announcement notifications are now translated.',
+      'Google Calendar sync tries again by itself when Google is busy, so you should not need to press sync several times. "Remove all" now removes every synced event in one go.',
+      'Pads can no longer be locked by regular accounts, so every pad stays open for everyone, like a real shared pad. Pads you already locked can still be unlocked.',
+      'The team can now reply to the feedback you send. You get a notification and can read every reply on the new Your feedback page, linked from the feedback window and the footer.',
+      'Each piece of feedback shows whether it is open, replied, resolved or declined.',
+    ],
+  },
+  {
     date: '2026-10-26',
     title: 'Plan mode and clearer unsure dates',
     items: [
       'Dashboard: a new Plan mode button shows every grade, average, credit count and chart as if you got your target grade in everything left. Parts without a target use the median of your grades. Nothing is saved, and the task table keeps your real grades.',
       'Tasks with a date that is not set yet or a surprise no longer show a date anywhere. They show "Date TBD" or "Surprise" instead, and they stay out of the calendar, deadline overlaps, the exam countdown and the busy-day hint.',
       'Task packs: "Cannot start yet" is now shared too, and packs created before the update can publish changes. The first publish links them to your tasks and to the copies your classmates imported.',
+      'Importing a task pack can now replace your current tasks in the same subjects and period. Graded and completed tasks are kept and linked to the pack, and you confirm before anything is deleted.',
+      'Classes have a new Task packs tab. Share one of your packs and classmates import it in one click. Members are notified.',
+      'Schedule week view: a test or deadline on the day of a class of the same subject now shows inside that class.',
+      'The Classes menu item and other class, wellbeing and pad labels are now translated.',
     ],
   },
   {

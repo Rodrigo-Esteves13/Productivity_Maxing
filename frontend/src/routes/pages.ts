@@ -23,6 +23,9 @@ export const Users = lazyWithPreload(() => import('../pages/Users'));
 export const Security = lazyWithPreload(() => import('../pages/Security'));
 export const Appeals = lazyWithPreload(() => import('../pages/Appeals'));
 export const FeedbackAdmin = lazyWithPreload(() => import('../pages/FeedbackAdmin'));
+export const MyFeedback = lazyWithPreload(() => import('../pages/MyFeedback'));
+export const PersonalNotes = lazyWithPreload(() => import('../pages/PersonalNotes'));
+export const Finance = lazyWithPreload(() => import('../pages/Finance'));
 export const FriendCodeRequestsAdmin = lazyWithPreload(() => import('../pages/FriendCodeRequestsAdmin'));
 export const AdminUserProfile = lazyWithPreload(() => import('../pages/AdminUserProfile'));
 export const TaskTypes = lazyWithPreload(() => import('../pages/TaskTypes'));
@@ -75,6 +78,9 @@ const BY_SECTION: Record<string, { preload: () => Promise<unknown> }> = {
   security: Security,
   appeals: Appeals,
   feedback: FeedbackAdmin,
+  'my-feedback': MyFeedback,
+  notes: PersonalNotes,
+  finance: Finance,
   'friend-code-requests': FriendCodeRequestsAdmin,
 };
 

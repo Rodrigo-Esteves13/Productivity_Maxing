@@ -220,50 +220,60 @@ model Priority {
 
 /// Representa um utilizador da plataforma.
 model User {
-  id        String   @id @default(uuid())
+  id                  String                    @id @default(uuid())
   // Areas privadas criadas por este user (ver Area.ownerId).
-  ownedAreas Area[] @relation("UserOwnedAreas")
+  ownedAreas          Area[]                    @relation("UserOwnedAreas")
   // Areas oficiais que este user desligou (ver AreaHidden).
-  hiddenAreas AreaHidden[]
-  pushSubscriptions PushSubscription[]
-  shareVisits       ShareVisit[]
-  feedbackEntries   Feedback[]
-  taskPacks         TaskPack[]
-  taskPackUpdates   TaskPackUpdate[]
+  hiddenAreas         AreaHidden[]
+  pushSubscriptions   PushSubscription[]
+  shareVisits         ShareVisit[]
+  feedbackEntries     Feedback[]
+  taskPacks           TaskPack[]
+  taskPackUpdates     TaskPackUpdate[]
   // Social: codigo de amigo aleatorio (criado a pedido), amizades e bloqueios.
-  friendCode        String?  @unique
+  friendCode          String?                   @unique
   friendCodeRequests  FriendCodeChangeRequest[]
-  friendshipsSent     Friendship[] @relation("FriendshipRequester")
-  friendshipsReceived Friendship[] @relation("FriendshipAddressee")
-  blocksMade          UserBlock[]  @relation("BlockMaker")
-  blocksReceived      UserBlock[]  @relation("BlockTarget")
-  notesGrantsGiven    NotebookViewGrant[] @relation("ViewGrantOwner")
-  notesGrantsReceived NotebookViewGrant[] @relation("ViewGrantViewer")
-  email     String   @unique
-  role      Role     @default(USER)
-  name      String?
-  avatarUrl String?
-  createdAt DateTime @default(now())
+  friendshipsSent     Friendship[]              @relation("FriendshipRequester")
+  friendshipsReceived Friendship[]              @relation("FriendshipAddressee")
+  blocksMade          UserBlock[]               @relation("BlockMaker")
+  blocksReceived      UserBlock[]               @relation("BlockTarget")
+  notesGrantsGiven    NotebookViewGrant[]       @relation("ViewGrantOwner")
+  notesGrantsReceived NotebookViewGrant[]       @relation("ViewGrantViewer")
+  email               String                    @unique
+  role                Role                      @default(USER)
+  name                String?
+  avatarUrl           String?
+  createdAt           DateTime                  @default(now())
 
   // Ban/suspend - efeito imediato mesmo com um JWT ainda válido (ver
   // JwtStrategy.validate(), que consulta isto por request). SUSPENDED
   // sempre com suspendedUntil definido; passada essa data, tratado como
   // ACTIVE automaticamente (sem cron - ver UsersService.isBlocked/
   // reactivateIfExpired). BANNED nunca tem suspendedUntil (indefinido).
-  status                UserStatus @default(ACTIVE)
+  status                UserStatus      @default(ACTIVE)
   suspendedUntil        DateTime?
   statusReason          String?
   statusUpdatedAt       DateTime?
   statusUpdatedByUserId String?
-  statusUpdatedBy       User?      @relation("UserStatusChangedBy", fields: [statusUpdatedByUserId], references: [id], onDelete: SetNull)
-  statusChangesMade     User[]     @relation("UserStatusChangedBy")
+  statusUpdatedBy       User?           @relation("UserStatusChangedBy", fields: [statusUpdatedByUserId], references: [id], onDelete: SetNull)
+  statusChangesMade     User[]          @relation("UserStatusChangedBy")
+  // Silenciado so no feedback (spam/insultos) sem banir a conta. Com valor,
+  // POST /feedback recusa. null = pode enviar.
+  feedbackMutedAt       DateTime?
+  turmaInvitesReceived  TurmaInvite[]   @relation("TurmaInvitesReceived")
+  turmaInvitesSent      TurmaInvite[]   @relation("TurmaInvitesSent")
+  personalNotes         PersonalNote[]
+  bloodDonations        BloodDonation[]
+  sharedTurmaPrograms   TurmaProgram[]
+  financeSettings       FinanceSettings?
+  financeEntries        FinanceEntry[]
+  financeGoals          FinanceGoal[]
 
   // Pedidos de recurso contra a própria suspensão/ban (AccountBlockedPage
   // no frontend) - ver o modelo UserAppeal. appealsResolved é o lado do
   // ADMIN que decidiu (approve/deny), nunca a mesma pessoa que "appeals".
   appeals         UserAppeal[] @relation("UserAppeals")
   appealsResolved UserAppeal[] @relation("UserAppealResolutions")
-
 
   // Id do utilizador no Supabase Auth (auth.users), só existe para contas
   // email+password. Precisamos disto para apagar a credencial real no
@@ -306,7 +316,7 @@ model User {
   // sempre de um valor selecionado, e TRANSIT é a opção mais segura para
   // quem ainda não configurou nada (não assume que toda a gente tem
   // carro).
-  commuteMode CommuteMode @default(TRANSIT)
+  commuteMode    CommuteMode @default(TRANSIT)
 
   // Janela de sono/indisponibilidade, em minutos desde a meia-noite (hora
   // de Lisboa). Suporta virar a meia-noite (ex: 23:00-07:00 ->
@@ -342,10 +352,10 @@ model User {
   deadlinePushReminders  Boolean @default(false)
   // Ao concluir uma task académica (não evento), cria 3 tasks leves de
   // revisão a +1/+3/+7 dias (ver TasksService.spawnFollowUps).
-  spacedReviewsEnabled Boolean @default(false)
+  spacedReviewsEnabled   Boolean @default(false)
   // Entradas novas do Notebook nascem escondidas dos amigos com acesso as
   // notas (NotebookEntry.privateFromFriends). Desligado = tudo visivel.
-  notesPrivateByDefault Boolean @default(false)
+  notesPrivateByDefault  Boolean @default(false)
 
   // 2FA (TOTP, RFC 6238). Só tem efeito com TWO_FACTOR_ENABLED=true no
   // backend; com a flag desligada nada disto é usado nem exposto.
@@ -368,49 +378,50 @@ model User {
   calendarFeedToken String? @unique
 
   // Relações
-  identities       Identity[]
-  tasks            Task[]
-  apiKeys          ApiKey[]
-  securityLogs     SecurityLog[]
-  studySessions    StudySession[]
-  agentConfig      AgentConfig?
-  programs         AcademicProgram[] @relation("UserPrograms")
-  classOccurrences ClassOccurrence[]
-  workShifts       WorkShift[]
+  identities                     Identity[]
+  tasks                          Task[]
+  apiKeys                        ApiKey[]
+  securityLogs                   SecurityLog[]
+  studySessions                  StudySession[]
+  agentConfig                    AgentConfig?
+  programs                       AcademicProgram[]            @relation("UserPrograms")
+  classOccurrences               ClassOccurrence[]
+  workShifts                     WorkShift[]
   // Bem-estar (Fase 7): registo diario do estado mental e medicacao.
-  moodLogs         MoodLog[]
-  medications      Medication[]
-  medicationDoses  MedicationDose[]
-  medicationIntakes MedicationIntake[]
+  moodLogs                       MoodLog[]
+  medications                    Medication[]
+  medicationDoses                MedicationDose[]
+  medicationIntakes              MedicationIntake[]
   // Aviso legal da medicacao aceite (versao e quando). Sem aceitar a versao
   // atual nao se pode adicionar medicamentos nem registar tomas.
   medicationDisclaimerVersion    Int?
   medicationDisclaimerAcceptedAt DateTime?
   // Lingua em que o aviso foi mostrado quando foi aceite (prova do texto lido).
-  medicationDisclaimerLocale     String?   @db.VarChar(10)
-  taskAttachments  TaskAttachment[]
+  medicationDisclaimerLocale     String?                      @db.VarChar(10)
+  taskAttachments                TaskAttachment[]
   // Pads (bloco estilo dontpad) e turmas (Fase 7).
-  padEdits            Pad[]               @relation("PadUpdatedBy")
-  padsLocked          Pad[]               @relation("PadLockedBy")
-  padSourcesBlocked   PadBlockedSource[]  @relation("PadSourceBlockedBy")
-  turmasCreated       Turma[]             @relation("TurmaCreatedBy")
-  turmaMemberships    TurmaMember[]
-  turmaNotesCreated   TurmaNote[]         @relation("TurmaNoteCreatedBy")
-  turmaNotesUpdated   TurmaNote[]         @relation("TurmaNoteUpdatedBy")
-  turmaFiles          TurmaFile[]
-  turmaAnnouncements  TurmaAnnouncement[]
-  turmaLinkedAreas    TurmaLinkedArea[]
-  commitments      Commitment[]
-  travelTimes      TravelTime[]
-  calendarSyncedEvents CalendarSyncedEvent[]
-  bannedIps        BannedIp[]
-  areaScheduleLinks AreaScheduleLink[]
-  areaInterests     AreaInterest[]
-  notebookEntries   NotebookEntry[]
-  notebookShares    NotebookShare[]
-  notebookShareAccessRequests NotebookShareAccessRequest[]
-  gradeComponents GradeComponent[]
-  notebookChangeProposals NotebookChangeProposal[]
+  padEdits                       Pad[]                        @relation("PadUpdatedBy")
+  padsLocked                     Pad[]                        @relation("PadLockedBy")
+  padSourcesBlocked              PadBlockedSource[]           @relation("PadSourceBlockedBy")
+  turmasCreated                  Turma[]                      @relation("TurmaCreatedBy")
+  turmaMemberships               TurmaMember[]
+  turmaNotesCreated              TurmaNote[]                  @relation("TurmaNoteCreatedBy")
+  turmaNotesUpdated              TurmaNote[]                  @relation("TurmaNoteUpdatedBy")
+  turmaFiles                     TurmaFile[]
+  turmaAnnouncements             TurmaAnnouncement[]
+  turmaLinkedAreas               TurmaLinkedArea[]
+  turmaPacks                     TurmaPack[]
+  commitments                    Commitment[]
+  travelTimes                    TravelTime[]
+  calendarSyncedEvents           CalendarSyncedEvent[]
+  bannedIps                      BannedIp[]
+  areaScheduleLinks              AreaScheduleLink[]
+  areaInterests                  AreaInterest[]
+  notebookEntries                NotebookEntry[]
+  notebookShares                 NotebookShare[]
+  notebookShareAccessRequests    NotebookShareAccessRequest[]
+  gradeComponents                GradeComponent[]
+  notebookChangeProposals        NotebookChangeProposal[]
 }
 
 /// Recurso submetido pelo próprio utilizador contra a sua suspensão/ban
@@ -444,7 +455,6 @@ model UserAppeal {
   @@index([resolvedAt])
 }
 
-
 /// Um "dashboard" académico do user (ex: "Secundário", "Licenciatura em
 /// Engenharia Informática"). Cada user pode ter vários, para não misturar
 /// níveis de ensino/percursos diferentes no mesmo ecrã.
@@ -454,19 +464,19 @@ model UserAppeal {
 /// isso o scoping por período fica no Task (que já é per-user), e não na
 /// Area como uma primeira leitura do modelo "User -> Area -> Task" sugeria.
 model AcademicProgram {
-  id         String   @id @default(uuid())
-  userId     String
-  name       String
-  gradeScale String   @default("0-20")
-  isActive   Boolean  @default(true)
-  order      Int      @default(0)
-  createdAt  DateTime @default(now())
+  id              String   @id @default(uuid())
+  userId          String
+  name            String
+  gradeScale      String   @default("0-20")
+  isActive        Boolean  @default(true)
+  order           Int      @default(0)
+  createdAt       DateTime @default(now())
   // Default for whether the final (credit-weighted) average is rounded to
   // the nearest whole number, e.g. some unis round the semester/course
   // final grade even though individual test grades stay decimal.
   // AcademicPeriod.roundFinalGrade can override this per period; null
   // there means "inherit this default".
-  roundFinalGrade Boolean @default(true)
+  roundFinalGrade Boolean  @default(true)
 
   user           User             @relation("UserPrograms", fields: [userId], references: [id], onDelete: Cascade)
   periods        AcademicPeriod[]
@@ -485,30 +495,30 @@ model AcademicProgram {
 /// diretamente - o Program é só o agrupador para o seletor no topo do
 /// dashboard.
 model AcademicPeriod {
-  id         String    @id @default(uuid())
-  programId  String
-  name       String
-  startDate  DateTime
-  endDate    DateTime?
-  isArchived Boolean   @default(false)
-  archivedAt DateTime?
+  id              String    @id @default(uuid())
+  programId       String
+  name            String
+  startDate       DateTime
+  endDate         DateTime?
+  isArchived      Boolean   @default(false)
+  archivedAt      DateTime?
   // The period the program should auto-select when you switch to it or
   // reload, instead of always defaulting to the chronologically most
   // recent non-archived one - lets you "stick" to a specific
   // semester/year even if a newer one already exists. At most one pinned
   // period per program (enforced in PeriodsService.pin(), not at the DB
   // level - a partial unique index would need raw SQL in the migration).
-  isPinned   Boolean   @default(false)
-  createdAt  DateTime  @default(now())
+  isPinned        Boolean   @default(false)
+  createdAt       DateTime  @default(now())
   // Overrides AcademicProgram.roundFinalGrade for this period specifically.
   // null = inherit the program's default (the common case) - only set this
   // when a period genuinely needs to diverge from its program's setting.
   roundFinalGrade Boolean?
 
-  program        AcademicProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
-  tasks          Task[]
+  program         AcademicProgram  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  tasks           Task[]
   gradeComponents GradeComponent[]
-  activeForUsers User[]          @relation("UserActivePeriod")
+  activeForUsers  User[]           @relation("UserActivePeriod")
 
   // programId: PeriodsService.findAllForProgram() always filters by
   // program - same indexing logic as the rest of the app.
@@ -588,17 +598,16 @@ model AgentConfig {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-
 model Identity {
-  id                String    @id @default(uuid())
-  calendarId String?
+  id                String   @id @default(uuid())
+  calendarId        String?
   userId            String
   provider          Provider
   providerAccountId String
   accessToken       String?
   refreshToken      String?
   scope             String?
-  createdAt         DateTime  @default(now())
+  createdAt         DateTime @default(now())
 
   // Relações
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -616,9 +625,9 @@ model Identity {
 model Area {
   // Cadeiras que membros publicaram numa turma (ver TurmaLinkedArea).
   turmaLinks TurmaLinkedArea[]
-  id       String @id @default(uuid())
-  name     String
-  colorHex String @default("#808080")
+  id         String            @id @default(uuid())
+  name       String
+  colorHex   String            @default("#808080")
 
   // Opcional: liga esta Area a um TaskType por omissão (ex: "CDR" -> Académico,
   // "Natação" fica null). Quando definido, o frontend pré-seleciona e tranca o
@@ -653,20 +662,20 @@ model Area {
   // Motivo da recusa, escrito pelo admin e visível só ao dono.
   proposalReviewNote String?
 
-  @@index([ownerId])
-  @@index([proposalStatus])
-
   hiddenBy AreaHidden[]
 
   // Relações
-  tasks         Task[]
-  studySessions StudySession[]
+  tasks           Task[]
+  studySessions   StudySession[]
   // Ligação por user a um texto de disciplina do horário (ver
   // AreaScheduleLink) e as entradas do caderno desta cadeira.
   scheduleLinks   AreaScheduleLink[]
   interests       AreaInterest[]
   notebookEntries NotebookEntry[]
   gradeComponents GradeComponent[]
+
+  @@index([ownerId])
+  @@index([proposalStatus])
 }
 
 /// Representa uma ação executável dentro de uma Área (Area).
@@ -753,11 +762,11 @@ model Task {
   // versao desse item ja tem aplicada. Quando o dono do pacote o atualiza,
   // nasce um TaskPackUpdate por task importada, que o user aceita ou recusa;
   // nunca se muda a task sem autorizacao.
-  packItemId      String?
-  packItem        TaskPackItem? @relation("ImportedFromPackItem", fields: [packItemId], references: [id], onDelete: SetNull)
-  packItemVersion Int?
+  packItemId        String?
+  packItem          TaskPackItem?    @relation("ImportedFromPackItem", fields: [packItemId], references: [id], onDelete: SetNull)
+  packItemVersion   Int?
   // Itens de pacotes criados a partir desta task (lado do dono).
-  sourceOfPackItems TaskPackItem[] @relation("PackItemSource")
+  sourceOfPackItems TaskPackItem[]   @relation("PackItemSource")
   packUpdates       TaskPackUpdate[]
 
   // Duração esperada em minutos, escrita manualmente pelo user ao criar/
@@ -792,30 +801,30 @@ model Task {
   lastOverdueCheckAt DateTime?
 
   // Integrações
-  googleCalendarEventId String?
+  googleCalendarEventId   String?
   // Duração em minutos do evento no Google Calendar, só relevante quando a
   // Task tem hora definida (evento "dia inteiro" ignora isto). Null =
   // continua a usar o default de 60min no CalendarService, para tasks
   // antigas criadas antes deste campo existir.
   calendarDurationMinutes Int?
-  createdAt             DateTime @default(now())
+  createdAt               DateTime @default(now())
   // Gerido automaticamente pelo Prisma (@updatedAt - toca em qualquer
   // update(), não só os campos "visíveis"). Alimenta o StaleTasksCard
   // no frontend ("esta task está pendente há muito tempo sem ninguém
   // lhe tocar") - sem isto não havia sinal nenhum de "última atividade"
   // numa task, só "quando foi criada" (createdAt), que não é a mesma
   // pergunta.
-  updatedAt DateTime @updatedAt
+  updatedAt               DateTime @updatedAt
 
   // Relações
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  area Area @relation(fields: [areaId], references: [id])
-  studySessions StudySession[]
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area                Area                 @relation(fields: [areaId], references: [id])
+  studySessions       StudySession[]
   // Recorrência: ao CONCLUIR esta task cria-se a próxima ocorrência
   // (TasksService.spawnFollowUps). null = não repete.
   recurrenceFrequency RecurrenceFrequency?
   // A cada N dias/semanas/meses (>= 1).
-  recurrenceInterval  Int                 @default(1)
+  recurrenceInterval  Int                  @default(1)
   // Última data (inclusive) em que ainda se cria ocorrência; null = sem fim.
   recurrenceUntil     DateTime?
 
@@ -825,10 +834,10 @@ model Task {
 
   // Checklist leve da task (ver model Subtask) - sem peso, sem nota, não
   // entra em nenhuma média nem previsão.
-  subtasks Subtask[]
+  subtasks      Subtask[]
   sentReminders SentReminder[]
   // Ficheiros da task (enunciado em PDF, etc.), ver model TaskAttachment.
-  attachments TaskAttachment[]
+  attachments   TaskAttachment[]
 
   // Nenhuma destas é indexada automaticamente só por ser FK no Postgres:
   // - userId: TasksService.findAll/findOne/update/remove filtram sempre
@@ -868,11 +877,11 @@ enum RecurrenceFrequency {
 /// data da task mudar, a chave muda e o lembrete pode voltar a sair; se o
 /// cron correr duas vezes, o unique impede o email duplicado.
 model SentReminder {
-  id        String   @id @default(uuid())
-  taskId    String
+  id       String   @id @default(uuid())
+  taskId   String
   // Prazo da task no momento do envio.
-  taskDate  DateTime
-  sentAt    DateTime @default(now())
+  taskDate DateTime
+  sentAt   DateTime @default(now())
 
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
@@ -985,12 +994,12 @@ model BannedIp {
 /// página Focus para: (1) o widget de sessão ativa, (2) o heatmap de
 /// melhores horas para estudar, (3) histórico.
 model StudySession {
-  id        String    @id @default(uuid())
-  userId    String
-  startedAt DateTime  @default(now())
+  id              String    @id @default(uuid())
+  userId          String
+  startedAt       DateTime  @default(now())
   // null enquanto a sessão está a decorrer - é o que StudySessionsService
   // usa para saber se há uma sessão "ativa" (no máximo 1 por utilizador).
-  endedAt   DateTime?
+  endedAt         DateTime?
   // Atualizado periodicamente pelo frontend enquanto a sessão está ativa
   // (ver StudySessionProvider.tsx, POST /study-sessions/:id/heartbeat) -
   // é o sinal que StudySessionsService.autoCloseIfStale usa para saber
@@ -1000,7 +1009,7 @@ model StudySession {
   // contar horas fantasma até o utilizador reparar. null até ao
   // primeiro heartbeat (mesmo instante do start(), na prática).
   lastHeartbeatAt DateTime?
-  note      String?
+  note            String?
 
   // Concentracao percebida, 1 (dispersa) a 5 (totalmente focada), dada ao
   // parar. Opcional: quem nao responder nao perde nada.
@@ -1015,7 +1024,7 @@ model StudySession {
   // e o total por sessao mostra quando/onde te distrais mais.
   distractionCount Int @default(0)
 
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   // Opcionais e independentes um do outro: dá para começar uma sessão sem
   // apontar a task/area nenhuma ("estudo genérico"), só a uma Area (ex:
@@ -1085,7 +1094,7 @@ model ClassOccurrence {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Entradas do caderno criadas a partir desta aula específica (ver
   // NotebookEntry.classOccurrenceId) - SetNull lá, não Cascade: apagar a
   // ocorrência (ex: reimport que já não a inclui) nunca deve apagar o
@@ -1161,7 +1170,7 @@ model AreaInterest {
 /// na hora de criação; fica null quando o utilizador cria a entrada sem
 /// estar dentro do horário de nenhuma aula dessa cadeira.
 model NotebookEntry {
-  id                String @id @default(uuid())
+  id                String  @id @default(uuid())
   userId            String
   areaId            String
   classOccurrenceId String?
@@ -1172,7 +1181,7 @@ model NotebookEntry {
   // Preso a código de propósito (mesma lógica do AuthProvider mais acima):
   // só CLASS liga à sugestão automática de classNumber incremental, não
   // faz sentido ser um catálogo editável pelo admin.
-  entryType NotebookEntryType @default(NOTE)
+  entryType   NotebookEntryType @default(NOTE)
   // Só relevante quando entryType = CLASS. Guardado como campo próprio
   // (não extraído do título por regex) precisamente para a sugestão de
   // "próxima aula" ser robusta - ver NotebookEntry no frontend
@@ -1238,15 +1247,15 @@ model NotebookEntry {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  area            Area             @relation(fields: [areaId], references: [id], onDelete: Cascade)
-  classOccurrence ClassOccurrence? @relation(fields: [classOccurrenceId], references: [id], onDelete: SetNull)
+  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area            Area                     @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  classOccurrence ClassOccurrence?         @relation(fields: [classOccurrenceId], references: [id], onDelete: SetNull)
   photos          NotebookPhoto[]
   attachments     NotebookAttachment[]
   share           NotebookShare?
+  changeProposals NotebookChangeProposal[]
 
   @@index([userId, areaId, date])
-  changeProposals NotebookChangeProposal[]
 }
 
 // Link de partilha "só de leitura" para uma lesson (NotebookEntry) - uma
@@ -1257,23 +1266,24 @@ model NotebookEntry {
 // "segredo": GET /notebook/shared/:token não passa por JwtAuthGuard
 // nenhum, é a única credencial de quem recebe o link.
 model NotebookShare {
-  id              String   @id @default(uuid())
-  notebookEntryId String   @unique
-  token           String   @unique @default(uuid())
+  id              String                  @id @default(uuid())
+  notebookEntryId String                  @unique
+  token           String                  @unique @default(uuid())
   createdByUserId String
-  createdAt       DateTime @default(now())
+  createdAt       DateTime                @default(now())
   // PUBLIC (default, comportamento original: o token sozinho já chega) ou
   // AUTHORIZED - nesse caso quem abre o link tem de ter sessão E um
   // NotebookShareAccessRequest com status APPROVED. Campo no share, não
   // na entry: é sobre COMO o link se comporta, não sobre o conteúdo em
   // si, e um dia a mesma entry pode voltar a ser partilhada de outra
   // forma sem isto arrastar histórico antigo.
-  visibility NotebookShareVisibility @default(PUBLIC)
+  visibility      NotebookShareVisibility @default(PUBLIC)
 
   notebookEntry  NotebookEntry                @relation(fields: [notebookEntryId], references: [id], onDelete: Cascade)
   createdBy      User                         @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
   accessRequests NotebookShareAccessRequest[]
   visits         ShareVisit[]
+
   // Sem @@index([token]): o @unique de token ja e o indice.
   // "As minhas partilhas" e "Partilhado comigo" filtram pelo dono.
   @@index([createdByUserId])
@@ -1290,19 +1300,19 @@ enum NotebookShareVisibility {
 // NotebookService.requestAccess) em vez de acumular pedidos duplicados
 // de quem carrega no botão mais do que uma vez.
 model NotebookShareAccessRequest {
-  id               String                    @id @default(uuid())
+  id               String                   @id @default(uuid())
   notebookShareId  String
   requestingUserId String
-  status           ShareAccessRequestStatus  @default(PENDING)
+  status           ShareAccessRequestStatus @default(PENDING)
   // Papel dado quando o dono aprova: VIEWER so le, EDITOR propoe alteracoes
   // que o dono aprova/recusa, CO_OWNER edita direto. So faz sentido em
   // partilhas AUTHORIZED (e preciso saber QUEM e a pessoa).
-  accessRole       ShareAccessRole           @default(VIEWER)
+  accessRole       ShareAccessRole          @default(VIEWER)
   // true = convite do DONO a um amigo (PENDING = a espera de o convidado
   // aceitar, nao de o dono decidir). Estes acessos sao re-verificados a cada
   // leitura: se deixarem de ser amigos, o acesso corta logo.
-  invitedByOwner   Boolean                   @default(false)
-  createdAt        DateTime                  @default(now())
+  invitedByOwner   Boolean                  @default(false)
+  createdAt        DateTime                 @default(now())
   // Preenchido quando o dono aprova/nega - fica null enquanto PENDING.
   decidedAt        DateTime?
 
@@ -1391,7 +1401,7 @@ model WorkShift {
 
   startMinutes  Int
   endMinutes    Int
-  bufferMinutes Int    @default(0)
+  bufferMinutes Int          @default(0)
   label         String?
   // Morada e meio de transporte de um evento pontual (sem local). Servem
   // para calcular a viagem casa-evento e entre o evento e o resto do dia
@@ -1445,11 +1455,11 @@ model CalendarSyncedEvent {
 /// próprio tempo de deslocação. Os turnos agrupam-se aqui; mudar o nome ou
 /// a deslocação atualiza todos os turnos (e o plano de estudo) de uma vez.
 model Commitment {
-  id             String @id @default(uuid())
+  id             String      @id @default(uuid())
   userId         String
   name           String
   // Minutos de viagem de cada lado de cada turno deste local.
-  commuteMinutes Int    @default(0)
+  commuteMinutes Int         @default(0)
   // Morada do local (trabalho, evento, ginasio...) e meio de transporte
   // usados para CALCULAR commuteMinutes a partir de User.homeAddress via
   // Distance Matrix. Opcionais: o valor manual continua a ser o caminho
@@ -1460,16 +1470,28 @@ model Commitment {
   // trabalha aqui. Turnos semanais nesses dias não se criam nem se expandem;
   // turnos pontuais (troca de folga) continuam a valer. Validado em
   // CreateCommitmentDto/UpdateCommitmentDto (valores únicos, máx. 6).
-  daysOff        Int[]  @default([])
+  daysOff        Int[]       @default([])
+  // Tipo de contrato de um trabalho (null = nao e um trabalho ou nao foi
+  // dito) e ultimo dia de trabalho. Depois de endsOn (meia-noite UTC do
+  // dia, hora de Lisboa) os turnos semanais deixam de contar.
+  contractType   ContractType?
+  endsOn         DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   shifts WorkShift[]
 
   @@unique([userId, name])
   @@index([userId])
+}
+
+/// Contrato de um trabalho (Commitment.contractType).
+enum ContractType {
+  PERMANENT
+  FIXED_TERM
+  INTERNSHIP
 }
 
 /// Como as entradas de um componente de nota se juntam numa so nota.
@@ -1516,12 +1538,12 @@ model GradeComponent {
 
 /// Uma nota dentro de um GradeComponent (ex: o seminario da semana 3).
 model GradeEntry {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   componentId String
   label       String?
   grade       Float
   date        DateTime?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
   component GradeComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
 
@@ -1620,6 +1642,13 @@ model ShareVisit {
   @@index([notebookShareId, lastVisitAt])
 }
 
+// Como um feedback fechado acabou: tratado ou recusado (nao se vai fazer).
+// null enquanto aberto.
+enum FeedbackResolution {
+  DONE
+  REJECTED
+}
+
 enum FeedbackCategory {
   BUG
   IDEA
@@ -1631,15 +1660,19 @@ enum FeedbackCategory {
 /// Feedback escrito pelos users (qualquer língua). `language` = língua da
 /// app quando foi enviado, para o admin saber o que está a ler/traduzir.
 model Feedback {
-  id        String           @id @default(uuid())
-  userId    String?
-  category  FeedbackCategory @default(OTHER)
-  rating    Int?
-  message   String
-  language  String           @default("en")
-  page      String?
-  createdAt DateTime         @default(now())
-  isResolved Boolean         @default(false)
+  id         String              @id @default(uuid())
+  userId     String?
+  category   FeedbackCategory    @default(OTHER)
+  rating     Int?
+  message    String
+  language   String              @default("en")
+  page       String?
+  createdAt  DateTime            @default(now())
+  isResolved Boolean             @default(false)
+  resolution FeedbackResolution?
+  // Resposta do admin, visivel ao autor em /my-feedback (texto simples).
+  adminReply String?
+  repliedAt  DateTime?
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -1659,8 +1692,9 @@ model TaskPack {
   importCount Int      @default(0)
   createdAt   DateTime @default(now())
 
-  owner User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  items TaskPackItem[]
+  owner  User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items  TaskPackItem[]
+  turmas TurmaPack[]
 
   @@index([ownerId])
 }
@@ -1670,7 +1704,7 @@ model TaskPack {
 /// para Areas OFICIAIS (iguais para todos); numa Area pessoal fica null e quem
 /// importa escolhe a sua (areaName serve de sugestao).
 model TaskPackItem {
-  id               String   @id @default(uuid())
+  id               String        @id @default(uuid())
   packId           String
   position         Int
   title            String
@@ -1698,7 +1732,6 @@ model TaskPackItem {
   updates       TaskPackUpdate[]
 
   @@index([sourceTaskId])
-
   @@index([packId, position])
 }
 
@@ -1838,14 +1871,14 @@ model TravelTime {
 // cruzar humor com o foco das sessoes de estudo e o tempo estudado
 // (WellbeingInsightsService). Dados de saude: so o proprio utilizador os ve.
 model MoodLog {
-  id     String @id @default(uuid())
+  id     String   @id @default(uuid())
   userId String
   // Meia-noite UTC do dia (hora de Lisboa), como WorkShift.date.
   date   DateTime
   mood   Int
   energy Int?
   stress Int?
-  note   String? @db.VarChar(500)
+  note   String?  @db.VarChar(500)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1866,17 +1899,17 @@ enum MedicationSchedule {
 // Nao e conselho medico: so um lembrete e um registo de tomas. De proposito
 // nao guarda classes nem avalia doses ou combinacoes.
 model Medication {
-  id        String             @id @default(uuid())
-  userId    String
-  name      String             @db.VarChar(100)
-  dosage    String?            @db.VarChar(60)
-  schedule  MedicationSchedule @default(DAILY)
+  id               String             @id @default(uuid())
+  userId           String
+  name             String             @db.VarChar(100)
+  dosage           String?            @db.VarChar(60)
+  schedule         MedicationSchedule @default(DAILY)
   // Minutos desde a meia-noite (Lisboa) de cada toma diaria, ordenados.
   // Vazio quando schedule = AS_NEEDED.
-  times  Int[]
+  times            Int[]
   // Desligar o lembrete sem apagar o medicamento nem o historico.
-  remindersEnabled Boolean @default(true)
-  active           Boolean @default(true)
+  remindersEnabled Boolean            @default(true)
+  active           Boolean            @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1890,17 +1923,17 @@ model Medication {
 
 // Uma toma "se necessario", registada pelo utilizador.
 model MedicationIntake {
-  id           String               @id @default(uuid())
+  id           String   @id @default(uuid())
   userId       String
   medicationId String
   takenAt      DateTime
-  dose         String?              @db.VarChar(60)
-  note         String?              @db.VarChar(200)
+  dose         String?  @db.VarChar(60)
+  note         String?  @db.VarChar(200)
 
   createdAt DateTime @default(now())
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  medication Medication  @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medication Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
 
   @@index([userId, takenAt])
   @@index([medicationId])
@@ -1925,24 +1958,68 @@ model MedicationDose {
   @@index([userId, date])
 }
 
+// Nota pessoal solta (fora do Notebook, que e por cadeira). Com remindAt,
+// o cron dos lembretes manda um push a propria pessoa a essa hora.
+model PersonalNote {
+  id         String    @id @default(uuid())
+  userId     String
+  title      String    @db.VarChar(200)
+  body       String    @default("") @db.VarChar(10000)
+  pinned     Boolean   @default(false)
+  remindAt   DateTime?
+  remindedAt DateTime?
+  doneAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
+  @@index([remindAt])
+}
+
+enum BloodDonationType {
+  WHOLE_BLOOD
+  PLASMA
+  PLATELETS
+}
+
+// Registo de dadivas de sangue (dado de saude, so do proprio). Serve para
+// ver o historico e quando volta a poder doar.
+model BloodDonation {
+  id       String            @id @default(uuid())
+  userId   String
+  date     DateTime          @db.Date
+  type     BloodDonationType @default(WHOLE_BLOOD)
+  location String?           @db.VarChar(120)
+  note     String?           @db.VarChar(300)
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
 // Bloco de texto partilhado por nome, a ideia do dontpad: /pad/<slug> abre o
 // mesmo texto para qualquer pessoa, com ou sem conta. Nao pertence a
 // ninguem; updatedById so diz que conta escreveu por ultimo (null = sem
 // conta). version serve de controlo de concorrencia otimista (ver
 // PadsService.save).
 model Pad {
-  id          String  @id @default(uuid())
-  slug        String  @unique @db.VarChar(100)
-  content     String  @default("")
-  version     Int     @default(0)
-  updatedById String?
+  id              String    @id @default(uuid())
+  slug            String    @unique @db.VarChar(100)
+  content         String    @default("")
+  version         Int       @default(0)
+  updatedById     String?
   // Gravacao sem conta: HMAC do IP (nunca o IP), so para a moderacao ver
   // que a mesma origem encheu varios pads de lixo.
-  updatedByIpHash String? @db.VarChar(64)
+  updatedByIpHash String?   @db.VarChar(64)
   // Conta que trancou o pad: todos leem, so ela edita. Apagar a conta
   // destranca (SetNull). Pads trancados nao expiram.
-  lockedById String?
-  lockedAt   DateTime?
+  lockedById      String?
+  lockedAt        DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1991,6 +2068,28 @@ model Turma {
   files         TurmaFile[]
   announcements TurmaAnnouncement[]
   linkedAreas   TurmaLinkedArea[]
+  packs         TurmaPack[]
+  programs      TurmaProgram[]
+  invites       TurmaInvite[]
+}
+
+// Convite direto para uma turma (um membro convida um amigo; um admin
+// convida qualquer conta). Fica pendente ate a pessoa aceitar ou recusar,
+// por isso chega mesmo a quem nao tem push.
+model TurmaInvite {
+  id          String  @id @default(uuid())
+  turmaId     String
+  userId      String
+  invitedById String?
+
+  createdAt DateTime @default(now())
+
+  turma     Turma @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  user      User  @relation("TurmaInvitesReceived", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy User? @relation("TurmaInvitesSent", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([turmaId, userId])
+  @@index([userId])
 }
 
 model TurmaMember {
@@ -1998,6 +2097,9 @@ model TurmaMember {
   turmaId String
   userId  String
   role    TurmaRole @default(MEMBER)
+  // Partilha o proprio horario de aulas com a turma. Desligado por
+  // defeito: nem toda a gente tem as mesmas cadeiras.
+  shareSchedule Boolean @default(false)
 
   joinedAt DateTime @default(now())
 
@@ -2066,6 +2168,24 @@ model TurmaAnnouncement {
 
 // Cadeira do caderno de um membro publicada na turma: os outros membros leem
 // as entradas dessa cadeira (menos as privadas, privateFromFriends).
+// Pacote de tasks que um membro (dono do pacote) partilhou com a turma. Os
+// outros membros veem-no na turma e importam pelo fluxo normal (/packs/:code).
+model TurmaPack {
+  id         String @id @default(uuid())
+  turmaId    String
+  packId     String
+  sharedById String
+
+  createdAt DateTime @default(now())
+
+  turma    Turma    @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  pack     TaskPack @relation(fields: [packId], references: [id], onDelete: Cascade)
+  sharedBy User     @relation(fields: [sharedById], references: [id], onDelete: Cascade)
+
+  @@unique([turmaId, packId])
+  @@index([turmaId])
+}
+
 model TurmaLinkedArea {
   id      String @id @default(uuid())
   turmaId String
@@ -2079,5 +2199,89 @@ model TurmaLinkedArea {
   area  Area  @relation(fields: [areaId], references: [id], onDelete: Cascade)
 
   @@unique([turmaId, userId, areaId])
+  @@index([turmaId])
+}
+
+/// Financas pessoais (separador Finance). Valores em centimos (Int) para
+/// nao haver erros de arredondamento. A app so regista e soma: nao da
+/// conselhos financeiros (aviso no proprio separador).
+model FinanceSettings {
+  userId             String   @id
+  currency           String   @default("EUR") @db.VarChar(3)
+  // Saldo atual escrito pela pessoa (nao ha ligacao a bancos).
+  balanceCents       Int      @default(0)
+  // Limite de gastos por mes e, dentro dele, para lazer. null = sem limite.
+  monthlyBudgetCents Int?
+  leisureBudgetCents Int?
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum FinanceEntryKind {
+  INCOME
+  EXPENSE
+}
+
+/// Uma entrada ou saida de dinheiro num dia. `recurring` = repete-se todos
+/// os meses (renda, salario): conta em cada mes a partir de `date`.
+model FinanceEntry {
+  id          String           @id @default(uuid())
+  userId      String
+  kind        FinanceEntryKind
+  amountCents Int
+  category    String           @db.VarChar(20)
+  note        String?          @db.VarChar(120)
+  // Meia-noite UTC do dia (hora de Lisboa).
+  date        DateTime
+  recurring   Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+enum FinanceGoalKind {
+  SAVINGS
+  INVESTMENT
+  WISHLIST
+  LONG_TERM
+}
+
+/// Objetivo com valor alvo: poupanca, investimento, lista de desejos ou
+/// plano a longo prazo. savedCents e atualizado a mao.
+model FinanceGoal {
+  id          String          @id @default(uuid())
+  userId      String
+  kind        FinanceGoalKind
+  name        String          @db.VarChar(80)
+  targetCents Int
+  savedCents  Int             @default(0)
+  deadline    DateTime?
+  createdAt   DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Licenciatura partilhada com a turma: copia (snapshot) da estrutura no
+/// momento da partilha, sem notas. Semestres com datas, cadeiras com
+/// creditos e componentes de avaliacao com pesos. Cada membro pode importar
+/// a copia para o seu proprio Grades, que fica independente.
+model TurmaProgram {
+  id         String   @id @default(uuid())
+  turmaId    String
+  sharedById String
+  name       String   @db.VarChar(120)
+  // { gradeScale, roundFinalGrade, periods: [{ name, startDate, endDate,
+  //   courses: [{ name, colorHex, credits, components: [...] }] }] }
+  snapshot   Json
+  createdAt  DateTime @default(now())
+
+  turma    Turma @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  sharedBy User  @relation(fields: [sharedById], references: [id], onDelete: Cascade)
+
   @@index([turmaId])
 }

@@ -2,6 +2,7 @@ export const auth: Record<string, string> = {
   'auth.loginTitle': "Entrar na tua conta",
   'auth.registerTitle': "Criar conta",
   'auth.email': "Email",
+  'auth.emailOrHandle': "Email ou utilizador (a parte antes do @)",
   'auth.password': "Palavra-passe",
   'auth.name': "Nome",
   'auth.namePlaceholder': "O teu nome",

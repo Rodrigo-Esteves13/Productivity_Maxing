@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsString, MaxLength, MinLength } from 'class-validator';
 import {
   EMAIL_MAX_LENGTH,
   PASSWORD_MAX_LENGTH,
@@ -9,8 +9,11 @@ import { NormalizeEmail } from '../email.util';
 // Mesmos limites do registo (RegisterDto): um corpo enorme nunca chega ao
 // Supabase.
 export class LoginDto {
+  // Email ou so a parte antes do @ (ex: numero de aluno "A047610"),
+  // resolvido em PasswordAuthService.resolveLoginEmail.
   @NormalizeEmail()
-  @IsEmail()
+  @IsString()
+  @MinLength(1)
   @MaxLength(EMAIL_MAX_LENGTH)
   email: string;
 

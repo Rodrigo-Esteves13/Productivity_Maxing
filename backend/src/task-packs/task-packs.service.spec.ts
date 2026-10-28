@@ -49,9 +49,20 @@ function setup() {
       findMany: jest.fn(),
       update: jest.fn().mockResolvedValue({}),
     },
-    area: { findMany: jest.fn().mockResolvedValue([]) },
+    area: {
+      findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue({ id: 'ok' }),
+    },
   };
-  const tasks = { create: jest.fn().mockResolvedValue({ id: 'new-task' }) };
+  const tasks = {
+    create: jest.fn().mockResolvedValue({ id: 'new-task' }),
+    resolvePeriodId: jest.fn().mockResolvedValue('per-1'),
+    bulkRemove: jest
+      .fn()
+      .mockImplementation((_u: string, ids: string[]) =>
+        Promise.resolve({ count: ids.length }),
+      ),
+  };
   const service = new TaskPacksService(
     prisma as unknown as PrismaService,
     tasks as unknown as TasksService,
@@ -163,6 +174,69 @@ describe('TaskPacksService', () => {
       });
       expect(res).toMatchObject({ created: 1, failed: 1 });
       expect(res.results[0].error).toBe('Weight over 100%');
+    });
+
+    it('substituir: apaga so as tasks do user nas cadeiras do import, guarda as com nota e liga-as', async () => {
+      const { service, prisma, tasks } = setup();
+      prisma.taskPack.findUnique.mockResolvedValue(pack);
+      prisma.task.findMany.mockResolvedValue([
+        {
+          id: 'velha',
+          title: 'Outro',
+          areaId: 'official',
+          realGrade: null,
+          progressStatus: 'ON_TRACK',
+        },
+        {
+          id: 'feita',
+          title: ' teste 1 ',
+          areaId: 'official',
+          realGrade: 15,
+          progressStatus: 'COMPLETED',
+        },
+      ]);
+      const res = await service.import('u2', 'code', {
+        replaceExisting: true,
+        items: [{ itemId: 'i1' }],
+      });
+      const where = (
+        prisma.task.findMany.mock.calls as [{ where: unknown }][]
+      )[0][0].where;
+      expect(where).toEqual({
+        userId: 'u2',
+        periodId: 'per-1',
+        areaId: { in: ['official'] },
+      });
+      expect(tasks.bulkRemove).toHaveBeenCalledWith('u2', ['velha']);
+      expect(tasks.create).not.toHaveBeenCalled();
+      expect(prisma.task.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'feita', userId: 'u2' } }),
+      );
+      expect(res).toMatchObject({
+        created: 0,
+        kept: 1,
+        replaced: 1,
+        failed: 0,
+      });
+    });
+
+    it('substituir: cadeira sem acesso nao apaga nada', async () => {
+      const { service, prisma, tasks } = setup();
+      prisma.taskPack.findUnique.mockResolvedValue(pack);
+      prisma.area.findFirst.mockResolvedValue(null);
+      await service.import('u2', 'code', {
+        replaceExisting: true,
+        items: [{ itemId: 'i2', areaId: 'alheia' }],
+      });
+      expect(prisma.task.findMany).not.toHaveBeenCalled();
+      expect(tasks.bulkRemove).not.toHaveBeenCalled();
+    });
+
+    it('sem substituir nunca apaga', async () => {
+      const { service, prisma, tasks } = setup();
+      prisma.taskPack.findUnique.mockResolvedValue(pack);
+      await service.import('u2', 'code', { items: [{ itemId: 'i1' }] });
+      expect(tasks.bulkRemove).not.toHaveBeenCalled();
     });
 
     it('codigo inexistente => 404', async () => {

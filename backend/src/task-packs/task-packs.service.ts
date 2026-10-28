@@ -5,10 +5,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
-import type { DateCertainty, Effort } from '@prisma/client';
+import type { DateCertainty, Effort, TaskPackItem } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TasksService } from '../tasks/tasks.service';
-import { accessibleAreaWhere } from '../areas/area-access';
+import {
+  accessibleAreaWhere,
+  assertAreaAccessible,
+} from '../areas/area-access';
 import type { CreateTaskDto } from '../tasks/dto/create-task.dto';
 import { CreateTaskPackDto, ImportTaskPackDto } from './dto/task-pack.dto';
 import { MAX_PACKS_PER_USER } from './task-packs.constants';
@@ -57,8 +60,21 @@ export interface ImportItemResult {
 export interface ImportTaskPackResult {
   created: number;
   failed: number;
+  /** Modo substituir: tasks apagadas antes de importar. */
+  replaced: number;
+  /** Modo substituir: tasks com nota/concluidas mantidas e ligadas ao pacote. */
+  kept: number;
   results: ImportItemResult[];
 }
+
+interface ResolvedItem {
+  item: TaskPackItem;
+  areaId: string;
+}
+
+const COMPLETED_STATUS = 'COMPLETED';
+const titleKey = (areaId: string, title: string) =>
+  `${areaId}|${title.trim().toLowerCase()}`;
 
 // Codigo curto mas nao adivinhavel (96 bits). Nunca derivado de ids/nomes.
 const newCode = () => randomBytes(12).toString('base64url');
@@ -213,6 +229,7 @@ export class TaskPacksService {
     const itemsById = new Map(pack.items.map((i) => [i.id, i]));
     const seen = new Set<string>();
     const results: ImportItemResult[] = [];
+    const resolved: ResolvedItem[] = [];
 
     for (const requested of dto.items) {
       if (seen.has(requested.itemId)) continue;
@@ -237,9 +254,31 @@ export class TaskPacksService {
         continue;
       }
 
+      resolved.push({ item, areaId });
+    }
+
+    const periodId = await this.tasksService.resolvePeriodId(
+      userId,
+      dto.periodId,
+    );
+    const replace = dto.replaceExisting
+      ? await this.clearForReplace(userId, periodId, resolved)
+      : { deleted: 0, keptByItem: new Map<string, string>() };
+
+    for (const { item, areaId } of resolved) {
+      const keptTaskId = replace.keptByItem.get(item.id);
+      if (keptTaskId) {
+        // A task com nota fica como esta, so passa a seguir o pacote.
+        await this.prisma.task.update({
+          where: { id: keptTaskId, userId },
+          data: { packItemId: item.id, packItemVersion: item.version },
+        });
+        results.push({ itemId: item.id, ok: true });
+        continue;
+      }
       const taskDto: CreateTaskDto = {
         areaId,
-        periodId: dto.periodId,
+        periodId,
         title: item.title,
         date: item.dueDate.toISOString(),
         type: item.taskType,
@@ -274,14 +313,80 @@ export class TaskPacksService {
       }
     }
 
-    const created = results.filter((r) => r.ok).length;
-    if (created > 0) {
+    const ok = results.filter((r) => r.ok).length;
+    if (ok > 0) {
       await this.prisma.taskPack.update({
         where: { id: pack.id },
         data: { importCount: { increment: 1 } },
       });
     }
-    return { created, failed: results.length - created, results };
+    const kept = replace.keptByItem.size;
+    return {
+      created: ok - kept,
+      failed: results.length - ok,
+      replaced: replace.deleted,
+      kept,
+      results,
+    };
+  }
+
+  /**
+   * Modo substituir: apaga as tasks do user no periodo e nas cadeiras que o
+   * import vai preencher, para o pacote ficar no lugar delas (e o limite de
+   * 100% de peso nao travar o import). Tasks com nota ou concluidas sao
+   * historia e ficam; se o titulo bater com um item, passam a ser essa task
+   * do pacote em vez de se criar uma copia.
+   *
+   * Cadeiras a que o user nao tem acesso saem antes de apagar: esses itens
+   * iam falhar no create e nao se apaga nada que nao vai ser substituido.
+   */
+  private async clearForReplace(
+    userId: string,
+    periodId: string,
+    resolved: ResolvedItem[],
+  ): Promise<{ deleted: number; keptByItem: Map<string, string> }> {
+    const areaIds: string[] = [];
+    for (const areaId of new Set(resolved.map((r) => r.areaId))) {
+      try {
+        await assertAreaAccessible(this.prisma, userId, areaId);
+        areaIds.push(areaId);
+      } catch {
+        // fica de fora: o item correspondente falha no create com a mensagem certa
+      }
+    }
+    if (areaIds.length === 0) return { deleted: 0, keptByItem: new Map() };
+
+    const existing = await this.prisma.task.findMany({
+      where: { userId, periodId, areaId: { in: areaIds } },
+      select: {
+        id: true,
+        title: true,
+        areaId: true,
+        realGrade: true,
+        progressStatus: true,
+      },
+    });
+    const isHistory = (t: (typeof existing)[number]) =>
+      t.realGrade !== null || t.progressStatus === COMPLETED_STATUS;
+
+    const keptByTitle = new Map<string, string>();
+    for (const task of existing.filter(isHistory)) {
+      keptByTitle.set(titleKey(task.areaId, task.title), task.id);
+    }
+    const keptByItem = new Map<string, string>();
+    const usedKept = new Set<string>();
+    for (const { item, areaId } of resolved) {
+      const taskId = keptByTitle.get(titleKey(areaId, item.title));
+      if (taskId && !usedKept.has(taskId)) {
+        keptByItem.set(item.id, taskId);
+        usedKept.add(taskId);
+      }
+    }
+
+    const toDelete = existing.filter((t) => !isHistory(t)).map((t) => t.id);
+    if (toDelete.length === 0) return { deleted: 0, keptByItem };
+    const { count } = await this.tasksService.bulkRemove(userId, toDelete);
+    return { deleted: count, keptByItem };
   }
 
   private async findByCodeOrThrow(code: string) {

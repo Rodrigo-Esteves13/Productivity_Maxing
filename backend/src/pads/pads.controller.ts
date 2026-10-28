@@ -133,12 +133,15 @@ export class PadsController {
     return this.pads.save(viewerOf(user, req), params.slug, dto);
   }
 
+  // So admin: um pad e de toda a gente (como o dontpad); um user normal a
+  // trancar tirava o pad aos outros. Quem ja tinha trancado ainda destranca.
   @Post(':slug/lock')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   @Throttle(perMinute(PAD_LOCKS_PER_MINUTE))
   @ApiOperation({
     summary:
-      'Locks a pad: everyone can still read it, only your account can edit it (account required).',
+      'Locks a pad: everyone can still read it, only the locking account can edit it (Admin only).',
   })
   lock(
     @CurrentUser() user: AuthenticatedUser,

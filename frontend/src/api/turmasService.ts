@@ -3,12 +3,14 @@ import type {
   TurmaAnnouncement,
   TurmaDetail,
   TurmaFile,
+  TurmaInvite,
   TurmaLinkedArea,
   TurmaLinkedEntry,
   TurmaLinkedEntrySummary,
   TurmaNote,
   TurmaNoteSearchResult,
   TurmaNoteSummary,
+  TurmaPack,
   TurmaSummary,
 } from '../types/models';
 
@@ -21,6 +23,21 @@ export const createTurma = async (input: { name: string; description?: string })
 
 export const joinTurma = async (code: string): Promise<{ id: string }> =>
   (await api.post<{ id: string }>('/classes/join', { code })).data;
+
+// Convites diretos (um amigo; um admin pode usar o email de qualquer conta).
+export const inviteToTurma = async (turmaId: string, input: { userId?: string; email?: string }): Promise<void> => {
+  await api.post(`${base(turmaId)}/invites`, input);
+};
+
+export const getTurmaInvites = async (): Promise<TurmaInvite[]> =>
+  (await api.get<TurmaInvite[]>('/classes/invites')).data;
+
+export const acceptTurmaInvite = async (inviteId: string): Promise<{ id: string }> =>
+  (await api.post<{ id: string }>(`/classes/invites/${encodeURIComponent(inviteId)}/accept`)).data;
+
+export const declineTurmaInvite = async (inviteId: string): Promise<void> => {
+  await api.delete(`/classes/invites/${encodeURIComponent(inviteId)}`);
+};
 
 export const getTurma = async (turmaId: string): Promise<TurmaDetail> =>
   (await api.get<TurmaDetail>(base(turmaId))).data;
@@ -91,6 +108,17 @@ export const deleteTurmaFile = async (turmaId: string, fileId: string): Promise<
   await api.delete(`${base(turmaId)}/files/${encodeURIComponent(fileId)}`);
 };
 
+export const getTurmaPacks = async (turmaId: string): Promise<TurmaPack[]> =>
+  (await api.get<TurmaPack[]>(`${base(turmaId)}/packs`)).data;
+
+export const shareTurmaPack = async (turmaId: string, packId: string): Promise<void> => {
+  await api.post(`${base(turmaId)}/packs`, { packId });
+};
+
+export const unshareTurmaPack = async (turmaId: string, linkId: string): Promise<void> => {
+  await api.delete(`${base(turmaId)}/packs/${encodeURIComponent(linkId)}`);
+};
+
 export const getLinkedAreas = async (turmaId: string): Promise<TurmaLinkedArea[]> =>
   (await api.get<TurmaLinkedArea[]>(`${base(turmaId)}/linked-areas`)).data;
 
@@ -116,3 +144,64 @@ export const getLinkedEntry = async (turmaId: string, linkId: string, entryId: s
 // Pesquisa global (Ctrl+K) nas notas das turmas de que sou membro.
 export const searchTurmaNotes = async (q: string): Promise<TurmaNoteSearchResult[]> =>
   (await api.get<TurmaNoteSearchResult[]>('/classes/search', { params: { q } })).data;
+
+// Horario partilhado da turma (cada membro escolhe partilhar o seu).
+export interface TurmaScheduleClass {
+  subject: string;
+  date: string;
+  startMinutes: number;
+  endMinutes: number;
+  location: string | null;
+  sharedBy: number;
+  inMine: boolean;
+}
+
+export interface TurmaSchedule {
+  sharing: boolean;
+  sharers: number;
+  classes: TurmaScheduleClass[];
+}
+
+export const getTurmaSchedule = async (turmaId: string): Promise<TurmaSchedule> =>
+  (await api.get<TurmaSchedule>(`/classes/${encodeURIComponent(turmaId)}/schedule`)).data;
+
+export const setTurmaScheduleSharing = async (turmaId: string, share: boolean): Promise<void> => {
+  await api.patch(`/classes/${encodeURIComponent(turmaId)}/schedule/sharing`, { share });
+};
+
+export const copyTurmaSubject = async (turmaId: string, subject: string): Promise<{ copied: number }> =>
+  (await api.post<{ copied: number }>(`/classes/${encodeURIComponent(turmaId)}/schedule/copy`, { subject })).data;
+
+// Licenciatura partilhada: copia da estrutura do Grades (sem notas).
+export interface TurmaProgramPeriod {
+  name: string;
+  startDate: string;
+  endDate: string | null;
+  courses: { name: string; credits: number | null; components: { name: string; weightPercentage: number }[] }[];
+}
+
+export interface TurmaProgram {
+  id: string;
+  name: string;
+  sharedById: string;
+  sharedByName: string | null;
+  createdAt: string;
+  snapshot: { gradeScale: string; periods: TurmaProgramPeriod[] };
+}
+
+export const getTurmaPrograms = async (turmaId: string): Promise<TurmaProgram[]> =>
+  (await api.get<TurmaProgram[]>(`/classes/${encodeURIComponent(turmaId)}/programs`)).data;
+
+export const shareTurmaProgram = async (turmaId: string, programId: string): Promise<void> => {
+  await api.post(`/classes/${encodeURIComponent(turmaId)}/programs`, { programId });
+};
+
+export const removeTurmaProgram = async (turmaId: string, linkId: string): Promise<void> => {
+  await api.delete(`/classes/${encodeURIComponent(turmaId)}/programs/${encodeURIComponent(linkId)}`);
+};
+
+export const importTurmaProgram = async (
+  turmaId: string,
+  linkId: string,
+): Promise<{ programId: string; periods: number; courses: number }> =>
+  (await api.post(`/classes/${encodeURIComponent(turmaId)}/programs/${encodeURIComponent(linkId)}/import`)).data;

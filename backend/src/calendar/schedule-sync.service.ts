@@ -37,6 +37,7 @@ import type {
   SyncResult,
 } from './schedule-sync.types';
 import { HTTP_GONE, HTTP_NOT_FOUND } from './http-codes';
+import { googleFetch } from './google-fetch.util';
 
 // Calendario da app para o sync em curso. E mutavel de proposito: se a pessoa
 // apagou o calendario, a primeira criacao a falhar com 404 substitui-o e os
@@ -331,7 +332,7 @@ export class ScheduleSyncService {
     body?: unknown,
   ): Promise<Response> {
     const eventsUrl = this.calendarService.eventsUrl(ctx.calendarId);
-    return fetch(eventId ? `${eventsUrl}/${eventId}` : eventsUrl, {
+    return googleFetch(eventId ? `${eventsUrl}/${eventId}` : eventsUrl, {
       method,
       headers: {
         Authorization: `Bearer ${ctx.accessToken}`,
