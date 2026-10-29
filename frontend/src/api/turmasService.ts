@@ -205,3 +205,53 @@ export const importTurmaProgram = async (
   linkId: string,
 ): Promise<{ programId: string; periods: number; courses: number }> =>
   (await api.post(`/classes/${encodeURIComponent(turmaId)}/programs/${encodeURIComponent(linkId)}/import`)).data;
+
+export type TurmaDeadlineKind = 'FREQUENCIA' | 'TRABALHO_PRATICO';
+
+export interface TurmaDeadline {
+  id: string;
+  title: string;
+  subject: string;
+  dueAt: string;
+  weightPercentage: number | null;
+  kind: TurmaDeadlineKind;
+  createdById: string | null;
+  createdByName: string | null;
+  myTaskId: string | null;
+  addedCount: number;
+}
+
+export interface TurmaDeadlineInput {
+  title: string;
+  subject: string;
+  dueAt: string;
+  weightPercentage: number | null;
+  kind: TurmaDeadlineKind;
+}
+
+export const getTurmaDeadlines = async (turmaId: string): Promise<TurmaDeadline[]> =>
+  (await api.get<TurmaDeadline[]>(`${base(turmaId)}/deadlines`)).data;
+
+export const createTurmaDeadline = async (turmaId: string, input: TurmaDeadlineInput): Promise<void> => {
+  await api.post(`${base(turmaId)}/deadlines`, input);
+};
+
+export const updateTurmaDeadline = async (
+  turmaId: string,
+  deadlineId: string,
+  input: Partial<TurmaDeadlineInput>,
+): Promise<void> => {
+  await api.patch(`${base(turmaId)}/deadlines/${encodeURIComponent(deadlineId)}`, input);
+};
+
+export const removeTurmaDeadline = async (turmaId: string, deadlineId: string): Promise<void> => {
+  await api.delete(`${base(turmaId)}/deadlines/${encodeURIComponent(deadlineId)}`);
+};
+
+export const adoptTurmaDeadline = async (
+  turmaId: string,
+  deadlineId: string,
+  areaId: string,
+): Promise<{ taskId: string }> =>
+  (await api.post<{ taskId: string }>(`${base(turmaId)}/deadlines/${encodeURIComponent(deadlineId)}/adopt`, { areaId }))
+    .data;

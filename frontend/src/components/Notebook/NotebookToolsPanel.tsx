@@ -131,7 +131,7 @@ export default function NotebookToolsPanel({ onInsert, onAddTable, onClose }: No
               aria-label={t('ui.customTableRows')}
               className="w-12 rounded-md border border-neutral-800 bg-neutral-950 px-1.5 py-1 text-xs text-neutral-100 focus:border-violet-500 focus:outline-none"
             />
-            <span className="text-xs text-neutral-600">{t('ui.rowsX')}</span>
+            <span className="text-xs text-neutral-500">{t('ui.rowsX')}</span>
             <input
               type="number"
               min={1}
@@ -141,7 +141,7 @@ export default function NotebookToolsPanel({ onInsert, onAddTable, onClose }: No
               aria-label={t('ui.customTableColumns')}
               className="w-12 rounded-md border border-neutral-800 bg-neutral-950 px-1.5 py-1 text-xs text-neutral-100 focus:border-violet-500 focus:outline-none"
             />
-            <span className="text-xs text-neutral-600">{t('ui.colsShort')}</span>
+            <span className="text-xs text-neutral-500">{t('ui.colsShort')}</span>
             <button
               type="button"
               onClick={handleCustomTable}
@@ -200,7 +200,7 @@ function SnippetButton({ label, title, mode, showCopied, onClick }: SnippetButto
       className="flex min-w-[2rem] items-center justify-center gap-1 rounded-md border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-neutral-200 transition-colors hover:border-violet-500 hover:text-white"
     >
       {showCopied && <CheckIcon className="h-3 w-3 text-violet-400" />}
-      {!showCopied && mode === 'copy' && <CopyIcon className="h-3 w-3 text-neutral-600" />}
+      {!showCopied && mode === 'copy' && <CopyIcon className="h-3 w-3 text-neutral-500" />}
       {label}
     </button>
   );

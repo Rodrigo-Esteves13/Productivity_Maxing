@@ -33,6 +33,7 @@ import { TurmaScheduleService } from './turma-schedule.service';
 import { TurmaProgramsService } from './turma-programs.service';
 import { TurmaPacksService } from './turma-packs.service';
 import { TurmaInvitesService } from './turma-invites.service';
+import { TurmaDeadlinesService } from './turma-deadlines.service';
 import {
   InviteToTurmaDto,
   CreateAnnouncementDto,
@@ -42,6 +43,9 @@ import {
   LinkAreaDto,
   ShareTurmaScheduleDto,
   ShareProgramDto,
+  CreateTurmaDeadlineDto,
+  UpdateTurmaDeadlineDto,
+  AdoptTurmaDeadlineDto,
   CopyTurmaSubjectDto,
   SaveTurmaNoteDto,
   SearchTurmaNotesQueryDto,
@@ -81,6 +85,7 @@ export class TurmasController {
     private readonly programs: TurmaProgramsService,
     private readonly packs: TurmaPacksService,
     private readonly invites: TurmaInvitesService,
+    private readonly deadlines: TurmaDeadlinesService,
   ) {}
 
   @Get()
@@ -418,6 +423,69 @@ export class TurmasController {
     @Param('linkId', ParseUUIDPipe) linkId: string,
   ) {
     return this.packs.unshare(user.id, id, linkId);
+  }
+
+  // Prazos da turma (frequencias, trabalhos) que cada um junta as tasks
+
+  @Get(':id/deadlines')
+  @ApiOperation({ summary: 'Upcoming class deadlines.' })
+  listDeadlines(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.deadlines.list(user.id, id);
+  }
+
+  @Post(':id/deadlines')
+  @Throttle(perMinute(TURMA_WRITES_PER_MINUTE))
+  @ApiOperation({ summary: 'Adds a class deadline (any member).' })
+  createDeadline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateTurmaDeadlineDto,
+  ) {
+    return this.deadlines.create(user.id, id, dto);
+  }
+
+  @Patch(':id/deadlines/:deadlineId')
+  @Throttle(perMinute(TURMA_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary:
+      'Edits a deadline (who added it or the rep). Updates every linked task.',
+  })
+  updateDeadline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('deadlineId', ParseUUIDPipe) deadlineId: string,
+    @Body() dto: UpdateTurmaDeadlineDto,
+  ) {
+    return this.deadlines.update(user.id, id, deadlineId, dto);
+  }
+
+  @Delete(':id/deadlines/:deadlineId')
+  @HttpCode(204)
+  @Throttle(perMinute(TURMA_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary: 'Removes a deadline. Tasks already added stay with each member.',
+  })
+  removeDeadline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('deadlineId', ParseUUIDPipe) deadlineId: string,
+  ) {
+    return this.deadlines.remove(user.id, id, deadlineId);
+  }
+
+  @Post(':id/deadlines/:deadlineId/adopt')
+  @Throttle(perMinute(TURMA_WRITES_PER_MINUTE))
+  @ApiOperation({ summary: 'Adds a class deadline to your own tasks.' })
+  adoptDeadline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('deadlineId', ParseUUIDPipe) deadlineId: string,
+    @Body() dto: AdoptTurmaDeadlineDto,
+  ) {
+    return this.deadlines.adopt(user.id, id, deadlineId, dto);
   }
 
   // Licenciatura partilhada (estrutura do Grades, sem notas)

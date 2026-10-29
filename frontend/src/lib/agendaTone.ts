@@ -4,7 +4,8 @@ import type { AgendaItem } from './agenda';
 // eventos pontuais (rosa). Um evento pontual e um turno sem local e nao
 // recorrente (medico, entrevista...) - antes partilhava o amarelo do
 // trabalho e confundia-se com ele. As mesmas cores vao para o Google
-// Calendar (COLOR_ID_BY_KIND no backend).
+// Calendar (COLOR_ID_BY_KIND no backend). As horas usam o tom 300 em vez do
+// 200 a 60%: no tema claro a transparencia deixava-as a menos de 3:1.
 export type AgendaTone = 'class' | 'work' | 'event';
 
 export function getAgendaTone(item: AgendaItem): AgendaTone {
@@ -17,19 +18,19 @@ export const AGENDA_TONE_CLASSES: Record<AgendaTone, { card: string; title: stri
   class: {
     card: 'bg-blue-950/30 border border-blue-900/40',
     title: 'text-blue-200',
-    meta: 'text-blue-200/60',
+    meta: 'text-blue-300',
     dot: 'bg-blue-400',
   },
   work: {
     card: 'bg-amber-950/30 border border-amber-900/40',
     title: 'text-amber-200',
-    meta: 'text-amber-200/60',
+    meta: 'text-amber-300',
     dot: 'bg-amber-400',
   },
   event: {
     card: 'bg-pink-950/30 border border-pink-900/40',
     title: 'text-pink-200',
-    meta: 'text-pink-200/60',
+    meta: 'text-pink-300',
     dot: 'bg-pink-400',
   },
 };

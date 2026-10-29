@@ -118,7 +118,7 @@ function ProposalRow({
           </p>
         </details>
       )}
-      {!titleChanged && !textChanged && <p className="text-neutral-600">{t('share.proposals.noChange')}</p>}
+      {!titleChanged && !textChanged && <p className="text-neutral-500">{t('share.proposals.noChange')}</p>}
     </li>
   );
 }
@@ -221,7 +221,7 @@ export default function NotebookEntryShare({ share, currentTitle, currentText }:
           <p className="mb-1 text-xs font-medium text-neutral-300">{t('share.visits.title')}</p>
           {visitsError && <p className="text-xs text-red-400">{t('share.visits.error')}</p>}
           {!visitsError && visits && visits.viewers.length === 0 && (
-            <p className="text-xs text-neutral-600">{t('share.visits.empty')}</p>
+            <p className="text-xs text-neutral-500">{t('share.visits.empty')}</p>
           )}
           {visits && visits.viewers.length > 0 && (
             <>
@@ -250,7 +250,7 @@ export default function NotebookEntryShare({ share, currentTitle, currentText }:
               </ul>
             </>
           )}
-          <p className="mt-1.5 text-[11px] text-neutral-600">{t('share.visits.hint')}</p>
+          <p className="mt-1.5 text-[11px] text-neutral-500">{t('share.visits.hint')}</p>
         </div>
       )}
 
@@ -302,7 +302,7 @@ export default function NotebookEntryShare({ share, currentTitle, currentText }:
             <p className="mb-2 text-[11px] text-neutral-500">{t('share.role.hint')}</p>
             {isRequestsLoading && <p className="text-xs text-neutral-500">{t('share.loading')}</p>}
             {!isRequestsLoading && requests.length === 0 && (
-              <p className="text-xs text-neutral-600">{t('share.requests.empty')}</p>
+              <p className="text-xs text-neutral-500">{t('share.requests.empty')}</p>
             )}
             <ul className="space-y-1.5">
               {requests.map((req) => (

@@ -32,7 +32,10 @@ export default function PriorityBadge({ priorityKey, label, colorHex }: Priority
       style={{
         backgroundColor: `${color}1a`, // ~10% opacity
         borderColor: `${color}4d`, // ~30% opacity
-        color,
+        // A cor do admin sozinha (ex: cinzento #64748b) ficava abaixo de
+        // 4.5:1 no fundo escuro. Meio caminho para o neutral-100 (claro
+        // nos temas escuros, escuro no tema claro) mantem o tom e le-se.
+        color: `color-mix(in oklab, ${color} 50%, var(--color-neutral-100))`,
       }}
     >
       {catalogLabel('priority', priorityKey, label)}

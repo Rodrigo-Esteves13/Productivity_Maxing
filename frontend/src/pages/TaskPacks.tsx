@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
-import Breadcrumbs from '../components/UI/Breadcrumbs';
 import ActionButton from '../components/UI/ActionButton';
 import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
@@ -24,7 +23,6 @@ export default function TaskPacks() {
 
   return (
     <PageLayout>
-      <Breadcrumbs items={[{ label: t('nav.tasks'), to: '/tasks' }, { label: t('nav.taskPacks') }]} />
       <PageHeader
         title={t('nav.taskPacks')}
         description={t('packs.description')}

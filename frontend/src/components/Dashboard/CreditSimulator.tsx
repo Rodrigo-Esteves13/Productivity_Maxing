@@ -49,6 +49,7 @@ export default function CreditSimulator({ programAverage, scale }: CreditSimulat
           value={credits}
           onChange={(e) => setCredits(e.target.value)}
           placeholder={t('ui.credits')}
+          aria-label={t('ui.credits')}
           min={1}
           className="w-24 border border-neutral-700 bg-neutral-900 text-white rounded-lg px-3 py-1.5 text-sm placeholder:text-neutral-500"
         />
@@ -57,6 +58,7 @@ export default function CreditSimulator({ programAverage, scale }: CreditSimulat
           value={grade}
           onChange={(e) => setGrade(e.target.value)}
           placeholder={t('ui.gradePlaceholderMax', { max })}
+          aria-label={t('ui.gradePlaceholderMax', { max })}
           min={0}
           max={max}
           step="0.1"

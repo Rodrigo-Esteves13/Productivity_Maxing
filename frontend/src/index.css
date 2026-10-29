@@ -15,8 +15,8 @@
   --color-neutral-100: #ece3f8;
   --color-neutral-200: #d7c5ef;
   --color-neutral-300: #b99cdf;
-  --color-neutral-400: #9c7cc9;
-  --color-neutral-500: #8064ab;
+  --color-neutral-400: #a288cf;
+  --color-neutral-500: #9582bb; /* >= 4.5:1 sobre neutral-900 e cartoes por cima de neutral-800 (WCAG AA) */
   --color-neutral-600: #644d87;
   --color-neutral-700: #4a3966;
   --color-neutral-800: #2e2249;
@@ -85,10 +85,22 @@ body {
    push the whole page sideways on mobile. Anything that legitimately
    needs horizontal scroll (the tables in TasksTable.tsx, code blocks)
    already opts in with its own `overflow-x-auto` wrapper, so this only
-   catches accidental overflow, not intentional scrollable regions. */
+   catches accidental overflow, not intentional scrollable regions.
+   `clip` and not `hidden`: hidden turned html and body into scroll
+   containers, which silently broke every position: sticky (the navbar,
+   the notebook toolbar, the legal contents list never stuck). `hidden`
+   stays first only as the fallback for browsers without `clip`. */
 html,
 body {
   overflow-x: hidden;
+  overflow-x: clip;
+}
+
+/* Texto branco sobre um fundo de destaque que nao e o proprio elemento nem
+   o pai (ex: o indicador que desliza no SegmentedControl). O tema claro
+   escurece o text-white normal, o que ali dava texto escuro sobre violeta. */
+@utility text-on-accent {
+  color: #fff;
 }
 
 ::selection {

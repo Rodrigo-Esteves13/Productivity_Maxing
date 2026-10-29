@@ -100,7 +100,7 @@ export default function TaskPackList({ packs, onDelete, onPublish }: Props) {
               )}
             </div>
           </div>
-          <p className="mt-2 break-all text-xs text-neutral-600">{packShareUrl(pack.code)}</p>
+          <p className="mt-2 break-all text-xs text-neutral-500">{packShareUrl(pack.code)}</p>
           {publishNote[pack.id] && (
             <p role="status" className="mt-2 text-xs text-violet-300">
               {publishNote[pack.id]}

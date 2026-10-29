@@ -57,7 +57,7 @@ export default defineConfig({
       name: 'Productivity Maxing',
       short_name: 'PMaxing',
       description: 'Gestão de tarefas académicas e produtividade pessoal.',
-      theme_color: '#a52ff0',
+      theme_color: '#0d0920',
       // violet-500 (accent da marca)
       background_color: '#0d0920',
       // neutral-950 (fundo dark do tema)

@@ -73,6 +73,7 @@ export default function Developer() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={t('ui.keyNameEGLeague')}
+          aria-label={t('ui.keyNameEGLeague')}
           className="flex-1 bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-violet-600"
         />
         {isAdmin && (
@@ -80,6 +81,7 @@ export default function Developer() {
             value={scope}
             onChange={(e) => setScope(e.target.value as ApiKeyScope)}
             title={t('ui.tasksYourOwnTasksPeriods')}
+            aria-label={t('ui.tasksYourOwnTasksPeriods')}
             className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-violet-600"
           >
             <option value="TASKS">{t('ui.tasksScope')}</option>

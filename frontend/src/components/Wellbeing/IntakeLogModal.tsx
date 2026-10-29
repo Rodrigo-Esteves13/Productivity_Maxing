@@ -3,6 +3,7 @@ import Modal from '../UI/Modal';
 import Input from '../UI/Input';
 import Button from '../UI/Button';
 import ErrorState from '../UI/ErrorState';
+import ToggleChip from '../UI/ToggleChip';
 import { useI18n } from '../../i18n/useI18n';
 import type { Medication, MedicationIntakeInput } from '../../types/models';
 
@@ -10,6 +11,7 @@ import type { Medication, MedicationIntakeInput } from '../../types/models';
 const MAX_DOSE_LENGTH = 60;
 const MAX_NOTE_LENGTH = 200;
 const MS_PER_MINUTE = 60_000;
+const MS_PER_DAY = 24 * 60 * MS_PER_MINUTE;
 
 interface IntakeLogModalProps {
   medication: Medication | null;
@@ -26,6 +28,10 @@ function localInputValue(date: Date): string {
 function IntakeForm({ medication, isSaving, onSubmit, onClose }: IntakeLogModalProps & { medication: Medication }) {
   const { t } = useI18n();
   const [takenAt, setTakenAt] = useState(() => localInputValue(new Date()));
+  // Atalhos: o seletor de data e hora e chato no telemovel, e o caso comum
+  // e "agora" ou "esqueci-me ontem".
+  const now = localInputValue(new Date());
+  const yesterday = localInputValue(new Date(Date.now() - MS_PER_DAY));
   const [dose, setDose] = useState(medication.dosage ?? '');
   const [note, setNote] = useState('');
   const [formError, setFormError] = useState('');
@@ -59,6 +65,14 @@ function IntakeForm({ medication, isSaving, onSubmit, onClose }: IntakeLogModalP
         max={localInputValue(new Date())}
         onChange={(e) => setTakenAt(e.target.value)}
       />
+      <div className="flex flex-wrap gap-2" role="group" aria-label={t('wellbeing.meds.intake.when')}>
+        <ToggleChip size="sm" pressed={takenAt === now} onClick={() => setTakenAt(now)}>
+          {t('wellbeing.meds.intake.now')}
+        </ToggleChip>
+        <ToggleChip size="sm" pressed={takenAt === yesterday} onClick={() => setTakenAt(yesterday)}>
+          {t('wellbeing.meds.intake.yesterdaySameTime')}
+        </ToggleChip>
+      </div>
       <Input
         label={t('wellbeing.meds.dosage')}
         value={dose}

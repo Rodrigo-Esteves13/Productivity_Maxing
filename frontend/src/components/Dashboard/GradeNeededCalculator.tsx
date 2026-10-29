@@ -81,6 +81,7 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
 
       <div className="flex flex-wrap gap-2 mb-3">
         <select
+          aria-label={t('ui.whatDoINeedOn')}
           value={scope}
           onChange={(e) => setScope(e.target.value)}
           className="border border-neutral-700 bg-neutral-900 text-white rounded-lg px-2 py-1.5 text-sm"
@@ -98,6 +99,7 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
           value={target}
           onChange={(e) => setTarget(e.target.value)}
           placeholder={t('ui.targetAveragePlaceholder', { example: (max * 0.8).toFixed(0) })}
+          aria-label={t('ui.targetAveragePlaceholder', { example: (max * 0.8).toFixed(0) })}
           min={0}
           max={max}
           step="0.1"

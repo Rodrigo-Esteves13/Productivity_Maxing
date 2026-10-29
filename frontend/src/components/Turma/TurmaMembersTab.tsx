@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Button from '../UI/Button';
 import Input from '../UI/Input';
 import FormError from '../UI/FormError';
@@ -21,8 +21,11 @@ import { useTurmaAction } from '../../hooks/useTurmas';
 import { useConfirmAction } from '../../hooks/useConfirmAction';
 import { useAuth } from '../../context/useAuth';
 import { useI18n } from '../../i18n/useI18n';
-import { TURMAS_PATH } from '../../lib/appLinks';
-import type { TurmaDetail } from '../../types/models';
+import { TURMAS_PATH, friendPath, socialTabPath } from '../../lib/appLinks';
+import { sendClassmateFriendRequest } from '../../api/socialService';
+import { notifySocialChanged } from '../../lib/socialEvents';
+import { useFeedback } from '../../context/useFeedback';
+import type { TurmaDetail, TurmaMember } from '../../types/models';
 import { TURMA_DESCRIPTION_MAX_LENGTH, TURMA_NAME_MAX_LENGTH, turmaInviteLink } from './turmaConfig';
 
 interface TurmaMembersTabProps {
@@ -55,9 +58,9 @@ export default function TurmaMembersTab({ turma, onChanged }: TurmaMembersTabPro
       <InviteSection turma={turma} onChanged={onChanged} />
 
       <section>
-        <h3 className="mb-2 text-sm font-semibold text-neutral-300">
+        <h2 className="mb-2 text-sm font-semibold text-neutral-300">
           {t('turma.memberCount', { count: turma.members.length })}
-        </h3>
+        </h2>
         <ul className="divide-y divide-neutral-800 rounded-xl border border-neutral-800">
           {turma.members.map((member) => {
             const name = member.name ?? t('social.anonymous');
@@ -70,6 +73,7 @@ export default function TurmaMembersTab({ turma, onChanged }: TurmaMembersTabPro
                   {isMe && <span className="ml-1 text-neutral-500">({t('turma.you')})</span>}
                 </span>
                 <TurmaRoleBadge role={member.role} />
+                {!isMe && <ClassmateFriendAction turmaId={turma.id} member={member} onChanged={onChanged} />}
                 {isDelegado && !isMe && (
                   <span className="flex gap-2">
                     <Button
@@ -147,13 +151,69 @@ export default function TurmaMembersTab({ turma, onChanged }: TurmaMembersTabPro
   );
 }
 
+// Liga os Membros ao Social: abrir o perfil de um amigo, ou adicionar um
+// colega sem precisar do codigo de amigo (estao na mesma turma).
+function ClassmateFriendAction({
+  turmaId,
+  member,
+  onChanged,
+}: {
+  turmaId: string;
+  member: TurmaMember;
+  onChanged: () => void;
+}) {
+  const { t } = useI18n();
+  const { notify } = useFeedback();
+  const [busy, setBusy] = useState(false);
+  const link = 'text-xs font-medium text-violet-400 hover:text-violet-300';
+
+  if (member.friendStatus === 'FRIEND') {
+    return (
+      <Link to={friendPath(member.userId)} className={link}>
+        {t('turma.members.friendProfile')}
+      </Link>
+    );
+  }
+  if (member.friendStatus === 'REQUESTED') {
+    return <span className="text-xs text-neutral-500">{t('turma.members.requestSent')}</span>;
+  }
+  if (member.friendStatus === 'INCOMING') {
+    return (
+      <Link to={socialTabPath('requests')} className={link}>
+        {t('turma.members.answerRequest')}
+      </Link>
+    );
+  }
+  if (member.friendStatus === 'BLOCKED') return null;
+
+  const add = async () => {
+    setBusy(true);
+    try {
+      const result = await sendClassmateFriendRequest(turmaId, member.userId);
+      notify(t(result.status === 'ACCEPTED' ? 'turma.members.nowFriends' : 'turma.members.requestSentToast'), 'success');
+      notifySocialChanged();
+      onChanged();
+    } catch {
+      notify(t('turma.actionError'), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Button variant="secondary" className="px-2.5 py-1 text-xs" disabled={busy} onClick={() => void add()}>
+      {t('turma.members.addFriend')}
+    </Button>
+  );
+}
+
 function InviteSection({ turma, onChanged }: TurmaMembersTabProps) {
   const { t } = useI18n();
   const regenerate = useTurmaAction(regenerateInviteCode, t('turma.actionError'));
 
   return (
     <section className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-4">
-      <h3 className="mb-1 text-sm font-semibold text-neutral-300">{t('turma.invite.title')}</h3>
+      <h2 className="mb-1 text-sm font-semibold text-neutral-300">{t('turma.invite.title')}</h2>
       <p className="mb-3 text-xs text-neutral-500">{t('turma.invite.hint')}</p>
       <div className="flex flex-wrap items-center gap-3">
         <span className="rounded-md bg-neutral-950 px-3 py-1.5 font-mono text-lg tracking-widest text-white">
@@ -197,7 +257,7 @@ function SettingsSection({ turma, onChanged }: TurmaMembersTabProps) {
 
   return (
     <section className="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900/30 p-4">
-      <h3 className="text-sm font-semibold text-neutral-300">{t('turma.settings.title')}</h3>
+      <h2 className="text-sm font-semibold text-neutral-300">{t('turma.settings.title')}</h2>
       <form onSubmit={handleSubmit} className="space-y-3">
         <Input
           label={t('turma.create.name')}

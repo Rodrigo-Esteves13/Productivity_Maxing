@@ -29,7 +29,7 @@ export default function AreaProposalBlock({ area, onPropose, onWithdraw }: AreaP
         </>
       ) : (
         <>
-          <p className="mt-1 text-xs text-neutral-600">
+          <p className="mt-1 text-xs text-neutral-500">
             {t('ui.proposeThisAreaToEveryone')}
           </p>
           {area.proposalStatus === 'REJECTED' && (

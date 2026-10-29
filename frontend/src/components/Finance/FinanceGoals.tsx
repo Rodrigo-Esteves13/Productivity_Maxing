@@ -104,7 +104,7 @@ export default function FinanceGoals({ goals, currency, onAdd, onUpdateSaved, on
   return (
     <Card>
       <h2 className="mb-3 text-lg font-semibold text-white">{t('finance.goals')}</h2>
-      <form onSubmit={(e) => void handleSubmit(e)} className="grid gap-3 sm:grid-cols-4">
+      <form onSubmit={(e) => void handleSubmit(e)} className="grid grid-cols-1 gap-3 sm:grid-cols-4">
         <Select label={t('finance.goalKind')} value={kind} onChange={(e) => setKind(e.target.value as FinanceGoalKind)}>
           {FINANCE_GOAL_KINDS.map((k) => (
             <option key={k} value={k}>

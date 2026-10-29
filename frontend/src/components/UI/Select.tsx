@@ -1,10 +1,15 @@
-import type { SelectHTMLAttributes } from 'react';
+import { useId, type SelectHTMLAttributes } from 'react';
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
 }
 
 export default function Select({ label, id, className = '', ...rest }: SelectProps) {
+  // Mesmo fallback do Input.tsx: sem id, o htmlFor da label nao apontava
+  // para nada e o leitor de ecra anunciava o select sem nome (Finance,
+  // Wellbeing...).
+  const generatedId = useId();
+  const resolvedId = id ?? generatedId;
   // `appearance-none` remove a seta nativa do browser. Com `color-scheme: dark`
   // definido globalmente, alguns browsers (Chrome/Edge) desenham o <select> com
   // um "theme" escuro próprio que inclui a sua própria seta, o que resultava em
@@ -13,7 +18,7 @@ export default function Select({ label, id, className = '', ...rest }: SelectPro
   const field = (
     <div className="relative">
       <select
-        id={id}
+        id={resolvedId}
         className={`w-full appearance-none border border-neutral-700 bg-neutral-900 text-white rounded-lg pl-3 pr-9 py-2.5 text-base transition-[border-color,box-shadow] duration-[var(--duration-quick)] ease-smooth-out hover:border-neutral-600 focus:outline-none focus:ring-2 focus:ring-violet-600/50 focus:border-violet-500 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
         {...rest}
       />
@@ -32,7 +37,7 @@ export default function Select({ label, id, className = '', ...rest }: SelectPro
 
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-neutral-300 mb-1">
+      <label htmlFor={resolvedId} className="block text-sm font-medium text-neutral-300 mb-1">
         {label}
       </label>
       {field}

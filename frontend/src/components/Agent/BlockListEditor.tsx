@@ -70,7 +70,7 @@ export default function BlockListEditor({
       </div>
 
       {items.length === 0 ? (
-        <p className="text-sm text-neutral-600 italic">{t('ui.nothingAddedYet')}</p>
+        <p className="text-sm text-neutral-500 italic">{t('ui.nothingAddedYet')}</p>
       ) : (
         <div className="flex flex-wrap gap-2">
           {items.map((item) => (

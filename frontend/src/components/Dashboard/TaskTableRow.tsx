@@ -105,7 +105,7 @@ function TaskTableRow({
     priority: task.priority ? (
       <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
     ) : (
-      <span className="text-neutral-600">N/A</span>
+      <span className="text-neutral-500">N/A</span>
     ),
     status: <StatusBadge status={task.progressStatus} />,
     grade: (

@@ -8,6 +8,7 @@ import AcademicSelectors from './AcademicSelectors';
 import SkipToContentLink from '../UI/SkipToContentLink';
 import ScrollProgressBar from '../UI/ScrollProgressBar';
 import BackToTopButton from '../UI/BackToTopButton';
+import PageTrail from './PageTrail';
 
 // Only Dashboard, Tasks and Notebook actually change with the active
 // program/period - everywhere else (Focus, Profile, Developer, Agent,
@@ -48,8 +49,9 @@ export default function PageLayout({ children }: PageLayoutProps) {
       <main
         id="main-content"
         tabIndex={-1}
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 focus:outline-none"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 scroll-mt-16 focus:outline-none"
       >
+        <PageTrail />
         {showAcademicSelectors && (
           <div className="print-hide">
             <AcademicSelectors />

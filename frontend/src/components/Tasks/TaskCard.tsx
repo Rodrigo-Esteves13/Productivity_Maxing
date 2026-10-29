@@ -1,5 +1,4 @@
 import { memo } from 'react';
-import type { KeyboardEvent } from 'react';
 import type { Task, Area } from '../../types/models';
 import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
@@ -48,14 +47,6 @@ function TaskCard({
   const status = getDateStatus(task);
   const canMoveArea = Boolean(areas && areas.length > 1 && onMoveArea);
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (!onSelect) return;
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onSelect(task);
-    }
-  };
-
   const canComplete = Boolean(onComplete) && task.progressStatus !== 'COMPLETED';
   const canPostpone = Boolean(onReschedule) && status === 'overdue';
 
@@ -67,11 +58,12 @@ function TaskCard({
       rightHint={<><CheckIcon aria-hidden="true" />{t('swipe.done')}</>}
       leftHint={<>{t('swipe.tomorrow')}<ClockIcon aria-hidden="true" /></>}
     >
+    {/* O cartao todo abre a task com o rato, mas para o teclado e o leitor
+        de ecra o botao e so o titulo: um role="button" a volta do pin, do
+        select da area e do +1 Day era um botao com botoes la dentro, e o
+        leitor de ecra lia o cartao inteiro como um so botao. */}
     <div
       onClick={() => onSelect?.(task)}
-      onKeyDown={handleKeyDown}
-      role={isInteractive ? 'button' : undefined}
-      tabIndex={isInteractive ? 0 : undefined}
       // h-full garante que todos os cards de uma linha da grelha ficam com a
       // mesma altura (a grelha já estica a linha para o mais alto - isto só
       // faz o cartão em si preencher esse espaço), para o rodapé (mt-auto)
@@ -88,10 +80,23 @@ function TaskCard({
           quebravam de forma inconsistente entre cards. Com só 1 badge,
           o título tem sempre a largura que precisa. */}
       <div className="flex justify-between items-start mb-3 gap-3">
-        <h3 className="text-lg font-medium text-white line-clamp-2 min-w-0">
-          {task.title}
+        <h2 className="text-lg font-medium text-white line-clamp-2 min-w-0">
+          {isInteractive ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect?.(task);
+              }}
+              className="inline text-left hover:text-violet-200"
+            >
+              {task.title}
+            </button>
+          ) : (
+            task.title
+          )}
           <SubtaskProgress subtasks={task.subtasks} className="ml-2 align-middle" />
-        </h3>
+        </h2>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {onTogglePin && (
             <IconButton
@@ -101,7 +106,7 @@ function TaskCard({
                 e.stopPropagation();
                 onTogglePin(task);
               }}
-              className={`-my-1.5 ${task.isPinned ? 'text-violet-400' : 'text-neutral-600 hover:text-neutral-300'}`}
+              className={`-my-1.5 ${task.isPinned ? 'text-violet-400' : 'text-neutral-500 hover:text-neutral-300'}`}
             >
               <PinIcon />
             </IconButton>
@@ -130,6 +135,7 @@ function TaskCard({
                 onMoveArea!(task, e.target.value);
               }}
               title={t('ui.moveToADifferentArea')}
+              aria-label={t('ui.moveToADifferentArea')}
               className="px-2 py-1 bg-neutral-800 rounded-md font-medium text-neutral-300 truncate max-w-[10rem] border border-transparent hover:border-neutral-600 focus:border-violet-500 outline-none cursor-pointer"
             >
               {areas!.map((area) => (

@@ -60,7 +60,7 @@ export default function NotebookPhotoGrid({
                   </span>
                 </button>
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-neutral-600">
+                <div className="flex h-full w-full items-center justify-center text-neutral-500">
                   <ImageIcon className="h-6 w-6" />
                 </div>
               )}

@@ -1,17 +1,21 @@
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
+  IsDateString,
   IsEmail,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
   Matches,
+  IsNumber,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { NormalizeEmail } from '../../auth/email.util';
 import {
   ANNOUNCEMENT_BODY_MAX_LENGTH,
@@ -189,4 +193,49 @@ export class SearchTurmaNotesQueryDto {
   @IsString()
   @MaxLength(SEARCH_QUERY_MAX_LENGTH)
   q: string;
+}
+
+// Prazos da turma: so os tipos academicos com data (sem tarefa secundaria).
+export const TURMA_DEADLINE_KINDS = ['FREQUENCIA', 'TRABALHO_PRATICO'] as const;
+
+export class CreateTurmaDeadlineDto {
+  @ApiProperty({ example: 'Midterm' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  title: string;
+
+  @ApiProperty({ example: 'Computer Networks' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(120)
+  subject: string;
+
+  @ApiProperty({ example: '2026-11-12T09:00:00.000Z' })
+  @IsDateString()
+  dueAt: string;
+
+  @ApiPropertyOptional({
+    example: 40,
+    description: 'Weight in the final grade (%).',
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  weightPercentage?: number | null;
+
+  @ApiProperty({ enum: TURMA_DEADLINE_KINDS })
+  @IsIn(TURMA_DEADLINE_KINDS)
+  kind: string;
+}
+
+export class UpdateTurmaDeadlineDto extends PartialType(
+  CreateTurmaDeadlineDto,
+) {}
+
+export class AdoptTurmaDeadlineDto {
+  @ApiProperty({ description: 'Your subject (area) the task goes into.' })
+  @IsUUID()
+  areaId: string;
 }

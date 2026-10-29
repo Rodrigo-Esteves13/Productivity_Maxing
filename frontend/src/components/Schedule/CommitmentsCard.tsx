@@ -87,7 +87,7 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
       )}
 
       {/* Lado a lado quando o cartao e largo (coluna principal do Schedule). */}
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {commitments.map((commitment) => (
           <CommitmentSection
             key={commitment.id}

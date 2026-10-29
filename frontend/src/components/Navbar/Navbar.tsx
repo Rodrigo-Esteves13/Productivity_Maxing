@@ -5,6 +5,7 @@ import NavLinks from './NavLinks';
 import UserMenu from './UserMenu';
 import MobileMenu from './MobileMenu';
 import AdminMenu from './AdminMenu';
+import OfflineBanner from '../../pwa/OfflineBanner';
 import { MenuIcon, XIcon, SearchIcon } from '../UI/Icons';
 import { useAuth } from '../../context/useAuth';
 import { useSocialPending } from '../../hooks/useSocialPending';
@@ -31,6 +32,7 @@ export default function Navbar() {
 
   return (
     <nav className="print-hide bg-neutral-950 border-b border-neutral-800 text-white sticky top-0 z-50">
+      <OfflineBanner />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex-shrink-0 whitespace-nowrap">
@@ -73,9 +75,12 @@ export default function Navbar() {
             {isAuthenticated ? (
               <UserMenu user={user} onLogout={handleLogout} />
             ) : (
-              <span className="text-sm font-medium text-neutral-500 italic">
-                {t('nav.notAuthenticated')}
-              </span>
+              <Link
+                to="/login"
+                className="rounded-md px-3 py-1.5 text-sm font-medium text-neutral-200 hover:bg-neutral-800 hover:text-white transition-colors"
+              >
+                {t('ui.logIn')}
+              </Link>
             )}
 
             {isAuthenticated && (

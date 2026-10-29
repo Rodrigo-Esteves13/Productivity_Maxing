@@ -27,7 +27,9 @@ export default function ApiKeysTable({ keys, onRevoke }: ApiKeysTableProps) {
             <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t('ui.scope')}</th>
             <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t('ui.created')}</th>
             <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t('ui.lastUsed')}</th>
-            <th className="px-4 py-3" />
+            <th className="px-4 py-3">
+              <span className="sr-only">{t('ui.actions')}</span>
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-800">

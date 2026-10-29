@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ErrorState from '../components/UI/ErrorState';
@@ -138,13 +138,24 @@ export default function Social() {
             <ErrorState message={t('social.loadError')} />
           ) : (
             <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <FriendCodeCard code={data.friendCode} request={data.codeChangeRequest} onRequestChange={requestCodeChange} />
                 <AddFriendForm onAdd={addFriend} />
               </div>
-              {data.friends.length === 0 ? <EmptyState message={t('social.empty')} /> : lists(['friends'])}
+              {data.friends.length === 0 ? (
+                <EmptyState
+                  message={t('social.emptyWithClasses')}
+                  action={
+                    <Link to="/classes" className="text-sm font-medium text-violet-400 hover:text-violet-300">
+                      {t('social.openClasses')}
+                    </Link>
+                  }
+                />
+              ) : (
+                lists(['friends'])
+              )}
               {lists(['blocked'])}
-              <p className="text-xs text-neutral-600">{t('social.privacy')}</p>
+              <p className="text-xs text-neutral-500">{t('social.privacy')}</p>
             </div>
           )}
         </div>

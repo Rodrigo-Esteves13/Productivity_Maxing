@@ -94,7 +94,7 @@ export const social: Record<string, string> = {
   'social.tab.mine': "내 공유",
   'social.requests.empty': "기다리는 항목이 없어요. 새 친구 요청과 초대가 여기에 표시돼요.",
   'social.wantsToBeFriends': "친구가 되고 싶어 해요",
-  'social.friend.open': "공유 보기",
+  'social.friend.open': "프로필 열기",
   'social.notes.readers': "내 노트를 읽는 사람",
   'social.notes.crumb': "노트",
   'social.mine.title': "공유 중인 노트",

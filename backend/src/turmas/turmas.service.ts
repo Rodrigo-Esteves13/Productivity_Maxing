@@ -38,6 +38,9 @@ function isUniqueViolation(err: unknown): boolean {
   );
 }
 
+export type ClassmateFriendStatus =
+  'NONE' | 'FRIEND' | 'REQUESTED' | 'INCOMING' | 'BLOCKED';
+
 @Injectable()
 export class TurmasService {
   constructor(
@@ -162,6 +165,10 @@ export class TurmasService {
     });
     const myRole =
       turma.members.find((m) => m.user.id === userId)?.role ?? membership.role;
+    const friendStatus = await this.friendStatusWith(
+      userId,
+      turma.members.map((m) => m.user.id).filter((id) => id !== userId),
+    );
     return {
       ...turma,
       myRole,
@@ -172,8 +179,57 @@ export class TurmasService {
         avatarUrl: m.user.avatarUrl,
         role: m.role,
         joinedAt: m.joinedAt.toISOString(),
+        friendStatus: friendStatus.get(m.user.id) ?? 'NONE',
       })),
     };
+  }
+
+  /**
+   * Para o separador Membros ligar ao Social: quem ja e amigo (abre o
+   * perfil), quem tem pedido pendente e quem da para adicionar. Bloqueios
+   * contam como BLOCKED para o botao nao aparecer.
+   */
+  private async friendStatusWith(
+    userId: string,
+    others: string[],
+  ): Promise<Map<string, ClassmateFriendStatus>> {
+    const result = new Map<string, ClassmateFriendStatus>();
+    if (others.length === 0) return result;
+    const [friendships, blocks] = await Promise.all([
+      this.prisma.friendship.findMany({
+        where: {
+          OR: [
+            { requesterId: userId, addresseeId: { in: others } },
+            { addresseeId: userId, requesterId: { in: others } },
+          ],
+        },
+        select: { requesterId: true, addresseeId: true, status: true },
+      }),
+      this.prisma.userBlock.findMany({
+        where: {
+          OR: [
+            { blockerId: userId, blockedId: { in: others } },
+            { blockedId: userId, blockerId: { in: others } },
+          ],
+        },
+        select: { blockerId: true, blockedId: true },
+      }),
+    ]);
+    for (const f of friendships) {
+      const other = f.requesterId === userId ? f.addresseeId : f.requesterId;
+      result.set(
+        other,
+        f.status === 'ACCEPTED'
+          ? 'FRIEND'
+          : f.requesterId === userId
+            ? 'REQUESTED'
+            : 'INCOMING',
+      );
+    }
+    for (const b of blocks) {
+      result.set(b.blockerId === userId ? b.blockedId : b.blockerId, 'BLOCKED');
+    }
+    return result;
   }
 
   async update(userId: string, turmaId: string, dto: UpdateTurmaDto) {

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/useAuth';
 import { createTask, getTaskMetadata, getUserAreas, getUserTasks } from '../../api/userService';
 import { searchNotebook } from '../../api/notebookService';
 import { searchTurmaNotes } from '../../api/turmasService';
+import { SECTION_LABEL_KEY, owningPage } from '../../lib/siteMap';
 import { notebookEntryPath, turmaNotePath } from '../../lib/appLinks';
 import {
   matchAreaInText,
@@ -511,6 +512,13 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
     }
   };
 
+  // Paginas mostram a secao do mapa (Estudo, Em conjunto...), a mesma do
+  // trilho no topo de cada pagina.
+  const navSectionLabel = (path: string) => {
+    const section = owningPage(path)?.section;
+    return section ? t(SECTION_LABEL_KEY[section]) : t('palette.kind.nav');
+  };
+
   const selectItem = (item: PaletteItem) => {
     if (item.kind === 'quick-add') {
       void createQuickTask(item);
@@ -568,6 +576,7 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
             }}
             onKeyDown={handleKeyDown}
             placeholder={t('palette.placeholder')}
+            aria-label={t('palette.placeholder')}
             className="flex-1 bg-transparent text-white placeholder:text-neutral-500 outline-none text-sm"
           />
           <kbd className="hidden sm:inline text-[10px] text-neutral-500 border border-neutral-700 rounded px-1.5 py-0.5">
@@ -646,7 +655,7 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
                   )}
                 </span>
                 <span className="text-[10px] uppercase tracking-wide text-neutral-500 shrink-0">
-                  {t(`palette.kind.${item.kind}`)}
+                  {item.kind === 'nav' ? navSectionLabel(item.path) : t(`palette.kind.${item.kind}`)}
                 </span>
               </button>
             );

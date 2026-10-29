@@ -5,7 +5,7 @@ import ErrorState from '../UI/ErrorState';
 import IconButton from '../UI/IconButton';
 import LinesSkeleton from '../UI/LinesSkeleton';
 import Button from '../UI/Button';
-import { BellIcon, PencilIcon, PlusIcon, TrashIcon } from '../UI/Icons';
+import { BellIcon, ChevronLeftIcon, ChevronRightIcon, PencilIcon, PlusIcon, TrashIcon } from '../UI/Icons';
 import MedicationForm from './MedicationForm';
 import IntakeLogModal from './IntakeLogModal';
 import MedicationDisclaimerGate, { DisclaimerText } from './MedicationDisclaimer';
@@ -14,7 +14,7 @@ import MedicationPushWarning from './MedicationPushWarning';
 import { formatClock, formatDateTime } from '../../lib/timeFormat';
 import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
-import type { useMedications } from '../../hooks/useMedications';
+import { MAX_DOSE_PAST_DAYS, type useMedications } from '../../hooks/useMedications';
 import type { Medication, MedicationDaySlot, MedicationIntake } from '../../types/models';
 
 interface MedicationsCardProps {
@@ -71,7 +71,7 @@ function scheduleSummary(m: Medication, t: ReturnType<typeof useI18n>['t']): str
 // Medicacao: lembretes e registo das tomas. De proposito nao avalia doses,
 // combinacoes nem dependencia: so lembra, regista e manda falar com o medico.
 export default function MedicationsCard({ meds }: MedicationsCardProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { notify, confirm } = useFeedback();
   const [editing, setEditing] = useState<Editing>(null);
   const [logging, setLogging] = useState<Medication | null>(null);
@@ -159,9 +159,51 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
         <>
           {hasDaily && (
             <>
-              <h3 className="mb-2 text-sm font-medium text-neutral-200">{t('wellbeing.meds.today')}</h3>
+              {/* Setas para ir a um dia que passou e marcar a toma esquecida. */}
+              <div className="mb-2 flex items-center gap-1">
+                <IconButton
+                  label={t('wellbeing.meds.prevDay')}
+                  disabled={meds.dayOffset >= MAX_DOSE_PAST_DAYS}
+                  onClick={() => meds.setDayOffset(meds.dayOffset + 1)}
+                >
+                  <ChevronLeftIcon className="h-4 w-4" />
+                </IconButton>
+                <h3 className="min-w-[6rem] text-center text-sm font-medium text-neutral-200" aria-live="polite">
+                  {meds.dayOffset === 0
+                    ? t('wellbeing.meds.today')
+                    : meds.dayOffset === 1
+                      ? t('wellbeing.meds.yesterday')
+                      : new Date(`${meds.dayKey}T12:00:00Z`).toLocaleDateString(lang, {
+                          weekday: 'short',
+                          day: 'numeric',
+                          month: 'short',
+                        })}
+                </h3>
+                <IconButton
+                  label={t('wellbeing.meds.nextDay')}
+                  disabled={meds.dayOffset === 0}
+                  onClick={() => meds.setDayOffset(meds.dayOffset - 1)}
+                >
+                  <ChevronRightIcon className="h-4 w-4" />
+                </IconButton>
+                {meds.dayOffset > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => meds.setDayOffset(0)}
+                    className="ml-auto text-xs font-medium text-violet-400 hover:text-violet-300"
+                  >
+                    {t('wellbeing.meds.backToToday')}
+                  </button>
+                )}
+              </div>
+              {meds.dayOffset > 0 && (
+                <p className="mb-2 text-xs text-neutral-400">{t('wellbeing.meds.pastDayHint')}</p>
+              )}
               {meds.slots.length === 0 ? (
-                <EmptyState variant="inline" message={t('wellbeing.meds.nothingToday')} />
+                <EmptyState
+                  variant="inline"
+                  message={t(meds.dayOffset === 0 ? 'wellbeing.meds.nothingToday' : 'wellbeing.meds.nothingThisDay')}
+                />
               ) : (
                 <ul className="mb-5 space-y-1.5">
                   {meds.slots.map((slot) => (

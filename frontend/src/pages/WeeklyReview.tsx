@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
-import Breadcrumbs from '../components/UI/Breadcrumbs';
 import ErrorState from '../components/UI/ErrorState';
 import DashboardCard, { CardHeading } from '../components/UI/DashboardCard';
 import MasonryGrid from '../components/UI/MasonryGrid';
@@ -59,7 +58,6 @@ export default function WeeklyReview() {
 
   return (
     <PageLayout>
-      <Breadcrumbs items={[{ label: t('nav.dashboard'), to: '/dashboard' }, { label: t('review.title') }]} />
       <PageHeader title={t('review.title')} description={t('review.description')} />
       {error && <ErrorState message={t('review.error')} />}
       {!data && !error && <p className="text-sm text-neutral-400">{t('review.loading')}</p>}

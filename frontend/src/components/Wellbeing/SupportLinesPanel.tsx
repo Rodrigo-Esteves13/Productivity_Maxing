@@ -57,7 +57,7 @@ export default function SupportLinesPanel() {
           href={INTERNATIONAL_HELPLINES_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-violet-400 hover:text-violet-300"
+          className="text-violet-400 underline underline-offset-2 hover:text-violet-300"
         >
           findahelpline.com
         </a>

@@ -27,6 +27,7 @@ import {
   BlockUserDto,
   FriendCodeChangeRequestDto,
   SendFriendRequestDto,
+  ClassmateFriendRequestDto,
 } from './dto/social.dto';
 import { perMinute } from '../common/throttle.util';
 
@@ -83,6 +84,20 @@ export class SocialController {
     @Body() dto: SendFriendRequestDto,
   ): Promise<SendRequestResult> {
     return this.social.sendRequest(user.id, dto.friendCode);
+  }
+
+  // Antes de requests/:id/accept: caminho literal no mesmo verbo.
+  @Post('requests/classmate')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(perMinute(10))
+  @ApiOperation({
+    summary: 'Send a friend request to someone in a class you are both in.',
+  })
+  sendToClassmate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ClassmateFriendRequestDto,
+  ): Promise<SendRequestResult> {
+    return this.social.sendRequestToClassmate(user.id, dto.turmaId, dto.userId);
   }
 
   @Post('requests/:id/accept')

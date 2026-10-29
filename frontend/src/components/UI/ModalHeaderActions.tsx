@@ -49,8 +49,11 @@ export default function ModalHeaderActions({
       {/* Botão de Pin - antes de tudo, sempre visível fora de edição */}
       {!isEditing && onTogglePin && (
         <button
+          type="button"
           onClick={onTogglePin}
           title={isPinned ? t('ui.unpinTask') : t('ui.pinTask')}
+          aria-label={isPinned ? t('ui.unpinTask') : t('ui.pinTask')}
+          aria-pressed={isPinned}
           className={`transition-colors p-1 ${
             isPinned ? 'text-violet-400 hover:text-violet-300' : 'text-neutral-400 hover:text-violet-400'
           }`}

@@ -14,11 +14,12 @@ import TurmaMembersTab from '../components/Turma/TurmaMembersTab';
 import TurmaPacksTab from '../components/Turma/TurmaPacksTab';
 import TurmaScheduleTab from '../components/Turma/TurmaScheduleTab';
 import TurmaProgramsTab from '../components/Turma/TurmaProgramsTab';
+import TurmaDeadlinesTab from '../components/Turma/TurmaDeadlinesTab';
 import { TURMA_TABS, TURMA_TAB_LABEL_KEY, isTurmaTab, type TurmaTab } from '../components/Turma/turmaConfig';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useTurmaDetail } from '../hooks/useTurmas';
 import { useI18n } from '../i18n/useI18n';
-import { TURMAS_PATH } from '../lib/appLinks';
+import { TURMAS_PATH, turmaPath } from '../lib/appLinks';
 
 const TAB_PARAM = 'tab';
 const DEFAULT_TAB: TurmaTab = 'announcements';
@@ -38,7 +39,13 @@ export default function TurmaPage() {
 
   return (
     <PageLayout>
-      <Breadcrumbs items={[{ label: t('nav.turmas'), to: TURMAS_PATH }, { label: turma?.name ?? '' }]} />
+      <Breadcrumbs
+        items={[
+          { label: t('nav.turmas'), to: TURMAS_PATH },
+          { label: turma?.name ?? '', to: turma ? turmaPath(turma.id) : undefined },
+          { label: t(TURMA_TAB_LABEL_KEY[tab]) },
+        ]}
+      />
       {isLoading ? (
         <PageHeaderSkeleton />
       ) : error || !turma ? (
@@ -58,6 +65,7 @@ export default function TurmaPage() {
             className="mb-4"
           />
           {tab === 'announcements' && <TurmaAnnouncementsTab turmaId={turma.id} isDelegado={turma.myRole === 'DELEGADO'} />}
+          {tab === 'deadlines' && <TurmaDeadlinesTab turmaId={turma.id} isDelegado={turma.myRole === 'DELEGADO'} />}
           {tab === 'programs' && <TurmaProgramsTab turmaId={turma.id} isDelegado={turma.myRole === 'DELEGADO'} />}
           {tab === 'schedule' && <TurmaScheduleTab turmaId={turma.id} />}
           {tab === 'packs' && <TurmaPacksTab turmaId={turma.id} isDelegado={turma.myRole === 'DELEGADO'} />}

@@ -46,6 +46,8 @@ export interface FriendHub {
     areaCount: number;
     grantId: string | null;
   };
+  /** Turmas onde estao os dois (liga o perfil do amigo as Turmas). */
+  commonTurmas: { id: string; name: string }[];
 }
 
 /** Uma nota tua com link de partilha, com quem a ve e o que espera por ti. */
@@ -101,64 +103,76 @@ export class NotebookSocialHubService {
     // Nao amigo (ou bloqueado, que apaga a amizade): 404 igual a "nao existe".
     if (!friendship) throw new NotFoundException();
 
-    const [friend, withMe, byMe, theirGrant, myGrant] = await Promise.all([
-      this.prisma.user.findUnique({
-        where: { id: friendId },
-        select: { id: true, name: true, avatarUrl: true },
-      }),
-      this.prisma.notebookShareAccessRequest.findMany({
-        where: {
-          requestingUserId: userId,
-          notebookShare: { createdByUserId: friendId },
-          OR: [
-            { status: 'APPROVED' },
-            { status: 'PENDING', invitedByOwner: true },
-          ],
-        },
-        orderBy: { createdAt: 'desc' },
-        take: MAX_ITEMS,
-        select: {
-          id: true,
-          status: true,
-          accessRole: true,
-          invitedByOwner: true,
-          notebookShare: {
-            select: {
-              token: true,
-              notebookEntry: { select: ENTRY_SELECT },
+    const [friend, withMe, byMe, theirGrant, myGrant, commonTurmas] =
+      await Promise.all([
+        this.prisma.user.findUnique({
+          where: { id: friendId },
+          select: { id: true, name: true, avatarUrl: true },
+        }),
+        this.prisma.notebookShareAccessRequest.findMany({
+          where: {
+            requestingUserId: userId,
+            notebookShare: { createdByUserId: friendId },
+            OR: [
+              { status: 'APPROVED' },
+              { status: 'PENDING', invitedByOwner: true },
+            ],
+          },
+          orderBy: { createdAt: 'desc' },
+          take: MAX_ITEMS,
+          select: {
+            id: true,
+            status: true,
+            accessRole: true,
+            invitedByOwner: true,
+            notebookShare: {
+              select: {
+                token: true,
+                notebookEntry: { select: ENTRY_SELECT },
+              },
             },
           },
-        },
-      }),
-      this.prisma.notebookShareAccessRequest.findMany({
-        where: {
-          requestingUserId: friendId,
-          notebookShare: { createdByUserId: userId },
-          OR: [
-            { status: 'APPROVED' },
-            { status: 'PENDING', invitedByOwner: true },
-          ],
-        },
-        orderBy: { createdAt: 'desc' },
-        take: MAX_ITEMS,
-        select: {
-          id: true,
-          status: true,
-          accessRole: true,
-          notebookShare: {
-            select: { notebookEntry: { select: ENTRY_SELECT } },
+        }),
+        this.prisma.notebookShareAccessRequest.findMany({
+          where: {
+            requestingUserId: friendId,
+            notebookShare: { createdByUserId: userId },
+            OR: [
+              { status: 'APPROVED' },
+              { status: 'PENDING', invitedByOwner: true },
+            ],
           },
-        },
-      }),
-      this.prisma.notebookViewGrant.findUnique({
-        where: { ownerId_viewerId: { ownerId: friendId, viewerId: userId } },
-        select: { status: true, areaIds: true },
-      }),
-      this.prisma.notebookViewGrant.findUnique({
-        where: { ownerId_viewerId: { ownerId: userId, viewerId: friendId } },
-        select: { id: true, status: true, areaIds: true },
-      }),
-    ]);
+          orderBy: { createdAt: 'desc' },
+          take: MAX_ITEMS,
+          select: {
+            id: true,
+            status: true,
+            accessRole: true,
+            notebookShare: {
+              select: { notebookEntry: { select: ENTRY_SELECT } },
+            },
+          },
+        }),
+        this.prisma.notebookViewGrant.findUnique({
+          where: { ownerId_viewerId: { ownerId: friendId, viewerId: userId } },
+          select: { status: true, areaIds: true },
+        }),
+        this.prisma.notebookViewGrant.findUnique({
+          where: { ownerId_viewerId: { ownerId: userId, viewerId: friendId } },
+          select: { id: true, status: true, areaIds: true },
+        }),
+        this.prisma.turma.findMany({
+          where: {
+            AND: [
+              { members: { some: { userId } } },
+              { members: { some: { userId: friendId } } },
+            ],
+          },
+          select: { id: true, name: true },
+          orderBy: { name: 'asc' },
+          take: 20,
+        }),
+      ]);
     if (!friend) throw new NotFoundException();
 
     return {
@@ -211,6 +225,7 @@ export class NotebookSocialHubService {
               grantId: myGrant.id,
             }
           : { status: 'NONE', areaCount: 0, grantId: null },
+      commonTurmas,
     };
   }
 

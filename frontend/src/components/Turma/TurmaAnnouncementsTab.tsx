@@ -47,7 +47,7 @@ export default function TurmaAnnouncementsTab({ turmaId, isDelegado }: TurmaTabP
           {data.map((announcement) => (
             <li key={announcement.id} className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
               <div className="mb-1 flex items-start justify-between gap-2">
-                <h3 className="font-semibold text-white">{announcement.title}</h3>
+                <h2 className="font-semibold text-white">{announcement.title}</h2>
                 {isDelegado && (
                   <IconButton
                     label={t('turma.announcements.delete')}

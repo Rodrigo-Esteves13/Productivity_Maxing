@@ -98,7 +98,7 @@ export default function NotebookTableEditor({ table, readOnly = false, onChange,
                       type="button"
                       onClick={() => removeRow(rowIndex)}
                       aria-label={t('ui.removeRow')}
-                      className="text-neutral-600 hover:text-red-400"
+                      className="text-neutral-500 hover:text-red-400"
                     >
                       &times;
                     </button>
@@ -114,7 +114,7 @@ export default function NotebookTableEditor({ table, readOnly = false, onChange,
                       type="button"
                       onClick={() => removeColumn(colIndex)}
                       aria-label={t('ui.removeColumn')}
-                      className="text-[10px] text-neutral-600 hover:text-red-400"
+                      className="text-[10px] text-neutral-500 hover:text-red-400"
                     >
                       &times;
                     </button>

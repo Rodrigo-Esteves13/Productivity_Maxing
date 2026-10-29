@@ -92,7 +92,7 @@ export default function GradingFields({
             onChange={(e) => onEstimatedMinutesChange(e.target.value)}
             className="w-32"
           />
-          {isPredictionLoading && <span className="text-xs text-neutral-600">{t('ui.estimating')}</span>}
+          {isPredictionLoading && <span className="text-xs text-neutral-500">{t('ui.estimating')}</span>}
           {!isPredictionLoading && hasSuggestion && (
             <button
               type="button"
@@ -116,7 +116,7 @@ export default function GradingFields({
           )}
         </div>
         {!isPredictionLoading && prediction?.method === 'insufficient_data' && (
-          <p className="text-xs text-neutral-600 mt-1">
+          <p className="text-xs text-neutral-500 mt-1">
             {t('ui.notEnoughCompletedTasksWith', { sampleSize: prediction.sampleSize })}</p>
         )}
       </FormField>

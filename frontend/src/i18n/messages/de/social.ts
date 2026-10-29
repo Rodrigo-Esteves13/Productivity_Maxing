@@ -94,7 +94,7 @@ export const social: Record<string, string> = {
   'social.tab.mine': "Meine Freigaben",
   'social.requests.empty': "Nichts wartet auf dich. Neue Freundschaftsanfragen und Einladungen erscheinen hier.",
   'social.wantsToBeFriends': "Möchte mit dir befreundet sein",
-  'social.friend.open': "Freigaben ansehen",
+  'social.friend.open': "Profil öffnen",
   'social.notes.readers': "Wer dein Notizbuch liest",
   'social.notes.crumb': "Notizen",
   'social.mine.title': "Notizen, die du teilst",

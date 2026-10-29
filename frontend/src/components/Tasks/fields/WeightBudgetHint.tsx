@@ -36,7 +36,7 @@ export default function WeightBudgetHint({ areaId, taskId, weightPercentage }: W
         {message}
       </p>
       {!over && missing > 0 && (
-        <p className="text-xs text-neutral-600">
+        <p className="text-xs text-neutral-500">
           {t('weight.budget.useComponent')}{' '}
           <Link to="/areas" className="text-violet-400 hover:underline">
             {t('grades.title')}

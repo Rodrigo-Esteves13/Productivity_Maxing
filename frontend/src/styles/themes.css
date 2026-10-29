@@ -11,8 +11,8 @@
   --color-neutral-100: #e8e8ea;
   --color-neutral-200: #d0d0d4;
   --color-neutral-300: #aeaeb5;
-  --color-neutral-400: #8b8b94;
-  --color-neutral-500: #6e6e78;
+  --color-neutral-400: #909099;
+  --color-neutral-500: #888893; /* >= 4.5:1 sobre neutral-900 e cartoes por cima de neutral-800 (WCAG AA) */
   --color-neutral-600: #54545d;
   --color-neutral-700: #3d3d45;
   --color-neutral-800: #27272d;
@@ -38,8 +38,8 @@
   --color-neutral-100: #e1ecf7;
   --color-neutral-200: #c3d7ee;
   --color-neutral-300: #97b8dc;
-  --color-neutral-400: #6f98c5;
-  --color-neutral-500: #5379a8;
+  --color-neutral-400: #759bc8;
+  --color-neutral-500: #7691bb; /* >= 4.5:1 sobre neutral-900 e cartoes por cima de neutral-800 (WCAG AA) */
   --color-neutral-600: #3f5d85;
   --color-neutral-700: #2e4565;
   --color-neutral-800: #1e2f49;
@@ -66,7 +66,7 @@
   --color-neutral-200: #c4dfcc;
   --color-neutral-300: #9cc6aa;
   --color-neutral-400: #77a98a;
-  --color-neutral-500: #5a8b6e;
+  --color-neutral-500: #6c9f7e; /* >= 4.5:1 sobre neutral-900 e cartoes por cima de neutral-800 (WCAG AA) */
   --color-neutral-600: #456e56;
   --color-neutral-700: #335242;
   --color-neutral-800: #223829;
@@ -93,7 +93,7 @@
   --color-neutral-200: #e8d4b0;
   --color-neutral-300: #d2b684;
   --color-neutral-400: #b99a64;
-  --color-neutral-500: #977a4a;
+  --color-neutral-500: #ad8856; /* >= 4.5:1 sobre neutral-900 e cartoes por cima de neutral-800 (WCAG AA) */
   --color-neutral-600: #735c38;
   --color-neutral-700: #544229;
   --color-neutral-800: #382b1b;
@@ -115,12 +115,14 @@
 }
 
 :root[data-theme='light'] {
+  /* Nas cores de destaque o 400 (o tom do texto: text-red-400, text-amber-400...)
+     e igual ao 300: o tom invertido anterior ficava a 3-4:1 no fundo branco. */
   --color-neutral-50: #140f26;
   --color-neutral-100: #231e38;
   --color-neutral-200: #342e4b;
   --color-neutral-300: #4f4868;
-  --color-neutral-400: #6c6488;
-  --color-neutral-500: #8c84a8;
+  --color-neutral-400: #645c80;
+  --color-neutral-500: #6c638d; /* >= 4.5:1 sobre neutral-900 e cartoes por cima de neutral-800 (WCAG AA) */
   --color-neutral-600: #b9b2d1;
   --color-neutral-700: #d6d1e6;
   --color-neutral-800: #e9e6f3;
@@ -142,7 +144,7 @@
   --color-red-100: oklch(39.6% 0.141 25.723);
   --color-red-200: oklch(44.4% 0.177 26.899);
   --color-red-300: oklch(50.5% 0.213 27.518);
-  --color-red-400: oklch(57.7% 0.245 27.325);
+  --color-red-400: oklch(50.5% 0.213 27.518);
   --color-red-500: oklch(63.7% 0.237 25.331);
   --color-red-600: oklch(70.4% 0.191 22.216);
   --color-red-700: oklch(80.8% 0.114 19.571);
@@ -153,7 +155,7 @@
   --color-amber-100: oklch(41.4% 0.112 45.904);
   --color-amber-200: oklch(47.3% 0.137 46.201);
   --color-amber-300: oklch(55.5% 0.163 48.998);
-  --color-amber-400: oklch(66.6% 0.179 58.318);
+  --color-amber-400: oklch(55.5% 0.163 48.998);
   --color-amber-500: oklch(76.9% 0.188 70.08);
   --color-amber-600: oklch(82.8% 0.189 84.429);
   --color-amber-700: oklch(87.9% 0.169 91.605);
@@ -164,7 +166,7 @@
   --color-emerald-100: oklch(37.8% 0.077 168.94);
   --color-emerald-200: oklch(43.2% 0.095 166.913);
   --color-emerald-300: oklch(50.8% 0.118 165.612);
-  --color-emerald-400: oklch(59.6% 0.145 163.225);
+  --color-emerald-400: oklch(50.8% 0.118 165.612);
   --color-emerald-500: oklch(69.6% 0.17 162.48);
   --color-emerald-600: oklch(76.5% 0.177 163.223);
   --color-emerald-700: oklch(84.5% 0.143 164.978);
@@ -175,7 +177,7 @@
   --color-green-100: oklch(39.3% 0.095 152.535);
   --color-green-200: oklch(44.8% 0.119 151.328);
   --color-green-300: oklch(52.7% 0.154 150.069);
-  --color-green-400: oklch(62.7% 0.194 149.214);
+  --color-green-400: oklch(52.7% 0.154 150.069);
   --color-green-500: oklch(72.3% 0.219 149.579);
   --color-green-600: oklch(79.2% 0.209 151.711);
   --color-green-700: oklch(87.1% 0.15 154.449);
@@ -186,7 +188,7 @@
   --color-cyan-100: oklch(39.8% 0.07 227.392);
   --color-cyan-200: oklch(45% 0.085 224.283);
   --color-cyan-300: oklch(52% 0.105 223.128);
-  --color-cyan-400: oklch(60.9% 0.126 221.723);
+  --color-cyan-400: oklch(52% 0.105 223.128);
   --color-cyan-500: oklch(71.5% 0.143 215.221);
   --color-cyan-600: oklch(78.9% 0.154 211.53);
   --color-cyan-700: oklch(86.5% 0.127 207.078);
@@ -197,18 +199,29 @@
   --color-sky-100: oklch(39.1% 0.09 240.876);
   --color-sky-200: oklch(44.3% 0.11 240.79);
   --color-sky-300: oklch(50% 0.134 242.749);
-  --color-sky-400: oklch(58.8% 0.158 241.966);
+  --color-sky-400: oklch(50% 0.134 242.749);
   --color-sky-500: oklch(68.5% 0.169 237.323);
   --color-sky-600: oklch(74.6% 0.16 232.661);
   --color-sky-700: oklch(82.8% 0.111 230.318);
   --color-sky-800: oklch(90.1% 0.058 230.902);
   --color-sky-900: oklch(95.1% 0.026 236.824);
   --color-sky-950: oklch(97.7% 0.013 236.62);
+  --color-pink-50: oklch(28.4% 0.109 3.907);
+  --color-pink-100: oklch(40.8% 0.153 2.432);
+  --color-pink-200: oklch(45.9% 0.187 3.815);
+  --color-pink-300: oklch(52.5% 0.223 3.958);
+  --color-pink-400: oklch(52.5% 0.223 3.958);
+  --color-pink-500: oklch(65.6% 0.241 354.308);
+  --color-pink-600: oklch(71.8% 0.202 349.761);
+  --color-pink-700: oklch(82.3% 0.12 346.018);
+  --color-pink-800: oklch(89.9% 0.061 343.231);
+  --color-pink-900: oklch(94.8% 0.028 342.258);
+  --color-pink-950: oklch(97.1% 0.014 343.198);
   --color-orange-50: oklch(26.6% 0.079 36.259);
   --color-orange-100: oklch(40.8% 0.123 38.172);
   --color-orange-200: oklch(47% 0.157 37.304);
   --color-orange-300: oklch(55.3% 0.195 38.402);
-  --color-orange-400: oklch(64.6% 0.222 41.116);
+  --color-orange-400: oklch(55.3% 0.195 38.402);
   --color-orange-500: oklch(70.5% 0.213 47.604);
   --color-orange-600: oklch(75% 0.183 55.934);
   --color-orange-700: oklch(83.7% 0.128 66.29);
@@ -241,7 +254,7 @@
   --color-yellow-100: oklch(42.1% 0.095 57.708);
   --color-yellow-200: oklch(47.6% 0.114 61.907);
   --color-yellow-300: oklch(55.4% 0.135 66.442);
-  --color-yellow-400: oklch(68.1% 0.162 75.834);
+  --color-yellow-400: oklch(55.4% 0.135 66.442);
   --color-yellow-500: oklch(79.5% 0.184 86.047);
   --color-yellow-600: oklch(85.2% 0.199 91.936);
   --color-yellow-700: oklch(90.5% 0.182 98.111);
@@ -303,7 +316,7 @@
   --color-red-100: oklch(40.8% 0.123 38.172);
   --color-red-200: oklch(47% 0.157 37.304);
   --color-red-300: oklch(55.3% 0.195 38.402);
-  --color-red-400: oklch(64.6% 0.222 41.116);
+  --color-red-400: oklch(55.3% 0.195 38.402);
   --color-red-500: oklch(70.5% 0.213 47.604);
   --color-red-600: oklch(75% 0.183 55.934);
   --color-red-700: oklch(83.7% 0.128 66.29);
@@ -314,7 +327,7 @@
   --color-emerald-100: oklch(37.9% 0.146 265.522);
   --color-emerald-200: oklch(42.4% 0.199 265.638);
   --color-emerald-300: oklch(48.8% 0.243 264.376);
-  --color-emerald-400: oklch(54.6% 0.245 262.881);
+  --color-emerald-400: oklch(48.8% 0.243 264.376);
   --color-emerald-500: oklch(62.3% 0.214 259.815);
   --color-emerald-600: oklch(70.7% 0.165 254.624);
   --color-emerald-700: oklch(80.9% 0.105 251.813);
@@ -325,7 +338,7 @@
   --color-green-100: oklch(37.9% 0.146 265.522);
   --color-green-200: oklch(42.4% 0.199 265.638);
   --color-green-300: oklch(48.8% 0.243 264.376);
-  --color-green-400: oklch(54.6% 0.245 262.881);
+  --color-green-400: oklch(48.8% 0.243 264.376);
   --color-green-500: oklch(62.3% 0.214 259.815);
   --color-green-600: oklch(70.7% 0.165 254.624);
   --color-green-700: oklch(80.9% 0.105 251.813);
@@ -336,7 +349,7 @@
   --color-amber-100: oklch(42.1% 0.095 57.708);
   --color-amber-200: oklch(47.6% 0.114 61.907);
   --color-amber-300: oklch(55.4% 0.135 66.442);
-  --color-amber-400: oklch(68.1% 0.162 75.834);
+  --color-amber-400: oklch(55.4% 0.135 66.442);
   --color-amber-500: oklch(79.5% 0.184 86.047);
   --color-amber-600: oklch(85.2% 0.199 91.936);
   --color-amber-700: oklch(90.5% 0.182 98.111);
@@ -346,27 +359,60 @@
 }
 
 /* Texto sobre fundos de cor forte: no tema claro `text-white` passa a escuro
-   (titulos), por isso os botoes/badges de cor mantem texto branco. */
+   (titulos), por isso os botoes/badges de cor mantem texto branco. A lista e
+   de classes exatas: o seletor antigo ([class*='bg-violet-5']) apanhava
+   tambem os fundos translucidos (bg-violet-500/10) e o hover:bg-red-600,
+   e punha texto branco sobre lilas claro. */
 :root[data-theme='light'] .text-white {
   color: var(--color-neutral-50);
 }
 :root[data-theme='light'] :is(
-    [class*='bg-violet-5'], [class*='bg-violet-6'], [class*='bg-violet-7'],
-    [class*='bg-red-5'], [class*='bg-red-6'], [class*='bg-red-7'],
-    [class*='bg-emerald-5'], [class*='bg-emerald-6'], [class*='bg-emerald-7'],
-    [class*='bg-amber-5'], [class*='bg-amber-6'], [class*='bg-amber-7'],
-    [class*='bg-sky-5'], [class*='bg-sky-6'], [class*='bg-cyan-5'], [class*='bg-cyan-6'],
-    [class*='bg-blue-5'], [class*='bg-blue-6'], [class*='bg-blue-7']
-  ),
+    .bg-violet-500, .bg-violet-600, .bg-violet-700, .bg-violet-600\/70,
+    .bg-red-500, .bg-red-600, .bg-red-700, .bg-red-600\/80,
+    .bg-emerald-500, .bg-emerald-600, .bg-emerald-700,
+    .bg-amber-500, .bg-amber-600, .bg-amber-700,
+    .bg-sky-500, .bg-sky-600, .bg-cyan-500, .bg-cyan-600,
+    .bg-blue-500, .bg-blue-600, .bg-blue-700
+  ).text-white,
 :root[data-theme='light'] :is(
-    [class*='bg-violet-5'], [class*='bg-violet-6'], [class*='bg-violet-7'],
-    [class*='bg-red-5'], [class*='bg-red-6'], [class*='bg-red-7'],
-    [class*='bg-emerald-5'], [class*='bg-emerald-6'], [class*='bg-emerald-7'],
-    [class*='bg-amber-5'], [class*='bg-amber-6'], [class*='bg-amber-7'],
-    [class*='bg-sky-5'], [class*='bg-sky-6'], [class*='bg-cyan-5'], [class*='bg-cyan-6'],
-    [class*='bg-blue-5'], [class*='bg-blue-6'], [class*='bg-blue-7']
+    .bg-violet-500, .bg-violet-600, .bg-violet-700, .bg-violet-600\/70,
+    .bg-red-500, .bg-red-600, .bg-red-700, .bg-red-600\/80,
+    .bg-emerald-500, .bg-emerald-600, .bg-emerald-700,
+    .bg-amber-500, .bg-amber-600, .bg-amber-700,
+    .bg-sky-500, .bg-sky-600, .bg-cyan-500, .bg-cyan-600,
+    .bg-blue-500, .bg-blue-600, .bg-blue-700
   ) .text-white {
   color: #fff;
+}
+
+/* Fundos solidos no tema claro. As escalas estao invertidas (o 700 do
+   violeta e o 600 do vermelho/ambar/verde passam a tons claros, para os
+   fundos translucidos), e um botao "bg-violet-700 text-white" ficava
+   lilas claro com texto branco (1.4:1). Os fundos solidos usam o tom
+   escuro da mesma cor; o hover fica um pouco mais escuro. */
+:root[data-theme='light'] .bg-violet-700 {
+  background-color: var(--color-violet-600);
+}
+:root[data-theme='light'] :is(.bg-red-500, .bg-red-600, .bg-red-700, .bg-red-600\/80) {
+  background-color: var(--color-red-300);
+}
+:root[data-theme='light'] :is(.bg-amber-500, .bg-amber-600, .bg-amber-700) {
+  background-color: var(--color-amber-300);
+}
+:root[data-theme='light'] :is(.bg-emerald-500, .bg-emerald-600, .bg-emerald-700) {
+  background-color: var(--color-emerald-300);
+}
+:root[data-theme='light'] :is(.hover\:bg-violet-600, .hover\:bg-violet-700):hover {
+  background-color: var(--color-violet-200);
+}
+:root[data-theme='light'] :is(.hover\:bg-red-500, .hover\:bg-red-600, .hover\:bg-red-700):hover {
+  background-color: var(--color-red-200);
+}
+:root[data-theme='light'] :is(.hover\:bg-amber-700, .hover\:bg-amber-800):hover {
+  background-color: var(--color-amber-200);
+}
+:root[data-theme='light'] :is(.hover\:bg-emerald-500, .hover\:bg-emerald-600, .hover\:bg-emerald-700):hover {
+  background-color: var(--color-emerald-200);
 }
 
 /* ---- Acessibilidade ---- */

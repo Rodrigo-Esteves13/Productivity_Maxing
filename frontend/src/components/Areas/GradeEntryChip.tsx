@@ -60,7 +60,7 @@ export default function GradeEntryChip({ entry, onChange, onRemove }: GradeEntry
         aria-label={t('grades.entry.remove')}
         title={t('grades.entry.remove')}
         onClick={() => void onRemove()}
-        className="px-1.5 py-1 text-neutral-600 hover:text-red-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
+        className="px-1.5 py-1 text-neutral-500 hover:text-red-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
       >
         <XIcon className="h-3 w-3" />
       </button>

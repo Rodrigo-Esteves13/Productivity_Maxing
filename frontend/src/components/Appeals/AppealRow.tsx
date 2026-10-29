@@ -55,7 +55,7 @@ export default function AppealRow({ appeal, onResolve }: AppealRowProps) {
       <p className="mt-2 text-sm text-neutral-300 whitespace-pre-wrap break-words leading-relaxed">
         {appeal.message}
       </p>
-      <p className="mt-2 text-xs text-neutral-600">
+      <p className="mt-2 text-xs text-neutral-500">
         {t('ui.submitted', { newDate: new Date(appeal.createdAt).toLocaleString() })}</p>
 
       {showNoteFor ? (

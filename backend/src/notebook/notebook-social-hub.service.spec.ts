@@ -30,6 +30,9 @@ const build = (overrides: Record<string, unknown> = {}) => {
     notebookViewGrant: { findUnique: jest.fn().mockResolvedValue(null) },
     notebookShare: { findMany: jest.fn().mockResolvedValue([]) },
     notebookChangeProposal: { groupBy: jest.fn().mockResolvedValue([]) },
+    turma: {
+      findMany: jest.fn().mockResolvedValue([{ id: 't1', name: 'LEI 3' }]),
+    },
     ...overrides,
   };
   return {

@@ -72,6 +72,10 @@ export const decideFriendCodeRequest = async (id: string, approve: boolean, note
 export const sendFriendRequest = async (friendCode: string): Promise<SendRequestResult> =>
   (await api.post<SendRequestResult>('/social/requests', { friendCode })).data;
 
+/** Pedido sem codigo a alguem da mesma turma. */
+export const sendClassmateFriendRequest = async (turmaId: string, userId: string): Promise<SendRequestResult> =>
+  (await api.post<SendRequestResult>('/social/requests/classmate', { turmaId, userId })).data;
+
 export const acceptFriendRequest = async (friendshipId: string): Promise<void> => {
   await api.post(`/social/requests/${friendshipId}/accept`);
 };

@@ -6,6 +6,7 @@ import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
 import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import PersonAvatar from '../components/Social/PersonAvatar';
+import { ArrowRightIcon } from '../components/UI/Icons';
 import ShareNoteWithFriend from '../components/Social/ShareNoteWithFriend';
 import InvitationCard from '../components/SharedWithMe/InvitationCard';
 import { ROLE_KEY, areaColorOf } from '../components/SharedWithMe/sharedWithMeLabels';
@@ -15,7 +16,7 @@ import { respondToInvitation } from '../api/notebookService';
 import { requestNotesAccess } from '../api/socialNotesService';
 import { blockUser, removeFriendship } from '../api/socialService';
 import type { FriendHub } from '../api/socialHubService';
-import { friendNotesPath, notebookEntryPath, sharedNotePath, socialTabPath } from '../lib/appLinks';
+import { friendNotesPath, notebookEntryPath, sharedNotePath, socialTabPath, turmaPath, TURMAS_PATH } from '../lib/appLinks';
 import { notifySocialChanged } from '../lib/socialEvents';
 import { useI18n } from '../i18n/useI18n';
 import { useFeedback } from '../context/useFeedback';
@@ -160,7 +161,7 @@ export default function FriendProfile() {
       {invitations.length > 0 && (
         <section aria-label={t('sharedWithMe.invite.title')} className="mb-6 space-y-3">
           <h2 className="text-sm font-semibold text-white">{t('sharedWithMe.invite.title')}</h2>
-          <ul className="grid gap-3 md:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {invitations.map((s) => (
               <li key={s.token}>
                 <InvitationCard
@@ -184,7 +185,34 @@ export default function FriendProfile() {
         </section>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* Liga o perfil as Turmas: onde estao os dois (prazos, notas, horario). */}
+      <section aria-label={t('friend.classes.title')} className="mb-6">
+        <h2 className="mb-2 text-sm font-semibold text-white">{t('friend.classes.title')}</h2>
+        {hub.commonTurmas.length === 0 ? (
+          <p className="text-sm text-neutral-400">
+            {t('friend.classes.none', { name })}{' '}
+            <Link to={TURMAS_PATH} className="font-medium text-violet-400 hover:text-violet-300">
+              {t('friend.classes.open')}
+            </Link>
+          </p>
+        ) : (
+          <ul className="flex flex-wrap gap-2">
+            {hub.commonTurmas.map((turma) => (
+              <li key={turma.id}>
+                <Link
+                  to={turmaPath(turma.id)}
+                  className="inline-flex items-center gap-1 rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1 text-sm text-neutral-200 transition-colors hover:border-violet-500/60 hover:text-white"
+                >
+                  {turma.name}
+                  <ArrowRightIcon className="h-3.5 w-3.5 text-neutral-500" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Section title={t('friend.theirs.title', { name })} hint={t('friend.theirs.hint')}>
           <NotebookAccessRow hub={hub} name={name} isAsking={isAsking} onAsk={() => void askNotes()} />
           {theirNotes.length === 0 ? (

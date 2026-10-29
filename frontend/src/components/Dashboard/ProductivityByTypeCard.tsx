@@ -58,7 +58,7 @@ export default function ProductivityByTypeCard({
                 <td
                   className={`py-1.5 px-2 text-right ${
                     row.onTimePct === null
-                      ? 'text-neutral-600'
+                      ? 'text-neutral-500'
                       : row.onTimePct >= 80
                         ? 'text-violet-400'
                         : row.onTimePct >= 50

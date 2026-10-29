@@ -3,6 +3,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { PushModule } from '../push/push.module';
 import { NotebookModule } from '../notebook/notebook.module';
+import { TasksModule } from '../tasks/tasks.module';
 import { TurmasController } from './turmas.controller';
 import { TurmasService } from './turmas.service';
 import { TurmaAccessService } from './turma-access.service';
@@ -14,9 +15,10 @@ import { TurmaScheduleService } from './turma-schedule.service';
 import { TurmaProgramsService } from './turma-programs.service';
 import { TurmaPacksService } from './turma-packs.service';
 import { TurmaInvitesService } from './turma-invites.service';
+import { TurmaDeadlinesService } from './turma-deadlines.service';
 
 @Module({
-  imports: [PrismaModule, AuthModule, PushModule, NotebookModule],
+  imports: [PrismaModule, AuthModule, PushModule, NotebookModule, TasksModule],
   controllers: [TurmasController],
   providers: [
     TurmasService,
@@ -29,6 +31,7 @@ import { TurmaInvitesService } from './turma-invites.service';
     TurmaProgramsService,
     TurmaPacksService,
     TurmaInvitesService,
+    TurmaDeadlinesService,
   ],
 })
 export class TurmasModule {}

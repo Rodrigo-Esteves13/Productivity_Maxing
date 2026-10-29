@@ -41,7 +41,7 @@ export default function NotebookEntryInvite({ share }: { share: UseEntryShareRes
       <p className="mb-1 text-xs font-medium text-neutral-300">{t('share.invite.title')}</p>
       <p className="mb-2 text-[11px] text-neutral-500">{t('share.invite.hint')}</p>
       {!isLoading && friends.length === 0 ? (
-        <p className="text-xs text-neutral-600">
+        <p className="text-xs text-neutral-500">
           {t('share.invite.noFriends')}{' '}
           <Link to="/social" className="text-violet-400 hover:underline">
             {t('nav.social')}
