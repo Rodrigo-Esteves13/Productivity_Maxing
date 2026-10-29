@@ -213,6 +213,40 @@ export class SocialService {
     // resposta, para nao revelar nada.
     if (!target || target.status === 'BANNED')
       throw new NotFoundException('Friend code not found.');
+    return this.requestTo(userId, target.id);
+  }
+
+  /**
+   * Pedido sem codigo a um colega de turma: so se os dois estiverem na
+   * mesma turma (ja se veem os nomes um ao outro la dentro).
+   */
+  async sendRequestToClassmate(
+    userId: string,
+    turmaId: string,
+    targetId: string,
+  ): Promise<SendRequestResult> {
+    if (targetId === userId)
+      throw new BadRequestException('You cannot add yourself.');
+    const [both, target] = await Promise.all([
+      this.prisma.turmaMember.count({
+        where: { turmaId, userId: { in: [userId, targetId] } },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: targetId },
+        select: { status: true },
+      }),
+    ]);
+    if (both !== 2 || !target || target.status === 'BANNED') {
+      throw new NotFoundException('Classmate not found.');
+    }
+    return this.requestTo(userId, targetId);
+  }
+
+  private async requestTo(
+    userId: string,
+    targetId: string,
+  ): Promise<SendRequestResult> {
+    const target = { id: targetId };
     if (target.id === userId)
       throw new BadRequestException('You cannot add yourself.');
 

@@ -2,7 +2,6 @@ import AppRouter from './routes/AppRouter';
 import { AuthProvider } from './context/AuthContext';
 import { AcademicProvider } from './context/AcademicContext';
 import { StudySessionProvider } from './context/StudySessionProvider';
-import OfflineBanner from './pwa/OfflineBanner';
 import AccessibilityEffects from './components/Accessibility/AccessibilityEffects';
 import CompletionBurst from './components/Accessibility/CompletionBurst';
 import MaintenanceGate from './components/Maintenance/MaintenanceGate';
@@ -38,7 +37,6 @@ function App() {
               <AcademicProvider>
                 <AccessibilityEffects />
                 <CompletionBurst />
-                <OfflineBanner />
                 <AppRouter />
               </AcademicProvider>
             </StudySessionProvider>

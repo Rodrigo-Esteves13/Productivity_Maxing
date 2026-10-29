@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PushService } from '../push/push.service';
 import {
   addUtcDays,
+  diffUtcDays,
   getLisbonNow,
   parseDateKey,
 } from '../common/date-key.util';
@@ -19,6 +20,7 @@ import {
 } from './dto/medication.dto';
 import { MedicationDisclaimerService } from './medication-disclaimer.service';
 import {
+  MAX_INTAKE_PAST_DAYS,
   MAX_MEDICATIONS_PER_USER,
   MEDICATION_PATH,
   MEDICATION_REMINDER_WINDOW_MINUTES,
@@ -257,6 +259,18 @@ export class MedicationsService {
       );
     }
     const date = parseDateKey(dto.date);
+    // Da para marcar um dia que passou (esqueceu-se de registar), mas nao
+    // um dia futuro nem muito antigo.
+    const daysAgo = diffUtcDays(date, getLisbonNow().today);
+    if (
+      Number.isNaN(daysAgo) ||
+      daysAgo < 0 ||
+      daysAgo > MAX_INTAKE_PAST_DAYS
+    ) {
+      throw new BadRequestException(
+        `The day must be in the last ${MAX_INTAKE_PAST_DAYS} days and not in the future.`,
+      );
+    }
     const takenAt = dto.taken ? new Date() : null;
     await this.prisma.medicationDose.upsert({
       where: {

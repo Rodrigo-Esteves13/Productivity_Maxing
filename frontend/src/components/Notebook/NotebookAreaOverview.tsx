@@ -125,7 +125,7 @@ export default function NotebookAreaOverview({ entries, isCreating, onSelect, on
           <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
             {t('notebook.overview.recent')}
           </h3>
-          <ul className="grid gap-2 sm:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {recent.map((entry) => {
               const preview = entryPreview(entry.preview, 140);
               return (

@@ -26,6 +26,9 @@ import type {
 
 // Tomas "se necessario" mostradas no cartao: os ultimos 7 dias.
 const RECENT_INTAKE_DAYS = 7;
+// Igual a MAX_INTAKE_PAST_DAYS do backend: ate quantos dias atras se pode
+// marcar uma toma esquecida.
+export const MAX_DOSE_PAST_DAYS = 30;
 
 // Medicamentos do utilizador, checklist das tomas de hoje, tomas "se
 // necessario" recentes e o estado do aviso legal.
@@ -33,6 +36,9 @@ export function useMedications() {
   // Dia de Lisboa (o do backend), atualizado a meia-noite e ao voltar a app.
   // Quando muda, `load` muda e o efeito abaixo volta a carregar (D-05).
   const today = useLisbonToday();
+  // 0 = hoje, 1 = ontem... Para marcar uma toma que ficou por registar.
+  const [dayOffset, setDayOffset] = useState(0);
+  const dayKey = dayOffset === 0 ? today : toDateKey(new Date(Date.parse(today) - dayOffset * MS_PER_DAY));
   const [medications, setMedications] = useState<Medication[]>([]);
   const [slots, setSlots] = useState<MedicationDaySlot[]>([]);
   const [intakes, setIntakes] = useState<MedicationIntake[]>([]);
@@ -46,7 +52,7 @@ export function useMedications() {
       const from = toDateKey(new Date(Date.parse(today) - (RECENT_INTAKE_DAYS - 1) * MS_PER_DAY));
       const [list, day, recent, notice] = await Promise.all([
         getMedications(),
-        getMedicationDay(today),
+        getMedicationDay(dayKey),
         getMedicationIntakes(from, today),
         getMedicationDisclaimer(),
       ]);
@@ -60,7 +66,7 @@ export function useMedications() {
     } finally {
       setIsLoading(false);
     }
-  }, [today]);
+  }, [today, dayKey]);
 
   useEffect(() => {
     void load();
@@ -93,17 +99,20 @@ export function useMedications() {
         );
       flip(!slot.taken);
       try {
-        await setMedicationDose(slot.medicationId, { date: today, slotMinutes: slot.slotMinutes, taken: !slot.taken });
+        await setMedicationDose(slot.medicationId, { date: dayKey, slotMinutes: slot.slotMinutes, taken: !slot.taken });
         return true;
       } catch {
         flip(slot.taken);
         return false;
       }
     },
-    [today],
+    [dayKey],
   );
 
   return {
+    dayOffset,
+    dayKey,
+    setDayOffset: (offset: number) => setDayOffset(Math.min(MAX_DOSE_PAST_DAYS, Math.max(0, offset))),
     medications,
     slots,
     intakes,

@@ -21,15 +21,30 @@ export default function StickyMobileCta() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [cookieNoticeDismissed, setCookieNoticeDismissed] = useState(true);
+  // So aparece depois dos botoes do hero sairem do ecra: com eles visiveis
+  // eram dois "Get started" iguais um em cima do outro.
+  const [heroCtaVisible, setHeroCtaVisible] = useState(true);
 
   useEffect(() => {
-    setCookieNoticeDismissed(!!window.localStorage.getItem(COOKIE_NOTICE_DISMISSED_KEY));
+    try {
+      setCookieNoticeDismissed(!!window.localStorage.getItem(COOKIE_NOTICE_DISMISSED_KEY));
+    } catch {
+      setCookieNoticeDismissed(true);
+    }
   }, []);
 
-  if (!cookieNoticeDismissed) return null;
+  useEffect(() => {
+    const hero = document.getElementById('hero-cta');
+    if (!hero || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) => setHeroCtaVisible(entry.isIntersecting));
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, []);
+
+  if (!cookieNoticeDismissed || heroCtaVisible) return null;
 
   return (
-    <div className="print-hide sm:hidden fixed bottom-0 inset-x-0 z-40 border-t border-neutral-800 bg-neutral-950/95 backdrop-blur px-4 py-3">
+    <div className="print-hide sm:hidden fixed bottom-0 inset-x-0 z-40 border-t border-neutral-800 bg-neutral-950/95 backdrop-blur px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
       <button
         type="button"
         onClick={() => navigate('/register')}

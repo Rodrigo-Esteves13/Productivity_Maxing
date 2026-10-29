@@ -74,7 +74,7 @@ export default function UserEditForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-sm font-medium rounded-md transition-colors"
+          className="px-4 py-2 bg-amber-700 hover:bg-amber-800 disabled:opacity-50 text-white text-sm font-medium rounded-md transition-colors"
         >
           {isSubmitting ? t('common.saving') : t('ui.saveChanges')}
         </button>

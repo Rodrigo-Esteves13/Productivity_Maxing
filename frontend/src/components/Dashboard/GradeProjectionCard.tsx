@@ -72,7 +72,7 @@ function TaskLine({ task }: { task: GradeProjectionTask }) {
             </p>
           )}
           {targetAdvice(task) && <p className="mt-0.5 pl-4 text-xs text-amber-300">{targetAdvice(task)}</p>}
-          <p className="mt-0.5 pl-4 text-[11px] text-neutral-600">{basisText(task)}</p>
+          <p className="mt-0.5 pl-4 text-[11px] text-neutral-500">{basisText(task)}</p>
         </>
       ) : (
         <p className="mt-0.5 pl-4 text-xs text-neutral-500">
@@ -114,7 +114,7 @@ export default function GradeProjectionCard() {
             ))}
           </ul>
           {hidden > 0 && <p className="mt-3 text-xs text-neutral-500">{t('ui.andMoreGradedTasks', { hidden: hidden })}</p>}
-          <p className="mt-3 text-[11px] text-neutral-600">
+          <p className="mt-3 text-[11px] text-neutral-500">
             {t('ui.anEstimateFromYourOwn')}
           </p>
         </>

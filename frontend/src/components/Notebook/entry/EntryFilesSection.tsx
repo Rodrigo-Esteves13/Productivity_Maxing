@@ -82,7 +82,7 @@ export function AttachmentsSection({ isEditing, attachments, onUpload, onDelete 
       onFileChange={handleChange}
     >
       {attachments.length === 0 ? (
-        !isEditing && <p className="text-xs text-neutral-600">{t('notebook.files.none')}</p>
+        !isEditing && <p className="text-xs text-neutral-500">{t('notebook.files.none')}</p>
       ) : (
         <div className="space-y-1.5">
           {attachments.map((attachment) => (
@@ -91,7 +91,7 @@ export function AttachmentsSection({ isEditing, attachments, onUpload, onDelete 
               icon={<FileIcon className="h-3.5 w-3.5" />}
               trailing={
                 <span className="ml-auto flex shrink-0 items-center gap-1">
-                  <span className="text-xs text-neutral-600">{formatFileSize(attachment.sizeBytes)}</span>
+                  <span className="text-xs text-neutral-500">{formatFileSize(attachment.sizeBytes)}</span>
                   <AttachmentActions attachment={attachment} onPreview={setPreviewing} />
                 </span>
               }

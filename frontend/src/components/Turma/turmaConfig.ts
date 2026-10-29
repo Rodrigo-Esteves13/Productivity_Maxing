@@ -8,14 +8,15 @@ export const ANNOUNCEMENT_TITLE_MAX_LENGTH = 200;
 export const ANNOUNCEMENT_BODY_MAX_LENGTH = 5_000;
 export const INVITE_CODE_LENGTH = 8;
 
-export type TurmaTab = 'announcements' | 'programs' | 'schedule' | 'packs' | 'notes' | 'files' | 'subjects' | 'members';
+export type TurmaTab = 'announcements' | 'deadlines' | 'programs' | 'schedule' | 'packs' | 'notes' | 'files' | 'subjects' | 'members';
 
-export const TURMA_TABS: TurmaTab[] = ['announcements', 'programs', 'schedule', 'packs', 'notes', 'files', 'subjects', 'members'];
+export const TURMA_TABS: TurmaTab[] = ['announcements', 'deadlines', 'programs', 'schedule', 'packs', 'notes', 'files', 'subjects', 'members'];
 
 export const TURMA_TAB_LABEL_KEY: Record<TurmaTab, string> = {
   announcements: 'turma.tab.announcements',
   schedule: 'turma.tab.schedule',
   programs: 'turma.tab.programs',
+  deadlines: 'turma.tab.deadlines',
   packs: 'turma.tab.packs',
   notes: 'turma.tab.notes',
   files: 'turma.tab.files',

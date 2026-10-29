@@ -456,7 +456,11 @@ export function SharedNotebookEntryView({
         <div className="space-y-1">
           <span
             className="inline-block rounded-full px-2 py-0.5 text-[11px] font-medium"
-            style={{ backgroundColor: `${entry.area.colorHex}22`, color: entry.area.colorHex }}
+            style={{
+              backgroundColor: `${entry.area.colorHex}22`,
+              // Mesmo truque do PriorityBadge: a cor da area sozinha pode nao ler bem.
+              color: `color-mix(in oklab, ${entry.area.colorHex} 50%, var(--color-neutral-100))`,
+            }}
           >
             {entry.area.name}
           </span>

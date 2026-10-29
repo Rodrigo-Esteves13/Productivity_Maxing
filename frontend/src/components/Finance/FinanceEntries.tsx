@@ -74,7 +74,7 @@ export default function FinanceEntries({ summary, defaultDate, onAdd, onRemove }
           onChange={changeKind}
           size="sm"
         />
-        <div className="grid gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
           <Input label={t('finance.amount')} inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
           <Select label={t('finance.category')} value={category} onChange={(e) => setCategory(e.target.value)}>
             {categories.map((c) => (

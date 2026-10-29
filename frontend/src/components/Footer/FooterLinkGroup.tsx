@@ -25,7 +25,7 @@ export default function FooterLinkGroup({ title, items }: FooterLinkGroupProps) 
   const here = `${pathname}${search}`;
   return (
     <div>
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">{title}</h3>
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">{title}</h2>
       <ul className="space-y-2">
         {items.map((item) => (
           <li key={item.label}>

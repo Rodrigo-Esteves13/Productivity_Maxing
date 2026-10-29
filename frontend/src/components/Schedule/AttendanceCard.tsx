@@ -88,7 +88,7 @@ export default function AttendanceCard({ refreshKey }: AttendanceCardProps) {
                 </span>
                 <span className="text-neutral-400">{t('attendance.attendedCount', { count: row.attended })}</span>
                 {row.unmarked > 0 && (
-                  <span className="text-neutral-600">{t('attendance.unmarkedCount', { count: row.unmarked })}</span>
+                  <span className="text-neutral-500">{t('attendance.unmarkedCount', { count: row.unmarked })}</span>
                 )}
                 {share !== null && row.missed > 0 && (
                   <span className="text-neutral-500">{t('attendance.limit.share', { pct: Math.round(share) })}</span>

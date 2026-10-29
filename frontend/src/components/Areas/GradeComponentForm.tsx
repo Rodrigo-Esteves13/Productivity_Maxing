@@ -63,7 +63,7 @@ export default function GradeComponentForm({ initial, onSubmit, onCancel }: Grad
 
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3 rounded-lg border border-neutral-800 bg-neutral-950/50 p-3">
-      <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_8rem]">
         <Input
           label={t('grades.form.name')}
           value={name}
@@ -88,7 +88,7 @@ export default function GradeComponentForm({ initial, onSubmit, onCancel }: Grad
         <SegmentedControl size="sm" options={ruleOptions} value={aggregation} onChange={setAggregation} />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {aggregation === 'BEST_OF' && (
           <Input
             label={t('grades.form.bestOfCount')}

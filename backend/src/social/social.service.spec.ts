@@ -176,3 +176,33 @@ describe('SocialService.pendingCounts', () => {
     });
   });
 });
+
+describe('SocialService.sendRequestToClassmate', () => {
+  const withTurma = (members: number) => {
+    const built = build();
+    const db = built.db as PrismaMock & { turmaMember: { count: Mock } };
+    db.turmaMember = { count: jest.fn().mockResolvedValue(members) };
+    db.user.findUnique.mockResolvedValue({ status: 'ACTIVE' });
+    db.userBlock.findFirst.mockResolvedValue(null);
+    db.friendship.findFirst.mockResolvedValue(null);
+    return { svc: built.svc, db };
+  };
+
+  it('sends the request when both are in the class', async () => {
+    const { svc, db } = withTurma(2);
+    await expect(
+      svc.sendRequestToClassmate('me', 't1', 'mate'),
+    ).resolves.toEqual({ status: 'PENDING' });
+    expect(db.friendship.create).toHaveBeenCalledWith({
+      data: { requesterId: 'me', addresseeId: 'mate' },
+    });
+  });
+
+  it('is a 404 when they do not share the class', async () => {
+    const { svc, db } = withTurma(1);
+    await expect(
+      svc.sendRequestToClassmate('me', 't1', 'stranger'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(db.friendship.create).not.toHaveBeenCalled();
+  });
+});

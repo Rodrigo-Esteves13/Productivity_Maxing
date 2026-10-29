@@ -40,7 +40,7 @@ export default function NotebookSharedPanel() {
         </span>
       </div>
       {invitations.length > 0 && (
-        <ul className="grid gap-3 md:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {invitations.map((item) => (
             <li key={item.token}>
               <InvitationCard item={item} onRespond={respond} />

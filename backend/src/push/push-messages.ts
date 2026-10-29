@@ -31,6 +31,8 @@ export type PushMessageKey =
   | 'medicationsDue'
   | 'turmaAnnouncement'
   | 'turmaPackShared'
+  | 'turmaDeadlineAdded'
+  | 'turmaDeadlineMoved'
   | 'taskPackUpdated'
   | 'feedbackReplied'
   | 'feedbackRejected'
@@ -112,6 +114,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     turmaAnnouncement: {
       title: '{name}',
       body: 'New announcement: {title}',
+    },
+    turmaDeadlineAdded: {
+      title: '{name}',
+      body: 'New deadline: {title}. Add it to your tasks.',
+    },
+    turmaDeadlineMoved: {
+      title: '{name}',
+      body: 'The date of {title} changed. Your task was updated.',
     },
     turmaPackShared: {
       title: '{name}',
@@ -207,6 +217,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '{name}',
       body: 'Novo anúncio: {title}',
     },
+    turmaDeadlineAdded: {
+      title: '{name}',
+      body: 'Novo prazo: {title}. Junta-o às tuas tasks.',
+    },
+    turmaDeadlineMoved: {
+      title: '{name}',
+      body: 'A data de {title} mudou. A tua task foi atualizada.',
+    },
     turmaPackShared: {
       title: '{name}',
       body: 'Novo pacote de tasks: {title}',
@@ -301,6 +319,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '{name}',
       body: 'Nuevo anuncio: {title}',
     },
+    turmaDeadlineAdded: {
+      title: '{name}',
+      body: 'Nuevo plazo: {title}. Añádelo a tus tareas.',
+    },
+    turmaDeadlineMoved: {
+      title: '{name}',
+      body: 'La fecha de {title} cambió. Tu tarea se actualizó.',
+    },
     turmaPackShared: {
       title: '{name}',
       body: 'Nuevo paquete de tareas: {title}',
@@ -378,6 +404,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     turmaAnnouncement: {
       title: '{name}',
       body: '新公告：{title}',
+    },
+    turmaDeadlineAdded: {
+      title: '{name}',
+      body: 'Nouvelle échéance : {title}. Ajoute-la à tes tâches.',
+    },
+    turmaDeadlineMoved: {
+      title: '{name}',
+      body: 'La date de {title} a changé. Ta tâche a été mise à jour.',
     },
     turmaPackShared: {
       title: '{name}',
@@ -473,6 +507,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '{name}',
       body: '新しいお知らせ：{title}',
     },
+    turmaDeadlineAdded: {
+      title: '{name}',
+      body: 'Neue Frist: {title}. Füge sie deinen Aufgaben hinzu.',
+    },
+    turmaDeadlineMoved: {
+      title: '{name}',
+      body: 'Das Datum von {title} hat sich geändert. Deine Aufgabe wurde aktualisiert.',
+    },
     turmaPackShared: {
       title: '{name}',
       body: '新しいタスクパック：{title}',
@@ -566,6 +608,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     turmaAnnouncement: {
       title: '{name}',
       body: '새 공지: {title}',
+    },
+    turmaDeadlineAdded: {
+      title: '{name}',
+      body: '新截止日期：{title}。把它加入你的任务。',
+    },
+    turmaDeadlineMoved: {
+      title: '{name}',
+      body: '{title} 的日期已更改。你的任务已更新。',
     },
     turmaPackShared: {
       title: '{name}',
@@ -665,6 +715,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '{name}',
       body: 'Nouvelle annonce : {title}',
     },
+    turmaDeadlineAdded: {
+      title: '{name}',
+      body: '新しい締め切り：{title}。タスクに追加しましょう。',
+    },
+    turmaDeadlineMoved: {
+      title: '{name}',
+      body: '{title} の日付が変わりました。タスクを更新しました。',
+    },
     turmaPackShared: {
       title: '{name}',
       body: 'Nouveau pack de tâches : {title}',
@@ -758,6 +816,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     turmaAnnouncement: {
       title: '{name}',
       body: 'Neue Ankündigung: {title}',
+    },
+    turmaDeadlineAdded: {
+      title: '{name}',
+      body: '새 마감: {title}. 내 할 일에 추가하세요.',
+    },
+    turmaDeadlineMoved: {
+      title: '{name}',
+      body: '{title}의 날짜가 바뀌었습니다. 내 할 일이 업데이트되었습니다.',
     },
     turmaPackShared: {
       title: '{name}',

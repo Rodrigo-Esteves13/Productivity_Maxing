@@ -144,6 +144,17 @@ export default function PrivacyPolicy() {
             are never included. You or the class rep can remove it at any time
           </li>
           <li>
+            Classmates: anyone in a class with you can send you a friend request from the Members tab without
+            your friend code. Nothing is shared until you accept. A friend&apos;s profile lists the classes you are
+            both in
+          </li>
+          <li>
+            Class deadlines: a test or assignment you add to a class (subject, title, date, weight) is visible
+            to its members with your name as who added it, and they get a notification. Members can see how many
+            people added it to their tasks, never who. When you add one to your tasks, a normal task is created
+            in your account and follows later changes to its title, date and weight
+          </li>
+          <li>
             Class timetable (off by default): if you turn on sharing in a class, its members see the subject,
             day, time and room of your classes for the next two weeks, merged with other members and never
             with your name, and can copy a subject into their own schedule. Turning it off stops sharing at once

@@ -94,7 +94,7 @@ export const social: Record<string, string> = {
   'social.tab.mine': "我的共享",
   'social.requests.empty': "没有等待你处理的事项。新的好友请求和邀请会显示在这里。",
   'social.wantsToBeFriends': "想成为你的好友",
-  'social.friend.open': "查看共享",
+  'social.friend.open': "打开资料",
   'social.notes.readers': "谁在阅读你的笔记本",
   'social.notes.crumb': "笔记",
   'social.mine.title': "你共享的笔记",

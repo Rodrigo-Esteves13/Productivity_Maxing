@@ -65,7 +65,7 @@ export default function SegmentedControl<T extends string>({
             data-active={active}
             onClick={() => onChange(optionValue)}
             className={`press relative flex items-center gap-1.5 rounded ${SIZE_CLASS[size]} text-xs font-medium ${
-              active ? `text-white ${rect ? '' : 'bg-violet-600'}` : 'text-neutral-400 hover:text-neutral-200'
+              active ? `text-on-accent ${rect ? '' : 'bg-violet-600'}` : 'text-neutral-400 hover:text-neutral-200'
             }`}
           >
             {Icon && <Icon className="h-3.5 w-3.5" />}

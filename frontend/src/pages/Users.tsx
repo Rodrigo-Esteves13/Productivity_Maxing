@@ -73,6 +73,7 @@ export default function Users() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t('adminSocial.search')}
+                aria-label={t('adminSocial.search')}
                 className="w-full rounded-lg border border-neutral-800 bg-neutral-900 py-2 pl-9 pr-3 text-sm text-white placeholder:text-neutral-500 focus:border-violet-600 focus:outline-none"
               />
             </label>

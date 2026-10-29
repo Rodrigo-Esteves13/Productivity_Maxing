@@ -156,7 +156,7 @@ export default function GpaTrendChart({ entries, scale, cumulativeAverage }: Gpa
       <div className="pointer-events-none absolute -inset-x-24 -top-14 h-64 bg-radial-[closest-side] from-violet-500/8 via-violet-500/5 to-transparent" />
 
       {zoomed && (
-        <p className="absolute right-1 top-0 text-[10px] text-neutral-600">
+        <p className="absolute right-1 top-0 text-[10px] text-neutral-500">
           {t('ui.zoomedToOfScale', { domainMin: domainMin, domainMax: domainMax, scaleMin: scaleMin, scaleMax: scaleMax })}</p>
       )}
 

@@ -86,6 +86,12 @@ export function applyToDocument(prefs: AccessibilityPrefs): void {
   const theme = resolveTheme(prefs.theme);
   // O tema original nao precisa de atributo (e o :root por defeito).
   toggle('data-theme', theme === 'nightshade' ? null : theme);
+
+  // Barra de estado do telemovel com a cor de fundo do tema (antes ficava
+  // sempre roxa, a destoar da app escura).
+  const background = getComputedStyle(root).getPropertyValue('--color-neutral-950').trim();
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta && background) meta.setAttribute('content', background);
 }
 
 // Chamado antes do primeiro render (main.tsx): evita o "flash" do tema

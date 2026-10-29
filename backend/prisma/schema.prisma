@@ -250,21 +250,23 @@ model User {
   // sempre com suspendedUntil definido; passada essa data, tratado como
   // ACTIVE automaticamente (sem cron - ver UsersService.isBlocked/
   // reactivateIfExpired). BANNED nunca tem suspendedUntil (indefinido).
-  status                UserStatus      @default(ACTIVE)
+  status                UserStatus          @default(ACTIVE)
   suspendedUntil        DateTime?
   statusReason          String?
   statusUpdatedAt       DateTime?
   statusUpdatedByUserId String?
-  statusUpdatedBy       User?           @relation("UserStatusChangedBy", fields: [statusUpdatedByUserId], references: [id], onDelete: SetNull)
-  statusChangesMade     User[]          @relation("UserStatusChangedBy")
+  statusUpdatedBy       User?               @relation("UserStatusChangedBy", fields: [statusUpdatedByUserId], references: [id], onDelete: SetNull)
+  statusChangesMade     User[]              @relation("UserStatusChangedBy")
   // Silenciado so no feedback (spam/insultos) sem banir a conta. Com valor,
   // POST /feedback recusa. null = pode enviar.
   feedbackMutedAt       DateTime?
-  turmaInvitesReceived  TurmaInvite[]   @relation("TurmaInvitesReceived")
-  turmaInvitesSent      TurmaInvite[]   @relation("TurmaInvitesSent")
+  turmaInvitesReceived  TurmaInvite[]       @relation("TurmaInvitesReceived")
+  turmaInvitesSent      TurmaInvite[]       @relation("TurmaInvitesSent")
   personalNotes         PersonalNote[]
   bloodDonations        BloodDonation[]
   sharedTurmaPrograms   TurmaProgram[]
+  turmaDeadlinesCreated TurmaDeadline[]     @relation("TurmaDeadlineCreatedBy")
+  turmaDeadlineTasks    TurmaDeadlineTask[]
   financeSettings       FinanceSettings?
   financeEntries        FinanceEntry[]
   financeGoals          FinanceGoal[]
@@ -834,10 +836,11 @@ model Task {
 
   // Checklist leve da task (ver model Subtask) - sem peso, sem nota, não
   // entra em nenhuma média nem previsão.
-  subtasks      Subtask[]
-  sentReminders SentReminder[]
+  subtasks          Subtask[]
+  sentReminders     SentReminder[]
+  turmaDeadlineLink TurmaDeadlineTask?
   // Ficheiros da task (enunciado em PDF, etc.), ver model TaskAttachment.
-  attachments   TaskAttachment[]
+  attachments       TaskAttachment[]
 
   // Nenhuma destas é indexada automaticamente só por ser FK no Postgres:
   // - userId: TasksService.findAll/findOne/update/remove filtram sempre
@@ -1455,22 +1458,22 @@ model CalendarSyncedEvent {
 /// próprio tempo de deslocação. Os turnos agrupam-se aqui; mudar o nome ou
 /// a deslocação atualiza todos os turnos (e o plano de estudo) de uma vez.
 model Commitment {
-  id             String      @id @default(uuid())
+  id             String        @id @default(uuid())
   userId         String
   name           String
   // Minutos de viagem de cada lado de cada turno deste local.
-  commuteMinutes Int         @default(0)
+  commuteMinutes Int           @default(0)
   // Morada do local (trabalho, evento, ginasio...) e meio de transporte
   // usados para CALCULAR commuteMinutes a partir de User.homeAddress via
   // Distance Matrix. Opcionais: o valor manual continua a ser o caminho
   // principal; a morada so existe para lembrar de onde veio o numero.
   address        String?
-  commuteMode    CommuteMode @default(TRANSIT)
+  commuteMode    CommuteMode   @default(TRANSIT)
   // Folgas fixas: dias da semana (0=Domingo..6=Sábado) em que NUNCA se
   // trabalha aqui. Turnos semanais nesses dias não se criam nem se expandem;
   // turnos pontuais (troca de folga) continuam a valer. Validado em
   // CreateCommitmentDto/UpdateCommitmentDto (valores únicos, máx. 6).
-  daysOff        Int[]       @default([])
+  daysOff        Int[]         @default([])
   // Tipo de contrato de um trabalho (null = nao e um trabalho ou nao foi
   // dito) e ultimo dia de trabalho. Depois de endsOn (meia-noite UTC do
   // dia, hora de Lisboa) os turnos semanais deixam de contar.
@@ -2070,6 +2073,7 @@ model Turma {
   linkedAreas   TurmaLinkedArea[]
   packs         TurmaPack[]
   programs      TurmaProgram[]
+  deadlines     TurmaDeadline[]
   invites       TurmaInvite[]
 }
 
@@ -2093,13 +2097,13 @@ model TurmaInvite {
 }
 
 model TurmaMember {
-  id      String    @id @default(uuid())
-  turmaId String
-  userId  String
-  role    TurmaRole @default(MEMBER)
+  id            String    @id @default(uuid())
+  turmaId       String
+  userId        String
+  role          TurmaRole @default(MEMBER)
   // Partilha o proprio horario de aulas com a turma. Desligado por
   // defeito: nem toda a gente tem as mesmas cadeiras.
-  shareSchedule Boolean @default(false)
+  shareSchedule Boolean   @default(false)
 
   joinedAt DateTime @default(now())
 
@@ -2284,4 +2288,47 @@ model TurmaProgram {
   sharedBy User  @relation(fields: [sharedById], references: [id], onDelete: Cascade)
 
   @@index([turmaId])
+}
+
+// Prazo da turma (frequencia, trabalho): alguem da turma regista uma vez e
+// cada membro junta-o as suas tasks com um clique. Mudar a data aqui muda
+// a task de toda a gente que a juntou (e o lembrete da vespera volta a
+// sair, porque o SentReminder e por data).
+model TurmaDeadline {
+  id               String   @id @default(uuid())
+  turmaId          String
+  createdById      String?
+  title            String   @db.VarChar(200)
+  subject          String   @db.VarChar(120)
+  dueAt            DateTime
+  weightPercentage Float?
+  // Chave de AcademicTaskType (FREQUENCIA, TRABALHO_PRATICO, ...).
+  kind             String   @db.VarChar(40)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  turma     Turma               @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  createdBy User?               @relation("TurmaDeadlineCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  tasks     TurmaDeadlineTask[]
+
+  @@index([turmaId, dueAt])
+}
+
+// Task de um membro criada a partir de um prazo da turma. Apagar a task
+// apaga a ligacao; apagar o prazo deixa a task (e do membro).
+model TurmaDeadlineTask {
+  id         String @id @default(uuid())
+  deadlineId String
+  userId     String
+  taskId     String @unique
+
+  createdAt DateTime @default(now())
+
+  deadline TurmaDeadline @relation(fields: [deadlineId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task     Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([deadlineId, userId])
+  @@index([userId])
 }

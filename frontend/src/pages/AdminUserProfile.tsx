@@ -233,7 +233,7 @@ export default function AdminUserProfile() {
         >
           <h2 className="text-sm font-semibold text-neutral-100">{t('adminSocial.notes')}</h2>
           <p className="mb-3 mt-0.5 text-xs text-neutral-500">{t('adminSocial.notesHint')}</p>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <AdminPersonList
               title={t('adminSocial.readers')}
               people={profile.readers}

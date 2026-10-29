@@ -130,10 +130,7 @@ export default function SocialLists({
               {t('social.friend.open')}
             </Link>
             {notesControl(f.userId)}
-            {confirmable(`rm:${f.friendshipId}`, t('social.remove'), t('social.removeConfirm'), () =>
-              onRemove(f.friendshipId),
-            )}
-            {confirmable(`block:${f.userId}`, t('social.block'), t('social.blockConfirm'), () => onBlock(f.userId))}
+            {/* Remover e bloquear ficam no perfil: aqui so o que se usa no dia a dia. */}
           </PersonRow>
         ))}
       </Section>

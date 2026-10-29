@@ -34,6 +34,7 @@ export default function DeleteAccountModal({
           value={confirmText}
           onChange={(e) => onConfirmTextChange(e.target.value)}
           placeholder="DELETE"
+          aria-label={t('ui.deleteYourAccount')}
           className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-white mb-3 focus:outline-none focus:border-red-700"
         />
         {error && <p className="text-red-400 text-sm mb-3">{error}</p>}

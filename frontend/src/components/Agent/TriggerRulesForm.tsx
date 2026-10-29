@@ -63,6 +63,7 @@ export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormP
             {t('ui.matchesTheBehindVeryBehind')}
           </span>
           <select
+            aria-label={t('ui.progressStatusIsAtLeast')}
             value={config.minProgressStatus ?? ''}
             onChange={(e) =>
               onChange({ minProgressStatus: (e.target.value || null) as ProgressStatus | null })
@@ -86,6 +87,7 @@ export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormP
             {t('ui.onlyLooksAtTasksDue')}
           </span>
           <select
+            aria-label={t('ui.todaySDifficultyIsAt')}
             value={config.minDifficultyToday ?? ''}
             onChange={(e) =>
               onChange({ minDifficultyToday: (e.target.value || null) as Difficulty | null })
@@ -104,10 +106,11 @@ export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormP
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-neutral-300 mb-2">
+          <label htmlFor="agent-trigger-mode" className="block text-sm font-medium text-neutral-300 mb-2">
             {t('ui.triggerMode')}
           </label>
           <select
+            id="agent-trigger-mode"
             value={config.triggerMode}
             onChange={(e) => onChange({ triggerMode: e.target.value as AgentTriggerMode })}
             className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-600"
@@ -118,10 +121,11 @@ export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormP
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-neutral-300 mb-2">
+          <label htmlFor="agent-fail-mode" className="block text-sm font-medium text-neutral-300 mb-2">
             {t('ui.ifTheAgentCanT')}
           </label>
           <select
+            id="agent-fail-mode"
             value={config.failMode}
             onChange={(e) => onChange({ failMode: e.target.value as AgentConfig['failMode'] })}
             className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-600"
@@ -133,10 +137,11 @@ export default function TriggerRulesForm({ config, onChange }: TriggerRulesFormP
       </div>
 
       <div className="max-w-xs">
-        <label className="block text-sm font-medium text-neutral-300 mb-2">
+        <label htmlFor="agent-poll-interval" className="block text-sm font-medium text-neutral-300 mb-2">
           {t('ui.checkForUpdatesEverySeconds')}
         </label>
         <input
+          id="agent-poll-interval"
           type="number"
           min={15}
           max={3600}

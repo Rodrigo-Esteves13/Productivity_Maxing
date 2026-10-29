@@ -99,7 +99,7 @@ export default function OptionalInfoFields({
         <div className="flex-1">
           <label htmlFor="sync-to-calendar" className={calendarConnected ? 'cursor-pointer' : ''}>
             <span className="text-sm text-neutral-400">{t('ui.addToGoogleCalendar')}</span>
-            <p className="text-xs text-neutral-600">
+            <p className="text-xs text-neutral-500">
               {calendarConnected
                 ? t('ui.createsOrUpdatesAnEvent')
                 : t('ui.connectGoogleCalendarInYour2')}
@@ -131,14 +131,14 @@ export default function OptionalInfoFields({
                     onChange={(e) => onCalendarDurationMinutesChange(e.target.value)}
                     className="w-20 bg-neutral-900 border border-neutral-700 rounded-md px-2 py-1 text-sm text-neutral-200 focus:outline-none focus:ring-1 focus:ring-violet-600"
                   />
-                  <span className="text-xs text-neutral-600">
+                  <span className="text-xs text-neutral-500">
                     {t('ui.minShort')}{' '}
                     {formatDurationHint(Number(calendarDurationMinutes)) &&
                       `(${formatDurationHint(Number(calendarDurationMinutes))})`}
                   </span>
                 </>
               ) : (
-                <span className="text-xs text-neutral-600">{t('ui.blankAllDayEvent')}</span>
+                <span className="text-xs text-neutral-500">{t('ui.blankAllDayEvent')}</span>
               )}
             </div>
           )}

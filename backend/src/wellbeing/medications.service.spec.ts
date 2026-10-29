@@ -133,3 +133,46 @@ describe('MedicationsService schedule', () => {
     expect(prisma.medication.create).not.toHaveBeenCalled();
   });
 });
+
+describe('MedicationsService past days', () => {
+  const setup = () => {
+    const prisma = {
+      medication: {
+        findFirst: jest.fn().mockResolvedValue({ times: [480] }),
+      },
+      medicationDose: { upsert: jest.fn().mockResolvedValue({}) },
+    };
+    const service = new MedicationsService(
+      prisma as unknown as PrismaService,
+      { notifyUser: jest.fn() } as unknown as PushService,
+      acceptedDisclaimer,
+    );
+    return { service, prisma };
+  };
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-12-02T10:00:00Z'));
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it('marks a dose of yesterday that was forgotten', async () => {
+    const { service, prisma } = setup();
+    await service.setDose('u1', 'm1', {
+      date: '2026-12-01',
+      slotMinutes: 480,
+      taken: true,
+    });
+    expect(prisma.medicationDose.upsert).toHaveBeenCalled();
+  });
+
+  it('rejects future days and days older than the limit', async () => {
+    const { service, prisma } = setup();
+    for (const date of ['2026-12-03', '2026-10-01']) {
+      await expect(
+        service.setDose('u1', 'm1', { date, slotMinutes: 480, taken: true }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    }
+    expect(prisma.medicationDose.upsert).not.toHaveBeenCalled();
+  });
+});

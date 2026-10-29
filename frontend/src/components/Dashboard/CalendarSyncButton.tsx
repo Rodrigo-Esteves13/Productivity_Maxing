@@ -26,7 +26,7 @@ export default function CalendarSyncButton({ task }: CalendarSyncButtonProps) {
         to="/profile"
         title={t('ui.connectGoogleCalendarInYour')}
         onClick={(e) => e.stopPropagation()}
-        className="flex items-center text-neutral-600 hover:text-neutral-400 transition-colors"
+        className="flex items-center text-neutral-500 hover:text-neutral-400 transition-colors"
       >
         <CalendarIcon width={14} height={14} />
       </Link>

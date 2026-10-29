@@ -94,7 +94,7 @@ export const social: Record<string, string> = {
   'social.tab.mine': "Mis compartidos",
   'social.requests.empty': "Nada te espera. Las nuevas solicitudes de amistad e invitaciones aparecen aquí.",
   'social.wantsToBeFriends': "Quiere ser tu amigo",
-  'social.friend.open': "Ver compartidos",
+  'social.friend.open': "Abrir perfil",
   'social.notes.readers': "Quién lee tu cuaderno",
   'social.notes.crumb': "Apuntes",
   'social.mine.title': "Apuntes que compartes",

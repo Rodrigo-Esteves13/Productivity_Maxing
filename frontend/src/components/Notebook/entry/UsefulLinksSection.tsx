@@ -39,7 +39,7 @@ export default function UsefulLinksSection({ isEditing, links, onChange }: Usefu
       <EntrySectionHeader icon={LinkIcon} title={t('notebook.section.links')} />
 
       {links.length === 0 && !isEditing ? (
-        <p className="text-xs text-neutral-600">{t('notebook.links.none')}</p>
+        <p className="text-xs text-neutral-500">{t('notebook.links.none')}</p>
       ) : (
         <div className="space-y-1.5">
           {links.map((link) => (

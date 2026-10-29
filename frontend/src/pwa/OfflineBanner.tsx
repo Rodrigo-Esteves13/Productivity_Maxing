@@ -12,6 +12,9 @@ import { useI18n } from '../i18n/useI18n';
  * (precache), por isso a app abre e recarrega offline depois de pelo menos
  * uma visita com rede desde o último deploy. Este banner existe para o user
  * perceber porque é que as ações estão a falhar.
+ *
+ * Vive dentro da Navbar (que é sticky): sendo ele próprio sticky top-0 ao
+ * lado dela, a navbar tapava-o assim que se fazia scroll.
  */
 export default function OfflineBanner() {
   const isOnline = useOnlineStatus();
@@ -22,7 +25,7 @@ export default function OfflineBanner() {
   return (
     <div
       role="status"
-      className="sticky top-0 z-50 flex items-center justify-center gap-2 bg-violet-800 px-4 py-2 text-sm font-medium text-neutral-50"
+      className="flex items-center justify-center gap-2 bg-violet-800 px-4 py-2 text-sm font-medium text-neutral-50"
     >
       <svg
         viewBox="0 0 24 24"

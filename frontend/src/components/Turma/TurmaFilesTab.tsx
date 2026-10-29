@@ -74,7 +74,7 @@ export default function TurmaFilesTab({ turmaId, isDelegado }: TurmaFilesTabProp
                 <span className="block truncate text-sm text-neutral-200" title={file.originalFileName}>
                   {file.originalFileName}
                 </span>
-                <span className="block text-xs text-neutral-600">
+                <span className="block text-xs text-neutral-500">
                   {formatFileSize(file.sizeBytes)} · {file.uploadedByName ?? t('social.anonymous')}
                 </span>
               </span>

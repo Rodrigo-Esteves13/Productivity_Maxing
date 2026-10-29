@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
-import RelatedLinks from '../components/Layout/RelatedLinks';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
@@ -29,12 +28,6 @@ export default function Turmas() {
   return (
     <PageLayout>
       <PageHeader title={t('nav.turmas')} description={t('turma.description')} />
-      <RelatedLinks
-        links={[
-          { to: '/schedule', labelKey: 'related.turmas.schedule' },
-          { to: '/notebook', labelKey: 'related.turmas.notebook' },
-        ]}
-      />
       <TurmaInvitesCard />
       <div className="mb-6 grid gap-4 md:grid-cols-2">
         <JoinTurmaCard />
@@ -48,7 +41,7 @@ export default function Turmas() {
       ) : !turmas || turmas.length === 0 ? (
         <EmptyState message={t('turma.none')} />
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {turmas.map((turma) => (
             <li key={turma.id}>
               <Link

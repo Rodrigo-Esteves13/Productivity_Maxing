@@ -5,32 +5,30 @@ import TechBadge from './TechBadge';
 import FooterBottomBar from './FooterBottomBar';
 import { REPO_URL, REPO_ISSUES_URL } from '../../lib/constants';
 import { socialTabPath } from '../../lib/appLinks';
+import { pagesInSection } from '../../lib/siteMap';
 import { useAuth } from '../../context/useAuth';
 import { useI18n } from '../../i18n/useI18n';
 
 // Lazy: so carrega quando alguem carrega em "Enviar feedback".
 const FeedbackModal = lazy(() => import('../Feedback/FeedbackModal'));
 
-const STUDY_LINKS: FooterLinkItem[] = [
-  { label: 'nav.dashboard', to: '/dashboard' },
-  { label: 'nav.tasks', to: '/tasks' },
-  { label: 'nav.focus', to: '/focus' },
-  { label: 'nav.schedule', to: '/schedule' },
-  { label: 'nav.notebook', to: '/notebook' },
-  { label: 'nav.areas', to: '/areas' },
-  { label: 'nav.review', to: '/review' },
-  { label: 'nav.wellbeing', to: '/wellbeing' },
-  { label: 'notes.title', to: '/notes' },
-  { label: 'finance.title', to: '/finance' },
-  { label: 'reportCard.title', to: '/report-card' },
-];
+// Mesmas secoes do trilho no topo das paginas (lib/siteMap.ts), para o
+// rodape e o trilho contarem a mesma arrumacao da app.
+const fromMap = (section: 'study' | 'life'): FooterLinkItem[] =>
+  pagesInSection(section, false).map((page) => ({ label: page.labelKey, to: page.path }));
 
-const SOCIAL_LINKS: FooterLinkItem[] = [
+const STUDY_LINKS = fromMap('study');
+const LIFE_LINKS = fromMap('life');
+
+// Social aparece pelos separadores: cada um e um sitio a que se volta.
+const TOGETHER_LINKS: FooterLinkItem[] = [
+  { label: 'nav.turmas', to: '/classes' },
   { label: 'social.tab.friends', to: socialTabPath('friends') },
   { label: 'social.tab.requests', to: socialTabPath('requests') },
   { label: 'nav.sharedWithMe', to: socialTabPath('shared') },
   { label: 'social.tab.mine', to: socialTabPath('mine') },
   { label: 'nav.taskPacks', to: '/task-packs' },
+  { label: 'nav.pads', to: '/pad' },
 ];
 
 // Sem sessao os links da app so levavam ao login: mostra-se logo o comeco.
@@ -79,14 +77,19 @@ export default function Footer() {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         {/* No telemovel as colunas de links ficam duas a duas em vez de uma
             lista enorme; a marca ocupa a linha toda. */}
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-[2fr_1fr_1fr_1fr_1fr]">
-          <div className="col-span-2 md:col-span-1">
+        <div
+          className={`grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-3 ${
+            isAuthenticated ? 'lg:grid-cols-[2fr_repeat(5,1fr)]' : 'lg:grid-cols-[2fr_1fr_1fr_1fr]'
+          }`}
+        >
+          <div className="col-span-2 md:col-span-3 lg:col-span-1">
             <FooterBrand />
           </div>
           {isAuthenticated ? (
             <>
-              <FooterLinkGroup title={t('footer.study')} items={STUDY_LINKS} />
-              <FooterLinkGroup title={t('footer.socialGroup')} items={SOCIAL_LINKS} />
+              <FooterLinkGroup title={t('map.section.study')} items={STUDY_LINKS} />
+              <FooterLinkGroup title={t('map.section.together')} items={TOGETHER_LINKS} />
+              <FooterLinkGroup title={t('map.section.life')} items={LIFE_LINKS} />
             </>
           ) : (
             <FooterLinkGroup title={t('footer.getStarted')} items={GET_STARTED_LINKS} />
@@ -96,9 +99,9 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 border-t border-neutral-800/80 pt-6">
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
             {t('footer.builtWith')}
-          </h3>
+          </h2>
           <div className="flex flex-wrap gap-2">
             {STACK.map((tech) => (
               <TechBadge key={tech} label={tech} />

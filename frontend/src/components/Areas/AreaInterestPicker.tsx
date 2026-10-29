@@ -16,7 +16,7 @@ export default function AreaInterestPicker({ area }: AreaInterestPickerProps) {
   return (
     <div className="mt-6 border-t border-neutral-800 pt-4">
       <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">{t('interest.label')}</p>
-      <p className="mt-1 text-xs text-neutral-600">{t('interest.hint')}</p>
+      <p className="mt-1 text-xs text-neutral-500">{t('interest.hint')}</p>
       <div className="mt-2 flex flex-wrap items-center gap-2" role="group" aria-label={t('interest.label')}>
         {RATING_VALUES.map((value) => (
           <button

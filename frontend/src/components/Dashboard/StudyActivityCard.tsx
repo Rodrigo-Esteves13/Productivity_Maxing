@@ -171,6 +171,7 @@ export default function StudyActivityCard() {
             {t('ui.todayMinutesOf', { minutes: todayMinutes })}{' '}
             <input
               type="number"
+              aria-label={t('ui.minGoal')}
               value={goalMinutes}
               onChange={(e) => setGoalMinutes(Math.max(1, Number(e.target.value) || 1))}
               className="w-14 bg-transparent border-b border-neutral-700 text-neutral-300 text-center"

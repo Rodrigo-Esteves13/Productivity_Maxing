@@ -34,7 +34,7 @@ export default function SecurityLogRow({ log, onBanIp, isBanned }: SecurityLogRo
         <div className="flex items-center gap-2">
           <span>{log.ip}</span>
           {isBanned ? (
-            <span className="text-xs text-neutral-600">{t('ui.bannedLower')}</span>
+            <span className="text-xs text-neutral-500">{t('ui.bannedLower')}</span>
           ) : (
             <button
               type="button"
@@ -66,7 +66,7 @@ export default function SecurityLogRow({ log, onBanIp, isBanned }: SecurityLogRo
         )}
       </td>
       <td className="px-4 py-3 text-neutral-300">
-        {log.user ? (log.user.name || log.user.email) : <span className="text-neutral-600">{t('ui.anonymousLower')}</span>}
+        {log.user ? (log.user.name || log.user.email) : <span className="text-neutral-500">{t('ui.anonymousLower')}</span>}
       </td>
       <td className="px-4 py-3 text-neutral-500 max-w-xs truncate" title={log.userAgent ?? undefined}>
         {log.userAgent ?? '-'}

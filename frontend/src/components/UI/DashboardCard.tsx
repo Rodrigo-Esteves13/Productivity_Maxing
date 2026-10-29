@@ -42,11 +42,13 @@ interface CardHeadingProps {
 }
 
 // Titulo pequeno em maiusculas no topo de um cartao (aceita um icone).
+// h2 e nao <p>: o titulo de cada cartao aparece na lista de titulos do
+// leitor de ecra, por baixo do h1 da pagina.
 export function CardHeading({ tone = 'neutral', className = '', children }: CardHeadingProps) {
   return (
-    <p className={`text-xs uppercase tracking-wide ${HEADING_CLASS[tone]} flex items-center gap-1.5 ${className}`}>
+    <h2 className={`text-xs uppercase tracking-wide ${HEADING_CLASS[tone]} flex items-center gap-1.5 ${className}`}>
       {children}
-    </p>
+    </h2>
   );
 }
 

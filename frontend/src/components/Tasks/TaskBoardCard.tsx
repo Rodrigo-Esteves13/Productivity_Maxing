@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import type { DragEvent, KeyboardEvent } from 'react';
+import type { DragEvent } from 'react';
 import type { Task } from '../../types/models';
 import ColorDot from '../UI/ColorDot';
 import PriorityBadge from '../UI/PriorityBadge';
@@ -37,13 +37,6 @@ function TaskBoardCard({
   const enumLabel = useEnumLabel();
   const isOverdue = getDateStatus(task) === 'overdue';
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onSelect(task);
-    }
-  };
-
   return (
     <li
       draggable
@@ -51,17 +44,26 @@ function TaskBoardCard({
       onDragEnd={onDragEnd}
       className={`cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-40' : ''}`}
     >
+      {/* Clique em qualquer sitio abre a task; para o teclado o botao e o
+          titulo (um role="button" a volta do select era um botao com um
+          controlo la dentro). */}
       <div
-        role="button"
-        tabIndex={0}
         onClick={() => onSelect(task)}
-        onKeyDown={handleKeyDown}
         className={`rounded-lg border bg-neutral-900 p-3 transition-colors hover:border-violet-500/50 ${
           task.isPinned ? 'border-violet-500/40' : 'border-neutral-800'
         }`}
       >
         <p className="break-words text-sm font-medium text-neutral-100 line-clamp-3">
-          {task.title}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(task);
+            }}
+            className="inline text-left hover:text-violet-200"
+          >
+            {task.title}
+          </button>
           <SubtaskProgress subtasks={task.subtasks} className="ml-2 align-middle" />
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-neutral-400">

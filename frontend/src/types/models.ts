@@ -1483,6 +1483,8 @@ export interface TurmaMember {
   avatarUrl: string | null;
   role: TurmaRole;
   joinedAt: string;
+  /** Liga os Membros ao Social: amigo, pedido pendente ou da para adicionar. */
+  friendStatus: 'NONE' | 'FRIEND' | 'REQUESTED' | 'INCOMING' | 'BLOCKED';
 }
 
 export interface TurmaDetail {

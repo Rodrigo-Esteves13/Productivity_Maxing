@@ -37,6 +37,8 @@ export interface FriendHub {
   sharedByMe: HubSharedByMe[];
   theirNotebook: { status: HubGrantStatus; areaCount: number };
   myNotebook: { status: HubGrantStatus; areaCount: number; grantId: string | null };
+  /** Turmas onde estao os dois. */
+  commonTurmas: { id: string; name: string }[];
 }
 
 export interface MyShare {

@@ -73,7 +73,7 @@ export default function TaskBoard({ tasks, statuses, onSelect, onChangeStatus }:
                 <span className="text-xs text-neutral-500">{columnTasks.length}</span>
               </header>
               {columnTasks.length === 0 ? (
-                <p className="px-1 py-4 text-center text-xs text-neutral-600">{t('board.empty')}</p>
+                <p className="px-1 py-4 text-center text-xs text-neutral-500">{t('board.empty')}</p>
               ) : (
                 <ul className="flex flex-col gap-2">
                   {columnTasks.map((task) => (

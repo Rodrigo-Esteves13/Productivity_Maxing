@@ -20,16 +20,21 @@ export default function AreaCard({ area, canManage, onSelect, onEdit, onDelete, 
   return (
     <div
       className={`p-4 bg-neutral-900/50 border border-neutral-800 rounded-xl flex items-center justify-between hover:border-neutral-700 transition-colors ${
-        area.isHidden ? 'opacity-50' : ''
+        area.isHidden ? 'opacity-70' : ''
       }`}
     >
-      <div
-        className="flex items-center gap-3 truncate cursor-pointer flex-1"
-        onClick={() => onSelect(area)}
-        title={t('ui.viewDetails')}
-      >
-        <ColorDot color={area.colorHex} variant="circle" size="sm" />
-        <span className="font-medium text-white truncate">{area.name}</span>
+      {/* button e nao div com onClick: com o teclado os detalhes da area
+          nao abriam de todo. */}
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <button
+          type="button"
+          onClick={() => onSelect(area)}
+          title={t('ui.viewDetails')}
+          className="flex min-w-0 items-center gap-3 rounded text-left"
+        >
+          <ColorDot color={area.colorHex} variant="circle" size="sm" />
+          <span className="font-medium text-white truncate">{area.name}</span>
+        </button>
         {!area.isOfficial && <AreaStatusBadge area={area} />}
       </div>
 

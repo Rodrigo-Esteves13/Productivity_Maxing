@@ -1,6 +1,8 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import PrefetchLink from '../UI/PrefetchLink';
-import { ACCOUNT_NAV } from './navItems';
+import { BAR_PATHS, isNavActive, navGroups } from './navItems';
+import { SECTION_LABEL_KEY } from '../../lib/siteMap';
 import type { User } from '../../types/models';
 import { LogoutIcon } from '../UI/Icons';
 import Avatar from '../Profile/Avatar';
@@ -8,6 +10,11 @@ import { useI18n } from '../../i18n/useI18n';
 
 // Lazy e montado so quando aberto: quase ninguem envia feedback numa visita.
 const FeedbackModal = lazy(() => import('../Feedback/FeedbackModal'));
+
+// O que nao cabe na barra, pelas secoes do trilho e do rodape. Em duas
+// colunas para nao passar a altura de um portatil.
+const GROUPS = navGroups(BAR_PATHS);
+const ITEM_CLASS = 'block rounded-md px-3 py-1.5 text-sm break-words transition-colors hover:bg-neutral-800 hover:text-white';
 
 interface UserMenuProps {
   user: User | null;
@@ -26,19 +33,28 @@ function getFirstName(user: User): string {
 
 export default function UserMenu({ user, onLogout }: UserMenuProps) {
   const { t } = useI18n();
+  const { pathname } = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
 
-  // Fecha o menu ao clicar fora dele
+  // Fecha o menu ao clicar fora dele ou com Escape
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     }
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsOpen(false);
+    }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, []);
 
   // Ainda a carregar os dados reais do user: mostra um placeholder discreto
@@ -53,8 +69,8 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
     <div className="relative ml-2 shrink-0" ref={containerRef}>
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        aria-haspopup="menu"
         aria-expanded={isOpen}
+        aria-controls={menuId}
         aria-label={t('nav.menu')}
         className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-neutral-800 transition-colors"
       >
@@ -65,32 +81,50 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
       </button>
 
       {isOpen && (
-        <div role="menu" className="motion-dropdown origin-top-right absolute right-0 mt-2 w-max min-w-48 max-w-[min(20rem,calc(100vw-1rem))] overflow-hidden bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl z-50">
-          {ACCOUNT_NAV.map((item) => (
-            <PrefetchLink
-              key={item.to}
-              to={item.to}
-              onClick={() => setIsOpen(false)}
-              className="block px-4 py-2.5 text-sm break-words text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
-            >
-              {t(item.labelKey)}
-            </PrefetchLink>
-          ))}
-          <button
-            onClick={() => {
-              setIsOpen(false);
-              setIsFeedbackOpen(true);
-            }}
-            className="block w-full text-left px-4 py-2.5 text-sm break-words text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors"
-          >
-            {t('feedback.open')}
-          </button>
+        <div id={menuId} className="motion-dropdown origin-top-right absolute right-0 mt-2 w-max min-w-48 max-w-[min(30rem,calc(100vw-1rem))] max-h-[calc(100dvh-5rem)] overflow-y-auto bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl z-50">
+          <div className="gap-x-2 p-2 sm:columns-2">
+            {GROUPS.map((group) => {
+              const headingId = `user-menu-${group.section}`;
+              return (
+                <section key={group.section} aria-labelledby={headingId} className="mb-2 break-inside-avoid">
+                  <p id={headingId} className="px-3 pb-1 pt-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                    {t(SECTION_LABEL_KEY[group.section])}
+                  </p>
+                  {group.items.map((item) => {
+                    const isCurrent = isNavActive(pathname, item.to);
+                    return (
+                      <PrefetchLink
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setIsOpen(false)}
+                        aria-current={isCurrent ? 'page' : undefined}
+                        className={`${ITEM_CLASS} ${isCurrent ? 'bg-neutral-800 text-white' : 'text-neutral-300'}`}
+                      >
+                        {t(item.labelKey)}
+                      </PrefetchLink>
+                    );
+                  })}
+                  {group.section === 'help' && (
+                    <button
+                      onClick={() => {
+                        setIsOpen(false);
+                        setIsFeedbackOpen(true);
+                      }}
+                      className={`${ITEM_CLASS} w-full text-left text-neutral-300`}
+                    >
+                      {t('feedback.open')}
+                    </button>
+                  )}
+                </section>
+              );
+            })}
+          </div>
           <button
             onClick={() => {
               setIsOpen(false);
               onLogout();
             }}
-            className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm break-words text-red-400 hover:bg-red-950/40 hover:text-red-300 transition-colors"
+            className="flex items-center gap-2 w-full border-t border-neutral-800 text-left px-5 py-2.5 text-sm break-words text-red-400 hover:bg-red-950/40 hover:text-red-300 transition-colors"
           >
             <LogoutIcon />
             {t('nav.logout')}

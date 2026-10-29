@@ -73,7 +73,7 @@ function Body({ variant }: { variant: Variant }) {
       );
     case 'notebook':
       return (
-        <div aria-hidden="true" className="grid gap-6 lg:grid-cols-[16rem_1fr]">
+        <div aria-hidden="true" className="grid grid-cols-1 gap-6 lg:grid-cols-[16rem_1fr]">
           <div className="space-y-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-10 w-full rounded-lg" />

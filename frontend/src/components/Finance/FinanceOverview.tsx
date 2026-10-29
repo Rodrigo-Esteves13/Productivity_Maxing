@@ -80,7 +80,7 @@ export default function FinanceOverview({ summary, onSaveSettings }: FinanceOver
   return (
     <Card className="mb-6">
       {isEditing ? (
-        <form onSubmit={(e) => void handleSubmit(e)} className="grid gap-3 sm:grid-cols-2">
+        <form onSubmit={(e) => void handleSubmit(e)} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input label={t('finance.balance')} inputMode="decimal" value={balance} onChange={(e) => setBalance(e.target.value)} />
           <Select label={t('finance.currency')} value={currency} onChange={(e) => setCurrency(e.target.value)}>
             {FINANCE_CURRENCIES.map((code) => (

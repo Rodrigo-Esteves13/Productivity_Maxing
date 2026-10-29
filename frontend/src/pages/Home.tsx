@@ -49,7 +49,7 @@ export default function Home() {
           {t('ui.taskAndGradeTrackerFor')}
         </p>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+        <div id="hero-cta" className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <Button size="lg" onClick={() => navigate('/register')}>
             {t('ui.getStartedForFree')}
           </Button>

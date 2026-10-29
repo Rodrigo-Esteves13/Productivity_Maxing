@@ -51,7 +51,9 @@ export default function BestTimesHeatmap() {
           <table className="w-full text-xs border-separate border-spacing-1">
             <thead>
               <tr>
-                <th className="w-10" />
+                <th className="w-10">
+                  <span className="sr-only">{t('ui.day')}</span>
+                </th>
                 {HOUR_BUCKET_LABELS.map((label) => (
                   <th key={label} className="text-neutral-500 font-normal pb-1">
                     {label}

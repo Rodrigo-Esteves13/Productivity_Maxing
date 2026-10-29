@@ -45,7 +45,7 @@ export default function PadEditor({ slug }: { slug: string }) {
           <SaveStatusText status={pad.status} />
         )}
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs text-neutral-600">
+          <span className="text-xs text-neutral-500">
             {text.length.toLocaleString()} / {maxLength.toLocaleString()}
           </span>
           <CopyButton text={link} label={t('pad.copyLink')} />

@@ -122,7 +122,7 @@ export default function OnboardingChecklist({ taskCount }: OnboardingChecklistPr
           <XIcon width={14} height={14} />
         </button>
       </div>
-      <ul className="grid gap-2 sm:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {steps.map((step) => (
           <li key={step.id}>
             <Link

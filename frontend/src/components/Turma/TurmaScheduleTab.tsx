@@ -80,14 +80,14 @@ export default function TurmaScheduleTab({ turmaId }: TurmaScheduleTabProps) {
       ) : (
         days.map((day) => (
           <section key={day}>
-            <h3 className="mb-2 text-sm font-semibold capitalize text-neutral-300">
+            <h2 className="mb-2 text-sm font-semibold capitalize text-neutral-300">
               {new Date(`${day}T00:00:00Z`).toLocaleDateString(lang, {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'short',
                 timeZone: 'UTC',
               })}
-            </h3>
+            </h2>
             <ul className="space-y-2">
               {data.classes
                 .filter((c) => c.date === day)

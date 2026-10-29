@@ -23,6 +23,16 @@ export class SendFriendRequestDto {
   friendCode: string;
 }
 
+export class ClassmateFriendRequestDto {
+  @ApiProperty({ description: 'A class you both belong to.' })
+  @IsUUID()
+  turmaId: string;
+
+  @ApiProperty({ description: 'The classmate to add.' })
+  @IsUUID()
+  userId: string;
+}
+
 export class BlockUserDto {
   @ApiProperty()
   @IsUUID()

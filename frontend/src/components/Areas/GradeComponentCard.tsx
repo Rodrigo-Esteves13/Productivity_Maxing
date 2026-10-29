@@ -92,7 +92,7 @@ export default function GradeComponentCard({
             {component.grade !== null ? (
               <span className="text-xl font-semibold tabular-nums text-white">{component.grade}</span>
             ) : (
-              <span className="text-xs text-neutral-600">{t('grades.noGrade')}</span>
+              <span className="text-xs text-neutral-500">{t('grades.noGrade')}</span>
             )}
           </div>
           <IconButton label={t('grades.edit')} className="hover:bg-neutral-800" onClick={() => setIsEditing(true)}>
