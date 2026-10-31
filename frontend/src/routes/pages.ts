@@ -39,6 +39,7 @@ export const DmcaPolicy = lazyWithPreload(() => import('../pages/DmcaPolicy'));
 export const WeeklyReview = lazyWithPreload(() => import('../pages/WeeklyReview'));
 export const Wellbeing = lazyWithPreload(() => import('../pages/Wellbeing'));
 export const ReportCard = lazyWithPreload(() => import('../pages/ReportCard'));
+export const Ratings = lazyWithPreload(() => import('../pages/Ratings'));
 export const Pad = lazyWithPreload(() => import('../pages/Pad'));
 export const PadsAdmin = lazyWithPreload(() => import('../pages/PadsAdmin'));
 export const Turmas = lazyWithPreload(() => import('../pages/Turmas'));
@@ -65,6 +66,7 @@ const BY_SECTION: Record<string, { preload: () => Promise<unknown> }> = {
   review: WeeklyReview,
   wellbeing: Wellbeing,
   'report-card': ReportCard,
+  ratings: Ratings,
   pad: Pad,
   turmas: Turmas,
   changelog: Changelog,

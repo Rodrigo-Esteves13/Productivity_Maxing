@@ -8,10 +8,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-10-31',
+    title: 'How you feel about teachers and courses',
+    items: [
+      'In a course, you can now rate from 1 to 5 how much you like the teacher and how much you like the course. Both are private, only you can see them, and both are optional.',
+      'The new Ratings page (and a Dashboard card, Teacher and course feelings) compares them with your grades, your focus and your study hours, as 2x2 tables and plain-language patterns. It only shows patterns once you have enough rated courses, and it is correlation, not proof of cause.',
+    ],
+  },
+  {
+    date: '2026-10-31',
     title: 'Per-course risk and a private teacher note',
     items: [
       'Dashboard: the Risk of failing card now scores each course from low to extreme, using your grades, the time you studied, your absences, postponed tasks and your approval rules, and lists the reasons in plain words. It also tells you when only the exam track is left.',
-      'You can add the name of the teacher to any course. It is a private note, only you can see it, it is never shown to classmates, Turmas or anyone you share with, and the risk card uses it to compare your grades with the same teacher across courses.',
+      'You can add the name of the teacher to any course. It is a private note, only you can see it, it is never shown to classmates, classes or anyone you share with, and the risk card uses it to compare your grades with the same teacher across courses.',
     ],
   },
   {
@@ -428,7 +436,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Importing a timetable now replaces the old classes in that date range, so a class that changed from 3h to 4h no longer shows twice.',
       'Replicate a shift to other days with one click.',
       'Themes: Nightshade, Midnight, Light, Ocean, Forest, Sunset, or match your system.',
-      'Languages: English, Portugues and Espanol (navigation, login, settings and new pages).',
+      'Languages: English, Portuguese and Spanish (navigation, login, settings and new pages).',
       'Accessibility: color-blind friendly colors, reduce motion, bigger text sizes.',
     ],
   },

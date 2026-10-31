@@ -6,7 +6,7 @@ import { useI18n } from '../i18n/useI18n';
 
 export default function Changelog() {
   const { t } = useI18n();
-  useDocumentTitle("What's new");
+  useDocumentTitle(t('ui.whatSNew'));
   return (
     <PageLayout>
       <PageHeader title={t('ui.whatSNew')} description={t('ui.recentChangesToProductivityMaxing')} />

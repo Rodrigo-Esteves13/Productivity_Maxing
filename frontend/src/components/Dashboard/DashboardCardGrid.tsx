@@ -22,6 +22,7 @@ import {
   DifficultyVsGradeCard,
   FailingRiskCard,
   PlanScenarioCard,
+  RatingsSummaryCard,
 } from './lazyCards';
 import type { DashboardWidgetKey } from '../../hooks/useDashboardWidgetPrefs';
 import type { AcademicProgram, AcademicTaskTypeOption, Area, Task } from '../../types/models';
@@ -51,6 +52,7 @@ export default function DashboardCardGrid({
         <UpcomingTasksCard tasks={academicTasks} areas={academicAreas} />
       )}
       {visibility.failingRisk && <FailingRiskCard />}
+      {visibility.ratingsSummary && <RatingsSummaryCard />}
       {academicTasks.length > 0 && visibility.atRisk && (
         <AtRiskTasksCard tasks={academicTasks} areas={academicAreas} />
       )}

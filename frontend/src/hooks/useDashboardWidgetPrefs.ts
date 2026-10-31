@@ -29,7 +29,8 @@ export type DashboardWidgetKey =
   | 'productivityByType'
   | 'difficultyVsGrade'
   | 'failingRisk'
-  | 'planScenario';
+  | 'planScenario'
+  | 'ratingsSummary';
 
 // Chaves i18n (traduzidas com t() em DashboardWidgetToggles).
 export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
@@ -62,6 +63,7 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   difficultyVsGrade: 'widget.difficultyVsGrade',
   failingRisk: 'widget.failingRisk',
   planScenario: 'widget.planScenario',
+  ratingsSummary: 'widget.ratingsSummary',
 };
 
 const STORAGE_KEY = 'dashboard-widget-prefs';
@@ -99,6 +101,7 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   difficultyVsGrade: true,
   failingRisk: true,
   planScenario: true,
+  ratingsSummary: true,
 };
 
 function loadPrefs(): Record<DashboardWidgetKey, boolean> {

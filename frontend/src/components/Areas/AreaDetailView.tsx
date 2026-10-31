@@ -7,6 +7,7 @@ import type { Area, TaskTypeOption } from '../../types/models';
 import GradeComponentsPanel from './GradeComponentsPanel';
 import AreaInterestPicker from './AreaInterestPicker';
 import AreaTeacherField from './AreaTeacherField';
+import AreaRatingsField from './AreaRatingsField';
 import AreaProposalBlock from './AreaProposalBlock';
 import AreaStatusBadge from './AreaStatusBadge';
 import { useI18n } from '../../i18n/useI18n';
@@ -72,6 +73,7 @@ export default function AreaDetailView({ area, taskTypes, onPropose, onWithdraw 
       <GradeComponentsPanel area={area} />
       <AreaInterestPicker area={area} />
       <AreaTeacherField area={area} />
+      <AreaRatingsField area={area} />
       <AreaProposalBlock area={area} onPropose={onPropose} onWithdraw={onWithdraw} />
     </div>
   );

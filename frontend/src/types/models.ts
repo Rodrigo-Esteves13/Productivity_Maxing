@@ -1741,3 +1741,61 @@ export interface AreaTeacherNote {
 }
 
 export const TEACHER_NAME_MAX_LENGTH = 100;
+
+// N48: avaliacao privada de docente e cadeira (contrato do backend em
+// area-ratings.types.ts). 1-5, null = sem avaliacao.
+export interface AreaRating {
+  areaId: string;
+  teacherRating: number | null;
+  courseLiking: number | null;
+}
+
+export interface RatingCourseRow {
+  areaId: string;
+  areaName: string;
+  colorHex: string;
+  teacherName: string | null;
+  teacherRating: number | null;
+  courseLiking: number | null;
+  avgFocus: number | null;
+  studiedMinutes: number;
+  /** Nota final media normalizada 0-1, null sem notas. */
+  gradeFraction: number | null;
+}
+
+export interface RatingQuadrants {
+  likedGradeHigh: number;
+  likedGradeLow: number;
+  notLikedGradeHigh: number;
+  notLikedGradeLow: number;
+}
+
+export interface RatingCorrelation {
+  r: number | null;
+  n: number;
+  enough: boolean;
+  // Porque nao ha r: poucos dados ou classificacoes todas iguais.
+  reason?: 'insufficient' | 'no_variation' | null;
+}
+
+export interface TeacherRatingSummary {
+  teacherName: string;
+  courses: number;
+  avgRating: number | null;
+  avgGradeFraction: number | null;
+}
+
+export interface RatingStats {
+  minSample: number;
+  courses: RatingCourseRow[];
+  quadrants: { teacher: RatingQuadrants; course: RatingQuadrants };
+  correlations: {
+    teacherVsGrade: RatingCorrelation;
+    courseVsGrade: RatingCorrelation;
+    focusVsGrade: RatingCorrelation;
+    courseVsFocus: RatingCorrelation;
+  };
+  byTeacher: TeacherRatingSummary[];
+}
+
+export type AreaRatingField = 'teacherRating' | 'courseLiking';

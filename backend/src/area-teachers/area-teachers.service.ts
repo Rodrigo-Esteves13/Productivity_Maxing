@@ -1,23 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { accessibleAreaWhere } from '../areas/area-access';
-import {
-  computeWeightedAverage,
-  GRADED_TASK_SELECT,
-  parseGradeScale,
-  type AreaGradedTaskLike,
-} from '../academic-programs/grade-average.util';
-import { loadComponentGradedItems } from '../grade-components/grade-component-items';
 import type { CourseRiskInput } from '../approval-rules/approval-rules.types';
 import { roundTo } from '../common/round.util';
 import { teacherKey } from './area-teachers.constants';
+import {
+  loadAreaGradeFractions,
+  type AreaGradeAverage,
+} from './area-grade-fractions';
 
 export type TeacherStats = NonNullable<CourseRiskInput['teacher']>;
-
-interface AreaAverage {
-  average: number;
-  count: number;
-}
 
 const mean = (values: number[]): number =>
   values.reduce((sum, v) => sum + v, 0) / values.length;
@@ -75,47 +67,7 @@ export class AreaTeachersService {
     });
     if (notes.length === 0) return result;
 
-    const [tasks, componentItems, periods] = await Promise.all([
-      this.prisma.task.findMany({
-        where: { userId, realGrade: { not: null } },
-        select: GRADED_TASK_SELECT,
-      }),
-      loadComponentGradedItems(this.prisma, { userId }),
-      this.prisma.academicPeriod.findMany({
-        where: { program: { userId } },
-        select: { id: true, program: { select: { gradeScale: true } } },
-      }),
-    ]);
-
-    const scaleByPeriod = new Map(
-      periods.map((p) => [p.id, parseGradeScale(p.program.gradeScale)]),
-    );
-    const fallbackScale = parseGradeScale('');
-    const normalised: AreaGradedTaskLike[] = [...tasks, ...componentItems]
-      .filter((item): item is typeof item & { areaId: string } => !!item.areaId)
-      .map((item) => {
-        const scale =
-          (item.periodId && scaleByPeriod.get(item.periodId)) || fallbackScale;
-        return {
-          ...item,
-          realGrade:
-            ((item.realGrade as number) - scale.min) / (scale.max - scale.min),
-        };
-      });
-
-    const itemsByArea = new Map<string, AreaGradedTaskLike[]>();
-    for (const item of normalised) {
-      const bucket = itemsByArea.get(item.areaId) ?? [];
-      bucket.push(item);
-      itemsByArea.set(item.areaId, bucket);
-    }
-    const averages = new Map<string, AreaAverage>();
-    for (const [areaId, items] of itemsByArea) {
-      const { average, gradedTaskCount } = computeWeightedAverage(items);
-      if (average !== null) {
-        averages.set(areaId, { average, count: gradedTaskCount });
-      }
-    }
+    const averages = await loadAreaGradeFractions(this.prisma, userId);
 
     const keyByArea = new Map(
       notes.map((n) => [n.areaId, teacherKey(n.teacherName)]),
@@ -127,8 +79,8 @@ export class AreaTeachersService {
     }
 
     for (const [areaId, key] of keyByArea) {
-      const withTeacher: AreaAverage[] = [];
-      const others: AreaAverage[] = [];
+      const withTeacher: AreaGradeAverage[] = [];
+      const others: AreaGradeAverage[] = [];
       for (const [id, avg] of averages) {
         if (id === areaId) continue;
         (keyByArea.get(id) === key ? withTeacher : others).push(avg);

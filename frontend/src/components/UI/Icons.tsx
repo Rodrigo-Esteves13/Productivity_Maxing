@@ -20,6 +20,7 @@ export {
   Trash2 as TrashIcon,
   LogOut as LogoutIcon,
   Heart as HeartIcon,
+  Star as StarIcon,
   Download as DownloadIcon,
   Upload as UploadIcon,
   ArrowUpRight as ArrowUpRightIcon,
