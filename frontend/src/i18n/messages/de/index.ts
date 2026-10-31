@@ -25,6 +25,9 @@ import { readiness } from './readiness';
 import { finance } from './finance';
 import { integration } from './integration';
 import { devices } from './devices';
+import { approvalRules } from './approvalRules';
+import { risk } from './risk';
+import { teacher } from './teacher';
 
 export const de: Record<string, string> = {
   ...packs,
@@ -54,4 +57,7 @@ export const de: Record<string, string> = {
   ...finance,
   ...integration,
   ...devices,
+  ...approvalRules,
+  ...risk,
+  ...teacher,
 };

@@ -177,6 +177,12 @@ const NAV_COMMANDS: NavCommand[] = [
     path: '/devices',
     keywords: ['devices', 'dispositivos', 'sessions', 'sessoes', 'sessões', 'sign out', 'log out', 'terminar sessao', 'terminar sessão', 'logout', 'security', 'seguranca', 'segurança', 'browser', 'phone', 'telemovel', 'telemóvel', 'lost phone'],
   },
+  {
+    id: 'nav-approval-rules',
+    labelKey: 'approvalRules.palette',
+    path: '/dashboard?approvalRules=on',
+    keywords: ['approval', 'aprovacao', 'aprovação', 'pass mark', 'nota minima', 'nota mínima', 'rounding', 'arredondamento', 'scale', 'escala', 'exam track', 'recurso', 'regras', 'rules', 'ismai', 'chumbo', 'fail'],
+  },
   { id: 'nav-changelog', labelKey: 'nav.changelog', path: '/changelog' },
   { id: 'nav-class-invites', labelKey: 'turma.invites.title', path: '/classes', keywords: ['invite', 'convite', 'turma', 'class', 'join', 'entrar'] },
   { id: 'nav-finance', labelKey: 'finance.title', path: '/finance', keywords: ['finance', 'financas', 'money', 'dinheiro', 'budget', 'orcamento', 'expenses', 'despesas', 'income', 'salario', 'savings', 'poupanca', 'wishlist', 'investment'] },

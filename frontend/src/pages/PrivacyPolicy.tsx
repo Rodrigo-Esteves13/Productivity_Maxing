@@ -74,6 +74,12 @@ export default function PrivacyPolicy() {
             only its name, color, credits and default type are shown to an administrator for review
           </li>
           <li>
+            Teacher name (optional): for each course you can write down the name of its teacher. It is a
+            private note, visible only to you, and never shared with classmates, Turmas or anyone you
+            share with. It is used only to compare your own grades across courses with the same teacher.
+            It is included in your data export and deleted with your account
+          </li>
+          <li>
             Shared notebook links: for each link you create, I count how many times it was opened and
             by whom. Visitors who are signed in are shown to you by name; visitors who are not signed in
             are only counted, using a one-way hash of their network address and browser (the address

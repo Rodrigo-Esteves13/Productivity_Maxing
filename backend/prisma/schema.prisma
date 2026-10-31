@@ -449,11 +449,13 @@ model User {
   bannedIps                      BannedIp[]
   areaScheduleLinks              AreaScheduleLink[]
   areaInterests                  AreaInterest[]
+  areaTeacherNotes               AreaTeacherNote[]
   notebookEntries                NotebookEntry[]
   notebookShares                 NotebookShare[]
   notebookShareAccessRequests    NotebookShareAccessRequest[]
   gradeComponents                GradeComponent[]
   notebookChangeProposals        NotebookChangeProposal[]
+  approvalRuleSets               ApprovalRuleSet[]
 }
 
 /// Recurso submetido pelo próprio utilizador contra a sua suspensão/ban
@@ -516,6 +518,8 @@ model AcademicProgram {
   // nunca mais do que 1 (o próprio dono), mas o Prisma exige o lado inverso
   // da relação declarado.
   activeForUsers User[]           @relation("UserActiveProgram")
+  // Regras de aprovacao do programa (N46), no maximo uma por user.
+  approvalRuleSets ApprovalRuleSet[]
 
   // userId: ProgramsService.findAllForUser() filtra sempre por dono - é a
   // query mais frequente deste modelo.
@@ -741,8 +745,11 @@ model Area {
   // AreaScheduleLink) e as entradas do caderno desta cadeira.
   scheduleLinks   AreaScheduleLink[]
   interests       AreaInterest[]
+  teacherNotes    AreaTeacherNote[]
   notebookEntries NotebookEntry[]
   gradeComponents GradeComponent[]
+  // Override das regras de aprovacao desta cadeira, por user (N46).
+  approvalRuleSets ApprovalRuleSet[]
 
   @@index([ownerId])
   @@index([proposalStatus])
@@ -1250,6 +1257,24 @@ model AreaInterest {
   @@index([areaId])
 }
 
+/// Nota PRIVADA do aluno: nome do docente de uma cadeira (N45). Vive por user
+/// e nao em Area porque as Areas oficiais sao catalogo partilhado: o docente
+/// de um aluno nao pode aparecer a todos. Nunca exposta a outros users.
+model AreaTeacherNote {
+  id          String   @id @default(uuid())
+  userId      String
+  areaId      String
+  teacherName String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area Area @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, areaId])
+  @@index([areaId])
+}
+
 /// Uma entrada do "caderno" de uma cadeira: texto, desenho à mão
 /// (drawingStrokes, vetorial - ver NotebookService/NotebookCanvas no
 /// frontend) e fotos (NotebookPhoto), tudo na mesma página, como um
@@ -1684,6 +1709,49 @@ model GradeEntry {
   component GradeComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
 
   @@index([componentId])
+}
+
+/// Arredondamento da nota final antes de comparar com a nota de passagem.
+enum ApprovalRounding {
+  NONE
+  UP_TO_INTEGER_AT_HALF
+}
+
+/// Regras de aprovacao (N46) de um user, ou para um programa inteiro ou como
+/// override de uma cadeira. Exatamente um de programId/areaId esta preenchido
+/// (garantido no ApprovalRulesService, um CHECK precisaria de SQL a mao).
+/// Resolucao: override da cadeira > regras do programa > preset generico.
+/// Os valores ficam sempre gravados (presetKey e so a origem, para a UI).
+model ApprovalRuleSet {
+  id        String  @id @default(uuid())
+  userId    String
+  programId String?
+  areaId    String?
+  presetKey String? @db.VarChar(40)
+
+  scaleMin                Float
+  scaleMax                Float
+  passMark                Float
+  rounding                ApprovalRounding @default(NONE)
+  componentMinGrade       Float?
+  secondThreshold         Float?
+  maxBelowSecondThreshold Int?
+  hasExamTrack            Boolean          @default(false)
+  hasResitTrack           Boolean          @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  program AcademicProgram? @relation(fields: [programId], references: [id], onDelete: Cascade)
+  area    Area?            @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  // NULLs sao distintos no Postgres: as linhas de cadeira nao colidem no
+  // unique do programa e vice-versa.
+  @@unique([userId, programId])
+  @@unique([userId, areaId])
+  @@index([programId])
+  @@index([areaId])
 }
 
 /// Papel de quem tem acesso aprovado a uma partilha AUTHORIZED.

@@ -125,8 +125,20 @@ export class AbsenceLimitRemindersService {
         take: USER_BATCH_SIZE,
       });
       for (const user of users) {
-        if (await this.processUser(user, { today, nowMinutes, week, dayKey })) {
-          sent += 1;
+        // Um user que falha nao pode abortar a corrida dos seguintes (a ordem
+        // e deterministica, os mesmos ficariam sempre sem aviso). Log so com o id.
+        try {
+          if (
+            await this.processUser(user, { today, nowMinutes, week, dayKey })
+          ) {
+            sent += 1;
+          }
+        } catch (err) {
+          this.logger.error(
+            `Limite de faltas: falhou o utilizador ${user.id} (${
+              err instanceof Error ? err.name : 'erro'
+            })`,
+          );
         }
       }
       if (users.length < USER_BATCH_SIZE) break;
@@ -148,55 +160,52 @@ export class AbsenceLimitRemindersService {
     ctx: { today: Date; nowMinutes: number; week: string; dayKey: string },
   ): Promise<boolean> {
     const { today, nowMinutes, week, dayKey } = ctx;
-    {
-      if (this.notifiedWeek.get(user.id) === week) return false;
-      if (this.evaluatedNoRisk.get(user.id) === dayKey) return false;
-      if (this.isQuietHour(user, nowMinutes)) return false;
+    if (this.notifiedWeek.get(user.id) === week) return false;
+    if (this.evaluatedNoRisk.get(user.id) === dayKey) return false;
+    if (this.isQuietHour(user, nowMinutes)) return false;
 
-      const from =
-        user.activePeriod?.startDate ??
-        addUtcDays(today, -FALLBACK_WINDOW_DAYS);
-      const periodEnd = user.activePeriod?.endDate;
-      const to = periodEnd && periodEnd < today ? periodEnd : today;
-      // O fim do periodo inclui o dia todo (mesma regra do /attendance).
-      const endOfTo = new Date(to);
-      endOfTo.setUTCHours(23, 59, 59, 999);
+    const from =
+      user.activePeriod?.startDate ?? addUtcDays(today, -FALLBACK_WINDOW_DAYS);
+    const periodEnd = user.activePeriod?.endDate;
+    const to = periodEnd && periodEnd < today ? periodEnd : today;
+    // O fim do periodo inclui o dia todo (mesma regra do /attendance).
+    const endOfTo = new Date(to);
+    endOfTo.setUTCHours(23, 59, 59, 999);
 
-      const rows = await this.prisma.classOccurrence.groupBy({
-        by: ['subject', 'attended'],
-        where: {
-          userId: user.id,
-          date: { gte: from, lte: endOfTo },
-          cancelled: false,
-        },
-        _count: { _all: true },
-      });
-      const risky = summarizeAttendance(rows).filter(
-        (row) => absenceRisk(row, DEFAULT_ABSENCE_LIMIT_PCT) !== 'none',
-      );
-      if (risky.length === 0) {
-        this.evaluatedNoRisk.set(user.id, dayKey);
-        return false;
-      }
-
-      const shown = risky
-        .slice(0, MAX_SUBJECTS_IN_PUSH)
-        .map((row) => row.subject)
-        .join(SUBJECT_SEPARATOR);
-      const extra = risky.length - MAX_SUBJECTS_IN_PUSH;
-      const delivered = await this.pushService.notifyUser(
-        user.id,
-        'absenceLimitNear',
-        {
-          title: extra > 0 ? `${shown} +${extra}` : shown,
-          url: SCHEDULE_PATH,
-        },
-      );
-      // Sem dispositivo que tenha recebido: tenta outra vez na proxima execucao.
-      if (delivered === 0) return false;
-      this.notifiedWeek.set(user.id, week);
-      return true;
+    const rows = await this.prisma.classOccurrence.groupBy({
+      by: ['subject', 'attended'],
+      where: {
+        userId: user.id,
+        date: { gte: from, lte: endOfTo },
+        cancelled: false,
+      },
+      _count: { _all: true },
+    });
+    const risky = summarizeAttendance(rows).filter(
+      (row) => absenceRisk(row, DEFAULT_ABSENCE_LIMIT_PCT) !== 'none',
+    );
+    if (risky.length === 0) {
+      this.evaluatedNoRisk.set(user.id, dayKey);
+      return false;
     }
+
+    const shown = risky
+      .slice(0, MAX_SUBJECTS_IN_PUSH)
+      .map((row) => row.subject)
+      .join(SUBJECT_SEPARATOR);
+    const extra = risky.length - MAX_SUBJECTS_IN_PUSH;
+    const delivered = await this.pushService.notifyUser(
+      user.id,
+      'absenceLimitNear',
+      {
+        title: extra > 0 ? `${shown} +${extra}` : shown,
+        url: SCHEDULE_PATH,
+      },
+    );
+    // Sem dispositivo que tenha recebido: tenta outra vez na proxima execucao.
+    if (delivered === 0) return false;
+    this.notifiedWeek.set(user.id, week);
+    return true;
   }
 
   private isQuietHour(

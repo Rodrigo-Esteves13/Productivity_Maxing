@@ -1,6 +1,7 @@
 import { memo, type ComponentType, type SVGProps } from 'react';
 import { MonitorIcon, SmartphoneIcon, TabletIcon } from '../UI/Icons';
 import { parseUserAgent, type DeviceKind } from '../../lib/userAgent';
+import { displayMaskedIp } from '../../lib/maskedIp';
 import { useI18n } from '../../i18n/useI18n';
 import type { DeviceSession } from '../../types/models';
 
@@ -49,7 +50,9 @@ function DeviceSessionRow({ session, isRevoking, onRevoke }: DeviceSessionRowPro
             {t('devices.lastActive', { when: formatDateTime(session.lastSeenAt, lang) })}
           </p>
           <p className="mt-0.5 text-xs text-neutral-500">
-            {session.ipMasked ? t('devices.ipMasked', { ip: session.ipMasked }) : t('devices.ipUnknown')}
+            {session.ipMasked
+              ? t('devices.ipMasked', { ip: displayMaskedIp(session.ipMasked) })
+              : t('devices.ipUnknown')}
             {' · '}
             {t('devices.signedIn', { when: formatDateTime(session.createdAt, lang) })}
           </p>

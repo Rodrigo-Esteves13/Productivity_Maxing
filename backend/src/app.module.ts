@@ -28,7 +28,10 @@ import { FeedbackModule } from './feedback/feedback.module';
 import { TaskPacksModule } from './task-packs/task-packs.module';
 import { SocialModule } from './social/social.module';
 import { GradeComponentsModule } from './grade-components/grade-components.module';
+import { ApprovalRulesModule } from './approval-rules/approval-rules.module';
 import { AreaInterestsModule } from './area-interests/area-interests.module';
+import { AreaTeachersModule } from './area-teachers/area-teachers.module';
+import { CourseRiskModule } from './course-risk/course-risk.module';
 import { BannedIpsModule } from './banned-ips/banned-ips.module';
 import { AppealsModule } from './appeals/appeals.module';
 import { WellbeingModule } from './wellbeing/wellbeing.module';
@@ -80,7 +83,10 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     TaskPacksModule,
     SocialModule,
     GradeComponentsModule,
+    ApprovalRulesModule,
     AreaInterestsModule,
+    AreaTeachersModule,
+    CourseRiskModule,
     BannedIpsModule,
     AppealsModule,
     WellbeingModule,

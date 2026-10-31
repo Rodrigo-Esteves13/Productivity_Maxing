@@ -1,11 +1,5 @@
 export const fase7c: Record<string, string> = {
   'widget.failingRisk': "낙제 위험",
-  'failingRisk.help': "지금까지의 성적으로는 남은 부분에서 높은 평균이 필요한 과목입니다.",
-  'failingRisk.level.impossible': "통과 불가",
-  'failingRisk.level.high': "높은 위험",
-  'failingRisk.level.watch': "주의",
-  'failingRisk.needed': "지금까지 성적의 {graded}%에서 평균 {average}. 통과하려면 남은 {remaining}%에서 {needed}이(가) 필요합니다.",
-  'failingRisk.noWeightLeft': "최종 평균 {average}로 통과 기준 미만이며 남은 비중이 없습니다.",
   'taskTemplates.label': "템플릿",
   'taskTemplates.none': "템플릿 없음",
   'taskTemplates.saveCurrent': "템플릿으로 저장",

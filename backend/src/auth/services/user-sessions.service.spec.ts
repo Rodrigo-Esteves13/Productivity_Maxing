@@ -185,6 +185,19 @@ function setup(
   return { service, db, sessionState, securityLogs, users };
 }
 
+interface RotationMemoryView {
+  previousHash: string;
+  rotatedAt: number;
+  graceSpent: boolean;
+}
+
+// A memoria privada da tolerancia (sessionId -> ultima rotacao).
+function rotationMemory(service: UserSessionsService) {
+  return (
+    service as unknown as { lastRotations: Map<string, RotationMemoryView> }
+  ).lastRotations;
+}
+
 describe('UserSessionsService.create', () => {
   it('stores only the hash, a masked IP and the truncated user agent', async () => {
     const { service, db } = setup();
@@ -740,6 +753,219 @@ describe('UserSessionsService.rotate (lost-response grace window)', () => {
       s.service.rotate(loserToken, CLIENT, at(2_000)),
     ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(row.revokedReason).toBe(SessionRevokeReason.TOKEN_REUSE);
+  });
+
+  // A proxima chamada a $transaction corre a transacao real e, ja com o
+  // compare-and-swap feito, deixa o teste agir antes do "commit" acabar.
+  function beforeCommitOnce(
+    s: ReturnType<typeof setup>,
+    hook: () => Promise<void>,
+  ) {
+    const realTx = s.db.prisma.$transaction.getMockImplementation()!;
+    s.db.prisma.$transaction.mockImplementationOnce(
+      async (fn: (tx: unknown) => Promise<unknown>) => {
+        const result = await realTx(fn);
+        await hook();
+        return result;
+      },
+    );
+  }
+
+  // A proxima transacao faz o compare-and-swap e depois falha no commit: a
+  // linha volta ao que era (rollback) e o erro sobe.
+  function rollbackOnce(s: ReturnType<typeof setup>, sessionId: string) {
+    const realTx = s.db.prisma.$transaction.getMockImplementation()!;
+    s.db.prisma.$transaction.mockImplementationOnce(
+      async (fn: (tx: unknown) => Promise<unknown>) => {
+        const row = s.db.rows.get(sessionId)!;
+        const before = { ...row };
+        await realTx(fn);
+        Object.assign(row, before);
+        throw new Error('commit failed');
+      },
+    );
+  }
+
+  it('records the rotation inside the transaction: a same-token request before the commit returns is a grace retry, not reuse', async () => {
+    const s = setup();
+    const issued = await s.service.create(user, CLIENT, NOW);
+    const memory = rotationMemory(s.service);
+    let memoryBeforeCommit: RotationMemoryView | undefined;
+    let concurrent: PromiseSettledResult<unknown>[] = [];
+    beforeCommitOnce(s, async () => {
+      memoryBeforeCommit = { ...memory.get(issued.sessionId)! };
+      concurrent = await Promise.allSettled([
+        s.service.rotate(issued.refreshToken, CLIENT, at(10)),
+      ]);
+    });
+
+    await expect(
+      s.service.rotate(issued.refreshToken, CLIENT, NOW),
+    ).resolves.toMatchObject({ sessionId: issued.sessionId });
+
+    expect(memoryBeforeCommit).toMatchObject({
+      previousHash: RefreshTokenCodec.hash(issued.refreshToken),
+      graceSpent: false,
+    });
+    expect(concurrent[0].status).toBe('fulfilled');
+    expect(s.db.rows.get(issued.sessionId)!.revokedAt).toBeNull();
+    expect(s.securityLogs.recordEvent).not.toHaveBeenCalled();
+  });
+
+  it('a rollback after the swap leaves no memory of the rotation that did not happen', async () => {
+    const s = setup();
+    const issued = await s.service.create(user, CLIENT, NOW);
+    const memory = rotationMemory(s.service);
+    rollbackOnce(s, issued.sessionId);
+
+    await expect(
+      s.service.rotate(issued.refreshToken, CLIENT, NOW),
+    ).rejects.toThrow('commit failed');
+
+    expect(memory.has(issued.sessionId)).toBe(false);
+    expect(warn).not.toHaveBeenCalled();
+    // O token continua a ser o atual na BD e roda normalmente.
+    await expect(
+      s.service.rotate(issued.refreshToken, CLIENT, at(1_000)),
+    ).resolves.toMatchObject({ sessionId: issued.sessionId });
+  });
+
+  it('a rolled-back grace rotation restores the previous memory, so the retry keeps its one grace', async () => {
+    const s = setup();
+    const { issued } = await lostResponse(s);
+    const memory = rotationMemory(s.service);
+    const original = memory.get(issued.sessionId);
+    rollbackOnce(s, issued.sessionId);
+
+    await expect(
+      s.service.rotate(issued.refreshToken, CLIENT, at(1_000)),
+    ).rejects.toThrow('commit failed');
+
+    expect(memory.get(issued.sessionId)).toBe(original);
+    expect(warn).not.toHaveBeenCalled();
+    await expect(
+      s.service.rotate(issued.refreshToken, CLIENT, at(2_000)),
+    ).resolves.toMatchObject({ sessionId: issued.sessionId });
+    expect(s.db.rows.get(issued.sessionId)!.revokedAt).toBeNull();
+  });
+
+  it('revoke clears the rotation memory; the previous token is then a plain rejection', async () => {
+    const s = setup();
+    const { issued } = await lostResponse(s);
+    const memory = rotationMemory(s.service);
+    expect(memory.has(issued.sessionId)).toBe(true);
+
+    await s.service.revoke(
+      'u1',
+      issued.sessionId,
+      SessionRevokeReason.LOGOUT,
+      at(1_000),
+    );
+
+    expect(memory.has(issued.sessionId)).toBe(false);
+    await expect(
+      s.service.rotate(issued.refreshToken, CLIENT, at(2_000)),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(s.db.rows.get(issued.sessionId)!.revokedReason).toBe(
+      SessionRevokeReason.LOGOUT,
+    );
+    expect(s.securityLogs.recordEvent).not.toHaveBeenCalled();
+  });
+
+  it('revoke with a foreign session id keeps the owner rotation memory', async () => {
+    const s = setup({ u1: { tokenVersion: 0 }, u2: { tokenVersion: 0 } });
+    const theirs = await s.service.create(
+      { id: 'u2', tokenVersion: 0 },
+      CLIENT,
+      NOW,
+    );
+    await s.service.rotate(theirs.refreshToken, CLIENT, NOW);
+    const memory = rotationMemory(s.service);
+
+    expect(
+      await s.service.revoke(
+        'u1',
+        theirs.sessionId,
+        SessionRevokeReason.REVOKED_BY_USER,
+        at(1_000),
+      ),
+    ).toBe(false);
+
+    expect(memory.has(theirs.sessionId)).toBe(true);
+    await expect(
+      s.service.rotate(theirs.refreshToken, CLIENT, at(2_000)),
+    ).resolves.toMatchObject({ sessionId: theirs.sessionId });
+  });
+
+  it('revokeAllExcept clears the memory of the revoked sessions only', async () => {
+    const s = setup({ u1: { tokenVersion: 0 }, u2: { tokenVersion: 0 } });
+    const rotatedSession = async (userId: string) => {
+      const session = await s.service.create(
+        { id: userId, tokenVersion: 0 },
+        CLIENT,
+        NOW,
+      );
+      await s.service.rotate(session.refreshToken, CLIENT, NOW);
+      return session;
+    };
+    const revoked = await rotatedSession('u1');
+    const kept = await rotatedSession('u1');
+    const foreign = await rotatedSession('u2');
+    const memory = rotationMemory(s.service);
+
+    await s.service.revokeAllExcept(
+      'u1',
+      SessionRevokeReason.SIGNED_OUT_OTHERS,
+      kept.sessionId,
+      at(1_000),
+    );
+
+    expect(memory.has(revoked.sessionId)).toBe(false);
+    expect(memory.has(kept.sessionId)).toBe(true);
+    expect(memory.has(foreign.sessionId)).toBe(true);
+    await expect(
+      s.service.rotate(revoked.refreshToken, CLIENT, at(2_000)),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(s.db.rows.get(revoked.sessionId)!.revokedReason).toBe(
+      SessionRevokeReason.SIGNED_OUT_OTHERS,
+    );
+    expect(s.securityLogs.recordEvent).not.toHaveBeenCalled();
+    // O dispositivo mantido conserva a sua tolerancia.
+    await expect(
+      s.service.rotate(kept.refreshToken, CLIENT, at(3_000)),
+    ).resolves.toMatchObject({ sessionId: kept.sessionId });
+  });
+
+  it('revokeAllExcept without a kept session clears every memory of the user', async () => {
+    const s = setup();
+    const { issued } = await lostResponse(s);
+    const memory = rotationMemory(s.service);
+
+    await s.service.revokeAllExcept(
+      'u1',
+      SessionRevokeReason.GLOBAL_SIGNOUT,
+      undefined,
+      at(1_000),
+    );
+
+    expect(memory.has(issued.sessionId)).toBe(false);
+    await expect(
+      s.service.rotate(issued.refreshToken, CLIENT, at(2_000)),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(s.securityLogs.recordEvent).not.toHaveBeenCalled();
+  });
+
+  it('a refresh refused for a stale tokenVersion clears the rotation memory', async () => {
+    const s = setup();
+    const { issued } = await lostResponse(s);
+    const memory = rotationMemory(s.service);
+    s.users.u1.tokenVersion = 1;
+
+    await expect(
+      s.service.rotate(issued.refreshToken, CLIENT, at(1_000)),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(memory.has(issued.sessionId)).toBe(false);
   });
 });
 

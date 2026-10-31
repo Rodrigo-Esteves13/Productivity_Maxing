@@ -283,23 +283,25 @@ describe('AbsenceLimitRemindersService paging, memo and guard', () => {
     const subscribed = new Set(ids);
     const lastOfPage = ids[USER_BATCH_SIZE - 1];
     const { service, prisma, push } = setup(rows('Math', 5, 5));
-    prisma.user.findMany.mockReset().mockImplementation(
-      (args: {
-        where: { id?: { gt: string } };
-        take: number;
-        cursor?: { id: string };
-        skip?: number;
-      }) => {
-        let list = ids.filter((id) => subscribed.has(id));
-        if (args.where.id) list = list.filter((id) => id > args.where.id!.gt);
-        if (args.cursor) {
-          const anchor = ids.includes(args.cursor.id) ? args.cursor.id : null;
-          list = anchor ? list.filter((id) => id >= anchor) : [];
-          list = list.slice(args.skip ?? 0);
-        }
-        return Promise.resolve(list.slice(0, args.take).map(mkUser));
-      },
-    );
+    prisma.user.findMany
+      .mockReset()
+      .mockImplementation(
+        (args: {
+          where: { id?: { gt: string } };
+          take: number;
+          cursor?: { id: string };
+          skip?: number;
+        }) => {
+          let list = ids.filter((id) => subscribed.has(id));
+          if (args.where.id) list = list.filter((id) => id > args.where.id!.gt);
+          if (args.cursor) {
+            const anchor = ids.includes(args.cursor.id) ? args.cursor.id : null;
+            list = anchor ? list.filter((id) => id >= anchor) : [];
+            list = list.slice(args.skip ?? 0);
+          }
+          return Promise.resolve(list.slice(0, args.take).map(mkUser));
+        },
+      );
     push.notifyUser.mockImplementation((userId: string) => {
       if (userId === lastOfPage) {
         subscribed.delete(userId);
@@ -314,6 +316,34 @@ describe('AbsenceLimitRemindersService paging, memo and guard', () => {
       ([userId]) => userId,
     );
     expect(notified).toEqual(ids);
+  });
+
+  it('keeps processing later users when one user throws', async () => {
+    const { service, prisma, push } = setup(rows('Math', 5, 5));
+    prisma.user.findMany
+      .mockReset()
+      .mockResolvedValue([mkUser('u1'), mkUser('u2'), mkUser('u3')]);
+    prisma.classOccurrence.groupBy
+      .mockReset()
+      .mockRejectedValueOnce(new Error('db down for u1 secret@example.com'))
+      .mockResolvedValue(rows('Math', 5, 5));
+    const errorSpy = jest
+      .spyOn(
+        (service as unknown as { logger: { error: () => void } }).logger,
+        'error',
+      )
+      .mockImplementation(() => undefined);
+
+    expect(await service.sendWeeklyReminders()).toBe(2);
+
+    const notified = (push.notifyUser.mock.calls as [string][]).map(
+      ([userId]) => userId,
+    );
+    expect(notified).toEqual(['u2', 'u3']);
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const logged = String((errorSpy.mock.calls[0] as unknown[])[0]);
+    expect(logged).toContain('u1');
+    expect(logged).not.toContain('secret@example.com');
   });
 
   it('skips no-risk users for the rest of the day (memo)', async () => {

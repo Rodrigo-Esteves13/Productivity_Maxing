@@ -1,11 +1,5 @@
 export const fase7c: Record<string, string> = {
   'widget.failingRisk': "挂科风险",
-  'failingRisk.help': "按目前成绩，剩余部分需要较高平均分才能及格的课程。",
-  'failingRisk.level.impossible': "已无法及格",
-  'failingRisk.level.high': "高风险",
-  'failingRisk.level.watch': "需关注",
-  'failingRisk.needed': "目前在成绩的 {graded}% 中平均 {average}。剩余 {remaining}% 需要 {needed} 才能及格。",
-  'failingRisk.noWeightLeft': "最终平均 {average}，低于及格线，且没有剩余权重。",
   'taskTemplates.label': "模板",
   'taskTemplates.none': "不使用模板",
   'taskTemplates.saveCurrent': "保存为模板",

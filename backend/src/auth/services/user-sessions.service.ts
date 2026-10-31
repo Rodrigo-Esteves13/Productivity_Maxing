@@ -57,14 +57,13 @@ export interface DeviceSessionView {
 // Resultado da transacao do refresh. As rejeicoes saem da transacao como
 // valor (e nao como excecao) para a revogacao feita la dentro ficar gravada:
 // uma excecao dentro de $transaction desfazia-a.
-// replacedHash: o hash que estava na BD e acabou de ser substituido (passa a
-// ser o "anterior" lembrado). viaGrace: a rotacao veio do token anterior,
-// dentro da janela de tolerancia (resposta perdida).
+// viaGrace: a rotacao veio do token anterior, dentro da janela de tolerancia
+// (resposta perdida). O hash substituido ja ficou na memoria dentro da
+// transacao (ver rememberRotation).
 type RotationOutcome =
   | {
       kind: 'rotated';
       session: RotatedSession;
-      replacedHash: string;
       viaGrace: boolean;
     }
   | { kind: 'invalid' }
@@ -87,10 +86,19 @@ function hashesMatch(a: string, b: string): boolean {
 // Ultima rotacao de uma sessao, para a tolerancia a resposta perdida.
 // graceSpent: esta entrada ja nasceu de uma rotacao por tolerancia e nao
 // autoriza outra (sem encadear: ver o comentario da classe).
+// userId: so para o revokeAllExcept apagar as entradas do utilizador sem ir
+// a BD buscar os ids revogados.
 interface RotationMemory {
   previousHash: string;
   rotatedAt: number;
   graceSpent: boolean;
+  userId: string;
+}
+
+// Desfaz o que uma rotacao escreveu na memoria, se a transacao falhar depois
+// do compare-and-swap (rollback ou commit falhado).
+interface PendingRotationMemory {
+  undo?: () => void;
 }
 
 /**
@@ -237,12 +245,28 @@ export class UserSessionsService {
     }
     const presentedHash = RefreshTokenCodec.hash(rawToken);
 
-    const outcome = await this.prisma.$transaction((tx) =>
-      this.rotateInTransaction(tx, sessionId, presentedHash, client, now),
-    );
+    const pending: PendingRotationMemory = {};
+    let outcome: RotationOutcome;
+    try {
+      outcome = await this.prisma.$transaction((tx) =>
+        this.rotateInTransaction(
+          tx,
+          sessionId,
+          presentedHash,
+          client,
+          now,
+          pending,
+        ),
+      );
+    } catch (error) {
+      // A BD voltou ao hash anterior: a memoria tambem volta, para nenhuma
+      // entrada de uma rotacao que nao aconteceu ficar a decidir a tolerancia.
+      pending.undo?.();
+      throw error;
+    }
 
     if (outcome.kind === 'rotated') {
-      this.rememberRotation(sessionId, outcome, now);
+      this.logGraceRotation(outcome);
       return outcome.session;
     }
 
@@ -264,7 +288,9 @@ export class UserSessionsService {
       });
     } else {
       // invalid (inclui tokenVersion antiga, ja revogada la dentro) ou
-      // conflict: nada a registar alem do 401.
+      // conflict: nada a registar alem do 401. Num invalid a sessao ja nao
+      // renova, por isso a memoria sai; num conflict fica (e a do vencedor).
+      if (outcome.kind === 'invalid') this.lastRotations.delete(sessionId);
       this.sessionState.invalidateDeviceSession(sessionId);
     }
     throw new UnauthorizedException(INVALID_REFRESH_MESSAGE);
@@ -276,6 +302,7 @@ export class UserSessionsService {
     presentedHash: string,
     client: SessionClientInfo,
     now: Date,
+    pending: PendingRotationMemory,
   ): Promise<RotationOutcome> {
     const session = await tx.userSession.findUnique({
       where: { id: sessionId },
@@ -337,6 +364,19 @@ export class UserSessionsService {
     });
     if (count !== 1) return { kind: 'conflict' };
 
+    // Ja dentro da transacao, logo a seguir ao compare-and-swap: um pedido
+    // com o mesmo token que leia a linha depois do commit encontra sempre a
+    // memoria desta rotacao (antes, entre o commit e esta escrita, parecia
+    // reutilizacao e revogava a sessao). Se a transacao falhar, rotate()
+    // chama o undo.
+    pending.undo = this.rememberRotation(
+      sessionId,
+      session.userId,
+      session.refreshTokenHash,
+      viaGrace,
+      now,
+    );
+
     return {
       kind: 'rotated',
       session: {
@@ -345,7 +385,6 @@ export class UserSessionsService {
         refreshToken: next.token,
         expiresAt,
       },
-      replacedHash: session.refreshTokenHash,
       viaGrace,
     };
   }
@@ -373,17 +412,22 @@ export class UserSessionsService {
   }
 
   /**
-   * Guarda o hash acabado de substituir como "anterior" desta sessao, so
-   * depois do commit. Uma rotacao por tolerancia fica marcada (graceSpent) e
-   * deixa um aviso: nao e alarme (o caso normal e uma resposta perdida), mas
-   * fica observavel. Sem SecurityLog: o enum nao tem um tipo de baixa
-   * severidade para isto e RATE_LIMIT_EXCEEDED sujava as estatisticas.
+   * Guarda o hash acabado de substituir como "anterior" desta sessao, dentro
+   * da transacao, logo depois do compare-and-swap. Uma rotacao por
+   * tolerancia fica marcada (graceSpent). Devolve o undo para um rollback:
+   * repoe a entrada que existia antes (a BD tambem volta a esse estado), mas
+   * so se a entrada atual ainda for a desta rotacao (um revoke ou outra
+   * rotacao entretanto ganham). As entradas expulsas pelo teto nao voltam:
+   * isso so torna a tolerancia mais estrita, nunca mais permissiva.
    */
   private rememberRotation(
     sessionId: string,
-    outcome: Extract<RotationOutcome, { kind: 'rotated' }>,
+    userId: string,
+    replacedHash: string,
+    viaGrace: boolean,
     now: Date,
-  ): void {
+  ): () => void {
+    const previous = this.lastRotations.get(sessionId);
     // Apagar antes de inserir mantem a ordem do Map = ordem das rotacoes.
     this.lastRotations.delete(sessionId);
     while (this.lastRotations.size >= MAX_GRACE_ENTRIES) {
@@ -391,15 +435,41 @@ export class UserSessionsService {
       if (oldest.done) break;
       this.lastRotations.delete(oldest.value);
     }
-    this.lastRotations.set(sessionId, {
-      previousHash: outcome.replacedHash,
+    const entry: RotationMemory = {
+      previousHash: replacedHash,
       rotatedAt: now.getTime(),
-      graceSpent: outcome.viaGrace,
-    });
-    if (outcome.viaGrace) {
-      this.logger.warn(
-        `Refresh retried with the previous token inside the grace window: session ${sessionId} rotated once (user ${outcome.session.user.id}).`,
-      );
+      graceSpent: viaGrace,
+      userId,
+    };
+    this.lastRotations.set(sessionId, entry);
+    return () => {
+      if (this.lastRotations.get(sessionId) !== entry) return;
+      this.lastRotations.delete(sessionId);
+      if (previous) this.lastRotations.set(sessionId, previous);
+    };
+  }
+
+  /**
+   * Uma rotacao por tolerancia deixa um aviso, so depois do commit: nao e
+   * alarme (o caso normal e uma resposta perdida), mas fica observavel. Sem
+   * SecurityLog: o enum nao tem um tipo de baixa severidade para isto e
+   * RATE_LIMIT_EXCEEDED sujava as estatisticas.
+   */
+  private logGraceRotation(
+    outcome: Extract<RotationOutcome, { kind: 'rotated' }>,
+  ): void {
+    if (!outcome.viaGrace) return;
+    this.logger.warn(
+      `Refresh retried with the previous token inside the grace window: session ${outcome.session.sessionId} rotated once (user ${outcome.session.user.id}).`,
+    );
+  }
+
+  /** Apaga a memoria de rotacao das sessoes revogadas deste utilizador. */
+  private forgetRotationsOfUser(userId: string, keepSessionId?: string): void {
+    for (const [sessionId, memory] of this.lastRotations) {
+      if (memory.userId === userId && sessionId !== keepSessionId) {
+        this.lastRotations.delete(sessionId);
+      }
     }
   }
 
@@ -418,6 +488,9 @@ export class UserSessionsService {
       where: { id: sessionId, userId, revokedAt: null },
       data: { revokedAt: now, revokedReason: reason },
     });
+    // So se a sessao era mesmo deste utilizador: o id de uma sessao alheia
+    // nunca apaga a memoria de tolerancia de outra pessoa.
+    if (count > 0) this.lastRotations.delete(sessionId);
     this.sessionState.invalidateDeviceSession(sessionId);
     return count > 0;
   }
@@ -442,6 +515,9 @@ export class UserSessionsService {
       },
       data: { revokedAt: now, revokedReason: reason },
     });
+    // Mesmo dentro de uma transacao que depois falhe, apagar so torna a
+    // tolerancia mais estrita (nunca mais permissiva).
+    this.forgetRotationsOfUser(userId, keepSessionId);
     this.sessionState.invalidateDeviceSessionsOfUser(userId);
     return count;
   }

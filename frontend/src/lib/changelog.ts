@@ -8,6 +8,23 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-10-31',
+    title: 'Per-course risk and a private teacher note',
+    items: [
+      'Dashboard: the Risk of failing card now scores each course from low to extreme, using your grades, the time you studied, your absences, postponed tasks and your approval rules, and lists the reasons in plain words. It also tells you when only the exam track is left.',
+      'You can add the name of the teacher to any course. It is a private note, only you can see it, it is never shown to classmates, Turmas or anyone you share with, and the risk card uses it to compare your grades with the same teacher across courses.',
+    ],
+  },
+  {
+    date: '2026-10-31',
+    title: 'Approval rules for your program',
+    items: [
+      'You can now set the rules that decide when you pass a subject: grade scale, pass mark, rounding, a minimum grade per component, a second threshold with a limit of components below it, and whether exam and resit tracks exist.',
+      'Pick a preset (for example the ISMAI one) and adjust it, or reset to the default. Open it from the sliders button next to your program, or search for approval rules in the command palette.',
+      'Any subject can override the program rules from its details window.',
+    ],
+  },
+  {
+    date: '2026-10-31',
     title: 'Alert when a new device signs in',
     items: [
       'When someone signs in to your account from a browser, system or network we have not seen on your account before, you now get an email and a push notification (if you turned push on) with the browser, system, a partial IP address and the time.',

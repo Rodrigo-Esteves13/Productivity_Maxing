@@ -50,9 +50,7 @@ export default function DashboardCardGrid({
       {academicTasks.length > 0 && visibility.upcoming && (
         <UpcomingTasksCard tasks={academicTasks} areas={academicAreas} />
       )}
-      {academicTasks.length > 0 && activeProgram && visibility.failingRisk && (
-        <FailingRiskCard tasks={academicTasks} areas={academicAreas} scale={activeProgram.gradeScale} />
-      )}
+      {visibility.failingRisk && <FailingRiskCard />}
       {academicTasks.length > 0 && visibility.atRisk && (
         <AtRiskTasksCard tasks={academicTasks} areas={academicAreas} />
       )}

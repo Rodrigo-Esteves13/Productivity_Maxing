@@ -35,8 +35,50 @@ describe('UsersService.exportUserData', () => {
         appeals: [],
         agentConfig: null,
         pushSubscriptions: [],
+        areaTeacherNotes: [],
+        approvalRuleSets: [],
       }),
     );
     expect(data.profile).toMatchObject({ quietHoursStart: 1380 });
+  });
+
+  it('exports the area behind a teacher note or a course rule override', async () => {
+    const areaFindMany = jest.fn().mockResolvedValue([]);
+    const empty = {
+      findMany: jest.fn().mockResolvedValue([]),
+      findUnique: jest.fn().mockResolvedValue(null),
+      findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'user-1' }),
+    };
+    const models: Record<string, unknown> = {
+      area: { ...empty, findMany: areaFindMany },
+      areaTeacherNote: {
+        ...empty,
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ areaId: 'area-note', teacherName: 'Ana' }]),
+      },
+      approvalRuleSet: {
+        ...empty,
+        findMany: jest.fn().mockResolvedValue([
+          { areaId: 'area-rule', programId: null },
+          { areaId: null, programId: 'prog-1' },
+        ]),
+      },
+    };
+    const prisma = new Proxy(
+      {},
+      { get: (_t, key: string) => models[key] ?? empty },
+    );
+    const none = {} as never;
+    const service = new UsersService(prisma as PrismaService, none, none, none);
+
+    const data = await service.exportUserData('user-1');
+
+    const calls = areaFindMany.mock.calls as [
+      { where: { id?: { in: string[] } } },
+    ][];
+    const where = calls.map(([args]) => args.where).find((w) => w.id);
+    expect(where?.id?.in.sort()).toEqual(['area-note', 'area-rule']);
+    expect(data.approvalRuleSets).toHaveLength(2);
   });
 });

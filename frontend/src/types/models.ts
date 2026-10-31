@@ -1697,3 +1697,47 @@ export interface PersonalNote {
   createdAt: string;
   updatedAt: string;
 }
+
+// Risco de chumbo por cadeira (GET /course-risk). Espelha CourseRisk em
+// backend/src/approval-rules/approval-rules.types.ts.
+export type ApprovalTrack = 'CONTINUOUS' | 'EXAM' | 'RESIT';
+export type RiskLevel = 'low' | 'medium' | 'high' | 'extreme';
+export type RiskReasonCode =
+  | 'COMPONENT_BELOW_MIN'
+  | 'TOO_MANY_BELOW_SECOND_THRESHOLD'
+  | 'IMPOSSIBLE_ON_REMAINING'
+  | 'HIGH_NEED_ON_REMAINING'
+  | 'LOW_AVERAGE_SO_FAR'
+  | 'LOW_STUDY_TIME'
+  | 'ABSENCE_NEAR_LIMIT'
+  | 'ABSENCE_OVER_LIMIT'
+  | 'POSTPONED_TASKS'
+  | 'TEACHER_HISTORY_LOWER'
+  | 'ONLY_EXAM_TRACK_LEFT';
+
+export interface RiskReason {
+  code: RiskReasonCode;
+  params: Record<string, string | number>;
+}
+
+export interface CourseRisk {
+  areaId: string;
+  areaName: string;
+  colorHex: string;
+  score: number;
+  level: RiskLevel;
+  track: ApprovalTrack;
+  reasons: RiskReason[];
+  currentAverage: number | null;
+  gradedWeightPct: number;
+  remainingWeightPct: number;
+  neededOnRemaining: number | null;
+}
+
+// Nota privada do aluno: nome do docente de uma cadeira (so dele).
+export interface AreaTeacherNote {
+  areaId: string;
+  teacherName: string;
+}
+
+export const TEACHER_NAME_MAX_LENGTH = 100;

@@ -21,6 +21,13 @@ describe('maskIp', () => {
     expect(maskIp('::1')).toBe('0:0:0::x');
   });
 
+  it('masks loopback consistently and never leaks the full address', () => {
+    expect(maskIp('127.0.0.1')).toBe('127.0.0.x');
+    expect(maskIp('::ffff:127.0.0.1')).toBe('127.0.0.x');
+    expect(maskIp('::1')).toBe('0:0:0::x');
+    expect(maskIp('::1')).not.toContain('1:');
+  });
+
   it('never returns the full address', () => {
     const ip = '192.0.2.200';
     expect(maskIp(ip)).not.toContain('200');

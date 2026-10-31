@@ -1,11 +1,5 @@
 export const fase7c: Record<string, string> = {
   'widget.failingRisk': "Risk of failing",
-  'failingRisk.help': "Courses where, with the grades so far, passing needs a high average on what is left.",
-  'failingRisk.level.impossible': "Cannot pass",
-  'failingRisk.level.high': "High risk",
-  'failingRisk.level.watch': "Watch",
-  'failingRisk.needed': "Average so far {average} on {graded}% of the grade. You need {needed} on the remaining {remaining}% to pass.",
-  'failingRisk.noWeightLeft': "Final average {average}, below the pass mark, and no grade weight is left.",
   'taskTemplates.label': "Template",
   'taskTemplates.none': "No template",
   'taskTemplates.saveCurrent': "Save as template",
