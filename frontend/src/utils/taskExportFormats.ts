@@ -11,6 +11,7 @@ const EXPORT_COLUMNS = [
   'Area',
   'Type',
   'Date',
+  'Hand-in',
   'Difficulty',
   'Status',
   'Weight %',
@@ -37,6 +38,8 @@ function toRow(
     areaName(task.areaId, areas),
     resolveOptionLabel(task.academicType, academicTaskTypes) ?? '-',
     taskDateOnly(task.date),
+    // Trabalho em duas fases: dia da entrega antes da apresentacao (Date).
+    task.submissionDate ? taskDateOnly(task.submissionDate) : '',
     formatEnumLabel(task.difficulty),
     formatEnumLabel(task.progressStatus),
     task.weightPercentage !== null ? String(task.weightPercentage) : '',

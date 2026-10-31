@@ -20,6 +20,8 @@ export interface PackSharedFields {
   dateCertainty: DateCertainty;
   availableFrom: string | null;
   isBlocked: boolean;
+  /** Entrega antes da apresentacao (trabalho em duas fases); null = uma fase. */
+  submissionDate: string | null;
 }
 
 export type PackChanges = Partial<PackSharedFields>;
@@ -48,6 +50,7 @@ const SHARED_KEYS: readonly (keyof PackSharedFields)[] = [
   'dateCertainty',
   'availableFrom',
   'isBlocked',
+  'submissionDate',
 ];
 
 const iso = (d: Date | null): string | null => (d ? d.toISOString() : null);
@@ -59,6 +62,7 @@ interface SharedRow {
   dateCertainty: DateCertainty;
   availableFrom: Date | null;
   isBlocked: boolean;
+  submissionDate: Date | null;
 }
 
 const fromTask = (t: SharedRow & { date: Date }): PackSharedFields => ({
@@ -69,6 +73,7 @@ const fromTask = (t: SharedRow & { date: Date }): PackSharedFields => ({
   dateCertainty: t.dateCertainty,
   availableFrom: iso(t.availableFrom),
   isBlocked: t.isBlocked,
+  submissionDate: iso(t.submissionDate),
 });
 
 const fromItem = (i: SharedRow & { dueDate: Date }): PackSharedFields =>
@@ -105,6 +110,7 @@ const SHARED_TASK_SELECT = {
   dateCertainty: true,
   availableFrom: true,
   isBlocked: true,
+  submissionDate: true,
 } satisfies Prisma.TaskSelect;
 
 @Injectable()
@@ -143,6 +149,7 @@ export class TaskPackSyncService {
             dateCertainty: true,
             availableFrom: true,
             isBlocked: true,
+            submissionDate: true,
             sourceTask: { select: SHARED_TASK_SELECT },
           },
         },
@@ -189,6 +196,9 @@ export class TaskPackSyncService {
               ? new Date(next.availableFrom)
               : null,
             isBlocked: next.isBlocked,
+            submissionDate: next.submissionDate
+              ? new Date(next.submissionDate)
+              : null,
           },
         }),
       ];

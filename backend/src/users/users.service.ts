@@ -228,6 +228,7 @@ export class UsersService {
         twoFactorEnabledAt: true,
         medicationDisclaimerVersion: true,
         medicationDisclaimerAcceptedAt: true,
+        allowEmailFriendRequests: true,
       },
     });
 
@@ -250,6 +251,7 @@ export class UsersService {
       pushSubscriptions,
       ownedAreas,
       travelTimes,
+      scheduleExceptions,
     ] = await Promise.all([
       this.prisma.workShift.findMany({ where: { userId: id } }),
       this.prisma.commitment.findMany({ where: { userId: id } }),
@@ -299,6 +301,7 @@ export class UsersService {
       }),
       this.prisma.area.findMany({ where: { ownerId: id } }),
       this.prisma.travelTime.findMany({ where: { userId: id } }),
+      this.prisma.scheduleException.findMany({ where: { userId: id } }),
     ]);
 
     const [
@@ -505,6 +508,7 @@ export class UsersService {
       },
       workShifts,
       commitments,
+      scheduleExceptions,
       classOccurrences,
       gradeComponents,
       travelTimes,

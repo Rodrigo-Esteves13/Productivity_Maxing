@@ -57,6 +57,30 @@ describe('CalendarFeedService scopes', () => {
     expect(taskQuery.where).toMatchObject({ userId: 'u1' });
   });
 
+  it('a two-phase task adds an all-day hand-in event', async () => {
+    const { prisma, service } = setup();
+    const soon = new Date();
+    soon.setUTCHours(0, 0, 0, 0);
+    soon.setUTCDate(soon.getUTCDate() + 5);
+    const handIn = new Date(soon);
+    handIn.setUTCDate(handIn.getUTCDate() - 2);
+    prisma.task.findMany.mockResolvedValue([
+      {
+        id: 't1',
+        title: 'Relatorio',
+        date: soon,
+        dateCertainty: 'EXACT',
+        submissionDate: handIn,
+        topics: null,
+        calendarDurationMinutes: null,
+        area: { name: 'Redes' },
+      },
+    ]);
+    const body = await service.buildFeedForToken(TOKEN, 'tasks');
+    expect(body).toContain('UID:task-handin:t1@productivitymaxing');
+    expect(body).toContain('SUMMARY:Hand in: Relatorio');
+  });
+
   it('a revoked token stops working for every scope', async () => {
     const { prisma, service } = setup();
     await service.buildFeedForToken(TOKEN, 'tasks');

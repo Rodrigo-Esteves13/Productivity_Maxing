@@ -92,6 +92,22 @@ const SPACED_REVIEW_OFFSETS_DAYS = [1, 3, 7];
 const SPACED_REVIEW_MINUTES = 20;
 
 /**
+ * A data mudou sem tocar na entrega (adiar para amanha, atualizacao de um
+ * pacote...): se a entrega ficasse depois da nova data, passa para esse dia.
+ */
+function clampedSubmission(
+  current: Date | null,
+  newDate: string | undefined,
+): { submissionDate?: Date } {
+  if (!current || !newDate) return {};
+  const presentation = new Date(newDate);
+  const dayOf = (d: Date) => d.toISOString().slice(0, 10);
+  return dayOf(current) > dayOf(presentation)
+    ? { submissionDate: presentation }
+    : {};
+}
+
+/**
  * Entrega de um trabalho em duas fases: nunca depois da apresentacao
  * (`date`). Comparado pelo dia, para "entregar e apresentar no mesmo dia"
  * ser valido mesmo com horas diferentes.
@@ -295,7 +311,11 @@ export class TasksService {
     const tasks = await this.prisma.task.findMany({
       where: {
         userId,
-        date: { gte: start, lt: end },
+        // Apresenta hoje ou, num trabalho em duas fases, entrega hoje.
+        OR: [
+          { date: { gte: start, lt: end } },
+          { submissionDate: { gte: start, lt: end } },
+        ],
         progressStatus: { not: 'COMPLETED' },
         // Data por marcar/surpresa ou task bloqueada: nao e "para hoje".
         ...ACTIONABLE_DEADLINE_WHERE,
@@ -533,7 +553,7 @@ export class TasksService {
                   )
                 : null,
             }
-          : {}),
+          : clampedSubmission(existing.submissionDate, date)),
       },
       include: TASK_INCLUDE,
     });
@@ -669,6 +689,15 @@ export class TasksService {
         recurrenceFrequency: task.recurrenceFrequency,
         recurrenceInterval: task.recurrenceInterval,
         recurrenceUntil: task.recurrenceUntil,
+        // Duas fases: a entrega anda o mesmo que a data (mesma antecedência).
+        ...(task.submissionDate
+          ? {
+              submissionDate: new Date(
+                task.submissionDate.getTime() +
+                  (nextDate.getTime() - task.date.getTime()),
+              ),
+            }
+          : {}),
         // notas e notas finais são desta ocorrência; a checklist volta
         // toda por fazer.
         subtasks: {

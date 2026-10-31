@@ -1,5 +1,5 @@
 import type { DateCertainty } from '@prisma/client';
-import { calendarTitle } from '../common/task-readiness.util';
+import { calendarTitle, hasFirmDate } from '../common/task-readiness.util';
 import { MS_PER_DAY, MS_PER_MINUTE } from '../common/time.constants';
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { Provider } from '@prisma/client';
@@ -27,6 +27,7 @@ interface TaskForSync {
   title: string;
   date: Date;
   dateCertainty: DateCertainty;
+  submissionDate?: Date | null;
   topics: string | null;
   difficulty: string;
   progressStatus: string;
@@ -231,6 +232,10 @@ export class CalendarService {
     if (task.taskType?.label) lines.push(`Type: ${task.taskType.label}`);
     if (task.academicType?.label) {
       lines.push(`Academic Type: ${task.academicType.label}`);
+    }
+    // Duas fases: o evento e a apresentacao, a entrega vai aqui.
+    if (task.submissionDate && hasFirmDate(task.dateCertainty)) {
+      lines.push(`Hand in: ${this.toDateOnlyString(task.submissionDate)}`);
     }
     lines.push(`Difficulty: ${formatEnumLabel(task.difficulty)}`);
     lines.push(`Status: ${formatEnumLabel(task.progressStatus)}`);

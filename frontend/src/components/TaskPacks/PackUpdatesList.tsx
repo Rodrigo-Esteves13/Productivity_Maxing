@@ -25,6 +25,7 @@ const FIELD_LABEL: Record<FieldKey, string> = {
   dateCertainty: 'readiness.dateCertainty',
   availableFrom: 'readiness.availableFrom',
   isBlocked: 'readiness.blocked',
+  submissionDate: 'twoPhase.handInDate',
 };
 
 function useFormatValue() {
@@ -37,6 +38,7 @@ function useFormatValue() {
       title: () => String(value),
       date: () => formatTaskDate(String(value), lang),
       availableFrom: () => formatTaskDate(String(value), lang),
+      submissionDate: () => formatTaskDate(String(value), lang),
       weightPercentage: () => `${value}%`,
       effort: () => enumLabel(String(value)),
       dateCertainty: () => enumLabel(String(value)),

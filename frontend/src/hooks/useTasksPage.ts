@@ -368,6 +368,13 @@ export function useTasksPage() {
         notes: selectedTask.notes ?? undefined,
         estimatedMinutes: selectedTask.estimatedMinutes ?? undefined,
         calendarDurationMinutes: selectedTask.calendarDurationMinutes ?? undefined,
+        // Prontidao e duas fases tambem descrevem a task (o mesmo que um
+        // pacote copia).
+        effort: selectedTask.effort ?? null,
+        dateCertainty: selectedTask.dateCertainty,
+        isBlocked: selectedTask.isBlocked,
+        availableFrom: selectedTask.availableFrom ?? null,
+        submissionDate: selectedTask.submissionDate ?? null,
         // Copia a checklist (todos os passos voltam a "por fazer").
         subtasks: (selectedTask.subtasks ?? []).map((s) => s.title),
       };

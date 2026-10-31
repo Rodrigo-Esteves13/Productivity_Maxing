@@ -7,6 +7,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-31',
+    title: 'Hand-in dates everywhere',
+    items: [
+      'Dashboard: Time between tests is now Time between evaluations. It shows tests and assignments together by default (a two-phase assignment shows its hand-in and its presentation), or only tests, or only assignments. Your choice is remembered, and Show more opens the whole list.',
+      'Study plan: for two-phase work the plan finishes your study by the hand-in, not the presentation.',
+      'Today: a task you hand in today now shows up there, not only on the presentation day.',
+      'Calendar: the calendar feed adds the hand-in as its own all-day event, and tasks synced to Google Calendar list the hand-in date.',
+      'Moving a task earlier (bulk reschedule, task pack updates) never leaves the hand-in after the presentation: it moves to the new date.',
+      'Repeating two-phase tasks keep the same gap between hand-in and presentation in the next one.',
+      'Duplicate task now also copies effort, date certainty, availability and the hand-in date. CSV and Markdown exports have a Hand-in column.',
+      'Classes: a class a classmate marked as cancelled no longer shows in the shared class schedule or gets copied.',
+      'Month view: public holidays are shown on each day.',
+      'Download my data now includes your time off and schedule changes.',
+    ],
+  },
+  {
     date: '2026-10-30',
     title: 'Holidays and days off, cancelled classes and two-phase assignments',
     items: [
@@ -14,7 +30,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Schedule: new Time off and changes card. Mark holidays for all your work or for one place, and see or remove every change in one list.',
       'Public holidays: each place now has "I work on public holidays". Turn it off and weekly shifts disappear on Portuguese national holidays by themselves. The week view also shows the holiday name. You can still choose to work one holiday.',
       'Teacher absent? Mark a class as cancelled from the week view. It stays struck through, does not count as missed in attendance, and the time is free in your study plan and calendar. If it happened after all, undo it and your attendance mark comes back.',
-      'Two-phase work: a task can have a hand-in date before the presentation (2 days before by default). Both show in the schedule, and the hand-in gets its own reminder the day before.',
+      'Two-phase work: a task can have a hand-in date before the presentation (2 days before by default). Both show in the schedule, and the hand-in gets its own reminder the day before. Task packs carry the hand-in date too, and Publish updates sends changes to it to everyone who imported the task.',
       'Finished on time? When you mark a task done after its date, the app asks whether it was actually on time (for two-phase work, the hand-in and the presentation). Your answer counts in Deadlines met, so presenting on the day and ticking it later no longer shows as late. For tasks you already finished, answer or change it in the task details.',
       'Dashboard: new Time between tests card. Your next tests in a line from today, with how many days you get between each one, the tightest gap and the average.',
       'Dashboard table: tasks are sorted by date by default, and Date TBD and Surprise tasks go to the end instead of sitting between real dates.',

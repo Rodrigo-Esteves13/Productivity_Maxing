@@ -4,6 +4,7 @@ import { formatDayLabel } from '../../lib/timeFormat';
 import { useI18n } from '../../i18n/useI18n';
 import { useMonthChipLabel } from '../../hooks/useMonthChipLabel';
 import MonthChipPill from './MonthChipPill';
+import { ptHolidayOn } from '../../lib/ptHolidays';
 
 // Chips visiveis por dia antes do "+N". Prazos vem primeiro (ver
 // buildMonthAgenda), por isso um exame nunca fica escondido atras de aulas.
@@ -22,6 +23,8 @@ export default function MonthDayCell({ day, chips, isToday, onOpenWeek }: MonthD
   const chipLabel = useMonthChipLabel();
   const visible = chips.slice(0, MAX_VISIBLE_CHIPS);
   const hidden = chips.slice(MAX_VISIBLE_CHIPS);
+  const holiday = ptHolidayOn(day.key);
+  const holidayName = holiday ? t(`holiday.${holiday.key}`) : null;
 
   return (
     <button
@@ -36,6 +39,11 @@ export default function MonthDayCell({ day, chips, isToday, onOpenWeek }: MonthD
         <span aria-hidden>{day.date.getUTCDate()}</span>
         <span className="sr-only">{formatDayLabel(day.key)}</span>
       </span>
+      {holidayName && (
+        <span title={holidayName} className="-mt-0.5 mb-1 truncate text-[11px] font-medium leading-tight text-amber-300">
+          {holidayName}
+        </span>
+      )}
       <span className="flex flex-col gap-1 min-w-0">
         {visible.map((chip) => (
           <MonthChipPill key={chip.id} chip={chip} />
