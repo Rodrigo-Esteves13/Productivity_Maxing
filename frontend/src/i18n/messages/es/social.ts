@@ -19,7 +19,7 @@ export const social: Record<string, string> = {
   'social.code.title': "Tu código de amigo",
   'social.code.hint': "Dáselo a quien confíes. Lo necesitan para enviarte una solicitud.",
   'social.code.copy': "Copiar código",
-  'social.add.title': "Añadir amigo por código",
+  'social.add.title': "Añadir amigo",
   'social.add.placeholder': "Código de amigo",
   'social.add.submit': "Enviar solicitud",
   'social.add.sent': "Solicitud enviada.",

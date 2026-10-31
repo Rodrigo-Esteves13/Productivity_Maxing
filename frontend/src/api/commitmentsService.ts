@@ -16,6 +16,8 @@ export interface CommitmentInput {
   endsOn?: string | null;
   address?: string;
   commuteMode?: CommuteMode;
+  // false = sem turnos semanais nos feriados nacionais.
+  worksOnHolidays?: boolean;
 }
 
 export const createCommitment = async (input: CommitmentInput): Promise<Commitment> => {

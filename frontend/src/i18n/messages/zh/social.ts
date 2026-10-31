@@ -19,7 +19,7 @@ export const social: Record<string, string> = {
   'social.code.title': "你的好友代码",
   'social.code.hint': "只给你信任的人。对方需要它才能向你发送请求。",
   'social.code.copy': "复制代码",
-  'social.add.title': "通过代码添加好友",
+  'social.add.title': "添加好友",
   'social.add.placeholder': "好友代码",
   'social.add.submit': "发送请求",
   'social.add.sent': "请求已发送。",

@@ -19,7 +19,7 @@ export const social: Record<string, string> = {
   'social.code.title': "あなたのフレンドコード",
   'social.code.hint': "信頼できる人にだけ教えてください。リクエストを送るのに必要です。",
   'social.code.copy': "コードをコピー",
-  'social.add.title': "コードで友達を追加",
+  'social.add.title': "友達を追加",
   'social.add.placeholder': "フレンドコード",
   'social.add.submit': "リクエストを送信",
   'social.add.sent': "リクエストを送信しました。",

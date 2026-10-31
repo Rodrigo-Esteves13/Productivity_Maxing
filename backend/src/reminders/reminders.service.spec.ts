@@ -20,6 +20,7 @@ function task(id: string, userId: string, prefs: Prefs) {
     id,
     title: `Task ${id}`,
     date: SOON,
+    submissionDate: null as Date | null,
     userId,
     area: null,
     user: {
@@ -170,6 +171,27 @@ describe('RemindersService.run', () => {
 
 // D-12: the deadline email uses the app language saved on the user's push
 // subscription; without one it stays English.
+describe('RemindersService two-phase work', () => {
+  it('reminds of the hand-in and keeps the presentation for its own day', async () => {
+    const prefs = {
+      deadlineEmailReminders: false,
+      deadlinePushReminders: true,
+    };
+    const twoPhase = {
+      ...task('t1', 'u1', prefs),
+      // Apresentacao daqui a 3 dias (fora da janela), entrega daqui a 2h.
+      date: new Date('2026-10-22T12:00:00.000Z'),
+      submissionDate: SOON,
+    };
+    const { service, prisma } = setup([twoPhase]);
+    await service.run(NOW);
+    expect(prisma.sentReminder.createMany).toHaveBeenCalledWith({
+      data: [{ taskId: 't1', taskDate: SOON }],
+      skipDuplicates: true,
+    });
+  });
+});
+
 describe('RemindersService email language', () => {
   const prefs = { deadlineEmailReminders: true, deadlinePushReminders: false };
 

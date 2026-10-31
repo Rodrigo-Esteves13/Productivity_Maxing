@@ -44,6 +44,12 @@ const NAV_COMMANDS: NavCommand[] = [
     keywords: ['today', 'hoje', 'next class', 'proxima aula', 'due today', 'study block', 'bloco de estudo'],
   },
   {
+    id: 'nav-test-gaps',
+    labelKey: 'widget.testGaps',
+    path: '/dashboard',
+    keywords: ['tests', 'testes', 'frequencias', 'frequências', 'exams', 'exames', 'gap', 'intervalo', 'between', 'entre', 'spacing'],
+  },
+  {
     id: 'nav-exam-mode',
     labelKey: 'examMode.paletteLabel',
     path: '/dashboard?exam=on',
@@ -104,6 +110,12 @@ const NAV_COMMANDS: NavCommand[] = [
     path: '/schedule',
     keywords: ['folga', 'folgas', 'days off', 'day off', 'trabalho', 'work', 'turnos', 'shifts', 'commitments', 'replicate'],
   },
+  {
+    id: 'nav-schedule-changes',
+    labelKey: 'scheduleChanges.title',
+    path: '/schedule',
+    keywords: ['holidays', 'vacation', 'ferias', 'férias', 'feriado', 'feriados', 'public holiday', 'time off', 'day off', 'folga', 'exception', 'excecao', 'exceção', 'change shift', 'mudar turno', 'teacher absent', 'professor faltou', 'cancelled class', 'aula cancelada', 'sem aula'],
+  },
   { id: 'nav-review', labelKey: 'nav.review', path: '/review' },
   {
     id: 'nav-wellbeing',
@@ -114,13 +126,13 @@ const NAV_COMMANDS: NavCommand[] = [
   {
     id: 'nav-blood-donations',
     labelKey: 'wellbeing.blood.title',
-    path: '/wellbeing',
+    path: '/wellbeing#blood',
     keywords: ['blood', 'sangue', 'dador', 'donor', 'donation', 'dadiva', 'plasma'],
   },
   {
     id: 'nav-medication-history',
     labelKey: 'wellbeing.history.title',
-    path: '/wellbeing',
+    path: '/wellbeing#medication-history',
     keywords: ['medication history', 'historico', 'adherence', 'weekly', 'monthly', 'semanal', 'mensal'],
   },
   {
@@ -167,6 +179,12 @@ const NAV_COMMANDS: NavCommand[] = [
   { id: 'nav-developer', labelKey: 'nav.developer', path: '/developer' },
   { id: 'nav-agent', labelKey: 'nav.agent', path: '/agent' },
   { id: 'nav-social', labelKey: 'nav.social', path: '/social', keywords: ['friends', 'amigos', 'friend code'] },
+  {
+    id: 'nav-add-friend',
+    labelKey: 'friendLink.crumb',
+    path: '/social?tab=friends',
+    keywords: ['add friend', 'adicionar amigo', 'invite', 'convidar', 'email', 'friend link', 'link de amizade', 'share link', 'partilhar link'],
+  },
   { id: 'nav-social-requests', labelKey: 'palette.socialRequests', path: '/social?tab=requests', keywords: ['invitations', 'convites', 'pedidos', 'requests'] },
   { id: 'nav-shared-with-me', labelKey: 'nav.sharedWithMe', path: '/social?tab=shared', keywords: ['shared', 'partilhado', 'lessons', 'notes'] },
   { id: 'nav-my-shares', labelKey: 'social.tab.mine', path: '/social?tab=mine', keywords: ['my shares', 'partilhas', 'links', 'share'] },

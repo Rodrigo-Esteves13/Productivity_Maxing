@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getSchedule, setClassAttendance } from '../api/scheduleService';
+import { getSchedule, setClassAttendance, setClassCancelled } from '../api/scheduleService';
 import { isRequestCanceled } from '../lib/abortable';
 import type { ClassOccurrence } from '../types/models';
 import { startOfWeek, todayUtcAnchored } from '../lib/weekDates';
@@ -90,6 +90,24 @@ export function useSchedule(initialWeekStart: Date = todayUtcAnchored()) {
     [],
   );
 
+  // Professor faltou / aula desmarcada (ou desfazer). Otimista como a
+  // presenca; cancelar limpa a presenca no servidor, aqui tambem.
+  const setCancelled = useCallback(
+    async (occurrence: ClassOccurrence, cancelled: boolean): Promise<boolean> => {
+      const apply = (value: boolean) =>
+        setOccurrences((prev) => prev.map((o) => (o.id === occurrence.id ? { ...o, cancelled: value } : o)));
+      apply(cancelled);
+      try {
+        await setClassCancelled(occurrence.id, cancelled);
+        return true;
+      } catch {
+        apply(occurrence.cancelled ?? false);
+        return false;
+      }
+    },
+    [],
+  );
+
   return {
     weekStart,
     weekEnd,
@@ -101,5 +119,6 @@ export function useSchedule(initialWeekStart: Date = todayUtcAnchored()) {
     goToNextWeek,
     goToCurrentWeek,
     setAttendance,
+    setCancelled,
   };
 }

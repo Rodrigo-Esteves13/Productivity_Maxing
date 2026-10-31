@@ -220,30 +220,34 @@ model Priority {
 
 /// Representa um utilizador da plataforma.
 model User {
-  id                  String                    @id @default(uuid())
+  id                       String                    @id @default(uuid())
   // Areas privadas criadas por este user (ver Area.ownerId).
-  ownedAreas          Area[]                    @relation("UserOwnedAreas")
+  ownedAreas               Area[]                    @relation("UserOwnedAreas")
   // Areas oficiais que este user desligou (ver AreaHidden).
-  hiddenAreas         AreaHidden[]
-  pushSubscriptions   PushSubscription[]
-  shareVisits         ShareVisit[]
-  feedbackEntries     Feedback[]
-  taskPacks           TaskPack[]
-  taskPackUpdates     TaskPackUpdate[]
+  hiddenAreas              AreaHidden[]
+  pushSubscriptions        PushSubscription[]
+  shareVisits              ShareVisit[]
+  feedbackEntries          Feedback[]
+  taskPacks                TaskPack[]
+  taskPackUpdates          TaskPackUpdate[]
   // Social: codigo de amigo aleatorio (criado a pedido), amizades e bloqueios.
-  friendCode          String?                   @unique
-  friendCodeRequests  FriendCodeChangeRequest[]
-  friendshipsSent     Friendship[]              @relation("FriendshipRequester")
-  friendshipsReceived Friendship[]              @relation("FriendshipAddressee")
-  blocksMade          UserBlock[]               @relation("BlockMaker")
-  blocksReceived      UserBlock[]               @relation("BlockTarget")
-  notesGrantsGiven    NotebookViewGrant[]       @relation("ViewGrantOwner")
-  notesGrantsReceived NotebookViewGrant[]       @relation("ViewGrantViewer")
-  email               String                    @unique
-  role                Role                      @default(USER)
-  name                String?
-  avatarUrl           String?
-  createdAt           DateTime                  @default(now())
+  friendCode               String?                   @unique
+  // Quem sabe o email desta pessoa pode enviar-lhe um pedido de amizade
+  // (sem codigo). A resposta ao remetente e sempre a mesma, exista a conta
+  // ou nao. false = so por codigo, link ou turma.
+  allowEmailFriendRequests Boolean                   @default(true)
+  friendCodeRequests       FriendCodeChangeRequest[]
+  friendshipsSent          Friendship[]              @relation("FriendshipRequester")
+  friendshipsReceived      Friendship[]              @relation("FriendshipAddressee")
+  blocksMade               UserBlock[]               @relation("BlockMaker")
+  blocksReceived           UserBlock[]               @relation("BlockTarget")
+  notesGrantsGiven         NotebookViewGrant[]       @relation("ViewGrantOwner")
+  notesGrantsReceived      NotebookViewGrant[]       @relation("ViewGrantViewer")
+  email                    String                    @unique
+  role                     Role                      @default(USER)
+  name                     String?
+  avatarUrl                String?
+  createdAt                DateTime                  @default(now())
 
   // Ban/suspend - efeito imediato mesmo com um JWT ainda válido (ver
   // JwtStrategy.validate(), que consulta isto por request). SUSPENDED
@@ -389,6 +393,7 @@ model User {
   programs                       AcademicProgram[]            @relation("UserPrograms")
   classOccurrences               ClassOccurrence[]
   workShifts                     WorkShift[]
+  scheduleExceptions             ScheduleException[]
   // Bem-estar (Fase 7): registo diario do estado mental e medicacao.
   moodLogs                       MoodLog[]
   medications                    Medication[]
@@ -794,6 +799,16 @@ model Task {
 
   completedAt DateTime?
 
+  // Trabalho em duas fases: entrega neste dia e apresentacao em `date`
+  // (ex: entregar 2 dias antes e apresentar na aula). null = uma so fase.
+  submissionDate   DateTime?
+  // Resposta do proprio a "acabaste a tempo?" ao concluir fora do prazo.
+  // Ganha ao calculo por completedAt (quem apresenta e so marca depois
+  // nao fica como atrasado). null = nao respondeu, vale o calculo.
+  onTime           Boolean?
+  // O mesmo para a entrega de um trabalho em duas fases.
+  submissionOnTime Boolean?
+
   // Última vez que perguntámos ao user se esta task (já fora de prazo) está
   // feita ou não (feature de "overdue check-in", ver tasks.service.ts).
   // Serve só para não repetir a pergunta várias vezes no mesmo dia - a
@@ -1092,7 +1107,12 @@ model ClassOccurrence {
   // na vista semanal do Schedule, ou sozinha (true) quando se cria uma
   // entrada do caderno a partir desta aula. Reimportar o .ics não lhe toca
   // (o update do upsert em importOccurrences não inclui este campo).
-  attended Boolean?
+  attended  Boolean?
+  // Aula que nao houve (professor faltou, aula desmarcada). Fica no
+  // horario riscada, mas nao conta para presencas nem ocupa tempo no plano
+  // de estudo ou no Google Calendar. Reimportar o .ics nao lhe toca, tal
+  // como a presenca.
+  cancelled Boolean  @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1415,8 +1435,9 @@ model WorkShift {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  commitment Commitment? @relation(fields: [commitmentId], references: [id], onDelete: Cascade)
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commitment Commitment?         @relation(fields: [commitmentId], references: [id], onDelete: Cascade)
+  exceptions ScheduleException[]
 
   // Toda a query filtra por dono; [userId, date] serve os turnos pontuais
   // dentro de um intervalo.
@@ -1458,39 +1479,86 @@ model CalendarSyncedEvent {
 /// próprio tempo de deslocação. Os turnos agrupam-se aqui; mudar o nome ou
 /// a deslocação atualiza todos os turnos (e o plano de estudo) de uma vez.
 model Commitment {
-  id             String        @id @default(uuid())
-  userId         String
-  name           String
+  id              String        @id @default(uuid())
+  userId          String
+  name            String
   // Minutos de viagem de cada lado de cada turno deste local.
-  commuteMinutes Int           @default(0)
+  commuteMinutes  Int           @default(0)
   // Morada do local (trabalho, evento, ginasio...) e meio de transporte
   // usados para CALCULAR commuteMinutes a partir de User.homeAddress via
   // Distance Matrix. Opcionais: o valor manual continua a ser o caminho
   // principal; a morada so existe para lembrar de onde veio o numero.
-  address        String?
-  commuteMode    CommuteMode   @default(TRANSIT)
+  address         String?
+  commuteMode     CommuteMode   @default(TRANSIT)
   // Folgas fixas: dias da semana (0=Domingo..6=Sábado) em que NUNCA se
   // trabalha aqui. Turnos semanais nesses dias não se criam nem se expandem;
   // turnos pontuais (troca de folga) continuam a valer. Validado em
   // CreateCommitmentDto/UpdateCommitmentDto (valores únicos, máx. 6).
-  daysOff        Int[]         @default([])
+  daysOff         Int[]         @default([])
   // Tipo de contrato de um trabalho (null = nao e um trabalho ou nao foi
   // dito) e ultimo dia de trabalho. Depois de endsOn (meia-noite UTC do
   // dia, hora de Lisboa) os turnos semanais deixam de contar.
-  contractType   ContractType?
-  endsOn         DateTime?
+  contractType    ContractType?
+  endsOn          DateTime?
+  // false = nos feriados nacionais nao se trabalha aqui: os turnos semanais
+  // desses dias desaparecem sozinhos. true (por omissao) = o horario normal
+  // mantem-se, como ate aqui.
+  worksOnHolidays Boolean       @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  shifts WorkShift[]
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shifts     WorkShift[]
+  exceptions ScheduleException[]
 
   @@unique([userId, name])
   @@index([userId])
 }
 
 /// Contrato de um trabalho (Commitment.contractType).
+/// OFF = nao ha turno nesses dias (folga pontual, ferias). RETIME = o turno
+/// acontece a outra hora nesses dias.
+enum ScheduleExceptionKind {
+  OFF
+  RETIME
+}
+
+/// Excecao ao horario semanal entre dois dias (inclusive): "na proxima
+/// semana entro as 10h", "dia 3 nao trabalho", "ferias de 1 a 15 de agosto".
+/// So mexe nos turnos semanais (os pontuais editam-se diretamente). Alvo:
+///   - shiftId: um turno semanal;
+///   - commitmentId: todos os turnos semanais de um local (ferias la, ou
+///     "na proxima semana entro as 10h");
+///   - nenhum: todos os turnos semanais (ferias de tudo). So OFF.
+/// Aplicada em WorkShiftsService.expandRange, por isso a grelha, o plano de
+/// estudo e o Google Calendar veem o mesmo.
+model ScheduleException {
+  id           String                @id @default(uuid())
+  userId       String
+  shiftId      String?
+  commitmentId String?
+  kind         ScheduleExceptionKind
+  // Meia-noite UTC do dia (hora de Lisboa), como WorkShift.date.
+  startsOn     DateTime
+  endsOn       DateTime
+  // So RETIME: a nova hora do turno nesses dias.
+  startMinutes Int?
+  endMinutes   Int?
+  note         String?               @db.VarChar(120)
+
+  createdAt DateTime @default(now())
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shift      WorkShift?  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  commitment Commitment? @relation(fields: [commitmentId], references: [id], onDelete: Cascade)
+
+  // expandRange le as excecoes do dono que tocam o intervalo pedido.
+  @@index([userId, endsOn])
+  @@index([shiftId])
+  @@index([commitmentId])
+}
+
 enum ContractType {
   PERMANENT
   FIXED_TERM

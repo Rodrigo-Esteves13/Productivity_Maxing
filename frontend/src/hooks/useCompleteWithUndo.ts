@@ -5,6 +5,7 @@ import type { Task } from '../types/models';
 import { useFeedback } from '../context/useFeedback';
 import { useI18n } from '../i18n/useI18n';
 import { celebrateCompletion } from '../lib/completionFeedback';
+import { askIfFinishedOnTime } from '../lib/onTimeQuestion';
 
 const COMPLETED_STATUS = 'COMPLETED';
 
@@ -57,6 +58,7 @@ export function useCompleteWithUndo(setTasks: Dispatch<SetStateAction<Task[]>>) 
       await bulkUpdateTaskStatus([...previous.keys()], COMPLETED_STATUS);
       applyStatuses(previous, new Date().toISOString());
       celebrateCompletion(previous.size);
+      askIfFinishedOnTime(tasks.filter((task) => previous.has(task.id)));
 
       offerUndo(previous.size, async () => {
         const idsByStatus = new Map<Status, string[]>();
@@ -84,6 +86,7 @@ export function useCompleteWithUndo(setTasks: Dispatch<SetStateAction<Task[]>>) 
       }
       const { spawnedTasks = [], ...updated } = response;
       celebrateCompletion();
+      askIfFinishedOnTime([task]);
       setTasks((prev) => {
         const known = new Set(prev.map((t) => t.id));
         return [

@@ -3,6 +3,7 @@ import { getOverdueCheckins, confirmOverdueTask, type OverdueAnswer } from '../a
 import type { Task } from '../types/models';
 import { todayKey } from '../lib/dateKey';
 import { readOverdueCheckDay, writeOverdueCheckDay } from '../lib/overdueCheckKey';
+import { askIfFinishedOnTime } from '../lib/onTimeQuestion';
 
 // O backend e sempre quem decide quais tasks ainda faltam confirmar
 // (lastOverdueCheckAt). A marca do dia em localStorage (por utilizador) so
@@ -63,6 +64,9 @@ export function useOverdueCheckins(userId: string | null | undefined): UseOverdu
       try {
         await confirmOverdueTask(current.id, response);
         setHasError(false);
+        // "Ja esta feita" numa task fora de prazo: pode ter sido a tempo
+        // (so faltou marcar).
+        if (response.isCompleted) askIfFinishedOnTime([current]);
         const rest = pendingTasks.slice(1);
         setPendingTasks(rest);
         if (rest.length === 0 && userId) writeOverdueCheckDay(userId, todayKey());

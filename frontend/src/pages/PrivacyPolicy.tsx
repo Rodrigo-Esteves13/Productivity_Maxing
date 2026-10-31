@@ -6,7 +6,7 @@ import LegalTable from '../components/Legal/LegalTable';
 import useSeo from '../hooks/useSeo';
 import { REPO_URL, CONTACT_EMAIL, APP_DOMAIN } from '../lib/constants';
 
-const LAST_UPDATED = '28/10/2026';
+const LAST_UPDATED = '30/10/2026';
 
 export default function PrivacyPolicy() {
   useSeo({
@@ -147,6 +147,16 @@ export default function PrivacyPolicy() {
             Classmates: anyone in a class with you can send you a friend request from the Members tab without
             your friend code. Nothing is shared until you accept. A friend&apos;s profile lists the classes you are
             both in
+          </li>
+          <li>
+            Friend links: if you share your friend code as a link, it carries a signature valid for 7 days.
+            Whoever opens it in that time sees your name and photo and becomes your friend when they accept,
+            without a separate approval from you. After 7 days the same link only sends a normal request
+          </li>
+          <li>
+            Friend requests by email: someone who already knows your email can send you a friend request.
+            They are never told whether an account exists, and your email is never shown to them. You can turn
+            this off in Social at any time
           </li>
           <li>
             Class deadlines: a test or assignment you add to a class (subject, title, date, weight) is visible

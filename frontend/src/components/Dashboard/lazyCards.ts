@@ -15,6 +15,7 @@ export const CourseForecastCard = lazy(() => import('./CourseForecastCard'));
 export const GradeProjectionCard = lazy(() => import('./GradeProjectionCard'));
 export const FocusEffectCard = lazy(() => import('./FocusEffectCard'));
 export const ExamCountdownCard = lazy(() => import('./ExamCountdownCard'));
+export const TestGapsCard = lazy(() => import('./TestGapsCard'));
 export const StaleTasksCard = lazy(() => import('./StaleTasksCard'));
 export const TimeByAreaCard = lazy(() => import('./TimeByAreaCard'));
 export const EstimationAccuracyCard = lazy(() => import('./EstimationAccuracyCard'));

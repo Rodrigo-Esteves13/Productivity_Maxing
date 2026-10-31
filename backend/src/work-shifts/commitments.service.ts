@@ -29,6 +29,7 @@ const COMMITMENT_SELECT = {
   daysOff: true,
   contractType: true,
   endsOn: true,
+  worksOnHolidays: true,
 } satisfies Prisma.CommitmentSelect;
 
 export interface CommitmentView {
@@ -40,6 +41,7 @@ export interface CommitmentView {
   daysOff: number[];
   contractType: ContractType | null;
   endsOn: Date | null;
+  worksOnHolidays: boolean;
 }
 
 export interface CommitmentWithShifts extends CommitmentView {
@@ -104,6 +106,7 @@ export class CommitmentsService {
         daysOff: sortedDaysOff(c.daysOff),
         contractType: c.contractType,
         endsOn: c.endsOn,
+        worksOnHolidays: c.worksOnHolidays,
         shifts: c.shifts.map(toShiftView),
       })),
       ungroupedShifts: ungrouped.map(toShiftView),
@@ -134,6 +137,9 @@ export class CommitmentsService {
           daysOff: dto.daysOff ?? [],
           contractType: dto.contractType ?? null,
           endsOn: dto.endsOn ? parseDateKey(dto.endsOn) : null,
+          ...(dto.worksOnHolidays !== undefined && {
+            worksOnHolidays: dto.worksOnHolidays,
+          }),
         },
         select: COMMITMENT_SELECT,
       });
@@ -165,6 +171,9 @@ export class CommitmentsService {
           }),
           ...(dto.endsOn !== undefined && {
             endsOn: dto.endsOn === null ? null : parseDateKey(dto.endsOn),
+          }),
+          ...(dto.worksOnHolidays !== undefined && {
+            worksOnHolidays: dto.worksOnHolidays,
           }),
         },
       });

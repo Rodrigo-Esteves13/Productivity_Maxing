@@ -21,7 +21,10 @@ import { Throttle } from '@nestjs/throttler';
 import { ScheduleService } from './schedule.service';
 import { ImportScheduleDto } from './dto/import-schedule.dto';
 import { EstimateCommuteDto } from './dto/estimate-commute.dto';
-import { SetAttendanceDto } from './dto/set-attendance.dto';
+import {
+  SetAttendanceDto,
+  SetClassCancelledDto,
+} from './dto/set-attendance.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
@@ -65,10 +68,12 @@ export class ScheduleController {
     @Query('from') from: string,
     @Query('to') to: string,
   ) {
+    // A grelha mostra tambem as aulas desmarcadas (riscadas).
     return this.scheduleService.findRange(
       user.id,
       new Date(from),
       new Date(to),
+      { includeCancelled: true },
     );
   }
 
@@ -137,6 +142,19 @@ export class ScheduleController {
     @Body() dto: SetAttendanceDto,
   ) {
     return this.scheduleService.setAttendance(user.id, id, dto.attended);
+  }
+
+  @Patch(':id/cancelled')
+  @ApiOperation({
+    summary:
+      'Marks a class as cancelled (teacher absent) or back to normal. Cancelled classes keep showing struck through but free the time.',
+  })
+  setCancelled(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetClassCancelledDto,
+  ) {
+    return this.scheduleService.setCancelled(user.id, id, dto.cancelled);
   }
 
   // Sem `from`/`to` apaga TODO o horário importado; com os dois só esse

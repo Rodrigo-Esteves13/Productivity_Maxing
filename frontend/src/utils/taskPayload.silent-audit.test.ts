@@ -19,6 +19,7 @@ const clearedEdit: TaskFormFieldValues = {
   dateCertainty: 'EXACT',
   isBlocked: false,
   availableFrom: '',
+  submissionDate: '',
   priority: '',
   areaId: 'a1',
   topics: '',

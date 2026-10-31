@@ -19,6 +19,7 @@ import { useSharedWithMe } from '../hooks/useSharedWithMe';
 import { useMyShares } from '../hooks/useMyShares';
 import { useI18n } from '../i18n/useI18n';
 import type { SocialTab } from '../lib/appLinks';
+import ToggleRow from '../components/UI/ToggleRow';
 
 const TABS: SocialTab[] = ['requests', 'friends', 'shared', 'mine'];
 const isSocialTab = (value: string | null): value is SocialTab => TABS.includes(value as SocialTab);
@@ -33,7 +34,19 @@ export default function Social() {
   const notes = useNotesAccess();
   const shared = useSharedWithMe();
   const mine = useMyShares();
-  const { data, isLoading, hasError, addFriend, requestCodeChange, accept, remove, block, unblock } = useSocial();
+  const {
+    data,
+    isLoading,
+    hasError,
+    addFriend,
+    addFriendByEmail,
+    setAllowEmailRequests,
+    requestCodeChange,
+    accept,
+    remove,
+    block,
+    unblock,
+  } = useSocial();
 
   const invitations = shared.items.filter((item) => item.invited);
   const sharedItems = shared.items.filter((item) => !item.invited);
@@ -140,7 +153,7 @@ export default function Social() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <FriendCodeCard code={data.friendCode} request={data.codeChangeRequest} onRequestChange={requestCodeChange} />
-                <AddFriendForm onAdd={addFriend} />
+                <AddFriendForm onAdd={addFriend} onAddByEmail={addFriendByEmail} />
               </div>
               {data.friends.length === 0 ? (
                 <EmptyState
@@ -155,6 +168,13 @@ export default function Social() {
                 lists(['friends'])
               )}
               {lists(['blocked'])}
+              <ToggleRow
+                variant="inline"
+                label={t('social.email.allowLabel')}
+                description={t('social.email.allowHelp')}
+                checked={data.allowEmailFriendRequests}
+                onChange={(allow) => void setAllowEmailRequests(allow)}
+              />
               <p className="text-xs text-neutral-500">{t('social.privacy')}</p>
             </div>
           )}

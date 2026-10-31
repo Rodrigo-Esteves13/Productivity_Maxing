@@ -19,6 +19,7 @@ export type DashboardWidgetKey =
   | 'creditSimulator'
   | 'creditsAccumulated'
   | 'examCountdown'
+  | 'testGaps'
   | 'staleTasks'
   | 'timeByArea'
   | 'estimationAccuracy'
@@ -50,6 +51,7 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   creditSimulator: 'widget.creditSimulator',
   creditsAccumulated: 'widget.creditsAccumulated',
   examCountdown: 'widget.examCountdown',
+  testGaps: 'widget.testGaps',
   staleTasks: 'widget.staleTasks',
   timeByArea: 'widget.timeByArea',
   estimationAccuracy: 'widget.estimationAccuracy',
@@ -86,6 +88,7 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   creditSimulator: true,
   creditsAccumulated: true,
   examCountdown: true,
+  testGaps: true,
   staleTasks: true,
   timeByArea: true,
   estimationAccuracy: true,

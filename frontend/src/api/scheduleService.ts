@@ -41,6 +41,16 @@ export const setClassAttendance = async (
   await api.patch(`/schedule/${encodeURIComponent(id)}/attendance`, { attended });
 };
 
+// Aula que nao houve (professor faltou): riscada na grelha, liberta o tempo
+// no plano e limpa a presenca. false volta a pô-la normal.
+export const setClassCancelled = async (
+  id: string,
+  cancelled: boolean,
+): Promise<{ id: string; cancelled: boolean; attended: boolean | null }> => {
+  const response = await api.patch(`/schedule/${encodeURIComponent(id)}/cancelled`, { cancelled });
+  return response.data as { id: string; cancelled: boolean; attended: boolean | null };
+};
+
 // Presencas por disciplina entre from/to ("YYYY-MM-DD"); o backend corta em hoje.
 export const getAttendanceSummary = async (
   from: string,

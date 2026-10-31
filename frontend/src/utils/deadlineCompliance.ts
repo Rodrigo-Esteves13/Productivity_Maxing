@@ -25,7 +25,7 @@ export interface DeadlineCompliance {
 // buildTaskDate in utils/taskPayload.ts), which would make finishing it
 // during the due day itself count as "late". For those, the real deadline
 // is the end of that day. Tasks with an explicit time keep it as-is.
-function effectiveDeadlineMs(task: Task): number {
+export function effectiveDeadlineMs(task: Pick<Task, 'date'>): number {
   const deadline = new Date(task.date);
   const isDateOnly =
     deadline.getUTCHours() === 0 &&
@@ -40,6 +40,11 @@ function effectiveDeadlineMs(task: Task): number {
 // as late.
 export function wasCompletedOnTime(task: Task): boolean | null {
   if (task.progressStatus !== 'COMPLETED') return null;
+  // A propria pessoa disse se acabou a tempo (ex: apresentou no dia e so
+  // marcou depois): ganha ao calculo. Num trabalho em duas fases, uma
+  // entrega fora do prazo tambem conta como atraso.
+  if (task.submissionOnTime === false) return false;
+  if (task.onTime !== null && task.onTime !== undefined) return task.onTime;
   // Testes e exames (tipo "evento"): a data e o momento do evento, nao um
   // prazo de entrega. Marcar como feito depois nunca e atraso, e como nao
   // precisam de completedAt contam sempre como pontuais.

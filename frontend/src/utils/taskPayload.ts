@@ -1,6 +1,7 @@
 import type { TaskFormFieldValues } from '../components/Tasks/TaskFormFields';
 import type { TaskFormSubmission } from '../types/models';
-import { DEFAULT_DATE_CERTAINTY } from '../lib/taskReadiness';
+import { DEFAULT_DATE_CERTAINTY, hasFirmDate } from '../lib/taskReadiness';
+import type { DateCertainty } from '../types/models';
 
 // TaskForm (criação) e TaskEditForm (edição) tinham a mesma conversão de
 // formData -> payload da API copiada nos dois sítios (parse de números,
@@ -44,6 +45,7 @@ export function buildTaskPayload(
     effort,
     dateCertainty,
     availableFrom,
+    submissionDate,
     ...rest
   } = formData;
 
@@ -70,6 +72,11 @@ export function buildTaskPayload(
     // "YYYY-MM-DD" isolado = meia-noite UTC desse dia (mesma regra do `date`
     // sem hora, ver buildTaskDate). Vazio = ja disponivel.
     availableFrom: availableFrom ? new Date(availableFrom).toISOString() : null,
+    // Uma data so tem sentido com prazo marcado; num palpite volta a uma fase.
+    submissionDate:
+      submissionDate && hasFirmDate({ dateCertainty: (dateCertainty || DEFAULT_DATE_CERTAINTY) as DateCertainty })
+        ? new Date(submissionDate).toISOString()
+        : null,
   };
 }
 

@@ -26,6 +26,10 @@ export interface TaskWriteInput {
   dateCertainty?: DateCertainty;
   isBlocked?: boolean;
   availableFrom?: string | null;
+  // Trabalho em duas fases: dia da entrega (antes da apresentacao em `date`).
+  submissionDate?: string | null;
+  onTime?: boolean | null;
+  submissionOnTime?: boolean | null;
   priority?: string;
   progressStatus?: string;
   weightPercentage?: number | null;
@@ -163,6 +167,8 @@ export interface ClassOccurrence {
   externalUid: string;
   // null = por marcar, true = fui, false = faltei (PATCH /schedule/:id/attendance).
   attended?: boolean | null;
+  // Aula que nao houve (professor faltou): riscada, sem presenca.
+  cancelled?: boolean;
 }
 
 // GET /schedule/attendance: uma linha por disciplina, so aulas ate hoje.
@@ -319,6 +325,8 @@ export interface Commitment {
   // dia (ISO, meia-noite UTC). Depois dele os turnos semanais acabam.
   contractType: ContractType | null;
   endsOn: string | null;
+  // false = nos feriados nacionais os turnos semanais daqui desaparecem.
+  worksOnHolidays: boolean;
 }
 
 export type ContractType = 'PERMANENT' | 'FIXED_TERM' | 'INTERNSHIP';
@@ -452,6 +460,40 @@ export interface WorkShiftOccurrence {
   bufferMinutes: number;
   label: string | null;
   isRecurring: boolean;
+  // Excecao que mudou este dia (para a desfazer); turno noutra hora so
+  // nesse dia; e, com withSkipped, o motivo de nao acontecer.
+  exceptionId?: string | null;
+  retimed?: boolean;
+  skipped?: ShiftSkipReason | null;
+}
+
+export type ShiftSkipReason = 'OFF' | 'HOLIDAY';
+export type ScheduleExceptionKind = 'OFF' | 'RETIME';
+
+// GET /schedule-exceptions: folgas, ferias e mudancas de hora do horario
+// semanal entre dois dias (inclusive).
+export interface ScheduleException {
+  id: string;
+  kind: ScheduleExceptionKind;
+  shiftId: string | null;
+  commitmentId: string | null;
+  startsOn: string;
+  endsOn: string;
+  startMinutes: number | null;
+  endMinutes: number | null;
+  note: string | null;
+}
+
+export interface CreateScheduleExceptionInput {
+  kind: ScheduleExceptionKind;
+  shiftId?: string;
+  commitmentId?: string;
+  /** YYYY-MM-DD */
+  startsOn: string;
+  endsOn: string;
+  startMinutes?: number;
+  endMinutes?: number;
+  note?: string;
 }
 
 export interface CreateWorkShiftInput {
@@ -789,6 +831,12 @@ export interface Task {
   // Ainda nao da para comecar: bloqueada sem data, ou abre em availableFrom.
   isBlocked: boolean;
   availableFrom: string | null;
+  // Trabalho em duas fases: entrega neste dia, apresentacao em `date`.
+  submissionDate?: string | null;
+  // Resposta a "acabaste a tempo?" ao concluir fora do prazo (ganha ao
+  // calculo por completedAt); a mesma para a entrega. null = nao respondeu.
+  onTime?: boolean | null;
+  submissionOnTime?: boolean | null;
   // Nullable, ao contrário de difficulty - ver comentário em priorityId no
   // schema.prisma (opcional de propósito). priorityLabel/priorityColorHex
   // vêm prontos do backend (toResponse) para as badges não precisarem de

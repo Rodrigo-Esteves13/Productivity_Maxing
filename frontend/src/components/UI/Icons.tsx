@@ -88,6 +88,11 @@ export {
   SquareDashedMousePointer as SelectAreaIcon,
   ClipboardPaste as PasteIcon,
   CopyPlus as DuplicateIcon,
+  CalendarX as CalendarXIcon,
+  CalendarClock as CalendarClockIcon,
+  UserPlus as UserPlusIcon,
+  Plane as PlaneIcon,
+  Hourglass as HourglassIcon,
 } from 'lucide-react';
 
 export function GoogleIcon(props: SVGProps<SVGSVGElement>) {

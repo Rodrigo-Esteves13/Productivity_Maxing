@@ -19,7 +19,7 @@ export const social: Record<string, string> = {
   'social.code.title': "내 친구 코드",
   'social.code.hint': "신뢰하는 사람에게만 알려 주세요. 요청을 보내려면 필요합니다.",
   'social.code.copy': "코드 복사",
-  'social.add.title': "코드로 친구 추가",
+  'social.add.title': "친구 추가",
   'social.add.placeholder': "친구 코드",
   'social.add.submit': "요청 보내기",
   'social.add.sent': "요청을 보냈습니다.",

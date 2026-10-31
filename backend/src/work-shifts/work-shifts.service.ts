@@ -18,6 +18,12 @@ import {
 import { UpdateWorkShiftDto } from './dto/update-work-shift.dto';
 import { MAX_RANGE_DAYS, MAX_SHIFTS_PER_USER } from './work-shifts.constants';
 import { isDayOff } from './days-off.util';
+import { ptHolidayKeysBetween } from '../common/pt-holidays.util';
+import {
+  resolveRecurringDay,
+  type ExceptionRule,
+  type SkipReason,
+} from './schedule-exceptions.util';
 
 export const SHIFT_SELECT = {
   id: true,
@@ -39,6 +45,7 @@ export const SHIFT_SELECT = {
       endsOn: true,
       address: true,
       commuteMode: true,
+      worksOnHolidays: true,
     },
   },
 } satisfies Prisma.WorkShiftSelect;
@@ -94,6 +101,12 @@ export interface WorkShiftOccurrence {
   isRecurring: boolean;
   address: string | null;
   commuteMode: CommuteMode | null;
+  // Excecao que mudou este dia (nova hora ou folga), para a desfazer.
+  exceptionId: string | null;
+  // Turno noutra hora so nesse dia (ScheduleException RETIME).
+  retimed: boolean;
+  // So com includeSkipped: o turno nao acontece (folga/ferias ou feriado).
+  skipped: SkipReason | null;
 }
 
 @Injectable()
@@ -280,6 +293,9 @@ export class WorkShiftsService {
     userId: string,
     fromKey: string,
     toKey: string,
+    // So a grelha semanal quer ver os turnos que nao acontecem (riscados,
+    // para os poder repor); o plano de estudo e o Google Calendar nao.
+    { includeSkipped = false }: { includeSkipped?: boolean } = {},
   ): Promise<WorkShiftOccurrence[]> {
     const from = parseDateKey(fromKey);
     const to = parseDateKey(toKey);
@@ -290,14 +306,32 @@ export class WorkShiftsService {
       );
     }
 
-    const rows = await this.prisma.workShift.findMany({
-      where: {
-        userId,
-        OR: [{ dayOfWeek: { not: null } }, { date: { gte: from, lte: to } }],
-      },
-      select: SHIFT_SELECT,
-    });
+    const [rows, exceptionRows] = await Promise.all([
+      this.prisma.workShift.findMany({
+        where: {
+          userId,
+          OR: [{ dayOfWeek: { not: null } }, { date: { gte: from, lte: to } }],
+        },
+        select: SHIFT_SELECT,
+      }),
+      this.prisma.scheduleException.findMany({
+        where: { userId, startsOn: { lte: to }, endsOn: { gte: from } },
+        // A mais recente primeiro: e essa que vale em sobreposicao.
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
     const shifts = rows.map((row) => ({ row, view: toShiftView(row) }));
+    const rules: ExceptionRule[] = exceptionRows.map((e) => ({
+      id: e.id,
+      kind: e.kind,
+      shiftId: e.shiftId,
+      commitmentId: e.commitmentId,
+      startsOn: toDateKey(e.startsOn),
+      endsOn: toDateKey(e.endsOn),
+      startMinutes: e.startMinutes,
+      endMinutes: e.endMinutes,
+    }));
+    const holidays = ptHolidayKeysBetween(fromKey, toKey);
 
     const occurrences: WorkShiftOccurrence[] = [];
     for (let i = 0; i < spanDays; i++) {
@@ -318,17 +352,39 @@ export class WorkShiftsService {
         const matchesOneOff = row.date !== null && toDateKey(row.date) === key;
         if (!matchesRecurring && !matchesOneOff) continue;
 
+        // Excecoes e feriados so mexem nos turnos semanais: um pontual
+        // edita-se diretamente.
+        const resolved = matchesRecurring
+          ? resolveRecurringDay(
+              {
+                id: row.id,
+                commitmentId: row.commitmentId,
+                startMinutes: view.startMinutes,
+                endMinutes: view.endMinutes,
+                // Turno solto (sem local): sem a opcao, fica como sempre.
+                worksOnHolidays: row.commitment?.worksOnHolidays ?? true,
+              },
+              key,
+              rules,
+              holidays,
+            )
+          : null;
+        if (resolved?.skipped && !includeSkipped) continue;
+
         occurrences.push({
           shiftId: view.id,
           commitmentId: view.commitmentId,
           date: key,
-          startMinutes: view.startMinutes,
-          endMinutes: view.endMinutes,
+          startMinutes: resolved?.startMinutes ?? view.startMinutes,
+          endMinutes: resolved?.endMinutes ?? view.endMinutes,
           bufferMinutes: view.bufferMinutes,
           label: view.label,
           isRecurring: row.dayOfWeek !== null,
           address: view.address,
           commuteMode: view.commuteMode,
+          exceptionId: resolved?.exceptionId ?? null,
+          retimed: resolved?.retimed ?? false,
+          skipped: resolved?.skipped ?? null,
         });
       }
     }

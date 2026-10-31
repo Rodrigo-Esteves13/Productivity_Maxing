@@ -91,6 +91,24 @@ const IMPORT_CREATE_CONCURRENCY = 10;
 const SPACED_REVIEW_OFFSETS_DAYS = [1, 3, 7];
 const SPACED_REVIEW_MINUTES = 20;
 
+/**
+ * Entrega de um trabalho em duas fases: nunca depois da apresentacao
+ * (`date`). Comparado pelo dia, para "entregar e apresentar no mesmo dia"
+ * ser valido mesmo com horas diferentes.
+ */
+function checkedSubmissionDate(submission: string, presentation: string): Date {
+  const value = new Date(submission);
+  if (
+    value.toISOString().slice(0, 10) >
+    new Date(presentation).toISOString().slice(0, 10)
+  ) {
+    throw new BadRequestException(
+      'The hand-in date must be on or before the presentation date.',
+    );
+  }
+  return value;
+}
+
 @Injectable()
 export class TasksService {
   private readonly logger = new Logger(TasksService.name);
@@ -118,6 +136,7 @@ export class TasksService {
       priority,
       recurrenceUntil,
       availableFrom,
+      submissionDate,
       ...rest
     } = dto;
     // A Area tem de ser oficial ou privada DESTE user: o FK sozinho aceita
@@ -169,6 +188,9 @@ export class TasksService {
             ? { recurrenceUntil: new Date(recurrenceUntil) }
             : {}),
           ...(availableFrom ? { availableFrom: new Date(availableFrom) } : {}),
+          ...(submissionDate
+            ? { submissionDate: checkedSubmissionDate(submissionDate, date) }
+            : {}),
         },
         include: TASK_INCLUDE,
       });
@@ -328,6 +350,7 @@ export class TasksService {
       priority,
       recurrenceUntil,
       availableFrom,
+      submissionDate,
       ...rest
     } = dto;
 
@@ -432,7 +455,11 @@ export class TasksService {
     // realmente muda de/para COMPLETED. Isto é o que torna o streak fiel
     // guardamos o momento exato da conclusão em vez de usar a "date" (prazo)
     // como proxy.
-    let completedAtUpdate: { completedAt?: Date | null } = {};
+    let completedAtUpdate: {
+      completedAt?: Date | null;
+      onTime?: null;
+      submissionOnTime?: null;
+    } = {};
     let justCompleted = false;
     if (rest.progressStatus !== undefined) {
       const wasCompleted = existing.progressStatus === 'COMPLETED';
@@ -441,7 +468,13 @@ export class TasksService {
         completedAtUpdate = { completedAt: new Date() };
         justCompleted = true;
       } else if (wasCompleted && !willBeCompleted) {
-        completedAtUpdate = { completedAt: null };
+        // Reaberta: a resposta "acabaste a tempo?" deixa de valer e volta a
+        // ser perguntada quando se concluir de novo.
+        completedAtUpdate = {
+          completedAt: null,
+          onTime: null,
+          submissionOnTime: null,
+        };
       }
       // Se já estava COMPLETED e continua COMPLETED, não tocamos
       // não queremos "reiniciar" a data de conclusão original.
@@ -489,6 +522,17 @@ export class TasksService {
         // undefined = não mexe; null = já está disponível.
         ...(availableFrom !== undefined
           ? { availableFrom: availableFrom ? new Date(availableFrom) : null }
+          : {}),
+        // undefined = não mexe; null = volta a ser uma so fase.
+        ...(submissionDate !== undefined
+          ? {
+              submissionDate: submissionDate
+                ? checkedSubmissionDate(
+                    submissionDate,
+                    date ?? existing.date.toISOString(),
+                  )
+                : null,
+            }
           : {}),
       },
       include: TASK_INCLUDE,
@@ -828,7 +872,12 @@ export class TasksService {
 
     const result = await this.prisma.task.updateMany({
       where: { id: { in: ids }, userId, progressStatus: 'COMPLETED' },
-      data: { progressStatus, completedAt: null },
+      data: {
+        progressStatus,
+        completedAt: null,
+        onTime: null,
+        submissionOnTime: null,
+      },
     });
     const untouched = await this.prisma.task.updateMany({
       where: { id: { in: ids }, userId, progressStatus: { not: 'COMPLETED' } },

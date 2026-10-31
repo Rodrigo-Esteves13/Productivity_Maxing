@@ -4,6 +4,7 @@ import Input from '../../UI/Input';
 import ActionButton from '../../UI/ActionButton';
 import ErrorState from '../../UI/ErrorState';
 import ToggleChip from '../../UI/ToggleChip';
+import ToggleRow from '../../UI/ToggleRow';
 import { WEEKDAYS } from './shiftText';
 import AddressTravelFields from './AddressTravelFields';
 import type { CommitmentInput } from '../../../api/commitmentsService';
@@ -32,7 +33,7 @@ interface CommitmentFormProps {
   /** Local existente a editar; sem isto o formulario abre em branco. */
   initial?: Pick<
     Commitment,
-    'name' | 'commuteMinutes' | 'daysOff' | 'address' | 'commuteMode' | 'contractType' | 'endsOn'
+    'name' | 'commuteMinutes' | 'daysOff' | 'address' | 'commuteMode' | 'contractType' | 'endsOn' | 'worksOnHolidays'
   >;
   submitLabel: string;
   isSaving: boolean;
@@ -51,6 +52,7 @@ export default function CommitmentForm({ initial, submitLabel, isSaving, onSubmi
   const [daysOff, setDaysOff] = useState<number[]>(initial?.daysOff ?? []);
   const [contract, setContract] = useState<'' | ContractType>(initial?.contractType ?? '');
   const [endsOn, setEndsOn] = useState(initial?.endsOn?.slice(0, 10) ?? '');
+  const [worksOnHolidays, setWorksOnHolidays] = useState(initial?.worksOnHolidays ?? true);
   const [formError, setFormError] = useState('');
   // Contrato a prazo e estagio acabam num dia: a data final e obrigatoria.
   const needsEndDate = contract === 'FIXED_TERM' || contract === 'INTERNSHIP';
@@ -89,6 +91,7 @@ export default function CommitmentForm({ initial, submitLabel, isSaving, onSubmi
       daysOff,
       address: address.trim(),
       commuteMode: mode,
+      worksOnHolidays,
     });
   };
 
@@ -151,6 +154,13 @@ export default function CommitmentForm({ initial, submitLabel, isSaving, onSubmi
         </div>
         <p className="mt-1 text-xs text-neutral-500">{t('commitment.form.daysOffHelp')}</p>
       </fieldset>
+      <ToggleRow
+        variant="inline"
+        label={t('commitment.form.worksOnHolidays')}
+        description={t('commitment.form.worksOnHolidaysHelp')}
+        checked={worksOnHolidays}
+        onChange={setWorksOnHolidays}
+      />
       {formError && <ErrorState message={formError} />}
       <div className="flex gap-2">
         <ActionButton type="submit" disabled={isSaving}>

@@ -2,6 +2,7 @@ import {
   ArrayMaxSize,
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsEnum,
   IsInt,
   Matches,
@@ -83,6 +84,15 @@ export class CreateCommitmentDto {
     message: 'endsOn must be formatted YYYY-MM-DD.',
   })
   endsOn?: string | null;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'false = no work on Portuguese national holidays: weekly shifts on those days disappear. Default true.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  worksOnHolidays?: boolean;
 }
 
 export class UpdateCommitmentDto {
@@ -144,6 +154,15 @@ export class UpdateCommitmentDto {
     message: 'endsOn must be formatted YYYY-MM-DD.',
   })
   endsOn?: string | null;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'false = no work on Portuguese national holidays: weekly shifts on those days disappear. Default true.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  worksOnHolidays?: boolean;
 }
 
 // Calcula (e guarda) o trajeto casa -> morada deste local. A origem e SEMPRE

@@ -7,6 +7,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-30',
+    title: 'Holidays and days off, cancelled classes and two-phase assignments',
+    items: [
+      'Schedule: click a weekly shift in the week view to change only some days. Take a day off, work at another time for one day or until the end of the week, for that shift or for the whole place. Your study plan and Google Calendar follow the change.',
+      'Schedule: new Time off and changes card. Mark holidays for all your work or for one place, and see or remove every change in one list.',
+      'Public holidays: each place now has "I work on public holidays". Turn it off and weekly shifts disappear on Portuguese national holidays by themselves. The week view also shows the holiday name. You can still choose to work one holiday.',
+      'Teacher absent? Mark a class as cancelled from the week view. It stays struck through, does not count as missed in attendance, and the time is free in your study plan and calendar. If it happened after all, undo it and your attendance mark comes back.',
+      'Two-phase work: a task can have a hand-in date before the presentation (2 days before by default). Both show in the schedule, and the hand-in gets its own reminder the day before.',
+      'Finished on time? When you mark a task done after its date, the app asks whether it was actually on time (for two-phase work, the hand-in and the presentation). Your answer counts in Deadlines met, so presenting on the day and ticking it later no longer shows as late. For tasks you already finished, answer or change it in the task details.',
+      'Dashboard: new Time between tests card. Your next tests in a line from today, with how many days you get between each one, the tightest gap and the average.',
+      'Dashboard table: tasks are sorted by date by default, and Date TBD and Surprise tasks go to the end instead of sitting between real dates.',
+      'Friends: share your friend code as a link. Whoever opens it in the next 7 days sees who you are and becomes your friend with one tap. You can also paste a friend link into Add friend.',
+      'Friends: add someone by email, no code needed. You are never told whether the email has an account, and anyone can turn off requests by email in Social.',
+    ],
+  },
+  {
     date: '2026-10-28',
     title: 'Money page, sign in with your username and job contracts',
     items: [

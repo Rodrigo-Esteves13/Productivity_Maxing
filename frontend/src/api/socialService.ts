@@ -18,6 +18,8 @@ export interface RequestEntry extends PublicPerson {
 
 export interface SocialOverview {
   friendCode: string;
+  // Quem sabe o teu email pode enviar-te um pedido (sem codigo).
+  allowEmailFriendRequests: boolean;
   friends: FriendEntry[];
   incoming: RequestEntry[];
   outgoing: RequestEntry[];
@@ -71,6 +73,49 @@ export const decideFriendCodeRequest = async (id: string, approve: boolean, note
 
 export const sendFriendRequest = async (friendCode: string): Promise<SendRequestResult> =>
   (await api.post<SendRequestResult>('/social/requests', { friendCode })).data;
+
+/**
+ * Pedido a quem tem este email. A resposta e sempre a mesma, exista a conta
+ * ou nao (nao revela quem tem conta).
+ */
+export const sendEmailFriendRequest = async (email: string): Promise<void> => {
+  await api.post('/social/requests/email', { email });
+};
+
+export const setAllowEmailFriendRequests = async (allow: boolean): Promise<void> => {
+  await api.patch('/social/settings', { allowEmailFriendRequests: allow });
+};
+
+// Link de amizade assinado: valido 7 dias, quem o abre e aceita fica logo
+// amigo. Sem assinatura (ou expirado) vale como pedido normal.
+export interface FriendLink {
+  code: string;
+  expires: number;
+  token: string;
+}
+
+export type FriendLinkStatus = 'NONE' | 'FRIEND' | 'REQUESTED' | 'INCOMING' | 'SELF';
+
+export interface FriendLinkPreview {
+  person: { id: string; name: string | null; avatarUrl: string | null };
+  status: FriendLinkStatus;
+  instant: boolean;
+}
+
+export interface FriendLinkParams {
+  friendCode: string;
+  expires?: number;
+  token?: string;
+}
+
+export const createFriendLink = async (): Promise<FriendLink> =>
+  (await api.get<FriendLink>('/social/friend-link')).data;
+
+export const previewFriendLink = async (params: FriendLinkParams): Promise<FriendLinkPreview> =>
+  (await api.get<FriendLinkPreview>('/social/friend-link/preview', { params })).data;
+
+export const acceptFriendLink = async (params: FriendLinkParams): Promise<SendRequestResult> =>
+  (await api.post<SendRequestResult>('/social/friend-link/accept', params)).data;
 
 /** Pedido sem codigo a alguem da mesma turma. */
 export const sendClassmateFriendRequest = async (turmaId: string, userId: string): Promise<SendRequestResult> =>

@@ -4,6 +4,7 @@ import { useCalendarStatus } from '../../hooks/useCalendarStatus';
 import { useDurationPrediction } from '../../hooks/useDurationPrediction';
 import TitleDateAreaFields from './fields/TitleDateAreaFields';
 import DifficultyTypeFields from './fields/DifficultyTypeFields';
+import SubmissionDateField from './fields/SubmissionDateField';
 import ReadinessFields from './fields/ReadinessFields';
 import { hasFirmDate } from '../../lib/taskReadiness';
 import { useI18n } from '../../i18n/useI18n';
@@ -31,6 +32,8 @@ export interface TaskFormFieldValues {
   isBlocked: boolean;
   // "YYYY-MM-DD" ou "" (ja disponivel).
   availableFrom: string;
+  // Trabalho em duas fases: dia da entrega, "" = uma so fase.
+  submissionDate: string;
   priority: string;
   areaId: string;
   topics: string;
@@ -138,6 +141,17 @@ export default function TaskFormFields({
           }
         }}
       />
+
+      {/* Entrega antes da apresentacao: so com data marcada (num palpite
+          nao ha "a tempo" para perguntar). */}
+      {!dateIsGuess && (
+        <SubmissionDateField
+          idPrefix={idPrefix}
+          submissionDate={values.submissionDate}
+          presentationDate={values.date}
+          onChange={(v) => onChange('submissionDate', v)}
+        />
+      )}
 
       <DifficultyTypeFields
         idPrefix={idPrefix}

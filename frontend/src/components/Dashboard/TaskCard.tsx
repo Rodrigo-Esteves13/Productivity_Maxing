@@ -16,7 +16,7 @@ import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus
 import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
-import { formatTaskDue } from '../../lib/taskReadiness';
+import { formatHandIn, formatTaskDue } from '../../lib/taskReadiness';
 
 interface TaskCardProps {
   task: Task;
@@ -117,6 +117,9 @@ function TaskCard({
         <div>
           <div className="text-[10px] uppercase text-neutral-500">{t('ui.date')}</div>
           <div className="text-xs text-neutral-300 mt-0.5">{formatTaskDue(task, lang)}</div>
+          {formatHandIn(task, lang) && (
+            <div className="text-xs text-neutral-400">{formatHandIn(task, lang)}</div>
+          )}
         </div>
         <div>
           <div className="text-[10px] uppercase text-neutral-500">{t('ui.weight')}</div>

@@ -33,6 +33,7 @@ export type PushMessageKey =
   | 'turmaPackShared'
   | 'turmaDeadlineAdded'
   | 'turmaDeadlineMoved'
+  | 'friendLinkJoined'
   | 'taskPackUpdated'
   | 'feedbackReplied'
   | 'feedbackRejected'
@@ -47,6 +48,10 @@ interface Template {
 // {name} = pessoa, {title} = título da entrada ou da task, {count} = quantas mais.
 const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
   en: {
+    friendLinkJoined: {
+      title: 'New friend',
+      body: '{name} used your friend link. You are now friends.',
+    },
     shareAccessRequested: {
       title: 'Access request',
       body: '{name} wants to open "{title}".',
@@ -149,6 +154,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
   },
   pt: {
+    friendLinkJoined: {
+      title: 'Novo amigo',
+      body: '{name} usou o teu link de amizade. Agora são amigos.',
+    },
     shareAccessRequested: {
       title: 'Pedido de acesso',
       body: '{name} quer abrir "{title}".',
@@ -251,6 +260,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
   },
   es: {
+    friendLinkJoined: {
+      title: 'Nuevo amigo',
+      body: '{name} usó tu enlace de amistad. Ahora sois amigos.',
+    },
     shareAccessRequested: {
       title: 'Solicitud de acceso',
       body: '{name} quiere abrir "{title}".',
@@ -353,6 +366,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
   },
   zh: {
+    friendLinkJoined: {
+      title: '新好友',
+      body: '{name} 通过你的好友链接添加了你，你们现在是好友了。',
+    },
     shareAccessRequested: {
       title: '访问请求',
       body: '{name} 想打开“{title}”。',
@@ -443,6 +460,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
   },
   ja: {
+    friendLinkJoined: {
+      title: '新しい友達',
+      body: '{name} があなたの友達リンクを使いました。友達になりました。',
+    },
     shareAccessRequested: {
       title: 'アクセスのリクエスト',
       body: '{name} さんが「{title}」を開こうとしています。',
@@ -545,6 +566,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
   },
   ko: {
+    friendLinkJoined: {
+      title: '새 친구',
+      body: '{name}님이 친구 링크를 사용했어요. 이제 친구예요.',
+    },
     shareAccessRequested: {
       title: '접근 요청',
       body: '{name}님이 "{title}"을(를) 열고 싶어 합니다.',
@@ -647,6 +672,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
   },
   fr: {
+    friendLinkJoined: {
+      title: 'Nouvel ami',
+      body: '{name} a utilisé ton lien d’ami. Vous êtes maintenant amis.',
+    },
     shareAccessRequested: {
       title: "Demande d'accès",
       body: '{name} souhaite ouvrir "{title}".',
@@ -749,6 +778,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
   },
   de: {
+    friendLinkJoined: {
+      title: 'Neuer Freund',
+      body: '{name} hat deinen Freundeslink benutzt. Ihr seid jetzt befreundet.',
+    },
     shareAccessRequested: {
       title: 'Zugriffsanfrage',
       body: '{name} möchte "{title}" öffnen.',

@@ -11,6 +11,7 @@ import MonthGrid from '../components/Schedule/MonthGrid';
 import ImportScheduleModal from '../components/Schedule/ImportScheduleModal';
 import StudyPlanCard from '../components/Study/StudyPlanCard';
 import CommitmentsCard from '../components/Schedule/CommitmentsCard';
+import ScheduleChangesCard from '../components/Schedule/ScheduleChangesCard';
 import ScheduleSyncCard from '../components/Schedule/ScheduleSyncCard';
 import CalendarFeedCard from '../components/Schedule/CalendarFeedCard';
 import { UploadIcon } from '../components/UI/Icons';
@@ -107,6 +108,7 @@ export default function Schedule() {
             initialDate={anchorDate}
             viewToggle={viewToggle}
             onAttendanceChanged={handleAttendanceChanged}
+            onScheduleChanged={handleScheduleChanged}
           />
         ) : (
           <MonthGrid
@@ -127,6 +129,7 @@ export default function Schedule() {
               <StudyPlanCard />
             </div>
             <CommitmentsCard onChanged={handleScheduleChanged} />
+            <ScheduleChangesCard refreshKey={scheduleVersion} onChanged={handleScheduleChanged} />
           </div>
           <div className="space-y-6">
             <AttendanceCard refreshKey={scheduleVersion + attendanceVersion} />

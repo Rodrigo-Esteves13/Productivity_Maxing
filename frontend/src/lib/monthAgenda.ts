@@ -4,6 +4,7 @@ import { AGENDA_TONE_CLASSES, AGENDA_TONE_LABEL_KEY, getAgendaTone, type AgendaT
 import { formatClock } from './timeFormat';
 import { hasFirmDate } from './taskReadiness';
 import { matchesAreaName } from './subjectMatch';
+import { translateNow } from '../i18n/translate';
 
 // Vista mensal do horario: cada dia vira uma lista de "chips". Prazos de
 // tasks vem primeiro (testes e exames a cabeca, e o que interessa ver na
@@ -91,7 +92,17 @@ export function buildDeadlineChips(tasks: Task[]): Map<string, DeadlineChip[]> {
   const result = new Map<string, DeadlineChip[]>();
   // Palpites (data por marcar/surpresa) nao ocupam um dia no calendario.
   for (const task of tasks) {
-    if (hasFirmDate(task)) pushTo(result, task.date.slice(0, 10), taskChip(task));
+    if (!hasFirmDate(task)) continue;
+    pushTo(result, task.date.slice(0, 10), taskChip(task));
+    // Trabalho em duas fases: a entrega tambem ocupa o seu dia.
+    if (task.submissionDate) {
+      pushTo(result, task.submissionDate.slice(0, 10), {
+        ...taskChip(task),
+        id: `handin-${task.id}`,
+        tone: 'deadline',
+        label: translateNow('twoPhase.handInChip', { title: task.title }),
+      });
+    }
   }
   for (const chips of result.values()) chips.sort((a, b) => deadlineRank(a) - deadlineRank(b));
   return result;

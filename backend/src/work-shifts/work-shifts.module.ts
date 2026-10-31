@@ -7,11 +7,22 @@ import { WorkShiftsController } from './work-shifts.controller';
 import { WorkShiftCopyService } from './work-shift-copy.service';
 import { CommitmentsService } from './commitments.service';
 import { CommitmentsController } from './commitments.controller';
+import { ScheduleExceptionsService } from './schedule-exceptions.service';
+import { ScheduleExceptionsController } from './schedule-exceptions.controller';
 
 @Module({
   imports: [PrismaModule, AuthModule, MapsModule],
-  controllers: [WorkShiftsController, CommitmentsController],
-  providers: [WorkShiftsService, WorkShiftCopyService, CommitmentsService],
+  controllers: [
+    WorkShiftsController,
+    CommitmentsController,
+    ScheduleExceptionsController,
+  ],
+  providers: [
+    WorkShiftsService,
+    WorkShiftCopyService,
+    CommitmentsService,
+    ScheduleExceptionsService,
+  ],
   // StudyPlanModule expande os turnos para calcular tempo livre.
   exports: [WorkShiftsService],
 })
