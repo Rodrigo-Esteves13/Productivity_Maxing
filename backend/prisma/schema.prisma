@@ -450,6 +450,7 @@ model User {
   areaScheduleLinks              AreaScheduleLink[]
   areaInterests                  AreaInterest[]
   areaTeacherNotes               AreaTeacherNote[]
+  areaRatings                    AreaRating[]
   notebookEntries                NotebookEntry[]
   notebookShares                 NotebookShare[]
   notebookShareAccessRequests    NotebookShareAccessRequest[]
@@ -746,6 +747,7 @@ model Area {
   scheduleLinks   AreaScheduleLink[]
   interests       AreaInterest[]
   teacherNotes    AreaTeacherNote[]
+  ratings         AreaRating[]
   notebookEntries NotebookEntry[]
   gradeComponents GradeComponent[]
   // Override das regras de aprovacao desta cadeira, por user (N46).
@@ -1267,6 +1269,26 @@ model AreaTeacherNote {
   teacherName String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area Area @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, areaId])
+  @@index([areaId])
+}
+
+/// Avaliacao PRIVADA do aluno (N48): nota 1-5 ao docente e quanto gostou da
+/// cadeira. Por user (Area e catalogo partilhado), nunca exposta a outros.
+/// Usada so para estatistica sobre os dados da propria pessoa.
+model AreaRating {
+  id            String   @id @default(uuid())
+  userId        String
+  areaId        String
+  // 1-5, null = sem avaliacao. Uma linha com os dois a null e apagada.
+  teacherRating Int?
+  courseLiking  Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   area Area @relation(fields: [areaId], references: [id], onDelete: Cascade)

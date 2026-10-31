@@ -80,6 +80,12 @@ export default function PrivacyPolicy() {
             It is included in your data export and deleted with your account
           </li>
           <li>
+            Teacher and course ratings (optional): you can give your teachers and courses a private rating
+            from 1 to 5. It is visible only to you, never shared with classmates, Turmas or anyone you
+            share with, and used only to show your own statistics. It is included in your data export and
+            deleted with your account
+          </li>
+          <li>
             Shared notebook links: for each link you create, I count how many times it was opened and
             by whom. Visitors who are signed in are shown to you by name; visitors who are not signed in
             are only counted, using a one-way hash of their network address and browser (the address

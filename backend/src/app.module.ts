@@ -31,6 +31,7 @@ import { GradeComponentsModule } from './grade-components/grade-components.modul
 import { ApprovalRulesModule } from './approval-rules/approval-rules.module';
 import { AreaInterestsModule } from './area-interests/area-interests.module';
 import { AreaTeachersModule } from './area-teachers/area-teachers.module';
+import { AreaRatingsModule } from './area-ratings/area-ratings.module';
 import { CourseRiskModule } from './course-risk/course-risk.module';
 import { BannedIpsModule } from './banned-ips/banned-ips.module';
 import { AppealsModule } from './appeals/appeals.module';
@@ -86,6 +87,7 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     ApprovalRulesModule,
     AreaInterestsModule,
     AreaTeachersModule,
+    AreaRatingsModule,
     CourseRiskModule,
     BannedIpsModule,
     AppealsModule,

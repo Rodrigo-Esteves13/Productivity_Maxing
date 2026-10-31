@@ -28,6 +28,7 @@ import { devices } from './devices';
 import { approvalRules } from './approvalRules';
 import { risk } from './risk';
 import { teacher } from './teacher';
+import { ratings } from './ratings';
 
 export const pt: Record<string, string> = {
   ...packs,
@@ -60,4 +61,5 @@ export const pt: Record<string, string> = {
   ...approvalRules,
   ...risk,
   ...teacher,
+  ...ratings,
 };

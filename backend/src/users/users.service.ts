@@ -458,31 +458,43 @@ export class UsersService {
     ]);
 
     // N45: nomes de docentes que a pessoa anotou (privados, so dela) e N46:
-    // as regras de aprovacao que gravou (por programa ou por cadeira).
-    const [areaTeacherNotes, approvalRuleSets] = await Promise.all([
-      this.prisma.areaTeacherNote.findMany({
-        where: { userId: id },
-        select: { areaId: true, teacherName: true, updatedAt: true },
-      }),
-      this.prisma.approvalRuleSet.findMany({
-        where: { userId: id },
-        select: {
-          programId: true,
-          areaId: true,
-          presetKey: true,
-          scaleMin: true,
-          scaleMax: true,
-          passMark: true,
-          rounding: true,
-          componentMinGrade: true,
-          secondThreshold: true,
-          maxBelowSecondThreshold: true,
-          hasExamTrack: true,
-          hasResitTrack: true,
-          updatedAt: true,
-        },
-      }),
-    ]);
+    // as regras de aprovacao que gravou (por programa ou por cadeira). N48:
+    // as avaliacoes pessoais de docente e cadeira.
+    const [areaTeacherNotes, areaRatings, approvalRuleSets] = await Promise.all(
+      [
+        this.prisma.areaTeacherNote.findMany({
+          where: { userId: id },
+          select: { areaId: true, teacherName: true, updatedAt: true },
+        }),
+        this.prisma.areaRating.findMany({
+          where: { userId: id },
+          select: {
+            areaId: true,
+            teacherRating: true,
+            courseLiking: true,
+            updatedAt: true,
+          },
+        }),
+        this.prisma.approvalRuleSet.findMany({
+          where: { userId: id },
+          select: {
+            programId: true,
+            areaId: true,
+            presetKey: true,
+            scaleMin: true,
+            scaleMax: true,
+            passMark: true,
+            rounding: true,
+            componentMinGrade: true,
+            secondThreshold: true,
+            maxBelowSecondThreshold: true,
+            hasExamTrack: true,
+            hasResitTrack: true,
+            updatedAt: true,
+          },
+        }),
+      ],
+    );
 
     // Area é um catálogo global (ver AreasService.findAll), não tem
     // userId - não dá para filtrar diretamente. O relevante para o
@@ -497,6 +509,7 @@ export class UsersService {
         .filter((areaId): areaId is string => areaId !== null),
       ...notebookEntries.map((n) => n.areaId),
       ...areaTeacherNotes.map((n) => n.areaId),
+      ...areaRatings.map((r) => r.areaId),
       ...approvalRuleSets
         .map((r) => r.areaId)
         .filter((areaId): areaId is string => areaId !== null),
@@ -512,6 +525,7 @@ export class UsersService {
       exportedAt: new Date().toISOString(),
       profile: user,
       areaTeacherNotes,
+      areaRatings,
       approvalRuleSets,
       tasks,
       linkedProviders: identities,

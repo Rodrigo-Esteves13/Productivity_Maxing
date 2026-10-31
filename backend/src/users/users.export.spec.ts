@@ -36,6 +36,7 @@ describe('UsersService.exportUserData', () => {
         agentConfig: null,
         pushSubscriptions: [],
         areaTeacherNotes: [],
+        areaRatings: [],
         approvalRuleSets: [],
       }),
     );
@@ -80,5 +81,46 @@ describe('UsersService.exportUserData', () => {
     const where = calls.map(([args]) => args.where).find((w) => w.id);
     expect(where?.id?.in.sort()).toEqual(['area-note', 'area-rule']);
     expect(data.approvalRuleSets).toHaveLength(2);
+  });
+
+  it('exports only the caller area ratings and the areas behind them (N48)', async () => {
+    const areaFindMany = jest.fn().mockResolvedValue([]);
+    const ratingFindMany = jest.fn().mockResolvedValue([
+      {
+        areaId: 'area-rated',
+        teacherRating: 4,
+        courseLiking: null,
+        updatedAt: new Date(0),
+      },
+    ]);
+    const empty = {
+      findMany: jest.fn().mockResolvedValue([]),
+      findUnique: jest.fn().mockResolvedValue(null),
+      findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'user-1' }),
+    };
+    const models: Record<string, unknown> = {
+      area: { ...empty, findMany: areaFindMany },
+      areaRating: { ...empty, findMany: ratingFindMany },
+    };
+    const prisma = new Proxy(
+      {},
+      { get: (_t, key: string) => models[key] ?? empty },
+    );
+    const none = {} as never;
+    const service = new UsersService(prisma as PrismaService, none, none, none);
+
+    const data = await service.exportUserData('user-1');
+
+    expect(ratingFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: 'user-1' } }),
+    );
+    expect(data.areaRatings).toEqual([
+      expect.objectContaining({ areaId: 'area-rated', teacherRating: 4 }),
+    ]);
+    const calls = areaFindMany.mock.calls as [
+      { where: { id?: { in: string[] } } },
+    ][];
+    const where = calls.map(([args]) => args.where).find((w) => w.id);
+    expect(where?.id?.in).toEqual(['area-rated']);
   });
 });

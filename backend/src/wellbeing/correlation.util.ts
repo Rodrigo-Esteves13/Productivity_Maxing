@@ -27,13 +27,12 @@ function mean(values: number[]): number {
   return values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
-// Correlacao de Pearson entre pares (x, y). Diz "dados insuficientes" ou
-// "sem variacao" em vez de inventar um numero.
-export function pearson(pairs: [number, number][]): CorrelationResult {
-  const sampleSize = pairs.length;
-  if (sampleSize < MIN_CORRELATION_SAMPLES) {
-    return { kind: 'not_enough_data', sampleSize };
-  }
+/**
+ * Coeficiente de Pearson cru (sem arredondar, sem amostra minima), ou null
+ * se um dos lados nao varia. Partilhado com o Spearman de N48 (area-ratings).
+ */
+export function pearsonCoefficient(pairs: [number, number][]): number | null {
+  if (pairs.length === 0) return null;
   const xs = pairs.map(([x]) => x);
   const ys = pairs.map(([, y]) => y);
   const mx = mean(xs);
@@ -46,10 +45,22 @@ export function pearson(pairs: [number, number][]): CorrelationResult {
     vx += (x - mx) ** 2;
     vy += (y - my) ** 2;
   }
-  if (Math.sqrt(vx) < MIN_STD || Math.sqrt(vy) < MIN_STD) {
+  if (Math.sqrt(vx) < MIN_STD || Math.sqrt(vy) < MIN_STD) return null;
+  return cov / Math.sqrt(vx * vy);
+}
+
+// Correlacao de Pearson entre pares (x, y). Diz "dados insuficientes" ou
+// "sem variacao" em vez de inventar um numero.
+export function pearson(pairs: [number, number][]): CorrelationResult {
+  const sampleSize = pairs.length;
+  if (sampleSize < MIN_CORRELATION_SAMPLES) {
+    return { kind: 'not_enough_data', sampleSize };
+  }
+  const coefficient = pearsonCoefficient(pairs);
+  if (coefficient === null) {
     return { kind: 'no_variation', sampleSize };
   }
-  const r = Math.round((cov / Math.sqrt(vx * vy)) * 100) / 100;
+  const r = Math.round(coefficient * 100) / 100;
   const strength =
     STRENGTH_THRESHOLDS.find((t) => Math.abs(r) >= t.min)?.label ?? 'none';
   return { kind: 'ok', sampleSize, r, strength };

@@ -98,6 +98,7 @@ export const SITE_PAGES: SitePage[] = [
     section: 'study',
     related: [
       { to: '/report-card', labelKey: 'related.areas.reportCard' },
+      { to: '/ratings', labelKey: 'ratings.related.stats' },
       { to: '/notebook', labelKey: 'related.areas.notebook' },
       { to: '/tasks', labelKey: 'related.areas.tasks' },
     ],
@@ -110,6 +111,16 @@ export const SITE_PAGES: SitePage[] = [
     related: [
       { to: '/classes', labelKey: 'related.reportCard.classes' },
       { to: '/tasks', labelKey: 'related.reportCard.tasks' },
+    ],
+  },
+  {
+    path: '/ratings',
+    labelKey: 'ratings.title',
+    section: 'study',
+    parent: '/areas',
+    related: [
+      { to: '/areas', labelKey: 'ratings.related.areas' },
+      { to: '/report-card', labelKey: 'ratings.related.reportCard' },
     ],
   },
   {

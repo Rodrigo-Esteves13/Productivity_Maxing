@@ -136,6 +136,12 @@ const NAV_COMMANDS: NavCommand[] = [
     keywords: ['medication history', 'historico', 'adherence', 'weekly', 'monthly', 'semanal', 'mensal'],
   },
   {
+    id: 'nav-ratings',
+    labelKey: 'ratings.title',
+    path: '/ratings',
+    keywords: ['ratings', 'teacher', 'professor', 'docente', 'like', 'liked', 'gosto', 'course', 'cadeira', 'feelings', 'correlation', 'correlacao', 'correlação', 'quadrant', 'grades'],
+  },
+  {
     id: 'nav-report-card',
     labelKey: 'reportCard.title',
     path: '/report-card',
