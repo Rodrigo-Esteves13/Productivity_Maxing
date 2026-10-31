@@ -1,4 +1,5 @@
 import { LoggerService, LogLevel } from '@nestjs/common';
+import { getRequestId } from '../request-context';
 
 interface LogLine {
   timestamp: string;
@@ -10,6 +11,9 @@ interface LogLine {
   // (Render's log viewer, or anything ingesting Render's log stream
   // later - Datadog, Axiom, etc.) can filter/search on it directly.
   trace?: string;
+  // Preenchido pelo requestIdMiddleware; ausente em logs fora de pedidos
+  // (arranque, shutdown).
+  requestId?: string;
 }
 
 function write(line: LogLine): void {
@@ -18,7 +22,7 @@ function write(line: LogLine): void {
   // locally too. Errors/warnings go to stderr, everything else to stdout -
   // same split Node's console.error/console.log already give you, kept
   // intentionally rather than writing everything to one stream.
-  const json = JSON.stringify(line);
+  const json = JSON.stringify({ ...line, requestId: getRequestId() });
   if (line.level === 'error' || line.level === 'warn') {
     process.stderr.write(json + '\n');
   } else {

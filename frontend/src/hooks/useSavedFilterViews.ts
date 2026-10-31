@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { DashboardFiltersState } from '../components/Dashboard/dashboardFilters.types';
+import { EMPTY_DASHBOARD_FILTERS, type DashboardFiltersState } from '../components/Dashboard/dashboardFilters.types';
 
 export interface SavedFilterView {
   id: string;
@@ -13,7 +13,10 @@ function loadViews(): SavedFilterView[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    return JSON.parse(raw);
+    // Vistas gravadas antes de existirem campos novos (esforco, prontidao)
+    // ficam sem eles: completa com os vazios.
+    const parsed = JSON.parse(raw) as SavedFilterView[];
+    return parsed.map((view) => ({ ...view, filters: { ...EMPTY_DASHBOARD_FILTERS, ...view.filters } }));
   } catch {
     return [];
   }

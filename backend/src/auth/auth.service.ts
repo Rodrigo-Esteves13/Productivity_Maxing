@@ -1,5 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { ApiKeyScope, CommuteMode, Provider, Role, User } from '@prisma/client';
+import {
+  ApiKeyScope,
+  CommuteMode,
+  Provider,
+  Role,
+  SessionRevokeReason,
+  User,
+} from '@prisma/client';
 import 'multer';
 import { PrismaService } from '../prisma/prisma.service';
 import { SessionStateService } from '../account-status/session-state.service';
@@ -14,7 +21,10 @@ import {
 } from './services/password-auth.service';
 import { EmailVerificationService } from './services/email-verification.service';
 import { TwoFactorService } from './services/two-factor.service';
-import { SessionTokenService } from './services/session-token.service';
+import {
+  SessionTokenService,
+  type AccessSessionStatus,
+} from './services/session-token.service';
 import { SupabaseClientsService } from './services/supabase-clients.service';
 import { releaseTurmasOfDeletedUser } from '../turmas/turma-account-cleanup.util';
 import { removeTaskAttachmentFiles } from '../tasks/task-attachments.service';
@@ -27,6 +37,8 @@ import { removeNotebookFilesOfDeletedUser } from '../notebook/notebook-account-c
  * - PasswordAuthService: email + password (Supabase Auth), recuperacao
  * - AvatarService: foto de perfil
  * - SessionTokenService: JWT, CSRF, state do "ligar conta"
+ * - UserSessionsService: sessoes por dispositivo e refresh tokens (usado
+ *   diretamente pelo AuthController)
  * - ApiKeyService: API Keys
  * - AccountGuardService: regras de conta banida/suspensa (usado pelos dois
  *   fluxos de login)
@@ -293,16 +305,23 @@ export class AuthService {
 
   // --- Tokens de sessao, CSRF e state OAuth (ver services/session-token.service.ts) ---
 
-  verifyAccessTokenCookie(token: string | undefined): JwtPayload | null {
-    return this.tokens.verifyAccessTokenCookie(token);
+  verifyAccessTokenCookie(
+    token: string | undefined,
+    options?: { ignoreExpiration?: boolean },
+  ): JwtPayload | null {
+    return this.tokens.verifyAccessTokenCookie(token, options);
   }
 
-  issueJwt(user: User): string {
-    return this.tokens.issueJwt(user);
+  issueJwt(user: User, sessionId: string): string {
+    return this.tokens.issueJwt(user, sessionId);
   }
 
-  revokeAllSessions(userId: string): Promise<User> {
-    return this.tokens.revokeAllSessions(userId);
+  revokeAllSessions(
+    userId: string,
+    keepSessionId?: string,
+    reason?: SessionRevokeReason,
+  ): Promise<User> {
+    return this.tokens.revokeAllSessions(userId, keepSessionId, reason);
   }
 
   generateCsrfToken(): string {
@@ -317,8 +336,12 @@ export class AuthService {
     state: string,
     provider: Provider,
     sessionCookie: string | undefined,
-  ): string {
+  ): Promise<string> {
     return this.tokens.consumeLinkState(state, provider, sessionCookie);
+  }
+
+  getAccessSessionStatus(payload: JwtPayload): Promise<AccessSessionStatus> {
+    return this.tokens.getAccessSessionStatus(payload);
   }
 
   // --- API Keys (ver services/api-key.service.ts) ---

@@ -2,7 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { getFrontendUrl, getMailFromName } from '../config/app.config';
 import { MS_PER_SECOND } from '../common/time.constants';
-import { deadlineEmailText, fillMailTemplate } from './mail-messages';
+import {
+  deadlineEmailText,
+  fillMailTemplate,
+  MAIL_DATE_LOCALE,
+  newDeviceEmailText,
+  resolveMailLanguage,
+} from './mail-messages';
 
 // Portas com TLS implicito. 2465 e a alternativa da Resend para hosts que
 // bloqueiam as portas SMTP normais (o Render gratuito bloqueia 25/465/587;
@@ -224,6 +230,76 @@ export class MailService {
       return true;
     } catch (err) {
       this.logger.error('Erro ao enviar lembrete de prazos', err);
+      return false;
+    }
+  }
+
+  /**
+   * Alerta de inicio de sessao num dispositivo novo (ver NewDeviceAlertService).
+   * O IP chega ja mascarado e nunca se mostra completo. Nunca lanca: devolve
+   * se o SMTP aceitou, so para o chamador poder registar.
+   */
+  async sendNewDeviceLoginEmail(
+    to: string,
+    device: {
+      browser: string;
+      os: string;
+      ipMasked: string | null;
+      at: Date;
+    },
+    devicesLink: string,
+    lang = 'en',
+  ): Promise<boolean> {
+    const transporter = this.getTransporter();
+    if (!transporter) return false;
+    const text = newDeviceEmailText(lang);
+
+    const fromEmail = process.env.SMTP_FROM_EMAIL ?? process.env.SMTP_USER;
+    const fromName = getMailFromName();
+    const when = new Intl.DateTimeFormat(
+      MAIL_DATE_LOCALE[resolveMailLanguage(lang)],
+      { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' },
+    ).format(device.at);
+    const rows = [
+      [
+        text.deviceLabel,
+        fillMailTemplate(text.deviceLine, {
+          browser: device.browser,
+          os: device.os,
+        }),
+      ],
+      [text.networkLabel, device.ipMasked ?? text.unknown],
+      [text.timeLabel, `${when} UTC`],
+    ]
+      .map(
+        ([label, value]) =>
+          `<strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}`,
+      )
+      .join('<br />');
+
+    try {
+      await transporter.sendMail({
+        from: `"${fromName}" <${fromEmail}>`,
+        to,
+        subject: text.subject,
+        html: renderActionEmail({
+          title: text.title,
+          intro: `${escapeHtml(text.intro)}<br /><br />${rows}`,
+          buttonLabel: text.button,
+          link: devicesLink,
+          footer: text.footer,
+          frontendUrl: getFrontendUrl(),
+        }),
+      });
+      this.logger.log(
+        `Alerta de novo dispositivo enviado para ${maskEmail(to)}`,
+      );
+      return true;
+    } catch (err) {
+      this.logger.error(
+        `Erro ao enviar alerta de novo dispositivo para ${maskEmail(to)}`,
+        err,
+      );
       return false;
     }
   }

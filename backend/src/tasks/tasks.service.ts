@@ -40,6 +40,8 @@ import {
   assertWeightFits,
   loadUsedWeight,
 } from '../grade-components/weight-budget';
+import type { CursorPaginationDto } from '../common/dto/cursor-pagination.dto';
+import { listOrPage, type ListMeta } from '../common/pagination.util';
 import { TaskAttachmentsService } from './task-attachments.service';
 import {
   ACTIONABLE_DEADLINE_WHERE,
@@ -222,7 +224,12 @@ export class TasksService {
     }
   }
 
-  async findAll(userId: string, periodId?: string) {
+  async findAll(
+    userId: string,
+    periodId?: string,
+    page: CursorPaginationDto = {},
+    meta?: ListMeta,
+  ) {
     // 'all' = vista agregada ("Ver todos os períodos") - sem filtro nenhum.
     // Omitido = usa o período ativo do user (declutter automático, é o que
     // resolve a Fase 2 sem qualquer breaking change para quem ainda chama
@@ -239,17 +246,35 @@ export class TasksService {
       where.periodId = await this.periodsService.resolveActivePeriodId(userId);
     }
 
-    const tasks = await this.prisma.task.findMany({
-      where,
-      include: TASK_INCLUDE,
-      // sortOrder primeiro: é a ordem manual (drag-and-drop no TaskGrid,
-      // ver reorder() abaixo). `date` como desempate cobre tasks que
-      // nunca foram arrastadas (todas com sortOrder=0 por omissão) -
-      // sem isto, ficariam na ordem arbitrária em que o Postgres as
-      // devolvesse.
-      orderBy: [{ sortOrder: 'asc' }, { date: 'asc' }],
-    });
-    return tasks.map((t) => this.toResponse(t));
+    const result = await listOrPage(
+      (args) =>
+        this.prisma.task.findMany({
+          where,
+          include: TASK_INCLUDE,
+          // sortOrder primeiro: é a ordem manual (drag-and-drop no TaskGrid,
+          // ver reorder() abaixo). `date` como desempate cobre tasks que
+          // nunca foram arrastadas (todas com sortOrder=0 por omissão) -
+          // sem isto, ficariam na ordem arbitrária em que o Postgres as
+          // devolvesse. `id` fecha o desempate (obrigatório p/ cursor).
+          orderBy: [{ sortOrder: 'asc' }, { date: 'asc' }, { id: 'asc' }],
+          ...args,
+        }),
+      page,
+      {
+        meta,
+        // Cursor so vale se a task existe no mesmo scope (user + periodo).
+        cursorExists: async (id) =>
+          !!(await this.prisma.task.findFirst({
+            where: { ...where, id },
+            select: { id: true },
+          })),
+      },
+    );
+    if (Array.isArray(result)) return result.map((t) => this.toResponse(t));
+    return {
+      items: result.items.map((t) => this.toResponse(t)),
+      nextCursor: result.nextCursor,
+    };
   }
 
   /**
@@ -913,6 +938,18 @@ export class TasksService {
       data: { progressStatus },
     });
     return { count: result.count + untouched.count };
+  }
+
+  /**
+   * Bulk set/clear effort. Ownership via userId in `where`: ids of other
+   * users simply do not match (same outcome as bulkUpdateStatus).
+   */
+  async bulkUpdateEffort(userId: string, ids: string[], effort: Effort | null) {
+    const result = await this.prisma.task.updateMany({
+      where: { id: { in: ids }, userId },
+      data: { effort },
+    });
+    return { count: result.count };
   }
 
   /** Bulk reschedule - ver bulkRescheduleTasks (mesma regra de postponedCount do update()). */

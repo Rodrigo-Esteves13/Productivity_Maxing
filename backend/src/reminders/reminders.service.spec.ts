@@ -2,9 +2,11 @@ import type { PersonalNotesService } from '../personal-notes/personal-notes.serv
 import type { PadsService } from '../pads/pads.service';
 import type { MedicationsService } from '../wellbeing/medications.service';
 import { RemindersService } from './reminders.service';
+import type { AbsenceLimitRemindersService } from './absence-limit-reminders.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { MailService } from '../mail/mail.service';
 import type { PushService } from '../push/push.service';
+import { REVOKED_SESSION_RETENTION_MS } from '../auth/session.constants';
 
 const NOW = new Date('2026-10-19T10:00:00.000Z');
 // Task com hora, a 2h do NOW: o lembrete (24h antes) ja pode sair.
@@ -40,6 +42,7 @@ function setup(
   const prisma = {
     task: { findMany: jest.fn().mockResolvedValue(tasks) },
     sentReminder: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    userSession: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
   };
   const mail = {
     sendDeadlineReminderEmail: jest.fn().mockResolvedValue(opts.mailOk ?? true),
@@ -60,6 +63,9 @@ function setup(
     {
       sendDueReminders: jest.fn().mockResolvedValue(0),
     } as unknown as PersonalNotesService,
+    {
+      sendWeeklyReminders: jest.fn().mockResolvedValue(0),
+    } as unknown as AbsenceLimitRemindersService,
   );
   return { service, prisma, mail, push };
 }
@@ -102,7 +108,9 @@ describe('RemindersService.run', () => {
       remindersSent: 1,
       medicationUsersPushed: 0,
       personalRemindersSent: 0,
+      absenceLimitUsersPushed: 0,
       expiredPadsDeleted: 0,
+      staleSessionsDeleted: 0,
     });
   });
 
@@ -151,7 +159,9 @@ describe('RemindersService.run', () => {
       remindersSent: 1,
       medicationUsersPushed: 0,
       personalRemindersSent: 0,
+      absenceLimitUsersPushed: 0,
       expiredPadsDeleted: 0,
+      staleSessionsDeleted: 0,
     });
   });
 
@@ -166,6 +176,32 @@ describe('RemindersService.run', () => {
     const result = await service.run(NOW);
     expect(prisma.sentReminder.createMany).not.toHaveBeenCalled();
     expect(result.remindersSent).toBe(0);
+  });
+
+  it('deletes expired and long-revoked device sessions on every run', async () => {
+    const { service, prisma } = setup([]);
+    prisma.userSession.deleteMany.mockResolvedValue({ count: 3 });
+    const result = await service.run(NOW);
+    expect(result.staleSessionsDeleted).toBe(3);
+    expect(prisma.userSession.deleteMany).toHaveBeenCalledWith({
+      where: {
+        OR: [
+          { expiresAt: { lt: NOW } },
+          {
+            revokedAt: {
+              lt: new Date(NOW.getTime() - REVOKED_SESSION_RETENTION_MS),
+            },
+          },
+        ],
+      },
+    });
+  });
+
+  it('keeps going when the session cleanup fails', async () => {
+    const { service, prisma } = setup([]);
+    prisma.userSession.deleteMany.mockRejectedValue(new Error('db down'));
+    const result = await service.run(NOW);
+    expect(result.staleSessionsDeleted).toBe(0);
   });
 });
 

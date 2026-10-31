@@ -8,6 +8,48 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-10-31',
+    title: 'Alert when a new device signs in',
+    items: [
+      'When someone signs in to your account from a browser, system or network we have not seen on your account before, you now get an email and a push notification (if you turned push on) with the browser, system, a partial IP address and the time.',
+      'The message links to the Devices page, where you can sign that device out straight away. Your first sign-in never triggers it, and neither does your usual sign-in renewing itself.',
+    ],
+  },
+  {
+    date: '2026-10-31',
+    title: 'Weekly heads-up on absence limits',
+    items: [
+      'If you turned on push notifications, you now get at most one notification a week when you are close to (or past) the absence limit in one or more subjects. All the subjects come together in a single message.',
+      'It uses the usual 25% limit and counts the classes you have marked in your current period. It respects your quiet hours and never wakes you before 09:00. The limit you set in the Schedule page applies only to what you see on screen.',
+    ],
+  },
+  {
+    date: '2026-10-31',
+    title: 'Filter by effort and readiness, set effort in bulk',
+    items: [
+      'Dashboard: new Effort filter (light to exhausting, or not set) and a Readiness filter (ready to start, locked, or date to be set). Both work with saved views, so you can keep a view like "heavy tasks I can start now".',
+      'Select several tasks and use Set effort in the selection bar to change the effort of all of them at once, or clear it.',
+    ],
+  },
+  {
+    date: '2026-10-31',
+    title: 'Test time from your class',
+    items: [
+      'Creating or editing a test or exam: if that subject has a class on the chosen date, the form offers Use class time with its start and length. One click fills the time and duration.',
+      'It never overwrites a time you typed, never applies by itself, and you can dismiss it.',
+    ],
+  },
+  {
+    date: '2026-10-31',
+    title: 'See and sign out your devices',
+    items: [
+      'New Devices page (Profile, account menu or Ctrl+K): every browser and phone signed in to your account, with the browser, system, a partial IP address and when it was last active. This device is marked.',
+      'Lost a phone or used a shared computer? Sign out that one device from the list, or sign out all other devices at once. This device stays signed in.',
+      'Signing out now only ends the session on the device you are using. Your other devices stay signed in.',
+      'Safer sessions: your sign-in renews itself quietly in the background, and if an old copy of your session is ever used somewhere else, that session is ended straight away.',
+    ],
+  },
+  {
+    date: '2026-10-31',
     title: 'Hand-in dates everywhere',
     items: [
       'Dashboard: Time between tests is now Time between evaluations. It shows tests and assignments together by default (a two-phase assignment shows its hand-in and its presentation), or only tests, or only assignments. Your choice is remembered, and Show more opens the whole list.',

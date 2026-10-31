@@ -22,4 +22,26 @@ export class HealthController {
 
     return result;
   }
+
+  // Liveness: so confirma que o processo responde. Nao toca na BD de
+  // proposito - uma falha transitoria da BD nao deve levar o Render a
+  // reiniciar uma instancia que esta perfeitamente viva.
+  @Get('live')
+  @ApiOperation({ summary: 'Liveness probe (process is up, no dependencies)' })
+  live() {
+    return this.healthService.live();
+  }
+
+  // Readiness: a instancia so deve receber trafego se a BD responder.
+  @Get('ready')
+  @ApiOperation({ summary: 'Readiness probe (database reachable)' })
+  async ready() {
+    const result = await this.healthService.check();
+
+    if (result.status === 'error') {
+      throw new ServiceUnavailableException(result);
+    }
+
+    return result;
+  }
 }

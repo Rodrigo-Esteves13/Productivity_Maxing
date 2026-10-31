@@ -139,6 +139,139 @@ export function deadlineEmailText(
   return DEADLINE_EMAIL[resolveMailLanguage(lang)];
 }
 
+// Email de alerta de novo dispositivo (ver NewDeviceAlertService).
+interface NewDeviceEmailText {
+  subject: string;
+  title: string;
+  intro: string;
+  /** {browser} {os} */
+  deviceLine: string;
+  deviceLabel: string;
+  networkLabel: string;
+  timeLabel: string;
+  /** Mostrado quando o navegador, o sistema ou o IP nao foram reconhecidos. */
+  unknown: string;
+  button: string;
+  footer: string;
+}
+
+const NEW_DEVICE_EMAIL: Record<MailLanguage, NewDeviceEmailText> = {
+  en: {
+    subject: 'New sign-in to your account',
+    title: 'New sign-in to your account',
+    intro: 'We noticed a sign-in from a device we have not seen before.',
+    deviceLine: '{browser} on {os}',
+    deviceLabel: 'Device',
+    networkLabel: 'Network',
+    timeLabel: 'Time',
+    unknown: 'unknown',
+    button: 'Review my devices',
+    footer:
+      'If this was you, no action is needed. If not, open Devices and sign that device out, then change your password.',
+  },
+  pt: {
+    subject: 'Novo início de sessão na tua conta',
+    title: 'Novo início de sessão na tua conta',
+    intro:
+      'Detetámos um início de sessão a partir de um dispositivo que ainda não conhecíamos.',
+    deviceLine: '{browser} em {os}',
+    deviceLabel: 'Dispositivo',
+    networkLabel: 'Rede',
+    timeLabel: 'Hora',
+    unknown: 'desconhecida',
+    button: 'Ver os meus dispositivos',
+    footer:
+      'Se foste tu, não precisas de fazer nada. Se não, abre Dispositivos e termina essa sessão, e depois muda a password.',
+  },
+  es: {
+    subject: 'Nuevo inicio de sesión en tu cuenta',
+    title: 'Nuevo inicio de sesión en tu cuenta',
+    intro:
+      'Detectamos un inicio de sesión desde un dispositivo que no conocíamos.',
+    deviceLine: '{browser} en {os}',
+    deviceLabel: 'Dispositivo',
+    networkLabel: 'Red',
+    timeLabel: 'Hora',
+    unknown: 'desconocida',
+    button: 'Ver mis dispositivos',
+    footer:
+      'Si fuiste tú, no tienes que hacer nada. Si no, abre Dispositivos y cierra esa sesión, y después cambia tu contraseña.',
+  },
+  fr: {
+    subject: 'Nouvelle connexion à ton compte',
+    title: 'Nouvelle connexion à ton compte',
+    intro:
+      'Nous avons détecté une connexion depuis un appareil que nous ne connaissions pas.',
+    deviceLine: '{browser} sur {os}',
+    deviceLabel: 'Appareil',
+    networkLabel: 'Réseau',
+    timeLabel: 'Heure',
+    unknown: 'inconnu',
+    button: 'Voir mes appareils',
+    footer:
+      'Si c’était toi, rien à faire. Sinon, ouvre Appareils et déconnecte cet appareil, puis change ton mot de passe.',
+  },
+  de: {
+    subject: 'Neue Anmeldung bei deinem Konto',
+    title: 'Neue Anmeldung bei deinem Konto',
+    intro:
+      'Wir haben eine Anmeldung von einem bisher unbekannten Gerät bemerkt.',
+    deviceLine: '{browser} auf {os}',
+    deviceLabel: 'Gerät',
+    networkLabel: 'Netzwerk',
+    timeLabel: 'Zeit',
+    unknown: 'unbekannt',
+    button: 'Meine Geräte ansehen',
+    footer:
+      'Wenn du das warst, musst du nichts tun. Falls nicht, öffne Geräte, melde dieses Gerät ab und ändere dann dein Passwort.',
+  },
+  ja: {
+    subject: 'アカウントへの新しいログイン',
+    title: 'アカウントへの新しいログイン',
+    intro: '見覚えのないデバイスからのログインを検出しました。',
+    deviceLine: '{os} の {browser}',
+    deviceLabel: 'デバイス',
+    networkLabel: 'ネットワーク',
+    timeLabel: '日時',
+    unknown: '不明',
+    button: 'デバイスを確認する',
+    footer:
+      'ご本人の場合は何もする必要はありません。違う場合は、デバイス画面でそのデバイスをログアウトし、パスワードを変更してください。',
+  },
+  ko: {
+    subject: '계정에 새 로그인',
+    title: '계정에 새 로그인',
+    intro: '처음 보는 기기에서 로그인한 것을 감지했습니다.',
+    deviceLine: '{os}의 {browser}',
+    deviceLabel: '기기',
+    networkLabel: '네트워크',
+    timeLabel: '시간',
+    unknown: '알 수 없음',
+    button: '내 기기 확인하기',
+    footer:
+      '본인이라면 아무것도 하지 않아도 됩니다. 아니라면 기기 메뉴에서 해당 기기를 로그아웃하고 비밀번호를 변경하세요.',
+  },
+  zh: {
+    subject: '你的账户有新的登录',
+    title: '你的账户有新的登录',
+    intro: '我们发现有一台未曾见过的设备登录了你的账户。',
+    deviceLine: '{os} 上的 {browser}',
+    deviceLabel: '设备',
+    networkLabel: '网络',
+    timeLabel: '时间',
+    unknown: '未知',
+    button: '查看我的设备',
+    footer:
+      '如果是你本人，无需操作。如果不是，请在“设备”中退出该设备，然后修改密码。',
+  },
+};
+
+export function newDeviceEmailText(
+  lang: string | null | undefined,
+): NewDeviceEmailText {
+  return NEW_DEVICE_EMAIL[resolveMailLanguage(lang)];
+}
+
 // Substitui {nome} pelos valores dados (texto simples; o HTML e escapado
 // por quem monta o email).
 export function fillMailTemplate(

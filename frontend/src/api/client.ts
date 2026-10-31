@@ -59,6 +59,69 @@ function refreshCsrfToken(): Promise<CsrfRefreshResult> {
   return pendingCsrfRefresh;
 }
 
+// SESSAO POR DISPOSITIVO (refresh token)
+// O JWT de acesso dura 15 minutos. Quando expira, o backend responde 401 e
+// este cliente pede um novo em POST /auth/refresh (o refresh token vive num
+// cookie HttpOnly so dessa rota) e repete o pedido original UMA vez.
+const REFRESH_ENDPOINT = '/auth/refresh';
+const RETRIED_AFTER_SESSION_REFRESH = '_retriedAfterSessionRefresh';
+// Web Locks: varias tabs do mesmo browser partilham o cookie do refresh
+// token, que roda a cada uso. Sem uma fila entre tabs, duas tabs a renovar
+// ao mesmo tempo enviavam o mesmo token e o backend tratava a segunda como
+// reutilizacao (e terminava a sessao). Com o lock, a segunda tab so envia
+// depois de a primeira ter recebido o cookie novo.
+const SESSION_REFRESH_LOCK = 'pmaxing-session-refresh';
+
+export interface SessionRefreshResult {
+  csrfToken: string;
+  userId: string;
+}
+
+// Resultado de um refresh. 'lost': o servidor recusou (401 sem sessao/token
+// invalido, 403 da verificacao de origem), a sessao acabou. 'transient': rede,
+// 429, 5xx etc.; a sessao pode continuar valida, por isso nao se faz logout.
+type RefreshOutcome = { kind: 'ok'; result: SessionRefreshResult } | { kind: 'lost' } | { kind: 'transient' };
+
+// Estados HTTP do /auth/refresh que significam "sessao perdida".
+const SESSION_LOST_STATUSES = new Set([401, 403]);
+
+// Pedidos em paralelo da mesma tab partilham UM so refresh (single-flight).
+let pendingSessionRefresh: Promise<RefreshOutcome> | null = null;
+
+// Nunca rejeita, para o Web Lock ser sempre libertado.
+function postRefresh(): Promise<RefreshOutcome> {
+  return api
+    .post<SessionRefreshResult>(REFRESH_ENDPOINT)
+    .then((response): RefreshOutcome => ({ kind: 'ok', result: response.data }))
+    .catch((error: unknown): RefreshOutcome => {
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      return status !== undefined && SESSION_LOST_STATUSES.has(status)
+        ? { kind: 'lost' }
+        : { kind: 'transient' };
+    });
+}
+
+function sharedRefresh(): Promise<RefreshOutcome> {
+  if (!pendingSessionRefresh) {
+    const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+    const run = locks ? locks.request(SESSION_REFRESH_LOCK, postRefresh) : postRefresh();
+    pendingSessionRefresh = run
+      .catch((): RefreshOutcome => ({ kind: 'transient' }))
+      .finally(() => {
+        pendingSessionRefresh = null;
+      });
+  }
+  return pendingSessionRefresh;
+}
+
+/**
+ * Renova a sessao deste dispositivo. Devolve o token CSRF (e o dono da
+ * sessao) ou null se nao foi possivel renovar. Nunca lanca.
+ */
+export function refreshSession(): Promise<SessionRefreshResult | null> {
+  return sharedRefresh().then((outcome) => (outcome.kind === 'ok' ? outcome.result : null));
+}
+
 // Antes de qualquer pedido que altera estado, anexa o csrf token guardado em
 // memória. O backend compara-o com o valor do cookie csrf_token
 // (double-submit cookie) - ver CsrfGuard no backend.
@@ -75,7 +138,7 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Endpoints usados só para PERGUNTAR "ainda estou autenticado?" (chamados no
@@ -95,7 +158,7 @@ function isAuthCheckRequest(url?: string): boolean {
 // um codigo 2FA errado em /login/2fa (pathname != '/login') mandava para
 // /login, perdia o token do desafio no fragmento e nunca mostrava "Invalid
 // code" (E-03 / F-02).
-const LOGIN_ENDPOINTS = new Set(['/auth/login', '/auth/2fa/login']);
+const LOGIN_ENDPOINTS = new Set(['/auth/login', '/auth/2fa/login', REFRESH_ENDPOINT]);
 
 function isLoginRequest(url?: string): boolean {
   if (!url) return false;
@@ -119,7 +182,9 @@ api.interceptors.response.use(
     // auth-check exemption below.
     if (status === 503 && error.response?.data?.code === 'MAINTENANCE_MODE') {
       window.dispatchEvent(
-        new CustomEvent(MAINTENANCE_EVENT, { detail: error.response.data.message }),
+        new CustomEvent(MAINTENANCE_EVENT, {
+          detail: error.response.data.message,
+        }),
       );
       return Promise.reject(error);
     }
@@ -164,19 +229,51 @@ api.interceptors.response.use(
       });
     }
 
-    if (status === 401 && !isAuthCheckRequest(url) && !isLoginRequest(url)) {
-      console.warn('Session expired or unauthorized. Logging out...');
-      setCsrfToken(null);
-
-      // Evita reload se já lá estamos (ex: várias chamadas em paralelo a
-      // falharem ao mesmo tempo).
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+    // JWT de acesso expirado (ou sessao revogada): tenta renovar UMA vez e
+    // repete o pedido. Os endpoints de login/refresh ficam de fora (um 401
+    // ai e "credenciais erradas" ou "sem sessao", nao um token expirado).
+    const alreadyRefreshed = Boolean(error.config?.[RETRIED_AFTER_SESSION_REFRESH]);
+    if (status === 401 && error.config && !isLoginRequest(url) && !alreadyRefreshed) {
+      error.config[RETRIED_AFTER_SESSION_REFRESH] = true;
+      return sharedRefresh().then((outcome) => {
+        if (outcome.kind === 'lost') return handleSessionEnded(error, url);
+        // Falha passageira (rede, 429, 5xx): a sessao pode estar valida, entao
+        // nao ha logout nem limpeza; o chamador recebe o 401 original.
+        if (outcome.kind === 'transient') return Promise.reject(error);
+        const result = outcome.result;
+        const tabUserId = getSessionUserId();
+        if (tabUserId && result.userId && result.userId !== tabUserId) {
+          // Mesmo caso do 403 de CSRF acima: o browser tem agora a sessao de
+          // outra conta (login noutra tab). Nada e repetido nesta.
+          console.warn('Signed in as another account in a different tab. Reloading...');
+          window.location.reload();
+          return Promise.reject(error);
+        }
+        setCsrfToken(result.csrfToken);
+        return api.request(error.config);
+      });
     }
-    return Promise.reject(error);
-  }
+
+    return handleSessionEnded(error, url);
+  },
 );
+
+// Sessao terminada de vez (sem refresh possivel): limpa o estado e manda
+// para o login, exceto nos pedidos de arranque e de login (ver acima).
+function handleSessionEnded(error: { response?: { status?: number } }, url?: string): Promise<never> {
+  const status = error.response?.status;
+  if (status === 401 && !isAuthCheckRequest(url) && !isLoginRequest(url)) {
+    console.warn('Session expired or unauthorized. Logging out...');
+    setCsrfToken(null);
+
+    // Evita reload se já lá estamos (ex: várias chamadas em paralelo a
+    // falharem ao mesmo tempo).
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+  }
+  return Promise.reject(error);
+}
 
 export default api;
 
@@ -209,7 +306,9 @@ export async function rawFetch(
   signal?.addEventListener('abort', () => controller.abort());
 
   try {
-    return await fetch(`${RAW_FETCH_BASE_URL}${path}`, { signal: controller.signal });
+    return await fetch(`${RAW_FETCH_BASE_URL}${path}`, {
+      signal: controller.signal,
+    });
   } finally {
     clearTimeout(timeoutId);
   }

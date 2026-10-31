@@ -5,6 +5,10 @@ export interface JwtPayload {
   // Versao das sessoes do utilizador quando o token foi emitido. Tokens
   // antigos (anteriores a esta mudanca) nao a trazem e contam como 0.
   tv?: number;
+  // UserSession (dispositivo) que emitiu o token. Revogar essa sessao corta
+  // tambem este token. Tokens antigos (anteriores as sessoes por
+  // dispositivo) nao a trazem e valem so pela versao `tv`.
+  sid?: string;
   iat?: number;
   exp?: number;
 }

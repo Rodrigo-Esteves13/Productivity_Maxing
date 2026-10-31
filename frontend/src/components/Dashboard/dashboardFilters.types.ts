@@ -5,6 +5,9 @@ export interface DashboardFiltersState {
   difficulty: string;
   progressStatus: string;
   dateStatus: string;
+  // Esforco (enum Effort ou 'NONE') e prontidao (ready/locked/dateTbd).
+  effort: string;
+  readiness: string;
 }
 
 export const EMPTY_DASHBOARD_FILTERS: DashboardFiltersState = {
@@ -14,4 +17,6 @@ export const EMPTY_DASHBOARD_FILTERS: DashboardFiltersState = {
   difficulty: '',
   progressStatus: '',
   dateStatus: '',
+  effort: '',
+  readiness: '',
 };

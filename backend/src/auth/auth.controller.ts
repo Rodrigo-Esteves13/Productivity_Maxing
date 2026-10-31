@@ -15,6 +15,9 @@ import {
   UploadedFile,
   UnauthorizedException,
   BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  ParseUUIDPipe,
   HttpCode,
   HttpStatus,
   Logger,
@@ -35,8 +38,20 @@ type MulterLimitsWithFieldNestingDepth = NonNullable<
   fieldNestingDepth?: number;
 };
 import type { Request, Response } from 'express';
-import { User, Role } from '@prisma/client';
+import { User, Role, SessionRevokeReason } from '@prisma/client';
 import { AuthService } from './auth.service';
+import {
+  UserSessionsService,
+  type SessionClientInfo,
+} from './services/user-sessions.service';
+import { isSessionCurrent } from './session-version.util';
+import { isAllowedRefreshOrigin } from './refresh-origin.util';
+import {
+  REFRESH_IP_CEILING_PER_MINUTE,
+  REFRESH_REQUESTS_PER_MINUTE,
+  SESSION_REVOKE_OTHERS_REQUESTS_PER_MINUTE,
+  SESSION_REVOKE_REQUESTS_PER_MINUTE,
+} from './dto/auth-limits';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -67,16 +82,34 @@ import {
   ACCESS_TOKEN_COOKIE,
   CSRF_COOKIE,
   OAUTH_LOGIN_STATE_COOKIE,
+  REFRESH_TOKEN_COOKIE,
   accessTokenCookieOptions,
   csrfCookieOptions,
   clearCookieOptions,
+  clearRefreshCookieOptions,
+  refreshTokenCookieOptions,
 } from './cookie.config';
 import { isWellFormedCsrfToken } from './csrf-token.util';
-import { perMinute } from '../common/throttle.util';
+import {
+  ThrottleIpCeiling,
+  perMinute,
+  perMinuteTrackedBy,
+} from '../common/throttle.util';
+import { refreshThrottleTracker } from './refresh-throttle.tracker';
 
 // URL do frontend para onde se redireciona depois do callback OAuth.
 // Ajustar em produção para o domínio real (Netlify).
 const FRONTEND_URL = getFrontendUrl();
+
+// Dados do pedido guardados (reduzidos) na sessao do dispositivo.
+function clientInfo(req: Request): SessionClientInfo {
+  return {
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+    method: req.method,
+    path: req.path,
+  };
+}
 
 @Controller('auth')
 export class AuthController {
@@ -85,6 +118,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly prisma: PrismaService,
+    private readonly userSessions: UserSessionsService,
   ) {}
 
   // EMAIL + PASSWORD
@@ -101,6 +135,7 @@ export class AuthController {
   @Throttle(perMinute(3))
   async register(
     @Body() dto: RegisterDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const outcome = await this.authService.registerWithPassword(dto);
@@ -116,7 +151,7 @@ export class AuthController {
     if (this.authService.needsEmailVerification(user)) {
       return { requiresEmailVerification: true as const, email: user.email };
     }
-    return this.establishSession(user, res);
+    return this.establishSession(user, req, res);
   }
 
   // Link do email de verificação. Pública e SEM CSRF de propósito: o token
@@ -166,6 +201,7 @@ export class AuthController {
   @Throttle(perMinute(5))
   async login(
     @Body() dto: LoginDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.authService.loginWithPassword(
@@ -180,7 +216,7 @@ export class AuthController {
         twoFactorToken: this.authService.createTwoFactorChallenge(user),
       };
     }
-    return this.establishSession(user, res);
+    return this.establishSession(user, req, res);
   }
 
   // Segundo passo do login com 2FA (email+password e OAuth). Pública e sem
@@ -191,13 +227,14 @@ export class AuthController {
   @Throttle(perMinute(10))
   async twoFactorLogin(
     @Body() dto: TwoFactorLoginDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.authService.completeTwoFactorLogin(
       dto.token,
       dto.code,
     );
-    return this.establishSession(user, res);
+    return this.establishSession(user, req, res);
   }
 
   @Get('2fa/status')
@@ -240,21 +277,115 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    // Terminar sessao invalida o token no servidor (nao so apaga o cookie
-    // do browser): um cookie copiado antes deixa de funcionar. Vale para
-    // todos os dispositivos da conta. Se o cookie ja expirou ou e invalido,
-    // nao ha nada a invalidar e o logout continua a funcionar.
-    const payload = this.authService.verifyAccessTokenCookie(
+    // Terminar sessao revoga a sessao DESTE dispositivo no servidor (nao so
+    // apaga os cookies do browser): um cookie copiado antes deixa de
+    // funcionar, e os outros dispositivos continuam com sessao (para os
+    // terminar ha "Sign out all other devices" na pagina Devices).
+    await this.revokeCurrentDevice(
       req.cookies?.[ACCESS_TOKEN_COOKIE] as string | undefined,
-    );
-    if (payload) {
-      await this.authService.revokeAllSessions(payload.sub).catch((err) => {
-        this.logger.warn(`Could not revoke sessions on logout: ${String(err)}`);
-      });
-    }
-    res.clearCookie(ACCESS_TOKEN_COOKIE, clearCookieOptions());
-    res.clearCookie(CSRF_COOKIE, clearCookieOptions());
+    ).catch((err) => {
+      this.logger.warn(`Could not revoke session on logout: ${String(err)}`);
+    });
+    this.clearSessionCookies(res);
     return { message: 'Logged out.' };
+  }
+
+  // Renova a sessao: troca o refresh token (cookie restrito a esta rota) por
+  // um novo e emite um JWT de acesso novo. O token roda em todos os usos e
+  // a reutilizacao de um token antigo revoga a sessao (ver
+  // UserSessionsService.rotate). CSRF: ver refresh-origin.util.ts (o
+  // double-submit nao serve aqui, o frontend pode nao ter o token CSRF).
+  // Rate limit por sessao de dispositivo (cookie com HMAC valido; senao por
+  // IP), com um teto por IP largo: ver refresh-throttle.tracker.ts.
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @SkipCsrf()
+  @Throttle(
+    perMinuteTrackedBy(REFRESH_REQUESTS_PER_MINUTE, refreshThrottleTracker),
+  )
+  @ThrottleIpCeiling(REFRESH_IP_CEILING_PER_MINUTE)
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    if (!isAllowedRefreshOrigin(req.headers.origin, FRONTEND_URL)) {
+      throw new ForbiddenException('Invalid request origin.');
+    }
+    const cookies = req.cookies as Record<string, string | undefined>;
+    // Numa rejeicao NAO se apagam os cookies: se dois pedidos do mesmo
+    // browser colidirem, o Set-Cookie de "apagar" do perdedor podia chegar
+    // depois do token novo do vencedor e apaga-lo. O frontend trata o 401
+    // como sessao terminada e o logout limpa tudo.
+    const rotated = await this.userSessions.rotate(
+      cookies?.[REFRESH_TOKEN_COOKIE],
+      clientInfo(req),
+    );
+    this.setDeviceSessionCookies(res, rotated.user, rotated);
+
+    // Reutiliza o token CSRF que o browser ja tem (outras tabs guardam-no em
+    // memoria, ver GET /auth/csrf); so cria um se nao existir.
+    const existing = cookies?.[CSRF_COOKIE];
+    const csrfToken = isWellFormedCsrfToken(existing)
+      ? existing
+      : this.authService.generateCsrfToken();
+    res.cookie(CSRF_COOKIE, csrfToken, csrfCookieOptions());
+    return { csrfToken, userId: rotated.user.id };
+  }
+
+  // SESSOES POR DISPOSITIVO (pagina Devices)
+  // Rotas literais antes de /sessions/:id.
+
+  @Get('sessions')
+  @UseGuards(JwtAuthGuard)
+  listSessions(@CurrentUser() user: AuthenticatedUser) {
+    return this.userSessions.list(user.id, user.sessionId);
+  }
+
+  // Termina todas as outras sessoes: sobe a tokenVersion (o interruptor
+  // global, apanha tambem JWTs antigos sem `sid`) e este dispositivo
+  // continua com um token novo.
+  @Post('sessions/revoke-others')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Throttle(perMinute(SESSION_REVOKE_OTHERS_REQUESTS_PER_MINUTE))
+  async revokeOtherSessions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.keepOnlyCurrentDevice(
+      user,
+      req,
+      res,
+      SessionRevokeReason.SIGNED_OUT_OTHERS,
+    );
+    return { message: 'Signed out of all other devices.' };
+  }
+
+  // Revoga uma sessao do proprio utilizador. O userId vai no where (ver
+  // UserSessionsService.revoke): o id de outra pessoa da 404, igual a um id
+  // que nao existe, para nao confirmar que existe.
+  @Delete('sessions/:id')
+  @UseGuards(JwtAuthGuard)
+  @Throttle(perMinute(SESSION_REVOKE_REQUESTS_PER_MINUTE))
+  async revokeSession(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) sessionId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const revoked = await this.userSessions.revoke(
+      user.id,
+      sessionId,
+      SessionRevokeReason.REVOKED_BY_USER,
+    );
+    if (!revoked) {
+      throw new NotFoundException('Session not found.');
+    }
+    // Revogar a propria sessao equivale a terminar sessao aqui.
+    if (sessionId === user.sessionId) {
+      this.clearSessionCookies(res);
+    }
+    return { message: 'Session revoked.' };
   }
 
   // Pública (não exige sessão) - pede ao Supabase para enviar o email de
@@ -293,14 +424,51 @@ export class AuthController {
   // aqui, não um erro, e um 401 fazia o DevTools mostrar uma linha vermelha
   // sempre que a app arrancasse sem sessão.
   @Get('csrf')
-  refreshCsrf(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async refreshCsrf(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const cookies = req.cookies as Record<string, string | undefined>;
-    const payload = this.authService.verifyAccessTokenCookie(
-      cookies?.[ACCESS_TOKEN_COOKIE],
-    );
+    const accessToken = cookies?.[ACCESS_TOKEN_COOKIE];
+    const payload = this.authService.verifyAccessTokenCookie(accessToken);
 
-    if (!payload) {
-      return { authenticated: false };
+    if (!payload || 'purpose' in payload) {
+      // refreshable: o JWT de acesso so expirou (assinatura valida, com
+      // `sid`). O frontend tenta POST /auth/refresh so neste caso, para um
+      // visitante sem sessao nao fazer um pedido extra a cada arranque.
+      const expired = payload
+        ? null
+        : this.authService.verifyAccessTokenCookie(accessToken, {
+            ignoreExpiration: true,
+          });
+      return { authenticated: false, refreshable: !!expired?.sid };
+    }
+
+    // Assinatura e validade nao chegam: a sessao do dispositivo (`sid`) pode
+    // ter sido revogada, ou a tokenVersion ter subido, com o JWT ainda dentro
+    // dos 15 minutos (o JwtStrategy ja o recusa). refreshable: so se o
+    // dispositivo continua ativo e so a versao esta atrasada (ex: resposta
+    // perdida de um "terminar as outras sessoes"); o refresh decide pela BD.
+    if (payload.sid) {
+      const status = await this.authService.getAccessSessionStatus(payload);
+      if (status !== 'live') {
+        return { authenticated: false, refreshable: status === 'stale' };
+      }
+    }
+
+    // JWT antigo (de antes das sessoes por dispositivo, sem `sid`, ate 7
+    // dias): passa a ter uma sessao com refresh token, sem novo login. So
+    // acontece uma vez por browser (o cookie e trocado por um JWT com `sid`).
+    // Pode sair daqui 7 dias depois do deploy, quando ja nao houver tokens
+    // destes validos.
+    if (!payload.sid) {
+      const upgraded = await this.upgradeLegacySession(
+        payload.sub,
+        payload.tv,
+        req,
+        res,
+      );
+      if (!upgraded) return { authenticated: false };
     }
 
     // Reutiliza o token que o browser ja tem, em vez de gerar um novo de
@@ -511,6 +679,7 @@ export class AuthController {
   async setPassword(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: SetPasswordDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.authService.setPassword(
@@ -520,11 +689,11 @@ export class AuthController {
     );
     // Mudar a password termina todas as outras sessoes (quem tivesse o
     // cookie antigo fica de fora); esta continua, com um token novo.
-    const fresh = await this.authService.revokeAllSessions(user.id);
-    res.cookie(
-      ACCESS_TOKEN_COOKIE,
-      this.authService.issueJwt(fresh),
-      accessTokenCookieOptions(),
+    await this.keepOnlyCurrentDevice(
+      user,
+      req,
+      res,
+      SessionRevokeReason.GLOBAL_SIGNOUT,
     );
     return { message: 'Password updated successfully.' };
   }
@@ -592,23 +761,165 @@ export class AuthController {
     @CurrentUser() user: AuthenticatedUser,
     @Res({ passthrough: true }) res: Response,
   ) {
+    // As sessoes de dispositivo vao com o User (onDelete: Cascade).
     await this.authService.deleteAccount(user.id);
 
-    res.clearCookie(ACCESS_TOKEN_COOKIE, clearCookieOptions());
-    res.clearCookie(CSRF_COOKIE, clearCookieOptions());
+    this.clearSessionCookies(res);
 
     return { message: 'Account deleted.' };
   }
 
-  // Define os cookies de sessão (JWT + CSRF) e devolve o csrfToken no corpo,
-  // para os fluxos de login/register que respondem diretamente ao frontend
-  // (o frontend não precisa de ler cookies à mão, só guarda o valor devolvido
-  // aqui em memória).
-  private establishSession(user: User, res: Response) {
-    const token = this.authService.issueJwt(user);
-    const csrfToken = this.authService.generateCsrfToken();
+  // Cria a sessao do dispositivo (UserSession) e poe os cookies do JWT de
+  // acesso e do refresh token. Usado por TODOS os caminhos de login.
+  private async startDeviceSession(
+    user: User,
+    req: Request,
+    res: Response,
+  ): Promise<string> {
+    const session = await this.userSessions.create(user, clientInfo(req));
+    this.setDeviceSessionCookies(res, user, session);
+    return session.sessionId;
+  }
 
-    res.cookie(ACCESS_TOKEN_COOKIE, token, accessTokenCookieOptions());
+  // Mesma coisa para um browser que ja tinha login com um JWT antigo (sem
+  // `sid`): ganha a sessao de dispositivo sem o alerta de "novo dispositivo"
+  // (nao e um inicio de sessao novo, ver UserSessionsService.adoptLegacy).
+  private async adoptLegacyDeviceSession(
+    user: User,
+    req: Request,
+    res: Response,
+  ): Promise<void> {
+    const session = await this.userSessions.adoptLegacy(user, clientInfo(req));
+    this.setDeviceSessionCookies(res, user, session);
+  }
+
+  // true se o pedido ja traz um JWT valido, do mesmo utilizador e versao,
+  // de uma sessao de dispositivo ativa: emite so um JWT novo para ela.
+  private async continueDeviceSession(
+    user: User,
+    req: Request,
+    res: Response,
+  ): Promise<boolean> {
+    const payload = this.authService.verifyAccessTokenCookie(
+      req.cookies?.[ACCESS_TOKEN_COOKIE] as string | undefined,
+    );
+    if (
+      !payload?.sid ||
+      'purpose' in payload ||
+      payload.sub !== user.id ||
+      !isSessionCurrent(payload.tv, user.tokenVersion) ||
+      !(await this.userSessions.isActive(payload.sid, user.id))
+    ) {
+      return false;
+    }
+    res.cookie(
+      ACCESS_TOKEN_COOKIE,
+      this.authService.issueJwt(user, payload.sid),
+      accessTokenCookieOptions(),
+    );
+    return true;
+  }
+
+  private setDeviceSessionCookies(
+    res: Response,
+    user: User,
+    session: { sessionId: string; refreshToken: string },
+  ): void {
+    res.cookie(
+      ACCESS_TOKEN_COOKIE,
+      this.authService.issueJwt(user, session.sessionId),
+      accessTokenCookieOptions(),
+    );
+    res.cookie(
+      REFRESH_TOKEN_COOKIE,
+      session.refreshToken,
+      refreshTokenCookieOptions(),
+    );
+  }
+
+  private clearSessionCookies(res: Response): void {
+    res.clearCookie(ACCESS_TOKEN_COOKIE, clearCookieOptions());
+    res.clearCookie(CSRF_COOKIE, clearCookieOptions());
+    res.clearCookie(REFRESH_TOKEN_COOKIE, clearRefreshCookieOptions());
+  }
+
+  /**
+   * Interruptor global mantendo este dispositivo: sobe a tokenVersion,
+   * revoga as outras sessoes e emite um JWT novo para a atual. Um pedido com
+   * JWT antigo (sem `sid`) ganha aqui uma sessao nova com refresh token.
+   */
+  private async keepOnlyCurrentDevice(
+    user: AuthenticatedUser,
+    req: Request,
+    res: Response,
+    reason: SessionRevokeReason,
+  ): Promise<void> {
+    const fresh = await this.authService.revokeAllSessions(
+      user.id,
+      user.sessionId,
+      reason,
+    );
+    if (user.sessionId) {
+      res.cookie(
+        ACCESS_TOKEN_COOKIE,
+        this.authService.issueJwt(fresh, user.sessionId),
+        accessTokenCookieOptions(),
+      );
+      return;
+    }
+    await this.adoptLegacyDeviceSession(fresh, req, res);
+  }
+
+  /**
+   * Logout: revoga a sessao do dispositivo indicada pelo JWT do cookie, mesmo
+   * ja expirado (a assinatura e verificada). Um JWT antigo sem `sid` so pode
+   * ser invalidado pela tokenVersion (todas as sessoes), como antes, e so se
+   * ainda estiver dentro da validade.
+   */
+  private async revokeCurrentDevice(
+    accessToken: string | undefined,
+  ): Promise<void> {
+    const payload = this.authService.verifyAccessTokenCookie(accessToken, {
+      ignoreExpiration: true,
+    });
+    if (!payload || 'purpose' in payload) return;
+    if (payload.sid) {
+      await this.userSessions.revoke(
+        payload.sub,
+        payload.sid,
+        SessionRevokeReason.LOGOUT,
+      );
+      return;
+    }
+    if (this.authService.verifyAccessTokenCookie(accessToken)) {
+      await this.authService.revokeAllSessions(payload.sub);
+    }
+  }
+
+  // Ver GET /auth/csrf: troca um JWT antigo (sem `sid`) por uma sessao de
+  // dispositivo. false se o token ja nao vale (versao antiga ou conta apagada).
+  private async upgradeLegacySession(
+    userId: string,
+    tokenVersion: number | undefined,
+    req: Request,
+    res: Response,
+  ): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !isSessionCurrent(tokenVersion, user.tokenVersion)) {
+      return false;
+    }
+    await this.adoptLegacyDeviceSession(user, req, res);
+    this.logger.log(`Legacy session upgraded - user id=${user.id}`);
+    return true;
+  }
+
+  // Define os cookies de sessão (JWT + refresh + CSRF) e devolve o csrfToken
+  // no corpo, para os fluxos de login/register que respondem diretamente ao
+  // frontend (o frontend não precisa de ler cookies à mão, só guarda o valor
+  // devolvido aqui em memória).
+  private async establishSession(user: User, req: Request, res: Response) {
+    await this.startDeviceSession(user, req, res);
+    const csrfToken = this.authService.generateCsrfToken();
     res.cookie(CSRF_COOKIE, csrfToken, csrfCookieOptions());
 
     this.logger.log(
@@ -621,7 +932,7 @@ export class AuthController {
   // Mesma coisa, mas para os callbacks OAuth, que respondem com um redirect
   // em vez de um JSON body - por isso o csrfToken não vai aqui, o frontend
   // pede-o à parte em GET /auth/csrf assim que aterra em /auth/callback.
-  private issueSessionAndRedirect(req: Request, res: Response) {
+  private async issueSessionAndRedirect(req: Request, res: Response) {
     const user = req.user as User;
 
     // Conta com 2FA: sem cookie de sessão ainda. O token do desafio vai no
@@ -635,9 +946,13 @@ export class AuthController {
       );
     }
 
-    const token = this.authService.issueJwt(user);
-
-    res.cookie(ACCESS_TOKEN_COOKIE, token, accessTokenCookieOptions());
+    // Regresso de um "ligar conta" (Google/GitHub/Discord, Calendar) num
+    // browser que ja tem sessao deste utilizador: continua a mesma sessao
+    // de dispositivo (so um JWT novo), em vez de criar outra e deixar a
+    // antiga orfa na lista de dispositivos.
+    if (!(await this.continueDeviceSession(user, req, res))) {
+      await this.startDeviceSession(user, req, res);
+    }
     // Já não precisamos do state anti-CSRF do login OAuth depois de
     // consumido - limpa-o para não ficar pendurado nem ser reutilizável.
     // Mesmos atributos com que foi criado (Secure, Path=/, sem Domain): para

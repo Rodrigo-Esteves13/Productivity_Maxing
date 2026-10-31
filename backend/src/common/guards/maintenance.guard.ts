@@ -11,7 +11,11 @@ import type { Request } from 'express';
 // report the instance as down just because MAINTENANCE_MODE is set;
 // that would turn a deliberate maintenance window into a false "the
 // service crashed" alert.
-const ALWAYS_ALLOWED_PATHS = new Set(['/health']);
+const ALWAYS_ALLOWED_PATHS = new Set([
+  '/health',
+  '/health/live',
+  '/health/ready',
+]);
 
 /**
  * True while MAINTENANCE_MODE is set to a truthy value in the

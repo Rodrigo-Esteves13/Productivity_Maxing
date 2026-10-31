@@ -8,10 +8,16 @@ import {
   type ThrottlerModuleOptions,
   type ThrottlerStorage,
   type ThrottlerLimitDetail,
+  type ThrottlerRequest,
 } from '@nestjs/throttler';
 import { SecurityLogsService } from '../../security-logs/security-logs.service';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
 import { redactSecretPath } from '../redact-secret-path.util';
+import {
+  IP_CEILING_KEY_SUFFIX,
+  NON_IP_TRACKER_PREFIX,
+  THROTTLE_IP_CEILING_KEY,
+} from '../throttle.util';
 
 interface PendingBucket {
   count: number;
@@ -70,6 +76,32 @@ export class LoggingThrottlerGuard
     private readonly securityLogsService: SecurityLogsService,
   ) {
     super(options, storageService, reflector);
+  }
+
+  /**
+   * Rotas com @ThrottleIpCeiling (limite normal contado por outra chave, ex:
+   * a sessao no POST /auth/refresh) passam primeiro por um teto por IP, com
+   * a mesma janela e uma chave propria (sufixo), e so depois pelo limite da
+   * rota. As outras rotas ficam exatamente como no ThrottlerGuard base.
+   */
+  protected async handleRequest(
+    requestProps: ThrottlerRequest,
+  ): Promise<boolean> {
+    const { context, generateKey } = requestProps;
+    const ceiling = this.reflector.getAllAndOverride<number | undefined>(
+      THROTTLE_IP_CEILING_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (ceiling !== undefined) {
+      await super.handleRequest({
+        ...requestProps,
+        limit: ceiling,
+        getTracker: (req) => this.getTracker(req),
+        generateKey: (ctx, tracker, name) =>
+          generateKey(ctx, tracker, `${name}${IP_CEILING_KEY_SUFFIX}`),
+      });
+    }
+    return super.handleRequest(requestProps);
   }
 
   protected async throwThrottlingException(
@@ -151,8 +183,12 @@ export class LoggingThrottlerGuard
   // ThrottlerGuard base), por isso é a fonte mais fiel do "quem" real.
   // req.ip só é correto com app.set('trust proxy', ...) ativo (ver
   // main.ts) - sem isso, atrás do proxy do Render, seria sempre o IP
-  // interno do proxy, não o do cliente.
+  // interno do proxy, não o do cliente. Um tracker que nao e um IP (ex: a
+  // sessao do POST /auth/refresh) nunca vai para o SecurityLog: usa-se o IP.
   private extractIp(req: Request, tracker: string): string {
-    return tracker || req.ip || 'unknown';
+    const trackerIp = tracker.startsWith(NON_IP_TRACKER_PREFIX)
+      ? undefined
+      : tracker;
+    return trackerIp || req.ip || 'unknown';
   }
 }

@@ -171,6 +171,12 @@ const NAV_COMMANDS: NavCommand[] = [
     path: '/profile',
     keywords: ['install', 'instalar', 'pwa', 'home screen', 'ecra principal', 'ecrã principal', 'add to home screen', 'iphone', 'android', 'app'],
   },
+  {
+    id: 'nav-devices',
+    labelKey: 'devices.title',
+    path: '/devices',
+    keywords: ['devices', 'dispositivos', 'sessions', 'sessoes', 'sessões', 'sign out', 'log out', 'terminar sessao', 'terminar sessão', 'logout', 'security', 'seguranca', 'segurança', 'browser', 'phone', 'telemovel', 'telemóvel', 'lost phone'],
+  },
   { id: 'nav-changelog', labelKey: 'nav.changelog', path: '/changelog' },
   { id: 'nav-class-invites', labelKey: 'turma.invites.title', path: '/classes', keywords: ['invite', 'convite', 'turma', 'class', 'join', 'entrar'] },
   { id: 'nav-finance', labelKey: 'finance.title', path: '/finance', keywords: ['finance', 'financas', 'money', 'dinheiro', 'budget', 'orcamento', 'expenses', 'despesas', 'income', 'salario', 'savings', 'poupanca', 'wishlist', 'investment'] },

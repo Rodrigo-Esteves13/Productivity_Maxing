@@ -8,7 +8,13 @@ import {
   Delete,
   Query,
   UseGuards,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
+import {
+  RESULT_TRUNCATED_HEADER,
+  type ListMeta,
+} from '../common/pagination.util';
 import { TasksService } from './tasks.service';
 import { WeeklyReviewService } from './weekly-review.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -16,11 +22,13 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { ConfirmOverdueDto } from './dto/confirm-overdue.dto';
 import { BulkTaskIdsDto } from './dto/bulk-task-ids.dto';
 import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
+import { BulkUpdateEffortDto } from './dto/bulk-update-effort.dto';
 import { BulkRescheduleDto } from './dto/bulk-reschedule.dto';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ImportTasksDto } from './dto/import-tasks.dto';
 import { ReorderTasksDto } from './dto/reorder-tasks.dto';
+import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
 
 import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -59,11 +67,22 @@ export class TasksController {
   // periodId: omitido = período ativo do user; 'all' = todos os períodos
   // (vista agregada, "Ver todos os períodos" no seletor); um UUID = esse
   // período específico (posse validada no service).
-  findAll(
+  // limit/cursor/paginated opcionais: sem cursor nem paginated=true devolve o
+  // array de sempre (com teto); com algum deles, { items, nextCursor }.
+  async findAll(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('periodId') periodId?: string,
+    @Query() query: ListTasksQueryDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.tasksService.findAll(user.id, periodId);
+    const meta: ListMeta = {};
+    const result = await this.tasksService.findAll(
+      user.id,
+      query.periodId,
+      query,
+      meta,
+    );
+    if (meta.truncated) res.setHeader(RESULT_TRUNCATED_HEADER, 'true');
+    return result;
   }
 
   @Get('today')
@@ -92,6 +111,15 @@ export class TasksController {
       dto.ids,
       dto.progressStatus,
     );
+  }
+
+  // "Set effort" da seleção múltipla - literal, antes de @Patch(':id').
+  @Patch('bulk-effort')
+  bulkUpdateEffort(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: BulkUpdateEffortDto,
+  ) {
+    return this.tasksService.bulkUpdateEffort(user.id, dto.ids, dto.effort);
   }
 
   // "Mover para hoje/amanhã" da seleção múltipla no Dashboard - literal,

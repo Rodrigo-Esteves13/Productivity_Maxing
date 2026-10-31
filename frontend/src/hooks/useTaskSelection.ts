@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { bulkDeleteTasks, bulkRescheduleTasks } from '../api/userService';
+import { bulkDeleteTasks, bulkRescheduleTasks, bulkSetTaskEffort } from '../api/userService';
 import { syncTaskToCalendar, unsyncTaskFromCalendar } from '../api/calendarService';
 import type { Task } from '../types/models';
 import { useCompleteWithUndo } from './useCompleteWithUndo';
@@ -82,6 +82,20 @@ export function useTaskSelection(
     [selectedIds, setTasks, visibleTasks],
   );
 
+  // "Set effort" da selecao (null limpa). Devolve quantas ficaram alteradas.
+  const setEffortSelected = useCallback(
+    async (effort: Task['effort']) => {
+      const ids = Array.from(selectedIds);
+      if (ids.length === 0) return 0;
+      const { count } = await bulkSetTaskEffort(ids, effort);
+      const changed = new Set(ids);
+      setTasks((prev) => prev.map((t) => (changed.has(t.id) ? { ...t, effort } : t)));
+      setSelectedIds(new Set());
+      return count;
+    },
+    [selectedIds, setTasks],
+  );
+
   // Quantas das selecionadas tem evento no Google Calendar: a barra so
   // pergunta "remover tambem os eventos?" quando ha algum (como o apagar
   // individual em useTasksPage).
@@ -117,6 +131,7 @@ export function useTaskSelection(
     toggleSelectAll,
     markSelectedDone,
     rescheduleSelected,
+    setEffortSelected,
     deleteSelected,
     selectedSyncedCount,
     clearSelection,

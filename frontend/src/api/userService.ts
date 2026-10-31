@@ -1,6 +1,8 @@
 // src/api/userService.ts
-import api from './client';
+import api, { refreshSession } from './client';
+import { fetchAllPages } from './fetchAllPages';
 import type {
+  DeviceSession,
   User,
   WeeklyReview,
   Area,
@@ -133,14 +135,47 @@ export const setPasswordRequest = async (password: string, currentPassword?: str
 // Chamado depois de um redirect de OAuth (o cookie de sessão já lá está,
 // mas o csrfToken não veio no redirect) e também no arranque da app, para
 // verificar se ainda existe uma sessão válida e obter um csrf token novo.
+// Com o JWT de acesso (15 min) ja expirado, o backend responde
+// refreshable: true e a sessao e renovada aqui com o refresh token, sem
+// voltar a pedir login.
 export const fetchCsrfToken = async (): Promise<string> => {
-  const response = await api.get<{ authenticated: boolean; csrfToken?: string }>(
+  const response = await api.get<{ authenticated: boolean; csrfToken?: string; refreshable?: boolean }>(
     '/auth/csrf',
   );
-  if (!response.data.authenticated || !response.data.csrfToken) {
-    throw new Error('Not authenticated');
+  if (response.data.authenticated && response.data.csrfToken) {
+    return response.data.csrfToken;
   }
-  return response.data.csrfToken;
+  if (response.data.refreshable) {
+    const refreshed = await refreshSession();
+    if (refreshed) return refreshed.csrfToken;
+  }
+  throw new Error('Not authenticated');
+};
+
+// Garante uma sessao com JWT de acesso valido antes de sair da app para um
+// fluxo do backend por navegacao (ex: ligar o Google Calendar), onde o
+// cliente HTTP nao consegue renovar o token sozinho. Renova SEMPRE (JWT novo
+// com os 15 minutos todos): o callback do Google so aceita o "ligar conta"
+// com o JWT ainda valido, e um token prestes a expirar (ex: 30 s) morria
+// durante o ecra de consentimento. Sem refresh token (sessao antiga), cai
+// num pedido autenticado barato, como antes.
+export const ensureFreshSession = async (): Promise<void> => {
+  if (await refreshSession()) return;
+  await api.get('/auth/me');
+};
+
+// SESSOES POR DISPOSITIVO (pagina Devices)
+export const getDeviceSessions = async (): Promise<DeviceSession[]> => {
+  const response = await api.get<DeviceSession[]>('/auth/sessions');
+  return response.data;
+};
+
+export const revokeDeviceSession = async (id: string): Promise<void> => {
+  await api.delete(`/auth/sessions/${encodeURIComponent(id)}`);
+};
+
+export const revokeOtherDeviceSessions = async (): Promise<void> => {
+  await api.post('/auth/sessions/revoke-others');
 };
 
 // USER ENDPOINTS
@@ -313,11 +348,8 @@ export async function updateArea(id: string, areaData: { name?: string; colorHex
 // todos os períodos agregados ("Ver todos os períodos" no seletor); um
 // UUID = esse período específico.
 export const getUserTasks = async (periodId?: string, signal?: AbortSignal): Promise<Task[]> => {
-  const response = await api.get<Task[]>('/tasks', {
-    params: periodId ? { periodId } : undefined,
-    signal,
-  });
-  return response.data;
+  // Segue as paginas de cursor em vez do modo array, que corta em 1000.
+  return fetchAllPages<Task>('/tasks', periodId ? { periodId } : {}, signal);
 };
 
 export async function createTask(taskData: TaskWriteInput): Promise<Task> {
@@ -383,6 +415,16 @@ export async function bulkUpdateTaskStatus(
       ids: batch,
       progressStatus,
     });
+    return response.data;
+  });
+}
+
+export async function bulkSetTaskEffort(
+  ids: string[],
+  effort: Task['effort'],
+): Promise<{ count: number }> {
+  return inBatches(ids, async (batch) => {
+    const response = await api.patch<{ count: number }>('/tasks/bulk-effort', { ids: batch, effort });
     return response.data;
   });
 }

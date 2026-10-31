@@ -88,7 +88,22 @@ export type Difficulty = 'VERY_EASY' | 'EASY' | 'MEDIUM' | 'HARD' | 'VERY_HARD';
 // it became an admin-managed catalog (see AdminPriority/PriorityOption
 // below) - it's just whatever key the admin's Priority rows use, a plain
 // string, same as `type`/`academicType` already were.
-export type SecurityEventType = 'RATE_LIMIT_EXCEEDED' | 'ADMIN_PAD_DELETED' | 'ADMIN_PAD_SOURCE_BLOCKED';
+export type SecurityEventType =
+  | 'RATE_LIMIT_EXCEEDED'
+  | 'ADMIN_PAD_DELETED'
+  | 'ADMIN_PAD_SOURCE_BLOCKED'
+  | 'REFRESH_TOKEN_REUSE';
+
+// Sessao de um dispositivo com login feito (GET /auth/sessions). ipMasked
+// ja vem com o fim escondido pelo backend; current = este browser.
+export interface DeviceSession {
+  id: string;
+  userAgent: string | null;
+  ipMasked: string | null;
+  createdAt: string;
+  lastSeenAt: string;
+  current: boolean;
+}
 // No longer fixed union types: now they come from the DB (a table the
 // admin can edit), so they're `string` (the "key" returned by /tasks/meta).
 export type TaskType = string;

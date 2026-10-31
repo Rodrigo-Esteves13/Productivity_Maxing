@@ -11,6 +11,7 @@ export const Schedule = lazyWithPreload(() => import('../pages/Schedule'));
 export const Notebook = lazyWithPreload(() => import('../pages/Notebook'));
 export const Profile = lazyWithPreload(() => import('../pages/Profile'));
 export const Developer = lazyWithPreload(() => import('../pages/Developer'));
+export const Devices = lazyWithPreload(() => import('../pages/Devices'));
 export const Agent = lazyWithPreload(() => import('../pages/Agent'));
 export const Areas = lazyWithPreload(() => import('../pages/Areas'));
 export const Social = lazyWithPreload(() => import('../pages/Social'));
@@ -69,6 +70,7 @@ const BY_SECTION: Record<string, { preload: () => Promise<unknown> }> = {
   changelog: Changelog,
   agent: Agent,
   developer: Developer,
+  devices: Devices,
   'task-packs': TaskPacks,
   privacy: PrivacyPolicy,
   terms: TermsOfService,

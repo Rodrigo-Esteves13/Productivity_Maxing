@@ -10,6 +10,8 @@ import { hasFirmDate } from '../../lib/taskReadiness';
 import { useI18n } from '../../i18n/useI18n';
 import type { DateCertainty } from '../../types/models';
 import AcademicFields from './fields/AcademicFields';
+import ClassTimeSuggestionHint from './ClassTimeSuggestionHint';
+import { isCalendarTimeFieldVisible } from '../../lib/calendarTimeField';
 import GradingFields from './fields/GradingFields';
 import OptionalInfoFields from './fields/OptionalInfoFields';
 import ProgressAndGradeFields from './fields/ProgressAndGradeFields';
@@ -104,21 +106,22 @@ export default function TaskFormFields({
   const { t } = useI18n();
   // Data por marcar/surpresa: o campo continua obrigatorio (o plano precisa
   // de um limite), mas diz claramente que e so um palpite.
-  const dateIsGuess = !hasFirmDate({ dateCertainty: values.dateCertainty as DateCertainty });
+  const dateIsGuess = !hasFirmDate({
+    dateCertainty: values.dateCertainty as DateCertainty,
+  });
 
   // null enquanto carrega - tratado como "não conectado" para o checkbox
   // não aparecer disponível antes de sabermos ao certo.
   const calendarConnected = useCalendarStatus() === true;
 
-  const { prediction: durationPrediction, isLoading: isDurationPredictionLoading } =
-    useDurationPrediction({
-      type: values.type,
-      academicType: values.academicType,
-      difficulty: values.difficulty,
-      weightPercentage: values.weightPercentage,
-      taskId,
-      areaId: values.areaId,
-    });
+  const { prediction: durationPrediction, isLoading: isDurationPredictionLoading } = useDurationPrediction({
+    type: values.type,
+    academicType: values.academicType,
+    difficulty: values.difficulty,
+    weightPercentage: values.weightPercentage,
+    taskId,
+    areaId: values.areaId,
+  });
 
   return (
     <>
@@ -200,6 +203,19 @@ export default function TaskFormFields({
           onAcademicTypeChange={(v) => onChange('academicType', v)}
         />
       )}
+
+      <ClassTimeSuggestionHint
+        isEventType={isAcademic && !!academicTaskTypes.find((a) => a.key === values.academicType)?.isEvent}
+        date={values.date}
+        calendarTime={values.calendarTime}
+        timeFieldVisible={isCalendarTimeFieldVisible(calendarConnected, values.syncToCalendar)}
+        areaId={values.areaId}
+        areaName={selectedArea?.name}
+        onApply={(time, minutes) => {
+          onChange('calendarTime', time);
+          onChange('calendarDurationMinutes', String(minutes));
+        }}
+      />
 
       <GradingFields
         idPrefix={idPrefix}

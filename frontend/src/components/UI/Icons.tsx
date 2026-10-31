@@ -93,6 +93,10 @@ export {
   UserPlus as UserPlusIcon,
   Plane as PlaneIcon,
   Hourglass as HourglassIcon,
+  // Pagina Devices: tipo de aparelho de cada sessao.
+  Monitor as MonitorIcon,
+  Smartphone as SmartphoneIcon,
+  Tablet as TabletIcon,
 } from 'lucide-react';
 
 export function GoogleIcon(props: SVGProps<SVGSVGElement>) {

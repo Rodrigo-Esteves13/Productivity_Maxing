@@ -13,7 +13,13 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
+import {
+  RESULT_TRUNCATED_HEADER,
+  type ListMeta,
+} from '../common/pagination.util';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
@@ -25,6 +31,7 @@ import { Throttle } from '@nestjs/throttler';
 import type { Options as MulterOptions } from 'multer';
 import 'multer';
 import { NotebookService } from './notebook.service';
+import { ListAreaEntriesQueryDto } from './dto/list-area-entries-query.dto';
 import { ATTACHMENT_MAX_SIZE_BYTES } from './attachment-validation.util';
 import {
   CreateNotebookEntryDto,
@@ -67,11 +74,21 @@ export class NotebookController {
     summary: 'Lists notebook entries for an area, newest first.',
   })
   @ApiQuery({ name: 'areaId', required: true })
-  findAllForArea(
+  // limit/cursor/paginated opcionais (ver common/pagination.util.ts).
+  async findAllForArea(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('areaId', ParseUUIDPipe) areaId: string,
+    @Query() query: ListAreaEntriesQueryDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.notebookService.findAllForArea(user.id, areaId);
+    const meta: ListMeta = {};
+    const result = await this.notebookService.findAllForArea(
+      user.id,
+      query.areaId,
+      query,
+      meta,
+    );
+    if (meta.truncated) res.setHeader(RESULT_TRUNCATED_HEADER, 'true');
+    return result;
   }
 
   // Caminho proprio (e nao entries/summary) para nunca colidir com
@@ -82,11 +99,20 @@ export class NotebookController {
       'Lists notebook entries for an area without their content (title, date, text preview, photo and file counts), newest first.',
   })
   @ApiQuery({ name: 'areaId', required: true })
-  listSummaries(
+  async listSummaries(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('areaId', ParseUUIDPipe) areaId: string,
+    @Query() query: ListAreaEntriesQueryDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.notebookService.listSummariesForArea(user.id, areaId);
+    const meta: ListMeta = {};
+    const result = await this.notebookService.listSummariesForArea(
+      user.id,
+      query.areaId,
+      query,
+      meta,
+    );
+    if (meta.truncated) res.setHeader(RESULT_TRUNCATED_HEADER, 'true');
+    return result;
   }
 
   // Barato (sem URLs assinados): o editor aberto noutro dispositivo/tab

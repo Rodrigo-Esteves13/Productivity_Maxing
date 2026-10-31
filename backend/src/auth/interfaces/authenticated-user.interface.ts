@@ -10,4 +10,8 @@ export interface AuthenticatedUser {
   // ApiKeyScopeGuard reads this to gate admin-only routes when a request
   // came in via API key rather than a real session.
   apiKeyScope?: ApiKeyScope;
+  // UserSession (dispositivo) deste pedido, vindo da claim `sid` do JWT.
+  // Ausente em pedidos por API key e em JWTs antigos, anteriores as sessoes
+  // por dispositivo.
+  sessionId?: string;
 }

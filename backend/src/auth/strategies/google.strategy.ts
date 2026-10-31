@@ -91,7 +91,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         // sem nada no terminal a apontar para a causa real.
         let linkUserId: string | undefined;
         try {
-          linkUserId = this.authService.consumeLinkState(
+          linkUserId = await this.authService.consumeLinkState(
             state,
             Provider.GOOGLE,
             (req.cookies as Record<string, string | undefined>)?.[

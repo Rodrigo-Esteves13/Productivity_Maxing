@@ -6,6 +6,7 @@ import { PadsModule } from '../pads/pads.module';
 import { PersonalNotesModule } from '../personal-notes/personal-notes.module';
 import { RemindersController } from './reminders.controller';
 import { RemindersService } from './reminders.service';
+import { AbsenceLimitRemindersService } from './absence-limit-reminders.service';
 
 @Module({
   imports: [
@@ -16,6 +17,6 @@ import { RemindersService } from './reminders.service';
     PersonalNotesModule,
   ],
   controllers: [RemindersController],
-  providers: [RemindersService],
+  providers: [RemindersService, AbsenceLimitRemindersService],
 })
 export class RemindersModule {}

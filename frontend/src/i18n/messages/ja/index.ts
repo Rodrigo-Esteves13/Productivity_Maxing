@@ -24,6 +24,7 @@ import { meds } from './meds';
 import { readiness } from './readiness';
 import { finance } from './finance';
 import { integration } from './integration';
+import { devices } from './devices';
 
 export const ja: Record<string, string> = {
   ...packs,
@@ -52,4 +53,5 @@ export const ja: Record<string, string> = {
   ...readiness,
   ...finance,
   ...integration,
+  ...devices,
 };

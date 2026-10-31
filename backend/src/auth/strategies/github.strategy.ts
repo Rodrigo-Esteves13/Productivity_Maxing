@@ -67,7 +67,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
       let user: User | undefined;
       if (state) {
         try {
-          const userId = this.authService.consumeLinkState(
+          const userId = await this.authService.consumeLinkState(
             state,
             Provider.GITHUB,
             (req.cookies as Record<string, string | undefined>)?.[

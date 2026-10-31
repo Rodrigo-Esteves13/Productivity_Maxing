@@ -28,6 +28,12 @@ import {
 } from './dto/upsert-notebook-entry.dto';
 import { UpsertScheduleLinkDto } from './dto/upsert-schedule-link.dto';
 import { notebookEntrySharePath } from '../common/app-links.util';
+import type { CursorPaginationDto } from '../common/dto/cursor-pagination.dto';
+import {
+  listOrPage,
+  type ListMeta,
+  type Page,
+} from '../common/pagination.util';
 import {
   getNotebookAttachmentsBucket,
   getNotebookBucket,
@@ -64,11 +70,20 @@ export interface NotebookEntrySummary {
   attachmentCount: number;
 }
 
+// Linha crua do select de listSummariesForArea (antes de virar resumo).
+type SummaryRow = Omit<
+  NotebookEntrySummary,
+  'preview' | 'photoCount' | 'attachmentCount'
+> & {
+  textContent: string | null;
+  _count: { photos: number; attachments: number };
+};
+
 // Caminhos por pedido de createSignedUrls (ver signPaths). Um caderno normal
 // cabe todo num so pedido; o limite so evita um corpo gigante.
 const SIGN_BATCH_SIZE = 500;
 
-interface SignableEntry {
+export interface SignableEntry {
   photos: { id: string; storagePath: string }[];
   attachments: {
     id: string;
@@ -281,17 +296,55 @@ export class NotebookService {
     return signed;
   }
 
-  async findAllForArea(userId: string, areaId: string) {
+  async findAllForArea(
+    userId: string,
+    areaId: string,
+  ): Promise<Awaited<ReturnType<NotebookService['attachSignedUrlsMany']>>>;
+  async findAllForArea(
+    userId: string,
+    areaId: string,
+    page: CursorPaginationDto,
+    meta?: ListMeta,
+  ): Promise<
+    | Awaited<ReturnType<NotebookService['attachSignedUrlsMany']>>
+    | Page<Awaited<ReturnType<NotebookService['attachSignedUrlsMany']>>[number]>
+  >;
+  async findAllForArea(
+    userId: string,
+    areaId: string,
+    page: CursorPaginationDto = {},
+    meta?: ListMeta,
+  ): Promise<
+    | Awaited<ReturnType<NotebookService['attachSignedUrlsMany']>>
+    | Page<Awaited<ReturnType<NotebookService['attachSignedUrlsMany']>>[number]>
+  > {
     await this.assertAreaExists(userId, areaId);
-    const entries = await this.prisma.notebookEntry.findMany({
-      where: { userId, areaId },
-      include: {
-        photos: { orderBy: { position: 'asc' } },
-        attachments: { orderBy: { createdAt: 'asc' } },
+    const result = await listOrPage(
+      (args) =>
+        this.prisma.notebookEntry.findMany({
+          where: { userId, areaId },
+          include: {
+            photos: { orderBy: { position: 'asc' } },
+            attachments: { orderBy: { createdAt: 'asc' } },
+          },
+          orderBy: [{ date: 'desc' }, { id: 'asc' }],
+          ...args,
+        }),
+      page,
+      {
+        meta,
+        cursorExists: async (id) =>
+          !!(await this.prisma.notebookEntry.findFirst({
+            where: { userId, areaId, id },
+            select: { id: true },
+          })),
       },
-      orderBy: { date: 'desc' },
-    });
-    return this.attachSignedUrlsMany(entries);
+    );
+    if (Array.isArray(result)) return this.attachSignedUrlsMany(result);
+    return {
+      items: await this.attachSignedUrlsMany(result.items),
+      nextCursor: result.nextCursor,
+    };
   }
 
   /**
@@ -307,28 +360,52 @@ export class NotebookService {
   async listSummariesForArea(
     userId: string,
     areaId: string,
-  ): Promise<NotebookEntrySummary[]> {
+    page: CursorPaginationDto = {},
+    meta?: ListMeta,
+  ): Promise<NotebookEntrySummary[] | Page<NotebookEntrySummary>> {
     await this.assertAreaExists(userId, areaId);
-    const rows = await this.prisma.notebookEntry.findMany({
-      where: { userId, areaId },
-      select: {
-        id: true,
-        areaId: true,
-        title: true,
-        entryType: true,
-        classNumber: true,
-        date: true,
-        textContent: true,
-        _count: { select: { photos: true, attachments: true } },
+    const result = await listOrPage(
+      (args) =>
+        this.prisma.notebookEntry.findMany({
+          where: { userId, areaId },
+          select: {
+            id: true,
+            areaId: true,
+            title: true,
+            entryType: true,
+            classNumber: true,
+            date: true,
+            textContent: true,
+            _count: { select: { photos: true, attachments: true } },
+          },
+          orderBy: [{ date: 'desc' }, { id: 'asc' }],
+          ...args,
+        }),
+      page,
+      {
+        meta,
+        cursorExists: async (id) =>
+          !!(await this.prisma.notebookEntry.findFirst({
+            where: { userId, areaId, id },
+            select: { id: true },
+          })),
       },
-      orderBy: { date: 'desc' },
-    });
-    return rows.map(({ textContent, _count, ...rest }) => ({
+    );
+    const toSummary = ({
+      textContent,
+      _count,
+      ...rest
+    }: SummaryRow): NotebookEntrySummary => ({
       ...rest,
       preview: textContent ? textContent.slice(0, SUMMARY_PREVIEW_CHARS) : null,
       photoCount: _count.photos,
       attachmentCount: _count.attachments,
-    }));
+    });
+    if (Array.isArray(result)) return result.map(toSummary);
+    return {
+      items: result.items.map(toSummary),
+      nextCursor: result.nextCursor,
+    };
   }
 
   /** Ids das fotos e anexos (por ordem), so do dono. */

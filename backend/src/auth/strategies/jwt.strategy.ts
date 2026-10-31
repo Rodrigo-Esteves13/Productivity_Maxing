@@ -53,8 +53,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
 
     // Efeito imediato de um ban/suspend mesmo com um JWT ainda válido -
-    // sem isto, a conta continuava a funcionar até o token expirar (até
-    // 7 dias, ver JwtModule.register em auth.module.ts). Consulta uma
+    // sem isto, a conta continuava a funcionar até o token expirar (15
+    // min, e o refresh renova-o, ver UserSessionsService). Consulta uma
     // cache em memória (ver AccountStatusService), não a BD - isto corre
     // em TODOS os pedidos autenticados.
     const { blocked, code, message } = this.accountStatus.isBlocked(
@@ -74,7 +74,22 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException('Session expired. Please log in again.');
     }
 
+    // Sessao de dispositivo revogada (outro dispositivo carregou em "Sign
+    // out", logout, reutilizacao de refresh token): o JWT de acesso deixa de
+    // valer logo, sem esperar pelos 15 minutos de validade.
+    if (
+      payload.sid &&
+      !(await this.sessionState.isDeviceSessionActive(payload.sid, payload.sub))
+    ) {
+      throw new UnauthorizedException('Session expired. Please log in again.');
+    }
+
     // fica disponível como req.user em qualquer rota protegida por JwtAuthGuard
-    return { id: payload.sub, email: payload.email, role: state.role };
+    return {
+      id: payload.sub,
+      email: payload.email,
+      role: state.role,
+      sessionId: payload.sid,
+    };
   }
 }

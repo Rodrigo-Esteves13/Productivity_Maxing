@@ -120,8 +120,13 @@ export default function SharedNotebookEntry() {
       .then((csrfToken) => {
         setCsrfToken(csrfToken);
         setHasSession(true);
+        // O JWT de acesso (15 min) pode ter sido renovado agora mesmo: o
+        // primeiro pedido da entrada pode ter saido como anonimo. Volta a
+        // pedir em silencio para uma partilha so para contas abrir logo.
+        load(true);
       })
       .catch(() => setHasSession(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- so no mount
   }, []);
 
   useDocumentTitle(entry ? t('ui.sharedEntryTitle', { title: entry.title }) : t('ui.sharedLesson'));
