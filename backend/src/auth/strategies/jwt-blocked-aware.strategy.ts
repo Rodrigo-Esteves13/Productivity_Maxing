@@ -83,6 +83,18 @@ export class JwtBlockedAwareStrategy extends PassportStrategy(
     if (!state || !isSessionCurrent(payload.tv, state.tokenVersion)) {
       throw new UnauthorizedException('Session expired. Please log in again.');
     }
-    return { id: payload.sub, email: payload.email, role: state.role };
+    // Idem para uma sessao de dispositivo revogada (ver JwtStrategy).
+    if (
+      payload.sid &&
+      !(await this.sessionState.isDeviceSessionActive(payload.sid, payload.sub))
+    ) {
+      throw new UnauthorizedException('Session expired. Please log in again.');
+    }
+    return {
+      id: payload.sub,
+      email: payload.email,
+      role: state.role,
+      sessionId: payload.sid,
+    };
   }
 }

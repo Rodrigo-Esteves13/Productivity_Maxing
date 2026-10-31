@@ -1,11 +1,5 @@
 export const fase7c: Record<string, string> = {
   'widget.failingRisk': "Durchfallrisiko",
-  'failingRisk.help': "Fächer, in denen du mit den bisherigen Noten im Rest einen hohen Schnitt zum Bestehen brauchst.",
-  'failingRisk.level.impossible': "Nicht mehr bestehbar",
-  'failingRisk.level.high': "Hohes Risiko",
-  'failingRisk.level.watch': "Beobachten",
-  'failingRisk.needed': "Bisheriger Schnitt {average} auf {graded}% der Note. Du brauchst {needed} auf die restlichen {remaining}%, um zu bestehen.",
-  'failingRisk.noWeightLeft': "Endschnitt {average}, unter der Bestehensgrenze, und es ist kein Gewicht mehr übrig.",
   'taskTemplates.label': "Vorlage",
   'taskTemplates.none': "Keine Vorlage",
   'taskTemplates.saveCurrent': "Als Vorlage speichern",

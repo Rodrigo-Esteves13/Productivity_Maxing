@@ -6,7 +6,7 @@ import LegalTable from '../components/Legal/LegalTable';
 import useSeo from '../hooks/useSeo';
 import { REPO_URL, CONTACT_EMAIL, APP_DOMAIN } from '../lib/constants';
 
-const LAST_UPDATED = '30/10/2026';
+const LAST_UPDATED = '31/10/2026';
 
 export default function PrivacyPolicy() {
   useSeo({
@@ -72,6 +72,12 @@ export default function PrivacyPolicy() {
             Study areas: a shared list of official subjects/categories that I curate, plus any personal
             areas you create yourself (visible only to you). If you propose a personal area as official,
             only its name, color, credits and default type are shown to an administrator for review
+          </li>
+          <li>
+            Teacher name (optional): for each course you can write down the name of its teacher. It is a
+            private note, visible only to you, and never shared with classmates, Turmas or anyone you
+            share with. It is used only to compare your own grades across courses with the same teacher.
+            It is included in your data export and deleted with your account
           </li>
           <li>
             Shared notebook links: for each link you create, I count how many times it was opened and
@@ -189,9 +195,20 @@ export default function PrivacyPolicy() {
 
         <h3 className="text-lg font-medium mt-4 mb-1">2.4 Technical data</h3>
         <p>
-          Session cookies (<code>HttpOnly</code>, used only to keep you signed in) and a CSRF protection
-          cookie. I don't use tracking or advertising cookies, and I don't use analytics services that
-          profile visitors.
+          Session cookies (<code>HttpOnly</code>, used only to keep you signed in: a short-lived access
+          cookie and a sign-in renewal cookie that is only sent to the sign-in renewal address) and a CSRF
+          protection cookie. I don't use tracking or advertising cookies, and I don't use analytics services
+          that profile visitors.
+        </p>
+        <p className="mt-3">
+          Signed-in devices: for each browser or phone where you sign in, I keep a record so you can see
+          and sign out your devices on the Devices page. It holds the browser&apos;s user agent (shortened),
+          only the start of your IP address (the last part is removed before it is stored, so it never
+          identifies your exact connection), when you signed in and when the device was last active. The
+          sign-in renewal token itself is stored only as a one-way hash. A device unused for 30 days is
+          signed out, and its record is deleted shortly after it expires or is signed out. If an old copy of
+          a sign-in is reused, the App ends that session and keeps a security log entry (date, IP address,
+          user agent) that only administrators can see.
         </p>
         <p className="mt-3">
           Display preferences (for example widget visibility, table density, column and area order, or

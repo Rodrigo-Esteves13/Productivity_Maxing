@@ -457,17 +457,49 @@ export class UsersService {
       }),
     ]);
 
+    // N45: nomes de docentes que a pessoa anotou (privados, so dela) e N46:
+    // as regras de aprovacao que gravou (por programa ou por cadeira).
+    const [areaTeacherNotes, approvalRuleSets] = await Promise.all([
+      this.prisma.areaTeacherNote.findMany({
+        where: { userId: id },
+        select: { areaId: true, teacherName: true, updatedAt: true },
+      }),
+      this.prisma.approvalRuleSet.findMany({
+        where: { userId: id },
+        select: {
+          programId: true,
+          areaId: true,
+          presetKey: true,
+          scaleMin: true,
+          scaleMax: true,
+          passMark: true,
+          rounding: true,
+          componentMinGrade: true,
+          secondThreshold: true,
+          maxBelowSecondThreshold: true,
+          hasExamTrack: true,
+          hasResitTrack: true,
+          updatedAt: true,
+        },
+      }),
+    ]);
+
     // Area é um catálogo global (ver AreasService.findAll), não tem
     // userId - não dá para filtrar diretamente. O relevante para o
     // export de dados do utilizador são só as Areas que ele realmente
-    // usa (via Task/StudySession/NotebookEntry), nunca o catálogo
-    // inteiro (que inclui cadeiras de outros utilizadores).
+    // usa (via Task/StudySession/NotebookEntry/nota de docente/regras),
+    // nunca o catálogo inteiro (que inclui cadeiras de outros
+    // utilizadores).
     const usedAreaIds = new Set<string>([
       ...tasks.map((t) => t.areaId),
       ...studySessions
         .map((s) => s.areaId)
         .filter((areaId): areaId is string => areaId !== null),
       ...notebookEntries.map((n) => n.areaId),
+      ...areaTeacherNotes.map((n) => n.areaId),
+      ...approvalRuleSets
+        .map((r) => r.areaId)
+        .filter((areaId): areaId is string => areaId !== null),
     ]);
     // + as Areas privadas que a pessoa criou (Area.ownerId), mesmo sem
     // tasks/sessoes/entradas.
@@ -479,6 +511,8 @@ export class UsersService {
     return {
       exportedAt: new Date().toISOString(),
       profile: user,
+      areaTeacherNotes,
+      approvalRuleSets,
       tasks,
       linkedProviders: identities,
       apiKeys,

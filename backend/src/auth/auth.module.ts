@@ -23,21 +23,33 @@ import { JwtBlockedAwareStrategy } from './strategies/jwt-blocked-aware.strategy
 import { ApiKeyStrategy } from './strategies/api-key.strategy';
 import { GoogleCalendarLinkGuard } from './guards/google-calendar-link.guard';
 import { AccountStatusModule } from '../account-status/account-status.module';
+import { UserSessionsService } from './services/user-sessions.service';
+import { NewDeviceAlertService } from './services/new-device-alert.service';
+import { PushCoreModule } from '../push/push-core.module';
+import { SecurityLogsCoreModule } from '../security-logs/security-logs-core.module';
+import { ACCESS_TOKEN_TTL_SECONDS } from './session.constants';
 
 @Module({
   imports: [
     PrismaModule,
     MailModule,
     AccountStatusModule,
+    // PushService e SecurityLogsService vem dos modulos "core" (instancia
+    // unica, partilhada com o PushModule/SecurityLogsModule). Importar esses
+    // dois modulos daqui criava um ciclo (ambos importam o AuthModule).
+    PushCoreModule,
+    SecurityLogsCoreModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '7d' },
+      signOptions: { expiresIn: ACCESS_TOKEN_TTL_SECONDS },
     }),
   ],
   controllers: [AuthController],
   providers: [
     AuthService,
+    UserSessionsService,
+    NewDeviceAlertService,
     SupabaseClientsService,
     AccountGuardService,
     OAuthIdentityService,

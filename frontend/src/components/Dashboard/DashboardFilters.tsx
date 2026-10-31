@@ -14,6 +14,8 @@ import type { Area, AcademicTaskTypeOption } from '../../types/models';
 import type { DashboardFiltersState } from './dashboardFilters.types';
 import { ACADEMIC_TASK_TYPE_KEY } from '../../lib/constants';
 import { useAreaOrder } from '../../hooks/useAreaOrder';
+import { EFFORTS } from '../../lib/taskReadiness';
+import { EFFORT_FILTER_NONE, READINESS_FILTERS } from '../../lib/taskReadinessFilter';
 
 interface DashboardFiltersProps {
   filters: DashboardFiltersState;
@@ -147,6 +149,29 @@ export default function DashboardFilters({
               <option value="today">{t('filters.dueToday')}</option>
               <option value="upcoming">{t('filters.upcoming')}</option>
               <option value="completed">{t('filters.completed')}</option>
+            </Select>
+          </FormField>
+
+          <FormField label={t('readiness.effort')} htmlFor="filter-effort" className="w-40">
+            <Select id="filter-effort" value={filters.effort} onChange={(e) => update({ effort: e.target.value })}>
+              <option value="">{t('filters.all')}</option>
+              {EFFORTS.map((effort) => (
+                <option key={effort} value={effort}>
+                  {enumLabel(effort)}
+                </option>
+              ))}
+              <option value={EFFORT_FILTER_NONE}>{t('readiness.effortNotSet')}</option>
+            </Select>
+          </FormField>
+
+          <FormField label={t('readiness.filter.label')} htmlFor="filter-readiness" className="w-44">
+            <Select id="filter-readiness" value={filters.readiness} onChange={(e) => update({ readiness: e.target.value })}>
+              <option value="">{t('filters.all')}</option>
+              {READINESS_FILTERS.map((option) => (
+                <option key={option} value={option}>
+                  {t(`readiness.filter.${option}`)}
+                </option>
+              ))}
             </Select>
           </FormField>
 

@@ -201,9 +201,17 @@ export const SITE_PAGES: SitePage[] = [
     labelKey: 'nav.profile',
     section: 'account',
     related: [
+      { to: '/devices', labelKey: 'related.profile.devices' },
       { to: '/agent', labelKey: 'related.profile.agent' },
       { to: '/wellbeing', labelKey: 'related.profile.wellbeing' },
     ],
+  },
+  {
+    path: '/devices',
+    labelKey: 'devices.title',
+    section: 'account',
+    parent: '/profile',
+    related: [{ to: '/profile', labelKey: 'related.devices.profile' }],
   },
   {
     path: '/agent',

@@ -24,6 +24,7 @@ import {
   Notebook,
   Profile,
   Developer,
+  Devices,
   Agent,
   Areas,
   Social,
@@ -182,6 +183,10 @@ export default function AppRouter() {
           <Route
             path="/developer"
             element={<PrivateRoute><Developer /></PrivateRoute>}
+          />
+          <Route
+            path="/devices"
+            element={<PrivateRoute><Devices /></PrivateRoute>}
           />
           <Route
             path="/agent"

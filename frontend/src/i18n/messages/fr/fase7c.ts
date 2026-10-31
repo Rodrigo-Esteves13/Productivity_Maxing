@@ -1,11 +1,5 @@
 export const fase7c: Record<string, string> = {
   'widget.failingRisk': "Risque d'échec",
-  'failingRisk.help': "Matières où, avec les notes actuelles, réussir demande une moyenne élevée sur ce qui reste.",
-  'failingRisk.level.impossible': "Plus possible de réussir",
-  'failingRisk.level.high': "Risque élevé",
-  'failingRisk.level.watch': "À surveiller",
-  'failingRisk.needed': "Moyenne actuelle {average} sur {graded}% de la note. Il te faut {needed} sur les {remaining}% restants pour réussir.",
-  'failingRisk.noWeightLeft': "Moyenne finale {average}, sous la note de validation, et il ne reste plus de poids.",
   'taskTemplates.label': "Modèle",
   'taskTemplates.none': "Aucun modèle",
   'taskTemplates.saveCurrent': "Enregistrer comme modèle",

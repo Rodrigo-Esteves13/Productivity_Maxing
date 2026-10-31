@@ -1,7 +1,11 @@
 import type { CookieOptions } from 'express';
+import { REFRESH_TOKEN_TTL_MS } from './session.constants';
 
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
+
+// O refresh token so e enviado para esta rota (Path restrito): nunca viaja
+// nos outros pedidos da app.
+export const REFRESH_TOKEN_PATH = '/auth/refresh';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -25,10 +29,15 @@ export function isSecureCookieEnv(): boolean {
 // desenvolvimento, sem HTTPS, o browser rejeitaria o prefixo). O frontend
 // nunca le estes cookies pelo nome, por isso a mudanca fica toda aqui.
 const HOST_PREFIX = isSecureCookies ? '__Host-' : '';
+// O cookie do refresh token tem Path=/auth/refresh, que o prefixo __Host-
+// proibe (exige Path=/). __Secure- continua a obrigar a Secure, e o cookie
+// nao leva Domain, por isso fica na mesma preso ao host da API.
+const SECURE_PREFIX = isSecureCookies ? '__Secure-' : '';
 
 export const ACCESS_TOKEN_COOKIE = `${HOST_PREFIX}access_token`;
 export const CSRF_COOKIE = `${HOST_PREFIX}csrf_token`;
 export const OAUTH_LOGIN_STATE_COOKIE = `${HOST_PREFIX}oauth_login_state`;
+export const REFRESH_TOKEN_COOKIE = `${SECURE_PREFIX}refresh_token`;
 
 // Frontend (app.pmaxing.pt) e API (api.pmaxing.pt) sao do MESMO site, por
 // isso 'lax' chega para o frontend enviar os cookies nos seus pedidos, e o
@@ -36,23 +45,49 @@ export const OAUTH_LOGIN_STATE_COOKIE = `${HOST_PREFIX}oauth_login_state`;
 // so seria preciso com frontend e API em sites diferentes.
 const SESSION_SAME_SITE = 'lax' as const;
 
+// O JWT la dentro so vale 15 minutos (ACCESS_TOKEN_TTL_SECONDS), mas o
+// cookie dura o mesmo que o refresh: o logout precisa de ler a claim `sid`
+// de um JWT ja expirado para saber que sessao terminar (a assinatura
+// continua a ser verificada). Um JWT expirado nunca autentica nada.
 export function accessTokenCookieOptions(): CookieOptions {
   return {
     httpOnly: true,
     secure: isSecureCookies,
     sameSite: SESSION_SAME_SITE,
     path: '/',
-    maxAge: SEVEN_DAYS_MS,
+    maxAge: REFRESH_TOKEN_TTL_MS,
   };
 }
 
+// Mesma validade do refresh: depois de um refresh o frontend volta a ter o
+// mesmo token CSRF (o cookie e reutilizado, ver AuthController.refresh).
 export function csrfCookieOptions(): CookieOptions {
   return {
     httpOnly: false,
     secure: isSecureCookies,
     sameSite: SESSION_SAME_SITE,
     path: '/',
-    maxAge: SEVEN_DAYS_MS,
+    maxAge: REFRESH_TOKEN_TTL_MS,
+  };
+}
+
+export function refreshTokenCookieOptions(): CookieOptions {
+  return {
+    httpOnly: true,
+    secure: isSecureCookies,
+    sameSite: SESSION_SAME_SITE,
+    path: REFRESH_TOKEN_PATH,
+    maxAge: REFRESH_TOKEN_TTL_MS,
+  };
+}
+
+// Apagar um cookie exige o mesmo Path com que foi criado.
+export function clearRefreshCookieOptions(): CookieOptions {
+  return {
+    httpOnly: true,
+    secure: isSecureCookies,
+    sameSite: SESSION_SAME_SITE,
+    path: REFRESH_TOKEN_PATH,
   };
 }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { rememberCurrentPage } from '../../lib/postAuthRedirect';
+import { openAuthenticatedBackendFlow } from '../../lib/backendNavigation';
 import ActionButton from '../UI/ActionButton';
 import ErrorState from '../UI/ErrorState';
 import { GoogleIcon } from '../UI/Icons';
@@ -47,7 +47,7 @@ export default function ScheduleSyncCard() {
           </p>
           <a
             href={`${apiUrl}/auth/google/link-calendar`}
-            onClick={rememberCurrentPage}
+            onClick={openAuthenticatedBackendFlow}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-500 text-white"
           >
             <GoogleIcon />

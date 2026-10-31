@@ -7,3 +7,6 @@ export const notebookEntrySharePath = (entryId: string): string =>
 
 /** Social no separador de pedidos (amizade, convites, leitura de notas). */
 export const SOCIAL_REQUESTS_PATH = '/social?tab=requests';
+
+/** Lista de dispositivos com sessao iniciada (onde se termina uma sessao). */
+export const DEVICES_PATH = '/devices';

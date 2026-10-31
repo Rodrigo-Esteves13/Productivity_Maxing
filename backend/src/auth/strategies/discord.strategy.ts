@@ -60,7 +60,7 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
       let user: User;
       if (state) {
         try {
-          const userId = this.authService.consumeLinkState(
+          const userId = await this.authService.consumeLinkState(
             state,
             Provider.DISCORD,
             (req.cookies as Record<string, string | undefined>)?.[

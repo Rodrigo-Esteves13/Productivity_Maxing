@@ -12,7 +12,11 @@ import { BannedIpsService } from '../../banned-ips/banned-ips.service';
 // bloquear o health check transformaria "banir um atacante" em "o Render
 // acha que o serviço caiu" - mesma exceção que o MaintenanceGuard já
 // tem.
-const ALWAYS_ALLOWED_PATHS = new Set(['/health']);
+const ALWAYS_ALLOWED_PATHS = new Set([
+  '/health',
+  '/health/live',
+  '/health/ready',
+]);
 
 /**
  * Primeiro guard global (ver app.module.ts - regista-se antes até do

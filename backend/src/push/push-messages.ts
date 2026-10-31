@@ -38,7 +38,9 @@ export type PushMessageKey =
   | 'feedbackReplied'
   | 'feedbackRejected'
   | 'turmaInvited'
-  | 'selfReminder';
+  | 'selfReminder'
+  | 'absenceLimitNear'
+  | 'newDeviceLogin';
 
 interface Template {
   title: string;
@@ -152,6 +154,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Reminder',
       body: '{title}',
     },
+    absenceLimitNear: {
+      title: 'Absence limit',
+      body: 'You are close to the absence limit in {title}.',
+    },
+    newDeviceLogin: {
+      title: 'New sign-in',
+      body: 'Signed in on {title}. If it was not you, sign that device out in Devices.',
+    },
   },
   pt: {
     friendLinkJoined: {
@@ -257,6 +267,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     selfReminder: {
       title: 'Lembrete',
       body: '{title}',
+    },
+    absenceLimitNear: {
+      title: 'Limite de faltas',
+      body: 'Estás perto do limite de faltas em {title}.',
+    },
+    newDeviceLogin: {
+      title: 'Novo início de sessão',
+      body: 'Sessão iniciada em {title}. Se não foste tu, termina essa sessão em Dispositivos.',
     },
   },
   es: {
@@ -364,6 +382,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Recordatorio',
       body: '{title}',
     },
+    absenceLimitNear: {
+      title: 'Límite de faltas',
+      body: 'Estás cerca del límite de faltas en {title}.',
+    },
+    newDeviceLogin: {
+      title: 'Nuevo inicio de sesión',
+      body: 'Sesión iniciada en {title}. Si no fuiste tú, cierra esa sesión en Dispositivos.',
+    },
   },
   zh: {
     friendLinkJoined: {
@@ -457,6 +483,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     selfReminder: {
       title: '提醒',
       body: '{title}',
+    },
+    absenceLimitNear: {
+      title: '缺勤上限',
+      body: '你在 {title} 的缺勤次数已接近上限。',
+    },
+    newDeviceLogin: {
+      title: '新的登录',
+      body: '已在 {title} 登录。如果不是你本人，请在“设备”中退出该设备。',
     },
   },
   ja: {
@@ -564,6 +598,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'リマインダー',
       body: '{title}',
     },
+    absenceLimitNear: {
+      title: '欠席の上限',
+      body: '{title} の欠席が上限に近づいています。',
+    },
+    newDeviceLogin: {
+      title: '新しいログイン',
+      body: '{title} でログインしました。心当たりがない場合は、「デバイス」でそのデバイスをログアウトしてください。',
+    },
   },
   ko: {
     friendLinkJoined: {
@@ -669,6 +711,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     selfReminder: {
       title: '알림',
       body: '{title}',
+    },
+    absenceLimitNear: {
+      title: '결석 한도',
+      body: '{title}의 결석이 한도에 가까워졌어요.',
+    },
+    newDeviceLogin: {
+      title: '새 로그인',
+      body: '{title}에서 로그인했습니다. 본인이 아니라면 기기 메뉴에서 해당 기기를 로그아웃하세요.',
     },
   },
   fr: {
@@ -776,6 +826,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Rappel',
       body: '{title}',
     },
+    absenceLimitNear: {
+      title: "Limite d'absences",
+      body: "Tu approches de la limite d'absences en {title}.",
+    },
+    newDeviceLogin: {
+      title: 'Nouvelle connexion',
+      body: 'Connexion depuis {title}. Si ce n’était pas toi, déconnecte cet appareil dans Appareils.',
+    },
   },
   de: {
     friendLinkJoined: {
@@ -881,6 +939,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     selfReminder: {
       title: 'Erinnerung',
       body: '{title}',
+    },
+    absenceLimitNear: {
+      title: 'Fehlzeitenlimit',
+      body: 'Du näherst dich dem Fehlzeitenlimit in {title}.',
+    },
+    newDeviceLogin: {
+      title: 'Neue Anmeldung',
+      body: 'Anmeldung auf {title}. Falls du das nicht warst, melde dieses Gerät unter Geräte ab.',
     },
   },
 };

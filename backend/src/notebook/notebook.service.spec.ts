@@ -1,4 +1,5 @@
-import { NotebookService } from './notebook.service';
+import { BadRequestException } from '@nestjs/common';
+import { NotebookService, type NotebookEntrySummary } from './notebook.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { PushService } from '../push/push.service';
 
@@ -29,7 +30,7 @@ function entry(id: string, photos: string[], attachments: string[] = []) {
   };
 }
 
-function setup(rows: unknown[], second: unknown[] = []) {
+function setup(rows: unknown[], second: unknown[] = [], cursorFound = true) {
   process.env.SUPABASE_URL ??= 'http://localhost:54321';
   process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'test-key';
 
@@ -39,7 +40,12 @@ function setup(rows: unknown[], second: unknown[] = []) {
     .mockResolvedValueOnce(second);
   const prisma = {
     area: { findFirst: jest.fn().mockResolvedValue({ id: 'area-1' }) },
-    notebookEntry: { findMany },
+    notebookEntry: {
+      findMany,
+      findFirst: jest
+        .fn()
+        .mockResolvedValue(cursorFound ? { id: 'cursor' } : null),
+    },
   };
 
   // O Storage assina tudo menos os caminhos com "missing" no nome.
@@ -60,7 +66,7 @@ function setup(rows: unknown[], second: unknown[] = []) {
     {} as PushService,
   );
   Object.assign(service, { storage: { storage: { from } } });
-  return { service, findMany, from, createSignedUrls };
+  return { service, findMany, from, createSignedUrls, prisma };
 }
 
 describe('NotebookService signed URLs', () => {
@@ -140,7 +146,10 @@ describe('NotebookService.listSummariesForArea', () => {
       },
     ]);
 
-    const result = await service.listSummariesForArea('user-1', 'area-1');
+    const result = (await service.listSummariesForArea(
+      'user-1',
+      'area-1',
+    )) as NotebookEntrySummary[];
 
     const args = (findMany.mock.calls[0] as [{ select: object }])[0];
     expect(Object.keys(args.select)).not.toContain('drawingStrokes');
@@ -207,5 +216,93 @@ describe('NotebookService.search', () => {
 
     expect(await service.search('user-1', 'xyz')).toEqual([]);
     expect(findMany).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('NotebookService pagination', () => {
+  const row = (id: string) => ({
+    id,
+    areaId: 'area-1',
+    title: id,
+    entryType: 'NOTE',
+    classNumber: null,
+    date: new Date('2026-10-01'),
+    textContent: null,
+    _count: { photos: 0, attachments: 0 },
+  });
+
+  it('summaries: no cursor keeps the array, scoped by userId, id tiebreaker', async () => {
+    const { service, findMany } = setup([row('e1')]);
+    const result = await service.listSummariesForArea('user-1', 'area-1');
+    expect(Array.isArray(result)).toBe(true);
+    expect((findMany.mock.calls[0] as unknown[])[0]).toMatchObject({
+      where: { userId: 'user-1', areaId: 'area-1' },
+      orderBy: [{ date: 'desc' }, { id: 'asc' }],
+      take: 1001,
+    });
+  });
+
+  it('summaries: cursor returns the envelope and trims the extra row', async () => {
+    const { service, findMany } = setup([row('e2'), row('e3'), row('e4')]);
+    const result = await service.listSummariesForArea('user-1', 'area-1', {
+      cursor: 'e1',
+      limit: 2,
+    });
+    expect((findMany.mock.calls[0] as unknown[])[0]).toMatchObject({
+      take: 3,
+      skip: 1,
+      cursor: { id: 'e1' },
+    });
+    expect(result).toMatchObject({ nextCursor: 'e3' });
+    expect((result as { items: unknown[] }).items).toHaveLength(2);
+  });
+
+  it('entries: paginated=true returns the envelope with a cursor', async () => {
+    const { service } = setup([
+      entry('e1', []),
+      entry('e2', []),
+      entry('e3', []),
+    ]);
+    const result = await service.findAllForArea('user-1', 'area-1', {
+      paginated: true,
+      limit: 2,
+    });
+    expect(Array.isArray(result)).toBe(false);
+    expect(result).toMatchObject({ nextCursor: 'e2' });
+  });
+});
+
+describe('NotebookService cursor validation', () => {
+  it('summaries: unknown/deleted/foreign cursor gives 400 and no list query', async () => {
+    const { service, findMany } = setup([], [], false);
+    await expect(
+      service.listSummariesForArea('user-1', 'area-1', { cursor: 'nope' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it('entries: unknown cursor gives 400', async () => {
+    const { service } = setup([], [], false);
+    await expect(
+      service.findAllForArea('user-1', 'area-1', { cursor: 'nope' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('valid cursor is looked up scoped by user and area', async () => {
+    const { service, prisma } = setup([], [], true);
+    await service.listSummariesForArea('user-1', 'area-1', { cursor: 'e1' });
+    expect(prisma.notebookEntry.findFirst).toHaveBeenCalledWith({
+      where: { userId: 'user-1', areaId: 'area-1', id: 'e1' },
+      select: { id: true },
+    });
+  });
+
+  it('entries: the cursor is looked up scoped by user and area too', async () => {
+    const { service, prisma } = setup([], [], true);
+    await service.findAllForArea('user-1', 'area-1', { cursor: 'e1' });
+    expect(prisma.notebookEntry.findFirst).toHaveBeenCalledWith({
+      where: { userId: 'user-1', areaId: 'area-1', id: 'e1' },
+      select: { id: true },
+    });
   });
 });

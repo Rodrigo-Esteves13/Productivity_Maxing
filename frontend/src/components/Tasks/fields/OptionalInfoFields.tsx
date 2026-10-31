@@ -1,6 +1,7 @@
 import Input from '../../UI/Input';
 import Textarea from '../../UI/Textarea';
 import { useI18n } from '../../../i18n/useI18n';
+import { isCalendarTimeFieldVisible } from '../../../lib/calendarTimeField';
 
 interface OptionalInfoFieldsProps {
   topics: string;
@@ -57,7 +58,7 @@ export default function OptionalInfoFields({
   onCalendarDurationMinutesChange,
 }: OptionalInfoFieldsProps) {
   const { t } = useI18n();
-  const showTimeField = calendarConnected && syncToCalendar;
+  const showTimeField = isCalendarTimeFieldVisible(calendarConnected, syncToCalendar);
   // A duração só faz sentido quando o evento tem mesmo uma hora de início -
   // um evento "dia inteiro" não tem hora de fim para calcular.
   const showDurationField = showTimeField && !!calendarTime;
@@ -100,9 +101,7 @@ export default function OptionalInfoFields({
           <label htmlFor="sync-to-calendar" className={calendarConnected ? 'cursor-pointer' : ''}>
             <span className="text-sm text-neutral-400">{t('ui.addToGoogleCalendar')}</span>
             <p className="text-xs text-neutral-500">
-              {calendarConnected
-                ? t('ui.createsOrUpdatesAnEvent')
-                : t('ui.connectGoogleCalendarInYour2')}
+              {calendarConnected ? t('ui.createsOrUpdatesAnEvent') : t('ui.connectGoogleCalendarInYour2')}
             </p>
           </label>
 

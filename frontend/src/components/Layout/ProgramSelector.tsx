@@ -1,6 +1,7 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Select from '../UI/Select';
-import { TrashIcon, PencilIcon } from '../UI/Icons';
+import { TrashIcon, PencilIcon, SlidersIcon } from '../UI/Icons';
 import { useAcademic } from '../../context/useAcademic';
 import { getApiMessage } from '../../lib/httpError';
 import CreateProgramModal from './CreateProgramModal';
@@ -11,6 +12,10 @@ import IconButton from '../UI/IconButton';
 
 // Lazy e montado so quando aberto.
 const ManagePeriodsModal = lazy(() => import('./ManagePeriodsModal'));
+const ApprovalRulesModal = lazy(() => import('../ApprovalRules/ApprovalRulesModal'));
+
+// Deep link usado pela paleta de comandos: /dashboard?approvalRules=on
+const APPROVAL_RULES_PARAM = 'approvalRules';
 
 const CREATE_NEW_VALUE = '__create_new__';
 const NO_PROGRAM_VALUE = '__no_program__';
@@ -32,7 +37,23 @@ export default function ProgramSelector() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [isPeriodsModalOpen, setIsPeriodsModalOpen] = useState(false);
+  const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const wantsRules = searchParams.has(APPROVAL_RULES_PARAM);
+
+  useEffect(() => {
+    if (!wantsRules || !activeProgram) return;
+    setIsRulesModalOpen(true);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete(APPROVAL_RULES_PARAM);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [wantsRules, activeProgram, setSearchParams]);
 
   // Nothing to pick with a single program yet - but it's still worth
   // showing the selector with the option to create a second one, so we
@@ -104,6 +125,14 @@ export default function ProgramSelector() {
             <PencilIcon />
           </IconButton>
 
+          <IconButton
+            label={t('approvalRules.open')}
+            onClick={() => setIsRulesModalOpen(true)}
+            className="text-neutral-500 hover:text-neutral-200"
+          >
+            <SlidersIcon />
+          </IconButton>
+
           <button
             type="button"
             onClick={() => setIsPeriodsModalOpen(true)}
@@ -137,6 +166,17 @@ export default function ProgramSelector() {
             program={activeProgram}
             onRenamed={refresh}
           />
+          {isRulesModalOpen && (
+            <Suspense fallback={null}>
+              <ApprovalRulesModal
+                isOpen
+                onClose={() => setIsRulesModalOpen(false)}
+                scope="program"
+                targetId={activeProgram.id}
+                targetName={activeProgram.name}
+              />
+            </Suspense>
+          )}
           {isPeriodsModalOpen && (
             <Suspense fallback={null}>
               <ManagePeriodsModal

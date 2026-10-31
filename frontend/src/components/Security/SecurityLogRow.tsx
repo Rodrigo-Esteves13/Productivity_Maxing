@@ -12,6 +12,7 @@ interface SecurityLogRowProps {
 const TYPE_LABEL_KEYS: Partial<Record<SecurityLog['type'], string>> = {
   ADMIN_PAD_DELETED: 'ui.securityTypeAdminPadDeleted',
   ADMIN_PAD_SOURCE_BLOCKED: 'ui.securityTypeAdminPadSourceBlocked',
+  REFRESH_TOKEN_REUSE: 'devices.securityTypeRefreshReuse',
 };
 
 const METHOD_STYLES: Record<string, string> = {

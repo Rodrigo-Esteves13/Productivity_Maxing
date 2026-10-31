@@ -41,6 +41,7 @@ import { PlanModeContext, type PlanModeContextValue } from '../context/plan-mode
 import { usePlanModePref } from '../hooks/usePlanMode';
 import { usePeriodGradeComponents } from '../hooks/usePeriodGradeComponents';
 import { applyPlanToComponents, applyPlanToTasks, buildPlanFill } from '../lib/planScenario';
+import { matchesEffortFilter, matchesReadinessFilter } from '../lib/taskReadinessFilter';
 import BulkActionsBar from '../components/Dashboard/BulkActionsBar';
 import TaskExportButtons from '../components/Dashboard/TaskExportButtons';
 import { ACADEMIC_TASK_TYPE_KEY } from '../lib/constants';
@@ -169,6 +170,8 @@ export default function Dashboard() {
       if (filters.difficulty && task.difficulty !== filters.difficulty) return false;
       if (filters.progressStatus && task.progressStatus !== filters.progressStatus) return false;
       if (filters.dateStatus && getDateStatus(task) !== filters.dateStatus) return false;
+      if (!matchesEffortFilter(task, filters.effort)) return false;
+      if (!matchesReadinessFilter(task, filters.readiness)) return false;
       return true;
     });
     // Sem coluna escolhida ordena por prazo (TBD/Surprise no fim). A ordem
@@ -178,7 +181,7 @@ export default function Dashboard() {
   }, [academicTasks, filters, showArchived, isExamMode, sort]);
 
   const {
-    selectedIds, toggleSelect, toggleSelectAll, markSelectedDone, rescheduleSelected, deleteSelected,
+    selectedIds, toggleSelect, toggleSelectAll, markSelectedDone, rescheduleSelected, setEffortSelected, deleteSelected,
     selectedSyncedCount, clearSelection,
   } = useTaskSelection(filteredTasks, setTasks, filters);
   const { completeOne } = useCompleteWithUndo(setTasks);
@@ -340,6 +343,7 @@ export default function Dashboard() {
                 selectedCount={selectedIds.size}
                 onMarkDone={markSelectedDone}
                 onReschedule={rescheduleSelected}
+                onSetEffort={setEffortSelected}
                 onDelete={deleteSelected}
                 syncedCount={selectedSyncedCount}
                 onClear={clearSelection}

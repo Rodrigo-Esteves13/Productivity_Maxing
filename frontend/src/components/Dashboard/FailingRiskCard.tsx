@@ -1,34 +1,41 @@
 import { useMemo } from 'react';
-import type { Area, Task } from '../../types/models';
-import { computeFailingRisk, type FailingRiskLevel } from '../../utils/failingRisk';
-import { usePeriodGradeComponents } from '../../hooks/usePeriodGradeComponents';
+import { useCourseRisk } from '../../hooks/useCourseRisk';
+import { useAbsenceLimitPref } from '../../hooks/useAbsenceLimitPref';
+import { hasVisibleRisk } from '../../lib/courseRisk';
 import { AlertTriangleIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
-import ColorDot from '../UI/ColorDot';
 import { useI18n } from '../../i18n/useI18n';
+import CourseRiskList from './CourseRiskList';
 
-interface FailingRiskCardProps {
-  tasks: Task[];
-  areas: Area[];
-  scale: string;
-}
+// Risco de chumbo por cadeira, calculado no backend com as regras de
+// aprovacao. Sem cadeiras em risco o cartao nao aparece; se o pedido falha
+// mostra so uma linha pequena com "tentar de novo".
 
-// Etiqueta e cor por nivel (tabela em vez de if/else).
-const LEVEL_STYLE: Record<FailingRiskLevel, { labelKey: string; className: string }> = {
-  impossible: { labelKey: 'failingRisk.level.impossible', className: 'border-red-700 bg-red-900/30 text-red-200' },
-  high: { labelKey: 'failingRisk.level.high', className: 'border-red-800 bg-red-900/20 text-red-300' },
-  watch: { labelKey: 'failingRisk.level.watch', className: 'border-violet-700 bg-violet-900/30 text-violet-200' },
-};
+export default function FailingRiskCard() {
+  const { t, lang } = useI18n();
+  // O backend usa o limite de faltas do utilizador (preferencia so do cliente).
+  const { limitPct } = useAbsenceLimitPref();
+  const { risks: allRisks, isLoading, hasError, retry } = useCourseRisk(limitPct);
+  const risks = useMemo(() => allRisks.filter(hasVisibleRisk), [allRisks]);
+  if (isLoading) return null;
 
-// Aviso antecipado de chumbo: por cadeira, com o que ja foi avaliado, que
-// media precisas no resto para chegar a nota minima. Sem cadeiras em risco
-// o cartao nao aparece.
-export default function FailingRiskCard({ tasks, areas, scale }: FailingRiskCardProps) {
-  const { t } = useI18n();
-  const components = usePeriodGradeComponents();
-  const rows = useMemo(() => computeFailingRisk(tasks, areas, components, scale), [tasks, areas, components, scale]);
-  if (rows.length === 0) return null;
-  const isSerious = rows.some((r) => r.level !== 'watch');
+  if (hasError) {
+    return (
+      <p className="flex items-center gap-2 text-xs text-neutral-500" role="status">
+        {t('courseRisk.error')}
+        <button
+          type="button"
+          onClick={retry}
+          className="rounded text-violet-400 underline transition-colors hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
+        >
+          {t('courseRisk.retry')}
+        </button>
+      </p>
+    );
+  }
+
+  if (risks.length === 0) return null;
+  const isSerious = risks.some((r) => r.level === 'high' || r.level === 'extreme');
 
   return (
     <DashboardCard tone={isSerious ? 'danger' : undefined}>
@@ -36,32 +43,8 @@ export default function FailingRiskCard({ tasks, areas, scale }: FailingRiskCard
         <AlertTriangleIcon className="shrink-0" />
         {t('widget.failingRisk')}
       </CardHeading>
-      <p className="mb-3 text-xs text-neutral-400">{t('failingRisk.help')}</p>
-      <ul className="space-y-3">
-        {rows.map((row) => (
-          <li key={row.area.id} className="text-sm">
-            <div className="mb-0.5 flex flex-wrap items-center justify-between gap-2">
-              <span className="flex min-w-0 items-center gap-2 text-neutral-200">
-                <ColorDot size="xs" color={row.area.colorHex} />
-                <span className="truncate">{row.area.name}</span>
-              </span>
-              <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${LEVEL_STYLE[row.level].className}`}>
-                {t(LEVEL_STYLE[row.level].labelKey)}
-              </span>
-            </div>
-            <p className="text-xs text-neutral-400">
-              {row.neededOnRest === null
-                ? t('failingRisk.noWeightLeft', { average: row.currentAverage })
-                : t('failingRisk.needed', {
-                    average: row.currentAverage,
-                    graded: row.gradedWeightPct,
-                    needed: row.neededOnRest,
-                    remaining: row.remainingWeightPct,
-                  })}
-            </p>
-          </li>
-        ))}
-      </ul>
+      <p className="mb-3 text-xs text-neutral-400">{t('courseRisk.help')}</p>
+      <CourseRiskList risks={risks} t={t} lang={lang} />
     </DashboardCard>
   );
 }

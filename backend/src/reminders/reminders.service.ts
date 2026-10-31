@@ -7,7 +7,9 @@ import { PushService } from '../push/push.service';
 import { PadsService } from '../pads/pads.service';
 import { MedicationsService } from '../wellbeing/medications.service';
 import { PersonalNotesService } from '../personal-notes/personal-notes.service';
+import { AbsenceLimitRemindersService } from './absence-limit-reminders.service';
 import { getFrontendUrl } from '../config/app.config';
+import { deleteStaleUserSessions } from '../auth/services/user-sessions.service';
 import { getLisbonNow, toDateKey } from '../common/date-key.util';
 import { lisbonWallClockToUtc } from '../calendar/feed/ics-feed.builder';
 import {
@@ -34,7 +36,11 @@ export interface ReminderRunResult {
   medicationUsersPushed: number;
   // Lembretes de notas pessoais enviados nesta execucao.
   personalRemindersSent: number;
+  // Utilizadores avisados de que estao perto do limite de faltas (semanal).
+  absenceLimitUsersPushed: number;
   expiredPadsDeleted: number;
+  // Sessoes de dispositivo expiradas/revogadas apagadas nesta execucao.
+  staleSessionsDeleted: number;
 }
 
 // Um aviso push por user e por execucao: a primeira task (a mais proxima)
@@ -57,6 +63,7 @@ export class RemindersService {
     private readonly medicationsService: MedicationsService,
     private readonly padsService: PadsService,
     private readonly personalNotesService: PersonalNotesService,
+    private readonly absenceLimitReminders: AbsenceLimitRemindersService,
   ) {}
 
   async run(now = new Date()): Promise<ReminderRunResult> {
@@ -137,7 +144,9 @@ export class RemindersService {
       remindersSent: 0,
       medicationUsersPushed: 0,
       personalRemindersSent: 0,
+      absenceLimitUsersPushed: 0,
       expiredPadsDeleted: 0,
+      staleSessionsDeleted: 0,
     };
     const tasksLink = `${getFrontendUrl()}${TASKS_PATH}`;
 
@@ -201,6 +210,15 @@ export class RemindersService {
       );
     }
 
+    try {
+      result.absenceLimitUsersPushed =
+        await this.absenceLimitReminders.sendWeeklyReminders();
+    } catch (error) {
+      this.logger.warn(
+        `Aviso de limite de faltas falhou: ${(error as Error).message}`,
+      );
+    }
+
     // Limpeza dos pads sem edicoes ha 90 dias; falhar aqui nao para os
     // lembretes (ja enviados acima).
     try {
@@ -208,6 +226,19 @@ export class RemindersService {
     } catch (error) {
       this.logger.warn(
         `Limpeza de pads expirados falhou: ${(error as Error).message}`,
+      );
+    }
+
+    // Sessoes de dispositivo com o refresh expirado ou revogadas ha dias
+    // (ver deleteStaleUserSessions): a tabela nao cresce para sempre.
+    try {
+      result.staleSessionsDeleted = await deleteStaleUserSessions(
+        this.prisma,
+        now,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Limpeza de sessoes expiradas falhou: ${(error as Error).message}`,
       );
     }
 

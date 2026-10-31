@@ -1,4 +1,8 @@
 import { useState } from 'react';
+import Select from '../UI/Select';
+import { EFFORTS } from '../../lib/taskReadiness';
+import type { Effort } from '../../types/models';
+import { useEnumLabel } from '../../hooks/useEnumLabel';
 import { CalendarIcon, CheckIcon, TrashIcon } from '../UI/Icons';
 import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
@@ -11,6 +15,8 @@ interface BulkActionsBarProps {
   onMarkDone: () => Promise<void>;
   // Recebe o dia ("YYYY-MM-DD") e devolve quantas tasks mudaram de data.
   onReschedule: (dateKey: string) => Promise<number>;
+  // Define (ou limpa, com null) o esforco das selecionadas; devolve quantas mudaram.
+  onSetEffort: (effort: Effort | null) => Promise<number>;
   // removeFromCalendar: true quando o user aceitou remover tambem os eventos
   // ligados no Google Calendar.
   onDelete: (removeFromCalendar: boolean) => Promise<void>;
@@ -26,6 +32,9 @@ interface BulkActionsBarProps {
 // field, which would need its own modal and isn't a real use case.
 // "Move to" (hoje, amanha ou um dia) junta-se a esses dois: e o caso real
 // de varias tasks em atraso que so precisam de nova data.
+// Valor da opcao que limpa o esforco (o select so trabalha com strings).
+const CLEAR_EFFORT = 'CLEAR';
+
 const MOVE_BUTTON_CLASS =
   'rounded-md border border-violet-800/60 px-2.5 py-1 text-sm text-violet-200 hover:bg-violet-900/40 transition-colors disabled:opacity-50';
 
@@ -33,18 +42,21 @@ export default function BulkActionsBar({
   selectedCount,
   onMarkDone,
   onReschedule,
+  onSetEffort,
   onDelete,
   onClear,
   syncedCount = 0,
 }: BulkActionsBarProps) {
   const { t } = useI18n();
   const { confirm, notify } = useFeedback();
+  const enumLabel = useEnumLabel();
   const [isMarkingDone, setIsMarkingDone] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRescheduling, setIsRescheduling] = useState(false);
+  const [isSettingEffort, setIsSettingEffort] = useState(false);
 
   if (selectedCount === 0) return null;
-  const isBusy = isMarkingDone || isDeleting || isRescheduling;
+  const isBusy = isMarkingDone || isDeleting || isRescheduling || isSettingEffort;
 
   const handleReschedule = async (dateKey: string) => {
     setIsRescheduling(true);
@@ -55,6 +67,19 @@ export default function BulkActionsBar({
       notify(t('bulkMove.failed'), 'error');
     } finally {
       setIsRescheduling(false);
+    }
+  };
+
+  const handleSetEffort = async (value: string) => {
+    if (!value) return;
+    setIsSettingEffort(true);
+    try {
+      const count = await onSetEffort(value === CLEAR_EFFORT ? null : (value as Effort));
+      notify(t(count === 1 ? 'bulkEffort.doneOne' : 'bulkEffort.doneMany', { count }), 'success');
+    } catch {
+      notify(t('bulkEffort.failed'), 'error');
+    } finally {
+      setIsSettingEffort(false);
     }
   };
 
@@ -135,6 +160,23 @@ export default function BulkActionsBar({
           }}
           className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-200 focus:outline-none focus:ring-2 focus:ring-violet-600/50 disabled:opacity-50 [color-scheme:dark]"
         />
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value=""
+          aria-label={t('bulkEffort.label')}
+          disabled={isBusy}
+          onChange={(e) => void handleSetEffort(e.target.value)}
+          className="py-1 text-sm"
+        >
+          <option value="">{t('bulkEffort.label')}</option>
+          {EFFORTS.map((effort) => (
+            <option key={effort} value={effort}>
+              {enumLabel(effort)}
+            </option>
+          ))}
+          <option value={CLEAR_EFFORT}>{t('bulkEffort.clear')}</option>
+        </Select>
       </div>
       <div className="flex items-center gap-2">
         <button

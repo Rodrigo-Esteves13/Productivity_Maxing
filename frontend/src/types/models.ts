@@ -88,7 +88,22 @@ export type Difficulty = 'VERY_EASY' | 'EASY' | 'MEDIUM' | 'HARD' | 'VERY_HARD';
 // it became an admin-managed catalog (see AdminPriority/PriorityOption
 // below) - it's just whatever key the admin's Priority rows use, a plain
 // string, same as `type`/`academicType` already were.
-export type SecurityEventType = 'RATE_LIMIT_EXCEEDED' | 'ADMIN_PAD_DELETED' | 'ADMIN_PAD_SOURCE_BLOCKED';
+export type SecurityEventType =
+  | 'RATE_LIMIT_EXCEEDED'
+  | 'ADMIN_PAD_DELETED'
+  | 'ADMIN_PAD_SOURCE_BLOCKED'
+  | 'REFRESH_TOKEN_REUSE';
+
+// Sessao de um dispositivo com login feito (GET /auth/sessions). ipMasked
+// ja vem com o fim escondido pelo backend; current = este browser.
+export interface DeviceSession {
+  id: string;
+  userAgent: string | null;
+  ipMasked: string | null;
+  createdAt: string;
+  lastSeenAt: string;
+  current: boolean;
+}
 // No longer fixed union types: now they come from the DB (a table the
 // admin can edit), so they're `string` (the "key" returned by /tasks/meta).
 export type TaskType = string;
@@ -1682,3 +1697,47 @@ export interface PersonalNote {
   createdAt: string;
   updatedAt: string;
 }
+
+// Risco de chumbo por cadeira (GET /course-risk). Espelha CourseRisk em
+// backend/src/approval-rules/approval-rules.types.ts.
+export type ApprovalTrack = 'CONTINUOUS' | 'EXAM' | 'RESIT';
+export type RiskLevel = 'low' | 'medium' | 'high' | 'extreme';
+export type RiskReasonCode =
+  | 'COMPONENT_BELOW_MIN'
+  | 'TOO_MANY_BELOW_SECOND_THRESHOLD'
+  | 'IMPOSSIBLE_ON_REMAINING'
+  | 'HIGH_NEED_ON_REMAINING'
+  | 'LOW_AVERAGE_SO_FAR'
+  | 'LOW_STUDY_TIME'
+  | 'ABSENCE_NEAR_LIMIT'
+  | 'ABSENCE_OVER_LIMIT'
+  | 'POSTPONED_TASKS'
+  | 'TEACHER_HISTORY_LOWER'
+  | 'ONLY_EXAM_TRACK_LEFT';
+
+export interface RiskReason {
+  code: RiskReasonCode;
+  params: Record<string, string | number>;
+}
+
+export interface CourseRisk {
+  areaId: string;
+  areaName: string;
+  colorHex: string;
+  score: number;
+  level: RiskLevel;
+  track: ApprovalTrack;
+  reasons: RiskReason[];
+  currentAverage: number | null;
+  gradedWeightPct: number;
+  remainingWeightPct: number;
+  neededOnRemaining: number | null;
+}
+
+// Nota privada do aluno: nome do docente de uma cadeira (so dele).
+export interface AreaTeacherNote {
+  areaId: string;
+  teacherName: string;
+}
+
+export const TEACHER_NAME_MAX_LENGTH = 100;

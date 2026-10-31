@@ -4,7 +4,7 @@ import {
   OnModuleInit,
   OnModuleDestroy,
 } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 // Prisma's default connection_limit, when the DATABASE_URL doesn't set one
 // explicitly, is `num_physical_cpus * 2 + 1`. On Render's smaller
@@ -32,6 +32,37 @@ import { PrismaClient } from '@prisma/client';
 const DEFAULT_CONNECTION_LIMIT = 10;
 const DEFAULT_POOL_TIMEOUT_SECONDS = 20;
 
+// Queries acima disto (ms) vao para o log como aviso. Configuravel sem
+// redeploy de codigo: SLOW_QUERY_MS no Render.
+const DEFAULT_SLOW_QUERY_MS = 500;
+const MAX_LOGGED_QUERY_CHARS = 300;
+
+export function getSlowQueryThresholdMs(
+  raw: string | undefined = process.env.SLOW_QUERY_MS,
+): number {
+  const parsed = Number(raw);
+  return raw && Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_SLOW_QUERY_MS;
+}
+
+/**
+ * Regista um aviso se a query durou mais que o limiar. Loga so o SQL com
+ * placeholders ($1, $2...) e a duracao - NUNCA e.params, que leva dados
+ * pessoais. Devolve true se avisou.
+ */
+export function logIfSlowQuery(
+  logger: Pick<Logger, 'warn'>,
+  event: Pick<Prisma.QueryEvent, 'query' | 'duration'>,
+  thresholdMs: number,
+): boolean {
+  if (event.duration <= thresholdMs) return false;
+  logger.warn(
+    `Slow query (${event.duration}ms > ${thresholdMs}ms): ${event.query.slice(0, MAX_LOGGED_QUERY_CHARS)}`,
+  );
+  return true;
+}
+
 function buildDatasourceUrl(): string | undefined {
   const raw = process.env.DATABASE_URL;
   if (!raw) return undefined; // let Prisma's own "DATABASE_URL missing" error fire, unchanged
@@ -55,14 +86,21 @@ function buildDatasourceUrl(): string | undefined {
 
 @Injectable()
 export class PrismaService
-  extends PrismaClient
+  extends PrismaClient<Prisma.PrismaClientOptions, 'query'>
   implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(PrismaService.name);
 
   constructor() {
     const datasourceUrl = buildDatasourceUrl();
-    super(datasourceUrl ? { datasourceUrl } : undefined);
+    super({
+      ...(datasourceUrl ? { datasourceUrl } : {}),
+      log: [{ emit: 'event', level: 'query' }],
+    });
+    const thresholdMs = getSlowQueryThresholdMs();
+    this.$on('query', (event) => {
+      logIfSlowQuery(this.logger, event, thresholdMs);
+    });
   }
 
   async onModuleInit() {

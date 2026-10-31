@@ -12,6 +12,14 @@ export interface HealthResult {
 export class HealthService {
   constructor(private readonly prisma: PrismaService) {}
 
+  live(): { status: 'ok'; uptime: number; timestamp: string } {
+    return {
+      status: 'ok',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   async check(): Promise<HealthResult> {
     const databaseOk = await this.pingDatabase();
 

@@ -7,8 +7,13 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import type { Express } from 'express';
 import { getFrontendUrl } from './config/app.config';
+import { RESULT_TRUNCATED_HEADER } from './common/pagination.util';
 import { JsonLogger } from './common/logger/json-logger.service';
 import { isMaintenanceMode } from './common/guards/maintenance.guard';
+import {
+  REQUEST_ID_HEADER,
+  requestIdMiddleware,
+} from './common/middleware/request-id.middleware';
 
 // Variáveis obrigatórias para o backend funcionar com segurança. Se
 // qualquer uma faltar, a app não deve arrancar silenciosamente com um
@@ -89,6 +94,8 @@ async function bootstrap() {
   // ligações do pooler em modo "session" (EMAXCONNSESSION).
   app.enableShutdownHooks();
 
+  // Antes de tudo o resto, para o id existir em qualquer log/erro do pedido.
+  app.use(requestIdMiddleware);
   app.use(helmet());
   // Gzips every JSON response over ~1KB by default (the compression
   // package's own threshold) - a task list of any real size is mostly
@@ -103,6 +110,8 @@ async function bootstrap() {
   app.enableCors({
     origin: getFrontendUrl(),
     credentials: true,
+    // Sem isto o browser esconde o header ao JS do frontend (cross-origin).
+    exposedHeaders: [REQUEST_ID_HEADER, RESULT_TRUNCATED_HEADER],
   });
 
   // Uma só instância do ValidationPipe (a duplicada anterior, sem

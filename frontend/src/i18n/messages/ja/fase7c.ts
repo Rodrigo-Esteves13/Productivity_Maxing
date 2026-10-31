@@ -1,11 +1,5 @@
 export const fase7c: Record<string, string> = {
   'widget.failingRisk': "不合格のリスク",
-  'failingRisk.help': "これまでの成績では、残りで高い平均が必要な科目です。",
-  'failingRisk.level.impossible': "合格できない",
-  'failingRisk.level.high': "高リスク",
-  'failingRisk.level.watch': "注意",
-  'failingRisk.needed': "これまでの平均は成績の {graded}% で {average}。合格するには残り {remaining}% で {needed} が必要です。",
-  'failingRisk.noWeightLeft': "最終平均は {average} で合格点未満、残りの配点はありません。",
   'taskTemplates.label': "テンプレート",
   'taskTemplates.none': "テンプレートなし",
   'taskTemplates.saveCurrent': "テンプレートとして保存",

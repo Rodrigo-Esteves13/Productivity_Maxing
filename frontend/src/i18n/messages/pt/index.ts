@@ -24,6 +24,10 @@ import { meds } from './meds';
 import { readiness } from './readiness';
 import { finance } from './finance';
 import { integration } from './integration';
+import { devices } from './devices';
+import { approvalRules } from './approvalRules';
+import { risk } from './risk';
+import { teacher } from './teacher';
 
 export const pt: Record<string, string> = {
   ...packs,
@@ -52,4 +56,8 @@ export const pt: Record<string, string> = {
   ...readiness,
   ...finance,
   ...integration,
+  ...devices,
+  ...approvalRules,
+  ...risk,
+  ...teacher,
 };

@@ -7,8 +7,9 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   // Usado só pelo `prisma migrate` (precisa de ligação "de sessão longa").
-  // O runtime (app a correr) usa sempre DATABASE_URL (pooler em modo
-  // transaction, porta 6543) - ver DIRECT_URL no .env.
+  // O runtime (app a correr) usa sempre DATABASE_URL: ligacao em modo
+  // "session" (porta 5432). O modo "transaction" (porta 6543) foi abandonado
+  // porque partia os prepared statements do Prisma. Ver DIRECT_URL no .env.
   directUrl = env("DIRECT_URL")
 }
 
@@ -77,6 +78,27 @@ enum SecurityEventType {
   ADMIN_PAD_DELETED
   // Um admin bloqueou uma origem sem conta de escrever em pads.
   ADMIN_PAD_SOURCE_BLOCKED
+  // Um refresh token ja rodado voltou a ser usado (provavel roubo do
+  // cookie): a sessao inteira desse dispositivo foi revogada. Ver
+  // UserSessionsService.rotate.
+  REFRESH_TOKEN_REUSE
+}
+
+// Porque e que uma sessao (UserSession) deixou de valer. So informativo
+// (lista de dispositivos, auditoria): qualquer valor nao nulo em revokedAt
+// ja chega para a sessao ficar morta.
+enum SessionRevokeReason {
+  // O proprio dispositivo terminou sessao (POST /auth/logout).
+  LOGOUT
+  // Revogada a partir de outro dispositivo (DELETE /auth/sessions/:id).
+  REVOKED_BY_USER
+  // "Terminar sessao nos outros dispositivos".
+  SIGNED_OUT_OTHERS
+  // Interruptor global: tokenVersion subiu (troca/reset de password, merge
+  // OAuth).
+  GLOBAL_SIGNOUT
+  // Reutilizacao de um refresh token ja rodado.
+  TOKEN_REUSE
 }
 
 // Estado de progresso aplicável a qualquer tarefa ou projeto.
@@ -291,6 +313,9 @@ model User {
   // deixa de valer assim que for incrementado (terminar sessao em todos os
   // dispositivos, troca de password, merge OAuth). Ver SessionStateService.
   tokenVersion Int @default(0)
+  // Uma por dispositivo/browser com sessao iniciada (refresh token rodado a
+  // cada uso). Ver UserSession.
+  sessions     UserSession[]
 
   // Dashboard ativo (Programa + Período selecionados) - guardado aqui em vez
   // de só em localStorage para persistir entre sessões/dispositivos (ver
@@ -424,11 +449,13 @@ model User {
   bannedIps                      BannedIp[]
   areaScheduleLinks              AreaScheduleLink[]
   areaInterests                  AreaInterest[]
+  areaTeacherNotes               AreaTeacherNote[]
   notebookEntries                NotebookEntry[]
   notebookShares                 NotebookShare[]
   notebookShareAccessRequests    NotebookShareAccessRequest[]
   gradeComponents                GradeComponent[]
   notebookChangeProposals        NotebookChangeProposal[]
+  approvalRuleSets               ApprovalRuleSet[]
 }
 
 /// Recurso submetido pelo próprio utilizador contra a sua suspensão/ban
@@ -491,6 +518,8 @@ model AcademicProgram {
   // nunca mais do que 1 (o próprio dono), mas o Prisma exige o lado inverso
   // da relação declarado.
   activeForUsers User[]           @relation("UserActiveProgram")
+  // Regras de aprovacao do programa (N46), no maximo uma por user.
+  approvalRuleSets ApprovalRuleSet[]
 
   // userId: ProgramsService.findAllForUser() filtra sempre por dono - é a
   // query mais frequente deste modelo.
@@ -550,6 +579,44 @@ model ApiKey {
   // (users.service.ts) faz findMany({ where: { userId } }) para listar as
   // keys de uma pessoa, sem isto seria sempre um scan à tabela toda.
   @@index([userId])
+}
+
+/// Sessao de um dispositivo (browser) com login feito. Cada linha e uma
+/// "familia" de refresh tokens: o token roda a cada POST /auth/refresh (a
+/// linha guarda so o hash SHA-256 do token atual) e o formato do token liga-o
+/// a esta linha com um HMAC do servidor, por isso um token antigo da mesma
+/// familia e reconhecido como reutilizacao sem guardar o historico todo (ver
+/// UserSessionsService). O JWT de acesso leva o id da linha (claim `sid`):
+/// revogar a linha corta tambem o acesso, em segundos (cache de 30s no
+/// SessionStateService).
+model UserSession {
+  id               String               @id @default(uuid())
+  userId           String
+  // SHA-256 (hex) do refresh token atual. Nunca o token em claro.
+  refreshTokenHash String               @unique
+  // User.tokenVersion quando a sessao foi criada (ou confirmada por uma
+  // troca de password neste dispositivo). Se o do User subir, o refresh
+  // recusa: o interruptor global continua a cortar tudo.
+  tokenVersion     Int
+  // User-Agent do browser, truncado (so para mostrar "Chrome em Windows").
+  userAgent        String?              @db.VarChar(255)
+  // IP com o fim mascarado (IPv4 /24, IPv6 /48). Nunca o IP completo.
+  ipMasked         String?              @db.VarChar(64)
+  createdAt        DateTime             @default(now())
+  // Ultimo refresh (o JWT de acesso dura minutos, por isso e uma boa
+  // aproximacao de "ultima atividade" sem escrever na BD a cada pedido).
+  lastSeenAt       DateTime             @default(now())
+  // Fim da validade do refresh token atual (deslizante: cada refresh adia).
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  revokedReason    SessionRevokeReason?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Lista de dispositivos: sessoes ativas de um user.
+  @@index([userId, revokedAt])
+  // Limpeza periodica (RemindersService): linhas expiradas.
+  @@index([expiresAt])
 }
 
 /// Configuração do pmaxing-agent (Fase 5) - uma por user. O agente local
@@ -678,8 +745,11 @@ model Area {
   // AreaScheduleLink) e as entradas do caderno desta cadeira.
   scheduleLinks   AreaScheduleLink[]
   interests       AreaInterest[]
+  teacherNotes    AreaTeacherNote[]
   notebookEntries NotebookEntry[]
   gradeComponents GradeComponent[]
+  // Override das regras de aprovacao desta cadeira, por user (N46).
+  approvalRuleSets ApprovalRuleSet[]
 
   @@index([ownerId])
   @@index([proposalStatus])
@@ -878,6 +948,8 @@ model Task {
   // findAll() ordena por [sortOrder, date] dentro de userId+periodId - sem
   // isto, o mesmo raciocínio dos índices acima aplica-se ao ORDER BY.
   @@index([userId, sortOrder])
+  // Listagem paginada (cursor) ordena por sortOrder, date dentro de userId+periodId.
+  @@index([userId, periodId, sortOrder, date])
   // "Hoje", Dashboard e atrasadas filtram userId + intervalo de date.
   @@index([userId, date])
   // O cron de lembretes (RemindersService) procura por intervalo de date em
@@ -1181,6 +1253,24 @@ model AreaInterest {
   area Area @relation(fields: [areaId], references: [id], onDelete: Cascade)
 
   // Um interesse por cadeira por user.
+  @@unique([userId, areaId])
+  @@index([areaId])
+}
+
+/// Nota PRIVADA do aluno: nome do docente de uma cadeira (N45). Vive por user
+/// e nao em Area porque as Areas oficiais sao catalogo partilhado: o docente
+/// de um aluno nao pode aparecer a todos. Nunca exposta a outros users.
+model AreaTeacherNote {
+  id          String   @id @default(uuid())
+  userId      String
+  areaId      String
+  teacherName String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area Area @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
   @@unique([userId, areaId])
   @@index([areaId])
 }
@@ -1619,6 +1709,49 @@ model GradeEntry {
   component GradeComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
 
   @@index([componentId])
+}
+
+/// Arredondamento da nota final antes de comparar com a nota de passagem.
+enum ApprovalRounding {
+  NONE
+  UP_TO_INTEGER_AT_HALF
+}
+
+/// Regras de aprovacao (N46) de um user, ou para um programa inteiro ou como
+/// override de uma cadeira. Exatamente um de programId/areaId esta preenchido
+/// (garantido no ApprovalRulesService, um CHECK precisaria de SQL a mao).
+/// Resolucao: override da cadeira > regras do programa > preset generico.
+/// Os valores ficam sempre gravados (presetKey e so a origem, para a UI).
+model ApprovalRuleSet {
+  id        String  @id @default(uuid())
+  userId    String
+  programId String?
+  areaId    String?
+  presetKey String? @db.VarChar(40)
+
+  scaleMin                Float
+  scaleMax                Float
+  passMark                Float
+  rounding                ApprovalRounding @default(NONE)
+  componentMinGrade       Float?
+  secondThreshold         Float?
+  maxBelowSecondThreshold Int?
+  hasExamTrack            Boolean          @default(false)
+  hasResitTrack           Boolean          @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  program AcademicProgram? @relation(fields: [programId], references: [id], onDelete: Cascade)
+  area    Area?            @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  // NULLs sao distintos no Postgres: as linhas de cadeira nao colidem no
+  // unique do programa e vice-versa.
+  @@unique([userId, programId])
+  @@unique([userId, areaId])
+  @@index([programId])
+  @@index([areaId])
 }
 
 /// Papel de quem tem acesso aprovado a uma partilha AUTHORIZED.
