@@ -12,6 +12,17 @@ import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 import { useDurationPrediction } from '../../hooks/useDurationPrediction';
 import { useI18n } from '../../i18n/useI18n';
 import { formatTaskDue } from '../../lib/taskReadiness';
+import { formatTaskDate } from '../../lib/timeFormat';
+import { askIfFinishedOnTime, canReviewOnTime } from '../../lib/onTimeQuestion';
+import { wasCompletedOnTime } from '../../utils/deadlineCompliance';
+
+// O que conta hoje para "Deadlines met": a resposta da pessoa ou, sem ela,
+// o dia em que marcou como feito.
+function onTimeStatusKey(task: Task): string {
+  if (task.submissionOnTime === false) return 'onTime.answeredNo';
+  if (task.onTime != null) return task.onTime ? 'onTime.answeredYes' : 'onTime.answeredNo';
+  return wasCompletedOnTime(task) === false ? 'onTime.computedLate' : 'onTime.computedOnTime';
+}
 
 interface TaskDetailViewProps {
   task: Task;
@@ -54,6 +65,34 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
           )}
         </div>
       </DetailRow>
+      {task.submissionDate && (
+        <DetailRow label={t('twoPhase.handInDate')}>
+          <span>{formatTaskDate(task.submissionDate, lang)}</span>
+          {task.submissionOnTime !== null && task.submissionOnTime !== undefined && (
+            <span className="ml-2 text-xs text-neutral-400">
+              {t(task.submissionOnTime ? 'onTime.answeredYes' : 'onTime.answeredNo')}
+            </span>
+          )}
+        </DetailRow>
+      )}
+      {canReviewOnTime(task) ? (
+        <DetailRow label={t('onTime.title')}>
+          <span>{t(onTimeStatusKey(task))}</span>
+          <button
+            type="button"
+            onClick={() => askIfFinishedOnTime([task])}
+            className="ml-2 text-xs font-medium text-violet-400 underline-offset-2 hover:text-violet-300 hover:underline"
+          >
+            {t(task.onTime != null || task.submissionOnTime != null ? 'onTime.change' : 'onTime.answer')}
+          </button>
+        </DetailRow>
+      ) : (
+        task.onTime != null && (
+          <DetailRow label={t('onTime.title')}>
+            {t(task.onTime ? 'onTime.answeredYes' : 'onTime.answeredNo')}
+          </DetailRow>
+        )
+      )}
       {onSubtasksChange && (
         <DetailRow label={t('ui.checklist')}>
           <SubtaskChecklist

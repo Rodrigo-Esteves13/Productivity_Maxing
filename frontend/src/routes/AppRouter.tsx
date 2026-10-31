@@ -29,6 +29,7 @@ import {
   Social,
   FriendNotes,
   FriendProfile,
+  FriendLink,
   FriendNoteEntry,
   TaskPacks,
   ImportTaskPack,
@@ -144,6 +145,10 @@ export default function AppRouter() {
           <Route
             path="/areas"
             element={<PrivateRoute><Areas /></PrivateRoute>}
+          />
+          <Route
+            path="/social/add/:code"
+            element={<PrivateRoute><FriendLink /></PrivateRoute>}
           />
           <Route
             path="/social/friends/:userId"

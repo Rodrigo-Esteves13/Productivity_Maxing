@@ -28,7 +28,8 @@ export function useMonthAgenda(initialDate: Date, refreshKey: number) {
       try {
         setIsLoadingClasses(true);
         setClassesError('');
-        setClasses(await getSchedule(fromKey, toKey, signal));
+        // Aulas desmarcadas (professor faltou) ficam so riscadas na semana.
+        setClasses((await getSchedule(fromKey, toKey, signal)).filter((c) => !c.cancelled));
         setIsLoadingClasses(false);
       } catch (caught) {
         // Mudar de mes depressa cancela o pedido anterior: nao e um erro.

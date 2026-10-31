@@ -45,6 +45,15 @@ const HIDDEN_DATE_LABEL: Partial<Record<DateCertainty, string>> = {
  * aproximada, e "Date TBD"/"Surprise" (sem data nenhuma) quando a data e so
  * um palpite. Usar isto em vez de formatTaskDate(task.date) nas tasks.
  */
+/** "Hand in 2 Nov" de um trabalho em duas fases, ou null. */
+export function formatHandIn(
+  task: Pick<Task, 'submissionDate' | 'dateCertainty'>,
+  lang?: string,
+): string | null {
+  if (!task.submissionDate || !hasFirmDate(task)) return null;
+  return translateNow('twoPhase.handInShort', { date: formatTaskDate(task.submissionDate, lang) });
+}
+
 export function formatTaskDue(task: Pick<Task, 'date' | 'dateCertainty'>, lang?: string): string {
   const hiddenKey = HIDDEN_DATE_LABEL[task.dateCertainty];
   if (hiddenKey) return translateNow(hiddenKey);

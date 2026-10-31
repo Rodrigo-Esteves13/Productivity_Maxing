@@ -53,7 +53,9 @@ export class WorkShiftsController {
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: WorkShiftRangeQueryDto,
   ) {
-    return this.workShiftsService.expandRange(user.id, query.from, query.to);
+    return this.workShiftsService.expandRange(user.id, query.from, query.to, {
+      includeSkipped: query.withSkipped === true,
+    });
   }
 
   @Post()

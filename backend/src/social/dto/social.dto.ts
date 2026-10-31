@@ -1,5 +1,8 @@
 import {
   IsBoolean,
+  IsEmail,
+  IsInt,
+  Min,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -62,4 +65,53 @@ export class DecideFriendCodeRequestDto {
   @IsString()
   @MaxLength(300)
   note?: string;
+}
+
+export class FriendLinkDto {
+  @ApiProperty({ example: 'k3J9xQ2mVb' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(32)
+  @Matches(/^[A-Za-z0-9_-]+$/)
+  friendCode: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Link expiry (ms since epoch).',
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? Number(value) : value,
+  )
+  @IsInt()
+  @Min(0)
+  expires?: number;
+
+  @ApiProperty({ required: false, description: 'Link signature.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  @Matches(/^[A-Za-z0-9_-]+$/)
+  token?: string;
+}
+
+export class EmailFriendRequestDto {
+  @ApiProperty({ example: 'friend@example.com' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsEmail()
+  @MaxLength(254)
+  email: string;
+}
+
+export class SocialSettingsDto {
+  @ApiProperty({
+    description: 'Let people who know your email send you a friend request.',
+  })
+  @IsBoolean()
+  allowEmailFriendRequests: boolean;
 }

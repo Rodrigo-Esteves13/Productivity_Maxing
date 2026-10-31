@@ -29,6 +29,7 @@ export interface RequestEntry extends PublicPerson {
 }
 
 export interface SocialOverview {
+  allowEmailFriendRequests: boolean;
   friendCode: string;
   friends: FriendEntry[];
   incoming: RequestEntry[];
@@ -111,7 +112,7 @@ export class SocialService {
   }
 
   async overview(userId: string): Promise<SocialOverview> {
-    const [friendCode, rows, blocks, lastRequest] = await Promise.all([
+    const [friendCode, rows, blocks, lastRequest, me] = await Promise.all([
       this.ensureFriendCode(userId),
       this.prisma.friendship.findMany({
         where: { OR: [{ requesterId: userId }, { addresseeId: userId }] },
@@ -130,6 +131,10 @@ export class SocialService {
         where: { userId },
         orderBy: { createdAt: 'desc' },
         select: { status: true, adminNote: true, createdAt: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { allowEmailFriendRequests: true },
       }),
     ]);
 
@@ -157,6 +162,7 @@ export class SocialService {
     friends.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
     return {
       friendCode,
+      allowEmailFriendRequests: me?.allowEmailFriendRequests ?? true,
       friends,
       incoming,
       outgoing,
@@ -242,6 +248,35 @@ export class SocialService {
     return this.requestTo(userId, targetId);
   }
 
+  /** Pedido direto a uma conta ja encontrada (ex: pelo email). */
+  requestToUser(userId: string, targetId: string): Promise<SendRequestResult> {
+    return this.requestTo(userId, targetId);
+  }
+
+  /**
+   * Limites do proprio (pedidos pendentes, amigos). Publico para o pedido por
+   * email os verificar antes de procurar a conta: se so falhasse quando o
+   * email existe, o 400 revelava quem esta registado.
+   */
+  async assertCanSendRequests(userId: string): Promise<void> {
+    const [pending, friendCount] = await Promise.all([
+      this.prisma.friendship.count({
+        where: { requesterId: userId, status: 'PENDING' },
+      }),
+      this.prisma.friendship.count({
+        where: {
+          status: 'ACCEPTED',
+          OR: [{ requesterId: userId }, { addresseeId: userId }],
+        },
+      }),
+    ]);
+    if (pending >= MAX_PENDING_OUTGOING) {
+      throw new BadRequestException('Too many pending requests.');
+    }
+    if (friendCount >= MAX_FRIENDS)
+      throw new BadRequestException('Friend limit reached.');
+  }
+
   private async requestTo(
     userId: string,
     targetId: string,
@@ -277,22 +312,7 @@ export class SocialService {
       return { status: 'ACCEPTED' };
     }
 
-    const [pending, friendCount] = await Promise.all([
-      this.prisma.friendship.count({
-        where: { requesterId: userId, status: 'PENDING' },
-      }),
-      this.prisma.friendship.count({
-        where: {
-          status: 'ACCEPTED',
-          OR: [{ requesterId: userId }, { addresseeId: userId }],
-        },
-      }),
-    ]);
-    if (pending >= MAX_PENDING_OUTGOING) {
-      throw new BadRequestException('Too many pending requests.');
-    }
-    if (friendCount >= MAX_FRIENDS)
-      throw new BadRequestException('Friend limit reached.');
+    await this.assertCanSendRequests(userId);
 
     await this.prisma.friendship.create({
       data: { requesterId: userId, addresseeId: target.id },

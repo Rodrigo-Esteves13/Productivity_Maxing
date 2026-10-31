@@ -1,6 +1,7 @@
 import type { Difficulty, ProgressStatus, Task } from '../types/models';
 import type { TasksTableColumnId } from '../lib/tasksTableColumns';
 import type { SortDirection } from '../lib/sortDirection';
+import { hasFirmDate } from '../lib/taskReadiness';
 
 // Ordem "natural" (crescente) de cada enum: menor = mais leve / mais cedo.
 const DIFFICULTY_RANK: Record<Difficulty, number> = {
@@ -40,6 +41,10 @@ function compareNullable(a: number | null, b: number | null, direction: SortDire
   return direction === 'asc' ? a - b : b - a;
 }
 
+function dueTime(task: Task): number | null {
+  return hasFirmDate(task) ? new Date(task.date).getTime() : null;
+}
+
 function compareText(a: string, b: string, direction: SortDirection): number {
   const result = a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true });
   return direction === 'asc' ? result : -result;
@@ -48,7 +53,10 @@ function compareText(a: string, b: string, direction: SortDirection): number {
 function compareByKey(a: Task, b: Task, key: TaskSortKey, direction: SortDirection): number {
   switch (key) {
     case 'date':
-      return compareNullable(new Date(a.date).getTime(), new Date(b.date).getTime(), direction);
+      // "Date TBD" e "Surprise" guardam so um palpite para o plano: sem
+      // isto ficavam no meio das datas reais. Vao para o fim, como as
+      // outras colunas sem valor.
+      return compareNullable(dueTime(a), dueTime(b), direction);
     case 'area':
       return compareText(a.area?.name ?? '', b.area?.name ?? '', direction);
     case 'title':

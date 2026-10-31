@@ -15,3 +15,12 @@ export class SetAttendanceDto {
   @IsBoolean()
   attended!: boolean | null;
 }
+
+export class SetClassCancelledDto {
+  @ApiProperty({
+    example: true,
+    description: 'true = the class did not happen (teacher absent).',
+  })
+  @IsBoolean()
+  cancelled!: boolean;
+}

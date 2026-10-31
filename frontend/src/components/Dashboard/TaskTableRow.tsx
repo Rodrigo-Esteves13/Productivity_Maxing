@@ -17,7 +17,7 @@ import type { Task, AcademicTaskTypeOption } from '../../types/models';
 import type { TableDensity } from '../../hooks/useTableDensity';
 import type { TasksTableColumnId } from '../../lib/tasksTableColumns';
 import { useI18n } from '../../i18n/useI18n';
-import { formatTaskDue } from '../../lib/taskReadiness';
+import { formatHandIn, formatTaskDue } from '../../lib/taskReadiness';
 
 interface TaskTableRowProps {
   task: Task;
@@ -60,6 +60,7 @@ function TaskTableRow({
     date: (
       <>
         <div>{formatTaskDue(task, lang)}</div>
+        {formatHandIn(task, lang) && <div className="text-xs text-neutral-400">{formatHandIn(task, lang)}</div>}
         {!isCompact && (
           <div className="mt-1 flex flex-col items-start gap-1">
             <span className="-ml-0.5">

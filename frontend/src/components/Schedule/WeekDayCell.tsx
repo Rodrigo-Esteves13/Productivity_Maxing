@@ -4,8 +4,8 @@ import { formatClock } from '../../lib/timeFormat';
 import type { AgendaItem } from '../../lib/agenda';
 import { AGENDA_TONE_CLASSES, getAgendaTone } from '../../lib/agendaTone';
 import { MONTH_CHIP_TONE_CLASSES, pinDeadlinesToClasses, type DeadlineChip } from '../../lib/monthAgenda';
-import { GraduationCapIcon } from '../UI/Icons';
-import type { ClassOccurrence } from '../../types/models';
+import { CalendarXIcon, GraduationCapIcon } from '../UI/Icons';
+import type { ClassOccurrence, WorkShiftOccurrence } from '../../types/models';
 import AttendanceToggle from './AttendanceToggle';
 import { useI18n } from '../../i18n/useI18n';
 
@@ -19,6 +19,12 @@ interface WeekDayCellProps {
   // Infinity num dia passado, a hora atual hoje, null num dia futuro.
   markableUntilMinutes?: number | null;
   onAttendanceChange?: (occurrence: ClassOccurrence, attended: boolean | null) => void;
+  // Professor faltou / aula desmarcada (ou desfazer).
+  onCancelChange?: (occurrence: ClassOccurrence, cancelled: boolean) => void;
+  // Abre "mudar este turno" (folga, outra hora, ferias) num turno semanal.
+  onShiftClick?: (occurrence: WorkShiftOccurrence) => void;
+  // Nome traduzido do feriado nacional deste dia.
+  holidayName?: string;
 }
 
 interface AgendaEntryProps {
@@ -27,6 +33,8 @@ interface AgendaEntryProps {
   pinned?: DeadlineChip[];
   markableUntilMinutes: number | null;
   onAttendanceChange?: WeekDayCellProps['onAttendanceChange'];
+  onCancelChange?: WeekDayCellProps['onCancelChange'];
+  onShiftClick?: WeekDayCellProps['onShiftClick'];
 }
 
 // Prazo de uma task, com as mesmas cores da vista mensal (exames a cheio).
@@ -73,23 +81,33 @@ function PinnedDeadline({ chip }: { chip: DeadlineChip }) {
   );
 }
 
-function AgendaEntry({ item, pinned = NO_PINNED, markableUntilMinutes, onAttendanceChange }: AgendaEntryProps) {
+function AgendaEntry({
+  item,
+  pinned = NO_PINNED,
+  markableUntilMinutes,
+  onAttendanceChange,
+  onCancelChange,
+  onShiftClick,
+}: AgendaEntryProps) {
   const { t } = useI18n();
   const tone = AGENDA_TONE_CLASSES[getAgendaTone(item)];
   const time = `${formatClock(item.startMinutes)}-${formatClock(item.endMinutes)}`;
 
   if (item.kind === 'class') {
     const { subject, location } = item.occurrence;
+    const isCancelled = item.occurrence.cancelled === true;
     const canMark =
+      !isCancelled &&
       Boolean(onAttendanceChange) &&
       markableUntilMinutes !== null &&
       item.startMinutes <= markableUntilMinutes;
     const hasPinned = pinned.length > 0;
+    const cancelLabel = t(isCancelled ? 'classCancel.undo' : 'classCancel.mark', { subject });
     return (
       <div
-        className={`text-xs rounded-md px-2 py-1.5 ${tone.card} ${hasPinned ? 'ring-1 ring-violet-500/70' : ''} ${
-          item.occurrence.attended === false ? 'opacity-60' : ''
-        }`}
+        className={`text-xs rounded-md px-2 py-1.5 ${
+          isCancelled ? 'border border-dashed border-neutral-700 bg-transparent' : tone.card
+        } ${hasPinned ? 'ring-1 ring-violet-500/70' : ''} ${!isCancelled && item.occurrence.attended === false ? 'opacity-60' : ''}`}
       >
         {/* Avaliacao desta aula no topo do bloco: um so cartao em vez de
             um chip solto mais a aula, que pareciam dois eventos. */}
@@ -102,33 +120,88 @@ function AgendaEntry({ item, pinned = NO_PINNED, markableUntilMinutes, onAttenda
         )}
         {/* 2 linhas no maximo, com hifenizacao: nomes de cadeiras longos
             partiam letra a letra. O nome inteiro fica no title. */}
-        <p title={subject} className={`${tone.title} font-medium leading-snug hyphens-auto line-clamp-2`}>
+        <p
+          title={subject}
+          className={`font-medium leading-snug hyphens-auto line-clamp-2 ${
+            isCancelled ? 'text-neutral-400 line-through' : tone.title
+          }`}
+        >
           {subject}
         </p>
-        <p className={`${tone.meta} mt-0.5 leading-tight tabular-nums`}>
-          {time}
-          {location ? ` · ${location}` : ''}
+        <p className={`${isCancelled ? 'text-neutral-500' : tone.meta} mt-0.5 leading-tight tabular-nums`}>
+          {isCancelled ? t('classCancel.label') : time}
+          {!isCancelled && location ? ` · ${location}` : ''}
         </p>
-        {canMark && (
-          <AttendanceToggle
-            subject={subject}
-            attended={item.occurrence.attended}
-            onChange={(attended) => onAttendanceChange?.(item.occurrence, attended)}
-          />
-        )}
+        <div className="mt-1 flex flex-wrap items-center gap-1">
+          {canMark && (
+            <AttendanceToggle
+              subject={subject}
+              attended={item.occurrence.attended}
+              onChange={(attended) => onAttendanceChange?.(item.occurrence, attended)}
+            />
+          )}
+          {onCancelChange && (
+            <button
+              type="button"
+              aria-pressed={isCancelled}
+              aria-label={cancelLabel}
+              title={cancelLabel}
+              onClick={() => onCancelChange(item.occurrence, !isCancelled)}
+              className={`flex h-6 w-6 items-center justify-center rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+                isCancelled
+                  ? 'border-amber-600 bg-amber-900/50 text-amber-200'
+                  : 'border-neutral-700 text-neutral-500 hover:text-white'
+              }`}
+            >
+              <CalendarXIcon className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </div>
     );
   }
 
   const isEvent = getAgendaTone(item) === 'event';
-  return (
-    <div className={`text-xs rounded-md px-2 py-1.5 ${tone.card}`}>
-      <p className={`${tone.title} font-medium leading-snug hyphens-auto line-clamp-2`}>
-        {item.occurrence.label ?? t(isEvent ? 'schedule.fallback.event' : 'schedule.fallback.work')}
+  const shift = item.occurrence;
+  const name = shift.label ?? t(isEvent ? 'schedule.fallback.event' : 'schedule.fallback.work');
+  const skipped = shift.skipped ?? null;
+  const body = (
+    <>
+      <p
+        className={`font-medium leading-snug hyphens-auto line-clamp-2 ${
+          skipped ? 'text-neutral-400 line-through' : tone.title
+        }`}
+      >
+        {name}
       </p>
-      <p className={`${tone.meta} mt-0.5 leading-tight tabular-nums`}>{time}</p>
-    </div>
+      <p className={`${skipped ? 'text-neutral-500' : tone.meta} mt-0.5 leading-tight tabular-nums`}>
+        {skipped === 'HOLIDAY'
+          ? t('shiftChange.badge.holiday')
+          : skipped === 'OFF'
+            ? t('shiftChange.badge.off')
+            : time}
+        {shift.retimed && !skipped && <span className="ml-1">{t('shiftChange.badge.changed')}</span>}
+      </p>
+    </>
   );
+  const boxClass = `block w-full text-left text-xs rounded-md px-2 py-1.5 ${
+    skipped ? 'border border-dashed border-neutral-700 bg-transparent' : tone.card
+  }`;
+  // So os turnos semanais tem excecoes; um pontual edita-se nos compromissos.
+  if (onShiftClick && shift.isRecurring) {
+    return (
+      <button
+        type="button"
+        onClick={() => onShiftClick(shift)}
+        title={t('shiftChange.open', { label: name })}
+        aria-haspopup="dialog"
+        className={`${boxClass} transition-colors hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500`}
+      >
+        {body}
+      </button>
+    );
+  }
+  return <div className={boxClass}>{body}</div>;
 }
 
 // Um dia da grelha semanal: prazos soltos primeiro, depois aulas e turnos
@@ -142,6 +215,9 @@ export default function WeekDayCell({
   items,
   markableUntilMinutes = null,
   onAttendanceChange,
+  onCancelChange,
+  onShiftClick,
+  holidayName,
 }: WeekDayCellProps) {
   const { byClassId, loose } = useMemo(() => pinDeadlinesToClasses(deadlines, items), [deadlines, items]);
   return (
@@ -163,6 +239,9 @@ export default function WeekDayCell({
           {dayOfMonth}
         </span>
       </p>
+      {holidayName && (
+        <p className="-mt-1 mb-2 px-0.5 text-[11px] font-medium leading-tight text-amber-300">{holidayName}</p>
+      )}
       <div className="space-y-1.5">
         {loose.map((chip) => (
           <DeadlineEntry key={chip.id} chip={chip} />
@@ -174,6 +253,8 @@ export default function WeekDayCell({
             pinned={byClassId.get(item.id)}
             markableUntilMinutes={markableUntilMinutes}
             onAttendanceChange={onAttendanceChange}
+            onCancelChange={onCancelChange}
+            onShiftClick={onShiftClick}
           />
         ))}
       </div>

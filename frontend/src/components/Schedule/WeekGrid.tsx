@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSchedule } from '../../hooks/useSchedule';
 import { useWorkShiftRange } from '../../hooks/useWorkShiftRange';
 import { useScheduleTasks } from '../../hooks/useScheduleTasks';
@@ -13,6 +13,8 @@ import { todayUtcAnchored } from '../../lib/weekDates';
 import { minutesSinceMidnight } from '../../lib/todayOverview';
 import { useFeedback } from '../../context/useFeedback';
 import WeekDayCell from './WeekDayCell';
+import ShiftChangeModal from './ShiftChangeModal';
+import { ptHolidayOn } from '../../lib/ptHolidays';
 import AgendaLegend from './AgendaLegend';
 import { useI18n } from '../../i18n/useI18n';
 import Card from '../UI/Card';
@@ -38,9 +40,18 @@ interface WeekGridProps {
   viewToggle?: ReactNode;
   // Chamado depois de gravar uma presenca (o resumo de presencas refaz o fetch).
   onAttendanceChanged?: () => void;
+  // Aula desmarcada ou turno mudado: a pagina refaz o plano e pergunta se
+  // o Google Calendar deve ser atualizado.
+  onScheduleChanged?: () => void;
 }
 
-export default function WeekGrid({ refreshKey, initialDate, viewToggle, onAttendanceChanged }: WeekGridProps) {
+export default function WeekGrid({
+  refreshKey,
+  initialDate,
+  viewToggle,
+  onAttendanceChanged,
+  onScheduleChanged,
+}: WeekGridProps) {
   const { t, lang } = useI18n();
   const { notify } = useFeedback();
   const {
@@ -54,7 +65,9 @@ export default function WeekGrid({ refreshKey, initialDate, viewToggle, onAttend
     goToNextWeek,
     goToCurrentWeek,
     setAttendance,
+    setCancelled,
   } = useSchedule(initialDate);
+  const [changingShift, setChangingShift] = useState<WorkShiftOccurrence | null>(null);
 
   const handleAttendance = useCallback(
     async (occurrence: ClassOccurrence, attended: boolean | null) => {
@@ -63,6 +76,20 @@ export default function WeekGrid({ refreshKey, initialDate, viewToggle, onAttend
       else notify(t('attendance.failed'), 'error');
     },
     [setAttendance, onAttendanceChanged, notify, t],
+  );
+
+  const handleCancelled = useCallback(
+    async (occurrence: ClassOccurrence, cancelled: boolean) => {
+      const saved = await setCancelled(occurrence, cancelled);
+      if (!saved) {
+        notify(t('classCancel.failed'), 'error');
+        return;
+      }
+      notify(t(cancelled ? 'classCancel.done' : 'classCancel.undone', { subject: occurrence.subject }), 'success');
+      onAttendanceChanged?.();
+      onScheduleChanged?.();
+    },
+    [setCancelled, notify, t, onAttendanceChanged, onScheduleChanged],
   );
 
   useEffect(() => {
@@ -74,6 +101,7 @@ export default function WeekGrid({ refreshKey, initialDate, viewToggle, onAttend
     toDateKey(weekStart),
     toDateKey(weekEnd),
     refreshKey,
+    true,
   );
   // Prazos sao best-effort, como os turnos: se falharem a grelha de aulas
   // continua a aparecer (a vista mensal e que mostra o erro).
@@ -102,6 +130,10 @@ export default function WeekGrid({ refreshKey, initialDate, viewToggle, onAttend
   }
 
   const todayKey = toDateKey(todayUtcAnchored());
+  const holidayName = (key: string): string | undefined => {
+    const holiday = ptHolidayOn(key);
+    return holiday ? t(`holiday.${holiday.key}`) : undefined;
+  };
   const nowMinutes = minutesSinceMidnight(new Date());
   // So aulas que ja comecaram podem ter presenca (ver WeekDayCell).
   const markableUntil = (key: string): number | null =>
@@ -145,6 +177,9 @@ export default function WeekGrid({ refreshKey, initialDate, viewToggle, onAttend
                 items={mergeAgenda(occurrencesByDay.get(key) ?? [], shiftsByDay.get(key) ?? [])}
                 markableUntilMinutes={markableUntil(key)}
                 onAttendanceChange={handleAttendance}
+                onCancelChange={handleCancelled}
+                onShiftClick={setChangingShift}
+                holidayName={holidayName(key)}
               />
             );
           })}
@@ -152,6 +187,14 @@ export default function WeekGrid({ refreshKey, initialDate, viewToggle, onAttend
       )}
 
       {!isLoading && !error && <AgendaLegend />}
+
+      {changingShift && (
+        <ShiftChangeModal
+          occurrence={changingShift}
+          onClose={() => setChangingShift(null)}
+          onChanged={() => onScheduleChanged?.()}
+        />
+      )}
     </Card>
   );
 }

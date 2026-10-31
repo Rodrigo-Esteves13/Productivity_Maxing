@@ -32,3 +32,12 @@ export type CopyWeekMode = (typeof COPY_WEEK_MODES)[number];
 // Dia da semana (getUTCDay) em que uma semana começa para esta funcionalidade.
 export const WEEK_START_DAY = 1;
 export const DAYS_PER_WEEK = 7;
+
+// Excecoes ao horario (ScheduleException) por utilizador, e quantos dias
+// uma so pode cobrir (umas ferias longas cabem; um "para sempre" nao, para
+// isso muda-se o turno).
+export const MAX_EXCEPTIONS_PER_USER = 300;
+export const MAX_EXCEPTION_DAYS = 366;
+export const MAX_EXCEPTION_NOTE_LENGTH = 120;
+// A lista mostra as que ainda nao acabaram e as dos ultimos dias.
+export const EXCEPTION_LIST_PAST_DAYS = 30;

@@ -4,12 +4,14 @@ import type { WorkShiftOccurrence } from '../types/models';
 
 // Turnos expandidos para um intervalo concreto (a semana visível no
 // WeekGrid). `refreshKey` muda quando o utilizador adiciona/remove turnos.
-export function useWorkShiftRange(fromKey: string, toKey: string, refreshKey: number) {
+// withSkipped: a grelha semanal tambem recebe os que nao acontecem (folga,
+// ferias, feriado), para os mostrar riscados.
+export function useWorkShiftRange(fromKey: string, toKey: string, refreshKey: number, withSkipped = false) {
   const [occurrences, setOccurrences] = useState<WorkShiftOccurrence[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    getWorkShiftRange(fromKey, toKey)
+    getWorkShiftRange(fromKey, toKey, withSkipped)
       .then((data) => {
         if (!cancelled) setOccurrences(data);
       })
@@ -21,7 +23,7 @@ export function useWorkShiftRange(fromKey: string, toKey: string, refreshKey: nu
     return () => {
       cancelled = true;
     };
-  }, [fromKey, toKey, refreshKey]);
+  }, [fromKey, toKey, refreshKey, withSkipped]);
 
   return occurrences;
 }

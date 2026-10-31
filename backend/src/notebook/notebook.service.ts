@@ -1245,6 +1245,8 @@ export class NotebookService {
         // casar pelo nome da cadeira (ver matchesAreaName).
         ...(scheduleSubject ? { subject: scheduleSubject } : {}),
         date: today,
+        // Aula desmarcada nao sugere entrada no caderno.
+        cancelled: false,
       },
     });
 

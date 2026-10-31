@@ -11,6 +11,7 @@ import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 import { FeedbackProvider } from './context/FeedbackProvider';
 import I18nProvider from './i18n/I18nProvider';
 import { LucideProvider } from 'lucide-react';
+import OnTimePrompt from './components/Tasks/OnTimePrompt';
 
 // Tamanho por defeito dos icones (ver components/UI/Icons.tsx).
 const ICON_SIZE_PX = 16;
@@ -37,6 +38,7 @@ function App() {
               <AcademicProvider>
                 <AccessibilityEffects />
                 <CompletionBurst />
+                <OnTimePrompt />
                 <AppRouter />
               </AcademicProvider>
             </StudySessionProvider>

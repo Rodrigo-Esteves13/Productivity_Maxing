@@ -3,21 +3,39 @@ import api from './client';
 import type {
   CopyWeekInput,
   CopyWeekResult,
+  CreateScheduleExceptionInput,
   CreateWorkShiftInput,
+  ScheduleException,
   UpdateWorkShiftInput,
   WorkShift,
   WorkShiftOccurrence,
 } from '../types/models';
 
 // `from`/`to` como "YYYY-MM-DD", intervalo máximo de 62 dias (validado no backend).
+// withSkipped: inclui os turnos que nao acontecem (folga, ferias, feriado),
+// com `skipped`, para a grelha os mostrar riscados e os poder repor.
 export const getWorkShiftRange = async (
   from: string,
   to: string,
+  withSkipped = false,
 ): Promise<WorkShiftOccurrence[]> => {
   const response = await api.get<WorkShiftOccurrence[]>('/work-shifts/range', {
-    params: { from, to },
+    params: { from, to, ...(withSkipped && { withSkipped: true }) },
   });
   return response.data;
+};
+
+// Folgas, ferias e mudancas de hora do horario semanal.
+export const getScheduleExceptions = async (): Promise<ScheduleException[]> =>
+  (await api.get<ScheduleException[]>('/schedule-exceptions')).data;
+
+export const createScheduleException = async (
+  input: CreateScheduleExceptionInput,
+): Promise<ScheduleException> =>
+  (await api.post<ScheduleException>('/schedule-exceptions', input)).data;
+
+export const deleteScheduleException = async (id: string): Promise<void> => {
+  await api.delete(`/schedule-exceptions/${encodeURIComponent(id)}`);
 };
 
 export const createWorkShifts = async (

@@ -1,4 +1,5 @@
 import {
+  ValidateIf,
   IsString,
   IsNotEmpty,
   IsDateString,
@@ -185,6 +186,37 @@ export class CreateTaskDto {
   @IsOptional()
   @IsDateString()
   availableFrom?: string | null;
+
+  @ApiPropertyOptional({
+    example: '2026-11-02T00:00:00Z',
+    nullable: true,
+    description:
+      'Two-phase work: hand-in deadline, with the presentation on `date`. Must be on or before `date`. null = one phase.',
+  })
+  @IsOptional()
+  @IsDateString()
+  submissionDate?: string | null;
+
+  @ApiPropertyOptional({
+    example: true,
+    nullable: true,
+    description:
+      'Own answer to "did you finish on time?". Overrides the completedAt check. null = not answered.',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsBoolean()
+  onTime?: boolean | null;
+
+  @ApiPropertyOptional({
+    example: true,
+    nullable: true,
+    description: 'Same as onTime, for the hand-in of a two-phase task.',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsBoolean()
+  submissionOnTime?: boolean | null;
 
   @ApiPropertyOptional({
     example: 'HIGH',

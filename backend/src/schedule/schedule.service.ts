@@ -163,12 +163,23 @@ export class ScheduleService {
    * dia - um pedido "de segunda a domingo" tem de incluir a última aula
    * de domingo, não parar à meia-noite desse dia.
    */
-  async findRange(userId: string, from: Date, to: Date) {
+  async findRange(
+    userId: string,
+    from: Date,
+    to: Date,
+    // Aulas que nao houve (professor faltou) so interessam a grelha, que as
+    // mostra riscadas; o plano de estudo e o Google Calendar ignoram-nas.
+    { includeCancelled = false }: { includeCancelled?: boolean } = {},
+  ) {
     const endOfTo = new Date(to);
     endOfTo.setHours(23, 59, 59, 999);
 
     return this.prisma.classOccurrence.findMany({
-      where: { userId, date: { gte: from, lte: endOfTo } },
+      where: {
+        userId,
+        date: { gte: from, lte: endOfTo },
+        ...(!includeCancelled && { cancelled: false }),
+      },
       orderBy: [{ date: 'asc' }, { startMinutes: 'asc' }],
     });
   }
@@ -192,6 +203,28 @@ export class ScheduleService {
   }
 
   /**
+   * Aula que nao houve (professor faltou, desmarcada) ou que afinal houve.
+   * A presenca fica guardada mas nao conta enquanto estiver cancelada (as
+   * contagens filtram cancelled), e volta tal como estava se afinal houve.
+   */
+  async setCancelled(
+    userId: string,
+    id: string,
+    cancelled: boolean,
+  ): Promise<{ id: string; cancelled: boolean; attended: boolean | null }> {
+    const result = await this.prisma.classOccurrence.updateMany({
+      where: { id, userId },
+      data: { cancelled },
+    });
+    if (result.count === 0) throw new NotFoundException('Class not found.');
+    const row = await this.prisma.classOccurrence.findFirst({
+      where: { id, userId },
+      select: { attended: true },
+    });
+    return { id, cancelled, attended: row?.attended ?? null };
+  }
+
+  /**
    * Presenças por disciplina entre duas datas (inclusive). Só conta aulas
    * até ao fim de `upTo` (hoje, no controller): aulas futuras ainda não
    * podem ter presença e iam inflacionar o "por marcar".
@@ -205,7 +238,8 @@ export class ScheduleService {
     endOfTo.setUTCHours(23, 59, 59, 999);
     const rows = await this.prisma.classOccurrence.groupBy({
       by: ['subject', 'attended'],
-      where: { userId, date: { gte: from, lte: endOfTo } },
+      // Aula desmarcada nao conta nem como presenca nem como falta.
+      where: { userId, date: { gte: from, lte: endOfTo }, cancelled: false },
       _count: { _all: true },
     });
     return summarizeAttendance(rows);
@@ -225,7 +259,7 @@ export class ScheduleService {
     endOfTo.setUTCHours(23, 59, 59, 999);
     const [classes, sessions, links, areas] = await Promise.all([
       this.prisma.classOccurrence.findMany({
-        where: { userId, date: { gte: from, lte: endOfTo } },
+        where: { userId, date: { gte: from, lte: endOfTo }, cancelled: false },
         select: { subject: true, startMinutes: true, endMinutes: true },
       }),
       this.prisma.studySession.findMany({

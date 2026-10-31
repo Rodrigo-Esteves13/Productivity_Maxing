@@ -171,8 +171,10 @@ export default function Dashboard() {
       if (filters.dateStatus && getDateStatus(task) !== filters.dateStatus) return false;
       return true;
     });
-    // Sem coluna escolhida mantem a ordem original do servidor.
-    return sort ? sortTasks(matching, sort.key, sort.direction) : matching;
+    // Sem coluna escolhida ordena por prazo (TBD/Surprise no fim). A ordem
+    // do servidor e a manual da pagina Tasks (arrastar), que aqui so
+    // baralhava as datas.
+    return sortTasks(matching, sort?.key ?? 'date', sort?.direction ?? 'asc');
   }, [academicTasks, filters, showArchived, isExamMode, sort]);
 
   const {

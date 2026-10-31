@@ -13,7 +13,7 @@ import SwipeableRow from '../UI/SwipeableRow';
 import { recurrenceLabel } from '../../lib/recurrence';
 import { getDateStatus } from '../../utils/taskDateStatus';
 import { useI18n } from '../../i18n/useI18n';
-import { formatTaskDue } from '../../lib/taskReadiness';
+import { formatHandIn, formatTaskDue } from '../../lib/taskReadiness';
 
 interface TaskCardProps {
   task: Task;
@@ -153,6 +153,7 @@ function TaskCard({
           <span className={status === 'overdue' ? 'text-red-400 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>
             {formatTaskDue(task, lang)}
           </span>
+          {formatHandIn(task, lang) && <span className="whitespace-nowrap">· {formatHandIn(task, lang)}</span>}
         </div>
 
         <div className="flex items-center justify-between gap-2">

@@ -68,6 +68,7 @@ export default function TaskForm({
     dateCertainty: DEFAULT_DATE_CERTAINTY,
     isBlocked: false,
     availableFrom: '',
+    submissionDate: '',
     // priorities[0] (não 'MEDIUM' fixo) - Priority passou a ser um
     // catálogo gerido pelo admin em /task-types, a key 'MEDIUM' do seed
     // inicial pode não existir mais se ele a renomear/apagar. priorities

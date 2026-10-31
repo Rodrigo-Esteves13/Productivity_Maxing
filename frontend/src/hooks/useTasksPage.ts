@@ -28,6 +28,7 @@ import { useAcademic } from '../context/useAcademic';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
 import { celebrateCompletion } from '../lib/completionFeedback';
+import { askIfFinishedOnTime, onOnTimeSaved } from '../lib/onTimeQuestion';
 
 // /tasks?new=1 (atalho do icone da app) abre o formulario de criar task.
 const NEW_TASK_PARAM = 'new';
@@ -55,6 +56,16 @@ export function useTasksPage() {
   const { rescheduleToTomorrow, reschedulingId } = useQuickReschedule((updatedTask) => {
     setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
   });
+
+  // Resposta a "acabaste a tempo?" gravada: lista e detalhe aberto mostram-na.
+  useEffect(
+    () =>
+      onOnTimeSaved((saved) => {
+        setTasks((prev) => prev.map((t) => (t.id === saved.id ? { ...t, ...saved } : t)));
+        setSelectedTask((prev) => (prev?.id === saved.id ? { ...prev, ...saved } : prev));
+      }),
+    [],
+  );
 
   // Segue sempre o período selecionado no topo da página (PeriodSelector).
   // "No program" (isViewingAllPrograms) também cai no 'all' do backend -
@@ -271,6 +282,10 @@ export function useTasksPage() {
       const { syncToCalendar, subtasks: ignoredSubtasks, ...taskPayload } = taskData;
       void ignoredSubtasks;
       const updated = absorbSpawnedTasks(await updateTask(selectedTask.id, taskPayload));
+      // Concluida a partir do formulario de edicao: a mesma pergunta.
+      if (selectedTask.progressStatus !== 'COMPLETED' && updated.progressStatus === 'COMPLETED') {
+        askIfFinishedOnTime([updated]);
+      }
       const finalTask = await applyCalendarSync(updated, !!syncToCalendar);
       setTasks((prev) => prev.map((t) => (t.id === finalTask.id ? finalTask : t)));
       setSelectedTask(finalTask);
@@ -386,6 +401,7 @@ export function useTasksPage() {
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setSelectedTask(updated);
       celebrateCompletion();
+      askIfFinishedOnTime([updated]);
     } catch {
       notify(translateNow('hook.couldNotMarkTheTaskAs'), 'error');
     }

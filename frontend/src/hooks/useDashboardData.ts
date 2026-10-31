@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getTaskMetadata, getUserAreas, getUserTasks } from '../api/userService';
 import type { AcademicTaskTypeOption, Area, Task } from '../types/models';
 import { isRequestCanceled } from '../lib/abortable';
+import { onOnTimeSaved } from '../lib/onTimeQuestion';
 import { translateNow } from '../i18n/translate';
 
 const LOAD_ERROR_KEY = 'hook.couldNotLoadTheDashboardData';
@@ -64,6 +65,15 @@ export function useDashboardData(periodParam: string | undefined, isAcademicLoad
     void fetchTasks();
     return () => controller.abort();
   }, [periodParam, isAcademicLoading]);
+
+  // "Acabaste a tempo?" respondido: a taxa de prazos cumpridos muda logo.
+  useEffect(
+    () =>
+      onOnTimeSaved((saved) =>
+        setTasks((prev) => prev.map((t) => (t.id === saved.id ? { ...t, ...saved } : t))),
+      ),
+    [],
+  );
 
   // Depois de um import: refaz so as tarefas, sem skeleton.
   const refreshTasks = useCallback(async () => {

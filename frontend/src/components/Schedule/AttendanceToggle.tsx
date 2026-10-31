@@ -27,7 +27,7 @@ const OPTIONS = [
 export default function AttendanceToggle({ subject, attended, onChange }: AttendanceToggleProps) {
   const { t } = useI18n();
   return (
-    <div role="group" aria-label={t('attendance.groupLabel', { subject })} className="mt-1 flex gap-1">
+    <div role="group" aria-label={t('attendance.groupLabel', { subject })} className="flex gap-1">
       {OPTIONS.map(({ value, labelKey, Icon, activeClass }) => {
         const pressed = attended === value;
         return (

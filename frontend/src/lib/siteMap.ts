@@ -253,9 +253,14 @@ export const SITE_PAGES: SitePage[] = [
 
 const BY_PATH = new Map(SITE_PAGES.map((page) => [page.path, page]));
 
-/** A pagina exata deste caminho (sem query). */
+/** A pagina exata deste caminho (sem query nem ancora). */
 export function sitePage(path: string): SitePage | undefined {
-  return BY_PATH.get(path.split('?')[0]);
+  return BY_PATH.get(stripQuery(path));
+}
+
+// Sem ?query nem #ancora (a paleta abre /wellbeing#blood, por exemplo).
+function stripQuery(path: string): string {
+  return path.split(/[?#]/)[0];
 }
 
 /**
@@ -263,7 +268,7 @@ export function sitePage(path: string): SitePage | undefined {
  * seja prefixo (/classes/abc -> /classes, /social/friends/x -> /social).
  */
 export function owningPage(path: string): SitePage | undefined {
-  const clean = path.split('?')[0];
+  const clean = stripQuery(path);
   const exact = BY_PATH.get(clean);
   if (exact) return exact;
   let best: SitePage | undefined;

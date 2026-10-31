@@ -9,7 +9,8 @@ const COMPLETED_STATUS: Task['progressStatus'] = 'COMPLETED';
 
 // Cartao que continua visivel em modo exame (se a pessoa nao o escondeu):
 // o dia de hoje continua a interessar no meio dos exames.
-const KEPT_IN_EXAM_MODE: DashboardWidgetKey[] = ['today'];
+// A folga entre testes e o que mais interessa na epoca de exames.
+const KEPT_IN_EXAM_MODE: DashboardWidgetKey[] = ['today', 'testGaps'];
 
 /** Teste ou exame: o tipo academico e um evento de data fixa (mesmo sinal do Schedule). */
 export function isExamTask(task: Task): boolean {

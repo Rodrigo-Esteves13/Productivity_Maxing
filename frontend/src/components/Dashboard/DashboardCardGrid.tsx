@@ -11,6 +11,7 @@ import {
   GradeProjectionCard,
   FocusEffectCard,
   ExamCountdownCard,
+  TestGapsCard,
   StaleTasksCard,
   TimeByAreaCard,
   EstimationAccuracyCard,
@@ -70,6 +71,9 @@ export default function DashboardCardGrid({
       )}
       {visibility.examCountdown && academicTasks.length > 0 && (
         <ExamCountdownCard tasks={academicTasks} areas={academicAreas} />
+      )}
+      {visibility.testGaps && academicTasks.length > 0 && (
+        <TestGapsCard tasks={academicTasks} areas={academicAreas} />
       )}
       {visibility.staleTasks && academicTasks.length > 0 && (
         <StaleTasksCard tasks={academicTasks} areas={academicAreas} />

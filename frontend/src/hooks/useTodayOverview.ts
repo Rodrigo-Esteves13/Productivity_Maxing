@@ -41,7 +41,11 @@ export function useTodayOverview() {
       if ([due, classes, shifts, plan].every((result) => result.status === 'rejected')) return;
       setOverview({
         dueToday: valueOr(due, []),
-        agenda: mergeAgenda(valueOr(classes, []), valueOr(shifts, [])),
+        // Aula desmarcada (professor faltou) nao entra no "hoje".
+        agenda: mergeAgenda(
+          valueOr(classes, []).filter((c) => !c.cancelled),
+          valueOr(shifts, []),
+        ),
         studyBlocks: plan.status === 'fulfilled' ? plan.value.suggestions : [],
       });
     });

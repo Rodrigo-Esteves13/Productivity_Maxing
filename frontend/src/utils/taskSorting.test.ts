@@ -30,6 +30,17 @@ describe('sortTasks', () => {
     expect(ids(sortTasks(tasks, 'date', 'desc'))).toEqual(['b', 'c', 'a']);
   });
 
+  it('Date TBD e Surprise ficam no fim nas duas direcoes', () => {
+    const tasks = [
+      makeTask({ id: 'tbd', date: '2026-10-11T00:00:00.000Z', dateCertainty: 'UNKNOWN' }),
+      makeTask({ id: 'late', date: '2026-10-20T00:00:00.000Z' }),
+      makeTask({ id: 'surprise', date: '2026-10-01T00:00:00.000Z', dateCertainty: 'SURPRISE' }),
+      makeTask({ id: 'early', date: '2026-10-05T00:00:00.000Z', dateCertainty: 'APPROXIMATE' }),
+    ];
+    expect(ids(sortTasks(tasks, 'date', 'asc'))).toEqual(['early', 'late', 'tbd', 'surprise']);
+    expect(ids(sortTasks(tasks, 'date', 'desc'))).toEqual(['late', 'early', 'tbd', 'surprise']);
+  });
+
   it('prioridade: menor priorityOrder primeiro em asc', () => {
     const tasks = [
       makeTask({ id: 'low', priorityOrder: 3 }),

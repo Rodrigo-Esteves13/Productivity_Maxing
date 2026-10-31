@@ -16,6 +16,7 @@ export const Areas = lazyWithPreload(() => import('../pages/Areas'));
 export const Social = lazyWithPreload(() => import('../pages/Social'));
 export const FriendNotes = lazyWithPreload(() => import('../pages/FriendNotes'));
 export const FriendProfile = lazyWithPreload(() => import('../pages/FriendProfile'));
+export const FriendLink = lazyWithPreload(() => import('../pages/FriendLink'));
 export const FriendNoteEntry = lazyWithPreload(() => import('../pages/FriendNoteEntry'));
 export const TaskPacks = lazyWithPreload(() => import('../pages/TaskPacks'));
 export const ImportTaskPack = lazyWithPreload(() => import('../pages/ImportTaskPack'));

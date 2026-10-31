@@ -60,10 +60,12 @@ export class RemindersService {
   ) {}
 
   async run(now = new Date()): Promise<ReminderRunResult> {
+    const window = { gt: now, lte: new Date(now.getTime() + LOOKAHEAD_MS) };
     const tasks = await this.prisma.task.findMany({
       where: {
         progressStatus: { not: 'COMPLETED' },
-        date: { gt: now, lte: new Date(now.getTime() + LOOKAHEAD_MS) },
+        // A entrega de um trabalho em duas fases tambem tem lembrete.
+        OR: [{ date: window }, { submissionDate: window }],
         // Data por marcar/surpresa e so um palpite: "falta 1 dia" mentia.
         ...FIRM_DATE_WHERE,
         user: {
@@ -78,6 +80,7 @@ export class RemindersService {
         id: true,
         title: true,
         date: true,
+        submissionDate: true,
         userId: true,
         area: { select: { name: true } },
         user: {
@@ -102,15 +105,25 @@ export class RemindersService {
     });
 
     const nowMinutes = getLisbonNow().nowMinutes;
-    const byUser = new Map<string, typeof tasks>();
+    // Um lembrete por prazo: a apresentacao (`date`) e, num trabalho em duas
+    // fases, a entrega. SentReminder e por [task, dia], por isso os dois
+    // saem cada um no seu dia sem se pisarem.
+    const inWindow = (d: Date | null): d is Date =>
+      d !== null && d > window.gt && d <= window.lte;
+    const dues = tasks.flatMap((task) =>
+      [task.date, task.submissionDate]
+        .filter(inWindow)
+        .map((due) => ({ ...task, due })),
+    );
+    const byUser = new Map<string, typeof dues>();
 
-    for (const task of tasks) {
-      const dateMs = task.date.getTime();
+    for (const task of dues) {
+      const dateMs = task.due.getTime();
       const alreadySent = task.sentReminders.some(
         (r) => r.taskDate.getTime() === dateMs,
       );
       if (alreadySent) continue;
-      if (this.remindAt(task.date).getTime() > now.getTime()) continue;
+      if (this.remindAt(task.due).getTime() > now.getTime()) continue;
       if (this.isQuietHour(task.user, nowMinutes)) continue;
 
       const list = byUser.get(task.userId) ?? [];
@@ -138,7 +151,7 @@ export class RemindersService {
           userTasks.map((t) => ({
             title: t.title,
             areaName: t.area?.name ?? null,
-            dueLabel: this.dueLabel(t.date, now, lang),
+            dueLabel: this.dueLabel(t.due, now, lang),
           })),
           tasksLink,
           lang,
@@ -162,7 +175,7 @@ export class RemindersService {
       if (!emailed && !pushed) continue;
 
       await this.prisma.sentReminder.createMany({
-        data: userTasks.map((t) => ({ taskId: t.id, taskDate: t.date })),
+        data: userTasks.map((t) => ({ taskId: t.id, taskDate: t.due })),
         skipDuplicates: true,
       });
       result.remindersSent += userTasks.length;

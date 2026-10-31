@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useI18n } from '../../i18n/useI18n';
-import type { CodeChangeRequest } from '../../api/socialService';
+import { createFriendLink, type CodeChangeRequest } from '../../api/socialService';
+import { friendLinkUrl } from '../../lib/friendLink';
+import { useFeedback } from '../../context/useFeedback';
+import { LinkIcon } from '../UI/Icons';
 import type { CodeRequestOutcome } from '../../hooks/useSocial';
 
 const MIN_REASON = 10;
@@ -24,7 +27,9 @@ interface Props {
 // ao admin, com um motivo, e o resultado aparece aqui.
 export default function FriendCodeCard({ code, request, onRequestChange }: Props) {
   const { t } = useI18n();
+  const { notify } = useFeedback();
   const [copied, setCopied] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [isAsking, setIsAsking] = useState(false);
   const [reason, setReason] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -45,6 +50,30 @@ export default function FriendCodeCard({ code, request, onRequestChange }: Props
     }
   };
 
+  // Link assinado (7 dias): quem o abre fica logo amigo. No telemovel abre
+  // a folha de partilha do sistema; no resto copia para a area de transferencia.
+  const shareLink = async () => {
+    setIsSharing(true);
+    try {
+      const url = friendLinkUrl(await createFriendLink());
+      if (typeof navigator.share === 'function') {
+        try {
+          await navigator.share({ title: t('social.link.shareTitle'), url });
+          return;
+        } catch (error) {
+          // Fechou a folha de partilha: nao e erro, so nao copia.
+          if (error instanceof DOMException && error.name === 'AbortError') return;
+        }
+      }
+      await navigator.clipboard.writeText(url);
+      notify(t('social.link.copied'), 'success');
+    } catch {
+      notify(t('social.link.failed'), 'error');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   const send = async () => {
     setIsSending(true);
     setErrorKey(null);
@@ -62,6 +91,7 @@ export default function FriendCodeCard({ code, request, onRequestChange }: Props
     <section className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
       <h2 className="text-sm font-semibold text-white">{t('social.code.title')}</h2>
       <p className="mt-1 text-xs text-neutral-500">{t('social.code.hint')}</p>
+      <p className="mt-1 text-xs text-neutral-500">{t('social.link.hint')}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <code className="rounded-md bg-neutral-800 px-3 py-1.5 font-mono text-sm text-violet-300 select-all break-all">
           {code}
@@ -72,6 +102,15 @@ export default function FriendCodeCard({ code, request, onRequestChange }: Props
           className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500"
         >
           {copied ? t('packs.list.copied') : t('social.code.copy')}
+        </button>
+        <button
+          type="button"
+          disabled={isSharing}
+          onClick={() => void shareLink()}
+          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-3 py-1.5 text-sm font-medium text-neutral-200 hover:border-violet-500/60 hover:text-white disabled:opacity-50"
+        >
+          <LinkIcon className="h-4 w-4" aria-hidden="true" />
+          {t('social.link.share')}
         </button>
         {!pending && !isAsking && (
           <button type="button" onClick={() => setIsAsking(true)} className="text-sm text-neutral-400 hover:text-white">

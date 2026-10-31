@@ -57,6 +57,7 @@ function buildInitialValues(task: Task): TaskFormFieldValues {
     isBlocked: task.isBlocked ?? false,
     // Guardado a meia-noite UTC do dia: o dia e a parte da data do ISO.
     availableFrom: task.availableFrom ? task.availableFrom.split('T')[0] : '',
+    submissionDate: task.submissionDate ? task.submissionDate.split('T')[0] : '',
     // task.priority pode ser null (ver comment em priorityId no
     // schema.prisma - é opcional). '' representa "sem priority definida"
     // de forma honesta, em vez de forçar uma escolha que o utilizador

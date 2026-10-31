@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
 import {
+  acceptFriendLink,
   acceptFriendRequest,
   blockUser,
   getSocialOverview,
   requestFriendCodeChange,
   removeFriendship,
+  sendEmailFriendRequest,
   sendFriendRequest,
+  setAllowEmailFriendRequests,
   unblockUser,
   type SocialOverview,
 } from '../api/socialService';
@@ -14,6 +17,8 @@ import { useLiveRefresh } from './useLiveRefresh';
 import { notifySocialChanged } from '../lib/socialEvents';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
+import { parseFriendInput } from '../lib/friendLink';
+import type { EmailFriendOutcome } from '../components/Social/AddFriendForm';
 
 export type AddFriendOutcome = 'PENDING' | 'ACCEPTED' | 'NOT_FOUND' | 'SELF' | 'LIMIT' | 'ERROR';
 export type CodeRequestOutcome = 'SENT' | 'ALREADY_PENDING' | 'TOO_MANY' | 'INVALID' | 'ERROR';
@@ -67,11 +72,18 @@ export function useSocial() {
     [load, notify],
   );
 
+  // Aceita o codigo ou um link de amizade colado (com assinatura valida o
+  // link torna-vos logo amigos, como abri-lo).
   const addFriend = useCallback(
-    async (code: string): Promise<AddFriendOutcome> => {
+    async (codeOrLink: string): Promise<AddFriendOutcome> => {
+      const parsed = parseFriendInput(codeOrLink);
+      if (!parsed) return 'NOT_FOUND';
       try {
-        const res = await sendFriendRequest(code);
+        const res = parsed.token
+          ? await acceptFriendLink(parsed)
+          : await sendFriendRequest(parsed.friendCode);
         await load(true);
+        notifySocialChanged();
         return res.status;
       } catch (e) {
         if (isAxiosError(e)) {
@@ -85,6 +97,31 @@ export function useSocial() {
       }
     },
     [load],
+  );
+
+  const addFriendByEmail = useCallback(async (email: string): Promise<EmailFriendOutcome> => {
+    try {
+      await sendEmailFriendRequest(email);
+      void load(true);
+      return 'SENT';
+    } catch (e) {
+      // 400 = limites do proprio (pedidos pendentes, amigos); 429 = demasiados.
+      if (isAxiosError(e) && (e.response?.status === 400 || e.response?.status === 429)) return 'LIMIT';
+      return 'ERROR';
+    }
+  }, [load]);
+
+  const setAllowEmailRequests = useCallback(
+    async (allow: boolean) => {
+      setData((prev) => (prev ? { ...prev, allowEmailFriendRequests: allow } : prev));
+      try {
+        await setAllowEmailFriendRequests(allow);
+      } catch {
+        setData((prev) => (prev ? { ...prev, allowEmailFriendRequests: !allow } : prev));
+        notify(translateNow('social.actionError'), 'error');
+      }
+    },
+    [notify],
   );
 
   // O cartao passa logo a "pendente" com a resposta do POST; o recarregar
@@ -115,6 +152,8 @@ export function useSocial() {
     isLoading,
     hasError,
     addFriend,
+    addFriendByEmail,
+    setAllowEmailRequests,
     requestCodeChange,
     accept: (id: string) => run(() => acceptFriendRequest(id)),
     remove: (id: string) => run(() => removeFriendship(id)),
