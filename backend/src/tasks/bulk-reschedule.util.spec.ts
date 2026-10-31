@@ -8,6 +8,7 @@ interface UpdateManyArgs {
 function makePrisma() {
   const updateMany = jest
     .fn<Promise<{ count: number }>, [UpdateManyArgs]>()
+    .mockResolvedValueOnce({ count: 0 })
     .mockResolvedValueOnce({ count: 2 })
     .mockResolvedValueOnce({ count: 1 });
   const prisma = {
@@ -30,8 +31,13 @@ describe('bulkRescheduleTasks', () => {
     );
 
     expect(result).toEqual({ count: 3 });
-    expect(updateMany).toHaveBeenCalledTimes(2);
-    const [later, earlier] = updateMany.mock.calls.map(([args]) => args);
+    expect(updateMany).toHaveBeenCalledTimes(3);
+    const [handIn, later, earlier] = updateMany.mock.calls.map(
+      ([args]) => args,
+    );
+    // Duas fases: a entrega que ficaria depois da nova data passa para ela.
+    expect(handIn.where.submissionDate).toEqual({ gt: date });
+    expect(handIn.data).toEqual({ submissionDate: date });
     expect(later.where.date).toEqual({ lt: date });
     // So prazos reais contam como adiados (palpites por marcar/surpresa nao).
     expect(later.where.dateCertainty).toEqual({ in: ['EXACT', 'APPROXIMATE'] });

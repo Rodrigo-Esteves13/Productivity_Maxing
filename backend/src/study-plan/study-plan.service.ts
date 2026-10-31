@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DateCertainty, Difficulty, Effort, Prisma } from '@prisma/client';
+import { hasFirmDate } from '../common/task-readiness.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import {
@@ -113,15 +114,30 @@ function averageOf(bucket: HistoryBucket | undefined): number | null {
     : null;
 }
 
+type PlanDeadlineTask = {
+  date: Date;
+  dateCertainty: DateCertainty;
+  submissionDate?: Date | null;
+};
+
+// Dia em que o trabalho tem de estar pronto: a entrega num trabalho em duas
+// fases (com data marcada), senao a data da task.
+function workDueKey(task: PlanDeadlineTask): string {
+  return task.submissionDate && hasFirmDate(task.dateCertainty)
+    ? toDateKey(task.submissionDate)
+    : toDateKey(task.date);
+}
+
 // Ultimo dia para que o plano reparte o estudo. Numa avaliacao surpresa a
 // data e so o limite: o objetivo e estar pronto cedo, por isso usa-se o
-// mais cedo entre essa data e daqui a SURPRISE_READY_WITHIN_DAYS dias.
-function planningDeadlineKey(
-  task: { date: Date; dateCertainty: DateCertainty },
+// mais cedo entre essa data e daqui a SURPRISE_READY_WITHIN_DAYS dias. Num
+// trabalho em duas fases o trabalho tem de estar pronto na entrega, nao na
+// apresentacao.
+export function planningDeadlineKey(
+  task: PlanDeadlineTask,
   today: Date,
 ): string {
-  if (task.dateCertainty !== DateCertainty.SURPRISE)
-    return toDateKey(task.date);
+  if (task.dateCertainty !== DateCertainty.SURPRISE) return workDueKey(task);
   const readyBy = addUtcDays(today, SURPRISE_READY_WITHIN_DAYS);
   return toDateKey(task.date < readyBy ? task.date : readyBy);
 }
@@ -194,6 +210,7 @@ export class StudyPlanService {
           effort: true,
           dateCertainty: true,
           availableFrom: true,
+          submissionDate: true,
           weightPercentage: true,
           estimatedMinutes: true,
           taskTypeId: true,
@@ -317,7 +334,8 @@ export class StudyPlanService {
         title: task.title,
         areaName: task.area.name,
         areaColorHex: task.area.colorHex,
-        deadline: toDateKey(task.date),
+        // O prazo que o plano usou (a entrega, num trabalho em duas fases).
+        deadline: workDueKey(task),
         estimateMinutes: resolved?.estimate.minutes ?? 0,
         estimateSource: resolved?.estimate.source ?? 'default',
         loggedMinutes: resolved?.logged ?? 0,

@@ -108,7 +108,12 @@ export class TurmaScheduleService {
       sharers.length === 0
         ? Promise.resolve([] as OccurrenceRow[])
         : this.prisma.classOccurrence.findMany({
-            where: { userId: { in: sharers }, date: { gte: today, lt: until } },
+            // Aula que um colega marcou sem professor nao se mostra nem se copia.
+            where: {
+              userId: { in: sharers },
+              date: { gte: today, lt: until },
+              cancelled: false,
+            },
             select,
           }),
       this.prisma.classOccurrence.findMany({
@@ -148,6 +153,7 @@ export class TurmaScheduleService {
           where: {
             userId: { in: sharers },
             subject: { equals: subject, mode: 'insensitive' },
+            cancelled: false,
             date: {
               gte: today,
               lt: addUtcDays(today, TURMA_SCHEDULE_COPY_DAYS),

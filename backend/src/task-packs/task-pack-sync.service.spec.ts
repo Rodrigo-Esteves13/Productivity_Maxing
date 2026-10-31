@@ -15,6 +15,7 @@ const base: PackSharedFields = {
   dateCertainty: 'UNKNOWN',
   availableFrom: null,
   isBlocked: false,
+  submissionDate: null,
 };
 
 describe('diffShared', () => {
@@ -26,6 +27,12 @@ describe('diffShared', () => {
         dateCertainty: 'EXACT',
       }),
     ).toEqual({ date: '2026-11-27T00:00:00.000Z', dateCertainty: 'EXACT' });
+  });
+
+  it('a entrega de um trabalho em duas fases tambem vai na atualizacao', () => {
+    expect(
+      diffShared(base, { ...base, submissionDate: '2026-11-18T00:00:00.000Z' }),
+    ).toEqual({ submissionDate: '2026-11-18T00:00:00.000Z' });
   });
 
   it('sem alteracoes devolve vazio', () => {

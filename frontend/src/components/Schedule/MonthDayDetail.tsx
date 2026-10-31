@@ -5,6 +5,7 @@ import ViewTaskButton from '../UI/ViewTaskButton';
 import { GraduationCapIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
 import { useMonthChipLabel } from '../../hooks/useMonthChipLabel';
+import { ptHolidayOn } from '../../lib/ptHolidays';
 
 interface MonthDayDetailProps {
   day: MonthGridDay;
@@ -16,11 +17,15 @@ interface MonthDayDetailProps {
 export default function MonthDayDetail({ day, chips, onOpenWeek }: MonthDayDetailProps) {
   const { t } = useI18n();
   const chipLabel = useMonthChipLabel();
+  const holiday = ptHolidayOn(day.key);
 
   return (
     <section className="mt-4 border-t border-neutral-800 pt-3" aria-live="polite">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-medium text-white">{formatDayLabel(day.key)}</h3>
+        <div className="min-w-0">
+          <h3 className="text-sm font-medium text-white">{formatDayLabel(day.key)}</h3>
+          {holiday && <p className="text-xs font-medium text-amber-300">{t(`holiday.${holiday.key}`)}</p>}
+        </div>
         <button
           type="button"
           onClick={() => onOpenWeek(day.date)}

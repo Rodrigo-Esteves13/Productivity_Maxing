@@ -11,7 +11,7 @@ import { useTaskPackImport } from '../hooks/useTaskPackImport';
 import { useI18n } from '../i18n/useI18n';
 import SelectionToolbar from '../components/UI/SelectionToolbar';
 import TaskReadinessBadges from '../components/UI/TaskReadinessBadges';
-import { formatTaskDue } from '../lib/taskReadiness';
+import { formatHandIn, formatTaskDue } from '../lib/taskReadiness';
 import ConfirmActionDialog from '../components/Turma/ConfirmActionDialog';
 import { useConfirmAction } from '../hooks/useConfirmAction';
 
@@ -139,6 +139,7 @@ export default function ImportTaskPack() {
                 <span className="block font-medium text-white">{item.title}</span>
                 <span className="block text-xs text-neutral-500">
                   {formatTaskDue(item, lang)}
+                  {formatHandIn(item, lang) && ` · ${formatHandIn(item, lang)}`}
                   {item.weightPercentage != null && ` · ${item.weightPercentage}%`}
                   {` · ${item.areaName}`}
                   {item.alreadyHave && ` · ${t('packs.import.alreadyHave')}`}

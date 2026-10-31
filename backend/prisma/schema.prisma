@@ -1796,6 +1796,9 @@ model TaskPackItem {
   // "Ainda nao da para comecar" (o enunciado ainda nao saiu): igual para a
   // turma, por isso tambem vai no pacote e nas atualizacoes.
   isBlocked        Boolean       @default(false)
+  // Trabalho em duas fases: dia de entrega antes da apresentacao (dueDate).
+  // Igual para a turma; null = uma so fase.
+  submissionDate   DateTime?
 
   pack          TaskPack         @relation(fields: [packId], references: [id], onDelete: Cascade)
   sourceTask    Task?            @relation("PackItemSource", fields: [sourceTaskId], references: [id], onDelete: SetNull)

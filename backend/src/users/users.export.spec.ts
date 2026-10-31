@@ -24,6 +24,7 @@ describe('UsersService.exportUserData', () => {
       expect.objectContaining({
         workShifts: [],
         commitments: [],
+        scheduleExceptions: [],
         classOccurrences: [],
         gradeComponents: [],
         travelTimes: [],

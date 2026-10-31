@@ -41,6 +41,8 @@ export interface TaskPackPreviewItem {
   /** Dia em que a task abre (ainda nao da para comecar); null = ja aberta. */
   availableFrom: string | null;
   isBlocked: boolean;
+  /** Entrega antes da apresentacao (`date`); null = uma so fase. */
+  submissionDate: string | null;
   /** O importador ja tem uma task com este titulo e data. */
   alreadyHave: boolean;
 }
@@ -109,6 +111,7 @@ export class TaskPacksService {
         dateCertainty: true,
         availableFrom: true,
         isBlocked: true,
+        submissionDate: true,
         areaId: true,
         area: { select: { name: true, ownerId: true } },
         taskType: { select: { key: true } },
@@ -146,6 +149,8 @@ export class TaskPacksService {
               dateCertainty: t.dateCertainty,
               availableFrom: t.availableFrom,
               isBlocked: t.isBlocked,
+              // Duas fases (entregar e depois apresentar): igual para a turma.
+              submissionDate: t.submissionDate,
               // Para o dono poder publicar alteracoes mais tarde (ver
               // TaskPackSyncService.publish).
               sourceTaskId: t.id,
@@ -208,6 +213,7 @@ export class TaskPacksService {
         dateCertainty: i.dateCertainty,
         availableFrom: i.availableFrom?.toISOString() ?? null,
         isBlocked: i.isBlocked,
+        submissionDate: i.submissionDate?.toISOString() ?? null,
         alreadyHave: have.has(haveKey(i.title, i.dueDate)),
       })),
     };
@@ -289,6 +295,7 @@ export class TaskPacksService {
         dateCertainty: item.dateCertainty,
         availableFrom: item.availableFrom?.toISOString() ?? null,
         isBlocked: item.isBlocked,
+        submissionDate: item.submissionDate?.toISOString() ?? null,
       };
       try {
         const created = await this.tasksService.create(userId, taskDto);

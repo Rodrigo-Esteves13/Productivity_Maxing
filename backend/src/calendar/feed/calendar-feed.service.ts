@@ -1,4 +1,4 @@
-import { calendarTitle } from '../../common/task-readiness.util';
+import { calendarTitle, hasFirmDate } from '../../common/task-readiness.util';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { UserStatus } from '@prisma/client';
@@ -157,6 +157,7 @@ export class CalendarFeedService {
           title: true,
           date: true,
           dateCertainty: true,
+          submissionDate: true,
           topics: true,
           calendarDurationMinutes: true,
           area: { select: { name: true } },
@@ -193,6 +194,21 @@ export class CalendarFeedService {
           ...base,
           start: task.date,
           end: new Date(task.date.getTime() + minutes * MS_PER_MINUTE),
+        });
+      }
+
+      // Trabalho em duas fases: a entrega e um dia proprio no calendario.
+      if (
+        task.submissionDate &&
+        hasFirmDate(task.dateCertainty) &&
+        task.submissionDate >= rangeStart
+      ) {
+        events.push({
+          uid: `task-handin:${task.id}@productivitymaxing`,
+          title: `Hand in: ${task.title}`,
+          description: description || null,
+          category: 'task',
+          allDayDate: toDateKey(task.submissionDate),
         });
       }
     }

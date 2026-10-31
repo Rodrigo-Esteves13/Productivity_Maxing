@@ -26,7 +26,13 @@ export async function bulkRescheduleTasks(
   };
   // So adiar um prazo real conta como adiamento: mexer no palpite de uma
   // data por marcar/surpresa nao (mesma regra de TasksService.update).
-  const [postponed, movedEarlier] = await prisma.$transaction([
+  const [, postponed, movedEarlier] = await prisma.$transaction([
+    // Duas fases: a entrega nunca fica depois da apresentacao (mesma regra
+    // do update()). Corre antes, enquanto a data antiga ainda esta la.
+    prisma.task.updateMany({
+      where: { ...scope, submissionDate: { gt: date } },
+      data: { submissionDate: date },
+    }),
     prisma.task.updateMany({
       where: { ...scope, date: { lt: date }, ...FIRM_DATE_WHERE },
       data: { date, postponedCount: { increment: 1 } },
