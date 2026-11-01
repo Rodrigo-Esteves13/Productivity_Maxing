@@ -11,9 +11,7 @@ describe('normalizeTags', () => {
     ]);
   });
   it('drops empty and non-string entries', () => {
-    expect(normalizeTags(['', '   ', 'a', 5 as unknown as string])).toEqual([
-      'a',
-    ]);
+    expect(normalizeTags(['', '   ', 'a', 5])).toEqual(['a']);
   });
   it('caps length and count', () => {
     expect(normalizeTags(['x'.repeat(50)])[0]).toHaveLength(TAG_LEN_MAX);

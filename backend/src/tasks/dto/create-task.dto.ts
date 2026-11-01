@@ -117,7 +117,7 @@ export class CreateTaskDto {
     description: 'Free-form labels, normalized (lowercase, deduped).',
   })
   @IsOptional()
-  @Transform(({ value }) =>
+  @Transform(({ value }: { value: unknown }): unknown =>
     Array.isArray(value) ? normalizeTags(value) : value,
   )
   @IsArray()
