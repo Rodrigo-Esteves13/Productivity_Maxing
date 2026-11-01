@@ -150,3 +150,35 @@ describe('silent-audit b: TasksService', () => {
     ).resolves.toBeDefined();
   });
 });
+
+describe('NOT_STARTED is display-only for locked tasks', () => {
+  it('ignores NOT_STARTED echoed back by the edit form of a blocked task', async () => {
+    const { prisma, service } = setup(
+      taskRow({
+        isBlocked: true,
+        availableFrom: null,
+        progressStatus: 'BEHIND',
+      }),
+    );
+
+    await service.update('u1', 't1', {
+      progressStatus: 'NOT_STARTED',
+      title: 'Renamed',
+    });
+
+    const data = prisma.task.update.mock.calls[0][0].data;
+    expect(data).not.toHaveProperty('progressStatus');
+    expect(data).toHaveProperty('title', 'Renamed');
+  });
+
+  it('still stores NOT_STARTED when the user picks it on an unlocked task', async () => {
+    const { prisma, service } = setup(
+      taskRow({ isBlocked: false, availableFrom: null }),
+    );
+
+    await service.update('u1', 't1', { progressStatus: 'NOT_STARTED' });
+
+    const data = prisma.task.update.mock.calls[0][0].data;
+    expect(data).toHaveProperty('progressStatus', 'NOT_STARTED');
+  });
+});

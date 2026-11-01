@@ -1,7 +1,7 @@
 // ENUMS
 export type Provider = 'GOOGLE' | 'DISCORD' | 'GITHUB';
 export type Role = 'USER' | 'ADMIN';
-export type ProgressStatus = 'AHEAD' | 'ON_TRACK' | 'BEHIND' | 'VERY_BEHIND' | 'COMPLETED';
+export type ProgressStatus = 'AHEAD' | 'NOT_STARTED' | 'ON_TRACK' | 'BEHIND' | 'VERY_BEHIND' | 'COMPLETED';
 // Quanto trabalho a task da (independente da dificuldade). Ver enum Effort
 // no schema.prisma; null = MODERATE.
 export type Effort = 'LIGHT' | 'MODERATE' | 'HEAVY' | 'EXHAUSTIVE';
@@ -863,6 +863,8 @@ export interface Task {
   // Ordem de /admin/priorities (menor = mais prioritário), null sem
   // prioridade - só usado pelo modo de ordenação "Priority" em Tasks.tsx.
   priorityOrder: number | null;
+  // Sugestao do sistema (nunca aplicada sozinha); null = concluida ou igual a atual.
+  suggestedPriorityKey?: string | null;
   // Histórico, nunca decresce - ver comentário em schema.prisma. Conta
   // qualquer vez que a data mudou para mais tarde, não só o botão rápido
   // "+1 Day".

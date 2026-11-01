@@ -57,6 +57,7 @@ export default function Tasks() {
     toggleEditing,
     stopEditing,
     handleUpdateTask,
+    applyPrioritySuggestion,
     handleDeleteTask,
     handleDuplicateTask,
     markSelectedTaskComplete,
@@ -276,6 +277,8 @@ export default function Tasks() {
               academicTaskTypes={academicTaskTypes}
               onSubtasksChange={handleSubtasksChange}
               onSubtaskConverted={handleSubtaskConverted}
+              priorities={priorities}
+              onApplyPriority={applyPrioritySuggestion}
             />
           ))}
       </Modal>

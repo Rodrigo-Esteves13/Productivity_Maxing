@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ThrottlerModule } from '@nestjs/throttler';
+// Alias: ja existe um ScheduleModule da app (horario de aulas).
+import { ScheduleModule as CronScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -60,6 +62,8 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
         limit: DEFAULT_REQUESTS_PER_MINUTE,
       },
     ]),
+    // Jobs @Cron dentro da app (precos de Finance de hora a hora).
+    CronScheduleModule.forRoot(),
     UsersModule,
     TasksModule,
     TaskTypesModule,

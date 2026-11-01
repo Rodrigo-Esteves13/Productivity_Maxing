@@ -17,7 +17,8 @@ const PROGRESS_RANK: Record<ProgressStatus, number> = {
   BEHIND: 1,
   ON_TRACK: 2,
   AHEAD: 3,
-  COMPLETED: 4,
+  NOT_STARTED: 4,
+  COMPLETED: 5,
 };
 
 // Chaves que o utilizador pode escolher para ordenar (colunas do dashboard

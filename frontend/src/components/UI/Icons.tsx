@@ -102,6 +102,8 @@ export {
   Tablet as TabletIcon,
   // Pagina Areas: docente de cada cadeira no cartao.
   User as UserIcon,
+  // Pagina Money: atualizar precos das posicoes.
+  RefreshCw as RefreshIcon,
 } from 'lucide-react';
 
 export function GoogleIcon(props: SVGProps<SVGSVGElement>) {

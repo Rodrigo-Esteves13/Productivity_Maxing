@@ -6,6 +6,7 @@ import { useEnumLabel } from '../../hooks/useEnumLabel';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import TaskReadinessBadges from '../UI/TaskReadinessBadges';
 import PriorityBadge from '../UI/PriorityBadge';
+import PrioritySuggestionHint from './PrioritySuggestionHint';
 import DetailRow from '../UI/DetailRow';
 import { recurrenceLabel } from '../../lib/recurrence';
 import { useCatalogLabel } from '../../hooks/useCatalogLabel';
@@ -32,9 +33,12 @@ interface TaskDetailViewProps {
   onSubtasksChange?: (taskId: string, subtasks: Subtask[]) => void;
   // Chamado quando um passo e promovido a task propria.
   onSubtaskConverted?: (task: Task) => void;
+  // Sem isto a sugestao de prioridade nao aparece.
+  priorities?: { key: string; label: string }[];
+  onApplyPriority?: (key: string) => void;
 }
 
-export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes = [], onSubtasksChange, onSubtaskConverted }: TaskDetailViewProps) {
+export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes = [], onSubtasksChange, onSubtaskConverted, priorities = [], onApplyPriority }: TaskDetailViewProps) {
   const { t, lang } = useI18n();
   const enumLabel = useEnumLabel();
   const { optionLabel } = useCatalogLabel();
@@ -126,9 +130,14 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       <DetailRow label={t('readiness.effort')}>
         {task.effort ? enumLabel(task.effort) : t('readiness.effortNotSet')}
       </DetailRow>
-      {task.priority && (
+      {(task.priority || (task.suggestedPriorityKey && onApplyPriority)) && (
         <DetailRow label={t('ui.priority')}>
-          <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
+          {task.priority && (
+            <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
+          )}
+          {onApplyPriority && (
+            <PrioritySuggestionHint suggestedKey={task.suggestedPriorityKey} priorities={priorities} onApply={onApplyPriority} />
+          )}
         </DetailRow>
       )}
 

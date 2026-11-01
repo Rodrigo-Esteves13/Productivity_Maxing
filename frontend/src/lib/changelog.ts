@@ -8,6 +8,16 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-11-01',
+    title: 'Money: accounts, investments and charts',
+    items: [
+      'Money: your balance is now split into bank, live, investment, crypto, cash and other money, with a total and the balance expected at the end of the month.',
+      'Entries can repeat every week, month or year, with a pay day rule (a fixed day, first or last business day, first business day of next month, last Friday), an end date and an account. Future repeats show as projected and can be edited.',
+      'Investments: add a symbol such as VWCE.DE with the amount you invested or the quantity, and see how much of one share you own, its value and gain. Prices refresh about every hour, or on demand.',
+      'New charts by week or month: income against expenses, where the money went by category, and your subscriptions with their monthly cost. The command palette can add an expense, income, investment or account.',
+    ],
+  },
+  {
+    date: '2026-11-01',
     title: 'Tags and flashcards',
     items: [
       'Tasks: add your own tags (up to 10 per task) and filter the list by tag. Tags show as small chips on task cards and rows.',

@@ -38,20 +38,18 @@ function BudgetLine({ label, spent, limit, money }: { label: string; spent: numb
   );
 }
 
-// Saldo atual (escrito a mao), somas do mes e limites de gastos/lazer.
+// Somas do mes (com as ocorrencias futuras) e limites de gastos/lazer.
 export default function FinanceOverview({ summary, onSaveSettings }: FinanceOverviewProps) {
   const { t, lang } = useI18n();
   const { settings, totals } = summary;
   const money = (cents: number) => formatMoney(cents, settings.currency, lang);
   const [isEditing, setIsEditing] = useState(false);
-  const [balance, setBalance] = useState('');
   const [budget, setBudget] = useState('');
   const [leisure, setLeisure] = useState('');
   const [currency, setCurrency] = useState(settings.currency);
   const [formError, setFormError] = useState('');
 
   const startEditing = () => {
-    setBalance(centsToInput(settings.balanceCents));
     setBudget(centsToInput(settings.monthlyBudgetCents));
     setLeisure(centsToInput(settings.leisureBudgetCents));
     setCurrency(settings.currency);
@@ -61,18 +59,16 @@ export default function FinanceOverview({ summary, onSaveSettings }: FinanceOver
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    const balanceCents = parseMoneyInput(balance || '0');
     const monthlyBudgetCents = budget.trim() ? parseMoneyInput(budget) : null;
     const leisureBudgetCents = leisure.trim() ? parseMoneyInput(leisure) : null;
     if (
-      balanceCents === null ||
       (budget.trim() && (monthlyBudgetCents === null || monthlyBudgetCents < 0)) ||
       (leisure.trim() && (leisureBudgetCents === null || leisureBudgetCents < 0))
     ) {
       setFormError(t('finance.invalidAmount'));
       return;
     }
-    if (await onSaveSettings({ currency, balanceCents, monthlyBudgetCents, leisureBudgetCents })) {
+    if (await onSaveSettings({ currency, monthlyBudgetCents, leisureBudgetCents })) {
       setIsEditing(false);
     }
   };
@@ -81,7 +77,6 @@ export default function FinanceOverview({ summary, onSaveSettings }: FinanceOver
     <Card className="mb-6">
       {isEditing ? (
         <form onSubmit={(e) => void handleSubmit(e)} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Input label={t('finance.balance')} inputMode="decimal" value={balance} onChange={(e) => setBalance(e.target.value)} />
           <Select label={t('finance.currency')} value={currency} onChange={(e) => setCurrency(e.target.value)}>
             {FINANCE_CURRENCIES.map((code) => (
               <option key={code} value={code}>
@@ -113,14 +108,8 @@ export default function FinanceOverview({ summary, onSaveSettings }: FinanceOver
         </form>
       ) : (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-sm text-neutral-400">{t('finance.balance')}</p>
-              <p className={`text-3xl font-semibold tabular-nums ${settings.balanceCents < 0 ? 'text-red-400' : 'text-white'}`}>
-                {money(settings.balanceCents)}
-              </p>
-              <p className="text-xs text-neutral-500">{t('finance.balanceHelp')}</p>
-            </div>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-neutral-200">{t('finance.monthSummary')}</h3>
             <button type="button" onClick={startEditing} className="text-sm text-violet-400 hover:text-violet-300">
               {t('finance.editSettings')}
             </button>
