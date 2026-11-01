@@ -7,6 +7,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-11-01',
+    title: 'Your chance of passing, always in view',
+    items: [
+      'Dashboard: the Risk of failing card now always shows a summary, with your average chance of passing, how many courses are at high, medium or low risk, and the course with the lowest chance. Courses without enough graded weight yet are shown dimmed, with what is missing.',
+      'The new Chance of passing page lists the courses that have tasks or grade components in view, with their chance of passing and failing, the grade you need on what is left, and the reasons in plain words. The chance is a rough estimate from your grades, study time, absences and approval rules, not a prediction.',
+      'The chance of passing is now more cautious: while part of the grade is still to be assessed there is always some risk, because any remaining component can fall under the minimum, be a second one under the limit, or be missed for reasons outside your control. The more weight is left, the lower the ceiling, and a course with nothing left to grade and the rules met can reach 100%. A short note on the page and the card explains why.',
+      'In the approval rules window you can now apply the same rules (for example the ISMAI preset) to all your courses at once, instead of setting them course by course.',
+    ],
+  },
+  {
     date: '2026-10-31',
     title: 'How you feel about teachers and courses',
     items: [

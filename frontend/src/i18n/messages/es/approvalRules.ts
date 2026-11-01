@@ -54,4 +54,9 @@ export const approvalRules: Record<string, string> = {
   'approvalRules.reset.error': "No se pudieron restablecer las reglas de aprobación.",
   'approvalRules.area.button': "Reglas de aprobación para esta asignatura",
   'approvalRules.area.hint': "Sustituye las reglas del programa solo para esta asignatura.",
+  'approvalRules.applyAll': "Aplicar a todas las asignaturas",
+  'approvalRules.applyAll.confirmTitle': "¿Aplicar estas reglas a todas las asignaturas?",
+  'approvalRules.applyAll.confirm': "Todas las asignaturas a las que tienes acceso tendrán exactamente estas reglas, sustituyendo las de una asignatura concreta. Las reglas del programa siguen como alternativa.",
+  'approvalRules.applyAll.done': "Reglas aplicadas a {count} asignaturas.",
+  'approvalRules.applyAll.error': "No se pudieron aplicar las reglas a todas las asignaturas.",
 };

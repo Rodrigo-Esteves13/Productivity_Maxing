@@ -9,6 +9,7 @@ import FormError from '../UI/FormError';
 import ErrorState from '../UI/ErrorState';
 import LinesSkeleton from '../UI/LinesSkeleton';
 import {
+  applyApprovalRulesToAllAreas,
   getApprovalPresets,
   getApprovalRules,
   resetApprovalRules,
@@ -156,6 +157,29 @@ export default function ApprovalRulesModal({
       onClose();
     } catch {
       setSaveFailed(true);
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const handleApplyAll = async () => {
+    if (!validation) return;
+    setShowErrors(true);
+    if (!validation.isValid || !validation.rules) return;
+    const confirmed = await confirm({
+      title: t('approvalRules.applyAll.confirmTitle'),
+      message: t('approvalRules.applyAll.confirm'),
+      confirmLabel: t('approvalRules.applyAll'),
+    });
+    if (!confirmed) return;
+
+    setIsBusy(true);
+    try {
+      const count = await applyApprovalRulesToAllAreas(validation.rules);
+      notify(t('approvalRules.applyAll.done', { count }), 'success');
+      onClose();
+    } catch {
+      notify(t('approvalRules.applyAll.error'), 'error');
     } finally {
       setIsBusy(false);
     }
@@ -328,7 +352,10 @@ export default function ApprovalRulesModal({
             <Button type="button" variant="secondary" onClick={handleReset} disabled={isBusy}>
               {t(`approvalRules.reset.${scope}`)}
             </Button>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" onClick={handleApplyAll} disabled={isBusy}>
+                {t('approvalRules.applyAll')}
+              </Button>
               <Button type="button" variant="secondary" onClick={onClose}>
                 {t('common.cancel')}
               </Button>

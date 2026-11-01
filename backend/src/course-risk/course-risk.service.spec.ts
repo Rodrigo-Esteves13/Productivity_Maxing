@@ -5,7 +5,11 @@ import type {
 } from '../approval-rules/approval-rules.types';
 import { CourseRiskService } from './course-risk.service';
 import { computeCourseRisk } from '../approval-rules/risk-engine';
-import { MIN_GRADED_WEIGHT_PCT } from './course-risk.constants';
+import {
+  CONFIDENCE_HIGH_FROM_PCT,
+  CONFIDENCE_MEDIUM_FROM_PCT,
+  MIN_GRADED_WEIGHT_PCT,
+} from './course-risk.constants';
 
 jest.mock('../approval-rules/risk-engine', () => ({
   computeCourseRisk: jest.fn(),
@@ -494,6 +498,353 @@ describe('CourseRiskService', () => {
     );
     expect(teacherByArea.get('area-1')).toEqual(stats);
     expect(teacherByArea.get('area-2')).toBeNull();
+  });
+
+  describe('overview', () => {
+    const areas3 = () => [
+      { id: 'area-1', name: 'Low', colorHex: '#111111' },
+      { id: 'area-2', name: 'High', colorHex: '#222222' },
+      { id: 'area-3', name: 'Zeta', colorHex: '#333333' },
+      { id: 'area-4', name: 'Alpha', colorHex: '#444444' },
+    ];
+    const mockByName = (
+      byName: Record<string, (Partial<CourseRisk> & { score: number }) | null>,
+    ) =>
+      engine.mockImplementation((input) => {
+        const spec = byName[input.areaName];
+        if (!spec) return null;
+        const { score, ...over } = spec;
+        return fakeRisk(input, score, over);
+      });
+
+    it('includes not_enough_data courses and orders assessed first', async () => {
+      const db = emptyDb();
+      db.areas = areas3();
+      db.tasks = [
+        task({ areaId: 'area-1' }),
+        task({ areaId: 'area-2' }),
+        task({ areaId: 'area-3', weightPercentage: null, realGrade: null }),
+        task({ areaId: 'area-4', weightPercentage: null, realGrade: null }),
+      ];
+      mockByName({
+        Low: { score: 20 },
+        High: { score: 80, level: 'high' },
+        Zeta: null,
+        Alpha: { score: 90, gradedWeightPct: 3 },
+      });
+      const { service } = build(db);
+
+      const result = await service.overview(USER_A);
+
+      expect(result.courses.map((c) => [c.areaName, c.status])).toEqual([
+        ['High', 'assessed'],
+        ['Low', 'assessed'],
+        ['Alpha', 'not_enough_data'],
+        ['Zeta', 'not_enough_data'],
+      ]);
+      const alpha = result.courses[2];
+      expect(alpha).toMatchObject({
+        risk: null,
+        passChancePct: null,
+        failChancePct: null,
+        gradedWeightPct: 3,
+      });
+      expect(result.courses[3].gradedWeightPct).toBe(0);
+      expect(result.courses[0]).toMatchObject({
+        passChancePct: 20,
+        failChancePct: 80,
+      });
+    });
+
+    it('computes the summary', async () => {
+      const db = emptyDb();
+      db.areas = areas3();
+      db.tasks = [
+        task({ areaId: 'area-1' }),
+        task({ areaId: 'area-2' }),
+        task({ areaId: 'area-3' }),
+        task({ areaId: 'area-4' }),
+      ];
+      mockByName({
+        Low: { score: 20, level: 'low' },
+        High: { score: 80, level: 'extreme' },
+        Zeta: { score: 45, level: 'medium' },
+        Alpha: null,
+      });
+      const { service } = build(db);
+
+      const { summary } = await service.overview(USER_A);
+
+      expect(summary).toEqual({
+        totalCourses: 4,
+        assessedCourses: 3,
+        highRiskCourses: 1,
+        mediumRiskCourses: 1,
+        lowRiskCourses: 1,
+        // (80 + 55 + 20) / 3 = 51.67
+        avgPassChancePct: 52,
+        worst: { areaId: 'area-2', areaName: 'High', passChancePct: 20 },
+        minGradedWeightPct: MIN_GRADED_WEIGHT_PCT,
+      });
+    });
+
+    it('breaks a worst tie by the higher raw score', async () => {
+      const db = emptyDb();
+      db.areas = areas3();
+      db.tasks = [task({ areaId: 'area-1' }), task({ areaId: 'area-2' })];
+      // 70.4 e 69.6 arredondam ambos para passChance 30.
+      mockByName({
+        Low: { score: 69.6 },
+        High: { score: 70.4 },
+      });
+      const { service } = build(db);
+
+      const { summary } = await service.overview(USER_A);
+      expect(summary.worst).toEqual({
+        areaId: 'area-2',
+        areaName: 'High',
+        passChancePct: 30,
+      });
+    });
+
+    it('averages the pass chance weighted by graded weight', async () => {
+      const db = emptyDb();
+      db.areas = areas3();
+      db.tasks = [task({ areaId: 'area-1' }), task({ areaId: 'area-2' })];
+      // Low: pass 80, peso 90. High: pass 20, peso 10. (7200 + 200) / 100 = 74.
+      mockByName({
+        Low: { score: 20, gradedWeightPct: 90 },
+        High: { score: 80, gradedWeightPct: 10 },
+      });
+      const { service } = build(db);
+      const { summary } = await service.overview(USER_A);
+      expect(summary.avgPassChancePct).toBe(74);
+    });
+
+    it('rounds the weighted average once', async () => {
+      const db = emptyDb();
+      db.areas = areas3();
+      db.tasks = [task({ areaId: 'area-1' }), task({ areaId: 'area-2' })];
+      // (70*10 + 31*20) / 30 = 44.33 -> 44
+      mockByName({
+        Low: { score: 30, gradedWeightPct: 10 },
+        High: { score: 69, gradedWeightPct: 20 },
+      });
+      const { service } = build(db);
+      const { summary } = await service.overview(USER_A);
+      expect(summary.avgPassChancePct).toBe(44);
+    });
+
+    it('falls back to the plain mean when every weight is 0', async () => {
+      const db = emptyDb();
+      db.areas = areas3();
+      db.tasks = [task({ areaId: 'area-1' }), task({ areaId: 'area-2' })];
+      // Peso 0 so e avaliado com regra dura (senao seria not_enough_data).
+      const hard = [{ code: 'COMPONENT_BELOW_MIN' as const, params: {} }];
+      mockByName({
+        Low: { score: 20, gradedWeightPct: 0, reasons: hard },
+        High: { score: 80, gradedWeightPct: 0, reasons: hard },
+      });
+      const { service } = build(db);
+      const { summary } = await service.overview(USER_A);
+      expect(summary.avgPassChancePct).toBe(50);
+    });
+
+    it('sets confidence from the graded weight at the boundaries', async () => {
+      const db = emptyDb();
+      const weights: Record<string, number> = {
+        A: CONFIDENCE_MEDIUM_FROM_PCT - 1,
+        B: CONFIDENCE_MEDIUM_FROM_PCT,
+        C: CONFIDENCE_HIGH_FROM_PCT - 1,
+        D: CONFIDENCE_HIGH_FROM_PCT,
+      };
+      db.areas = Object.keys(weights).map((name, i) => ({
+        id: `c-${i}`,
+        name,
+        colorHex: '#111111',
+      }));
+      db.tasks = db.areas.map((a) => task({ areaId: a.id }));
+      engine.mockImplementation((input) =>
+        fakeRisk(input, 10, { gradedWeightPct: weights[input.areaName] }),
+      );
+      const { service } = build(db);
+      const { courses } = await service.overview(USER_A);
+      const by = new Map(courses.map((c) => [c.areaName, c.confidence]));
+      expect(Object.fromEntries(by)).toEqual({
+        A: 'low',
+        B: 'medium',
+        C: 'medium',
+        D: 'high',
+      });
+    });
+
+    it('has null confidence for not_enough_data', async () => {
+      const db = emptyDb();
+      db.tasks = [task({})];
+      engine.mockImplementation(() => null);
+      const { service } = build(db);
+      const { courses } = await service.overview(USER_A);
+      expect(courses[0].confidence).toBeNull();
+    });
+
+    it('never reports certainty while weight remains, but allows it at 0', async () => {
+      const db = emptyDb();
+      db.areas = areas3();
+      db.tasks = [task({ areaId: 'area-1' }), task({ areaId: 'area-2' })];
+      mockByName({
+        Low: { score: 0, remainingWeightPct: 50 },
+        High: { score: 0, remainingWeightPct: 0 },
+      });
+      const { service } = build(db);
+      const { courses } = await service.overview(USER_A);
+      const by = new Map(courses.map((c) => [c.areaName, c]));
+      expect(by.get('Low')).toMatchObject({
+        passChancePct: 99,
+        failChancePct: 1,
+      });
+      expect(by.get('High')).toMatchObject({
+        passChancePct: 100,
+        failChancePct: 0,
+      });
+    });
+
+    it('orders ties by area name for assessed and not_enough_data rows', async () => {
+      const db = emptyDb();
+      db.areas = areas3();
+      db.tasks = areas3().map((a) => task({ areaId: a.id }));
+      // Low e High empatam no score; Zeta e Alpha sem dados suficientes.
+      mockByName({
+        Low: { score: 50 },
+        High: { score: 50 },
+        Zeta: { score: 90, gradedWeightPct: 1 },
+        Alpha: { score: 90, gradedWeightPct: 1 },
+      });
+      const { service } = build(db);
+      const { courses } = await service.overview(USER_A);
+      expect(courses.map((c) => c.areaName)).toEqual([
+        'High',
+        'Low',
+        'Alpha',
+        'Zeta',
+      ]);
+    });
+
+    it('breaks a full worst tie (pass and score) by area name', async () => {
+      const db = emptyDb();
+      db.areas = areas3();
+      db.tasks = [task({ areaId: 'area-3' }), task({ areaId: 'area-4' })];
+      mockByName({ Zeta: { score: 70 }, Alpha: { score: 70 } });
+      const { service } = build(db);
+      const { summary } = await service.overview(USER_A);
+      expect(summary.worst?.areaName).toBe('Alpha');
+    });
+
+    it('has a null average and worst when nothing is assessed', async () => {
+      const db = emptyDb();
+      db.tasks = [task({})];
+      engine.mockImplementation(() => null);
+      const { service } = build(db);
+
+      const { summary, courses } = await service.overview(USER_A);
+      expect(courses).toHaveLength(1);
+      expect(summary).toMatchObject({
+        totalCourses: 1,
+        assessedCourses: 0,
+        avgPassChancePct: null,
+        worst: null,
+      });
+    });
+
+    it('clamps and rounds the pass chance', async () => {
+      const db = emptyDb();
+      db.areas = areas3();
+      db.tasks = [
+        task({ areaId: 'area-1' }),
+        task({ areaId: 'area-2' }),
+        task({ areaId: 'area-3' }),
+      ];
+      mockByName({
+        Low: { score: 120 },
+        High: { score: -5 },
+        Zeta: { score: 33.4 },
+      });
+      const { service } = build(db);
+
+      const { courses } = await service.overview(USER_A);
+      const by = new Map(courses.map((c) => [c.areaName, c]));
+      expect(by.get('Low')).toMatchObject({
+        passChancePct: 0,
+        failChancePct: 100,
+      });
+      expect(by.get('High')).toMatchObject({
+        passChancePct: 100,
+        failChancePct: 0,
+      });
+      expect(by.get('Zeta')).toMatchObject({
+        passChancePct: 67,
+        failChancePct: 33,
+      });
+    });
+
+    it('keeps the worst assessed period for a course in two periods', async () => {
+      const db = emptyDb();
+      db.tasks = [task({ periodId: 'p1' }), task({ periodId: 'p2' })];
+      let call = 0;
+      engine.mockImplementation((input) =>
+        fakeRisk(input, call++ === 0 ? 30 : 70),
+      );
+      const { service } = build(db);
+      const { courses } = await service.overview(USER_A);
+      expect(courses).toHaveLength(1);
+      expect(courses[0].risk?.score).toBe(70);
+    });
+
+    it('keeps one not_enough_data row when no period is assessed', async () => {
+      const db = emptyDb();
+      db.tasks = [task({ periodId: 'p1' }), task({ periodId: 'p2' })];
+      engine.mockImplementation((input) =>
+        fakeRisk(input, 70, { gradedWeightPct: 2 }),
+      );
+      const { service } = build(db);
+      const { courses } = await service.overview(USER_A);
+      expect(courses).toHaveLength(1);
+      expect(courses[0].status).toBe('not_enough_data');
+    });
+
+    it('omits an area with no task and no component', async () => {
+      const db = emptyDb();
+      db.areas = areas3();
+      db.tasks = [task({ areaId: 'area-1' })];
+      const { service } = build(db);
+      const { courses } = await service.overview(USER_A);
+      expect(courses.map((c) => c.areaId)).toEqual(['area-1']);
+    });
+
+    it('rejects a period of another user with 404 and reads no data', async () => {
+      const { service, prisma } = build(emptyDb());
+      await expect(
+        service.overview(USER_A, undefined, 'p-b'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.task.findMany).not.toHaveBeenCalled();
+    });
+
+    it('keeps list() dropping not_enough_data and unweighted courses', async () => {
+      const db = emptyDb();
+      db.areas = areas3();
+      db.tasks = [
+        task({ areaId: 'area-1' }),
+        task({ areaId: 'area-2', weightPercentage: null, realGrade: null }),
+        task({ areaId: 'area-3' }),
+      ];
+      mockByName({
+        Low: { score: 20 },
+        High: { score: 80 },
+        Zeta: { score: 90, gradedWeightPct: 1 },
+      });
+      const { service } = build(db);
+      const result = await service.list(USER_A);
+      expect(result.map((r) => r.areaName)).toEqual(['Low']);
+    });
   });
 
   it('includes grade components in the engine input', async () => {

@@ -10,6 +10,11 @@ import type {
   RiskReason,
   RiskReasonCode,
 } from './approval-rules.types';
+import {
+  ASSUMED_COMPONENT_SHARE,
+  modelPassPct,
+  passCeilingPct,
+} from './pass-probability';
 
 // Motor puro do risco de chumbo (N45-N47). Sem Nest nem Prisma: recebe as
 // regras ja resolvidas e os dados da cadeira e devolve o veredicto.
@@ -37,6 +42,13 @@ import type {
 // - Sinais secundarios (estudo, faltas, adiamentos) somam pouco e com teto.
 //   O docente escala com o risco que ja existe: sozinho nunca decide.
 //
+// Pessimismo (N47): enquanto ha peso por avaliar nunca ha certeza. A chance de
+// passar vem de uma simulacao (pass-probability.ts) que conta o risco de cada
+// componente futuro ficar abaixo do minimo, de gastar a quota do limiar
+// secundario ou de ser falhado por motivos externos, com teto que desce com o
+// peso por avaliar. O score nunca fica abaixo da chance de chumbar do modelo,
+// e a razao REMAINING_UNCERTAINTY explica o risco residual.
+//
 // Params das razoes (nomes fixos, a UI ja traduz com eles; numeros a 1 casa):
 //   COMPONENT_BELOW_MIN              label, grade, min
 //   TOO_MANY_BELOW_SECOND_THRESHOLD  count, threshold, max
@@ -49,6 +61,9 @@ import type {
 //   POSTPONED_TASKS                  count
 //   TEACHER_HISTORY_LOWER            teacher, withTeacher, others (na escala da cadeira)
 //   ONLY_EXAM_TRACK_LEFT             track (EXAM ou RESIT, a prova que resta)
+//   REMAINING_UNCERTAINTY            remaining (%), count (estimado), min, second, max
+//   REMAINING_UNCERTAINTY_MIN        remaining (%), count, min (sem quota do limiar)
+//   REMAINING_UNCERTAINTY_BASIC      remaining (%), count (sem minimo/limiar nas regras)
 //
 // LOW_AVERAGE_SO_FAR.average arredonda para baixo (1 casa) para nunca
 // mostrar uma media igual a passagem e dizer que esta abaixo (9.96 -> 9.9).
@@ -70,6 +85,8 @@ const DISPLAY_DECIMALS = 1;
  * 33.33 x3 somam 99.99 e nao podem deixar 0.01% "por avaliar".
  */
 const SETTLED_SHARE_TOLERANCE = 0.005;
+/** Impacto da razao residual: 0, ordena depois de qualquer causa concreta. */
+const RESIDUAL_REASON_IMPACT = 0;
 
 // Score e niveis.
 const SCORE_MIN = 0;
@@ -218,6 +235,9 @@ interface CourseContext {
   needed: number;
   finalPasses: boolean;
   violations: RiskReason[];
+  graded: GradedComponent[];
+  /** Fracao (0-1) de cada componente que falta (reais, mais os assumidos). */
+  remainingShares: number[];
 }
 
 interface ScoredReason extends RiskReason {
@@ -243,6 +263,24 @@ const DISPLAY_FACTOR = 10 ** DISPLAY_DECIMALS;
 /** Como display, mas sempre para baixo (nunca sobe ate a passagem). */
 const displayFloor = (value: number): number =>
   Math.floor(value * DISPLAY_FACTOR + FLOAT_EPSILON) / DISPLAY_FACTOR;
+
+/** Componentes ainda sem nota, com os pesos reais; o resto assume-se em fatias. */
+function remainingSharesOf(
+  weighted: RiskComponentInput[],
+  weightBase: number,
+  remainingShare: number,
+): number[] {
+  if (remainingShare <= SETTLED_SHARE_TOLERANCE + FLOAT_EPSILON) return [];
+  const known = weighted
+    .filter((c) => c.grade === null || !Number.isFinite(c.grade))
+    .map((c) => c.weightPct / weightBase);
+  const unallocated = remainingShare - sum(known);
+  if (unallocated <= SETTLED_SHARE_TOLERANCE + FLOAT_EPSILON) return known;
+  const chunks = Math.ceil(
+    unallocated / ASSUMED_COMPONENT_SHARE - FLOAT_EPSILON,
+  );
+  return [...known, ...Array<number>(chunks).fill(unallocated / chunks)];
+}
 
 const isPresent = <T>(value: T | null): value is T => value !== null;
 
@@ -410,6 +448,8 @@ function buildContext(input: CourseRiskInput): CourseContext | null {
     violations: HARD_RULE_CHECKS.map((check) => check(graded, rules)).filter(
       isPresent,
     ),
+    graded,
+    remainingShares: remainingSharesOf(weighted, weightBase, remainingShare),
   };
 }
 
@@ -735,6 +775,91 @@ function teacherSignal(
 }
 
 /**
+ * Chance de chumbar do modelo (0-100), com o teto do peso por avaliar. Nota
+ * final ja aprovada: 0.
+ */
+/**
+ * Sem regras duras e com todo o peso restante a nota minima da escala a nota
+ * final ja passa: nao ha risco residual.
+ */
+function remainingCannotFail(ctx: CourseContext): boolean {
+  const { rules } = ctx;
+  const hasHardRules =
+    rules.componentMinGrade !== null ||
+    (rules.secondThreshold !== null && rules.maxBelowSecondThreshold !== null);
+  if (hasHardRules || ctx.remainingShares.length === 0) return false;
+  const earned = sum(ctx.graded.map((g) => g.grade * g.share));
+  const worst = earned + rules.scaleMin * sum(ctx.remainingShares);
+  return applyRounding(worst, rules) >= rules.passMark - FLOAT_EPSILON;
+}
+
+function modelFailChancePct(
+  ctx: CourseContext,
+  outcome: ContinuousOutcome,
+): number {
+  if (outcome === 'passed') return SCORE_MIN;
+  if (outcome === 'open' && remainingCannotFail(ctx)) return SCORE_MIN;
+  const passPct = modelPassPct({
+    rules: ctx.rules,
+    passRaw: ctx.passRaw,
+    graded: ctx.graded,
+    remainingShares: ctx.remainingShares,
+    continuousOpen: outcome === 'open',
+    sittings: countSittings(ctx.rules),
+    round: (value) => applyRounding(value, ctx.rules),
+  });
+  const remainingPct = (1 - ctx.gradedShare) * PERCENT;
+  // Arredonda a chance de chumbar para cima: a de passar nunca passa o teto.
+  return Math.ceil(
+    PERCENT - Math.min(passPct, passCeilingPct(remainingPct)) - FLOAT_EPSILON,
+  );
+}
+
+/** Risco residual: com peso por avaliar e a continua ainda aberta nunca e zero. */
+function residualReason(
+  ctx: CourseContext,
+  outcome: ContinuousOutcome,
+): ScoredReason[] {
+  if (outcome !== 'open' || ctx.remainingShares.length === 0) return [];
+  if (remainingCannotFail(ctx)) return [];
+  const { rules } = ctx;
+  const { componentMinGrade, secondThreshold, maxBelowSecondThreshold } = rules;
+  const params = {
+    remaining: display((1 - ctx.gradedShare) * PERCENT),
+    count: ctx.remainingShares.length,
+  };
+  const hasQuota = secondThreshold !== null && maxBelowSecondThreshold !== null;
+  if (componentMinGrade !== null && hasQuota) {
+    return [
+      {
+        code: 'REMAINING_UNCERTAINTY',
+        params: {
+          ...params,
+          min: display(componentMinGrade),
+          second: display(secondThreshold),
+          max: maxBelowSecondThreshold,
+        },
+        impact: RESIDUAL_REASON_IMPACT,
+      },
+    ];
+  }
+  // So o minimo por componente, ou nenhuma regra dura: textos mais simples.
+  return [
+    componentMinGrade !== null
+      ? {
+          code: 'REMAINING_UNCERTAINTY_MIN',
+          params: { ...params, min: display(componentMinGrade) },
+          impact: RESIDUAL_REASON_IMPACT,
+        }
+      : {
+          code: 'REMAINING_UNCERTAINTY_BASIC',
+          params,
+          impact: RESIDUAL_REASON_IMPACT,
+        },
+  ];
+}
+
+/**
  * Risco de chumbo de uma cadeira. null quando nao ha nenhum peso avaliado
  * (os outros sinais sozinhos nao chegam para um veredicto).
  */
@@ -749,17 +874,24 @@ export function computeCourseRisk(input: CourseRiskInput): CourseRisk | null {
   const secondary = SECONDARY_SIGNALS.map((evaluate) => evaluate(input))
     .filter(isPresent)
     .filter((r) => keepSignal(r.code));
-  const scoreSoFar =
-    core.points +
-    Math.min(SECONDARY_MAX_POINTS, sum(secondary.map((r) => r.impact)));
-  const teacher = [teacherSignal(input, scoreSoFar)]
+  const modelFailPct = modelFailChancePct(ctx, outcome);
+  const secondaryPoints = Math.min(
+    SECONDARY_MAX_POINTS,
+    sum(secondary.map((r) => r.impact)),
+  );
+  // O modelo e o chao do nucleo; os sinais secundarios somam por cima.
+  const scoreSoFar = Math.max(core.points, modelFailPct) + secondaryPoints;
+  // O docente pesa pelo risco das notas, nao pelo risco residual do modelo.
+  const teacherLeverageScore = core.points + secondaryPoints;
+  const teacher = [teacherSignal(input, teacherLeverageScore)]
     .filter(isPresent)
     .filter((r) => keepSignal(r.code));
 
+  const residual = residualReason(ctx, outcome);
   const score = Math.round(
     clamp(scoreSoFar + sum(teacher.map((r) => r.impact)), SCORE_MIN, SCORE_MAX),
   );
-  const reasons = [...core.reasons, ...secondary, ...teacher]
+  const reasons = [...core.reasons, ...secondary, ...teacher, ...residual]
     .sort((a, b) => b.impact - a.impact)
     .map(({ code, params }) => ({ code, params }));
   const gradedWeightPct = display(ctx.gradedShare * PERCENT);

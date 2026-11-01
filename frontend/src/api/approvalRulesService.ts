@@ -53,3 +53,9 @@ export const saveApprovalRules = async (
 export const resetApprovalRules = async (scope: ApprovalRulesScope, id: string): Promise<void> => {
   await api.delete(`${SCOPE_PATH[scope]}/${id}`);
 };
+
+/** Grava as mesmas regras como override em todas as cadeiras do user. */
+export const applyApprovalRulesToAllAreas = async (rules: ApprovalRules): Promise<number> => {
+  const response = await api.put<{ count: number }>(SCOPE_PATH.area, rules);
+  return response.data.count;
+};

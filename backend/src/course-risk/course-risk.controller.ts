@@ -28,4 +28,21 @@ export class CourseRiskController {
   ) {
     return this.service.list(user.id, query.absenceLimitPct, query.periodId);
   }
+
+  @Get('overview')
+  @Throttle(perMinute(COURSE_RISK_REQUESTS_PER_MINUTE))
+  @ApiOperation({
+    summary:
+      'Fail risk overview: every course (also without enough data), pass chance and summary.',
+  })
+  overview(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: CourseRiskQueryDto,
+  ) {
+    return this.service.overview(
+      user.id,
+      query.absenceLimitPct,
+      query.periodId,
+    );
+  }
 }

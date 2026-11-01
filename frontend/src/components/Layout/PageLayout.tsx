@@ -18,7 +18,7 @@ import PageTrail from './PageTrail';
 // Lazy: so carrega quando ha uma task em atraso para confirmar.
 const OverdueCheckinModal = lazy(() => import('../Tasks/OverdueCheckinModal'));
 
-const ROUTES_WITH_ACADEMIC_SELECTORS = ['/dashboard', '/tasks', '/notebook', '/ratings'];
+const ROUTES_WITH_ACADEMIC_SELECTORS = ['/dashboard', '/tasks', '/notebook', '/ratings', '/risk'];
 
 interface PageLayoutProps {
   children: ReactNode;

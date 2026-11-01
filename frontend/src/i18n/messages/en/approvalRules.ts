@@ -54,4 +54,9 @@ export const approvalRules: Record<string, string> = {
   'approvalRules.reset.error': "Could not reset the approval rules.",
   'approvalRules.area.button': "Approval rules for this subject",
   'approvalRules.area.hint': "Override the program rules for this subject only.",
+  'approvalRules.applyAll': "Apply to all courses",
+  'approvalRules.applyAll.confirmTitle': "Apply these rules to all courses?",
+  'approvalRules.applyAll.confirm': "Every course you can access will get exactly these rules, replacing any rules set on a single course. Rules set on the program stay as the fallback.",
+  'approvalRules.applyAll.done': "Rules applied to {count} courses.",
+  'approvalRules.applyAll.error': "Could not apply the rules to all courses.",
 };

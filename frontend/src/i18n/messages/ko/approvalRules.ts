@@ -54,4 +54,9 @@ export const approvalRules: Record<string, string> = {
   'approvalRules.reset.error': "승인 규칙을 재설정할 수 없습니다.",
   'approvalRules.area.button': "이 과목의 승인 규칙",
   'approvalRules.area.hint': "이 과목에 대해서만 프로그램 규칙을 덮어씁니다.",
+  'approvalRules.applyAll': "모든 과목에 적용",
+  'approvalRules.applyAll.confirmTitle': "이 규칙을 모든 과목에 적용할까요?",
+  'approvalRules.applyAll.confirm': "접근할 수 있는 모든 과목에 이 규칙이 그대로 적용되며, 개별 과목에 설정한 규칙은 대체됩니다. 프로그램 규칙은 대체 수단으로 남습니다.",
+  'approvalRules.applyAll.done': "{count}개 과목에 규칙을 적용했습니다.",
+  'approvalRules.applyAll.error': "모든 과목에 규칙을 적용하지 못했습니다.",
 };

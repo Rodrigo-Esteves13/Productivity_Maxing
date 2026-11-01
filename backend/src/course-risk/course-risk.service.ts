@@ -8,6 +8,16 @@ import type {
   CourseRiskInput,
   RiskReasonCode,
 } from '../approval-rules/approval-rules.types';
+import type {
+  CourseRiskOverview,
+  CourseRiskOverviewRow,
+  CourseRiskSummary,
+} from './course-risk-overview.types';
+import {
+  confidenceFor,
+  failChancePct,
+  passChancePct,
+} from './course-risk-pass-chance.util';
 import { AreaTeachersService } from '../area-teachers/area-teachers.service';
 import { getLisbonNow } from '../common/date-key.util';
 import { summarizeAttendance } from '../schedule/attendance-summary.util';
@@ -52,6 +62,91 @@ export function hasTooLittleEvidence(risk: CourseRisk): boolean {
   );
 }
 
+interface AreaInfo {
+  id: string;
+  name: string;
+  colorHex: string;
+}
+
+/** Resultado do motor para uma cadeira+periodo (risk null = motor sem veredicto). */
+interface GroupRisk {
+  area: AreaInfo;
+  risk: CourseRisk | null;
+}
+
+/** assessed por score desc, depois not_enough_data; empates por nome (ordem estavel). */
+function compareOverviewRows(
+  a: CourseRiskOverviewRow,
+  b: CourseRiskOverviewRow,
+): number {
+  if (a.status !== b.status) return a.status === 'assessed' ? -1 : 1;
+  if (a.risk && b.risk && a.risk.score !== b.risk.score) {
+    return b.risk.score - a.risk.score;
+  }
+  return a.areaName.localeCompare(b.areaName);
+}
+
+/** Media ponderada pelo peso avaliado; media simples se todos os pesos forem 0. */
+function weightedAvgPassChance(
+  rows: readonly { passChancePct: number; gradedWeightPct: number }[],
+): number | null {
+  if (rows.length === 0) return null;
+  const totalWeight = rows.reduce((sum, r) => sum + r.gradedWeightPct, 0);
+  if (totalWeight <= 0) {
+    return Math.round(
+      rows.reduce((sum, r) => sum + r.passChancePct, 0) / rows.length,
+    );
+  }
+  return Math.round(
+    rows.reduce((sum, r) => sum + r.passChancePct * r.gradedWeightPct, 0) /
+      totalWeight,
+  );
+}
+
+function buildSummary(courses: CourseRiskOverviewRow[]): CourseRiskSummary {
+  const assessed = courses.filter(
+    (
+      c,
+    ): c is CourseRiskOverviewRow & {
+      risk: CourseRisk;
+      passChancePct: number;
+    } => c.risk != null && c.passChancePct != null,
+  );
+  const count = (levels: readonly CourseRisk['level'][]) =>
+    assessed.filter((c) => levels.includes(c.risk.level)).length;
+
+  let worst: (typeof assessed)[number] | null = null;
+  for (const c of assessed) {
+    if (
+      !worst ||
+      c.passChancePct < worst.passChancePct ||
+      (c.passChancePct === worst.passChancePct &&
+        (c.risk.score > worst.risk.score ||
+          (c.risk.score === worst.risk.score &&
+            c.areaName.localeCompare(worst.areaName) < 0)))
+    ) {
+      worst = c;
+    }
+  }
+
+  return {
+    totalCourses: courses.length,
+    assessedCourses: assessed.length,
+    highRiskCourses: count(['high', 'extreme']),
+    mediumRiskCourses: count(['medium']),
+    lowRiskCourses: count(['low']),
+    avgPassChancePct: weightedAvgPassChance(assessed),
+    worst: worst
+      ? {
+          areaId: worst.areaId,
+          areaName: worst.areaName,
+          passChancePct: worst.passChancePct,
+        }
+      : null,
+    minGradedWeightPct: MIN_GRADED_WEIGHT_PCT,
+  };
+}
+
 const PERIOD_SELECT = { select: { startDate: true, endDate: true } } as const;
 
 @Injectable()
@@ -77,7 +172,108 @@ export class CourseRiskService {
     periodId?: string,
   ): Promise<CourseRisk[]> {
     if (periodId) await this.assertPeriodOwned(userId, periodId);
-    const groups = await this.loadGroups(userId, periodId);
+    const entries = await this.computeGroupRisks(
+      userId,
+      absenceLimitPct,
+      periodId,
+      false,
+    );
+
+    const worstByArea = new Map<string, CourseRisk>();
+    for (const { risk } of entries) {
+      if (!risk || hasTooLittleEvidence(risk)) continue;
+      const current = worstByArea.get(risk.areaId);
+      if (!current || risk.score > current.score) {
+        worstByArea.set(risk.areaId, risk);
+      }
+    }
+    return [...worstByArea.values()].sort((a, b) => b.score - a.score);
+  }
+
+  /**
+   * Resumo de risco: TODAS as cadeiras com pelo menos uma task ou componente
+   * no ambito, tambem as sem dados suficientes (status not_enough_data).
+   * Mesma regra de periodos e de posse que list().
+   */
+  async overview(
+    userId: string,
+    absenceLimitPct: number = COURSE_RISK_DEFAULT_ABSENCE_LIMIT_PCT,
+    periodId?: string,
+  ): Promise<CourseRiskOverview> {
+    if (periodId) await this.assertPeriodOwned(userId, periodId);
+    const entries = await this.computeGroupRisks(
+      userId,
+      absenceLimitPct,
+      periodId,
+      true,
+    );
+
+    // Por cadeira: a linha avaliada mais arriscada; sem nenhuma, uma so linha
+    // not_enough_data (com o maior peso avaliado visto).
+    const byArea = new Map<string, CourseRiskOverviewRow>();
+    for (const { area, risk } of entries) {
+      const assessed = risk != null && !hasTooLittleEvidence(risk);
+      const row: CourseRiskOverviewRow = assessed
+        ? this.assessedRow(area, risk)
+        : {
+            areaId: area.id,
+            areaName: area.name,
+            colorHex: area.colorHex,
+            status: 'not_enough_data',
+            risk: null,
+            passChancePct: null,
+            failChancePct: null,
+            confidence: null,
+            gradedWeightPct: risk?.gradedWeightPct ?? 0,
+          };
+      const current = byArea.get(area.id);
+      if (!current || this.isBetterRow(row, current)) byArea.set(area.id, row);
+    }
+
+    const courses = [...byArea.values()].sort(compareOverviewRows);
+    return { courses, summary: buildSummary(courses) };
+  }
+
+  private assessedRow(area: AreaInfo, risk: CourseRisk): CourseRiskOverviewRow {
+    const pass = passChancePct(risk);
+    return {
+      areaId: area.id,
+      areaName: area.name,
+      colorHex: area.colorHex,
+      status: 'assessed',
+      risk,
+      passChancePct: pass,
+      failChancePct: failChancePct(pass),
+      confidence: confidenceFor(risk.gradedWeightPct),
+      gradedWeightPct: risk.gradedWeightPct,
+    };
+  }
+
+  /** assessed vence not_enough_data; entre assessed, maior score; senao maior peso avaliado. */
+  private isBetterRow(
+    candidate: CourseRiskOverviewRow,
+    current: CourseRiskOverviewRow,
+  ): boolean {
+    if (candidate.status !== current.status) {
+      return candidate.status === 'assessed';
+    }
+    if (candidate.risk && current.risk) {
+      return candidate.risk.score > current.risk.score;
+    }
+    return candidate.gradedWeightPct > current.gradedWeightPct;
+  }
+
+  /**
+   * Risco calculado por cadeira+periodo, ANTES do filtro de evidencia.
+   * includeEmpty: inclui grupos sem nada avaliavel (so para o overview).
+   */
+  private async computeGroupRisks(
+    userId: string,
+    absenceLimitPct: number,
+    periodId: string | undefined,
+    includeEmpty: boolean,
+  ): Promise<GroupRisk[]> {
+    const groups = await this.loadGroups(userId, periodId, includeEmpty);
     if (groups.length === 0) return [];
 
     const areaIds = [...new Set(groups.map((g) => g.areaId))];
@@ -97,8 +293,8 @@ export class CourseRiskService {
       areas.map((a) => a.id),
     );
 
-    const risks = await Promise.all(
-      groups.map(async (group): Promise<CourseRisk | null> => {
+    const computed = await Promise.all(
+      groups.map(async (group): Promise<GroupRisk | null> => {
         const area = areaById.get(group.areaId);
         const resolved = rulesByArea.get(group.areaId);
         if (!area || !resolved) return null;
@@ -119,20 +315,10 @@ export class CourseRiskService {
           postponedCount: sumPostponed(group.tasks),
           teacher: teacherStats.get(group.areaId) ?? null,
         };
-        const risk = computeCourseRisk(input);
-        return risk && !hasTooLittleEvidence(risk) ? risk : null;
+        return { area, risk: computeCourseRisk(input) };
       }),
     );
-
-    const worstByArea = new Map<string, CourseRisk>();
-    for (const risk of risks) {
-      if (!risk) continue;
-      const current = worstByArea.get(risk.areaId);
-      if (!current || risk.score > current.score) {
-        worstByArea.set(risk.areaId, risk);
-      }
-    }
-    return [...worstByArea.values()].sort((a, b) => b.score - a.score);
+    return computed.filter((entry): entry is GroupRisk => entry !== null);
   }
 
   /** AcademicPeriod nao tem userId: a posse vem do programa. */
@@ -154,6 +340,7 @@ export class CourseRiskService {
   private async loadGroups(
     userId: string,
     periodId?: string,
+    includeEmpty = false,
   ): Promise<CourseGroup[]> {
     const taskPeriodWhere = periodId
       ? { periodId }
@@ -226,7 +413,9 @@ export class CourseRiskService {
       groupFor(areaId, periodId, period)?.components.push(component);
     }
 
-    // So cadeiras com algo avaliavel (tasks com nota/peso ou componentes).
+    // list(): so cadeiras com algo avaliavel (tasks com nota/peso ou
+    // componentes). overview(): todas as que tem alguma task ou componente.
+    if (includeEmpty) return [...groups.values()];
     return [...groups.values()].filter(
       (group) =>
         group.components.length > 0 ||

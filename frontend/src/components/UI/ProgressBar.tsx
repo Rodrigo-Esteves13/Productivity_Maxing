@@ -10,6 +10,8 @@ interface ProgressBarProps {
   thickness?: ProgressBarThickness;
   // Sem label a barra e decorativa (o texto ao lado ja diz o valor).
   label?: string;
+  // 'meter' para um valor numa escala (ex: uma probabilidade), 'progressbar' para andamento.
+  semantics?: 'progressbar' | 'meter';
   className?: string;
 }
 
@@ -32,11 +34,12 @@ export default function ProgressBar({
   fillColor,
   thickness = 'sm',
   label,
+  semantics = 'progressbar',
   className = '',
 }: ProgressBarProps) {
   const value = clampPercent(percent);
   const accessibility = label
-    ? { role: 'progressbar', 'aria-valuenow': Math.round(value), 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': label }
+    ? { role: semantics, 'aria-valuenow': Math.round(value), 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': label }
     : { 'aria-hidden': true };
 
   return (

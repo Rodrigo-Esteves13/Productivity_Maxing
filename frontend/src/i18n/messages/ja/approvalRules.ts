@@ -54,4 +54,9 @@ export const approvalRules: Record<string, string> = {
   'approvalRules.reset.error': "承認ルールを初期化できませんでした。",
   'approvalRules.area.button': "この科目の承認ルール",
   'approvalRules.area.hint': "この科目だけプログラムのルールを上書きします。",
+  'approvalRules.applyAll': "すべての科目に適用",
+  'approvalRules.applyAll.confirmTitle': "これらの規則をすべての科目に適用しますか?",
+  'approvalRules.applyAll.confirm': "アクセスできるすべての科目にこの規則がそのまま適用され、個別に設定した規則は置き換えられます。プログラムの規則は代替として残ります。",
+  'approvalRules.applyAll.done': "{count} 科目に規則を適用しました。",
+  'approvalRules.applyAll.error': "すべての科目に規則を適用できませんでした。",
 };

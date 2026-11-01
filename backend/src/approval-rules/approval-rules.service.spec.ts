@@ -23,7 +23,13 @@ function setup() {
       findFirst: jest.fn().mockResolvedValue(null),
       findMany: jest.fn().mockResolvedValue([]),
     },
-    area: { findFirst: jest.fn().mockResolvedValue({ id: AREA }) },
+    area: {
+      findFirst: jest.fn().mockResolvedValue({ id: AREA }),
+      findMany: jest.fn().mockResolvedValue([{ id: AREA }, { id: 'a2' }]),
+    },
+    $transaction: jest
+      .fn()
+      .mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops)),
     approvalRuleSet: {
       findFirst: jest.fn().mockResolvedValue(null),
       findMany: jest.fn().mockResolvedValue([]),
@@ -325,6 +331,43 @@ describe('mergeRules / assertRulesConsistent', () => {
     });
     await expect(
       service.upsertForProgram(ME, PROGRAM, { passMark: 25 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.approvalRuleSet.upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe('ApprovalRulesService.upsertForAllAreas', () => {
+  it('grava o mesmo override em todas as cadeiras acessiveis, presas ao userId', async () => {
+    const { service, prisma } = setup();
+    const dto = { presetKey: PRESET_PT_PT_ISMAI } as never;
+    await expect(service.upsertForAllAreas(ME, dto)).resolves.toEqual({
+      count: 2,
+    });
+    expect(prisma.area.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { OR: [{ ownerId: null }, { ownerId: ME }] },
+      }),
+    );
+    expect(prisma.approvalRuleSet.upsert).toHaveBeenCalledTimes(2);
+    for (const areaId of [AREA, 'a2']) {
+      expect(prisma.approvalRuleSet.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId_areaId: { userId: ME, areaId } },
+          create: expect.objectContaining({
+            userId: ME,
+            areaId,
+            programId: null,
+            componentMinGrade: 6,
+          }) as unknown,
+        }),
+      );
+    }
+  });
+
+  it('body incoerente nao grava nada', async () => {
+    const { service, prisma } = setup();
+    await expect(
+      service.upsertForAllAreas(ME, { scaleMin: 10, scaleMax: 5 }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.approvalRuleSet.upsert).not.toHaveBeenCalled();
   });
