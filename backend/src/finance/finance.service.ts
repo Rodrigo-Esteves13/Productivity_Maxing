@@ -79,7 +79,7 @@ export function parseDay(key: string, field: string): Date {
   return date;
 }
 
-interface Settings {
+export interface Settings {
   currency: string;
   balanceCents: number;
   monthlyBudgetCents: number | null;
