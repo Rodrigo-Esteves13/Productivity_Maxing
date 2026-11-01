@@ -2,18 +2,23 @@ import { useState, type FormEvent } from 'react';
 import Card from '../UI/Card';
 import Input from '../UI/Input';
 import Select from '../UI/Select';
-import ActionButton from '../UI/ActionButton';
+import Modal from '../UI/Modal';
+import FinanceSubmitButton from './FinanceSubmitButton';
+import Money from './Money';
 import IconButton from '../UI/IconButton';
 import ProgressBar from '../UI/ProgressBar';
 import SegmentedControl from '../UI/SegmentedControl';
-import { RefreshIcon, TrashIcon } from '../UI/Icons';
+import { PencilIcon, RefreshIcon, TrashIcon } from '../UI/Icons';
 import {
   FINANCE_SYMBOL_MAX_LENGTH,
   type FinanceAccount,
   type FinanceHolding,
   type FinanceHoldingInput,
+  type FinanceHoldingUpdate,
 } from '../../api/financeService';
-import { formatMoney, formatPercent, formatQuantity, formatRelativeTime, parseMoneyInput, parseQuantity } from '../../lib/money';
+import { formatPercent, formatQuantity, formatRelativeTime, parseMoneyInput, parseQuantity } from '../../lib/money';
+import type { SubmitOutcome } from '../../lib/idempotency';
+import { useIdempotentSubmit } from '../../hooks/useIdempotentSubmit';
 import { useI18n } from '../../i18n/useI18n';
 
 type AmountMode = 'invested' | 'quantity';
@@ -23,10 +28,11 @@ const NO_ACCOUNT = '';
 interface HoldingRowProps {
   holding: FinanceHolding;
   currency: string;
+  onEdit: (holding: FinanceHolding) => void;
   onRemove: (holding: FinanceHolding) => void;
 }
 
-function HoldingRow({ holding, currency, onRemove }: HoldingRowProps) {
+function HoldingRow({ holding, currency, onEdit, onRemove }: HoldingRowProps) {
   const { t, lang } = useI18n();
   const gain = holding.gainCents;
   // valueCents e gainCents vem na moeda da cotacao (USD para AAPL), nao na das definicoes.
@@ -48,23 +54,26 @@ function HoldingRow({ holding, currency, onRemove }: HoldingRowProps) {
       <div>
         <p className="text-xs text-neutral-500 md:hidden">{t('finance.lastPrice')}</p>
         <p className="text-sm tabular-nums text-neutral-200">
-          {holding.lastPriceCents === null ? t('finance.noPrice') : formatMoney(holding.lastPriceCents, priceCurrency, lang)}
+          {holding.lastPriceCents === null ? t('finance.noPrice') : <Money cents={holding.lastPriceCents} currency={priceCurrency} />}
         </p>
       </div>
       <div>
         <p className="text-xs text-neutral-500 md:hidden">{t('finance.value')}</p>
         <p className="text-sm font-medium tabular-nums text-neutral-100">
-          {holding.valueCents === null ? t('finance.noPrice') : formatMoney(holding.valueCents, priceCurrency, lang)}
+          {holding.valueCents === null ? t('finance.noPrice') : <Money cents={holding.valueCents} currency={priceCurrency} />}
         </p>
       </div>
       <div>
         <p className="text-xs text-neutral-500 md:hidden">{t('finance.gain')}</p>
         <p className={`text-sm tabular-nums ${gain === null ? 'text-neutral-500' : gain < 0 ? 'text-red-400' : 'text-cyan-400'}`}>
-          {gain === null ? t('finance.noPrice') : `${gain < 0 ? '' : '+'}${formatMoney(gain, priceCurrency, lang)}`}
+          {gain === null ? t('finance.noPrice') : <Money cents={gain} currency={priceCurrency} prefix={gain < 0 ? '' : '+'} />}
           {holding.gainPercent !== null && <span className="ml-1 text-xs">({formatPercent(holding.gainPercent, lang)})</span>}
         </p>
       </div>
-      <div className="justify-self-end">
+      <div className="flex justify-self-end">
+        <IconButton label={t('finance.editHolding')} onClick={() => onEdit(holding)}>
+          <PencilIcon className="h-4 w-4" />
+        </IconButton>
         <IconButton label={t('finance.deleteHolding')} tone="danger" onClick={() => onRemove(holding)}>
           <TrashIcon className="h-4 w-4" />
         </IconButton>
@@ -90,14 +99,17 @@ interface FinanceHoldingsProps {
   currency: string;
   isRefreshing: boolean;
   onRefresh: () => void;
-  onAdd: (input: FinanceHoldingInput) => Promise<boolean>;
+  onAdd: (input: FinanceHoldingInput, key: string) => Promise<SubmitOutcome>;
+  onUpdate: (id: string, changes: FinanceHoldingUpdate) => Promise<boolean>;
   onRemove: (holding: FinanceHolding) => void;
 }
 
 // Posicoes: simbolo + quantidade (ou valor investido), preco e valor
 // atuais (atualizados de hora a hora), ganho e quanto de uma unidade inteira se tem.
-export default function FinanceHoldings({ holdings, accounts, currency, isRefreshing, onRefresh, onAdd, onRemove }: FinanceHoldingsProps) {
+export default function FinanceHoldings({ holdings, accounts, currency, isRefreshing, onRefresh, onAdd, onUpdate, onRemove }: FinanceHoldingsProps) {
   const { t } = useI18n();
+  const { submit, isSubmitting } = useIdempotentSubmit();
+  const [editing, setEditing] = useState<FinanceHolding | null>(null);
   const [symbol, setSymbol] = useState('');
   const [mode, setMode] = useState<AmountMode>('invested');
   const [amount, setAmount] = useState('');
@@ -119,7 +131,7 @@ export default function FinanceHoldings({ holdings, accounts, currency, isRefres
       accountId: accountId || null,
       ...(mode === 'invested' ? { investedCents: parsed as number } : { quantity: parsed as string }),
     };
-    if (await onAdd(input)) {
+    if (await submit((key) => onAdd(input, key))) {
       setSymbol('');
       setAmount('');
     }
@@ -155,7 +167,7 @@ export default function FinanceHoldings({ holdings, accounts, currency, isRefres
           </div>
           <ul className="mb-4 divide-y divide-neutral-800">
             {holdings.map((holding) => (
-              <HoldingRow key={holding.id} holding={holding} currency={currency} onRemove={onRemove} />
+              <HoldingRow key={holding.id} holding={holding} currency={currency} onEdit={setEditing} onRemove={onRemove} />
             ))}
           </ul>
         </>
@@ -202,10 +214,86 @@ export default function FinanceHoldings({ holdings, accounts, currency, isRefres
         </div>
         <p className="text-xs text-neutral-500">{t('finance.holdingFormHelp')}</p>
         <div className="flex flex-wrap items-center gap-3">
-          <ActionButton type="submit">{t('finance.addHolding')}</ActionButton>
+          <FinanceSubmitButton isSubmitting={isSubmitting}>{t('finance.addHolding')}</FinanceSubmitButton>
           {formError && <p className="text-sm text-red-400">{formError}</p>}
         </div>
       </form>
+
+      <Modal isOpen={editing !== null} onClose={() => setEditing(null)} title={t('finance.editHolding')}>
+        {editing && <HoldingEditForm holding={editing} accounts={investmentAccounts} onSubmit={(changes) => onUpdate(editing.id, changes)} onDone={() => setEditing(null)} />}
+      </Modal>
     </Card>
+  );
+}
+
+interface HoldingEditFormProps {
+  holding: FinanceHolding;
+  accounts: FinanceAccount[];
+  onSubmit: (changes: FinanceHoldingUpdate) => Promise<boolean>;
+  onDone: () => void;
+}
+
+// Editar uma posicao: quantidade OU valor investido (nunca os dois) e conta.
+function HoldingEditForm({ holding, accounts, onSubmit, onDone }: HoldingEditFormProps) {
+  const { t } = useI18n();
+  const { submit, isSubmitting } = useIdempotentSubmit();
+  const [mode, setMode] = useState<AmountMode>('quantity');
+  const [amount, setAmount] = useState(holding.quantity);
+  const [accountId, setAccountId] = useState(holding.accountId ?? NO_ACCOUNT);
+  const [formError, setFormError] = useState('');
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    const parsed = mode === 'invested' ? parseMoneyInput(amount) : parseQuantity(amount);
+    if (parsed === null || (mode === 'invested' && Number(parsed) <= 0)) {
+      setFormError(t(mode === 'invested' ? 'finance.invalidHoldingInvested' : 'finance.invalidHoldingQuantity'));
+      return;
+    }
+    setFormError('');
+    const changes: FinanceHoldingUpdate = {
+      accountId: accountId || null,
+      ...(mode === 'invested' ? { investedCents: parsed as number } : { quantity: parsed as string }),
+    };
+    if (await submit(() => onSubmit(changes))) onDone();
+  };
+
+  return (
+    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3">
+      <p className="text-sm text-neutral-300">{holding.symbol}</p>
+      <SegmentedControl
+        options={[
+          { value: 'quantity', label: t('finance.modeQuantity') },
+          { value: 'invested', label: t('finance.modeInvested') },
+        ]}
+        value={mode}
+        onChange={(next) => {
+          setMode(next);
+          setAmount(next === 'quantity' ? holding.quantity : '');
+        }}
+        size="sm"
+      />
+      <Input
+        label={mode === 'invested' ? t('finance.amountInvested') : t('finance.quantity')}
+        inputMode="decimal"
+        placeholder={mode === 'invested' ? '0.00' : '0.000000'}
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+      />
+      <Select label={t('finance.account')} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+        <option value={NO_ACCOUNT}>{t('finance.noAccount')}</option>
+        {accounts.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.name}
+          </option>
+        ))}
+      </Select>
+      <div className="flex flex-wrap items-center gap-3">
+        <FinanceSubmitButton isSubmitting={isSubmitting}>{t('finance.save')}</FinanceSubmitButton>
+        <button type="button" onClick={onDone} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+          {t('common.cancel')}
+        </button>
+        {formError && <p className="text-sm text-red-400">{formError}</p>}
+      </div>
+    </form>
   );
 }

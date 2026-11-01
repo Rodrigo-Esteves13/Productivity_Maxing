@@ -1,4 +1,8 @@
-import { MS_PER_MINUTE, MS_PER_SECOND } from '../common/time.constants';
+import {
+  MS_PER_HOUR,
+  MS_PER_MINUTE,
+  MS_PER_SECOND,
+} from '../common/time.constants';
 
 // Limites do separador Finance. Valores em centimos.
 // Teto de uma coluna Int do Postgres (int4). Valores acima rebentavam a
@@ -62,6 +66,68 @@ export const UNASSIGNED_BUCKET = 'UNASSIGNED';
 // Regra FIXED_DAY: dia do mes (cortado ao ultimo dia quando o mes e curto).
 export const MIN_PAY_DAY = 1;
 export const MAX_PAY_DAY = 31;
+
+// Regras de rendimento (salario). Tetos para nao gerar janelas enormes.
+export const MAX_SKIP_OCCURRENCES = 60;
+export const MAX_PAID_IN_ARREARS_MONTHS = 3;
+// Porque e que uma ocorrencia tem aquele valor (retencao do empregador).
+export const OCCURRENCE_REASONS = {
+  REGULAR: 'REGULAR',
+  WITHHELD_FIRST: 'WITHHELD_FIRST',
+  WITHHELD_RELEASE: 'WITHHELD_RELEASE',
+} as const;
+export type OccurrenceReason =
+  (typeof OCCURRENCE_REASONS)[keyof typeof OCCURRENCE_REASONS];
+
+// "Devem-me dinheiro" (finance-owed.util.ts). Percentagens 0-100.
+export const FINANCE_DEBTOR_NAME_MAX_LENGTH = 80;
+export const MAX_LATE_RISK_PCT = 100;
+export const MAX_INTEREST_RATE_PCT = 100;
+export const INTEREST_RATE_DECIMALS = 3;
+// Juros simples: base de 365 dias (sem anos bissextos).
+export const DAYS_PER_YEAR = 365;
+// Cenario "paga tarde": valor se pagar estes dias depois do prazo.
+export const OWED_LATE_SCENARIO_DAYS = 30;
+
+// Idempotencia dos POST: mesmo user + mesma chave dentro da janela devolve
+// a linha ja criada. Fora da janela a chave ja usada da 409.
+export const IDEMPOTENCY_HEADER = 'idempotency-key';
+export const IDEMPOTENCY_WINDOW_MS = 24 * MS_PER_HOUR;
+
+// Planos dos objetivos (finance-goal-plan.util.ts). So aritmetica.
+// Meses completos (antes do mes atual) usados para a media do excedente.
+export const GOAL_PLAN_HISTORY_MONTHS = 3;
+// Menos meses com dados do que isto: usa as regras que se repetem e marca
+// lowConfidence.
+export const MIN_SURPLUS_HISTORY_MONTHS = 2;
+// Despesas nestas categorias sao dinheiro posto de lado (vai para objetivos),
+// por isso nao reduzem o excedente.
+export const GOAL_CONTRIBUTION_CATEGORIES: readonly FinanceCategory[] = [
+  'SAVINGS',
+  'INVESTING',
+  'CRYPTO',
+];
+export const GOAL_PLAN_STATUSES = {
+  ON_TRACK: 'ON_TRACK',
+  AT_RISK: 'AT_RISK',
+  UNREALISTIC: 'UNREALISTIC',
+  NO_DEADLINE: 'NO_DEADLINE',
+  DONE: 'DONE',
+} as const;
+export type GoalPlanStatus =
+  (typeof GOAL_PLAN_STATUSES)[keyof typeof GOAL_PLAN_STATUSES];
+export const SURPLUS_SOURCES = {
+  HISTORY: 'HISTORY',
+  RECURRING: 'RECURRING',
+} as const;
+export type SurplusSource =
+  (typeof SURPLUS_SOURCES)[keyof typeof SURPLUS_SOURCES];
+export const GOAL_PLAN_SOURCES = {
+  USER: 'USER',
+  SUGGESTED: 'SUGGESTED',
+} as const;
+export type GoalPlanSource =
+  (typeof GOAL_PLAN_SOURCES)[keyof typeof GOAL_PLAN_SOURCES];
 
 // Custo mensal equivalente de uma subscricao semanal/anual.
 export const WEEKS_PER_YEAR = 52;

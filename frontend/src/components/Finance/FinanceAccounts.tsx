@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react';
 import Card from '../UI/Card';
 import Input from '../UI/Input';
 import Select from '../UI/Select';
-import ActionButton from '../UI/ActionButton';
+import FinanceSubmitButton from './FinanceSubmitButton';
+import Money from './Money';
 import IconButton from '../UI/IconButton';
 import { PencilIcon, TrashIcon } from '../UI/Icons';
 import {
@@ -12,18 +13,24 @@ import {
   type FinanceAccountInput,
   type FinanceAccountType,
 } from '../../api/financeService';
-import { centsToInput, formatMoney, parseMoneyInput } from '../../lib/money';
+import { centsToInput, parseMoneyInput } from '../../lib/money';
+import type { SubmitOutcome } from '../../lib/idempotency';
+import { useIdempotentSubmit } from '../../hooks/useIdempotentSubmit';
+import { usePrivateInputClass } from '../../hooks/usePrivacyMode';
 import { useI18n } from '../../i18n/useI18n';
 
 interface AccountFormProps {
   initial?: FinanceAccount;
-  onSubmit: (input: FinanceAccountInput) => Promise<boolean>;
+  /** `key` e a Idempotency-Key da tentativa (ignorada ao editar). */
+  onSubmit: (input: FinanceAccountInput, key: string) => Promise<SubmitOutcome>;
   onCancel?: () => void;
 }
 
 // Formulario unico para criar e editar uma conta.
 function AccountForm({ initial, onSubmit, onCancel }: AccountFormProps) {
   const { t } = useI18n();
+  const { submit, isSubmitting } = useIdempotentSubmit();
+  const privateInput = usePrivateInputClass();
   const [name, setName] = useState(initial?.name ?? '');
   const [type, setType] = useState<FinanceAccountType>(initial?.type ?? 'BANK');
   const [balance, setBalance] = useState(initial ? centsToInput(initial.balanceCents) : '');
@@ -37,7 +44,7 @@ function AccountForm({ initial, onSubmit, onCancel }: AccountFormProps) {
       return;
     }
     setFormError('');
-    if (await onSubmit({ name: name.trim(), type, balanceCents })) {
+    if (await submit((key) => onSubmit({ name: name.trim(), type, balanceCents }, key))) {
       if (!initial) {
         setName('');
         setBalance('');
@@ -57,10 +64,10 @@ function AccountForm({ initial, onSubmit, onCancel }: AccountFormProps) {
             </option>
           ))}
         </Select>
-        <Input label={t('finance.accountBalance')} inputMode="decimal" placeholder="0.00" value={balance} onChange={(e) => setBalance(e.target.value)} />
+        <Input className={privateInput} label={t('finance.accountBalance')} inputMode="decimal" placeholder="0.00" value={balance} onChange={(e) => setBalance(e.target.value)} />
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <ActionButton type="submit">{initial ? t('finance.save') : t('finance.addAccount')}</ActionButton>
+        <FinanceSubmitButton isSubmitting={isSubmitting}>{initial ? t('finance.save') : t('finance.addAccount')}</FinanceSubmitButton>
         {onCancel && (
           <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
             {t('common.cancel')}
@@ -75,7 +82,7 @@ function AccountForm({ initial, onSubmit, onCancel }: AccountFormProps) {
 interface FinanceAccountsProps {
   accounts: FinanceAccount[];
   currency: string;
-  onAdd: (input: FinanceAccountInput) => Promise<boolean>;
+  onAdd: (input: FinanceAccountInput, key: string) => Promise<SubmitOutcome>;
   onUpdate: (id: string, changes: Partial<FinanceAccountInput>) => Promise<boolean>;
   onRemove: (account: FinanceAccount) => void;
 }
@@ -83,7 +90,7 @@ interface FinanceAccountsProps {
 // Contas escritas a mao (banco, dia a dia, corretora, cripto, dinheiro vivo).
 // O saldo de uma conta so muda quando a pessoa o edita aqui.
 export default function FinanceAccounts({ accounts, currency, onAdd, onUpdate, onRemove }: FinanceAccountsProps) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const [editingId, setEditingId] = useState<string | null>(null);
 
   return (
@@ -105,9 +112,11 @@ export default function FinanceAccounts({ accounts, currency, onAdd, onUpdate, o
                   <p className="truncate text-sm text-neutral-200">{account.name}</p>
                   <p className="text-xs text-neutral-500">{t(`finance.bucket.${account.type}`)}</p>
                 </div>
-                <span className={`text-sm font-medium tabular-nums ${account.balanceCents < 0 ? 'text-red-400' : 'text-neutral-200'}`}>
-                  {formatMoney(account.balanceCents, account.currency ?? currency, lang)}
-                </span>
+                <Money
+                  cents={account.balanceCents}
+                  currency={account.currency ?? currency}
+                  className={`text-sm font-medium tabular-nums ${account.balanceCents < 0 ? 'text-red-400' : 'text-neutral-200'}`}
+                />
                 <IconButton label={t('finance.editAccount')} onClick={() => setEditingId(account.id)}>
                   <PencilIcon className="h-4 w-4" />
                 </IconButton>

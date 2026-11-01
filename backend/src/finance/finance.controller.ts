@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
   Param,
@@ -13,7 +14,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiHeader,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -35,7 +41,16 @@ import {
 import {
   FINANCE_REFRESH_PER_MINUTE,
   FINANCE_WRITES_PER_MINUTE,
+  IDEMPOTENCY_HEADER,
 } from './finance.constants';
+
+// Header opcional dos POST: o mesmo uuid repetido devolve a linha ja criada.
+const IdempotencyHeader = () =>
+  ApiHeader({
+    name: IDEMPOTENCY_HEADER,
+    required: false,
+    description: 'UUID. Repeating it returns the row already created.',
+  });
 
 // Contrato para o frontend: finance.contract.ts.
 
@@ -81,13 +96,15 @@ export class FinanceController {
   }
 
   @Post('entries')
+  @IdempotencyHeader()
   @Throttle(perMinute(FINANCE_WRITES_PER_MINUTE))
   @ApiOperation({ summary: 'Adds an income or an expense.' })
   createEntry(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateFinanceEntryDto,
+    @Headers(IDEMPOTENCY_HEADER) key?: string,
   ) {
-    return this.finance.createEntry(user.id, dto);
+    return this.finance.createEntry(user.id, dto, key);
   }
 
   @Patch('entries/:id')
@@ -115,13 +132,15 @@ export class FinanceController {
   }
 
   @Post('accounts')
+  @IdempotencyHeader()
   @Throttle(perMinute(FINANCE_WRITES_PER_MINUTE))
   @ApiOperation({ summary: 'Adds an account (bank, live money, broker...).' })
   createAccount(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateFinanceAccountDto,
+    @Headers(IDEMPOTENCY_HEADER) key?: string,
   ) {
-    return this.finance.createAccount(user.id, dto);
+    return this.finance.createAccount(user.id, dto, key);
   }
 
   @Patch('accounts/:id')
@@ -158,6 +177,7 @@ export class FinanceController {
   }
 
   @Post('holdings')
+  @IdempotencyHeader()
   @Throttle(perMinute(FINANCE_WRITES_PER_MINUTE))
   @ApiOperation({
     summary: 'Adds a holding by quantity or by invested amount.',
@@ -165,8 +185,9 @@ export class FinanceController {
   createHolding(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateFinanceHoldingDto,
+    @Headers(IDEMPOTENCY_HEADER) key?: string,
   ) {
-    return this.finance.createHolding(user.id, dto);
+    return this.finance.createHolding(user.id, dto, key);
   }
 
   @Patch('holdings/:id')
@@ -192,6 +213,7 @@ export class FinanceController {
   }
 
   @Post('goals')
+  @IdempotencyHeader()
   @Throttle(perMinute(FINANCE_WRITES_PER_MINUTE))
   @ApiOperation({
     summary: 'Adds a savings, investment, wishlist or long-term goal.',
@@ -199,13 +221,17 @@ export class FinanceController {
   createGoal(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateFinanceGoalDto,
+    @Headers(IDEMPOTENCY_HEADER) key?: string,
   ) {
-    return this.finance.createGoal(user.id, dto);
+    return this.finance.createGoal(user.id, dto, key);
   }
 
   @Patch('goals/:id')
   @Throttle(perMinute(FINANCE_WRITES_PER_MINUTE))
-  @ApiOperation({ summary: 'Edits a goal or how much is already saved.' })
+  @ApiOperation({
+    summary:
+      'Edits a goal: kind, name, target, saved, deadline or monthly plan.',
+  })
   updateGoal(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,

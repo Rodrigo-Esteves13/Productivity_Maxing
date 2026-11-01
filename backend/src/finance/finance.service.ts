@@ -1,12 +1,15 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import {
   FinanceAccountType,
   FinanceEntryKind,
   FinanceFrequency,
+  FinanceInterestKind,
   FinancePayDayRule,
   Prisma,
   type FinanceAccount,
@@ -37,6 +40,8 @@ import {
   DEFAULT_ANALYTICS_GRANULARITY,
   DEFAULT_ANALYTICS_MONTHS,
   DEFAULT_FINANCE_CURRENCY,
+  GOAL_PLAN_HISTORY_MONTHS,
+  IDEMPOTENCY_WINDOW_MS,
   LEGACY_ACCOUNT_NAME,
   LEISURE_CATEGORY,
   MAX_ANALYTICS_RANGE_DAYS,
@@ -45,13 +50,31 @@ import {
   MAX_FINANCE_GOALS_PER_USER,
   MAX_FINANCE_HOLDINGS_PER_USER,
   MAX_OCCURRENCES_PER_RULE,
+  MAX_PAID_IN_ARREARS_MONTHS,
   SUBSCRIPTIONS_CATEGORY,
   UNASSIGNED_BUCKET,
 } from './finance.constants';
-import { occurrencesInRange, resolveFrequency } from './finance-schedule.util';
+import {
+  firstPayDate,
+  occurrencesInRange,
+  resolveFrequency,
+} from './finance-schedule.util';
+import {
+  addUtcMonths,
+  estimateSurplus,
+  historyMonthKeys,
+  planGoals,
+  type GoalInput,
+} from './finance-goal-plan.util';
+import {
+  effectiveInterestKind,
+  summarizeOwed,
+  type OwedInput,
+} from './finance-owed.util';
 import {
   bucketize,
   materialize,
+  type EntryRow,
   monthKey,
   monthlyCostCents,
   topCategories,
@@ -65,6 +88,26 @@ import {
 import { FinancePricesService } from './finance-prices.service';
 
 const MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
+const UNIQUE_VIOLATION = 'P2002';
+
+/**
+ * Chave de idempotencia do header ou do body (uuid). As duas tem de bater
+ * quando vem as duas.
+ */
+export function resolveRequestKey(
+  header: string | undefined,
+  body: string | undefined,
+): string | undefined {
+  if (header !== undefined && !isUUID(header)) {
+    throw new BadRequestException('Idempotency-Key must be a UUID.');
+  }
+  if (header && body && header !== body) {
+    throw new BadRequestException(
+      'Idempotency-Key and clientRequestId do not match.',
+    );
+  }
+  return body ?? header;
+}
 
 /**
  * YYYY-MM-DD validado a serio. O DTO so ve o formato: "2026-13-01" dava
@@ -156,7 +199,18 @@ export function overlappingEntriesWhere(
       {
         AND: [
           { OR: [{ recurring: true }, { frequency: { not: null } }] },
-          { OR: [{ endDate: null }, { endDate: { gte: start } }] },
+          // Com paidInArrearsMonths o dinheiro chega ate N meses depois do
+          // endDate (ancora); scheduleInRange corta o resto.
+          {
+            OR: [
+              { endDate: null },
+              {
+                endDate: {
+                  gte: addUtcMonths(start, -MAX_PAID_IN_ARREARS_MONTHS),
+                },
+              },
+            ],
+          },
         ],
       },
     ],
@@ -228,6 +282,12 @@ interface RuleInput {
   endDate: Date | null;
 }
 
+interface IncomeRuleInput {
+  skipFirstOccurrences: number;
+  paidInArrearsMonths: number;
+  withheldCents: number | null;
+}
+
 const NO_RULE: RuleInput = {
   date: new Date(0),
   frequency: null,
@@ -243,8 +303,13 @@ const NO_RULE: RuleInput = {
  */
 export function resolveRule(
   dto: UpdateFinanceEntryDto,
-  existing: RuleInput & { recurring?: boolean },
-): RuleInput & { recurring: boolean } {
+  existing: RuleInput &
+    Partial<IncomeRuleInput> & {
+      recurring?: boolean;
+      kind?: FinanceEntryKind;
+      amountCents?: number;
+    },
+): RuleInput & IncomeRuleInput & { recurring: boolean } {
   const legacy =
     dto.recurring === undefined
       ? resolveFrequency(existing)
@@ -280,15 +345,241 @@ export function resolveRule(
   if (endDate && endDate < date) {
     throw new BadRequestException('endDate must not be before date.');
   }
+  if (dto.skipFirstOccurrences && frequency === null) {
+    throw new BadRequestException('skipFirstOccurrences needs a frequency.');
+  }
+  if (dto.paidInArrearsMonths && frequency !== FinanceFrequency.MONTHLY) {
+    throw new BadRequestException(
+      'paidInArrearsMonths needs frequency MONTHLY.',
+    );
+  }
+  const repeatingIncome =
+    frequency !== null &&
+    (dto.kind ?? existing.kind) === FinanceEntryKind.INCOME;
+  if (dto.withheldCents && !repeatingIncome) {
+    throw new BadRequestException(
+      'withheldCents needs a repeating INCOME entry.',
+    );
+  }
+  // Valor do pedido, senao o que ja existe, senao o de omissao.
+  const keep = <K extends keyof IncomeRuleInput>(
+    key: K,
+    fallback: IncomeRuleInput[K],
+  ): IncomeRuleInput[K] =>
+    (dto[key] as IncomeRuleInput[K] | undefined) ?? existing[key] ?? fallback;
+  const withheldCents =
+    !repeatingIncome || dto.withheldCents === null
+      ? null
+      : keep('withheldCents', null);
+  // Retido acima do valor criava dinheiro: a primeira paga 0 e a devolucao
+  // devolvia mais do que foi descontado.
+  const amountCents = dto.amountCents ?? existing.amountCents;
+  if (
+    withheldCents !== null &&
+    amountCents !== undefined &&
+    withheldCents > amountCents
+  ) {
+    throw new BadRequestException('withheldCents must not exceed amountCents.');
+  }
   return {
     date,
     frequency,
     payDayRule,
     payDay,
     endDate,
+    skipFirstOccurrences:
+      frequency === null ? 0 : keep('skipFirstOccurrences', 0),
+    paidInArrearsMonths:
+      frequency === FinanceFrequency.MONTHLY
+        ? keep('paidInArrearsMonths', 0)
+        : 0,
+    withheldCents,
     // Mantido para leitores antigos: true sempre que ha repeticao.
     recurring: frequency !== null,
   };
+}
+
+interface OwedFields {
+  isOwed: boolean;
+  debtorName: string | null;
+  expectedDate: Date | null;
+  latePaymentRiskPct: number | null;
+  interestRatePct: number | Prisma.Decimal | null;
+  interestKind: FinanceInterestKind | null;
+  receivedAt: Date | null;
+}
+
+const NOT_OWED: OwedFields = {
+  isOwed: false,
+  debtorName: null,
+  expectedDate: null,
+  latePaymentRiskPct: null,
+  interestRatePct: null,
+  interestKind: null,
+  receivedAt: null,
+};
+
+const OWED_KEYS = Object.keys(NOT_OWED).filter(
+  (k) => k !== 'isOwed',
+) as (keyof UpdateFinanceEntryDto)[];
+
+/**
+ * Campos de "devem-me dinheiro". So INCOME de uma vez. Com juros o prazo e
+ * obrigatorio. Ao receber (receivedAt), `date` passa a esse dia e a entrada
+ * conta como uma entrada normal. Sem isOwed os campos sao limpos.
+ */
+export function resolveOwed(
+  dto: UpdateFinanceEntryDto,
+  existing: Partial<OwedFields> & { kind?: FinanceEntryKind },
+  rule: { date: Date; frequency: FinanceFrequency | null },
+): OwedFields & { date: Date } {
+  const isOwed = dto.isOwed ?? existing.isOwed ?? false;
+  if (!isOwed) {
+    if (OWED_KEYS.some((k) => dto[k] !== undefined && dto[k] !== null)) {
+      throw new BadRequestException('These fields need isOwed true.');
+    }
+    return { ...NOT_OWED, date: rule.date };
+  }
+  if ((dto.kind ?? existing.kind) !== FinanceEntryKind.INCOME) {
+    throw new BadRequestException('isOwed needs kind INCOME.');
+  }
+  if (rule.frequency !== null) {
+    throw new BadRequestException('isOwed entries happen once.');
+  }
+  const day = (key: 'expectedDate' | 'receivedAt') =>
+    dto[key] === undefined
+      ? (existing[key] ?? null)
+      : dto[key] === null
+        ? null
+        : parseDay(dto[key], key);
+  const expectedDate = day('expectedDate');
+  const receivedAt = day('receivedAt');
+  const interestRatePct =
+    dto.interestRatePct !== undefined
+      ? dto.interestRatePct
+      : (existing.interestRatePct ?? null);
+  const interestKind =
+    dto.interestKind !== undefined
+      ? dto.interestKind
+      : (existing.interestKind ?? null);
+  const hasInterest =
+    effectiveInterestKind(
+      interestKind,
+      interestRatePct === null ? null : Number(interestRatePct),
+    ) !== FinanceInterestKind.NONE;
+  if (hasInterest && !expectedDate) {
+    throw new BadRequestException('expectedDate is required with interest.');
+  }
+  // Ja recebido: `date` e o dia do pagamento, as datas antigas nao se comparam.
+  const settled = receivedAt !== null && existing.receivedAt != null;
+  if (!settled && expectedDate && expectedDate < rule.date) {
+    throw new BadRequestException('expectedDate must not be before date.');
+  }
+  if (receivedAt && !settled && receivedAt < rule.date) {
+    throw new BadRequestException('receivedAt must not be before date.');
+  }
+  return {
+    isOwed,
+    debtorName:
+      dto.debtorName !== undefined
+        ? dto.debtorName || null
+        : (existing.debtorName ?? null),
+    expectedDate,
+    latePaymentRiskPct:
+      dto.latePaymentRiskPct !== undefined
+        ? dto.latePaymentRiskPct
+        : (existing.latePaymentRiskPct ?? null),
+    interestRatePct,
+    interestKind,
+    receivedAt,
+    date: receivedAt ?? rule.date,
+  };
+}
+
+/**
+ * Projecao + valor esperado (pesado pelo risco) das dividas com prazo ate
+ * ao fim do mes projetado (inclui as ja atrasadas). Sem prazo nao entram.
+ */
+export function withOwed(
+  projection: { untilDate: string; projectedBalanceCents: number },
+  items: ReturnType<typeof summarizeOwed>['items'],
+) {
+  const owedRiskWeightedCents = items
+    .filter(
+      (i) => i.expectedDate !== null && i.expectedDate <= projection.untilDate,
+    )
+    .reduce((a, i) => a + i.expectedValueCents, 0);
+  return {
+    ...projection,
+    owedRiskWeightedCents,
+    projectedBalanceCents:
+      projection.projectedBalanceCents + owedRiskWeightedCents,
+  };
+}
+
+/** Linha do Prisma para o util (Decimal da taxa passa a number). */
+const owedInput = (e: FinanceEntry): OwedInput => ({
+  ...e,
+  interestRatePct:
+    e.interestRatePct === null ? null : Number(e.interestRatePct),
+});
+
+/**
+ * Dinheiro retido pelo empregador (withheldCents) que ja foi descontado
+ * (primeira ocorrencia ate hoje) e ainda nao foi devolvido (sem endDate, ou
+ * endDate depois de hoje). Nao conta no saldo.
+ */
+export function heldByEmployer(entries: EntryRow[], today: Date) {
+  const items = entries.flatMap((e) => {
+    if (e.kind !== FinanceEntryKind.INCOME || !e.withheldCents) return [];
+    const since = resolveFrequency(e) ? firstPayDate(e) : null;
+    const released = e.endDate !== null && e.endDate <= today;
+    if (!since || since > today || released) return [];
+    return [
+      {
+        entryId: e.id,
+        note: e.note,
+        withheldCents: e.withheldCents,
+        since: toDateKey(since),
+        releaseDate: e.endDate ? toDateKey(e.endDate) : null,
+      },
+    ];
+  });
+  return {
+    totalCents: items.reduce((a, i) => a + i.withheldCents, 0),
+    items,
+  };
+}
+
+/**
+ * Planos dos objetivos, sempre em relacao a HOJE (nao ao mes pedido).
+ * Historico = os GOAL_PLAN_HISTORY_MONTHS meses completos antes do atual.
+ */
+export function goalPlansOf(
+  entries: EntryRow[],
+  goals: GoalInput[],
+  today: Date,
+) {
+  const currentMonth = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1),
+  );
+  const history = materialize(
+    entries,
+    addUtcMonths(currentMonth, -GOAL_PLAN_HISTORY_MONTHS),
+    currentMonth,
+    today,
+  );
+  const recurring = entries.flatMap((e) => {
+    const frequency = resolveFrequency(e);
+    const active = frequency && (!e.endDate || e.endDate >= today);
+    return active ? [{ ...e, frequency }] : [];
+  });
+  const surplus = estimateSurplus(
+    history,
+    historyMonthKeys(today, GOAL_PLAN_HISTORY_MONTHS),
+    recurring,
+  );
+  return planGoals(goals, surplus, today);
 }
 
 // Financas pessoais: so regista e soma o que a pessoa escreve. Nao ha
@@ -305,22 +596,40 @@ export class FinanceService {
   async summary(userId: string, month: string, today = getLisbonNow().today) {
     const { start, end } = monthBounds(month);
     const tomorrow = addUtcDays(today, 1);
-    const queryStart = tomorrow < start ? tomorrow : start;
-    const [wallet, entries, goals] = await Promise.all([
+    const currentMonth = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1),
+    );
+    const historyStart = addUtcMonths(currentMonth, -GOAL_PLAN_HISTORY_MONTHS);
+    // Uma so query cobre o mes pedido, o resto do mes atual (projecao), o
+    // historico dos planos e as retencoes ainda por devolver.
+    const queryStart = [start, tomorrow, historyStart].reduce((a, b) =>
+      b < a ? b : a,
+    );
+    const queryEnd = end > tomorrow ? end : tomorrow;
+    const [wallet, entries, goals, owedRows] = await Promise.all([
       this.loadWallet(userId),
       this.prisma.financeEntry.findMany({
-        where: overlappingEntriesWhere(userId, queryStart, end),
+        where: overlappingEntriesWhere(userId, queryStart, queryEnd),
         orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
       }),
       this.prisma.financeGoal.findMany({
         where: { userId },
         orderBy: [{ kind: 'asc' }, { createdAt: 'asc' }],
       }),
+      // Dividas por receber: entram em `owed`, nunca nos totais nem no saldo.
+      this.prisma.financeEntry.findMany({
+        where: { userId, isOwed: true, receivedAt: null },
+        orderBy: [{ expectedDate: 'asc' }, { createdAt: 'asc' }],
+      }),
     ]);
     const occurrences = materialize(entries, start, end, today);
+    const owed = summarizeOwed(owedRows.map(owedInput), today);
+    const projection = this.projection(
+      wallet.balances.totalCents,
+      tomorrow < end ? materialize(entries, tomorrow, end, today) : [],
+      end,
+    );
     const inMonth = new Set(occurrences.map((o) => o.entryId));
-    const remaining =
-      tomorrow < end ? materialize(entries, tomorrow, end, today) : [];
     return {
       month,
       settings: wallet.settings,
@@ -336,7 +645,13 @@ export class FinanceService {
       accounts: wallet.accounts,
       holdings: wallet.holdings,
       balances: wallet.balances,
-      projection: this.projection(wallet.balances.totalCents, remaining, end),
+      projection,
+      // Separado de projection: soma o valor esperado (pesado pelo risco)
+      // das dividas com prazo ate ao fim do mes projetado.
+      projectionWithOwed: withOwed(projection, owed.items),
+      owed,
+      heldByEmployer: heldByEmployer(entries, today),
+      ...goalPlansOf(entries, goals, today),
     };
   }
 
@@ -532,25 +847,73 @@ export class FinanceService {
     if (count === 0) throw new NotFoundException('Account not found.');
   }
 
-  async createEntry(userId: string, dto: CreateFinanceEntryDto) {
-    const count = await this.prisma.financeEntry.count({ where: { userId } });
-    if (count >= MAX_FINANCE_ENTRIES_PER_USER) {
-      throw new BadRequestException(
-        `You can have at most ${MAX_FINANCE_ENTRIES_PER_USER} entries.`,
-      );
+  /**
+   * Cria uma so vez por (userId, clientRequestId). Repetido dentro da janela
+   * devolve a linha ja criada (duplo clique, retry); fora da janela da 409.
+   * Dois pedidos ao mesmo tempo: o segundo bate no unique e le o primeiro.
+   */
+  private async idempotent<T extends { createdAt: Date }>(
+    key: string | undefined,
+    find: (clientRequestId: string) => Promise<T | null>,
+    create: (clientRequestId: string | null) => Promise<T>,
+  ): Promise<T> {
+    if (!key) return create(null);
+    const reuse = (row: T) => {
+      if (Date.now() - row.createdAt.getTime() > IDEMPOTENCY_WINDOW_MS) {
+        throw new ConflictException('This request key was already used.');
+      }
+      return row;
+    };
+    const existing = await find(key);
+    if (existing) return reuse(existing);
+    try {
+      return await create(key);
+    } catch (err) {
+      if ((err as { code?: string } | null)?.code !== UNIQUE_VIOLATION) {
+        throw err;
+      }
+      const winner = await find(key);
+      if (!winner) throw err;
+      return reuse(winner);
     }
-    await this.assertAccount(userId, dto.accountId);
-    return this.prisma.financeEntry.create({
-      data: {
-        userId,
-        kind: dto.kind,
-        amountCents: dto.amountCents,
-        category: dto.category,
-        note: dto.note || null,
-        accountId: dto.accountId ?? null,
-        ...resolveRule(dto, NO_RULE),
+  }
+
+  async createEntry(
+    userId: string,
+    dto: CreateFinanceEntryDto,
+    headerKey?: string,
+  ) {
+    const { clientRequestId, ...fields } = dto;
+    return this.idempotent(
+      resolveRequestKey(headerKey, clientRequestId),
+      (key) =>
+        this.prisma.financeEntry.findFirst({
+          where: { userId, clientRequestId: key },
+        }),
+      async (key) => {
+        const count = await this.prisma.financeEntry.count({
+          where: { userId },
+        });
+        if (count >= MAX_FINANCE_ENTRIES_PER_USER) {
+          throw new BadRequestException(
+            `You can have at most ${MAX_FINANCE_ENTRIES_PER_USER} entries.`,
+          );
+        }
+        await this.assertAccount(userId, fields.accountId);
+        return this.prisma.financeEntry.create({
+          data: {
+            userId,
+            clientRequestId: key,
+            kind: fields.kind,
+            amountCents: fields.amountCents,
+            category: fields.category,
+            note: fields.note || null,
+            accountId: fields.accountId ?? null,
+            ...this.ruleAndOwed(fields, { ...NO_RULE, kind: fields.kind }),
+          },
+        });
       },
-    });
+    );
   }
 
   async updateEntry(userId: string, id: string, dto: UpdateFinanceEntryDto) {
@@ -567,10 +930,19 @@ export class FinanceService {
         ...(dto.category !== undefined && { category: dto.category }),
         ...(dto.note !== undefined && { note: dto.note || null }),
         ...(dto.accountId !== undefined && { accountId: dto.accountId }),
-        ...resolveRule(dto, existing),
+        ...this.ruleAndOwed(dto, existing),
       },
     });
     return this.prisma.financeEntry.findFirstOrThrow({ where: { id, userId } });
+  }
+
+  // Regra de repeticao + campos de divida (receber muda `date`).
+  private ruleAndOwed(
+    dto: UpdateFinanceEntryDto,
+    existing: Parameters<typeof resolveRule>[1] & Partial<OwedFields>,
+  ) {
+    const rule = resolveRule(dto, existing);
+    return { ...rule, ...resolveOwed(dto, existing, rule) };
   }
 
   async removeEntry(userId: string, id: string): Promise<void> {
@@ -580,22 +952,38 @@ export class FinanceService {
     if (count === 0) throw new NotFoundException('Entry not found.');
   }
 
-  async createAccount(userId: string, dto: CreateFinanceAccountDto) {
-    const count = await this.prisma.financeAccount.count({ where: { userId } });
-    if (count >= MAX_FINANCE_ACCOUNTS_PER_USER) {
-      throw new BadRequestException(
-        `You can have at most ${MAX_FINANCE_ACCOUNTS_PER_USER} accounts.`,
-      );
-    }
-    return this.prisma.financeAccount.create({
-      data: {
-        userId,
-        name: dto.name,
-        type: dto.type,
-        balanceCents: dto.balanceCents ?? 0,
-        currency: dto.currency ?? null,
+  async createAccount(
+    userId: string,
+    dto: CreateFinanceAccountDto,
+    headerKey?: string,
+  ) {
+    return this.idempotent(
+      resolveRequestKey(headerKey, dto.clientRequestId),
+      (key) =>
+        this.prisma.financeAccount.findFirst({
+          where: { userId, clientRequestId: key },
+        }),
+      async (key) => {
+        const count = await this.prisma.financeAccount.count({
+          where: { userId },
+        });
+        if (count >= MAX_FINANCE_ACCOUNTS_PER_USER) {
+          throw new BadRequestException(
+            `You can have at most ${MAX_FINANCE_ACCOUNTS_PER_USER} accounts.`,
+          );
+        }
+        return this.prisma.financeAccount.create({
+          data: {
+            userId,
+            clientRequestId: key,
+            name: dto.name,
+            type: dto.type,
+            balanceCents: dto.balanceCents ?? 0,
+            currency: dto.currency ?? null,
+          },
+        });
       },
-    });
+    );
   }
 
   async updateAccount(
@@ -630,10 +1018,31 @@ export class FinanceService {
     return holding;
   }
 
-  async createHolding(userId: string, dto: CreateFinanceHoldingDto) {
+  async createHolding(
+    userId: string,
+    dto: CreateFinanceHoldingDto,
+    headerKey?: string,
+  ) {
     if ((dto.quantity === undefined) === (dto.investedCents === undefined)) {
       throw new BadRequestException('Send either quantity or investedCents.');
     }
+    const row = await this.idempotent(
+      resolveRequestKey(headerKey, dto.clientRequestId),
+      (key) =>
+        this.prisma.financeHolding.findFirst({
+          where: { userId, clientRequestId: key },
+          include: { account: { select: { type: true } } },
+        }),
+      (key) => this.insertHolding(userId, dto, key),
+    );
+    return holdingView(row);
+  }
+
+  private async insertHolding(
+    userId: string,
+    dto: CreateFinanceHoldingDto,
+    clientRequestId: string | null,
+  ): Promise<HoldingRow> {
     const count = await this.prisma.financeHolding.count({ where: { userId } });
     if (count >= MAX_FINANCE_HOLDINGS_PER_USER) {
       throw new BadRequestException(
@@ -647,6 +1056,7 @@ export class FinanceService {
     const created = await this.prisma.financeHolding.create({
       data: {
         userId,
+        clientRequestId,
         symbol: dto.symbol,
         name: dto.name || dto.symbol,
         accountId: dto.accountId ?? null,
@@ -662,7 +1072,7 @@ export class FinanceService {
             : (dto.investedCents ?? null),
       },
     });
-    return holdingView(await this.findHolding(userId, created.id));
+    return this.findHolding(userId, created.id);
   }
 
   async updateHolding(
@@ -738,29 +1148,50 @@ export class FinanceService {
     return quantity;
   }
 
-  async createGoal(userId: string, dto: CreateFinanceGoalDto) {
-    const count = await this.prisma.financeGoal.count({ where: { userId } });
-    if (count >= MAX_FINANCE_GOALS_PER_USER) {
-      throw new BadRequestException(
-        `You can have at most ${MAX_FINANCE_GOALS_PER_USER} goals.`,
-      );
-    }
-    return this.prisma.financeGoal.create({
-      data: {
-        userId,
-        kind: dto.kind,
-        name: dto.name,
-        targetCents: dto.targetCents,
-        savedCents: dto.savedCents ?? 0,
-        deadline: dto.deadline ? parseDay(dto.deadline, 'deadline') : null,
+  async createGoal(
+    userId: string,
+    dto: CreateFinanceGoalDto,
+    headerKey?: string,
+  ) {
+    return this.idempotent(
+      resolveRequestKey(headerKey, dto.clientRequestId),
+      (key) =>
+        this.prisma.financeGoal.findFirst({
+          where: { userId, clientRequestId: key },
+        }),
+      async (key) => {
+        const count = await this.prisma.financeGoal.count({
+          where: { userId },
+        });
+        if (count >= MAX_FINANCE_GOALS_PER_USER) {
+          throw new BadRequestException(
+            `You can have at most ${MAX_FINANCE_GOALS_PER_USER} goals.`,
+          );
+        }
+        return this.prisma.financeGoal.create({
+          data: {
+            userId,
+            clientRequestId: key,
+            kind: dto.kind,
+            name: dto.name,
+            targetCents: dto.targetCents,
+            savedCents: dto.savedCents ?? 0,
+            deadline: dto.deadline ? parseDay(dto.deadline, 'deadline') : null,
+            monthlyPlanCents: dto.monthlyPlanCents ?? null,
+          },
+        });
       },
-    });
+    );
   }
 
   async updateGoal(userId: string, id: string, dto: UpdateFinanceGoalDto) {
     const { count } = await this.prisma.financeGoal.updateMany({
       where: { id, userId },
       data: {
+        ...(dto.kind !== undefined && { kind: dto.kind }),
+        ...(dto.monthlyPlanCents !== undefined && {
+          monthlyPlanCents: dto.monthlyPlanCents,
+        }),
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.targetCents !== undefined && { targetCents: dto.targetCents }),
         ...(dto.savedCents !== undefined && { savedCents: dto.savedCents }),

@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   FinanceEntryKind,
   FinanceFrequency,
@@ -7,13 +11,24 @@ import {
 import {
   FinanceService,
   computeBalances,
+  heldByEmployer,
   monthBounds,
   overlappingEntriesWhere,
   parseDay,
+  resolveOwed,
+  resolveRequestKey,
   resolveRule,
+  withOwed,
   summarize,
 } from './finance.service';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import type { FinancePricesService } from './finance-prices.service';
+import {
+  CreateFinanceEntryDto,
+  UpdateFinanceEntryDto,
+  UpdateFinanceGoalDto,
+} from './dto/finance.dto';
 import type { PrismaService } from '../prisma/prisma.service';
 import { parseDateKey } from '../common/date-key.util';
 
@@ -214,6 +229,9 @@ describe('FinanceService', () => {
     payDay: null,
     endDate: null,
     accountId: null,
+    skipFirstOccurrences: 0,
+    paidInArrearsMonths: 0,
+    withheldCents: null,
   };
 
   it('includes repeating entries that started before the month', async () => {
@@ -221,9 +239,10 @@ describe('FinanceService', () => {
     const result = await service.summary('me', '2026-10', today);
     expect(prisma.financeEntry.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
+        // Comeca 3 meses antes: historico dos planos dos objetivos.
         where: overlappingEntriesWhere(
           'me',
-          new Date('2026-10-01T00:00:00Z'),
+          new Date('2026-07-01T00:00:00Z'),
           new Date('2026-11-01T00:00:00Z'),
         ),
       }),
@@ -447,6 +466,502 @@ describe('FinanceService', () => {
     await expect(
       service.analytics('me', { from: '2000-01-01', to: '2026-99-99' }, today),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+describe('FinanceService idempotency and plans', () => {
+  const KEY = '00000000-0000-4000-8000-000000000001';
+  const body = {
+    kind: FinanceEntryKind.EXPENSE,
+    amountCents: 100,
+    category: 'CAFE',
+    date: '2026-10-01',
+  };
+  function setup() {
+    const prisma = {
+      financeSettings: { findUnique: jest.fn().mockResolvedValue(null) },
+      financeAccount: { findMany: jest.fn().mockResolvedValue([]) },
+      financeHolding: { findMany: jest.fn().mockResolvedValue([]) },
+      financeEntry: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'new' }),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      financeGoal: {
+        findMany: jest.fn().mockResolvedValue([]),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findFirstOrThrow: jest.fn().mockResolvedValue({ id: 'g1' }),
+      },
+    };
+    const service = new FinanceService(
+      prisma as unknown as PrismaService,
+      {} as FinancePricesService,
+    );
+    return { prisma, service };
+  }
+
+  it('a repeated key returns the row already created, scoped to the user', async () => {
+    const { prisma, service } = setup();
+    const existing = { id: 'e1', createdAt: new Date() };
+    prisma.financeEntry.findFirst.mockResolvedValue(existing);
+    await expect(
+      service.createEntry('me', { ...body, clientRequestId: KEY }),
+    ).resolves.toBe(existing);
+    expect(prisma.financeEntry.findFirst).toHaveBeenCalledWith({
+      where: { userId: 'me', clientRequestId: KEY },
+    });
+    expect(prisma.financeEntry.create).not.toHaveBeenCalled();
+  });
+
+  it('stores the key from the header on create', async () => {
+    const { prisma, service } = setup();
+    await service.createEntry('me', body, KEY);
+    expect(prisma.financeEntry.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'me',
+        clientRequestId: KEY,
+      }) as unknown,
+    });
+  });
+
+  it('two requests at once: the loser reads the winner', async () => {
+    const { prisma, service } = setup();
+    const winner = { id: 'e1', createdAt: new Date() };
+    prisma.financeEntry.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(winner);
+    prisma.financeEntry.create.mockRejectedValue({ code: 'P2002' });
+    await expect(service.createEntry('me', body, KEY)).resolves.toBe(winner);
+  });
+
+  it('a key reused after the window is a conflict', async () => {
+    const { prisma, service } = setup();
+    prisma.financeEntry.findFirst.mockResolvedValue({
+      id: 'e1',
+      createdAt: new Date('2000-01-01T00:00:00Z'),
+    });
+    await expect(service.createEntry('me', body, KEY)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+  });
+
+  it('rejects a bad header or a header that disagrees with the body', () => {
+    expect(() => resolveRequestKey('nope', undefined)).toThrow(
+      BadRequestException,
+    );
+    expect(() =>
+      resolveRequestKey(KEY, '00000000-0000-4000-8000-000000000000'),
+    ).toThrow(BadRequestException);
+    expect(resolveRequestKey(undefined, KEY)).toBe(KEY);
+    expect(resolveRequestKey(undefined, undefined)).toBeUndefined();
+  });
+
+  it('edits the kind and monthly plan of a goal', async () => {
+    const { prisma, service } = setup();
+    await service.updateGoal('me', 'g1', {
+      kind: 'WISHLIST',
+      monthlyPlanCents: null,
+      name: 'Bike',
+    });
+    expect(prisma.financeGoal.updateMany).toHaveBeenCalledWith({
+      where: { id: 'g1', userId: 'me' },
+      data: { kind: 'WISHLIST', monthlyPlanCents: null, name: 'Bike' },
+    });
+  });
+
+  it('summary carries goal plans and money held by the employer', async () => {
+    const { prisma, service } = setup();
+    prisma.financeEntry.findMany.mockResolvedValue([
+      {
+        id: 'job',
+        kind: FinanceEntryKind.INCOME,
+        amountCents: 80000,
+        category: 'SALARY',
+        note: 'Job',
+        date: parseDateKey('2026-09-30'),
+        recurring: true,
+        frequency: FinanceFrequency.MONTHLY,
+        payDayRule: null,
+        payDay: null,
+        endDate: null,
+        accountId: null,
+        skipFirstOccurrences: 0,
+        paidInArrearsMonths: 0,
+        withheldCents: 40000,
+        createdAt: new Date(),
+      },
+    ]);
+    prisma.financeGoal.findMany.mockResolvedValue([
+      {
+        id: 'g1',
+        targetCents: 60000,
+        savedCents: 0,
+        deadline: parseDateKey('2027-01-15'),
+        monthlyPlanCents: null,
+        createdAt: new Date(),
+      },
+    ]);
+    const result = await service.summary(
+      'me',
+      '2026-10',
+      parseDateKey('2026-10-15'),
+    );
+    expect(result.heldByEmployer.totalCents).toBe(40000);
+    expect(result.occurrences).toEqual([
+      expect.objectContaining({ date: '2026-10-30', reason: 'REGULAR' }),
+    ]);
+    expect(result.goalPlans[0]).toMatchObject({
+      goalId: 'g1',
+      monthsLeft: 3,
+      requiredMonthlyCents: 20000,
+      suggestedMonthlyCents: 20000,
+      status: 'ON_TRACK',
+    });
+    // Um so mes de dados (setembro, com a retencao): usa a regra mensal.
+    expect(result.goalPlanSummary.surplus).toEqual({
+      monthlyCents: 80000,
+      source: 'RECURRING',
+      monthsOfData: 1,
+      lowConfidence: true,
+    });
+  });
+});
+
+describe('heldByEmployer', () => {
+  const job = {
+    id: 'job',
+    kind: FinanceEntryKind.INCOME,
+    amountCents: 80000,
+    category: 'SALARY',
+    note: null,
+    date: parseDateKey('2026-09-30'),
+    recurring: true,
+    frequency: FinanceFrequency.MONTHLY,
+    payDayRule: null,
+    payDay: null,
+    endDate: null as Date | null,
+    accountId: null,
+    skipFirstOccurrences: 0,
+    paidInArrearsMonths: 0,
+    withheldCents: 40000,
+    isOwed: false,
+    receivedAt: null,
+  };
+
+  it('counts money already withheld and not yet released', () => {
+    expect(heldByEmployer([job], parseDateKey('2026-10-01'))).toEqual({
+      totalCents: 40000,
+      items: [
+        {
+          entryId: 'job',
+          note: null,
+          withheldCents: 40000,
+          since: '2026-09-30',
+          releaseDate: null,
+        },
+      ],
+    });
+  });
+
+  it('ignores it before the first pay and from the release day on', () => {
+    expect(heldByEmployer([job], parseDateKey('2026-09-29')).totalCents).toBe(
+      0,
+    );
+    expect(
+      heldByEmployer(
+        [{ ...job, endDate: parseDateKey('2026-12-15') }],
+        parseDateKey('2026-12-15'),
+      ).totalCents,
+    ).toBe(0);
+  });
+});
+
+describe('resolveRule income fields', () => {
+  const none = {
+    date: new Date(0),
+    frequency: null,
+    payDayRule: null,
+    payDay: null,
+    endDate: null,
+  };
+  const salary = {
+    kind: FinanceEntryKind.INCOME,
+    date: '2026-10-01',
+    frequency: FinanceFrequency.MONTHLY,
+  };
+
+  it('accepts skip, arrears and withholding on a monthly income', () => {
+    expect(
+      resolveRule(
+        {
+          ...salary,
+          skipFirstOccurrences: 1,
+          paidInArrearsMonths: 1,
+          withheldCents: 40000,
+        },
+        none,
+      ),
+    ).toMatchObject({
+      skipFirstOccurrences: 1,
+      paidInArrearsMonths: 1,
+      withheldCents: 40000,
+    });
+  });
+
+  it('rejects them where they make no sense', () => {
+    expect(() =>
+      resolveRule({ date: '2026-10-01', skipFirstOccurrences: 1 }, none),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      resolveRule(
+        {
+          ...salary,
+          frequency: FinanceFrequency.WEEKLY,
+          paidInArrearsMonths: 1,
+        },
+        none,
+      ),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      resolveRule(
+        { ...salary, kind: FinanceEntryKind.EXPENSE, withheldCents: 5 },
+        none,
+      ),
+    ).toThrow(BadRequestException);
+  });
+
+  it('keeps existing values on edit and clears them for a one-off', () => {
+    const existing = {
+      ...none,
+      kind: FinanceEntryKind.INCOME,
+      date: parseDateKey('2026-01-01'),
+      frequency: FinanceFrequency.MONTHLY,
+      skipFirstOccurrences: 2,
+      paidInArrearsMonths: 1,
+      withheldCents: 300,
+    };
+    expect(resolveRule({ amountCents: 500 }, existing)).toMatchObject({
+      skipFirstOccurrences: 2,
+      paidInArrearsMonths: 1,
+      withheldCents: 300,
+    });
+    expect(resolveRule({ withheldCents: null }, existing)).toMatchObject({
+      withheldCents: null,
+    });
+    expect(resolveRule({ frequency: null }, existing)).toMatchObject({
+      skipFirstOccurrences: 0,
+      paidInArrearsMonths: 0,
+      withheldCents: null,
+    });
+  });
+
+  it('rejects withholding above the amount (create and edit)', () => {
+    expect(() =>
+      resolveRule({ ...salary, amountCents: 1000, withheldCents: 1001 }, none),
+    ).toThrow(BadRequestException);
+    expect(
+      resolveRule({ ...salary, amountCents: 1000, withheldCents: 1000 }, none),
+    ).toMatchObject({ withheldCents: 1000 });
+    const existing = {
+      ...none,
+      kind: FinanceEntryKind.INCOME,
+      date: parseDateKey('2026-01-01'),
+      frequency: FinanceFrequency.MONTHLY,
+      amountCents: 1000,
+      withheldCents: 800,
+    };
+    // Baixar o valor para menos do que o retido tambem e recusado.
+    expect(() => resolveRule({ amountCents: 500 }, existing)).toThrow(
+      BadRequestException,
+    );
+    expect(() => resolveRule({ withheldCents: 1500 }, existing)).toThrow(
+      BadRequestException,
+    );
+  });
+});
+
+describe('resolveOwed', () => {
+  const rule = { date: parseDateKey('2026-10-01'), frequency: null };
+  const income = { kind: FinanceEntryKind.INCOME };
+
+  it('needs a one-off INCOME', () => {
+    expect(() =>
+      resolveOwed({ isOwed: true }, { kind: FinanceEntryKind.EXPENSE }, rule),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      resolveOwed({ isOwed: true }, income, {
+        ...rule,
+        frequency: FinanceFrequency.MONTHLY,
+      }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('needs a due date when there is interest', () => {
+    expect(() =>
+      resolveOwed({ isOwed: true, interestRatePct: 4.5 }, income, rule),
+    ).toThrow(BadRequestException);
+    expect(
+      resolveOwed(
+        { isOwed: true, interestRatePct: 4.5, expectedDate: '2027-01-01' },
+        income,
+        rule,
+      ),
+    ).toMatchObject({ isOwed: true, interestRatePct: 4.5 });
+  });
+
+  it('rejects owed fields without isOwed and clears them when it goes off', () => {
+    expect(() => resolveOwed({ debtorName: 'Ana' }, income, rule)).toThrow(
+      BadRequestException,
+    );
+    expect(
+      resolveOwed(
+        { isOwed: false },
+        { ...income, isOwed: true, debtorName: 'Ana' },
+        rule,
+      ),
+    ).toMatchObject({ isOwed: false, debtorName: null });
+  });
+
+  it('marking it received moves the entry to that day', () => {
+    const existing = {
+      ...income,
+      isOwed: true,
+      debtorName: 'Ana',
+      expectedDate: parseDateKey('2026-12-01'),
+      receivedAt: null,
+    };
+    expect(
+      resolveOwed({ receivedAt: '2026-11-20' }, existing, rule),
+    ).toMatchObject({
+      date: parseDateKey('2026-11-20'),
+      receivedAt: parseDateKey('2026-11-20'),
+      debtorName: 'Ana',
+    });
+    expect(() =>
+      resolveOwed({ receivedAt: '2026-09-01' }, existing, rule),
+    ).toThrow(BadRequestException);
+  });
+});
+
+describe('owed money in the summary', () => {
+  const loanRow = {
+    id: 'loan',
+    kind: FinanceEntryKind.INCOME,
+    amountCents: 50000,
+    category: 'OTHER',
+    note: null,
+    date: parseDateKey('2026-10-01'),
+    recurring: false,
+    frequency: null,
+    payDayRule: null,
+    payDay: null,
+    endDate: null,
+    accountId: null,
+    skipFirstOccurrences: 0,
+    paidInArrearsMonths: 0,
+    withheldCents: null,
+    isOwed: true,
+    debtorName: 'Ana',
+    expectedDate: parseDateKey('2026-10-20'),
+    latePaymentRiskPct: 40,
+    interestRatePct: null,
+    interestKind: null,
+    receivedAt: null,
+    createdAt: new Date(),
+  };
+
+  it('never counts in totals or the main projection, only in projectionWithOwed', async () => {
+    const prisma = {
+      financeSettings: { findUnique: jest.fn().mockResolvedValue(null) },
+      financeAccount: { findMany: jest.fn().mockResolvedValue([]) },
+      financeHolding: { findMany: jest.fn().mockResolvedValue([]) },
+      financeEntry: { findMany: jest.fn().mockResolvedValue([loanRow]) },
+      financeGoal: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const service = new FinanceService(
+      prisma as unknown as PrismaService,
+      {} as FinancePricesService,
+    );
+    const result = await service.summary(
+      'me',
+      '2026-10',
+      parseDateKey('2026-10-15'),
+    );
+    expect(prisma.financeEntry.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'me', isOwed: true, receivedAt: null },
+      }),
+    );
+    expect(result.occurrences).toEqual([]);
+    expect(result.totals.incomeCents).toBe(0);
+    expect(result.projection.projectedBalanceCents).toBe(0);
+    expect(result.owed).toMatchObject({
+      totalOwedCents: 50000,
+      totalRiskWeightedCents: 30000,
+      overdueCount: 0,
+    });
+    expect(result.projectionWithOwed).toMatchObject({
+      owedRiskWeightedCents: 30000,
+      projectedBalanceCents: 30000,
+    });
+  });
+
+  it('withOwed leaves out debts due after the projected month', () => {
+    const items = [
+      { expectedDate: '2026-12-01', expectedValueCents: 100 },
+      { expectedDate: null, expectedValueCents: 100 },
+      { expectedDate: '2026-10-31', expectedValueCents: 7 },
+    ] as never;
+    expect(
+      withOwed({ untilDate: '2026-10-31', projectedBalanceCents: 10 }, items),
+    ).toMatchObject({ owedRiskWeightedCents: 7, projectedBalanceCents: 17 });
+  });
+});
+
+describe('finance DTOs', () => {
+  const errorsOf = async (cls: new () => object, body: object) =>
+    (
+      await validate(plainToInstance(cls, body), {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      })
+    )
+      .map((e) => e.property)
+      .sort();
+
+  it('update DTOs accept the new fields but not clientRequestId', async () => {
+    expect(
+      await errorsOf(UpdateFinanceGoalDto, {
+        kind: 'WISHLIST',
+        monthlyPlanCents: null,
+      }),
+    ).toEqual([]);
+    expect(
+      await errorsOf(UpdateFinanceEntryDto, {
+        clientRequestId: '00000000-0000-4000-8000-000000000001',
+      }),
+    ).toEqual(['clientRequestId']);
+  });
+
+  it('create DTOs validate the key, percentages and rate', async () => {
+    expect(
+      await errorsOf(CreateFinanceEntryDto, {
+        kind: 'INCOME',
+        amountCents: 100,
+        category: 'OTHER',
+        date: '2026-10-01',
+        clientRequestId: 'not-a-uuid',
+        latePaymentRiskPct: 101,
+        interestRatePct: 4.1234,
+        skipFirstOccurrences: -1,
+      }),
+    ).toEqual([
+      'clientRequestId',
+      'interestRatePct',
+      'latePaymentRiskPct',
+      'skipFirstOccurrences',
+    ]);
   });
 });
 

@@ -2487,34 +2487,67 @@ enum FinancePayDayRule {
   LAST_FRIDAY
 }
 
+/// Como cresce o dinheiro que alguem deve (FinanceEntry.isOwed).
+enum FinanceInterestKind {
+  NONE
+  SIMPLE
+  MONTHLY_COMPOUND
+}
+
 /// Uma entrada ou saida de dinheiro num dia, ou uma regra que se repete
 /// (renda, salario, subscricao) a partir de `date` ate `endDate`.
 /// `recurring` e legado: true sem `frequency` = MONTHLY no dia de `date`
 /// (resolvido no codigo, ver finance-schedule.util.ts).
 model FinanceEntry {
-  id          String             @id @default(uuid())
-  userId      String
-  kind        FinanceEntryKind
-  amountCents Int
-  category    String             @db.VarChar(20)
-  note        String?            @db.VarChar(120)
+  id                   String             @id @default(uuid())
+  userId               String
+  kind                 FinanceEntryKind
+  amountCents          Int
+  category             String             @db.VarChar(20)
+  note                 String?            @db.VarChar(120)
   // Meia-noite UTC do dia (hora de Lisboa). Primeira ocorrencia possivel.
-  date        DateTime
-  recurring   Boolean            @default(false)
-  frequency   FinanceFrequency?
-  payDayRule  FinancePayDayRule?
+  date                 DateTime
+  recurring            Boolean            @default(false)
+  frequency            FinanceFrequency?
+  payDayRule           FinancePayDayRule?
   // So para FIXED_DAY (1-31, cortado ao fim do mes). null = dia de `date`.
-  payDay      Int?
+  payDay               Int?
   // Ultimo dia (inclusive) em que ainda ha ocorrencias. null = sem fim.
-  endDate     DateTime?
+  endDate              DateTime?
   // So etiqueta: nao mexe no saldo da conta (o saldo e escrito a mao).
-  accountId   String?
-  createdAt   DateTime           @default(now())
+  accountId            String?
+  // As primeiras N ocorrencias da regra nao contam (ex.: o salario deste mes
+  // ja foi recebido antes de usar a app). `date` continua a ser a ancora.
+  skipFirstOccurrences Int                @default(0)
+  // So MONTHLY: o mes M (ancora) paga no mes M+N. endDate filtra a ancora.
+  paidInArrearsMonths  Int                @default(0)
+  // So INCOME que se repete: o empregador retem isto na primeira ocorrencia
+  // e devolve-o numa ocorrencia extra em endDate. Sem endDate fica retido.
+  withheldCents        Int?
+  // Chave de idempotencia do cliente (uuid). O mesmo pedido repetido (duplo
+  // clique, retry) devolve a linha ja criada em vez de uma nova.
+  clientRequestId      String?            @db.Uuid
+  // "Devem-me dinheiro" (so INCOME de uma vez). Nao conta em nada ate
+  // receivedAt; ao receber, `date` passa a ser receivedAt (entrada normal).
+  // Enquanto em divida, `date` e o dia em que o dinheiro foi emprestado
+  // (inicio dos juros) e expectedDate o prazo.
+  isOwed               Boolean            @default(false)
+  debtorName           String?            @db.VarChar(80)
+  expectedDate         DateTime?
+  // Estimativa da propria pessoa (0-100) de NAO ser pago a tempo.
+  latePaymentRiskPct   Int?
+  // Taxa anual em percentagem (ex.: 4.500).
+  interestRatePct      Decimal?           @db.Decimal(6, 3)
+  interestKind         FinanceInterestKind?
+  receivedAt           DateTime?
+  createdAt            DateTime           @default(now())
 
   user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   account FinanceAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
+  @@unique([userId, clientRequestId])
   @@index([userId, date])
+  @@index([userId, isOwed])
   @@index([accountId])
 }
 
@@ -2531,45 +2564,53 @@ enum FinanceAccountType {
 /// carteira cripto). balanceCents e o dinheiro parado na conta, escrito a
 /// mao; o valor das posicoes (FinanceHolding) soma-se a parte.
 model FinanceAccount {
-  id           String             @id @default(uuid())
-  userId       String
-  name         String             @db.VarChar(60)
-  type         FinanceAccountType
-  balanceCents Int                @default(0)
+  id              String             @id @default(uuid())
+  userId          String
+  name            String             @db.VarChar(60)
+  type            FinanceAccountType
+  balanceCents    Int                @default(0)
   // null = moeda das definicoes.
-  currency     String?            @db.VarChar(3)
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  currency        String?            @db.VarChar(3)
+  // Chave de idempotencia do cliente (uuid). O mesmo pedido repetido (duplo
+  // clique, retry) devolve a linha ja criada em vez de uma nova.
+  clientRequestId String?            @db.Uuid
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   entries  FinanceEntry[]
   holdings FinanceHolding[]
 
+  @@unique([userId, clientRequestId])
   @@index([userId])
 }
 
 /// Posicao num ativo cotado (ETF, acao, cripto). Aceita fracoes de unidade.
 /// lastPriceCents vem do cron de hora a hora (cache do ultimo preco bom).
 model FinanceHolding {
-  id             String    @id @default(uuid())
-  userId         String
-  accountId      String?
+  id              String    @id @default(uuid())
+  userId          String
+  accountId       String?
   // Simbolo do fornecedor de cotacoes (ex.: VWCE.DE, BTC-EUR).
-  symbol         String    @db.VarChar(20)
-  name           String    @db.VarChar(80)
-  quantity       Decimal   @db.Decimal(18, 6)
+  symbol          String    @db.VarChar(20)
+  name            String    @db.VarChar(80)
+  quantity        Decimal   @db.Decimal(18, 6)
   // Preco de uma unidade inteira, em centimos de priceCurrency.
-  lastPriceCents Int?
-  priceCurrency  String?   @db.VarChar(3)
-  priceUpdatedAt DateTime?
+  lastPriceCents  Int?
+  priceCurrency   String?   @db.VarChar(3)
+  priceUpdatedAt  DateTime?
   // Quanto custou no total (opcional, para ganho/perda).
-  costBasisCents Int?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  costBasisCents  Int?
+  // Chave de idempotencia do cliente (uuid). O mesmo pedido repetido (duplo
+  // clique, retry) devolve a linha ja criada em vez de uma nova.
+  clientRequestId String?   @db.Uuid
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   account FinanceAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
+  @@unique([userId, clientRequestId])
   @@index([userId])
   @@index([symbol])
 }
@@ -2584,17 +2625,24 @@ enum FinanceGoalKind {
 /// Objetivo com valor alvo: poupanca, investimento, lista de desejos ou
 /// plano a longo prazo. savedCents e atualizado a mao.
 model FinanceGoal {
-  id          String          @id @default(uuid())
-  userId      String
-  kind        FinanceGoalKind
-  name        String          @db.VarChar(80)
-  targetCents Int
-  savedCents  Int             @default(0)
-  deadline    DateTime?
-  createdAt   DateTime        @default(now())
+  id               String          @id @default(uuid())
+  userId           String
+  kind             FinanceGoalKind
+  name             String          @db.VarChar(80)
+  targetCents      Int
+  savedCents       Int             @default(0)
+  deadline         DateTime?
+  // Quanto a pessoa planeia por de lado por mes (null = sem plano proprio;
+  // o plano usa a sugestao calculada, ver finance-goal-plan.util.ts).
+  monthlyPlanCents Int?
+  // Chave de idempotencia do cliente (uuid). O mesmo pedido repetido (duplo
+  // clique, retry) devolve a linha ja criada em vez de uma nova.
+  clientRequestId  String?         @db.Uuid
+  createdAt        DateTime        @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, clientRequestId])
   @@index([userId])
 }
 

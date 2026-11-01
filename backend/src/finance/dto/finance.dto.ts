@@ -2,6 +2,7 @@ import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
+  IsNumber,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -25,6 +26,7 @@ import {
   FinanceEntryKind,
   FinanceFrequency,
   FinanceGoalKind,
+  FinanceInterestKind,
   FinancePayDayRule,
 } from '@prisma/client';
 import {
@@ -32,11 +34,17 @@ import {
   FINANCE_ACCOUNT_NAME_MAX_LENGTH,
   FINANCE_CATEGORIES,
   FINANCE_CURRENCIES,
+  FINANCE_DEBTOR_NAME_MAX_LENGTH,
   FINANCE_GOAL_NAME_MAX_LENGTH,
   FINANCE_HOLDING_NAME_MAX_LENGTH,
   FINANCE_NOTE_MAX_LENGTH,
+  INTEREST_RATE_DECIMALS,
   MAX_AMOUNT_CENTS,
+  MAX_INTEREST_RATE_PCT,
+  MAX_LATE_RISK_PCT,
+  MAX_PAID_IN_ARREARS_MONTHS,
   MAX_PAY_DAY,
+  MAX_SKIP_OCCURRENCES,
   MIN_PAY_DAY,
   QUANTITY_PATTERN,
   QUOTE_SYMBOL_MAX_LENGTH,
@@ -51,6 +59,16 @@ const upperTrim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().toUpperCase() : value;
 const DATE_MESSAGE = (field: string) =>
   `${field} must be formatted YYYY-MM-DD.`;
+
+// Idempotencia dos POST (tambem aceite no header Idempotency-Key). O mesmo
+// uuid repetido devolve a linha ja criada. So nos create: os Update omitem.
+class ClientRequestDto {
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  clientRequestId?: string;
+}
+const CLIENT_REQUEST_FIELD = ['clientRequestId'] as const;
 
 export class UpdateFinanceSettingsDto {
   @ApiPropertyOptional({ enum: FINANCE_CURRENCIES })
@@ -84,7 +102,7 @@ export class UpdateFinanceSettingsDto {
   leisureBudgetCents?: number | null;
 }
 
-export class CreateFinanceEntryDto {
+export class CreateFinanceEntryDto extends ClientRequestDto {
   @ApiProperty({ enum: FinanceEntryKind })
   @IsEnum(FinanceEntryKind)
   kind: FinanceEntryKind;
@@ -156,11 +174,96 @@ export class CreateFinanceEntryDto {
   @ValidateIf((_, value) => value !== null)
   @IsUUID()
   accountId?: string | null;
+
+  // So com repeticao: as primeiras N ocorrencias nao contam (ex.: o salario
+  // deste mes ja foi recebido). `date` continua a ser a ancora.
+  @ApiPropertyOptional({ minimum: 0, maximum: MAX_SKIP_OCCURRENCES })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(MAX_SKIP_OCCURRENCES)
+  skipFirstOccurrences?: number;
+
+  // So MONTHLY: o mes M paga no mes M+N.
+  @ApiPropertyOptional({ minimum: 0, maximum: MAX_PAID_IN_ARREARS_MONTHS })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(MAX_PAID_IN_ARREARS_MONTHS)
+  paidInArrearsMonths?: number;
+
+  // So INCOME com repeticao: retido na primeira ocorrencia, devolvido em
+  // endDate. null = sem retencao.
+  @ApiPropertyOptional({ example: 40000, nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_AMOUNT_CENTS)
+  withheldCents?: number | null;
+
+  // "Devem-me dinheiro": so INCOME de uma vez. Nao conta ate receivedAt.
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isOwed?: boolean;
+
+  @ApiPropertyOptional({ example: 'Joao', nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @Transform(trim)
+  @IsString()
+  @MaxLength(FINANCE_DEBTOR_NAME_MAX_LENGTH)
+  debtorName?: string | null;
+
+  // Prazo. Obrigatorio quando ha juros.
+  @ApiPropertyOptional({ example: '2027-01-31', nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('expectedDate') })
+  expectedDate?: string | null;
+
+  // Estimativa da pessoa de NAO ser pago a tempo (0-100).
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: MAX_LATE_RISK_PCT,
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsInt()
+  @Min(0)
+  @Max(MAX_LATE_RISK_PCT)
+  latePaymentRiskPct?: number | null;
+
+  // Taxa anual em %, ate 3 casas.
+  @ApiPropertyOptional({ example: 4.5, nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsNumber({ maxDecimalPlaces: INTEREST_RATE_DECIMALS })
+  @Min(0)
+  @Max(MAX_INTEREST_RATE_PCT)
+  interestRatePct?: number | null;
+
+  @ApiPropertyOptional({ enum: FinanceInterestKind, nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsEnum(FinanceInterestKind)
+  interestKind?: FinanceInterestKind | null;
+
+  // Marcar como recebido: passa a entrada normal nesse dia.
+  @ApiPropertyOptional({ example: '2026-11-20', nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('receivedAt') })
+  receivedAt?: string | null;
 }
 
-export class UpdateFinanceEntryDto extends PartialType(CreateFinanceEntryDto) {}
+export class UpdateFinanceEntryDto extends PartialType(
+  OmitType(CreateFinanceEntryDto, CLIENT_REQUEST_FIELD),
+) {}
 
-export class CreateFinanceAccountDto {
+export class CreateFinanceAccountDto extends ClientRequestDto {
   @ApiProperty({ example: 'Revolut' })
   @Transform(trim)
   @IsString()
@@ -189,13 +292,13 @@ export class CreateFinanceAccountDto {
 }
 
 export class UpdateFinanceAccountDto extends PartialType(
-  CreateFinanceAccountDto,
+  OmitType(CreateFinanceAccountDto, CLIENT_REQUEST_FIELD),
 ) {}
 
 // Posicao: manda `quantity` OU `investedCents` (nunca os dois).
 // Com investedCents a quantidade = investedCents / preco (priceCents ou a
 // cotacao atual do fornecedor).
-export class CreateFinanceHoldingDto {
+export class CreateFinanceHoldingDto extends ClientRequestDto {
   @ApiProperty({ example: 'VWCE.DE' })
   @Transform(upperTrim)
   @IsString()
@@ -250,7 +353,10 @@ export class CreateFinanceHoldingDto {
 }
 
 export class UpdateFinanceHoldingDto extends PartialType(
-  OmitType(CreateFinanceHoldingDto, ['symbol'] as const),
+  OmitType(CreateFinanceHoldingDto, [
+    'symbol',
+    ...CLIENT_REQUEST_FIELD,
+  ] as const),
 ) {}
 
 export class FinanceAnalyticsQueryDto {
@@ -271,7 +377,7 @@ export class FinanceAnalyticsQueryDto {
   to?: string;
 }
 
-export class CreateFinanceGoalDto {
+export class CreateFinanceGoalDto extends ClientRequestDto {
   @ApiProperty({ enum: FinanceGoalKind })
   @IsEnum(FinanceGoalKind)
   kind: FinanceGoalKind;
@@ -303,36 +409,17 @@ export class CreateFinanceGoalDto {
     message: 'deadline must be formatted YYYY-MM-DD.',
   })
   deadline?: string | null;
-}
 
-export class UpdateFinanceGoalDto {
-  @ApiPropertyOptional()
+  // Quanto a pessoa planeia por de lado por mes. null = usa a sugestao.
+  @ApiPropertyOptional({ example: 15000, nullable: true })
   @IsOptional()
-  @Transform(trim)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(FINANCE_GOAL_NAME_MAX_LENGTH)
-  name?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(MAX_AMOUNT_CENTS)
-  targetCents?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
   @IsInt()
   @Min(0)
   @Max(MAX_AMOUNT_CENTS)
-  savedCents?: number;
-
-  @ApiPropertyOptional({ nullable: true })
-  @IsOptional()
-  @ValidateIf((_, value) => value !== null)
-  @Matches(DATE_KEY_PATTERN, {
-    message: 'deadline must be formatted YYYY-MM-DD.',
-  })
-  deadline?: string | null;
+  monthlyPlanCents?: number | null;
 }
+
+export class UpdateFinanceGoalDto extends PartialType(
+  OmitType(CreateFinanceGoalDto, CLIENT_REQUEST_FIELD),
+) {}

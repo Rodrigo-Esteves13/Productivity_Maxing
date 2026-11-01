@@ -1,6 +1,9 @@
 import Card from '../UI/Card';
 import { FINANCE_BUCKETS, type FinanceBucket, type FinanceSummary } from '../../api/financeService';
+import Money, { PrivateText } from './Money';
 import { formatMoney } from '../../lib/money';
+import { PRIVACY_MASK } from '../../lib/privacy';
+import { usePrivacyMode } from '../../hooks/usePrivacyMode';
 import { useI18n } from '../../i18n/useI18n';
 
 interface FinanceBalancesProps {
@@ -14,8 +17,10 @@ const ALWAYS_SHOWN: FinanceBucket[] = FINANCE_BUCKETS.filter((b) => b !== 'UNASS
 // e o saldo previsto para o fim do mes.
 export default function FinanceBalances({ summary }: FinanceBalancesProps) {
   const { t, lang } = useI18n();
-  const { balances, projection } = summary;
-  const money = (cents: number) => formatMoney(cents, balances.currency, lang);
+  const { balances, projection, projectionWithOwed } = summary;
+  const { enabled: privacyOn } = usePrivacyMode();
+  const { currency } = balances;
+  const owedAdded = projectionWithOwed.owedRiskWeightedCents;
   const buckets = ALWAYS_SHOWN.concat(balances.byType.UNASSIGNED !== 0 ? ['UNASSIGNED'] : []);
   const otherCurrencies = Object.entries(balances.otherCurrencies);
   const { gainCents } = balances.investments;
@@ -26,21 +31,42 @@ export default function FinanceBalances({ summary }: FinanceBalancesProps) {
         <div>
           <p className="text-sm text-neutral-400">{t('finance.totalBalance')}</p>
           <p className={`text-3xl font-semibold tabular-nums ${balances.totalCents < 0 ? 'text-red-400' : 'text-white'}`}>
-            {money(balances.totalCents)}
+            <Money cents={balances.totalCents} currency={currency} />
           </p>
           <p className="text-xs text-neutral-500">{t('finance.totalBalanceHelp')}</p>
         </div>
         <div className="text-right">
           <p className="text-sm text-neutral-400">{t('finance.projectedEnd', { date: new Date(`${projection.untilDate}T00:00:00`).toLocaleDateString(lang, { day: 'numeric', month: 'short' }) })}</p>
           <p className={`text-xl font-semibold tabular-nums ${projection.projectedBalanceCents < 0 ? 'text-red-400' : 'text-neutral-100'}`}>
-            {money(projection.projectedBalanceCents)}
+            <Money cents={projection.projectedBalanceCents} currency={currency} />
           </p>
+          {privacyOn && (
+            <p className={`text-xs font-medium ${projection.projectedBalanceCents < 0 ? 'text-red-400' : 'text-cyan-400'}`}>
+              {t(projection.projectedBalanceCents < 0 ? 'finance.privacy.negative' : 'finance.privacy.positive')}
+            </p>
+          )}
           <p className="text-xs tabular-nums text-neutral-500">
-            {t('finance.projectedDetail', {
-              income: money(projection.remainingIncomeCents),
-              expenses: money(projection.remainingExpenseCents),
-            })}
+            <PrivateText
+              render={(money) =>
+                t('finance.projectedDetail', {
+                  income: money(projection.remainingIncomeCents, currency),
+                  expenses: money(projection.remainingExpenseCents, currency),
+                })
+              }
+            />
           </p>
+          {owedAdded > 0 && (
+            <p className="mt-1 text-xs tabular-nums text-neutral-400">
+              <PrivateText
+                render={(money) =>
+                  t('finance.projectedWithOwed', {
+                    amount: money(projectionWithOwed.projectedBalanceCents, currency),
+                    owed: money(owedAdded, currency),
+                  })
+                }
+              />
+            </p>
+          )}
         </div>
       </div>
 
@@ -49,12 +75,11 @@ export default function FinanceBalances({ summary }: FinanceBalancesProps) {
           <div key={bucket} className="rounded-lg bg-neutral-800/50 p-3">
             <dt className="text-xs text-neutral-400">{t(`finance.bucket.${bucket}`)}</dt>
             <dd className={`text-base font-semibold tabular-nums sm:text-lg ${balances.byType[bucket] < 0 ? 'text-red-400' : 'text-white'}`}>
-              {money(balances.byType[bucket])}
+              <Money cents={balances.byType[bucket]} currency={currency} />
             </dd>
             {bucket === 'INVESTMENT' && balances.investments.costBasisCents > 0 && (
               <dd className={`text-xs tabular-nums ${gainCents < 0 ? 'text-red-400' : 'text-cyan-400'}`}>
-                {gainCents < 0 ? '' : '+'}
-                {money(gainCents)}
+                <Money cents={gainCents} currency={currency} prefix={gainCents < 0 ? '' : '+'} />
               </dd>
             )}
           </div>
@@ -64,7 +89,7 @@ export default function FinanceBalances({ summary }: FinanceBalancesProps) {
       {otherCurrencies.length > 0 && (
         <p className="mt-3 text-xs text-neutral-500">
           {t('finance.otherCurrencies', {
-            amounts: otherCurrencies.map(([code, cents]) => formatMoney(cents, code, lang)).join(', '),
+            amounts: otherCurrencies.map(([code, cents]) => (privacyOn ? PRIVACY_MASK : formatMoney(cents, code, lang))).join(', '),
           })}
         </p>
       )}

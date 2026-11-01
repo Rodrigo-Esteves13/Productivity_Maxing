@@ -5,7 +5,9 @@ import Select from '../UI/Select';
 import ActionButton from '../UI/ActionButton';
 import ProgressBar from '../UI/ProgressBar';
 import { FINANCE_CURRENCIES, type FinanceSettings, type FinanceSummary } from '../../api/financeService';
-import { centsToInput, formatMoney, parseMoneyInput } from '../../lib/money';
+import Money, { PrivateText } from './Money';
+import { centsToInput, parseMoneyInput } from '../../lib/money';
+import { usePrivateInputClass } from '../../hooks/usePrivacyMode';
 import { useI18n } from '../../i18n/useI18n';
 
 interface FinanceOverviewProps {
@@ -13,7 +15,7 @@ interface FinanceOverviewProps {
   onSaveSettings: (changes: Partial<FinanceSettings>) => Promise<boolean>;
 }
 
-function BudgetLine({ label, spent, limit, money }: { label: string; spent: number; limit: number | null; money: (c: number) => string }) {
+function BudgetLine({ label, spent, limit, currency }: { label: string; spent: number; limit: number | null; currency: string }) {
   const { t } = useI18n();
   if (limit === null) return null;
   const over = spent - limit;
@@ -22,9 +24,13 @@ function BudgetLine({ label, spent, limit, money }: { label: string; spent: numb
       <div className="flex justify-between text-sm">
         <span className="text-neutral-300">{label}</span>
         <span className={over > 0 ? 'text-red-400' : 'text-neutral-400'}>
-          {over > 0
-            ? t('finance.overBudget', { amount: money(over) })
-            : t('finance.budgetUsed', { spent: money(spent), limit: money(limit) })}
+          <PrivateText
+            render={(money) =>
+              over > 0
+                ? t('finance.overBudget', { amount: money(over, currency) })
+                : t('finance.budgetUsed', { spent: money(spent, currency), limit: money(limit, currency) })
+            }
+          />
         </span>
       </div>
       <ProgressBar
@@ -40,9 +46,9 @@ function BudgetLine({ label, spent, limit, money }: { label: string; spent: numb
 
 // Somas do mes (com as ocorrencias futuras) e limites de gastos/lazer.
 export default function FinanceOverview({ summary, onSaveSettings }: FinanceOverviewProps) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { settings, totals } = summary;
-  const money = (cents: number) => formatMoney(cents, settings.currency, lang);
+  const privateInput = usePrivateInputClass();
   const [isEditing, setIsEditing] = useState(false);
   const [budget, setBudget] = useState('');
   const [leisure, setLeisure] = useState('');
@@ -86,6 +92,7 @@ export default function FinanceOverview({ summary, onSaveSettings }: FinanceOver
           </Select>
           <Input
             label={t('finance.monthlyBudget')}
+            className={privateInput}
             inputMode="decimal"
             placeholder={t('finance.noLimit')}
             value={budget}
@@ -93,6 +100,7 @@ export default function FinanceOverview({ summary, onSaveSettings }: FinanceOver
           />
           <Input
             label={t('finance.leisureBudget')}
+            className={privateInput}
             inputMode="decimal"
             placeholder={t('finance.noLimit')}
             value={leisure}
@@ -122,12 +130,12 @@ export default function FinanceOverview({ summary, onSaveSettings }: FinanceOver
             ].map((item) => (
               <div key={item.label} className="rounded-lg bg-neutral-800/50 p-2">
                 <dt className="text-xs text-neutral-400">{item.label}</dt>
-                <dd className={`text-base sm:text-lg font-semibold tabular-nums ${item.tone}`}>{money(item.value)}</dd>
+                <dd className={`text-base sm:text-lg font-semibold tabular-nums ${item.tone}`}><Money cents={item.value} currency={settings.currency} /></dd>
               </div>
             ))}
           </dl>
-          <BudgetLine label={t('finance.monthlyBudget')} spent={totals.expenseCents} limit={settings.monthlyBudgetCents} money={money} />
-          <BudgetLine label={t('finance.leisureBudget')} spent={totals.leisureCents} limit={settings.leisureBudgetCents} money={money} />
+          <BudgetLine label={t('finance.monthlyBudget')} spent={totals.expenseCents} limit={settings.monthlyBudgetCents} currency={settings.currency} />
+          <BudgetLine label={t('finance.leisureBudget')} spent={totals.leisureCents} limit={settings.leisureBudgetCents} currency={settings.currency} />
         </div>
       )}
     </Card>
