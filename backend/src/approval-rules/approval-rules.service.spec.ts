@@ -343,21 +343,31 @@ describe('ApprovalRulesService.upsertForAllAreas', () => {
     await expect(service.upsertForAllAreas(ME, dto)).resolves.toEqual({
       count: 2,
     });
-    expect(prisma.area.findMany.mock.calls[0][0].where).toEqual({
-      OR: [{ ownerId: null }, { ownerId: ME }],
-    });
+    expect(prisma.area.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { OR: [{ ownerId: null }, { ownerId: ME }] },
+      }),
+    );
     expect(prisma.approvalRuleSet.upsert).toHaveBeenCalledTimes(2);
-    for (const [arg] of prisma.approvalRuleSet.upsert.mock.calls) {
-      expect(arg.where.userId_areaId.userId).toBe(ME);
-      expect(arg.create.programId).toBeNull();
-      expect(arg.create.componentMinGrade).toBe(6);
+    for (const areaId of [AREA, 'a2']) {
+      expect(prisma.approvalRuleSet.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId_areaId: { userId: ME, areaId } },
+          create: expect.objectContaining({
+            userId: ME,
+            areaId,
+            programId: null,
+            componentMinGrade: 6,
+          }) as unknown,
+        }),
+      );
     }
   });
 
   it('body incoerente nao grava nada', async () => {
     const { service, prisma } = setup();
     await expect(
-      service.upsertForAllAreas(ME, { scaleMin: 10, scaleMax: 5 } as never),
+      service.upsertForAllAreas(ME, { scaleMin: 10, scaleMax: 5 }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.approvalRuleSet.upsert).not.toHaveBeenCalled();
   });
