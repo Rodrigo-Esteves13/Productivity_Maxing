@@ -6,7 +6,7 @@ import {
   type FinanceEntry,
 } from '@prisma/client';
 import { addUtcDays, parseDateKey, toDateKey } from '../common/date-key.util';
-import { occurrencesInRange, resolveFrequency } from './finance-schedule.util';
+import { resolveFrequency, scheduleInRange } from './finance-schedule.util';
 import {
   ANALYTICS_TOP_CATEGORIES,
   MONTHS_PER_YEAR,
@@ -14,6 +14,7 @@ import {
   PERCENT_SCALE,
   WEEKS_PER_YEAR,
   type AnalyticsGranularity,
+  type OccurrenceReason,
 } from './finance.constants';
 
 export type EntryRow = Pick<
@@ -30,6 +31,11 @@ export type EntryRow = Pick<
   | 'payDay'
   | 'endDate'
   | 'accountId'
+  | 'skipFirstOccurrences'
+  | 'paidInArrearsMonths'
+  | 'withheldCents'
+  | 'isOwed'
+  | 'receivedAt'
 >;
 
 export interface FinanceOccurrence {
@@ -44,6 +50,8 @@ export interface FinanceOccurrence {
   frequency: FinanceFrequency | null;
   /** true = ainda nao aconteceu (data depois de hoje). */
   projected: boolean;
+  /** REGULAR, ou a primeira com retencao / a devolucao da retencao. */
+  reason: OccurrenceReason;
 }
 
 /** Ocorrencias de todas as entradas em [from, to), por data. */
@@ -55,18 +63,21 @@ export function materialize(
 ): FinanceOccurrence[] {
   const out: FinanceOccurrence[] = [];
   for (const e of entries) {
+    // Divida ainda por receber nao conta em nada (ver finance-owed.util).
+    if (e.isOwed && !e.receivedAt) continue;
     const frequency = resolveFrequency(e);
-    for (const d of occurrencesInRange(e, from, to)) {
+    for (const o of scheduleInRange(e, from, to)) {
       out.push({
         entryId: e.id,
-        date: toDateKey(d),
+        date: toDateKey(o.date),
         kind: e.kind,
-        amountCents: e.amountCents,
+        amountCents: o.amountCents,
         category: e.category,
         note: e.note,
         accountId: e.accountId,
         frequency,
-        projected: d > today,
+        projected: o.date > today,
+        reason: o.reason,
       });
     }
   }

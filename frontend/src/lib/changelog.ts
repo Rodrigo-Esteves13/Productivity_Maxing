@@ -8,6 +8,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-11-01',
+    title: 'Money: goal plans, money owed to you and privacy mode',
+    items: [
+      'Creating an entry, goal, account or investment can no longer happen twice with a fast double click: the button shows a spinner while it saves and a retry never duplicates the item.',
+      'Goals can be edited (type, name, target, saved, deadline) and each one has a monthly plan. A summary shows what each goal needs per month against your estimated surplus, a status per goal, the projected completion and how to split the surplus. It is plain arithmetic, not advice.',
+      'Investments can now be edited (quantity or amount invested, account).',
+      'Salary questions on a monthly income: whether this month was already paid, paid in arrears by 1 to 3 months, and part of the first pay withheld by your employer and released on the end date, with a preview of the next 3 payments. Withheld money shows as a separate card and never counts in your balance.',
+      'Money owed to you: mark an income as owed by someone, with the expected date, a late payment risk, optional interest, the value today, the risk-weighted value and a 30 days late scenario. It stays out of your balance until you mark it as received. A separate line shows the projection counting it.',
+      'Privacy mode: a button in Money hides every amount on screen, including chart tooltips. Select a hidden value to show it for 5 seconds. It turns back on when you leave the tab or stay idle for 2 minutes, and the command palette can toggle it.',
+    ],
+  },
+  {
+    date: '2026-11-01',
     title: 'Money: accounts, investments and charts',
     items: [
       'Money: your balance is now split into bank, live, investment, crypto, cash and other money, with a total and the balance expected at the end of the month.',

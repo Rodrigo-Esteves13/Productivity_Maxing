@@ -5,7 +5,8 @@ import Modal from '../UI/Modal';
 import { PencilIcon, TrashIcon } from '../UI/Icons';
 import FinanceEntryForm from './FinanceEntryForm';
 import type { FinanceEntry, FinanceEntryInput, FinanceEntryKind, FinanceSummary } from '../../api/financeService';
-import { formatMoney } from '../../lib/money';
+import Money from './Money';
+import type { SubmitOutcome } from '../../lib/idempotency';
 import { useI18n } from '../../i18n/useI18n';
 
 interface FinanceEntriesProps {
@@ -14,7 +15,7 @@ interface FinanceEntriesProps {
   defaultDate: string;
   /** Tipo pedido por um atalho (paleta); muda para recriar o formulario. */
   initialKind?: FinanceEntryKind;
-  onAdd: (input: FinanceEntryInput) => Promise<boolean>;
+  onAdd: (input: FinanceEntryInput, key: string) => Promise<SubmitOutcome>;
   onUpdate: (id: string, changes: Partial<FinanceEntryInput>) => Promise<boolean>;
   onRemove: (entry: FinanceEntry) => void;
 }
@@ -23,7 +24,7 @@ interface FinanceEntriesProps {
 // previstas) + gastos por categoria.
 export default function FinanceEntries({ summary, defaultDate, initialKind, onAdd, onUpdate, onRemove }: FinanceEntriesProps) {
   const { t, lang } = useI18n();
-  const money = (cents: number) => formatMoney(cents, summary.settings.currency, lang);
+  const { currency } = summary.settings;
   const [editing, setEditing] = useState<FinanceEntry | null>(null);
   const entriesById = new Map(summary.entries.map((e) => [e.id, e]));
   const accountNames = new Map(summary.accounts.map((a) => [a.id, a.name]));
@@ -31,7 +32,7 @@ export default function FinanceEntries({ summary, defaultDate, initialKind, onAd
 
   return (
     <Card className="mb-6">
-      <FinanceEntryForm key={initialKind ?? 'default'} accounts={summary.accounts} defaultDate={defaultDate} initialKind={initialKind} onSubmit={onAdd} />
+      <FinanceEntryForm key={initialKind ?? 'default'} accounts={summary.accounts} defaultDate={defaultDate} initialKind={initialKind} currency={currency} onSubmit={onAdd} />
 
       <h3 className="mt-6 mb-2 text-sm font-semibold text-neutral-200">{t('finance.entries')}</h3>
       {summary.occurrences.length === 0 ? (
@@ -52,15 +53,22 @@ export default function FinanceEntries({ summary, defaultDate, initialKind, onAd
                     <span>{new Date(`${occ.date}T00:00:00`).toLocaleDateString(lang)}</span>
                     {occ.frequency && <span>{t(`finance.freq.${occ.frequency}`)}</span>}
                     {account && <span>{account}</span>}
+                    {occ.reason !== 'REGULAR' && (
+                      <span className="rounded-full border border-amber-800 bg-amber-900/30 px-2 text-[11px] font-semibold text-amber-300">
+                        {t(`finance.reason.${occ.reason}`)}
+                      </span>
+                    )}
                     {occ.projected && (
                       <span className="rounded border border-dashed border-neutral-600 px-1.5 text-neutral-400">{t('finance.projected')}</span>
                     )}
                   </p>
                 </div>
-                <span className={`tabular-nums text-sm font-medium ${occ.kind === 'INCOME' ? 'text-cyan-400' : 'text-red-400'}`}>
-                  {occ.kind === 'INCOME' ? '+' : '-'}
-                  {money(occ.amountCents)}
-                </span>
+                <Money
+                  cents={occ.amountCents}
+                  currency={currency}
+                  prefix={occ.kind === 'INCOME' ? '+' : '-'}
+                  className={`tabular-nums text-sm font-medium ${occ.kind === 'INCOME' ? 'text-cyan-400' : 'text-red-400'}`}
+                />
                 {entry && (
                   <>
                     <IconButton label={t('finance.editEntry')} onClick={() => setEditing(entry)}>
@@ -85,7 +93,7 @@ export default function FinanceEntries({ summary, defaultDate, initialKind, onAd
               <li key={c} className="flex justify-between">
                 <span className="text-neutral-400">{t(`finance.cat.${c}`)}</span>
                 <span className="tabular-nums text-neutral-200">
-                  {money(cents)}
+                  <Money cents={cents} currency={currency} />
                   <span className="ml-2 text-xs text-neutral-500">{Math.round((cents / summary.totals.expenseCents) * 100)}%</span>
                 </span>
               </li>
@@ -100,6 +108,7 @@ export default function FinanceEntries({ summary, defaultDate, initialKind, onAd
             accounts={summary.accounts}
             defaultDate={defaultDate}
             entry={editing}
+            currency={currency}
             onSubmit={(input) => onUpdate(editing.id, input)}
             onDone={() => setEditing(null)}
           />

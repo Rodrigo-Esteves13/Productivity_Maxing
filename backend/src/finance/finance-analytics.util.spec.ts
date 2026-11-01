@@ -21,6 +21,11 @@ const entry = (over: Partial<EntryRow>): EntryRow => ({
   payDay: null,
   endDate: null,
   accountId: null,
+  skipFirstOccurrences: 0,
+  paidInArrearsMonths: 0,
+  withheldCents: null,
+  isOwed: false,
+  receivedAt: null,
   ...over,
 });
 

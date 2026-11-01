@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
@@ -13,17 +13,24 @@ import FinanceEntries from '../components/Finance/FinanceEntries';
 import FinanceHoldings from '../components/Finance/FinanceHoldings';
 import FinanceAnalytics from '../components/Finance/FinanceAnalytics';
 import FinanceGoals from '../components/Finance/FinanceGoals';
+import FinanceOwed from '../components/Finance/FinanceOwed';
+import FinancePrivacyToggle from '../components/Finance/FinancePrivacyToggle';
+import PrivacyModeProvider from '../context/PrivacyModeProvider';
+import { useMoneyText, usePrivacyMode } from '../hooks/usePrivacyMode';
 import ConfirmActionDialog from '../components/Turma/ConfirmActionDialog';
 import { useConfirmAction } from '../hooks/useConfirmAction';
 import { useFinance } from '../hooks/useFinance';
 import useDocumentTitle from '../hooks/useDocumentTitle';
-import type { FinanceAccount, FinanceEntry, FinanceEntryKind, FinanceGoal, FinanceHolding } from '../api/financeService';
-import { formatMoney, monthKey, shiftMonth } from '../lib/money';
+import type { FinanceAccount, FinanceEntry, FinanceEntryKind, FinanceGoal, FinanceHolding, FinanceOwedItem } from '../api/financeService';
+import { monthKey, shiftMonth } from '../lib/money';
 import { toLocalDateKey } from '../lib/dateKey';
 import { useI18n } from '../i18n/useI18n';
 
 // Atalhos (paleta de comandos): /finance?add=expense|income|holding|account.
 const ADD_PARAM = 'add';
+// Paleta de comandos: /finance?privacy=toggle liga ou desliga o modo privacidade.
+const PRIVACY_PARAM = 'privacy';
+const PRIVACY_TOGGLE_VALUE = 'toggle';
 const ADD_TARGETS: Record<string, { id: string; kind?: FinanceEntryKind }> = {
   expense: { id: 'finance-entry-amount', kind: 'EXPENSE' },
   income: { id: 'finance-entry-amount', kind: 'INCOME' },
@@ -35,7 +42,18 @@ const ADD_TARGETS: Record<string, { id: string; kind?: FinanceEntryKind }> = {
 // com preco atualizado, analitica e objetivos. So regista e soma o que a
 // pessoa escreve: nao e aconselhamento.
 export default function Finance() {
+  return (
+    <PrivacyModeProvider>
+      <FinanceContent />
+    </PrivacyModeProvider>
+  );
+}
+
+function FinanceContent() {
   const { t, lang } = useI18n();
+  const moneyText = useMoneyText();
+  const { toggle: togglePrivacy } = usePrivacyMode();
+  const privacyHandled = useRef(false);
   useDocumentTitle(t('finance.title'));
   const currentMonth = monthKey(new Date());
   const [month, setMonth] = useState(currentMonth);
@@ -65,6 +83,23 @@ export default function Finance() {
     return () => cancelAnimationFrame(frame);
   }, [addTarget, data, setSearchParams]);
 
+  // Atalho da paleta: alterna o modo uma vez e limpa o parametro.
+  const privacyRequested = searchParams.get(PRIVACY_PARAM) === PRIVACY_TOGGLE_VALUE;
+  useEffect(() => {
+    if (!privacyRequested) {
+      privacyHandled.current = false;
+      return;
+    }
+    if (privacyHandled.current) return;
+    privacyHandled.current = true;
+    togglePrivacy();
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete(PRIVACY_PARAM);
+      return next;
+    }, { replace: true });
+  }, [privacyRequested, togglePrivacy, setSearchParams]);
+
   const confirmDelete = useCallback(
     (title: string, message: string, run: () => Promise<boolean>) =>
       request({
@@ -84,10 +119,19 @@ export default function Finance() {
     (entry: FinanceEntry) =>
       confirmDelete(
         t('finance.deleteEntry'),
-        t(entry.frequency ? 'finance.deleteRuleConfirm' : 'finance.deleteEntryConfirm', { amount: formatMoney(entry.amountCents, currency, lang) }),
+        t(entry.frequency ? 'finance.deleteRuleConfirm' : 'finance.deleteEntryConfirm', { amount: moneyText(entry.amountCents, currency) }),
         () => removeEntry(entry.id),
       ),
-    [confirmDelete, removeEntry, t, currency, lang],
+    [confirmDelete, removeEntry, t, currency, moneyText],
+  );
+  const requestRemoveOwed = useCallback(
+    (item: FinanceOwedItem) =>
+      confirmDelete(
+        t('finance.owed.delete'),
+        t('finance.owed.deleteConfirm', { name: item.debtorName ?? item.note ?? t('finance.owed.someone') }),
+        () => removeEntry(item.entryId),
+      ),
+    [confirmDelete, removeEntry, t],
   );
   const requestRemoveGoal = useCallback(
     (goal: FinanceGoal) => confirmDelete(t('finance.deleteGoal'), t('finance.deleteGoalConfirm', { name: goal.name }), () => removeGoal(goal.id)),
@@ -115,6 +159,7 @@ export default function Finance() {
       <p className="mb-6 rounded-lg border border-amber-800/50 bg-amber-900/10 p-3 text-sm text-amber-300">
         {t('finance.disclaimer')}
       </p>
+      <FinancePrivacyToggle />
       <div className="mb-4 flex items-center gap-2">
         <IconButton label={t('finance.prevMonth')} onClick={() => setMonth((m) => shiftMonth(m, -1))}>
           <ChevronLeftIcon className="h-5 w-5" />
@@ -139,6 +184,7 @@ export default function Finance() {
             isRefreshing={finance.isRefreshing}
             onRefresh={() => void finance.refreshPrices()}
             onAdd={finance.addHolding}
+            onUpdate={finance.updateHolding}
             onRemove={requestRemoveHolding}
           />
           <FinanceEntries
@@ -149,6 +195,13 @@ export default function Finance() {
             onAdd={finance.addEntry}
             onUpdate={finance.updateEntry}
             onRemove={requestRemoveEntry}
+          />
+          <FinanceOwed
+            owed={data.owed}
+            held={data.heldByEmployer}
+            currency={currency}
+            onReceived={(item, changes) => finance.updateEntry(item.entryId, changes)}
+            onRemove={requestRemoveOwed}
           />
           <FinanceAnalytics refreshKey={finance.version} currency={currency} />
           <div id="finance-accounts" tabIndex={-1}>
@@ -162,9 +215,11 @@ export default function Finance() {
           </div>
           <FinanceGoals
             goals={data.goals}
+            plans={data.goalPlans}
+            planSummary={data.goalPlanSummary}
             currency={currency}
             onAdd={finance.addGoal}
-            onUpdateSaved={(goal, savedCents) => finance.updateGoal(goal.id, { savedCents })}
+            onUpdate={(goal, changes) => finance.updateGoal(goal.id, changes)}
             onRemove={requestRemoveGoal}
           />
         </>

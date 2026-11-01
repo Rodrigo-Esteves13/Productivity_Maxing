@@ -18,7 +18,9 @@ import {
   buildCategorySlices,
   OTHER_KEY,
 } from '../../lib/financeChart';
-import { formatBucketLabel, formatMoney } from '../../lib/money';
+import Money, { PrivateText } from './Money';
+import { formatBucketLabel } from '../../lib/money';
+import { useMoneyText, usePrivacyMode } from '../../hooks/usePrivacyMode';
 import { useI18n } from '../../i18n/useI18n';
 
 const RANGE_MONTHS = [3, 6, 12] as const;
@@ -71,7 +73,8 @@ export default function FinanceAnalytics({ refreshKey, currency }: FinanceAnalyt
   const [granularity, setGranularity] = useState<AnalyticsGranularity>('month');
   const [months, setMonths] = useState<number>(DEFAULT_MONTHS.month);
   const { data, error } = useFinanceAnalytics(granularity, months, refreshKey);
-  const money = (cents: number) => formatMoney(cents, data?.currency ?? currency, lang);
+  const moneyText = useMoneyText();
+  const money = (cents: number) => moneyText(cents, data?.currency ?? currency);
   const compact = useMemo(() => new Intl.NumberFormat(lang, { notation: 'compact' }), [lang]);
 
   const changeGranularity = (next: AnalyticsGranularity) => {
@@ -122,6 +125,8 @@ interface AnalyticsBodyProps {
 
 function AnalyticsBody({ data, granularity, money, compact }: AnalyticsBodyProps) {
   const { t, lang } = useI18n();
+  const { enabled: privacyOn } = usePrivacyMode();
+  const { currency } = data;
   const rows = useMemo<ChartRow[]>(
     () =>
       data.series.map((b) => ({
@@ -172,7 +177,9 @@ function AnalyticsBody({ data, granularity, money, compact }: AnalyticsBodyProps
         ].map((item) => (
           <div key={item.label} className="rounded-lg bg-neutral-800/50 p-2">
             <dt className="text-xs text-neutral-400">{item.label}</dt>
-            <dd className={`text-base font-semibold tabular-nums sm:text-lg ${item.tone}`}>{money(item.value)}</dd>
+            <dd className={`text-base font-semibold tabular-nums sm:text-lg ${item.tone}`}>
+              <Money cents={item.value} currency={currency} />
+            </dd>
           </div>
         ))}
       </dl>
@@ -202,7 +209,7 @@ function AnalyticsBody({ data, granularity, money, compact }: AnalyticsBodyProps
             <BarChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barGap={SLICE_GAP_PX}>
               <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="label" tick={{ fill: AXIS_COLOR, fontSize: AXIS_FONT_SIZE }} axisLine={{ stroke: GRID_COLOR }} tickLine={false} interval="preserveStartEnd" />
-              <YAxis tick={{ fill: AXIS_COLOR, fontSize: AXIS_FONT_SIZE }} axisLine={false} tickLine={false} width={Y_AXIS_WIDTH} tickFormatter={compact} />
+              <YAxis tick={{ fill: AXIS_COLOR, fontSize: AXIS_FONT_SIZE }} axisLine={false} tickLine={false} width={Y_AXIS_WIDTH} tickFormatter={compact} hide={privacyOn} />
               <Tooltip content={renderTooltip} cursor={{ fill: GRID_COLOR, fillOpacity: 0.4 }} />
               <Bar dataKey="incomeActual" stackId="income" fill={INCOME_COLOR} fillOpacity={SOLID_OPACITY} isAnimationActive={false} />
               <Bar dataKey="incomeProjected" stackId="income" fill={INCOME_COLOR} fillOpacity={PROJECTED_OPACITY} radius={[4, 4, 0, 0]} isAnimationActive={false} />
@@ -255,7 +262,9 @@ function AnalyticsBody({ data, granularity, money, compact }: AnalyticsBodyProps
                       return (
                         <div className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-xs shadow-2xl">
                           <p className="font-medium text-neutral-200">{categoryName(slice.key)}</p>
-                          <p className="tabular-nums text-neutral-300">{money(slice.cents)}</p>
+                          <p className="tabular-nums text-neutral-300">
+                            <Money cents={slice.cents} currency={currency} />
+                          </p>
                         </div>
                       );
                     }}
@@ -274,7 +283,7 @@ function AnalyticsBody({ data, granularity, money, compact }: AnalyticsBodyProps
                         <span className="truncate">{categoryName(s.key)}</span>
                       </span>
                       <span className="tabular-nums text-neutral-200">
-                        {money(s.cents)}
+                        <Money cents={s.cents} currency={currency} />
                         <span className="ml-2 text-xs text-neutral-500">{Math.round(share)}%</span>
                       </span>
                     </div>
@@ -294,7 +303,7 @@ function AnalyticsBody({ data, granularity, money, compact }: AnalyticsBodyProps
           </h4>
           {data.subscriptions.items.length > 0 && (
             <p className="text-sm tabular-nums text-neutral-300">
-              {t('finance.subscriptionsMonthly', { amount: money(data.subscriptions.monthlyTotalCents) })}
+              <PrivateText render={(m) => t('finance.subscriptionsMonthly', { amount: m(data.subscriptions.monthlyTotalCents, currency) })} />
             </p>
           )}
         </div>
@@ -312,9 +321,12 @@ function AnalyticsBody({ data, granularity, money, compact }: AnalyticsBodyProps
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm tabular-nums text-neutral-200">{money(sub.amountCents)}</p>
+                  <p className="text-sm tabular-nums text-neutral-200">
+                    <Money cents={sub.amountCents} currency={currency} />
+                  </p>
                   {sub.frequency !== 'MONTHLY' && (
-                    <p className="text-xs tabular-nums text-neutral-500">{t('finance.perMonth', { amount: money(sub.monthlyCostCents) })}</p>
+                    <p className="text-xs tabular-nums text-neutral-500"><PrivateText render={(m) => t('finance.perMonth', { amount: m(sub.monthlyCostCents, currency) })} />
+                    </p>
                   )}
                 </div>
               </li>

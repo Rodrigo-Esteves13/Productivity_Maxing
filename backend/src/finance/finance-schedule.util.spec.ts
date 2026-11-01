@@ -1,8 +1,10 @@
 import { FinanceFrequency, FinancePayDayRule } from '@prisma/client';
 import { parseDateKey, toDateKey } from '../common/date-key.util';
 import {
+  firstPayDate,
   occurrencesInRange,
   resolveFrequency,
+  scheduleInRange,
   type RecurrenceRule,
 } from './finance-schedule.util';
 
@@ -125,5 +127,134 @@ describe('occurrencesInRange', () => {
       payDayRule: FinancePayDayRule.FIRST_BUSINESS_DAY,
     });
     expect(keys(r, '2026-10-01', '2026-12-01')).toEqual(['2026-11-02']);
+  });
+});
+
+describe('skipFirstOccurrences', () => {
+  it('drops the first N occurrences counted from date', () => {
+    // Ja recebeu o salario de janeiro antes de usar a app.
+    const r = rule({
+      date: parseDateKey('2026-01-25'),
+      skipFirstOccurrences: 1,
+    });
+    expect(keys(r, '2026-01-01', '2026-04-01')).toEqual([
+      '2026-02-25',
+      '2026-03-25',
+    ]);
+  });
+
+  it('counts from the first valid pay day, not the calendar month', () => {
+    // Dia 5 antes de 20 de janeiro: a primeira ocorrencia e fevereiro.
+    const r = rule({
+      date: parseDateKey('2026-01-20'),
+      payDayRule: FinancePayDayRule.FIXED_DAY,
+      payDay: 5,
+      skipFirstOccurrences: 1,
+    });
+    expect(keys(r, '2026-01-01', '2026-05-01')).toEqual([
+      '2026-03-05',
+      '2026-04-05',
+    ]);
+  });
+
+  it('works for weekly rules and can skip past endDate', () => {
+    const weekly = rule({
+      date: parseDateKey('2026-10-05'),
+      frequency: FinanceFrequency.WEEKLY,
+      skipFirstOccurrences: 2,
+    });
+    expect(keys(weekly, '2026-10-01', '2026-11-01')).toEqual([
+      '2026-10-19',
+      '2026-10-26',
+    ]);
+    const ended = rule({
+      endDate: parseDateKey('2026-02-28'),
+      skipFirstOccurrences: 3,
+    });
+    expect(keys(ended, '2026-01-01', '2027-01-01')).toEqual([]);
+  });
+});
+
+describe('paidInArrearsMonths', () => {
+  it('pays month M in month M+N with the same pay-day rule', () => {
+    const r = rule({
+      date: parseDateKey('2026-07-01'),
+      payDayRule: FinancePayDayRule.LAST_BUSINESS_DAY,
+      paidInArrearsMonths: 1,
+      endDate: parseDateKey('2026-09-30'),
+    });
+    // Julho paga a 31 de agosto; setembro (ultimo mes) paga a 30 de outubro.
+    expect(keys(r, '2026-07-01', '2027-01-01')).toEqual([
+      '2026-08-31',
+      '2026-09-30',
+      '2026-10-30',
+    ]);
+    expect(firstPayDate(r)).toEqual(parseDateKey('2026-08-31'));
+  });
+
+  it('is ignored outside MONTHLY', () => {
+    const r = rule({
+      date: parseDateKey('2026-10-05'),
+      frequency: FinanceFrequency.WEEKLY,
+      paidInArrearsMonths: 2,
+    });
+    expect(keys(r, '2026-10-01', '2026-10-13')).toEqual([
+      '2026-10-05',
+      '2026-10-12',
+    ]);
+  });
+});
+
+describe('withheldCents', () => {
+  const job = (over: Partial<RecurrenceRule> = {}) => ({
+    ...rule({ date: parseDateKey('2026-01-31'), ...over }),
+    amountCents: 80000,
+    withheldCents: 40000,
+  });
+  const view = (r: ReturnType<typeof job>, from: string, to: string) =>
+    scheduleInRange(r, parseDateKey(from), parseDateKey(to)).map((o) => [
+      toDateKey(o.date),
+      o.amountCents,
+      o.reason,
+    ]);
+
+  it('the first pay is reduced and endDate releases the held money', () => {
+    const r = job({ endDate: parseDateKey('2026-04-15') });
+    expect(view(r, '2026-01-01', '2026-06-01')).toEqual([
+      ['2026-01-31', 40000, 'WITHHELD_FIRST'],
+      ['2026-02-28', 80000, 'REGULAR'],
+      ['2026-03-31', 80000, 'REGULAR'],
+      ['2026-04-15', 40000, 'WITHHELD_RELEASE'],
+    ]);
+  });
+
+  it('never goes below zero and releases nothing without endDate', () => {
+    const r = { ...job(), withheldCents: 99999 };
+    expect(view(r, '2026-01-01', '2026-03-01')).toEqual([
+      ['2026-01-31', 0, 'WITHHELD_FIRST'],
+      ['2026-02-28', 80000, 'REGULAR'],
+    ]);
+  });
+
+  it('a skipped first pay stays withheld and is still released', () => {
+    const r = job({
+      endDate: parseDateKey('2026-03-10'),
+      skipFirstOccurrences: 1,
+    });
+    expect(view(r, '2026-01-01', '2026-04-01')).toEqual([
+      ['2026-02-28', 80000, 'REGULAR'],
+      ['2026-03-10', 40000, 'WITHHELD_RELEASE'],
+    ]);
+  });
+
+  it('occurrencesInRange keeps only the pay dates', () => {
+    const r = job({ endDate: parseDateKey('2026-02-10') });
+    expect(
+      occurrencesInRange(
+        r,
+        parseDateKey('2026-01-01'),
+        parseDateKey('2026-03-01'),
+      ).map(toDateKey),
+    ).toEqual(['2026-01-31']);
   });
 });

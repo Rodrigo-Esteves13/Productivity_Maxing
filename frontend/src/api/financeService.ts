@@ -12,6 +12,10 @@ export type FinancePayDayRule =
 export type FinanceAccountType = 'BANK' | 'LIVE' | 'INVESTMENT' | 'CRYPTO' | 'CASH' | 'OTHER';
 export type FinanceBucket = FinanceAccountType | 'UNASSIGNED';
 export type AnalyticsGranularity = 'week' | 'month';
+export type FinanceInterestKind = 'NONE' | 'SIMPLE' | 'MONTHLY_COMPOUND';
+export type GoalPlanStatus = 'ON_TRACK' | 'AT_RISK' | 'UNREALISTIC' | 'NO_DEADLINE' | 'DONE';
+export type GoalPlanSource = 'USER' | 'SUGGESTED';
+export type OccurrenceReason = 'REGULAR' | 'WITHHELD_FIRST' | 'WITHHELD_RELEASE';
 
 // Mesmas listas do backend (finance.constants.ts).
 export const FINANCE_CATEGORIES = [
@@ -52,6 +56,14 @@ export const FINANCE_NOTE_MAX_LENGTH = 120;
 export const FINANCE_ACCOUNT_NAME_MAX_LENGTH = 60;
 export const FINANCE_SYMBOL_MAX_LENGTH = 20;
 export const HTTP_TOO_MANY_REQUESTS = 429;
+export const HTTP_CONFLICT = 409;
+export const IDEMPOTENCY_HEADER = 'Idempotency-Key';
+export const FINANCE_INTEREST_KINDS: FinanceInterestKind[] = ['NONE', 'SIMPLE', 'MONTHLY_COMPOUND'];
+export const FINANCE_GOAL_STATUSES: GoalPlanStatus[] = ['ON_TRACK', 'AT_RISK', 'UNREALISTIC', 'NO_DEADLINE', 'DONE'];
+export const FINANCE_MAX_ARREARS_MONTHS = 3;
+export const FINANCE_MAX_SKIP_OCCURRENCES = 60;
+export const FINANCE_DEBTOR_NAME_MAX_LENGTH = 80;
+export const FINANCE_MAX_RATE_PCT = 100;
 
 // Valores sempre em centimos.
 export interface FinanceSettings {
@@ -74,6 +86,17 @@ export interface FinanceEntry {
   payDay: number | null;
   endDate: string | null;
   accountId: string | null;
+  skipFirstOccurrences: number;
+  paidInArrearsMonths: number;
+  withheldCents: number | null;
+  isOwed: boolean;
+  debtorName: string | null;
+  expectedDate: string | null;
+  latePaymentRiskPct: number | null;
+  /** Decimal do Prisma: vem como texto ("4.5"). */
+  interestRatePct: string | null;
+  interestKind: FinanceInterestKind | null;
+  receivedAt: string | null;
 }
 
 export interface FinanceOccurrence {
@@ -88,6 +111,7 @@ export interface FinanceOccurrence {
   frequency: FinanceFrequency | null;
   /** true = ainda nao aconteceu. */
   projected: boolean;
+  reason: OccurrenceReason;
 }
 
 export interface FinanceGoal {
@@ -97,6 +121,7 @@ export interface FinanceGoal {
   targetCents: number;
   savedCents: number;
   deadline: string | null;
+  monthlyPlanCents: number | null;
 }
 
 export interface FinanceTotals {
@@ -153,6 +178,70 @@ export interface FinanceProjection {
   projectedBalanceCents: number;
 }
 
+export interface SurplusEstimate {
+  monthlyCents: number;
+  source: 'HISTORY' | 'RECURRING';
+  monthsOfData: number;
+  lowConfidence: boolean;
+}
+
+export interface FinanceGoalPlan {
+  goalId: string;
+  remainingCents: number;
+  monthsLeft: number | null;
+  requiredMonthlyCents: number | null;
+  monthlyPlanCents: number | null;
+  suggestedMonthlyCents: number;
+  plannedMonthlyCents: number;
+  planSource: GoalPlanSource;
+  projectedCompletionDate: string | null;
+  overdue: boolean;
+  status: GoalPlanStatus;
+}
+
+export interface FinanceGoalPlanSummary {
+  surplus: SurplusEstimate;
+  availableMonthlyCents: number;
+  totalRequiredMonthlyCents: number;
+  totalPlannedMonthlyCents: number;
+  allocationRealistic: boolean;
+  planRealistic: boolean;
+  shortfallCents: number;
+  suggestedSplit: { goalId: string; suggestedMonthlyCents: number }[];
+  overdueGoalIds: string[];
+}
+
+export interface FinanceHeldByEmployer {
+  totalCents: number;
+  items: { entryId: string; note: string | null; withheldCents: number; since: string; releaseDate: string | null }[];
+}
+
+export interface FinanceOwedItem {
+  entryId: string;
+  debtorName: string | null;
+  note: string | null;
+  principalCents: number;
+  since: string;
+  expectedDate: string | null;
+  interestKind: FinanceInterestKind;
+  interestRatePct: number | null;
+  latePaymentRiskPct: number;
+  interestToDateCents: number;
+  valueTodayCents: number;
+  dueValueCents: number;
+  expectedValueCents: number;
+  overdue: boolean;
+  daysLate: number;
+  lateScenario: { date: string; valueCents: number } | null;
+}
+
+export interface FinanceOwed {
+  items: FinanceOwedItem[];
+  totalOwedCents: number;
+  totalRiskWeightedCents: number;
+  overdueCount: number;
+}
+
 export interface FinanceSummary {
   month: string;
   settings: FinanceSettings;
@@ -165,6 +254,12 @@ export interface FinanceSummary {
   holdings: FinanceHolding[];
   balances: FinanceBalances;
   projection: FinanceProjection;
+  /** Linha separada: nunca somar a `projection`. */
+  projectionWithOwed: FinanceProjection & { owedRiskWeightedCents: number };
+  owed: FinanceOwed;
+  heldByEmployer: FinanceHeldByEmployer;
+  goalPlans: FinanceGoalPlan[];
+  goalPlanSummary: FinanceGoalPlanSummary;
 }
 
 export interface FinanceAnalyticsBucket {
@@ -214,6 +309,16 @@ export interface FinanceEntryInput {
   payDay?: number | null;
   endDate?: string | null;
   accountId?: string | null;
+  skipFirstOccurrences?: number;
+  paidInArrearsMonths?: number;
+  withheldCents?: number | null;
+  isOwed?: boolean;
+  debtorName?: string | null;
+  expectedDate?: string | null;
+  latePaymentRiskPct?: number | null;
+  interestRatePct?: number | null;
+  interestKind?: FinanceInterestKind | null;
+  receivedAt?: string | null;
 }
 
 export interface FinanceAccountInput {
@@ -231,12 +336,15 @@ export interface FinanceHoldingInput {
   investedCents?: number;
 }
 
+export type FinanceHoldingUpdate = Partial<Omit<FinanceHoldingInput, 'symbol'>>;
+
 export interface FinanceGoalInput {
   kind: FinanceGoalKind;
   name: string;
   targetCents: number;
   savedCents?: number;
   deadline?: string | null;
+  monthlyPlanCents?: number | null;
 }
 
 export interface PriceRefreshResult {
@@ -253,6 +361,9 @@ export interface AnalyticsQuery {
 
 const enc = encodeURIComponent;
 
+// Um uuid por intencao de criar; o backend devolve a mesma linha se repetir.
+const idempotent = (key: string) => ({ headers: { [IDEMPOTENCY_HEADER]: key } });
+
 export const getFinance = async (month: string): Promise<FinanceSummary> =>
   (await api.get<FinanceSummary>('/finance', { params: { month } })).data;
 
@@ -262,8 +373,8 @@ export const getFinanceAnalytics = async (query: AnalyticsQuery): Promise<Financ
 export const updateFinanceSettings = async (changes: Partial<FinanceSettings>): Promise<FinanceSettings> =>
   (await api.put<FinanceSettings>('/finance/settings', changes)).data;
 
-export const createFinanceEntry = async (input: FinanceEntryInput): Promise<FinanceEntry> =>
-  (await api.post<FinanceEntry>('/finance/entries', input)).data;
+export const createFinanceEntry = async (input: FinanceEntryInput, requestId: string): Promise<FinanceEntry> =>
+  (await api.post<FinanceEntry>('/finance/entries', input, idempotent(requestId))).data;
 
 export const updateFinanceEntry = async (id: string, changes: Partial<FinanceEntryInput>): Promise<FinanceEntry> =>
   (await api.patch<FinanceEntry>(`/finance/entries/${enc(id)}`, changes)).data;
@@ -272,8 +383,8 @@ export const deleteFinanceEntry = async (id: string): Promise<void> => {
   await api.delete(`/finance/entries/${enc(id)}`);
 };
 
-export const createFinanceAccount = async (input: FinanceAccountInput): Promise<FinanceAccount> =>
-  (await api.post<FinanceAccount>('/finance/accounts', input)).data;
+export const createFinanceAccount = async (input: FinanceAccountInput, requestId: string): Promise<FinanceAccount> =>
+  (await api.post<FinanceAccount>('/finance/accounts', input, idempotent(requestId))).data;
 
 export const updateFinanceAccount = async (id: string, changes: Partial<FinanceAccountInput>): Promise<FinanceAccount> =>
   (await api.patch<FinanceAccount>(`/finance/accounts/${enc(id)}`, changes)).data;
@@ -282,13 +393,10 @@ export const deleteFinanceAccount = async (id: string): Promise<void> => {
   await api.delete(`/finance/accounts/${enc(id)}`);
 };
 
-export const createFinanceHolding = async (input: FinanceHoldingInput): Promise<FinanceHolding> =>
-  (await api.post<FinanceHolding>('/finance/holdings', input)).data;
+export const createFinanceHolding = async (input: FinanceHoldingInput, requestId: string): Promise<FinanceHolding> =>
+  (await api.post<FinanceHolding>('/finance/holdings', input, idempotent(requestId))).data;
 
-export const updateFinanceHolding = async (
-  id: string,
-  changes: Partial<Omit<FinanceHoldingInput, 'symbol'>>,
-): Promise<FinanceHolding> => (await api.patch<FinanceHolding>(`/finance/holdings/${enc(id)}`, changes)).data;
+export const updateFinanceHolding = async (id: string, changes: FinanceHoldingUpdate): Promise<FinanceHolding> => (await api.patch<FinanceHolding>(`/finance/holdings/${enc(id)}`, changes)).data;
 
 export const deleteFinanceHolding = async (id: string): Promise<void> => {
   await api.delete(`/finance/holdings/${enc(id)}`);
@@ -297,13 +405,10 @@ export const deleteFinanceHolding = async (id: string): Promise<void> => {
 export const refreshFinanceHoldings = async (): Promise<PriceRefreshResult> =>
   (await api.post<PriceRefreshResult>('/finance/holdings/refresh')).data;
 
-export const createFinanceGoal = async (input: FinanceGoalInput): Promise<FinanceGoal> =>
-  (await api.post<FinanceGoal>('/finance/goals', input)).data;
+export const createFinanceGoal = async (input: FinanceGoalInput, requestId: string): Promise<FinanceGoal> =>
+  (await api.post<FinanceGoal>('/finance/goals', input, idempotent(requestId))).data;
 
-export const updateFinanceGoal = async (
-  id: string,
-  changes: Partial<Omit<FinanceGoalInput, 'kind'>>,
-): Promise<FinanceGoal> => (await api.patch<FinanceGoal>(`/finance/goals/${enc(id)}`, changes)).data;
+export const updateFinanceGoal = async (id: string, changes: Partial<FinanceGoalInput>): Promise<FinanceGoal> => (await api.patch<FinanceGoal>(`/finance/goals/${enc(id)}`, changes)).data;
 
 export const deleteFinanceGoal = async (id: string): Promise<void> => {
   await api.delete(`/finance/goals/${enc(id)}`);
