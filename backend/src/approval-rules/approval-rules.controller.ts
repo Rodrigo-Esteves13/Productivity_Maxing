@@ -71,6 +71,19 @@ export class ApprovalRulesController {
     await this.service.removeForProgram(user.id, programId);
   }
 
+  // Literal antes das rotas com :areaId.
+  @Put('areas')
+  @Throttle(perMinute(WRITE_LIMIT_PER_MINUTE))
+  @ApiOperation({
+    summary: 'Applies the same rules to every course of the user at once.',
+  })
+  upsertForAllAreas(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpsertApprovalRulesDto,
+  ) {
+    return this.service.upsertForAllAreas(user.id, dto);
+  }
+
   @Get('areas/:areaId')
   @ApiOperation({
     summary:

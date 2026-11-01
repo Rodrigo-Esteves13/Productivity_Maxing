@@ -12,6 +12,11 @@ export const COURSE_RISK_DEFAULT_ABSENCE_LIMIT_PCT = DEFAULT_ABSENCE_LIMIT_PCT;
 // duras, como uma nota abaixo do minimo de componente, furam este minimo).
 export const MIN_GRADED_WEIGHT_PCT = 10;
 
+// Confianca da estimativa pelo peso ja avaliado (%): abaixo de MEDIUM_FROM e
+// low, abaixo de HIGH_FROM e medium, a partir dai high.
+export const CONFIDENCE_MEDIUM_FROM_PCT = 30;
+export const CONFIDENCE_HIGH_FROM_PCT = 60;
+
 // Teto de seguranca de tasks lidas por pedido (uma conta normal tem
 // centenas, este teto so protege contra contas gigantes).
 export const MAX_TASKS_SCANNED = 5000;

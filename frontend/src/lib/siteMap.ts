@@ -48,6 +48,7 @@ export const SITE_PAGES: SitePage[] = [
       { to: '/schedule', labelKey: 'related.dashboard.schedule' },
       { to: '/focus', labelKey: 'related.dashboard.focus' },
       { to: '/review', labelKey: 'related.dashboard.review' },
+      { to: '/risk', labelKey: 'courseRisk.related.risk' },
     ],
   },
   {
@@ -121,6 +122,16 @@ export const SITE_PAGES: SitePage[] = [
     related: [
       { to: '/areas', labelKey: 'ratings.related.areas' },
       { to: '/report-card', labelKey: 'ratings.related.reportCard' },
+    ],
+  },
+  {
+    path: '/risk',
+    labelKey: 'courseRisk.page.title',
+    section: 'study',
+    parent: '/dashboard',
+    related: [
+      { to: '/areas', labelKey: 'courseRisk.related.areas' },
+      { to: '/tasks', labelKey: 'courseRisk.related.tasks' },
     ],
   },
   {

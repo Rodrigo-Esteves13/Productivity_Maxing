@@ -5,7 +5,10 @@ import {
 } from '@nestjs/common';
 import type { ApprovalRuleSet } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { assertAreaAccessible } from '../areas/area-access';
+import {
+  accessibleAreaWhere,
+  assertAreaAccessible,
+} from '../areas/area-access';
 import {
   parseGradeScale,
   resolveRoundFinalGrade,
@@ -292,6 +295,34 @@ export class ApprovalRulesService {
       source: 'area',
       rules: rowToRules(saved),
     };
+  }
+
+  /**
+   * Grava as mesmas regras como override em todas as cadeiras acessiveis do
+   * user (as proprias e as globais), de uma vez. So escreve linhas do user.
+   */
+  async upsertForAllAreas(
+    userId: string,
+    dto: UpsertApprovalRulesDto,
+  ): Promise<{ count: number }> {
+    const rules = mergeRules(presetRules(PRESET_GENERIC), dto);
+    assertRulesConsistent(rules);
+
+    const areas = await this.prisma.area.findMany({
+      where: accessibleAreaWhere(userId),
+      select: { id: true },
+    });
+    await this.prisma.$transaction(
+      areas.map(({ id: areaId }) =>
+        this.prisma.approvalRuleSet.upsert({
+          where: { userId_areaId: { userId, areaId } },
+          create: { userId, areaId, programId: null, ...rules },
+          update: { ...rules },
+          select: { id: true },
+        }),
+      ),
+    );
+    return { count: areas.length };
   }
 
   async removeForArea(userId: string, areaId: string): Promise<void> {

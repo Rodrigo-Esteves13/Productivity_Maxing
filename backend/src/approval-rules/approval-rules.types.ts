@@ -69,7 +69,10 @@ export type RiskReasonCode =
   | 'ABSENCE_OVER_LIMIT'
   | 'POSTPONED_TASKS'
   | 'TEACHER_HISTORY_LOWER'
-  | 'ONLY_EXAM_TRACK_LEFT';
+  | 'ONLY_EXAM_TRACK_LEFT'
+  | 'REMAINING_UNCERTAINTY'
+  | 'REMAINING_UNCERTAINTY_MIN'
+  | 'REMAINING_UNCERTAINTY_BASIC';
 
 /** A UI traduz por codigo; params alimentam a interpolacao. */
 export interface RiskReason {

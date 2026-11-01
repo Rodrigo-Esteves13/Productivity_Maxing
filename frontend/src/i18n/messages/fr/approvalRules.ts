@@ -54,4 +54,9 @@ export const approvalRules: Record<string, string> = {
   'approvalRules.reset.error': "Impossible de rétablir les règles de validation.",
   'approvalRules.area.button': "Règles de validation pour cette matière",
   'approvalRules.area.hint': "Remplace les règles du programme pour cette matière uniquement.",
+  'approvalRules.applyAll': "Appliquer à toutes les matières",
+  'approvalRules.applyAll.confirmTitle': "Appliquer ces règles à toutes les matières ?",
+  'approvalRules.applyAll.confirm': "Toutes les matières auxquelles tu as accès auront exactement ces règles, à la place de celles définies pour une matière en particulier. Les règles du programme restent la solution de repli.",
+  'approvalRules.applyAll.done': "Règles appliquées à {count} matières.",
+  'approvalRules.applyAll.error': "Impossible d'appliquer les règles à toutes les matières.",
 };

@@ -176,7 +176,8 @@ describe('computeCourseRisk: exemplo trabalhado (6 em 70%, falta 30%)', () => {
   it('boa media com muito por fazer e risco baixo', () => {
     const r = risk({ components: [comp(40, 15), comp(60, null)] });
     expect(r.level).toBe('low');
-    expect(r.reasons).toEqual([]);
+    // So o risco residual do que falta avaliar, nunca uma causa concreta.
+    expect(codes(r)).toEqual(['REMAINING_UNCERTAINTY']);
   });
 });
 
@@ -736,6 +737,7 @@ describe('computeCourseRisk: sinais secundarios', () => {
       'HIGH_NEED_ON_REMAINING',
       'LOW_AVERAGE_SO_FAR',
       'POSTPONED_TASKS',
+      'REMAINING_UNCERTAINTY',
     ]);
   });
 });
@@ -756,8 +758,9 @@ describe('computeCourseRisk: historico com o docente (medias 0-1)', () => {
     };
     const without = risk(base);
     const withTeacher = risk({ ...base, teacher: harshTeacher });
+    // Passa mesmo com 0 no resto e sem regras duras: o docente sozinho nao mexe.
     expect(without.score).toBe(0);
-    expect(withTeacher.score).toBe(0);
+    expect(withTeacher.score).toBe(without.score);
     expect(withTeacher.level).toBe('low');
     // Continua informativo.
     expect(codes(withTeacher)).toContain('TEACHER_HISTORY_LOWER');

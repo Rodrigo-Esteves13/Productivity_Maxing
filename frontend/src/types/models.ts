@@ -1713,7 +1713,10 @@ export type RiskReasonCode =
   | 'ABSENCE_OVER_LIMIT'
   | 'POSTPONED_TASKS'
   | 'TEACHER_HISTORY_LOWER'
-  | 'ONLY_EXAM_TRACK_LEFT';
+  | 'ONLY_EXAM_TRACK_LEFT'
+  | 'REMAINING_UNCERTAINTY'
+  | 'REMAINING_UNCERTAINTY_MIN'
+  | 'REMAINING_UNCERTAINTY_BASIC';
 
 export interface RiskReason {
   code: RiskReasonCode;
@@ -1732,6 +1735,40 @@ export interface CourseRisk {
   gradedWeightPct: number;
   remainingWeightPct: number;
   neededOnRemaining: number | null;
+}
+
+// Resumo de risco (GET /course-risk/overview). Espelha
+// backend/src/course-risk/course-risk-overview.types.ts.
+export type CourseRiskOverviewStatus = 'assessed' | 'not_enough_data';
+
+export type CourseRiskConfidence = 'low' | 'medium' | 'high';
+
+export interface CourseRiskOverviewRow {
+  areaId: string;
+  areaName: string;
+  colorHex: string;
+  status: CourseRiskOverviewStatus;
+  risk: CourseRisk | null;
+  passChancePct: number | null;
+  failChancePct: number | null;
+  confidence: CourseRiskConfidence | null;
+  gradedWeightPct: number;
+}
+
+export interface CourseRiskSummary {
+  totalCourses: number;
+  assessedCourses: number;
+  highRiskCourses: number;
+  mediumRiskCourses: number;
+  lowRiskCourses: number;
+  avgPassChancePct: number | null;
+  worst: { areaId: string; areaName: string; passChancePct: number } | null;
+  minGradedWeightPct: number;
+}
+
+export interface CourseRiskOverview {
+  courses: CourseRiskOverviewRow[];
+  summary: CourseRiskSummary;
 }
 
 // Nota privada do aluno: nome do docente de uma cadeira (so dele).

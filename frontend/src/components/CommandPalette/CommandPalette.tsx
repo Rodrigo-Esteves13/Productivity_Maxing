@@ -142,6 +142,12 @@ const NAV_COMMANDS: NavCommand[] = [
     keywords: ['ratings', 'teacher', 'professor', 'docente', 'like', 'liked', 'gosto', 'course', 'cadeira', 'feelings', 'correlation', 'correlacao', 'correlação', 'quadrant', 'grades'],
   },
   {
+    id: 'nav-risk',
+    labelKey: 'courseRisk.page.title',
+    path: '/risk',
+    keywords: ['risk', 'risco', 'chance', 'probability', 'probabilidade', 'pass', 'passar', 'fail', 'chumbar', 'chumbo', 'passing', 'aprovacao', 'aprovação', 'courses', 'cadeiras', 'estimate'],
+  },
+  {
     id: 'nav-report-card',
     labelKey: 'reportCard.title',
     path: '/report-card',

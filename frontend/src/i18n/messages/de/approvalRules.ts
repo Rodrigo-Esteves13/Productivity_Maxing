@@ -54,4 +54,9 @@ export const approvalRules: Record<string, string> = {
   'approvalRules.reset.error': "Die Genehmigungsregeln konnten nicht zurückgesetzt werden.",
   'approvalRules.area.button': "Genehmigungsregeln für dieses Fach",
   'approvalRules.area.hint': "Überschreibt die Programmregeln nur für dieses Fach.",
+  'approvalRules.applyAll': "Auf alle Fächer anwenden",
+  'approvalRules.applyAll.confirmTitle': "Diese Regeln auf alle Fächer anwenden?",
+  'approvalRules.applyAll.confirm': "Alle Fächer, auf die du Zugriff hast, erhalten genau diese Regeln und ersetzen die für ein einzelnes Fach festgelegten. Die Regeln des Programms bleiben als Ersatz bestehen.",
+  'approvalRules.applyAll.done': "Regeln auf {count} Fächer angewendet.",
+  'approvalRules.applyAll.error': "Die Regeln konnten nicht auf alle Fächer angewendet werden.",
 };

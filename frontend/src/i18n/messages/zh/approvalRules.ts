@@ -54,4 +54,9 @@ export const approvalRules: Record<string, string> = {
   'approvalRules.reset.error': "无法重置审核规则。",
   'approvalRules.area.button': "本科目的审核规则",
   'approvalRules.area.hint': "仅对本科目覆盖项目规则。",
+  'approvalRules.applyAll': "应用到所有课程",
+  'approvalRules.applyAll.confirmTitle': "将这些规则应用到所有课程?",
+  'approvalRules.applyAll.confirm': "你有权访问的所有课程都将使用这些规则,并替换单独为某门课程设置的规则。专业的规则仍作为备用。",
+  'approvalRules.applyAll.done': "已将规则应用到 {count} 门课程。",
+  'approvalRules.applyAll.error': "无法将规则应用到所有课程。",
 };

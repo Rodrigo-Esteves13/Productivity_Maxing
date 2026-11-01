@@ -54,4 +54,9 @@ export const approvalRules: Record<string, string> = {
   'approvalRules.reset.error': "Não foi possível repor as regras de aprovação.",
   'approvalRules.area.button': "Regras de aprovação para esta disciplina",
   'approvalRules.area.hint': "Substitui as regras do programa apenas para esta disciplina.",
+  'approvalRules.applyAll': "Aplicar a todas as disciplinas",
+  'approvalRules.applyAll.confirmTitle': "Aplicar estas regras a todas as disciplinas?",
+  'approvalRules.applyAll.confirm': "Todas as disciplinas a que tens acesso passam a ter exatamente estas regras, substituindo as definidas numa disciplina em particular. As regras do programa mantêm-se como alternativa.",
+  'approvalRules.applyAll.done': "Regras aplicadas a {count} disciplinas.",
+  'approvalRules.applyAll.error': "Não foi possível aplicar as regras a todas as disciplinas.",
 };

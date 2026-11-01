@@ -5,7 +5,7 @@ import { useAcademic } from '../context/useAcademic';
 import type { RatingStats } from '../types/models';
 
 // Estatisticas das avaliacoes do periodo ativo (todos na vista agregada),
-// como o useCourseRisk. Erro devolve hasError e retry.
+// como o useCourseRiskOverview. Erro devolve hasError e retry.
 export function useRatingStats() {
   const { activePeriod, isViewingAllPeriods, isViewingAllPrograms, isLoading: isAcademicLoading } = useAcademic();
   const periodId = isViewingAllPeriods || isViewingAllPrograms ? undefined : activePeriod?.id;

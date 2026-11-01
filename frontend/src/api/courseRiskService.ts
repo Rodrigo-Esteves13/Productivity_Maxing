@@ -1,5 +1,5 @@
 import api from './client';
-import type { CourseRisk } from '../types/models';
+import type { CourseRiskOverview } from '../types/models';
 
 export interface CourseRiskParams {
   absenceLimitPct?: number;
@@ -7,9 +7,13 @@ export interface CourseRiskParams {
   periodId?: string;
 }
 
-// Ordenado por score desc pelo backend. Ambos os parametros sao opcionais.
-export async function getCourseRisk(params: CourseRiskParams = {}, signal?: AbortSignal): Promise<CourseRisk[]> {
-  const response = await api.get<CourseRisk[]>('/course-risk', {
+// Todas as cadeiras do ambito (tambem as sem dados suficientes) mais o resumo.
+// Ambos os parametros sao opcionais.
+export async function getCourseRiskOverview(
+  params: CourseRiskParams = {},
+  signal?: AbortSignal,
+): Promise<CourseRiskOverview> {
+  const response = await api.get<CourseRiskOverview>('/course-risk/overview', {
     params: { absenceLimitPct: params.absenceLimitPct, periodId: params.periodId },
     signal,
   });
