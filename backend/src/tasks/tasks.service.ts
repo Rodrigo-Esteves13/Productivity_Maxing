@@ -1,3 +1,5 @@
+import { suggestPriorityKey } from './priority-suggestion.util';
+import { effectiveProgressStatus } from '../common/task-readiness.util';
 import { roundTo } from '../common/round.util';
 import {
   Injectable,
@@ -426,14 +428,28 @@ export class TasksService {
     // o retira explicitamente do objeto antes disso importar.
     // `priority: ''` ou `null` (opção "Sem prioridade" do formulário) limpa
     // a prioridade; antes caía em undefined e o valor antigo ficava.
+    // NOT_STARTED de uma task trancada e so o estado mostrado. O formulario
+    // de edicao devolve-o tal como o recebeu e isso apagava o estado guardado
+    // (ao desbloquear ficava NOT_STARTED para sempre): ignora-se o eco.
+    if (
+      rest.progressStatus === ProgressStatus.NOT_STARTED &&
+      effectiveProgressStatus(existing) === ProgressStatus.NOT_STARTED
+    ) {
+      delete rest.progressStatus;
+    }
+
+    // Concluida nao tem prioridade: se o estado final e COMPLETED, limpa.
+    const finalStatus = rest.progressStatus ?? existing.progressStatus;
     const priorityIdUpdate =
-      priority !== undefined
-        ? {
-            priorityId: priority
-              ? await this.resolvePriorityId(priority)
-              : null,
-          }
-        : {};
+      finalStatus === 'COMPLETED'
+        ? { priorityId: null }
+        : priority !== undefined
+          ? {
+              priorityId: priority
+                ? await this.resolvePriorityId(priority)
+                : null,
+            }
+          : {};
 
     // Só mexemos em periodId se vier explicitamente no PATCH - e, tal como
     // no create(), validamos sempre posse antes de aceitar (o user podia
@@ -925,7 +941,7 @@ export class TasksService {
           userId,
           progressStatus: { not: 'COMPLETED' },
         },
-        data: { progressStatus, completedAt: new Date() },
+        data: { progressStatus, completedAt: new Date(), priorityId: null },
       });
       return { count: result.count };
     }
@@ -1372,8 +1388,19 @@ export class TasksService {
     void academicTypeId;
     void priorityId;
 
+    const now = new Date();
+    const shownPriority = rest.progressStatus === 'COMPLETED' ? null : priority;
     return {
       ...rest,
+      // Bloqueada/ainda nao aberta nao se pode comecar: mostra NOT_STARTED
+      // sem tocar no estado guardado (ao desbloquear volta ao normal).
+      progressStatus: effectiveProgressStatus(rest, now),
+      // So uma sugestao (nunca aplicada sozinha); ver priority-suggestion.util.
+      suggestedPriorityKey: suggestPriorityKey(
+        rest,
+        shownPriority?.key ?? null,
+        now,
+      ),
       attachmentCount: _count?.attachments ?? 0,
       type: taskType.key,
       academicType: academicType?.key ?? null,
@@ -1385,13 +1412,14 @@ export class TasksService {
       // nos formulários. colorHex vai à parte para a PriorityBadge não
       // precisar de repetir a lista de cores localmente, mesmo raciocínio
       // que levou taskType a já incluir colorHex.
-      priority: priority?.key ?? null,
-      priorityLabel: priority?.label ?? null,
-      priorityColorHex: priority?.colorHex ?? null,
+      // Concluida nao mostra prioridade (tambem para dados antigos).
+      priority: shownPriority?.key ?? null,
+      priorityLabel: shownPriority?.label ?? null,
+      priorityColorHex: shownPriority?.colorHex ?? null,
       // Ordem definida em /admin/priorities (menor = mais prioritário, mesma
       // convenção do resto dos catálogos) - null para tasks sem prioridade,
       // usado pelo modo de ordenação "Priority" em Tasks.tsx.
-      priorityOrder: priority?.order ?? null,
+      priorityOrder: shownPriority?.order ?? null,
     };
   }
 }

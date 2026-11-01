@@ -103,6 +103,9 @@ enum SessionRevokeReason {
 
 // Estado de progresso aplicável a qualquer tarefa ou projeto.
 enum ProgressStatus {
+  // Task ainda nao comecada (ex.: bloqueada). Valor novo no fim do fluxo
+  // de leitura; nao e escolhido pelo plano, so mostrado.
+  NOT_STARTED
   AHEAD
   ON_TRACK
   BEHIND
@@ -296,6 +299,8 @@ model User {
   financeSettings       FinanceSettings?
   financeEntries        FinanceEntry[]
   financeGoals          FinanceGoal[]
+  financeAccounts       FinanceAccount[]
+  financeHoldings       FinanceHolding[]
 
   // Pedidos de recurso contra a própria suspensão/ban (AccountBlockedPage
   // no frontend) - ver o modelo UserAppeal. appealsResolved é o lado do
@@ -2449,7 +2454,9 @@ model TurmaLinkedArea {
 model FinanceSettings {
   userId             String   @id
   currency           String   @default("EUR") @db.VarChar(3)
-  // Saldo atual escrito pela pessoa (nao ha ligacao a bancos).
+  // Saldo antigo (antes das contas). Legado: no primeiro GET /finance sem
+  // contas passa para uma conta BANK e fica a 0; se voltar a ter valor e
+  // mostrado como balde "sem conta". Nao apagar sem migrar os dados.
   balanceCents       Int      @default(0)
   // Limite de gastos por mes e, dentro dele, para lazer. null = sem limite.
   monthlyBudgetCents Int?
@@ -2464,23 +2471,107 @@ enum FinanceEntryKind {
   EXPENSE
 }
 
-/// Uma entrada ou saida de dinheiro num dia. `recurring` = repete-se todos
-/// os meses (renda, salario): conta em cada mes a partir de `date`.
+/// Frequencia de uma entrada que se repete. null = acontece uma vez.
+enum FinanceFrequency {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+/// Em que dia do mes cai uma entrada MONTHLY. null = mesmo dia de `date`.
+enum FinancePayDayRule {
+  FIXED_DAY
+  FIRST_BUSINESS_DAY
+  FIRST_BUSINESS_DAY_NEXT_MONTH
+  LAST_BUSINESS_DAY
+  LAST_FRIDAY
+}
+
+/// Uma entrada ou saida de dinheiro num dia, ou uma regra que se repete
+/// (renda, salario, subscricao) a partir de `date` ate `endDate`.
+/// `recurring` e legado: true sem `frequency` = MONTHLY no dia de `date`
+/// (resolvido no codigo, ver finance-schedule.util.ts).
 model FinanceEntry {
-  id          String           @id @default(uuid())
+  id          String             @id @default(uuid())
   userId      String
   kind        FinanceEntryKind
   amountCents Int
-  category    String           @db.VarChar(20)
-  note        String?          @db.VarChar(120)
-  // Meia-noite UTC do dia (hora de Lisboa).
+  category    String             @db.VarChar(20)
+  note        String?            @db.VarChar(120)
+  // Meia-noite UTC do dia (hora de Lisboa). Primeira ocorrencia possivel.
   date        DateTime
-  recurring   Boolean          @default(false)
-  createdAt   DateTime         @default(now())
+  recurring   Boolean            @default(false)
+  frequency   FinanceFrequency?
+  payDayRule  FinancePayDayRule?
+  // So para FIXED_DAY (1-31, cortado ao fim do mes). null = dia de `date`.
+  payDay      Int?
+  // Ultimo dia (inclusive) em que ainda ha ocorrencias. null = sem fim.
+  endDate     DateTime?
+  // So etiqueta: nao mexe no saldo da conta (o saldo e escrito a mao).
+  accountId   String?
+  createdAt   DateTime           @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account FinanceAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   @@index([userId, date])
+  @@index([accountId])
+}
+
+enum FinanceAccountType {
+  BANK
+  LIVE
+  INVESTMENT
+  CRYPTO
+  CASH
+  OTHER
+}
+
+/// Conta ou balde de dinheiro (banco, dinheiro do dia a dia, corretora,
+/// carteira cripto). balanceCents e o dinheiro parado na conta, escrito a
+/// mao; o valor das posicoes (FinanceHolding) soma-se a parte.
+model FinanceAccount {
+  id           String             @id @default(uuid())
+  userId       String
+  name         String             @db.VarChar(60)
+  type         FinanceAccountType
+  balanceCents Int                @default(0)
+  // null = moeda das definicoes.
+  currency     String?            @db.VarChar(3)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries  FinanceEntry[]
+  holdings FinanceHolding[]
+
+  @@index([userId])
+}
+
+/// Posicao num ativo cotado (ETF, acao, cripto). Aceita fracoes de unidade.
+/// lastPriceCents vem do cron de hora a hora (cache do ultimo preco bom).
+model FinanceHolding {
+  id             String    @id @default(uuid())
+  userId         String
+  accountId      String?
+  // Simbolo do fornecedor de cotacoes (ex.: VWCE.DE, BTC-EUR).
+  symbol         String    @db.VarChar(20)
+  name           String    @db.VarChar(80)
+  quantity       Decimal   @db.Decimal(18, 6)
+  // Preco de uma unidade inteira, em centimos de priceCurrency.
+  lastPriceCents Int?
+  priceCurrency  String?   @db.VarChar(3)
+  priceUpdatedAt DateTime?
+  // Quanto custou no total (opcional, para ganho/perda).
+  costBasisCents Int?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account FinanceAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([symbol])
 }
 
 enum FinanceGoalKind {

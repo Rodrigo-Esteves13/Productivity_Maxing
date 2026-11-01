@@ -1,4 +1,4 @@
-import { DateCertainty, Prisma } from '@prisma/client';
+import { DateCertainty, Prisma, ProgressStatus } from '@prisma/client';
 
 // Datas que sao mesmo um prazo. UNKNOWN (ainda nao marcada) e SURPRISE (pode
 // calhar em qualquer dia) guardam so um palpite em `date`, por isso nunca
@@ -41,3 +41,26 @@ export const ACTIONABLE_DEADLINE_WHERE = {
   isBlocked: false,
   dateCertainty: { in: [...FIRM_DATE_CERTAINTIES] },
 } satisfies Prisma.TaskWhereInput;
+
+// Ainda nao da para comecar: bloqueada ou so abre numa data futura.
+export function isTaskLocked(
+  task: { isBlocked: boolean; availableFrom: Date | null },
+  now: Date = new Date(),
+): boolean {
+  return task.isBlocked || (!!task.availableFrom && task.availableFrom > now);
+}
+
+// Estado mostrado ao user: uma task trancada (e nao concluida) e NOT_STARTED.
+export function effectiveProgressStatus(
+  task: {
+    progressStatus: ProgressStatus;
+    isBlocked: boolean;
+    availableFrom: Date | null;
+  },
+  now: Date = new Date(),
+): ProgressStatus {
+  return task.progressStatus !== ProgressStatus.COMPLETED &&
+    isTaskLocked(task, now)
+    ? ProgressStatus.NOT_STARTED
+    : task.progressStatus;
+}

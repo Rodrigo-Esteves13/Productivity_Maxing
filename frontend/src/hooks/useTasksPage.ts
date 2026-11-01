@@ -415,6 +415,21 @@ export function useTasksPage() {
     }
   }, [selectedTask, notify, absorbSpawnedTasks]);
 
+  // Aplica a prioridade sugerida (decisao do user, so um PATCH da prioridade).
+  const applyPrioritySuggestion = useCallback(
+    async (key: string) => {
+      if (!selectedTask) return;
+      try {
+        const updated = await updateTask(selectedTask.id, { priority: key });
+        setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+        setSelectedTask(updated);
+      } catch {
+        notify(translateNow('hook.couldNotSaveTheChanges'), 'error');
+      }
+    },
+    [selectedTask, notify],
+  );
+
   // Quadro Kanban: mudar de coluna = mudar o estado. Concluir passa pelo
   // completeTask (Undo e tasks criadas ao concluir); o resto e otimista
   // (o cartao muda logo de coluna) e volta atras se o PATCH falhar.
@@ -525,6 +540,7 @@ export function useTasksPage() {
     toggleEditing,
     stopEditing,
     handleUpdateTask,
+    applyPrioritySuggestion,
     handleDeleteTask,
     rescheduleToTomorrow,
     reschedulingId,

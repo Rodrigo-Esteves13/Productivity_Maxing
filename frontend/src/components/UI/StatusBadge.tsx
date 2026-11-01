@@ -16,6 +16,7 @@ const SIZE_STYLE: Record<NonNullable<StatusBadgeProps['size']>, string> = {
 export default function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
   const enumLabel = useEnumLabel();
   const styles: Record<string, string> = {
+    NOT_STARTED: 'bg-neutral-800 text-neutral-400 border-neutral-700',
     AHEAD: 'bg-cyan-900/50 text-cyan-400 border-cyan-800',
     ON_TRACK: 'bg-violet-900/50 text-violet-300 border-violet-800',
     BEHIND: 'bg-orange-900/50 text-orange-400 border-orange-800',
