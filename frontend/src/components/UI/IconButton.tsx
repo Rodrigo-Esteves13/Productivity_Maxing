@@ -30,7 +30,7 @@ export default function IconButton({
       type={type}
       aria-label={label}
       title={label}
-      className={`press inline-flex items-center justify-center ${baseColor} p-2 rounded-md hover:bg-neutral-800/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 disabled:opacity-50 ${TONE_CLASS[tone]} ${className}`}
+      className={`press inline-flex min-h-10 min-w-10 items-center justify-center ${baseColor} p-2 rounded-md hover:bg-neutral-800/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 disabled:opacity-50 ${TONE_CLASS[tone]} ${className}`}
       {...rest}
     >
       {children}

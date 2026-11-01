@@ -7,6 +7,7 @@ import type { User } from '../../types/models';
 import { LogoutIcon } from '../UI/Icons';
 import Avatar from '../Profile/Avatar';
 import { useI18n } from '../../i18n/useI18n';
+import { MODAL_EXIT_MS, usePresence } from '../../hooks/usePresence';
 
 // Lazy e montado so quando aberto: quase ninguem envia feedback numa visita.
 const FeedbackModal = lazy(() => import('../Feedback/FeedbackModal'));
@@ -38,6 +39,8 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+  // Fica montado durante a animacao de saida (data-state="closed").
+  const { mounted, state } = usePresence(isOpen, MODAL_EXIT_MS);
 
   // Fecha o menu ao clicar fora dele ou com Escape
   useEffect(() => {
@@ -80,8 +83,8 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
         </span>
       </button>
 
-      {isOpen && (
-        <div id={menuId} className="motion-dropdown origin-top-right absolute right-0 mt-2 w-max min-w-48 max-w-[min(30rem,calc(100vw-1rem))] max-h-[calc(100dvh-5rem)] overflow-y-auto bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl z-50">
+      {mounted && (
+        <div id={menuId} data-state={state} className="motion-dropdown data-[state=closed]:opacity-0 data-[state=closed]:scale-[0.99] data-[state=closed]:duration-[var(--duration-quick)] data-[state=closed]:pointer-events-none origin-top-right absolute right-0 mt-2 w-max min-w-48 max-w-[min(30rem,calc(100vw-1rem))] max-h-[calc(100dvh-5rem)] overflow-y-auto bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl z-50">
           <div className="gap-x-2 p-2 sm:columns-2">
             {GROUPS.map((group) => {
               const headingId = `user-menu-${group.section}`;

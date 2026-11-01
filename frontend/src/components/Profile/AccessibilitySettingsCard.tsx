@@ -3,6 +3,7 @@ import { LANGUAGES, type LanguageCode } from '../../i18n/languages';
 import { useI18n } from '../../i18n/useI18n';
 import ToggleRow from '../UI/ToggleRow';
 import Card from '../UI/Card';
+import { useDailyDigestPref } from '../../hooks/useDailyDigestPref';
 
 const FONT_SCALES: FontScale[] = ['normal', 'large', 'larger', 'largest'];
 
@@ -25,6 +26,7 @@ export default function AccessibilitySettingsCard() {
     toggleCelebrate,
   } = useAccessibilityPrefs();
   const { t, lang, setLang } = useI18n();
+  const digest = useDailyDigestPref();
 
   const themeChoices: { id: ThemeId; preview?: (typeof THEME_OPTIONS)[number]['preview'] }[] = [
     { id: 'system' },
@@ -141,6 +143,13 @@ export default function AccessibilitySettingsCard() {
         description={t('prefs.celebrateHelp')}
         checked={celebrate}
         onChange={toggleCelebrate}
+      />
+      <ToggleRow
+        variant="inline"
+        label={t('dailyDigest.pref.label')}
+        description={t('dailyDigest.pref.help')}
+        checked={digest.enabled}
+        onChange={digest.setEnabled}
       />
     </Card>
   );

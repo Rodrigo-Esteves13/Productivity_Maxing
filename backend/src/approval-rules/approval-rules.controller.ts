@@ -18,6 +18,7 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 import { perMinute } from '../common/throttle.util';
 import { ApprovalRulesService } from './approval-rules.service';
 import { UpsertApprovalRulesDto } from './dto/upsert-approval-rules.dto';
+import { ApplyApprovalRulesToAreasDto } from './dto/apply-approval-rules-to-areas.dto';
 
 // Escritas sao raras (configurar uma vez por programa/cadeira).
 const WRITE_LIMIT_PER_MINUTE = 30;
@@ -75,11 +76,12 @@ export class ApprovalRulesController {
   @Put('areas')
   @Throttle(perMinute(WRITE_LIMIT_PER_MINUTE))
   @ApiOperation({
-    summary: 'Applies the same rules to every course of the user at once.',
+    summary:
+      'Applies the same rules to the chosen courses (default: every course) at once.',
   })
   upsertForAllAreas(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: UpsertApprovalRulesDto,
+    @Body() dto: ApplyApprovalRulesToAreasDto,
   ) {
     return this.service.upsertForAllAreas(user.id, dto);
   }

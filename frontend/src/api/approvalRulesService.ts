@@ -15,6 +15,10 @@ export interface ApprovalRulesPreset {
 // Tolera o servidor devolver as regras diretamente ou embrulhadas em { rules }.
 type MaybeWrapped<T> = T | { rules: T };
 
+function withCustomRules(rules: ApprovalRules): ApprovalRules {
+  return { ...rules, customRules: rules.customRules ?? [] };
+}
+
 function unwrap<T>(value: MaybeWrapped<T>): T {
   return value && typeof value === 'object' && 'rules' in value
     ? (value as { rules: T }).rules
@@ -28,7 +32,7 @@ export const getApprovalPresets = async (): Promise<ApprovalRulesPreset[]> => {
   return response.data.map((item) => {
     const rules = unwrap<ApprovalRules>(item);
     const key = item.key ?? rules.presetKey ?? '';
-    return { key, rules: { ...rules, presetKey: key } };
+    return { key, rules: { ...withCustomRules(rules), presetKey: key } };
   });
 };
 
@@ -37,7 +41,7 @@ export const getApprovalRules = async (
   id: string,
 ): Promise<ApprovalRules> => {
   const response = await api.get<MaybeWrapped<ApprovalRules>>(`${SCOPE_PATH[scope]}/${id}`);
-  return unwrap(response.data);
+  return withCustomRules(unwrap(response.data));
 };
 
 export const saveApprovalRules = async (
@@ -46,7 +50,7 @@ export const saveApprovalRules = async (
   rules: ApprovalRules,
 ): Promise<ApprovalRules> => {
   const response = await api.put<MaybeWrapped<ApprovalRules>>(`${SCOPE_PATH[scope]}/${id}`, rules);
-  return unwrap(response.data);
+  return withCustomRules(unwrap(response.data));
 };
 
 /** Programa: volta ao preset generico. Cadeira: remove o override. */
@@ -54,8 +58,19 @@ export const resetApprovalRules = async (scope: ApprovalRulesScope, id: string):
   await api.delete(`${SCOPE_PATH[scope]}/${id}`);
 };
 
-/** Grava as mesmas regras como override em todas as cadeiras do user. */
-export const applyApprovalRulesToAllAreas = async (rules: ApprovalRules): Promise<number> => {
-  const response = await api.put<{ count: number }>(SCOPE_PATH.area, rules);
+/**
+ * Grava as mesmas regras como override nas cadeiras indicadas. Sem areaIds
+ * aplica a todas as cadeiras do user.
+ */
+export const applyApprovalRulesToAreas = async (
+  rules: ApprovalRules,
+  areaIds?: string[],
+): Promise<number> => {
+  const body = areaIds ? { ...rules, areaIds } : rules;
+  const response = await api.put<{ count: number }>(SCOPE_PATH.area, body);
   return response.data.count;
 };
+
+/** Grava as mesmas regras como override em todas as cadeiras do user. */
+export const applyApprovalRulesToAllAreas = (rules: ApprovalRules): Promise<number> =>
+  applyApprovalRulesToAreas(rules);

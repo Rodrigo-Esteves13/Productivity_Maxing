@@ -3,6 +3,7 @@ import PrefetchLink from '../UI/PrefetchLink';
 import { ADMIN_NAV } from './navItems';
 import { ShieldIcon, ChevronDownIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
+import { MODAL_EXIT_MS, usePresence } from '../../hooks/usePresence';
 
 interface AdminMenuProps {
   currentPath: string;
@@ -18,6 +19,7 @@ export default function AdminMenu({ currentPath }: AdminMenuProps) {
   const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { mounted, state } = usePresence(isOpen, MODAL_EXIT_MS);
 
   const isAnyActive = ADMIN_NAV.some((link) => currentPath.startsWith(link.to));
 
@@ -48,7 +50,7 @@ export default function AdminMenu({ currentPath }: AdminMenuProps) {
         className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 ${
           isAnyActive
             ? 'text-amber-400 bg-amber-400/10'
-            : 'text-amber-500/70 hover:text-amber-400 hover:bg-neutral-800'
+            : 'text-amber-400 hover:bg-neutral-800'
         }`}
       >
         <ShieldIcon className="h-4 w-4" />
@@ -56,10 +58,11 @@ export default function AdminMenu({ currentPath }: AdminMenuProps) {
         <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform duration-[var(--duration-fast)] ease-smooth-out ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
-      {isOpen && (
+      {mounted && (
         <div
           role="menu"
-          className="motion-dropdown origin-top-left absolute left-0 mt-2 w-max min-w-44 max-w-[min(20rem,calc(100vw-1rem))] overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 shadow-2xl z-50"
+          data-state={state}
+          className="motion-dropdown data-[state=closed]:opacity-0 data-[state=closed]:scale-[0.99] data-[state=closed]:duration-[var(--duration-quick)] data-[state=closed]:pointer-events-none origin-top-left absolute left-0 mt-2 w-max min-w-44 max-w-[min(20rem,calc(100vw-1rem))] overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 shadow-2xl z-50"
         >
           {ADMIN_NAV.map((link) => {
             const isActive = currentPath.startsWith(link.to);
@@ -73,7 +76,7 @@ export default function AdminMenu({ currentPath }: AdminMenuProps) {
                 className={`block px-4 py-2.5 text-sm font-semibold break-words transition-colors ${
                   isActive
                     ? 'text-amber-400 bg-amber-400/10'
-                    : 'text-amber-500/70 hover:text-amber-400 hover:bg-neutral-800'
+                    : 'text-amber-400 hover:bg-neutral-800'
                 }`}
               >
                 {t(link.labelKey)}

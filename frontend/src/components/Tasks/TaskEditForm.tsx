@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
+import { collectTags } from '../../lib/taskTags';
 import type { Task, TaskTypeOption, AcademicTaskTypeOption, PriorityOption, TaskFormSubmission } from '../../types/models';
 import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
 import DayLoadHint from './DayLoadHint';
@@ -67,6 +68,7 @@ function buildInitialValues(task: Task): TaskFormFieldValues {
     areaId: task.areaId,
     topics: task.topics ?? '',
     notes: task.notes ?? '',
+    tags: task.tags ?? [],
     referenceLink: task.referenceLink ?? '',
     targetGrade: task.targetGrade != null ? String(task.targetGrade) : '',
     weightPercentage: task.weightPercentage != null ? String(task.weightPercentage) : '',
@@ -101,7 +103,9 @@ export default function TaskEditForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const updateField = useCallback((field: keyof TaskFormFieldValues, value: string | boolean) => {
+  const tagSuggestions = useMemo(() => collectTags(existingTasks), [existingTasks]);
+
+  const updateField = useCallback((field: keyof TaskFormFieldValues, value: string | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }, []);
 
@@ -146,6 +150,7 @@ export default function TaskEditForm({
         progressStatuses={progressStatuses}
         showRealGrade
         showProgressStatus
+        tagSuggestions={tagSuggestions}
       />
 
       <DayLoadHint date={formData.date} tasks={existingTasks} excludeTaskId={task.id} />

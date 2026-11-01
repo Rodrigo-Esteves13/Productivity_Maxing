@@ -316,6 +316,7 @@ export class UsersService {
       medicationIntakes,
       bloodDonations,
       personalNotes,
+      flashcards,
       financeSettings,
       financeEntries,
       financeGoals,
@@ -389,6 +390,7 @@ export class UsersService {
       this.prisma.medicationIntake.findMany({ where: { userId: id } }),
       this.prisma.bloodDonation.findMany({ where: { userId: id } }),
       this.prisma.personalNote.findMany({ where: { userId: id } }),
+      this.prisma.flashcard.findMany({ where: { userId: id } }),
       this.prisma.financeSettings.findUnique({ where: { userId: id } }),
       this.prisma.financeEntry.findMany({ where: { userId: id } }),
       this.prisma.financeGoal.findMany({ where: { userId: id } }),
@@ -464,7 +466,12 @@ export class UsersService {
       [
         this.prisma.areaTeacherNote.findMany({
           where: { userId: id },
-          select: { areaId: true, teacherName: true, updatedAt: true },
+          select: {
+            areaId: true,
+            teacherName: true,
+            autoFromSchedule: true,
+            updatedAt: true,
+          },
         }),
         this.prisma.areaRating.findMany({
           where: { userId: id },
@@ -488,6 +495,7 @@ export class UsersService {
             componentMinGrade: true,
             secondThreshold: true,
             maxBelowSecondThreshold: true,
+            customRules: true,
             hasExamTrack: true,
             hasResitTrack: true,
             updatedAt: true,
@@ -539,6 +547,7 @@ export class UsersService {
       medicationIntakes,
       bloodDonations,
       personalNotes,
+      flashcards,
       finance: {
         settings: financeSettings,
         entries: financeEntries,

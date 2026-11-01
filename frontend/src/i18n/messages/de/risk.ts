@@ -63,4 +63,5 @@ export const risk: Record<string, string> = {
   'courseRisk.needed.closed': "Nichts mehr zu bewerten",
   'courseRisk.needed.otherTrack': "Mit kontinuierlicher Bewertung nicht erreichbar, siehe Klausur oder Nachholung",
   'courseRisk.needsPeriod': "Lege ein Programm und einen Zeitraum an, um deine Bestehenschance zu sehen.",
+  'courseRisk.reason.CUSTOM_RULE_VIOLATED': "Deine eigene Regel ist nicht erfüllt: {rule}.",
 };

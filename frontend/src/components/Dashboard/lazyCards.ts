@@ -21,6 +21,7 @@ export const TimeByAreaCard = lazy(() => import('./TimeByAreaCard'));
 export const EstimationAccuracyCard = lazy(() => import('./EstimationAccuracyCard'));
 export const DeadlineComplianceCard = lazy(() => import('./DeadlineComplianceCard'));
 export const WeekdayLoadCard = lazy(() => import('./WeekdayLoadCard'));
+export const ProcrastinationWeekdayCard = lazy(() => import('./ProcrastinationWeekdayCard'));
 export const TargetVsRealCard = lazy(() => import('./TargetVsRealCard'));
 export const ProductivityByTypeCard = lazy(() => import('./ProductivityByTypeCard'));
 export const DifficultyVsGradeCard = lazy(() => import('./DifficultyVsGradeCard'));

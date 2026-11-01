@@ -510,6 +510,7 @@ export const extra: Record<string, string> = {
   "ui.copied": "Copied!",
   "ui.hidePassword": "Hide password",
   "ui.showPassword": "Show password",
+  "ui.capsLockOn": "Caps Lock is on",
   "ui.postponedNTimes": "Postponed {count} times",
   "ui.ratingFromTo": "Rating from {min} to {max}",
   "ui.stepsDoneOf": "{done} of {total} steps done",

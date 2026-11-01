@@ -3,8 +3,10 @@ import {
   ApprovalRulesService,
   assertRulesConsistent,
   mergeRules,
+  rulesToData,
 } from './approval-rules.service';
 import { presetRules, PRESET_GENERIC, PRESET_PT_PT_ISMAI } from './presets';
+import { Prisma } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 
 const ME = 'me';
@@ -370,5 +372,91 @@ describe('ApprovalRulesService.upsertForAllAreas', () => {
       service.upsertForAllAreas(ME, { scaleMin: 10, scaleMax: 5 }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.approvalRuleSet.upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe('customRules', () => {
+  const rule = {
+    kind: 'MAX_BELOW' as const,
+    threshold: 8,
+    maxBelow: 1,
+    labelContains: 'teste',
+  };
+
+  it('mergeRules keeps base customRules when the body omits them', () => {
+    const base = { ...presetRules(PRESET_GENERIC), customRules: [rule] };
+    expect(mergeRules(base, { passMark: 10 }).customRules).toEqual([rule]);
+  });
+
+  it('mergeRules keeps base customRules when only presetKey is sent', () => {
+    const base = { ...presetRules(PRESET_GENERIC), customRules: [rule] };
+    const merged = mergeRules(base, { presetKey: PRESET_GENERIC });
+    expect(merged.customRules).toEqual([rule]);
+  });
+
+  it('mergeRules replaces them, normalising absent optionals, and [] clears', () => {
+    const base = { ...presetRules(PRESET_GENERIC), customRules: [rule] };
+    const merged = mergeRules(base, {
+      customRules: [{ kind: 'GROUP_AVG_MIN', threshold: 9, maxBelow: 4 }],
+    });
+    expect(merged.customRules).toEqual([
+      {
+        kind: 'GROUP_AVG_MIN',
+        threshold: 9,
+        maxBelow: null,
+        labelContains: null,
+      },
+    ]);
+    expect(mergeRules(base, { customRules: [] }).customRules).toEqual([]);
+  });
+
+  it('assertRulesConsistent rejects a threshold outside the scale', () => {
+    const rules = {
+      ...presetRules(PRESET_GENERIC),
+      customRules: [{ ...rule, threshold: 99 }],
+    };
+    expect(() => assertRulesConsistent(rules)).toThrow(BadRequestException);
+  });
+
+  it('rulesToData maps empty customRules to DbNull', () => {
+    const empty = rulesToData({
+      ...presetRules(PRESET_GENERIC),
+      customRules: [],
+    });
+    expect(empty.customRules).toBe(Prisma.DbNull);
+    const filled = rulesToData({
+      ...presetRules(PRESET_GENERIC),
+      customRules: [rule],
+    });
+    expect(filled.customRules).toEqual([rule]);
+  });
+
+  it('bulk with areaIds restricts to accessible areas (foreign ids ignored)', async () => {
+    const { service, prisma } = setup();
+    prisma.area.findMany.mockResolvedValue([{ id: AREA }]);
+    const res = await service.upsertForAllAreas(ME, {
+      passMark: 10,
+      areaIds: [AREA, 'foreign'],
+    });
+    expect(res).toEqual({ count: 1 });
+    expect(prisma.area.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: [{ ownerId: null }, { ownerId: ME }],
+          id: { in: [AREA, 'foreign'] },
+        },
+      }),
+    );
+    expect(prisma.approvalRuleSet.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it('bulk without areaIds targets every accessible area', async () => {
+    const { service, prisma } = setup();
+    await service.upsertForAllAreas(ME, { passMark: 10 });
+    const [args] = prisma.area.findMany.mock.calls[0] as [
+      { where: Record<string, unknown> },
+    ];
+    expect(args.where).not.toHaveProperty('id');
+    expect(prisma.approvalRuleSet.upsert).toHaveBeenCalledTimes(2);
   });
 });

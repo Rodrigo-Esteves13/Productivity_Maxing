@@ -510,6 +510,7 @@ export const extra: Record<string, string> = {
   "ui.copied": "복사했어요!",
   "ui.hidePassword": "비밀번호 숨기기",
   "ui.showPassword": "비밀번호 보기",
+  "ui.capsLockOn": "Caps Lock이 켜져 있습니다",
   "ui.postponedNTimes": "{count}번 미룸",
   "ui.ratingFromTo": "{min}부터 {max}까지 평가",
   "ui.stepsDoneOf": "{total}단계 중 {done}단계 완료",

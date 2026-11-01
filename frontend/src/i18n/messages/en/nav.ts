@@ -5,6 +5,8 @@ export const nav: Record<string, string> = {
   'nav.schedule': "Schedule",
   'nav.notebook': "Notebook",
   'nav.areas': "Areas",
+  'nav.areasSelect': "Select courses",
+  'nav.flashcards': "Flashcards",
   'nav.profile': "Profile",
   'nav.developer': "Developer",
   'nav.agent': "Agent",

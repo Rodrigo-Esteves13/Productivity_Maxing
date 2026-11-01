@@ -13,7 +13,7 @@ interface AreaTeacherFieldProps {
 // Docente da cadeira. Nota PRIVADA do aluno (nunca vai para turmas/partilhas).
 export default function AreaTeacherField({ area }: AreaTeacherFieldProps) {
   const { t } = useI18n();
-  const { teacherName, isLoading, isSaving, error, save } = useAreaTeacher(area.id);
+  const { teacherName, autoFromSchedule, isLoading, isSaving, error, save } = useAreaTeacher(area.id);
   const [draft, setDraft] = useState('');
   const [saved, setSaved] = useState(false);
 
@@ -37,6 +37,10 @@ export default function AreaTeacherField({ area }: AreaTeacherFieldProps) {
         disabled={isLoading}
         onChange={(event) => setDraft(event.target.value)}
       />
+      {/* Editar o texto torna-o manual: a dica some assim que o valor muda. */}
+      {autoFromSchedule && draft.trim() === teacherName && teacherName !== '' && (
+        <p className="mt-1 text-xs text-violet-400">{t('areaTeacher.fromSchedule')}</p>
+      )}
       <p className="mt-1 text-xs text-neutral-500">{t('teacher.hint')}</p>
       <div className="mt-2 flex items-center gap-2">
         <Button type="submit" size="sm" disabled={isLoading || isSaving || draft.trim() === teacherName}>

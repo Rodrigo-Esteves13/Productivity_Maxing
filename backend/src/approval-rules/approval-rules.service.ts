@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import type { ApprovalRuleSet } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -13,7 +14,8 @@ import {
   parseGradeScale,
   resolveRoundFinalGrade,
 } from '../academic-programs/grade-average.util';
-import type { ApprovalRules } from './approval-rules.types';
+import type { ApprovalRules, CustomRule } from './approval-rules.types';
+import { sanitizeCustomRules } from './custom-rules';
 import {
   APPROVAL_PRESETS,
   APPROVAL_PRESET_KEYS,
@@ -22,7 +24,11 @@ import {
   presetRules,
 } from './presets';
 import type { ApprovalPresetKey } from './presets';
-import { UpsertApprovalRulesDto } from './dto/upsert-approval-rules.dto';
+import {
+  UpsertApprovalRulesDto,
+  type CustomRuleDto,
+} from './dto/upsert-approval-rules.dto';
+import { ApplyApprovalRulesToAreasDto } from './dto/apply-approval-rules-to-areas.dto';
 
 /** De onde vieram as regras efetivas de uma cadeira. */
 export type ApprovalRulesSource = 'area' | 'program' | 'generic';
@@ -61,6 +67,7 @@ type RuleRow = Pick<
   | 'maxBelowSecondThreshold'
   | 'hasExamTrack'
   | 'hasResitTrack'
+  | 'customRules'
 >;
 
 export function rowToRules(row: RuleRow): ApprovalRules {
@@ -75,6 +82,21 @@ export function rowToRules(row: RuleRow): ApprovalRules {
     maxBelowSecondThreshold: row.maxBelowSecondThreshold,
     hasExamTrack: row.hasExamTrack,
     hasResitTrack: row.hasResitTrack,
+    customRules: sanitizeCustomRules(row.customRules),
+  };
+}
+
+/**
+ * Regras -> colunas Prisma. customRules vai para a coluna Json; lista vazia
+ * grava NULL (DbNull) em vez de um array vazio.
+ */
+export function rulesToData(rules: ApprovalRules) {
+  const { customRules, ...rest } = rules;
+  return {
+    ...rest,
+    customRules: customRules?.length
+      ? (customRules as unknown as Prisma.InputJsonValue)
+      : Prisma.DbNull,
   };
 }
 
@@ -105,6 +127,13 @@ export function assertRulesConsistent(rules: ApprovalRules): void {
   for (const [field, value] of scaled) {
     if (value !== null && !isInScale(value, rules)) {
       throw new BadRequestException(`${field} must be within the grade scale.`);
+    }
+  }
+  for (const rule of rules.customRules ?? []) {
+    if (!isInScale(rule.threshold, rules)) {
+      throw new BadRequestException(
+        'customRules threshold must be within the grade scale.',
+      );
     }
   }
   if (
@@ -154,6 +183,20 @@ export function mergeRules(
     maxBelowSecondThreshold: pick('maxBelowSecondThreshold'),
     hasExamTrack: pick('hasExamTrack'),
     hasResitTrack: pick('hasResitTrack'),
+    customRules:
+      dto.customRules === undefined
+        ? (base.customRules ?? [])
+        : dto.customRules.map(dtoToCustomRule),
+  };
+}
+
+/** Normaliza o item do DTO: opcionais ausentes viram null. */
+function dtoToCustomRule(item: CustomRuleDto): CustomRule {
+  return {
+    kind: item.kind,
+    threshold: item.threshold,
+    maxBelow: item.kind === 'MAX_BELOW' ? (item.maxBelow ?? null) : null,
+    labelContains: item.labelContains ?? null,
   };
 }
 
@@ -168,6 +211,7 @@ const RULE_SELECT = {
   maxBelowSecondThreshold: true,
   hasExamTrack: true,
   hasResitTrack: true,
+  customRules: true,
 } as const;
 
 const PERIOD_RULE_SELECT = { programId: true, roundFinalGrade: true } as const;
@@ -233,8 +277,8 @@ export class ApprovalRulesService {
 
     const saved = await this.prisma.approvalRuleSet.upsert({
       where: { userId_programId: { userId, programId } },
-      create: { userId, programId, areaId: null, ...rules },
-      update: { ...rules },
+      create: { userId, programId, areaId: null, ...rulesToData(rules) },
+      update: { ...rulesToData(rules) },
       select: RULE_SELECT,
     });
     return {
@@ -284,8 +328,8 @@ export class ApprovalRulesService {
 
     const saved = await this.prisma.approvalRuleSet.upsert({
       where: { userId_areaId: { userId, areaId } },
-      create: { userId, areaId, programId: null, ...rules },
-      update: { ...rules },
+      create: { userId, areaId, programId: null, ...rulesToData(rules) },
+      update: { ...rulesToData(rules) },
       select: RULE_SELECT,
     });
     return {
@@ -300,24 +344,31 @@ export class ApprovalRulesService {
   /**
    * Grava as mesmas regras como override em todas as cadeiras acessiveis do
    * user (as proprias e as globais), de uma vez. So escreve linhas do user.
+   * Com areaIds, so as cadeiras escolhidas; ids de cadeiras que o user nao
+   * alcanca (alheias ou inexistentes) sao ignorados em silencio, sem revelar
+   * se existem.
    */
   async upsertForAllAreas(
     userId: string,
-    dto: UpsertApprovalRulesDto,
+    dto: ApplyApprovalRulesToAreasDto,
   ): Promise<{ count: number }> {
-    const rules = mergeRules(presetRules(PRESET_GENERIC), dto);
+    const { areaIds, ...rulesDto } = dto;
+    const rules = mergeRules(presetRules(PRESET_GENERIC), rulesDto);
     assertRulesConsistent(rules);
 
     const areas = await this.prisma.area.findMany({
-      where: accessibleAreaWhere(userId),
+      where: {
+        ...accessibleAreaWhere(userId),
+        ...(areaIds ? { id: { in: areaIds } } : {}),
+      },
       select: { id: true },
     });
     await this.prisma.$transaction(
       areas.map(({ id: areaId }) =>
         this.prisma.approvalRuleSet.upsert({
           where: { userId_areaId: { userId, areaId } },
-          create: { userId, areaId, programId: null, ...rules },
-          update: { ...rules },
+          create: { userId, areaId, programId: null, ...rulesToData(rules) },
+          update: { ...rulesToData(rules) },
           select: { id: true },
         }),
       ),

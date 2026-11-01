@@ -6,4 +6,5 @@ export const teacher: Record<string, string> = {
   'teacher.clear': "クリア",
   'teacher.saved': "担当教員を保存しました。",
   'teacher.error': "担当教員を保存できませんでした。",
+  'areaTeacher.fromSchedule': "時間割から",
 };

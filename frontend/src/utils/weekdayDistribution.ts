@@ -18,7 +18,7 @@ export interface WeekdayBucket {
 // UTC the local weekday would land on the day BEFORE the one the user
 // picked. Those are read in UTC instead; tasks with an explicit time are
 // read in local time, which is what the user sees on screen.
-function dueWeekdayIndexMondayFirst(task: Task): number {
+export function dueWeekdayIndexMondayFirst(task: Task): number {
   const d = new Date(task.date);
   const isDateOnly = d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
   const sundayFirst = isDateOnly ? d.getUTCDay() : d.getDay();

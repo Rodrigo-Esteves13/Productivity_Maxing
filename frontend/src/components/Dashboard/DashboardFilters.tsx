@@ -24,6 +24,7 @@ interface DashboardFiltersProps {
   academicTaskTypes: AcademicTaskTypeOption[];
   difficulties: string[];
   progressStatuses: string[];
+  tags: string[];
   onClear: () => void;
   sort: TableSortState<TasksTableColumnId> | null;
   onSortKeyChange: (key: TasksTableColumnId | null) => void;
@@ -56,6 +57,7 @@ export default function DashboardFilters({
   academicTaskTypes,
   difficulties,
   progressStatuses,
+  tags,
   onClear,
   sort,
   onSortKeyChange,
@@ -174,6 +176,19 @@ export default function DashboardFilters({
               ))}
             </Select>
           </FormField>
+
+          {tags.length > 0 && (
+            <FormField label={t('tags.label')} htmlFor="filter-tag" className="w-40">
+              <Select id="filter-tag" value={filters.tag} onChange={(e) => update({ tag: e.target.value })}>
+                <option value="">{t('filters.all')}</option>
+                {tags.map((tag) => (
+                  <option key={tag} value={tag}>
+                    #{tag}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          )}
 
           <div className="flex items-end gap-2">
             <FormField label={t('filters.sortBy')} htmlFor="filter-sort" className="w-44">

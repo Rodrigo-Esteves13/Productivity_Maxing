@@ -3,6 +3,31 @@
 
 export type ApprovalRounding = 'NONE' | 'UP_TO_INTEGER_AT_HALF';
 
+export type CustomRuleKind = 'MAX_BELOW' | 'GROUP_AVG_MIN';
+
+export const CUSTOM_RULE_KINDS: CustomRuleKind[] = ['MAX_BELOW', 'GROUP_AVG_MIN'];
+
+export const CUSTOM_RULE_KIND_LABEL_KEY: Record<CustomRuleKind, string> = {
+  MAX_BELOW: 'approvalRules.custom.kind.MAX_BELOW',
+  GROUP_AVG_MIN: 'approvalRules.custom.kind.GROUP_AVG_MIN',
+};
+
+// Iguais ao backend (custom-rules.constants.ts).
+/** Chave do preset neutro (igual ao backend); ponto de partida do modo em massa. */
+export const GENERIC_PRESET_KEY = 'generic';
+
+export const CUSTOM_RULES_MAX = 10;
+export const CUSTOM_RULE_LABEL_MAX = 60;
+export const CUSTOM_RULE_MAX_BELOW_LIMIT = 20;
+
+/** Regra extra, somada as duas regras fixas. maxBelow so existe em MAX_BELOW. */
+export interface CustomRule {
+  kind: CustomRuleKind;
+  threshold: number;
+  maxBelow: number | null;
+  labelContains: string | null;
+}
+
 export interface ApprovalRules {
   presetKey: string | null;
   scaleMin: number;
@@ -14,6 +39,7 @@ export interface ApprovalRules {
   maxBelowSecondThreshold: number | null;
   hasExamTrack: boolean;
   hasResitTrack: boolean;
+  customRules: CustomRule[];
 }
 
 export type ApprovalRulesScope = 'program' | 'area';
@@ -24,6 +50,32 @@ export const ROUNDING_LABEL_KEY: Record<ApprovalRounding, string> = {
   NONE: 'approvalRules.rounding.none',
   UP_TO_INTEGER_AT_HALF: 'approvalRules.rounding.half',
 };
+
+export interface CustomRuleDraft {
+  // Chave estavel so para o React (nao vai para o servidor).
+  key: string;
+  kind: CustomRuleKind;
+  threshold: string;
+  maxBelow: string;
+  labelContains: string;
+}
+
+export interface CustomRuleErrors {
+  threshold?: string;
+  maxBelow?: string;
+  label?: string;
+}
+
+let customKeySeed = 0;
+export const nextCustomRuleKey = (): string => `custom-rule-${(customKeySeed += 1)}`;
+
+export const emptyCustomRuleDraft = (): CustomRuleDraft => ({
+  key: nextCustomRuleKey(),
+  kind: 'MAX_BELOW',
+  threshold: '',
+  maxBelow: '1',
+  labelContains: '',
+});
 
 /** Todos os campos numericos como texto, para o utilizador poder escrever livremente. */
 export interface ApprovalRulesDraft {
@@ -37,6 +89,7 @@ export interface ApprovalRulesDraft {
   maxBelowSecondThreshold: string;
   hasExamTrack: boolean;
   hasResitTrack: boolean;
+  customRules: CustomRuleDraft[];
 }
 
 export type ApprovalRulesField =
@@ -63,6 +116,13 @@ export function rulesToDraft(rules: ApprovalRules): ApprovalRulesDraft {
     maxBelowSecondThreshold: numToText(rules.maxBelowSecondThreshold),
     hasExamTrack: rules.hasExamTrack,
     hasResitTrack: rules.hasResitTrack,
+    customRules: (rules.customRules ?? []).map((rule) => ({
+      key: nextCustomRuleKey(),
+      kind: rule.kind,
+      threshold: numToText(rule.threshold),
+      maxBelow: numToText(rule.maxBelow),
+      labelContains: rule.labelContains ?? '',
+    })),
   };
 }
 
@@ -87,6 +147,8 @@ function hasTooManyDecimals(value: number): boolean {
 export interface ApprovalRulesValidation {
   errors: ApprovalRulesErrors;
   isValid: boolean;
+  /** Um item por regra extra (mesma ordem do rascunho). */
+  customErrors: CustomRuleErrors[];
   /** Presente apenas quando isValid. */
   rules: ApprovalRules | null;
 }
@@ -161,16 +223,44 @@ export function validateApprovalRulesDraft(draft: ApprovalRulesDraft): ApprovalR
     }
   }
 
-  const isValid = Object.keys(errors).length === 0;
+  const customErrors = draft.customRules.map((rule): CustomRuleErrors => {
+    const result: CustomRuleErrors = {};
+    const threshold = parseNumber(rule.threshold);
+    if (threshold === null || hasTooManyDecimals(threshold) || (scaleKnown && !inScale(threshold))) {
+      result.threshold = 'approvalRules.custom.error.threshold';
+    }
+    if (rule.kind === 'MAX_BELOW') {
+      const count = parseNumber(rule.maxBelow);
+      if (
+        count === null ||
+        !Number.isInteger(count) ||
+        count < 0 ||
+        count > CUSTOM_RULE_MAX_BELOW_LIMIT
+      ) {
+        result.maxBelow = 'approvalRules.custom.error.maxBelow';
+      }
+    }
+    if (rule.labelContains.trim().length > CUSTOM_RULE_LABEL_MAX) {
+      result.label = 'approvalRules.custom.error.label';
+    }
+    return result;
+  });
+  const customOk =
+    draft.customRules.length <= CUSTOM_RULES_MAX &&
+    customErrors.every((entry) => Object.keys(entry).length === 0);
+
+  const isValid = Object.keys(errors).length === 0 && customOk;
   if (!isValid || scaleMin === null || scaleMax === null || passMark === null) {
-    return { errors, isValid: false, rules: null };
+    return { errors, customErrors, isValid: false, rules: null };
   }
 
   return {
     errors,
+    customErrors,
     isValid: true,
     rules: {
-      presetKey: draft.presetKey,
+      // Com regras extra o resultado ja nao e um preset puro.
+      presetKey: draft.customRules.length > 0 ? null : draft.presetKey,
       scaleMin,
       scaleMax,
       passMark,
@@ -180,6 +270,12 @@ export function validateApprovalRulesDraft(draft: ApprovalRulesDraft): ApprovalR
       maxBelowSecondThreshold: hasSecond ? maxBelow : null,
       hasExamTrack: draft.hasExamTrack,
       hasResitTrack: draft.hasResitTrack,
+      customRules: draft.customRules.map((rule) => ({
+        kind: rule.kind,
+        threshold: parseNumber(rule.threshold) as number,
+        maxBelow: rule.kind === 'MAX_BELOW' ? (parseNumber(rule.maxBelow) as number) : null,
+        labelContains: rule.labelContains.trim() === '' ? null : rule.labelContains.trim(),
+      })),
     },
   };
 }

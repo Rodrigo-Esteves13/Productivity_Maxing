@@ -25,6 +25,7 @@ const clearedEdit: TaskFormFieldValues = {
   topics: '',
   referenceLink: '',
   notes: '',
+  tags: [],
   targetGrade: '',
   weightPercentage: '',
   estimatedMinutes: '',

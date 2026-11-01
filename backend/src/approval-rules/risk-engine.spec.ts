@@ -823,6 +823,98 @@ describe('computeCourseRisk: historico com o docente (medias 0-1)', () => {
   });
 });
 
+describe('computeCourseRisk: regras custom', () => {
+  it('[] nao muda nada face a regras sem customRules', () => {
+    const components = [comp(40, 12, 'Teste 1'), comp(30, 7, 'Trabalho')];
+    expect(
+      risk({ rules: { ...STRICT_RULES, customRules: [] }, components }),
+    ).toEqual(risk({ components }));
+  });
+
+  it('MAX_BELOW violado decide a continua, uma razao por regra', () => {
+    const r = risk({
+      rules: {
+        ...GENERIC_RULES,
+        hasExamTrack: true,
+        customRules: [
+          {
+            kind: 'MAX_BELOW',
+            threshold: 10,
+            maxBelow: 0,
+            labelContains: 'teste',
+          },
+          {
+            kind: 'GROUP_AVG_MIN',
+            threshold: 12,
+            maxBelow: null,
+            labelContains: 'Téste',
+          },
+          {
+            kind: 'MAX_BELOW',
+            threshold: 5,
+            maxBelow: 0,
+            labelContains: null,
+          },
+        ],
+      },
+      components: [
+        comp(30, 9, 'TESTE 1'),
+        comp(30, 13, 'teste 2'),
+        comp(20, 18, 'Trabalho'),
+      ],
+    });
+    expect(r.track).toBe('EXAM');
+    expect(r.level).toBe('high');
+    const custom = r.reasons.filter((x) => x.code === 'CUSTOM_RULE_VIOLATED');
+    // Media do grupo = 11 < 12 viola; nada abaixo de 5.
+    expect(custom.map((x) => x.params)).toEqual([
+      { rule: 'max 0 < 10 "teste"' },
+      { rule: 'avg >= 12 "Téste"' },
+    ]);
+  });
+
+  it('sem violacao custom a continua continua aberta', () => {
+    const r = risk({
+      rules: {
+        ...GENERIC_RULES,
+        customRules: [
+          {
+            kind: 'GROUP_AVG_MIN',
+            threshold: 10,
+            maxBelow: null,
+            labelContains: 'exame',
+          },
+        ],
+      },
+      components: [comp(50, 14, 'Teste 1')],
+    });
+    expect(r.track).toBe('CONTINUOUS');
+    expect(codes(r)).not.toContain('CUSTOM_RULE_VIOLATED');
+  });
+
+  it('regras custom tiram a certeza de "nao pode chumbar"', () => {
+    const components = [comp(80, 20, 'Teste 1')];
+    const plain = risk({ rules: GENERIC_RULES, components });
+    const custom = risk({
+      rules: {
+        ...GENERIC_RULES,
+        customRules: [
+          {
+            kind: 'GROUP_AVG_MIN',
+            threshold: 10,
+            maxBelow: null,
+            labelContains: 'exame',
+          },
+        ],
+      },
+      components,
+    });
+    expect(plain.score).toBe(0);
+    expect(custom.score).toBeGreaterThan(0);
+    expect(codes(custom)).toContain('REMAINING_UNCERTAINTY_BASIC');
+  });
+});
+
 describe('computeCourseRisk: forma do resultado', () => {
   it('copia identidade da cadeira e mantem score 0-100', () => {
     const r = risk({ components: [comp(100, 0)] });

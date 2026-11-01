@@ -63,4 +63,5 @@ export const risk: Record<string, string> = {
   'courseRisk.needed.closed': "Plus rien à noter",
   'courseRisk.needed.otherTrack': "Hors d'atteinte en évaluation continue, voir examen ou rattrapage",
   'courseRisk.needsPeriod': "Crée un programme et une période pour voir ta chance de réussir.",
+  'courseRisk.reason.CUSTOM_RULE_VIOLATED': "Ta règle personnalisée n'est pas respectée : {rule}.",
 };

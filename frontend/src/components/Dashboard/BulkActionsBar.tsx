@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Select from '../UI/Select';
+import Button from '../UI/Button';
 import { EFFORTS } from '../../lib/taskReadiness';
 import type { Effort } from '../../types/models';
 import { useEnumLabel } from '../../hooks/useEnumLabel';
@@ -123,7 +124,10 @@ export default function BulkActionsBar({
   };
 
   return (
-    <div className="print-hide flex flex-wrap items-center justify-between gap-3 rounded-lg border border-violet-800/50 bg-violet-900/20 px-4 py-3 mb-4">
+    // Preso ao fundo do ecra (acima da area segura do iPhone). Vem depois da
+    // tabela, por isso fica visivel enquanto se percorre a lista e o fim da
+    // pagina nunca fica tapado; sem selecao nao ocupa espaco nenhum.
+    <div className="print-hide motion-toast sticky bottom-[calc(1rem+env(safe-area-inset-bottom))] z-20 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-violet-800/50 bg-neutral-900/95 px-4 py-3 shadow-lg backdrop-blur">
       <p className="text-sm text-neutral-200">
         {fillNodes(t('ui.selectedCount'), {
           count: <span className="font-semibold tabular-nums text-white">{selectedCount}</span>,
@@ -158,7 +162,7 @@ export default function BulkActionsBar({
           onChange={(e) => {
             if (e.target.value) void handleReschedule(e.target.value);
           }}
-          className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-200 focus:outline-none focus:ring-2 focus:ring-violet-600/50 disabled:opacity-50 [color-scheme:dark]"
+          className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-200 focus:outline-none focus:ring-2 focus:ring-violet-600/50 disabled:opacity-50"
         />
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -179,24 +183,27 @@ export default function BulkActionsBar({
         </Select>
       </div>
       <div className="flex items-center gap-2">
-        <button
+        <Button
           type="button"
+          size="sm"
           onClick={handleMarkDone}
           disabled={isBusy}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-md transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5"
         >
           <CheckIcon />
           {isMarkingDone ? t('ui.marking') : t('ui.markAsDone')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="danger"
+          size="sm"
           onClick={handleDelete}
           disabled={isBusy}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-red-700 hover:bg-red-600 rounded-md transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5"
         >
           <TrashIcon />
           {isDeleting ? t('ui.deleting') : t('common.delete')}
-        </button>
+        </Button>
         <button
           type="button"
           onClick={onClear}

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { accessibleAreaWhere } from '../areas/area-access';
+import { AreaTeachersService } from '../area-teachers/area-teachers.service';
 import { loadAreaGradeFractions } from '../area-teachers/area-grade-fractions';
 import { sumSessionMinutes } from '../common/session-minutes.util';
 import { roundTo } from '../common/round.util';
@@ -24,7 +25,10 @@ interface SessionRow {
 
 @Injectable()
 export class AreaRatingsStatsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly teachers: AreaTeachersService,
+  ) {}
 
   /**
    * Avaliacoes do user cruzadas com nota final, foco e tempo de estudo, por
@@ -38,6 +42,7 @@ export class AreaRatingsStatsService {
     const areaIds = await this.loadCourseAreaIds(userId, periodIds);
     if (areaIds.length === 0) return buildRatingStats([]);
 
+    await this.teachers.syncFromScheduleSafe(userId);
     const [areas, ratings, teacherNotes, grades, sessionsByArea] =
       await Promise.all([
         this.prisma.area.findMany({

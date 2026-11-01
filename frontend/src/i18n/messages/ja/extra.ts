@@ -510,6 +510,7 @@ export const extra: Record<string, string> = {
   "ui.copied": "コピーしました！",
   "ui.hidePassword": "パスワードを隠す",
   "ui.showPassword": "パスワードを表示",
+  "ui.capsLockOn": "Caps Lock がオンです",
   "ui.postponedNTimes": "{count} 回延期",
   "ui.ratingFromTo": "{min} から {max} の評価",
   "ui.stepsDoneOf": "{total} ステップ中 {done} 完了",

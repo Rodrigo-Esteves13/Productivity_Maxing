@@ -55,6 +55,7 @@ export {
   Eye as EyeIcon,
   EyeOff as EyeOffIcon,
   Copy as CopyIcon,
+  PinOff as PinOffIcon,
   ArrowUp as ArrowUpIcon,
   ArrowDown as ArrowDownIcon,
   Mail as MailIcon,
@@ -88,6 +89,7 @@ export {
   // Ferramenta Selecionar do quadro e as acoes da selecao.
   SquareDashedMousePointer as SelectAreaIcon,
   ClipboardPaste as PasteIcon,
+  Paperclip as PaperclipIcon,
   CopyPlus as DuplicateIcon,
   CalendarX as CalendarXIcon,
   CalendarClock as CalendarClockIcon,
@@ -98,6 +100,8 @@ export {
   Monitor as MonitorIcon,
   Smartphone as SmartphoneIcon,
   Tablet as TabletIcon,
+  // Pagina Areas: docente de cada cadeira no cartao.
+  User as UserIcon,
 } from 'lucide-react';
 
 export function GoogleIcon(props: SVGProps<SVGSVGElement>) {

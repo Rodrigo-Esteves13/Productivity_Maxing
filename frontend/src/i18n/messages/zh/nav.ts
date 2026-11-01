@@ -5,6 +5,8 @@ export const nav: Record<string, string> = {
   'nav.schedule': "课表",
   'nav.notebook': "笔记本",
   'nav.areas': "科目",
+  'nav.areasSelect': "选择科目",
+  'nav.flashcards': "闪卡",
   'nav.profile': "个人资料",
   'nav.developer': "开发者",
   'nav.agent': "助手",

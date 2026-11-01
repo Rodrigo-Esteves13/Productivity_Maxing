@@ -8,6 +8,37 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-11-01',
+    title: 'Tags and flashcards',
+    items: [
+      'Tasks: add your own tags (up to 10 per task) and filter the list by tag. Tags show as small chips on task cards and rows.',
+      'New Flashcards page: write cards for a course and review the ones that are due. Rate each answer Again, Good or Easy and the next review is scheduled for you. Cards are included in your data export.',
+    ],
+  },
+  {
+    date: '2026-11-01',
+    title: 'Rest days, a daily summary and quick actions',
+    items: [
+      'Profile: choose how rest days count for your task streak. Weekends can be free, or one missed day per week can be forgiven, and a badge shows when a rest day was used.',
+      'Dashboard: a short summary appears once a day with what is due today, any overdue tasks, your next exam and the classes of the day. You can turn it off in your profile settings.',
+      'Ctrl+K: when a task is highlighted you can mark it done (with Undo), postpone it to tomorrow, or start a focus session on it, with keyboard shortcuts shown in the footer. The palette also has a Select courses shortcut for the Areas page.',
+      'Tasks: a small paperclip with the number of files now shows on task cards and table rows when a task has attachments.',
+      'Dashboard: a new card shows on which weekdays your tasks tend to be postponed. It needs a few postponements to appear and is an approximation. You can hide it in Customize widgets.',
+      'Smoother menus and dialogs: dropdowns and the command palette now fade out, dialogs keep keyboard focus inside and return it when closed, and small buttons and checkboxes have larger tap areas.',
+    ],
+  },
+  {
+    date: '2026-11-01',
+    title: 'Approval rules for several courses, and your own rules',
+    items: [
+      'Areas: you can now select several courses and set their approval rules at once. The rules replace only the courses you selected.',
+      'Approval rules: you can add custom rules on top of the two fixed ones, to limit how many components fall below a grade, or to require a minimum weighted average of the components whose name contains a word you choose.',
+      'The teacher name of a course is now filled in automatically from your schedule when you have not set one yourself.',
+      'Areas page redesign: search, filter (all, on, off) and sort by name, risk or open tasks, a summary of your courses, and cards that show open and overdue tasks, the next deadline, the risk level and the teacher.',
+      'Dashboard: the Locked and effort badges now match the size and style of the other badges in the list and table.',
+    ],
+  },
+  {
+    date: '2026-11-01',
     title: 'Your chance of passing, always in view',
     items: [
       'Dashboard: the Risk of failing card now always shows a summary, with your average chance of passing, how many courses are at high, medium or low risk, and the course with the lowest chance. Courses without enough graded weight yet are shown dimmed, with what is missing.',

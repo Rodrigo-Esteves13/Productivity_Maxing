@@ -1,6 +1,7 @@
 import { useState, type DragEvent, type KeyboardEvent } from 'react';
 import AreaCard from './AreaCard';
 import type { Area } from '../../types/models';
+import type { AreaOverviewItem } from '../../lib/areaOverview';
 import { useI18n } from '../../i18n/useI18n';
 
 interface AreaGridProps {
@@ -13,12 +14,36 @@ interface AreaGridProps {
   // Sem isto a grelha nao se reordena. Arrastar um cartao para cima de
   // outro, ou Alt + seta esquerda/direita com o cartao focado.
   onReorder?: (draggedId: string, targetId: string) => void;
+  // Modo de selecao: checkbox em cada cartao.
+  selectMode?: boolean;
+  selectedIds?: ReadonlySet<string>;
+  onToggleSelect?: (area: Area) => void;
+  // Resumo opcional por cadeira (useAreaOverview).
+  overviewById?: ReadonlyMap<string, AreaOverviewItem>;
+  overviewLoading?: boolean;
+  overviewFailed?: boolean;
+  gradeMax?: number | null;
 }
 
 // Alt + seta: troca com o vizinho (teclado, sem rato).
 const KEY_STEP: Record<string, number> = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 };
 
-export default function AreaGrid({ areas, canManage, onSelect, onEdit, onDelete, onToggleHidden, onReorder }: AreaGridProps) {
+export default function AreaGrid({
+  areas,
+  canManage,
+  onSelect,
+  onEdit,
+  onDelete,
+  onToggleHidden,
+  onReorder,
+  selectMode = false,
+  selectedIds,
+  onToggleSelect,
+  overviewById,
+  overviewLoading = false,
+  overviewFailed = false,
+  gradeMax = null,
+}: AreaGridProps) {
   const { t } = useI18n();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -53,7 +78,7 @@ export default function AreaGrid({ areas, canManage, onSelect, onEdit, onDelete,
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3">
       {areas.map((area, index) => {
         const card = (
           <AreaCard
@@ -63,9 +88,16 @@ export default function AreaGrid({ areas, canManage, onSelect, onEdit, onDelete,
             onEdit={onEdit}
             onDelete={onDelete}
             onToggleHidden={onToggleHidden}
+            selectMode={selectMode}
+            selected={selectedIds?.has(area.id) ?? false}
+            onToggleSelect={onToggleSelect}
+            overview={overviewById?.get(area.id)}
+            overviewLoading={overviewLoading}
+            overviewFailed={overviewFailed}
+            gradeMax={gradeMax}
           />
         );
-        if (!onReorder) return <div key={area.id}>{card}</div>;
+        if (!onReorder) return <div key={area.id} className="h-full">{card}</div>;
         return (
           <div
             key={area.id}
@@ -77,7 +109,7 @@ export default function AreaGrid({ areas, canManage, onSelect, onEdit, onDelete,
             onDrop={handleDrop(area.id)}
             onDragEnd={handleDragEnd}
             onKeyDown={handleKeyDown(index)}
-            className={`rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 ${
+            className={`h-full rounded-xl transition-[opacity,box-shadow] duration-[var(--duration-quick)] ease-smooth-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 ${
               draggedId === area.id ? 'opacity-50' : ''
             } ${dragOverId === area.id && draggedId !== area.id ? 'ring-2 ring-violet-500' : ''}`}
           >

@@ -1,4 +1,5 @@
 import type { ApprovalRules } from './approval-rules.types';
+import { evaluateCustomRules } from './custom-rules';
 
 // Probabilidade de passar com peso ainda por avaliar (N47, pessimista).
 // Pura: sem Nest nem Prisma, e deterministica (PRNG com semente fixa, os
@@ -63,6 +64,8 @@ export interface GradedShare {
   grade: number;
   /** Fracao (0-1) do peso total da cadeira. */
   share: number;
+  /** Nome do componente; so as regras custom com labelContains o usam. */
+  label?: string;
 }
 
 export interface PassModelInput {
@@ -160,6 +163,17 @@ function continuousPassProbability(input: PassModelInput): number {
   const gradedGrades = graded.map((g) => g.grade);
   // Regras duras ja violadas pelas notas tiradas: a continua nao passa.
   if (violatesHardRules(gradedGrades, rules)) return 0;
+  // Regras custom: so sobre as notas ja tiradas (nao se simulam nos
+  // componentes futuros, ver custom-rules.ts). Sem label conta como ''.
+  const customViolations = evaluateCustomRules(
+    graded.map((g) => ({
+      label: g.label ?? '',
+      grade: g.grade,
+      share: g.share,
+    })),
+    rules,
+  );
+  if (customViolations.length > 0) return 0;
   const earned = graded.reduce((acc, g) => acc + g.grade * g.share, 0);
   const { mean, sd } = futureGradeModel(graded, rules);
   const { componentMinGrade, secondThreshold, maxBelowSecondThreshold } = rules;

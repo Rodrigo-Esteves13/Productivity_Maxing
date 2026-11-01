@@ -63,4 +63,5 @@ export const risk: Record<string, string> = {
   'courseRisk.needed.closed': "評価する項目は残っていません",
   'courseRisk.needed.otherTrack': "継続評価では到達できません。試験または再試験を確認してください",
   'courseRisk.needsPeriod': "プログラムと期間を作成すると合格確率が表示されます。",
+  'courseRisk.reason.CUSTOM_RULE_VIOLATED': "カスタム規則を満たしていません: {rule}。",
 };

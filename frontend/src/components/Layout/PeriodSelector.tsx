@@ -3,6 +3,7 @@ import { useAcademic } from '../../context/useAcademic';
 import { PinIcon, ChevronDownIcon } from '../UI/Icons';
 import type { AcademicPeriod } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import { MODAL_EXIT_MS, usePresence } from '../../hooks/usePresence';
 
 // Lives next to ProgramSelector, always in this order (Program -> Period).
 //
@@ -25,6 +26,7 @@ export default function PeriodSelector() {
   } = useAcademic();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { mounted, state } = usePresence(isOpen, MODAL_EXIT_MS);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -78,10 +80,11 @@ export default function PeriodSelector() {
             <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400" />
           </button>
 
-          {isOpen && (
+          {mounted && (
             <div
               role="listbox"
-              className="motion-dropdown origin-top absolute left-0 mt-1 w-full min-w-[220px] bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl py-1 z-50 max-h-72 overflow-y-auto"
+              data-state={state}
+              className="motion-dropdown data-[state=closed]:opacity-0 data-[state=closed]:scale-[0.99] data-[state=closed]:duration-[var(--duration-quick)] data-[state=closed]:pointer-events-none origin-top absolute left-0 mt-1 w-full min-w-[220px] bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl py-1 z-50 max-h-72 overflow-y-auto"
             >
               {visiblePeriods.map((period: AcademicPeriod) => (
                 <button

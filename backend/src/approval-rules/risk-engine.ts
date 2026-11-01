@@ -10,6 +10,7 @@ import type {
   RiskReason,
   RiskReasonCode,
 } from './approval-rules.types';
+import { describeCustomRule, evaluateCustomRules } from './custom-rules';
 import {
   ASSUMED_COMPONENT_SHARE,
   modelPassPct,
@@ -28,7 +29,7 @@ import {
 //   medida na escala (dificuldade), mais a distancia entre esse minimo e a
 //   media ja mostrada (pesada pela fracao ja avaliada).
 // - Regras duras (componente abaixo do minimo, demasiados abaixo do limiar
-//   secundario), nota final fechada abaixo da passagem ou meta impossivel no
+//   secundario, regras custom do user sobre o ja avaliado), nota final fechada abaixo da passagem ou meta impossivel no
 //   peso restante decidem a continua: passa a contar a prova unica a 100%
 //   (exame, depois recurso). Com prova o risco e "high" (depende de uma
 //   tentativa), nunca "extreme" so por isso; sem prova nenhuma e chumbo.
@@ -60,6 +61,7 @@ import {
 //   ABSENCE_OVER_LIMIT               share, limit (percentagens)
 //   POSTPONED_TASKS                  count
 //   TEACHER_HISTORY_LOWER            teacher, withTeacher, others (na escala da cadeira)
+//   CUSTOM_RULE_VIOLATED             rule (texto de describeCustomRule, uma por regra)
 //   ONLY_EXAM_TRACK_LEFT             track (EXAM ou RESIT, a prova que resta)
 //   REMAINING_UNCERTAINTY            remaining (%), count (estimado), min, second, max
 //   REMAINING_UNCERTAINTY_MIN        remaining (%), count, min (sem quota do limiar)
@@ -366,10 +368,43 @@ function checkSecondThreshold(
   };
 }
 
-const HARD_RULE_CHECKS: readonly ((
+/**
+ * Regras custom (custom-rules.ts), so sobre os componentes ja avaliados: uma
+ * razao por regra violada.
+ */
+function checkCustomRules(
   graded: GradedComponent[],
   rules: ApprovalRules,
-) => RiskReason | null)[] = [checkComponentMin, checkSecondThreshold];
+): RiskReason[] {
+  return evaluateCustomRules(graded, rules).map(({ rule }) => ({
+    code: 'CUSTOM_RULE_VIOLATED',
+    params: { rule: describeCustomRule(rule) },
+  }));
+}
+
+type HardRuleCheck = (
+  graded: GradedComponent[],
+  rules: ApprovalRules,
+) => RiskReason[];
+
+/** Adapta uma regra que da no maximo uma razao. */
+const single =
+  (
+    check: (
+      graded: GradedComponent[],
+      rules: ApprovalRules,
+    ) => RiskReason | null,
+  ): HardRuleCheck =>
+  (graded, rules) => {
+    const reason = check(graded, rules);
+    return reason ? [reason] : [];
+  };
+
+const HARD_RULE_CHECKS: readonly HardRuleCheck[] = [
+  single(checkComponentMin),
+  single(checkSecondThreshold),
+  checkCustomRules,
+];
 
 /**
  * Nota minima de cada componente que falta: o minimo por componente e, se
@@ -445,9 +480,7 @@ function buildContext(input: CourseRiskInput): CourseContext | null {
       : Math.max(rawNeeded, remainingComponentFloor(graded, rules)),
     finalPasses:
       applyRounding(projected, rules) >= rules.passMark - FLOAT_EPSILON,
-    violations: HARD_RULE_CHECKS.map((check) => check(graded, rules)).filter(
-      isPresent,
-    ),
+    violations: HARD_RULE_CHECKS.flatMap((check) => check(graded, rules)),
     graded,
     remainingShares: remainingSharesOf(weighted, weightBase, remainingShare),
   };
@@ -784,9 +817,12 @@ function teacherSignal(
  */
 function remainingCannotFail(ctx: CourseContext): boolean {
   const { rules } = ctx;
+  // Regras custom tambem contam: os componentes futuros podem viola-las.
   const hasHardRules =
     rules.componentMinGrade !== null ||
-    (rules.secondThreshold !== null && rules.maxBelowSecondThreshold !== null);
+    (rules.secondThreshold !== null &&
+      rules.maxBelowSecondThreshold !== null) ||
+    (rules.customRules ?? []).length > 0;
   if (hasHardRules || ctx.remainingShares.length === 0) return false;
   const earned = sum(ctx.graded.map((g) => g.grade * g.share));
   const worst = earned + rules.scaleMin * sum(ctx.remainingShares);

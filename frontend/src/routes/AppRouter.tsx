@@ -12,6 +12,7 @@ import CookieNotice from '../components/Legal/CookieNotice';
 import CommandPaletteHost from '../components/CommandPalette/CommandPaletteHost';
 import GlobalStudyTimerHost from '../components/Study/GlobalStudyTimerHost';
 import RoutePrefetcher from './RoutePrefetcher';
+import DailyDigestHost from '../components/Digest/DailyDigestHost';
 import CalendarSyncReviewModal from '../components/Schedule/CalendarSyncReviewModal';
 import PushPermissionPrompt from '../pwa/PushPermissionPrompt';
 import PushSubscriptionSync from '../pwa/PushSubscriptionSync';
@@ -27,6 +28,7 @@ import {
   Devices,
   Agent,
   Areas,
+  Flashcards,
   Social,
   FriendNotes,
   FriendProfile,
@@ -152,6 +154,10 @@ export default function AppRouter() {
             element={<PrivateRoute><Areas /></PrivateRoute>}
           />
           <Route
+            path="/flashcards"
+            element={<PrivateRoute><Flashcards /></PrivateRoute>}
+          />
+          <Route
             path="/social/add/:code"
             element={<PrivateRoute><FriendLink /></PrivateRoute>}
           />
@@ -230,6 +236,7 @@ export default function AppRouter() {
           visible across every navigation instead of remounting per page
           the way it would if it lived inside PageLayout instead. */}
       <GlobalStudyTimerHost />
+      <DailyDigestHost />
       <RoutePrefetcher />
       {/* Montado uma vez: abre sozinho a pedir Confirm/Deny quando o
           horário, os turnos ou o plano mudam e o Google Calendar está

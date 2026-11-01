@@ -17,6 +17,7 @@ import {
   EstimationAccuracyCard,
   DeadlineComplianceCard,
   WeekdayLoadCard,
+  ProcrastinationWeekdayCard,
   TargetVsRealCard,
   ProductivityByTypeCard,
   DifficultyVsGradeCard,
@@ -89,6 +90,9 @@ export default function DashboardCardGrid({
       )}
       {visibility.weekdayLoad && academicTasks.length > 0 && (
         <WeekdayLoadCard tasks={academicTasks} />
+      )}
+      {visibility.procrastinationWeekday && academicTasks.length > 0 && (
+        <ProcrastinationWeekdayCard tasks={academicTasks} />
       )}
       {visibility.targetVsReal && academicTasks.length > 0 && activeProgram && (
         <TargetVsRealCard

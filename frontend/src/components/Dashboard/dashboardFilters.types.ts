@@ -8,6 +8,8 @@ export interface DashboardFiltersState {
   // Esforco (enum Effort ou 'NONE') e prontidao (ready/locked/dateTbd).
   effort: string;
   readiness: string;
+  // Etiqueta ('' = todas).
+  tag: string;
 }
 
 export const EMPTY_DASHBOARD_FILTERS: DashboardFiltersState = {
@@ -19,4 +21,5 @@ export const EMPTY_DASHBOARD_FILTERS: DashboardFiltersState = {
   dateStatus: '',
   effort: '',
   readiness: '',
+  tag: '',
 };

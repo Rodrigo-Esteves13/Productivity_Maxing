@@ -10,6 +10,7 @@ import { AreaRatingsStatsService } from './area-ratings-stats.service';
 import { EPSILON, RATING_STATS_MIN_SAMPLE } from './area-ratings.constants';
 import type { RatingCourseRow } from './area-ratings.types';
 import { MS_PER_DAY } from '../common/time.constants';
+import type { AreaTeachersService } from '../area-teachers/area-teachers.service';
 import type { PrismaService } from '../prisma/prisma.service';
 
 const USER = 'user-1';
@@ -298,9 +299,16 @@ describe('AreaRatingsStatsService', () => {
         findMany: jest.fn().mockResolvedValue(data.sessions ?? []),
       },
     };
+    const teachers = {
+      syncFromScheduleSafe: jest.fn().mockResolvedValue(undefined),
+    };
     return {
       prisma,
-      service: new AreaRatingsStatsService(prisma as unknown as PrismaService),
+      teachers,
+      service: new AreaRatingsStatsService(
+        prisma as unknown as PrismaService,
+        teachers as unknown as AreaTeachersService,
+      ),
     };
   }
 
@@ -316,6 +324,19 @@ describe('AreaRatingsStatsService', () => {
         where: { isArchived: false, program: { userId: USER } },
       }),
     );
+  });
+
+  it('syncs the schedule teachers before reading the notes', async () => {
+    const { prisma, teachers, service } = build({
+      periods: [{ id: P1 }],
+      courseTaskAreas: ['a'],
+      areas: [{ id: 'a', name: 'A', colorHex: '#000000' }],
+    });
+    await service.stats(USER);
+    expect(teachers.syncFromScheduleSafe).toHaveBeenCalledWith(USER);
+    expect(
+      teachers.syncFromScheduleSafe.mock.invocationCallOrder[0],
+    ).toBeLessThan(prisma.areaTeacherNote.findMany.mock.invocationCallOrder[0]);
   });
 
   it('404s for a periodId that is not the user', async () => {

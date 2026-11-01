@@ -510,6 +510,7 @@ export const extra: Record<string, string> = {
   "ui.copied": "已复制！",
   "ui.hidePassword": "隐藏密码",
   "ui.showPassword": "显示密码",
+  "ui.capsLockOn": "大写锁定已开启",
   "ui.postponedNTimes": "已推迟 {count} 次",
   "ui.ratingFromTo": "评分范围 {min} 到 {max}",
   "ui.stepsDoneOf": "已完成 {done}/{total} 个步骤",

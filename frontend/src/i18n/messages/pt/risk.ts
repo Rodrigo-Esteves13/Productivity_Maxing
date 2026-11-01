@@ -63,4 +63,5 @@ export const risk: Record<string, string> = {
   'courseRisk.needed.closed': "Nada por avaliar",
   'courseRisk.needed.otherTrack': "Inalcançável na avaliação contínua, ver exame ou recurso",
   'courseRisk.needsPeriod': "Cria um programa e um período para ver a tua probabilidade de passar.",
+  'courseRisk.reason.CUSTOM_RULE_VIOLATED': "A tua regra personalizada não é cumprida: {rule}.",
 };
