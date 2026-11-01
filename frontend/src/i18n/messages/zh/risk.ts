@@ -63,4 +63,5 @@ export const risk: Record<string, string> = {
   'courseRisk.needed.closed': "没有待评分的内容",
   'courseRisk.needed.otherTrack': "持续评估已无法达成,请查看考试或重修",
   'courseRisk.needsPeriod': "创建项目和时间段后即可查看通过概率。",
+  'courseRisk.reason.CUSTOM_RULE_VIOLATED': "你的自定义规则未满足:{rule}。",
 };

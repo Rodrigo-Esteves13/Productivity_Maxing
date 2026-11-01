@@ -833,6 +833,7 @@ export interface Task {
   academicTypeIsEvent?: boolean;
   topics: string | null;
   notes: string | null;
+  tags?: string[];
   isPinned: boolean;
   // Manual drag-and-drop order in TaskGrid - lower first. Set via
   // PATCH /tasks/reorder (reorderTasks in userService.ts).
@@ -892,6 +893,8 @@ export interface Task {
 
   // Checklist da task (vem ordenada do backend).
   subtasks?: Subtask[];
+  // Numero de ficheiros anexados (so a contagem); ausente em payloads antigos.
+  attachmentCount?: number;
 
   // Recorrencia: ao concluir cria-se a proxima ocorrencia.
   recurrenceFrequency?: RecurrenceFrequency | null;
@@ -1713,6 +1716,7 @@ export type RiskReasonCode =
   | 'ABSENCE_OVER_LIMIT'
   | 'POSTPONED_TASKS'
   | 'TEACHER_HISTORY_LOWER'
+  | 'CUSTOM_RULE_VIOLATED'
   | 'ONLY_EXAM_TRACK_LEFT'
   | 'REMAINING_UNCERTAINTY'
   | 'REMAINING_UNCERTAINTY_MIN'
@@ -1775,6 +1779,8 @@ export interface CourseRiskOverview {
 export interface AreaTeacherNote {
   areaId: string;
   teacherName: string;
+  // Preenchido a partir do horario; editar torna-o manual.
+  autoFromSchedule: boolean;
 }
 
 export const TEACHER_NAME_MAX_LENGTH = 100;
@@ -1836,3 +1842,18 @@ export interface RatingStats {
 }
 
 export type AreaRatingField = 'teacherRating' | 'courseLiking';
+
+export type FlashcardGrade = 'AGAIN' | 'GOOD' | 'EASY';
+
+export interface Flashcard {
+  id: string;
+  areaId: string | null;
+  front: string;
+  back: string;
+  dueAt: string;
+  intervalDays: number;
+  ease: number;
+  reps: number;
+  lapses: number;
+  createdAt: string;
+}

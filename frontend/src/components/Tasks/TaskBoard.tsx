@@ -64,13 +64,13 @@ export default function TaskBoard({ tasks, statuses, onSelect, onChangeStatus }:
                 if (overStatus !== status) setOverStatus(status);
               }}
               onDrop={handleDrop(status)}
-              className={`flex w-[78vw] max-w-[18rem] shrink-0 flex-col rounded-xl border bg-neutral-900/40 p-2 xl:w-auto xl:max-w-none xl:flex-1 xl:min-w-0 ${
+              className={`flex w-[78vw] max-w-[18rem] shrink-0 flex-col rounded-2xl border bg-neutral-900/40 p-2 transition-colors duration-[var(--duration-quick)] ease-smooth-out xl:w-auto xl:max-w-none xl:flex-1 xl:min-w-0 ${
                 overStatus === status && draggedId ? 'border-violet-500/70' : 'border-neutral-800'
               }`}
             >
               <header className="flex items-center justify-between gap-2 px-1 pb-2">
                 <StatusBadge status={status as ProgressStatus} />
-                <span className="text-xs text-neutral-500">{columnTasks.length}</span>
+                <span className="text-xs tabular-nums text-neutral-500">{columnTasks.length}</span>
               </header>
               {columnTasks.length === 0 ? (
                 <p className="px-1 py-4 text-center text-xs text-neutral-500">{t('board.empty')}</p>

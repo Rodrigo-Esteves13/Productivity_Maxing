@@ -105,6 +105,15 @@ export const SITE_PAGES: SitePage[] = [
     ],
   },
   {
+    path: '/flashcards',
+    labelKey: 'nav.flashcards',
+    section: 'study',
+    related: [
+      { to: '/notebook', labelKey: 'related.areas.notebook' },
+      { to: '/areas', labelKey: 'nav.areas' },
+    ],
+  },
+  {
     path: '/report-card',
     labelKey: 'reportCard.title',
     section: 'study',

@@ -4,6 +4,8 @@ import { clearAreaTeacher, getAreaTeachers, setAreaTeacher } from '../api/areaTe
 // Nome do docente (nota privada) de uma cadeira.
 export function useAreaTeacher(areaId: string) {
   const [teacherName, setTeacherName] = useState('');
+  // Nome vindo do horario. Gravar manualmente passa a manual.
+  const [autoFromSchedule, setAutoFromSchedule] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(false);
@@ -12,7 +14,10 @@ export function useAreaTeacher(areaId: string) {
     let cancelled = false;
     getAreaTeachers()
       .then((rows) => {
-        if (!cancelled) setTeacherName(rows.find((row) => row.areaId === areaId)?.teacherName ?? '');
+        if (cancelled) return;
+        const row = rows.find((item) => item.areaId === areaId);
+        setTeacherName(row?.teacherName ?? '');
+        setAutoFromSchedule(row?.autoFromSchedule ?? false);
       })
       .catch(() => {
         if (!cancelled) setError(true);
@@ -35,6 +40,7 @@ export function useAreaTeacher(areaId: string) {
         if (trimmed === '') await clearAreaTeacher(areaId);
         else await setAreaTeacher(areaId, trimmed);
         setTeacherName(trimmed);
+        setAutoFromSchedule(false);
         return true;
       } catch {
         setError(true);
@@ -46,5 +52,5 @@ export function useAreaTeacher(areaId: string) {
     [areaId],
   );
 
-  return { teacherName, isLoading, isSaving, error, save };
+  return { teacherName, autoFromSchedule, isLoading, isSaving, error, save };
 }

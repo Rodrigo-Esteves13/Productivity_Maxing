@@ -10,7 +10,8 @@ export default function ViewTaskButton({ taskId, title }: { taskId: string; titl
     <Link
       to={`/tasks?open=${encodeURIComponent(taskId)}`}
       onClick={(e) => e.stopPropagation()}
-      className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-neutral-700 text-neutral-400 hover:text-violet-300 hover:border-violet-700 transition-colors print-hide"
+      // before: alarga o alvo de toque para 40px sem mudar o desenho de 32px.
+      className="relative inline-flex items-center justify-center h-8 w-8 rounded-md border border-neutral-700 text-neutral-400 hover:text-violet-300 hover:border-violet-700 transition-colors duration-[var(--duration-quick)] ease-smooth-out before:absolute before:-inset-1 before:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 print-hide"
       aria-label={t('common.openTaskNamed', { title })}
       title={t('common.openTask')}
     >

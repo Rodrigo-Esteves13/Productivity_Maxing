@@ -81,6 +81,12 @@ describe('UsersService.exportUserData', () => {
     const where = calls.map(([args]) => args.where).find((w) => w.id);
     expect(where?.id?.in.sort()).toEqual(['area-note', 'area-rule']);
     expect(data.approvalRuleSets).toHaveLength(2);
+    const noteSel = (models.areaTeacherNote as { findMany: jest.Mock }).findMany
+      .mock.calls[0] as [{ select: Record<string, boolean> }];
+    expect(noteSel[0].select.autoFromSchedule).toBe(true);
+    const ruleSel = (models.approvalRuleSet as { findMany: jest.Mock }).findMany
+      .mock.calls[0] as [{ select: Record<string, boolean> }];
+    expect(ruleSel[0].select.customRules).toBe(true);
   });
 
   it('exports only the caller area ratings and the areas behind them (N48)', async () => {

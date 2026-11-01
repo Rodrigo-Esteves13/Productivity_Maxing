@@ -135,6 +135,7 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       <DetailRow label={t('ui.type')}>{typeLabel}</DetailRow>
       {academicTypeLabel && <DetailRow label={t('ui.academicType')}>{academicTypeLabel}</DetailRow>}
       {task.topics && <DetailRow label={t('ui.topics')}>{task.topics}</DetailRow>}
+      {task.tags?.length ? <DetailRow label={t('tags.label')}>{task.tags.map((tag) => `#${tag}`).join(' ')}</DetailRow> : null}
       {task.notes && (
         <DetailRow label={t('ui.notes')}>
           <span className="whitespace-pre-wrap break-words">{task.notes}</span>

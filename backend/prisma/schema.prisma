@@ -457,6 +457,7 @@ model User {
   gradeComponents                GradeComponent[]
   notebookChangeProposals        NotebookChangeProposal[]
   approvalRuleSets               ApprovalRuleSet[]
+  flashcards                     Flashcard[]
 }
 
 /// Recurso submetido pelo próprio utilizador contra a sua suspensão/ban
@@ -752,6 +753,7 @@ model Area {
   gradeComponents GradeComponent[]
   // Override das regras de aprovacao desta cadeira, por user (N46).
   approvalRuleSets ApprovalRuleSet[]
+  flashcards       Flashcard[]
 
   @@index([ownerId])
   @@index([proposalStatus])
@@ -785,6 +787,9 @@ model Task {
   academicTypeId String?
   academicType   AcademicTaskType? @relation(fields: [academicTypeId], references: [id])
   topics         String?
+
+  // Etiquetas livres do user (minusculas, max 10, ver tasks/task-tags.ts).
+  tags String[] @default([])
 
   // Notas livres/journaling sobre a task - reflexão pós-conclusão, o que
   // correu bem/mal num exame, contexto que não cabe no título nem nos
@@ -1267,6 +1272,9 @@ model AreaTeacherNote {
   userId      String
   areaId      String
   teacherName String
+  // true = preenchido sozinho a partir do professor do horario (ClassOccurrence).
+  // Editar ou gravar a mao poe a false e nunca mais e sobrescrito.
+  autoFromSchedule Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -1760,6 +1768,9 @@ model ApprovalRuleSet {
   maxBelowSecondThreshold Int?
   hasExamTrack            Boolean          @default(false)
   hasResitTrack           Boolean          @default(false)
+  // Regras extra do user, somadas as duas fixas (nota minima e quota). Lista
+  // validada no DTO e no servico (ver custom-rules.ts). null = nenhuma.
+  customRules             Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2557,4 +2568,26 @@ model TurmaDeadlineTask {
 
   @@unique([deadlineId, userId])
   @@index([userId])
+}
+
+/// Flashcard de revisao espacada (SM-2 simplificado, ver flashcards/flashcard-schedule.ts).
+model Flashcard {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Opcional: ligar o cartao a uma cadeira. SetNull se a Area desaparecer.
+  areaId       String?
+  area         Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  front        String
+  back         String   @db.Text
+  dueAt        DateTime @default(now())
+  intervalDays Int      @default(0)
+  ease         Float    @default(2.5)
+  reps         Int      @default(0)
+  lapses       Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId, dueAt])
+  @@index([userId, areaId])
 }

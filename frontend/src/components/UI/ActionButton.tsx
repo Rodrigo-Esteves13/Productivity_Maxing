@@ -7,7 +7,7 @@ interface ActionButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const colorClasses: Record<ActionButtonColor, string> = {
-  violet: 'bg-violet-600 hover:bg-violet-700',
+  violet: 'bg-violet-700 hover:bg-violet-600',
   amber: 'bg-amber-700 hover:bg-amber-800',
 };
 

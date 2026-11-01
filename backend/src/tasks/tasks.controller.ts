@@ -80,6 +80,7 @@ export class TasksController {
       query.periodId,
       query,
       meta,
+      query.tag,
     );
     if (meta.truncated) res.setHeader(RESULT_TRUNCATED_HEADER, 'true');
     return result;

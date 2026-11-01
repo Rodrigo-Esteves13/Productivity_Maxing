@@ -1,12 +1,18 @@
+import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsIn,
   IsInt,
   IsNumber,
   IsOptional,
+  IsString,
   Max,
+  MaxLength,
   Min,
   ValidateIf,
+  ValidateNested,
   registerDecorator,
   type ValidationArguments,
   type ValidationOptions,
@@ -19,7 +25,13 @@ import {
   MAX_BELOW_SECOND_THRESHOLD_LIMIT,
 } from '../presets';
 import type { ApprovalPresetKey } from '../presets';
-import type { ApprovalRounding } from '../approval-rules.types';
+import type { ApprovalRounding, CustomRuleKind } from '../approval-rules.types';
+import {
+  CUSTOM_RULES_MAX,
+  CUSTOM_RULE_KINDS,
+  CUSTOM_RULE_LABEL_MAX,
+  CUSTOM_RULE_MAX_BELOW_LIMIT,
+} from '../custom-rules.constants';
 
 const GRADE_DECIMALS = { maxDecimalPlaces: 2 };
 
@@ -81,6 +93,72 @@ function IsWithinScale(options?: ValidationOptions) {
           if (isFiniteNumber(scaleMin) && value < scaleMin) return false;
           if (isFiniteNumber(scaleMax) && value > scaleMax) return false;
           return true;
+        },
+      },
+    });
+  };
+}
+
+const KIND_MAX_BELOW: CustomRuleKind = 'MAX_BELOW';
+
+/** Texto vazio (ou so espacos) passa a null; o resto vem sem espacos nas pontas. */
+const trimToNull = ({ value }: { value: unknown }): unknown => {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+};
+
+/** Uma regra extra. maxBelow so existe (e e obrigatorio) em MAX_BELOW. */
+export class CustomRuleDto {
+  @ApiPropertyOptional({ enum: CUSTOM_RULE_KINDS })
+  @IsIn(CUSTOM_RULE_KINDS)
+  kind!: CustomRuleKind;
+
+  @ApiPropertyOptional({ example: 8 })
+  @IsNumber(GRADE_DECIMALS)
+  @Min(0)
+  @Max(APPROVAL_SCALE_LIMIT)
+  threshold!: number;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Required for MAX_BELOW, must be null for GROUP_AVG_MIN.',
+  })
+  @ValidateIf(
+    (o: CustomRuleDto) => o.kind === KIND_MAX_BELOW || o.maxBelow != null,
+  )
+  @IsInt()
+  @Min(0)
+  @Max(CUSTOM_RULE_MAX_BELOW_LIMIT)
+  @IsNullForGroupAvg()
+  maxBelow?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Only components whose name contains this text. null = all.',
+  })
+  @Transform(trimToNull)
+  @IsOptional()
+  @IsString()
+  @MaxLength(CUSTOM_RULE_LABEL_MAX)
+  labelContains?: string | null;
+}
+
+/** maxBelow so faz sentido em MAX_BELOW. */
+function IsNullForGroupAvg(options?: ValidationOptions) {
+  return (object: object, propertyName: string) => {
+    registerDecorator({
+      name: 'isNullForGroupAvg',
+      target: object.constructor,
+      propertyName,
+      options: {
+        message: 'maxBelow is only allowed for MAX_BELOW rules.',
+        ...options,
+      },
+      validator: {
+        validate(value: unknown, args: ValidationArguments) {
+          const { kind } = args.object as CustomRuleDto;
+          return kind === KIND_MAX_BELOW || value == null;
         },
       },
     });
@@ -166,4 +244,15 @@ export class UpsertApprovalRulesDto {
   @OptionalNotNull()
   @IsBoolean()
   hasResitTrack?: boolean;
+
+  @ApiPropertyOptional({
+    type: [CustomRuleDto],
+    description: 'Extra rules on top of the fixed ones. [] clears them.',
+  })
+  @OptionalNotNull()
+  @IsArray()
+  @ArrayMaxSize(CUSTOM_RULES_MAX)
+  @ValidateNested({ each: true })
+  @Type(() => CustomRuleDto)
+  customRules?: CustomRuleDto[];
 }

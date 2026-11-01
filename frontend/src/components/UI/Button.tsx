@@ -24,7 +24,7 @@ const sizeClasses: Record<ButtonSize, string> = {
 export default function Button({ variant = 'primary', size, className = '', ...rest }: ButtonProps) {
   return (
     <button
-      className={`press rounded-lg p-2 font-medium disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 ${size ? sizeClasses[size] : ''} ${variantClasses[variant]} ${className}`}
+      className={`press rounded-lg p-2 font-medium disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${size ? sizeClasses[size] : ''} ${variantClasses[variant]} ${className}`}
       {...rest}
     />
   );

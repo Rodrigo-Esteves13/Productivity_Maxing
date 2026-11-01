@@ -6,4 +6,5 @@ export const teacher: Record<string, string> = {
   'teacher.clear': "清除",
   'teacher.saved': "教师已保存。",
   'teacher.error': "无法保存教师。",
+  'areaTeacher.fromSchedule': "来自你的课表",
 };

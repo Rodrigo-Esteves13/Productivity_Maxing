@@ -366,6 +366,7 @@ export function useTasksPage() {
         periodId: selectedTask.periodId ?? undefined,
         priority: selectedTask.priority ?? undefined,
         notes: selectedTask.notes ?? undefined,
+        tags: selectedTask.tags,
         estimatedMinutes: selectedTask.estimatedMinutes ?? undefined,
         calendarDurationMinutes: selectedTask.calendarDurationMinutes ?? undefined,
         // Prontidao e duas fases tambem descrevem a task (o mesmo que um

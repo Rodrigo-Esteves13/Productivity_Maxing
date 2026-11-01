@@ -63,4 +63,5 @@ export const risk: Record<string, string> = {
   'courseRisk.needed.closed': "더 평가할 항목이 없습니다",
   'courseRisk.needed.otherTrack': "지속 평가로는 달성할 수 없습니다. 시험 또는 재시험을 확인하세요",
   'courseRisk.needsPeriod': "프로그램과 기간을 만들면 합격 확률을 볼 수 있습니다.",
+  'courseRisk.reason.CUSTOM_RULE_VIOLATED': "사용자 지정 규칙이 충족되지 않았습니다: {rule}.",
 };

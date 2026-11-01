@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getUserAreas,
   createArea,
@@ -20,6 +20,8 @@ import { useFeedback } from '../context/useFeedback';
 import { useAuth } from '../context/useAuth';
 import { translateNow } from '../i18n/translate';
 import { getApiCode } from '../lib/httpError';
+import { useAreaListPrefs } from './useAreaListPrefs';
+import { DEFAULT_AREA_FILTER } from '../lib/areaList';
 
 export type CreateMode = 'personal' | 'official';
 
@@ -225,7 +227,57 @@ export function useAreasPage() {
     }
   };
 
+  // Modo de selecao (regras de aprovacao em massa). Ids que ja nao existem na
+  // lista (apagadas, escondidas) deixam de contar.
+  const [selectMode, setSelectMode] = useState(false);
+  const [pickedIds, setPickedIds] = useState<Set<string>>(new Set());
+  const selectedIds = useMemo(
+    () => areas.filter((a) => pickedIds.has(a.id)).map((a) => a.id),
+    [areas, pickedIds],
+  );
+  const startSelecting = () => setSelectMode(true);
+  const stopSelecting = () => {
+    setSelectMode(false);
+    setPickedIds(new Set());
+  };
+  const toggleSelected = (id: string) =>
+    setPickedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const selectIds = (ids: string[]) => setPickedIds((prev) => new Set([...prev, ...ids]));
+  const deselectIds = (ids: string[]) =>
+    setPickedIds((prev) => {
+      const drop = new Set(ids);
+      return new Set([...prev].filter((id) => !drop.has(id)));
+    });
+
+  // Pesquisa (so nesta visita), filtro e ordenacao (guardados neste browser).
+  const [search, setSearch] = useState('');
+  const { filter, sort, setFilter, setSort } = useAreaListPrefs();
+  // "Limpar filtros": a ordenacao nao esconde nada, por isso fica.
+  const resetListQuery = () => {
+    setSearch('');
+    setFilter(DEFAULT_AREA_FILTER);
+  };
+
   return {
+    search,
+    setSearch,
+    filter,
+    setFilter,
+    sort,
+    setSort,
+    resetListQuery,
+    selectMode,
+    selectedIds,
+    startSelecting,
+    stopSelecting,
+    toggleSelected,
+    selectIds,
+    deselectIds,
     isAdmin,
     areas,
     proposals,

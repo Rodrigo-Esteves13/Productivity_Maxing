@@ -5,6 +5,7 @@ import { ChevronDownIcon, SearchIcon } from '../UI/Icons';
 import { OPEN_COMMAND_PALETTE_EVENT } from '../CommandPalette/CommandPaletteHost';
 import { useAuth } from '../../context/useAuth';
 import { useI18n } from '../../i18n/useI18n';
+import { MODAL_EXIT_MS, usePresence } from '../../hooks/usePresence';
 import { SECTION_LABEL_KEY, owningPage, pagesInSection, type SiteSection } from '../../lib/siteMap';
 
 // Primeiro passo do trilho: o nome da secao abre as paginas irmas, para
@@ -18,6 +19,7 @@ export default function SectionMenu({ section }: { section: SiteSection }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
+  const { mounted, state } = usePresence(isOpen, MODAL_EXIT_MS);
   const pages = pagesInSection(section, user?.role === 'ADMIN');
   const current = owningPage(pathname)?.path;
 
@@ -59,10 +61,11 @@ export default function SectionMenu({ section }: { section: SiteSection }) {
         {label}
         <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
-      {isOpen && (
+      {mounted && (
         <div
           id={menuId}
-          className="motion-dropdown absolute left-0 z-40 mt-1.5 w-max min-w-52 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 py-1 shadow-2xl"
+          data-state={state}
+          className="motion-dropdown data-[state=closed]:opacity-0 data-[state=closed]:scale-[0.99] data-[state=closed]:duration-[var(--duration-quick)] data-[state=closed]:pointer-events-none absolute left-0 z-40 mt-1.5 w-max min-w-52 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 py-1 shadow-2xl"
         >
           <ul>
             {pages.map((page) => {

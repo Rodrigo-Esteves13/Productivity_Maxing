@@ -3,7 +3,9 @@ import type { DragEvent } from 'react';
 import type { Task } from '../../types/models';
 import ColorDot from '../UI/ColorDot';
 import PriorityBadge from '../UI/PriorityBadge';
+import TagChips from '../UI/TagChips';
 import TaskReadinessBadges from '../UI/TaskReadinessBadges';
+import AttachmentCount from '../UI/AttachmentCount';
 import SubtaskProgress from '../UI/SubtaskProgress';
 import { getDateStatus } from '../../utils/taskDateStatus';
 import { useEnumLabel } from '../../hooks/useEnumLabel';
@@ -49,8 +51,8 @@ function TaskBoardCard({
           controlo la dentro). */}
       <div
         onClick={() => onSelect(task)}
-        className={`rounded-lg border bg-neutral-900 p-3 transition-colors hover:border-violet-500/50 ${
-          task.isPinned ? 'border-violet-500/40' : 'border-neutral-800'
+        className={`rounded-lg border bg-neutral-900 p-3 transition-[border-color] duration-[var(--duration-quick)] ease-smooth-out ${
+          task.isPinned ? 'border-violet-500/40' : 'border-neutral-800 hover:border-neutral-700'
         }`}
       >
         <p className="break-words text-sm font-medium text-neutral-100 line-clamp-3">
@@ -65,6 +67,7 @@ function TaskBoardCard({
             {task.title}
           </button>
           <SubtaskProgress subtasks={task.subtasks} className="ml-2 align-middle" />
+          <AttachmentCount count={task.attachmentCount} className="ml-2 align-middle" />
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-neutral-400">
           {task.area?.colorHex && <ColorDot color={task.area.colorHex} />}
@@ -76,6 +79,7 @@ function TaskBoardCard({
             <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
           )}
           <TaskReadinessBadges task={task} />
+          <TagChips tags={task.tags} />
         </div>
         <select
           value={task.progressStatus}
@@ -83,7 +87,7 @@ function TaskBoardCard({
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
           onChange={(e) => onChangeStatus(task, e.target.value)}
-          className="mt-2 w-full cursor-pointer rounded-md border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-neutral-300 outline-none focus:border-violet-500"
+          className="mt-2 w-full cursor-pointer rounded-md border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-300 focus:border-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
         >
           {statuses.map((status) => (
             <option key={status} value={status}>

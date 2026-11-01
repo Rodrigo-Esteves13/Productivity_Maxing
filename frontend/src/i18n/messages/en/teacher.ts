@@ -6,4 +6,5 @@ export const teacher: Record<string, string> = {
   'teacher.clear': "Clear",
   'teacher.saved': "Teacher saved.",
   'teacher.error': "Could not save the teacher.",
+  'areaTeacher.fromSchedule': "From your schedule",
 };

@@ -147,7 +147,7 @@ export default function Tasks() {
             <Link to="/task-packs" className="whitespace-nowrap text-sm text-violet-400 hover:text-violet-300">
               {t('packs.openLink')}
             </Link>
-            <SegmentedControl size="sm" options={viewOptions} value={view} onChange={setView} />
+            <SegmentedControl options={viewOptions} value={view} onChange={setView} />
             <TaskSortControl
               sortMode={sortMode}
               onChange={setSortMode}
@@ -181,34 +181,39 @@ export default function Tasks() {
 
       {isLoading ? (
         <CardGridSkeleton cards={6} />
-      ) : error ? (
-        <ErrorState message={error} />
-      ) : tasks.length === 0 ? (
-        <EmptyState message={t('ui.youHaveNoTasksRegistered')} />
-      ) : visibleTasks.length === 0 ? (
-        // Every task exists, but they're all completed-and-old enough to
-        // be archived, and the toggle above is off - "no tasks" would be
-        // actively misleading here (the user very much has tasks).
-        <EmptyState message={t('ui.allTasksArchived', { count: archivedCount })} />
-      ) : view === 'board' ? (
-        <TaskBoard
-          tasks={sortedTasks}
-          statuses={progressStatuses}
-          onSelect={handleSelectTask}
-          onChangeStatus={changeTaskStatus}
-        />
       ) : (
-        <TaskGrid 
-          tasks={sortedTasks} 
-          onSelect={handleSelectTask} 
-          onReschedule={rescheduleToTomorrow}
-          onComplete={completeTask}
-          reschedulingId={reschedulingId}
-          areas={areas}
-          onMoveArea={moveTaskToArea}
-          onTogglePin={toggleTaskPin}
-          onReorder={sortMode === 'manual' ? reorderTasksInState : undefined}
-        />
+        // motion-page: do esqueleto para o conteudo ha um fade curto, sem corte seco.
+        <div className="motion-page">
+          {error ? (
+            <ErrorState message={error} />
+          ) : tasks.length === 0 ? (
+            <EmptyState message={t('ui.youHaveNoTasksRegistered')} />
+          ) : visibleTasks.length === 0 ? (
+            // Every task exists, but they're all completed-and-old enough to
+            // be archived, and the toggle above is off - "no tasks" would be
+            // actively misleading here (the user very much has tasks).
+            <EmptyState message={t('ui.allTasksArchived', { count: archivedCount })} />
+          ) : view === 'board' ? (
+            <TaskBoard
+              tasks={sortedTasks}
+              statuses={progressStatuses}
+              onSelect={handleSelectTask}
+              onChangeStatus={changeTaskStatus}
+            />
+          ) : (
+            <TaskGrid
+              tasks={sortedTasks}
+              onSelect={handleSelectTask}
+              onReschedule={rescheduleToTomorrow}
+              onComplete={completeTask}
+              reschedulingId={reschedulingId}
+              areas={areas}
+              onMoveArea={moveTaskToArea}
+              onTogglePin={toggleTaskPin}
+              onReorder={sortMode === 'manual' ? reorderTasksInState : undefined}
+            />
+          )}
+        </div>
       )}
 
       {/* Modal de criação */}

@@ -1,12 +1,6 @@
-import { PencilIcon, TrashIcon, UndoIcon, CheckIcon, PinIcon } from './Icons';
+import { PencilIcon, TrashIcon, UndoIcon, CheckIcon, PinIcon, PinOffIcon, DuplicateIcon } from './Icons';
 import { useI18n } from '../../i18n/useI18n';
 import IconButton from './IconButton';
-
-const DuplicateIcon = () => (
-  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-  </svg>
-);
 
 interface ModalHeaderActionsProps {
   isEditing: boolean;
@@ -48,18 +42,18 @@ export default function ModalHeaderActions({
     <div className="flex items-center gap-1">
       {/* Botão de Pin - antes de tudo, sempre visível fora de edição */}
       {!isEditing && onTogglePin && (
-        <button
-          type="button"
-          onClick={onTogglePin}
-          title={isPinned ? t('ui.unpinTask') : t('ui.pinTask')}
-          aria-label={isPinned ? t('ui.unpinTask') : t('ui.pinTask')}
+        <IconButton
+          label={isPinned ? t('ui.unpinTask') : t('ui.pinTask')}
           aria-pressed={isPinned}
-          className={`transition-colors p-1 ${
-            isPinned ? 'text-violet-400 hover:text-violet-300' : 'text-neutral-400 hover:text-violet-400'
-          }`}
+          onClick={onTogglePin}
+          className={isPinned ? 'text-violet-400 hover:text-violet-300' : 'text-neutral-400 hover:text-violet-400'}
         >
-          <PinIcon />
-        </button>
+          {/* Os dois icones ficam montados e trocam com fade/scale/blur. */}
+          <span className="icon-swap" aria-hidden="true">
+            <PinIcon data-shown={!isPinned} />
+            <PinOffIcon data-shown={isPinned} />
+          </span>
+        </IconButton>
       )}
 
       {/* Botão de Marcar como Concluída - antes do Duplicar, só fora de edição */}

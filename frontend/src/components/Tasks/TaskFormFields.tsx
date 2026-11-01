@@ -13,6 +13,7 @@ import AcademicFields from './fields/AcademicFields';
 import ClassTimeSuggestionHint from './ClassTimeSuggestionHint';
 import { isCalendarTimeFieldVisible } from '../../lib/calendarTimeField';
 import GradingFields from './fields/GradingFields';
+import TagInput from '../UI/TagInput';
 import OptionalInfoFields from './fields/OptionalInfoFields';
 import ProgressAndGradeFields from './fields/ProgressAndGradeFields';
 
@@ -41,6 +42,7 @@ export interface TaskFormFieldValues {
   topics: string;
   referenceLink: string;
   notes: string;
+  tags: string[];
   targetGrade: string;
   weightPercentage: string;
   estimatedMinutes: string;
@@ -65,7 +67,7 @@ export interface TaskFormFieldValues {
 interface TaskFormFieldsProps {
   idPrefix: string;
   values: TaskFormFieldValues;
-  onChange: (field: keyof TaskFormFieldValues, value: string | boolean) => void;
+  onChange: (field: keyof TaskFormFieldValues, value: string | boolean | string[]) => void;
   // Só definido em edição (TaskEditForm) - permite ao pedido de previsão
   // também devolver actualMinutes para esta task em concreto. Ausente na
   // criação (TaskForm), onde a task ainda não existe.
@@ -78,6 +80,7 @@ interface TaskFormFieldsProps {
   progressStatuses?: string[];
   showRealGrade?: boolean;
   showProgressStatus?: boolean;
+  tagSuggestions?: string[];
 }
 
 export default function TaskFormFields({
@@ -93,6 +96,7 @@ export default function TaskFormFields({
   progressStatuses = [],
   showRealGrade = false,
   showProgressStatus = false,
+  tagSuggestions,
 }: TaskFormFieldsProps) {
   const { isAcademic, availableAcademicTypes, selectedArea, isTypeLockedByArea, filteredAreas } =
     useTaskTypeLogic({
@@ -230,6 +234,8 @@ export default function TaskFormFields({
         prediction={durationPrediction}
         isPredictionLoading={isDurationPredictionLoading}
       />
+
+      <TagInput value={values.tags} onChange={(v) => onChange('tags', v)} suggestions={tagSuggestions} />
 
       <OptionalInfoFields
         topics={values.topics}

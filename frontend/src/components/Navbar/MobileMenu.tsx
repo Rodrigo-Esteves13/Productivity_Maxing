@@ -1,4 +1,5 @@
 import { useI18n } from '../../i18n/useI18n';
+import type { PresenceState } from '../../hooks/usePresence';
 import CountBadge from '../UI/CountBadge';
 import PrefetchLink from '../UI/PrefetchLink';
 import { SECTION_LABEL_KEY } from '../../lib/siteMap';
@@ -9,6 +10,8 @@ interface MobileMenuProps {
   isAdmin: boolean;
   socialPending: number;
   onNavigate: () => void;
+  // Vem do usePresence da Navbar: "closed" anima a saida antes de desmontar.
+  state?: PresenceState;
 }
 
 const LINK_BASE = 'flex min-w-0 items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors';
@@ -16,7 +19,7 @@ const LINK_ACTIVE = `${LINK_BASE} bg-neutral-800 text-white`;
 const LINK_IDLE = `${LINK_BASE} text-neutral-300 hover:bg-neutral-800 hover:text-white`;
 const ADMIN_BASE = 'block px-3 py-2 rounded-md text-sm font-bold transition-colors';
 const ADMIN_ACTIVE = `${ADMIN_BASE} text-amber-400 bg-amber-400/10`;
-const ADMIN_IDLE = `${ADMIN_BASE} text-amber-500/70 hover:text-amber-400 hover:bg-neutral-800`;
+const ADMIN_IDLE = `${ADMIN_BASE} text-amber-400 hover:bg-neutral-800`;
 const HEADING = 'px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-neutral-500';
 
 // Todas as paginas do mapa, que seria demasiado para a barra.
@@ -30,7 +33,7 @@ const GROUPS = navGroups();
 // rodape (Estudo, Em conjunto, Vida...), em duas colunas para caber sem
 // scroll. Se mesmo assim nao couber (telemoveis baixos), o painel rola
 // sozinho: a navbar e sticky, e o fim da lista ficava inalcancavel.
-export default function MobileMenu({ currentPath, isAdmin, socialPending, onNavigate }: MobileMenuProps) {
+export default function MobileMenu({ currentPath, isAdmin, socialPending, onNavigate, state = 'open' }: MobileMenuProps) {
   const { t } = useI18n();
   const linkClass = (path: string) => (isNavActive(currentPath, path) ? LINK_ACTIVE : LINK_IDLE);
   const adminClass = (path: string) => (isNavActive(currentPath, path) ? ADMIN_ACTIVE : ADMIN_IDLE);
@@ -52,7 +55,7 @@ export default function MobileMenu({ currentPath, isAdmin, socialPending, onNavi
   };
 
   return (
-    <div className="motion-panel xl:hidden max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-t border-neutral-800 bg-neutral-950 px-2 pb-3">
+    <div data-state={state} className="motion-panel data-[state=closed]:opacity-0 data-[state=closed]:-translate-y-1 data-[state=closed]:duration-[var(--duration-quick)] data-[state=closed]:pointer-events-none xl:hidden max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-t border-neutral-800 bg-neutral-950 px-2 pb-3">
       {GROUPS.map((group) => {
         const headingId = `mobile-nav-${group.section}`;
         return (

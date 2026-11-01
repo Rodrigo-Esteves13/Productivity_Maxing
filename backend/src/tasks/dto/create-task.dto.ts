@@ -9,6 +9,8 @@ import {
   IsInt,
   IsUrl,
   IsBoolean,
+  IsArray,
+  ArrayMaxSize,
   Min,
   Max,
   MaxLength,
@@ -21,6 +23,8 @@ import {
   RecurrenceFrequency,
 } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import { normalizeTags, TAGS_MAX, TAG_LEN_MAX } from '../task-tags';
 
 // Campos opcionais aceitam `null` (o @IsOptional deixa passar): no PATCH
 // (UpdateTaskDto) null quer dizer "limpar este campo", undefined/ausente quer
@@ -107,6 +111,20 @@ export class CreateTaskDto {
   @IsString()
   @MaxLength(5000)
   notes?: string | null;
+
+  @ApiPropertyOptional({
+    example: ['exam prep'],
+    description: 'Free-form labels, normalized (lowercase, deduped).',
+  })
+  @IsOptional()
+  @Transform(({ value }) =>
+    Array.isArray(value) ? normalizeTags(value) : value,
+  )
+  @IsArray()
+  @ArrayMaxSize(TAGS_MAX)
+  @IsString({ each: true })
+  @MaxLength(TAG_LEN_MAX, { each: true })
+  tags?: string[];
 
   @ApiPropertyOptional({
     example: 25.5,

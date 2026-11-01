@@ -4,7 +4,9 @@ import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
 import TaskReadinessBadges from '../UI/TaskReadinessBadges';
+import TagChips from '../UI/TagChips';
 import PostponedIndicator from '../UI/PostponedIndicator';
+import AttachmentCount from '../UI/AttachmentCount';
 import SubtaskProgress from '../UI/SubtaskProgress';
 import RescheduleButton from '../UI/RescheduleButton';
 import IconButton from '../UI/IconButton';
@@ -71,8 +73,8 @@ function TaskCard({
       // border-violet-500/40 quando pinned - uma pista visual sutil mesmo
       // sem reparar no ícone (útil quando a grelha tem muitos cards e o
       // pin fica fora do primeiro relance).
-      className={`relative flex flex-col h-full p-4 bg-neutral-900/50 border rounded-xl transition-colors ${
-        task.isPinned ? 'border-violet-500/40' : 'border-neutral-800 hover:border-violet-500/50'
+      className={`relative flex flex-col h-full p-4 bg-neutral-900/50 border rounded-xl transition-[border-color] duration-[var(--duration-quick)] ease-smooth-out ${
+        task.isPinned ? 'border-violet-500/40' : 'border-neutral-800 hover:border-neutral-700'
       } ${isInteractive ? 'cursor-pointer' : ''}`}
     >
       {/* Cabeçalho: pin + status. A dificuldade voltou para o rodapé.
@@ -96,6 +98,7 @@ function TaskCard({
             task.title
           )}
           <SubtaskProgress subtasks={task.subtasks} className="ml-2 align-middle" />
+          <AttachmentCount count={task.attachmentCount} className="ml-2 align-middle" />
         </h2>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {onTogglePin && (
@@ -136,7 +139,7 @@ function TaskCard({
               }}
               title={t('ui.moveToADifferentArea')}
               aria-label={t('ui.moveToADifferentArea')}
-              className="px-2 py-1 bg-neutral-800 rounded-md font-medium text-neutral-300 truncate max-w-[10rem] border border-transparent hover:border-neutral-600 focus:border-violet-500 outline-none cursor-pointer"
+              className="px-2 py-1.5 bg-neutral-800 rounded-md font-medium text-neutral-300 truncate max-w-[10rem] border border-transparent hover:border-neutral-600 focus:border-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 cursor-pointer"
             >
               {areas!.map((area) => (
                 <option key={area.id} value={area.id}>
@@ -145,7 +148,7 @@ function TaskCard({
               ))}
             </select>
           ) : (
-            <span className="px-2 py-1 bg-neutral-800 rounded-md font-medium text-neutral-300 truncate max-w-[10rem]">
+            <span className="px-2 py-1.5 bg-neutral-800 rounded-md font-medium text-neutral-300 truncate max-w-[10rem]">
               {areaName}
             </span>
           )}
@@ -164,6 +167,7 @@ function TaskCard({
             )}
             <PostponedIndicator count={task.postponedCount} />
             <TaskReadinessBadges task={task} />
+            <TagChips tags={task.tags} />
             {recurrenceLabel(task) && (
               <span
                 title={`${recurrenceLabel(task)}. ${t('ui.nextOneCreatedOnComplete')}`}

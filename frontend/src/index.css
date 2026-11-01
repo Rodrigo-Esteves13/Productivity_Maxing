@@ -41,6 +41,10 @@
 
   /* Easing por defeito de tudo o que abre/fecha/desliza (ease-smooth-out) */
   --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Qualquer utilitario transition-* do Tailwind herda a escala de movimento */
+  --default-transition-timing-function: var(--ease-smooth-out);
+  --default-transition-duration: var(--duration-quick);
 }
 
 /* Escala de movimento (transitions.dev). Usar var(--...) em vez de valores
@@ -297,7 +301,7 @@ body {
   }
   .motion-toast {
     transition-property: opacity, translate;
-    transition-duration: var(--duration-fast);
+    transition-duration: var(--duration-slow);
     transition-timing-function: var(--ease-smooth-out);
   }
 

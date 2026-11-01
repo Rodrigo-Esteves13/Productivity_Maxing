@@ -75,6 +75,8 @@ const TASK_INCLUDE = {
   // Checklist da task, sempre ordenada - o frontend mostra "2/5" nos
   // cards/linhas sem pedir nada extra.
   subtasks: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
+  // So o numero de anexos (indicador de clipe nos cards), nunca as linhas.
+  _count: { select: { attachments: true } },
 } satisfies Prisma.TaskInclude;
 
 // Automatically infer the type of a Task when it includes the relations above
@@ -229,13 +231,17 @@ export class TasksService {
     periodId?: string,
     page: CursorPaginationDto = {},
     meta?: ListMeta,
+    tag?: string,
   ) {
     // 'all' = vista agregada ("Ver todos os períodos") - sem filtro nenhum.
     // Omitido = usa o período ativo do user (declutter automático, é o que
     // resolve a Fase 2 sem qualquer breaking change para quem ainda chama
     // este endpoint sem saber que períodos existem). Um UUID explícito
     // passa sempre por findOwnedOrThrow - defesa contra IDOR.
-    const where: { userId: string; periodId?: string } = { userId };
+    const where: Prisma.TaskWhereInput = {
+      userId,
+      ...(tag ? { tags: { has: tag.trim().toLowerCase() } } : {}),
+    };
     if (periodId === 'all') {
       // sem filtro de periodId
     } else if (periodId) {
@@ -1355,6 +1361,7 @@ export class TasksService {
       academicTypeId,
       priority,
       priorityId,
+      _count,
       ...rest
     } = task;
 
@@ -1367,6 +1374,7 @@ export class TasksService {
 
     return {
       ...rest,
+      attachmentCount: _count?.attachments ?? 0,
       type: taskType.key,
       academicType: academicType?.key ?? null,
       // Tipos de data fixa (testes, exames): o momento em que se marca como

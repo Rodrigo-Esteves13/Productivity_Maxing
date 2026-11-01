@@ -25,6 +25,7 @@ export type DashboardWidgetKey =
   | 'estimationAccuracy'
   | 'deadlineCompliance'
   | 'weekdayLoad'
+  | 'procrastinationWeekday'
   | 'targetVsReal'
   | 'productivityByType'
   | 'difficultyVsGrade'
@@ -58,6 +59,7 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   estimationAccuracy: 'widget.estimationAccuracy',
   deadlineCompliance: 'widget.deadlineCompliance',
   weekdayLoad: 'widget.weekdayLoad',
+  procrastinationWeekday: 'procrastination.title',
   targetVsReal: 'widget.targetVsReal',
   productivityByType: 'widget.productivityByType',
   difficultyVsGrade: 'widget.difficultyVsGrade',
@@ -96,6 +98,7 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   estimationAccuracy: true,
   deadlineCompliance: true,
   weekdayLoad: true,
+  procrastinationWeekday: true,
   targetVsReal: true,
   productivityByType: true,
   difficultyVsGrade: true,

@@ -24,6 +24,28 @@ export interface ApprovalRules {
   /** Pistas de exame/recurso existentes. Valem 100%, uma so tentativa. */
   hasExamTrack: boolean;
   hasResitTrack: boolean;
+  /**
+   * Regras extra do user, somadas as duas fixas (componentMinGrade e a quota
+   * secondThreshold). Ausente ou [] = nenhuma. Ver custom-rules.ts.
+   */
+  customRules?: CustomRule[];
+}
+
+/**
+ * MAX_BELOW: no maximo `maxBelow` componentes (filtrados por labelContains)
+ *            abaixo de `threshold`.
+ * GROUP_AVG_MIN: a media ponderada dos componentes (filtrados por
+ *            labelContains) tem de ser >= `threshold`. maxBelow = null.
+ * labelContains: texto (sem maiusculas/acentos) que o nome do componente tem
+ * de conter; null = todos os componentes.
+ */
+export type CustomRuleKind = 'MAX_BELOW' | 'GROUP_AVG_MIN';
+
+export interface CustomRule {
+  kind: CustomRuleKind;
+  threshold: number;
+  maxBelow: number | null;
+  labelContains: string | null;
 }
 
 export interface RiskComponentInput {
@@ -69,6 +91,7 @@ export type RiskReasonCode =
   | 'ABSENCE_OVER_LIMIT'
   | 'POSTPONED_TASKS'
   | 'TEACHER_HISTORY_LOWER'
+  | 'CUSTOM_RULE_VIOLATED'
   | 'ONLY_EXAM_TRACK_LEFT'
   | 'REMAINING_UNCERTAINTY'
   | 'REMAINING_UNCERTAINTY_MIN'

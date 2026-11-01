@@ -3,6 +3,7 @@ import { WIDGET_LABELS, type DashboardWidgetKey } from '../../hooks/useDashboard
 import { SlidersIcon } from '../UI/Icons';
 import ToolbarButton from '../UI/ToolbarButton';
 import { useI18n } from '../../i18n/useI18n';
+import { MODAL_EXIT_MS, usePresence } from '../../hooks/usePresence';
 
 interface DashboardWidgetTogglesProps {
   visibility: Record<DashboardWidgetKey, boolean>;
@@ -18,6 +19,7 @@ export function DashboardWidgetToggles({ visibility, toggle }: DashboardWidgetTo
   const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { mounted, state } = usePresence(isOpen, MODAL_EXIT_MS);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -40,8 +42,8 @@ export function DashboardWidgetToggles({ visibility, toggle }: DashboardWidgetTo
         {t('ui.customizeWidgets')}
       </ToolbarButton>
 
-      {isOpen && (
-        <div className="motion-dropdown origin-top-right absolute right-0 z-10 mt-2 w-64 rounded-lg border border-neutral-800 bg-neutral-900 p-3 shadow-xl">
+      {mounted && (
+        <div data-state={state} className="motion-dropdown data-[state=closed]:opacity-0 data-[state=closed]:scale-[0.99] data-[state=closed]:duration-[var(--duration-quick)] data-[state=closed]:pointer-events-none origin-top-right absolute right-0 z-10 mt-2 w-64 rounded-lg border border-neutral-800 bg-neutral-900 p-3 shadow-xl">
           <p className="text-xs uppercase tracking-wide text-neutral-500 mb-2 flex items-center gap-1.5">
             <SlidersIcon className="shrink-0" />
             {t('widget.showOnDashboard')}

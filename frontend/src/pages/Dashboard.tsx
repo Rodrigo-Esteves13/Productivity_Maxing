@@ -8,6 +8,7 @@ import TasksTable from '../components/Dashboard/TasksTable';
 import TasksTableSkeleton from '../components/Dashboard/TasksTableSkeleton';
 import DashboardFilters from '../components/Dashboard/DashboardFilters';
 import { EMPTY_DASHBOARD_FILTERS, type DashboardFiltersState } from '../components/Dashboard/dashboardFilters.types';
+import { collectTags } from '../lib/taskTags';
 import { getDateStatus } from '../utils/taskDateStatus';
 import { sortTasks } from '../utils/taskSorting';
 import { useTableSort } from '../hooks/useTableSort';
@@ -154,6 +155,8 @@ export default function Dashboard() {
     return areas.filter((area) => areaIdsWithAcademicTasks.has(area.id));
   }, [areas, academicTasks]);
 
+  const allTags = useMemo(() => collectTags(academicTasks), [academicTasks]);
+
   const archivedCount = useMemo(
     () => academicTasks.filter((task) => isTaskArchived(task)).length,
     [academicTasks],
@@ -172,6 +175,7 @@ export default function Dashboard() {
       if (filters.dateStatus && getDateStatus(task) !== filters.dateStatus) return false;
       if (!matchesEffortFilter(task, filters.effort)) return false;
       if (!matchesReadinessFilter(task, filters.readiness)) return false;
+      if (filters.tag && !task.tags?.includes(filters.tag)) return false;
       return true;
     });
     // Sem coluna escolhida ordena por prazo (TBD/Surprise no fim). A ordem
@@ -319,7 +323,7 @@ export default function Dashboard() {
       ) : error ? (
         <ErrorState message={error} />
       ) : (
-        <>
+        <div className="motion-page">
           <div className="print-hide">
             <DashboardFilters
               filters={filters}
@@ -328,6 +332,7 @@ export default function Dashboard() {
               academicTaskTypes={academicTaskTypes}
               difficulties={difficulties}
               progressStatuses={progressStatuses}
+              tags={allTags}
               onClear={() => setFilters(EMPTY_DASHBOARD_FILTERS)}
               sort={sort}
               onSortKeyChange={setKey}
@@ -339,15 +344,6 @@ export default function Dashboard() {
             <EmptyState message={t(emptyMessageKey(academicTasks.length, isExamMode))} />
           ) : (
             <>
-              <BulkActionsBar
-                selectedCount={selectedIds.size}
-                onMarkDone={markSelectedDone}
-                onReschedule={rescheduleSelected}
-                onSetEffort={setEffortSelected}
-                onDelete={deleteSelected}
-                syncedCount={selectedSyncedCount}
-                onClear={clearSelection}
-              />
               <TasksTable
                 tasks={filteredTasks}
                 academicTaskTypes={academicTaskTypes}
@@ -361,9 +357,19 @@ export default function Dashboard() {
                 sort={sort}
                 onSortColumn={toggleKey}
               />
+              {/* Depois da tabela: preso ao fundo do ecra enquanto ha selecao. */}
+              <BulkActionsBar
+                selectedCount={selectedIds.size}
+                onMarkDone={markSelectedDone}
+                onReschedule={rescheduleSelected}
+                onSetEffort={setEffortSelected}
+                onDelete={deleteSelected}
+                syncedCount={selectedSyncedCount}
+                onClear={clearSelection}
+              />
             </>
           )}
-        </>
+        </div>
       )}
 
       {isImportModalOpen && (

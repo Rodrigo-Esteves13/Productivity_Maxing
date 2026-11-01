@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type Dispatch, type KeyboardEvent as ReactKeyboardEvent, type SetStateAction } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type KeyboardEvent as ReactKeyboardEvent, type SetStateAction } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { createTask, getTaskMetadata, getUserAreas, getUserTasks } from '../../api/userService';
@@ -20,6 +20,20 @@ import { ACADEMIC_TASK_TYPE_KEY } from '../../lib/constants';
 import { useI18n } from '../../i18n/useI18n';
 import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 import { useEnumLabel } from '../../hooks/useEnumLabel';
+import { MODAL_EXIT_MS, usePresence } from '../../hooks/usePresence';
+import { useCompleteWithUndo } from '../../hooks/useCompleteWithUndo';
+import { useQuickReschedule } from '../../hooks/useQuickReschedule';
+import { useActiveStudySession } from '../../context/useActiveStudySession';
+import { useFeedback } from '../../context/useFeedback';
+import {
+  actionForKey,
+  paletteTaskActions,
+  resolveAction,
+  shortcutLabel,
+  type PaletteTaskActionId,
+} from '../../lib/paletteActions';
+
+const IS_MAC = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC');
 
 // Static "go to page" commands - mirrors the routes in AppRouter.tsx and
 // the admin gating already used in Navbar.tsx (role === 'ADMIN'). Kept as
@@ -213,7 +227,9 @@ const NAV_COMMANDS: NavCommand[] = [
   { id: 'nav-shared-with-me', labelKey: 'nav.sharedWithMe', path: '/social?tab=shared', keywords: ['shared', 'partilhado', 'lessons', 'notes'] },
   { id: 'nav-my-shares', labelKey: 'social.tab.mine', path: '/social?tab=mine', keywords: ['my shares', 'partilhas', 'links', 'share'] },
   { id: 'nav-task-packs', labelKey: 'nav.taskPacks', path: '/task-packs', keywords: ['share tasks', 'import'] },
-  { id: 'nav-areas', labelKey: 'nav.areas', path: '/areas', keywords: ['courses', 'subjects', 'propose'] },
+  { id: 'nav-areas', labelKey: 'nav.areas', path: '/areas', keywords: ['courses', 'subjects', 'propose', 'select courses', 'selecionar disciplinas', 'select', 'selecionar', 'bulk', 'em massa', 'approval rules', 'regras de aprovacao', 'custom rules', 'regras personalizadas', 'teacher', 'professor', 'docente'] },
+  { id: 'nav-areas-select', labelKey: 'nav.areasSelect', path: '/areas?select=1', keywords: ['bulk', 'em massa', 'approval rules', 'regras de aprovacao', 'select all', 'selecionar tudo', 'multiple', 'varias'] },
+  { id: 'nav-flashcards', labelKey: 'nav.flashcards', path: '/flashcards', keywords: ['flashcards', 'cards', 'cartoes', 'revisao', 'review', 'spaced repetition', 'repeticao espacada', 'study', 'estudar', 'anki'] },
   { id: 'nav-users', labelKey: 'nav.admin.users', path: '/users', adminOnly: true },
   { id: 'nav-task-types', labelKey: 'nav.admin.taskTypes', path: '/task-types', adminOnly: true },
   { id: 'nav-security', labelKey: 'nav.admin.security', path: '/security', adminOnly: true },
@@ -281,6 +297,10 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
   const { catalogLabel } = useCatalogLabel();
   const enumLabel = useEnumLabel();
   const navigate = useNavigate();
+  const { notify } = useFeedback();
+  const { activeSession, start: startStudySession } = useActiveStudySession();
+  // Fica montada durante a animacao de saida (data-state="closed").
+  const { mounted, state } = usePresence(isOpen, MODAL_EXIT_MS);
 
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -299,6 +319,25 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
   const tasksFailedRef = useRef(false);
   const areasFailedRef = useRef(false);
   const listsUserIdRef = useRef<string | null>(null);
+
+  // Acoes rapidas sobre a task destacada. Reutilizam os mesmos hooks do
+  // Dashboard (feita com Undo, adiar para amanha), por isso o postponedCount
+  // e o calendario seguem as mesmas regras; a lista local mantem-se em dia.
+  const setTaskList = useCallback<Dispatch<SetStateAction<Task[]>>>((action) => {
+    setTasks((prev) => {
+      const base = prev ?? [];
+      return typeof action === 'function' ? action(base) : action;
+    });
+  }, []);
+  const { completeOne } = useCompleteWithUndo(setTaskList);
+  const onPostponed = useCallback(
+    (updated: Task) => {
+      setTasks((prev) => (prev ? prev.map((task) => (task.id === updated.id ? { ...task, ...updated } : task)) : prev));
+      notify(t('paletteActions.postponed'), 'success');
+    },
+    [notify, t],
+  );
+  const { rescheduleToTomorrow } = useQuickReschedule(onPostponed);
 
   // O Ctrl+K e o evento do botao da Navbar vivem no CommandPaletteHost.
 
@@ -582,6 +621,23 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
     }
   };
 
+  const actionContext = { hasActiveSession: activeSession !== null };
+
+  const runTaskAction = async (task: Task, id: PaletteTaskActionId) => {
+    setIsOpen(false);
+    if (id === 'done') {
+      await completeOne(task);
+    } else if (id === 'postpone') {
+      await rescheduleToTomorrow(null, task);
+    } else {
+      // A sessao e criada ja aqui (a pagina Focus nao recebe a task por URL);
+      // o cronometro e o cartao do Focus mostram a sessao a correr.
+      const started = await startStudySession({ taskId: task.id, areaId: task.areaId });
+      if (started) navigate('/focus');
+      else notify(t('paletteActions.focusFailed'), 'error');
+    }
+  };
+
   const handleKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -592,18 +648,37 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
     } else if (e.key === 'Enter') {
       e.preventDefault();
       const item = items[clampedIndex];
-      if (item) selectItem(item);
+      if (!item) return;
+      if (item.kind === 'task') {
+        // Ctrl/Cmd+Enter feita, Shift+Enter amanha, Ctrl/Cmd+Shift+Enter focar.
+        const requested = actionForKey(e);
+        if (requested) {
+          const action = resolveAction(item.task, requested, actionContext);
+          if (action) void runTaskAction(item.task, action);
+          return;
+        }
+      }
+      selectItem(item);
     }
   };
 
-  if (!isAuthenticated || !isOpen) return null;
+  if (!isAuthenticated || !mounted) return null;
+
+  const activeItem = items[clampedIndex];
+  const activeTaskActions =
+    activeItem?.kind === 'task' ? paletteTaskActions(activeItem.task, actionContext) : [];
 
   return (
     <div
+      data-state={state}
       className="motion-backdrop fixed inset-0 z-50 flex items-start justify-center pt-[15vh] p-4 bg-black/80 backdrop-blur-sm"
       onClick={() => setIsOpen(false)}
     >
       <div
+        data-state={state}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('paletteActions.dialog')}
         className="motion-modal w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
@@ -636,7 +711,7 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
             </p>
           )}
           {items.map((item, index) => {
-            const rowClass = `w-full flex items-center justify-between gap-3 text-left px-4 py-2 text-sm transition-colors ${
+            const rowClass = `w-full flex items-center justify-between gap-3 text-left px-4 py-2 text-sm ${
               index === clampedIndex
                 ? 'bg-violet-500/15 text-white'
                 : 'text-neutral-300 hover:bg-neutral-800'
@@ -678,8 +753,8 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
             }
 
             return (
+              <Fragment key={`${item.kind}-${item.id}`}>
               <button
-                key={`${item.kind}-${item.id}`}
                 type="button"
                 onClick={() => selectItem(item)}
                 onMouseEnter={() => setActiveIndex(index)}
@@ -700,9 +775,39 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
                   {item.kind === 'nav' ? navSectionLabel(item.path) : t(`palette.kind.${item.kind}`)}
                 </span>
               </button>
+              {item.kind === 'task' && index === clampedIndex && activeTaskActions.length > 0 && (
+                <div
+                  role="group"
+                  aria-label={t('paletteActions.group')}
+                  className="flex flex-wrap gap-1.5 bg-violet-500/15 px-4 pb-2"
+                >
+                  {activeTaskActions.map((action) => (
+                    <button
+                      key={action.id}
+                      type="button"
+                      onClick={() => void runTaskAction(item.task, action.id)}
+                      className="press inline-flex min-h-10 items-center gap-2 rounded-md border border-neutral-700 px-3 text-xs text-neutral-200 hover:border-neutral-600 hover:bg-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-violet-400"
+                    >
+                      {t(action.labelKey)}
+                      <kbd className="hidden text-[10px] text-neutral-500 sm:inline">{shortcutLabel(action, IS_MAC)}</kbd>
+                    </button>
+                  ))}
+                </div>
+              )}
+              </Fragment>
             );
           })}
         </div>
+
+        {activeTaskActions.length > 0 && (
+          <p className="hidden border-t border-neutral-800 px-4 py-2 text-[10px] text-neutral-500 sm:block">
+            {t('paletteActions.hint', {
+              done: shortcutLabel({ mod: true, shift: false }, IS_MAC),
+              postpone: shortcutLabel({ mod: false, shift: true }, IS_MAC),
+              focus: shortcutLabel({ mod: true, shift: true }, IS_MAC),
+            })}
+          </p>
+        )}
       </div>
     </div>
   );

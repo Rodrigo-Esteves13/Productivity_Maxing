@@ -52,6 +52,7 @@ export const risk: Record<string, string> = {
   'courseRisk.reason.ABSENCE_OVER_LIMIT': "Absences at {share}%, over your {limit}% limit.",
   'courseRisk.reason.POSTPONED_TASKS': "{count} tasks for this course were postponed.",
   'courseRisk.reason.TEACHER_HISTORY_LOWER': "Your average with {teacher} is {withTeacher}, against {others} in other courses.",
+  'courseRisk.reason.CUSTOM_RULE_VIOLATED': "Your custom rule is not met: {rule}.",
   'courseRisk.reason.ONLY_EXAM_TRACK_LEFT': "Continuous assessment is no longer enough, only the exam track is left.",
   'courseRisk.reason.REMAINING_UNCERTAINTY': "About {count} component(s) still to assess ({remaining}% of the grade). Any of them can fall under {min}, take you past the {max} allowed under {second}, or be missed for reasons outside your control, and that breaks the rules.",
   'courseRisk.reason.REMAINING_UNCERTAINTY_MIN': "About {count} component(s) still to assess ({remaining}% of the grade). Any of them can fall under {min} or be missed for reasons outside your control, and that breaks the rules.",

@@ -81,7 +81,7 @@ export default function TaskGrid({
             setDraggedId(null);
             setDragOverId(null);
           }}
-          className={`rounded-xl transition-shadow h-full ${onReorder ? 'cursor-grab active:cursor-grabbing' : ''} ${
+          className={`rounded-xl transition-[opacity,box-shadow] duration-[var(--duration-quick)] ease-smooth-out h-full ${onReorder ? 'cursor-grab active:cursor-grabbing' : ''} ${
             dragOverId === task.id && draggedId !== task.id
               ? 'ring-2 ring-violet-500/60'
               : ''

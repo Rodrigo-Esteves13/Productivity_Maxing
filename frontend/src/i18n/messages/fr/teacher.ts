@@ -6,4 +6,5 @@ export const teacher: Record<string, string> = {
   'teacher.clear': "Effacer",
   'teacher.saved': "Enseignant enregistré.",
   'teacher.error': "Impossible d'enregistrer l'enseignant.",
+  'areaTeacher.fromSchedule': "Depuis ton emploi du temps",
 };

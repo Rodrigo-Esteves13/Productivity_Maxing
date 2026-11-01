@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  emptyCustomRuleDraft,
   rulesToDraft,
   validateApprovalRulesDraft,
   parseNumber,
+  CUSTOM_RULES_MAX,
+  GENERIC_PRESET_KEY,
   type ApprovalRules,
 } from './approvalRules';
 
 const BASE: ApprovalRules = {
-  presetKey: 'generic',
+  presetKey: GENERIC_PRESET_KEY,
   scaleMin: 0,
   scaleMax: 20,
   passMark: 10,
@@ -17,9 +20,10 @@ const BASE: ApprovalRules = {
   maxBelowSecondThreshold: 1,
   hasExamTrack: true,
   hasResitTrack: true,
+  customRules: [],
 };
 
-const draftWith = (patch: Record<string, string | boolean | null>) => ({
+const draftWith = (patch: Partial<ReturnType<typeof rulesToDraft>>) => ({
   ...rulesToDraft(BASE),
   ...patch,
 });
@@ -135,5 +139,90 @@ describe('approvalRules validation: backend parity', () => {
     expect(
       validateApprovalRulesDraft(draftWith({ scaleMin: '5', passMark: '5' })).errors.passMark,
     ).toBe('approvalRules.error.passMarkRange');
+  });
+});
+
+describe('approvalRules custom rules', () => {
+  const withCustom = (rules: ApprovalRules['customRules']) =>
+    rulesToDraft({ ...BASE, customRules: rules });
+
+  it('round-trips custom rules and trims the label', () => {
+    const draft = withCustom([
+      { kind: 'MAX_BELOW', threshold: 9, maxBelow: 2, labelContains: 'quiz' },
+      { kind: 'GROUP_AVG_MIN', threshold: 10, maxBelow: null, labelContains: null },
+    ]);
+    draft.customRules[0].labelContains = '  quiz ';
+    const r = validateApprovalRulesDraft(draft);
+    expect(r.isValid).toBe(true);
+    expect(r.rules?.customRules).toEqual([
+      { kind: 'MAX_BELOW', threshold: 9, maxBelow: 2, labelContains: 'quiz' },
+      { kind: 'GROUP_AVG_MIN', threshold: 10, maxBelow: null, labelContains: null },
+    ]);
+  });
+
+  it('keeps the two fixed rules untouched when custom rules exist', () => {
+    const draft = withCustom([{ kind: 'GROUP_AVG_MIN', threshold: 10, maxBelow: null, labelContains: 'lab' }]);
+    const r = validateApprovalRulesDraft(draft);
+    expect(r.rules?.componentMinGrade).toBe(8);
+    expect(r.rules?.secondThreshold).toBe(8);
+    expect(r.rules?.maxBelowSecondThreshold).toBe(1);
+  });
+
+  it('flags threshold outside the scale or with too many decimals', () => {
+    const draft = withCustom([
+      { kind: 'GROUP_AVG_MIN', threshold: 10, maxBelow: null, labelContains: null },
+      { kind: 'GROUP_AVG_MIN', threshold: 10, maxBelow: null, labelContains: null },
+    ]);
+    draft.customRules[0].threshold = '25';
+    draft.customRules[1].threshold = '9.123';
+    const r = validateApprovalRulesDraft(draft);
+    expect(r.isValid).toBe(false);
+    expect(r.customErrors[0].threshold).toBe('approvalRules.custom.error.threshold');
+    expect(r.customErrors[1].threshold).toBe('approvalRules.custom.error.threshold');
+  });
+
+  it('requires a whole maxBelow in 0..20 only for MAX_BELOW', () => {
+    const draft = withCustom([{ kind: 'MAX_BELOW', threshold: 9, maxBelow: 1, labelContains: null }]);
+    for (const bad of ['', '1.5', '-1', '21']) {
+      draft.customRules[0].maxBelow = bad;
+      expect(validateApprovalRulesDraft(draft).customErrors[0].maxBelow).toBe(
+        'approvalRules.custom.error.maxBelow',
+      );
+    }
+    draft.customRules[0].kind = 'GROUP_AVG_MIN';
+    draft.customRules[0].maxBelow = 'abc';
+    const r = validateApprovalRulesDraft(draft);
+    expect(r.isValid).toBe(true);
+    expect(r.rules?.customRules[0].maxBelow).toBeNull();
+  });
+
+  it('rejects a label over 60 characters', () => {
+    const draft = withCustom([{ kind: 'GROUP_AVG_MIN', threshold: 10, maxBelow: null, labelContains: null }]);
+    draft.customRules[0].labelContains = 'x'.repeat(61);
+    expect(validateApprovalRulesDraft(draft).customErrors[0].label).toBe(
+      'approvalRules.custom.error.label',
+    );
+  });
+
+  it('rejects more than the limit of rules', () => {
+    const draft = withCustom([]);
+    draft.customRules = Array.from({ length: CUSTOM_RULES_MAX + 1 }, () => ({
+      ...emptyCustomRuleDraft(),
+      threshold: '9',
+    }));
+    expect(validateApprovalRulesDraft(draft).isValid).toBe(false);
+  });
+});
+
+describe('approvalRules presetKey with custom rules', () => {
+  it('saves presetKey null when custom rules exist', () => {
+    const draft = { ...draftWith({ presetKey: GENERIC_PRESET_KEY }), customRules: [{ ...emptyCustomRuleDraft(), threshold: '5' }] };
+    const result = validateApprovalRulesDraft(draft);
+    expect(result.rules?.presetKey).toBeNull();
+  });
+
+  it('keeps presetKey without custom rules', () => {
+    const result = validateApprovalRulesDraft(draftWith({ presetKey: GENERIC_PRESET_KEY }));
+    expect(result.rules?.presetKey).toBe(GENERIC_PRESET_KEY);
   });
 });

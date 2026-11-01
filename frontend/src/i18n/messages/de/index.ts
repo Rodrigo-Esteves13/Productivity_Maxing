@@ -19,6 +19,13 @@ import { auto } from './auto';
 import { extra } from './extra';
 import { fase7 } from './fase7';
 import { fase7b } from './fase7b';
+import { fileIndicator } from './fileIndicator';
+import { procrastination } from './procrastination';
+import { taskTags } from './taskTags';
+import { flashcards } from './flashcards';
+import { streakFreeze } from './streakFreeze';
+import { dailyDigest } from './dailyDigest';
+import { paletteActions } from './paletteActions';
 import { fase7c } from './fase7c';
 import { meds } from './meds';
 import { readiness } from './readiness';
@@ -52,6 +59,13 @@ export const de: Record<string, string> = {
   ...extra,
   ...fase7,
   ...fase7b,
+  ...fileIndicator,
+  ...procrastination,
+  ...taskTags,
+  ...flashcards,
+  ...streakFreeze,
+  ...dailyDigest,
+  ...paletteActions,
   ...fase7c,
   ...meds,
   ...readiness,

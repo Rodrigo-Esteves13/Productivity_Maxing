@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from 'react';
+import { useMemo, useState, type SyntheticEvent } from 'react';
 import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
 import FormError from '../UI/FormError';
 import Button from '../UI/Button';
@@ -11,6 +11,7 @@ import RecurrenceFields from './RecurrenceFields';
 import TaskTemplatePicker from './TaskTemplatePicker';
 import { pickTemplateFields, templateFieldsFor, type TaskTemplate } from '../../lib/taskTemplates';
 import { EMPTY_RECURRENCE, recurrencePayload, type RecurrenceValue } from '../../lib/recurrence';
+import { collectTags } from '../../lib/taskTags';
 import { todayKey } from '../../lib/dateKey';
 import { useI18n } from '../../i18n/useI18n';
 
@@ -80,6 +81,7 @@ export default function TaskForm({
     topics: '',
     referenceLink: '',
     notes: '',
+    tags: [],
     targetGrade: '',
     weightPercentage: '',
     estimatedMinutes: '',
@@ -96,7 +98,9 @@ export default function TaskForm({
     calendarDurationMinutes: '60',
   });
 
-  const updateField = (field: keyof TaskFormFieldValues, value: string | boolean) => {
+  const tagSuggestions = useMemo(() => collectTags(existingTasks), [existingTasks]);
+
+  const updateField = (field: keyof TaskFormFieldValues, value: string | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -167,6 +171,7 @@ export default function TaskForm({
         priorities={priorities}
         progressStatuses={progressStatuses}
         showProgressStatus
+        tagSuggestions={tagSuggestions}
       />
 
       <DayLoadHint date={formData.date} tasks={existingTasks} />

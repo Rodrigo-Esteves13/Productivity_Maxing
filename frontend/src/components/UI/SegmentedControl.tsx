@@ -21,8 +21,8 @@ interface SegmentedControlProps<T extends string> {
 }
 
 const SIZE_CLASS: Record<SegmentedControlSize, string> = {
-  sm: 'px-2 py-1',
-  md: 'px-2.5 py-1.5',
+  sm: 'min-h-8 px-2 py-1',
+  md: 'min-h-9 px-2.5 py-1.5',
 };
 
 const SURFACE_CLASS = {
@@ -64,7 +64,7 @@ export default function SegmentedControl<T extends string>({
             aria-pressed={active}
             data-active={active}
             onClick={() => onChange(optionValue)}
-            className={`press relative flex items-center gap-1.5 rounded ${SIZE_CLASS[size]} text-xs font-medium ${
+            className={`press relative flex items-center gap-1.5 rounded before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] ${SIZE_CLASS[size]} text-xs font-medium ${
               active ? `text-on-accent ${rect ? '' : 'bg-violet-600'}` : 'text-neutral-400 hover:text-neutral-200'
             }`}
           >

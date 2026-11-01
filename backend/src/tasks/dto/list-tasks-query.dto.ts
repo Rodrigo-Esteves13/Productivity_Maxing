@@ -11,4 +11,10 @@ export class ListTasksQueryDto extends CursorPaginationDto {
   @IsString()
   @MaxLength(64)
   periodId?: string;
+
+  @ApiPropertyOptional({ description: 'Only tasks carrying this tag' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(24)
+  tag?: string;
 }

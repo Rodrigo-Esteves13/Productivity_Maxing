@@ -4,11 +4,13 @@ import StatusBadge from '../UI/StatusBadge';
 import DifficultyBadge from '../UI/DifficultyBadge';
 import PriorityBadge from '../UI/PriorityBadge';
 import TaskReadinessBadges from '../UI/TaskReadinessBadges';
+import TagChips from '../UI/TagChips';
 import PostponedIndicator from '../UI/PostponedIndicator';
 import DateStatusBadge from '../UI/DateStatusBadge';
 import ColorDot from '../UI/ColorDot';
 import RescheduleButton from '../UI/RescheduleButton';
 import ViewTaskButton from '../UI/ViewTaskButton';
+import AttachmentCount from '../UI/AttachmentCount';
 import SubtaskProgress from '../UI/SubtaskProgress';
 import CalendarSyncButton from './CalendarSyncButton';
 import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus';
@@ -84,7 +86,13 @@ function TaskTableRow({
         <div className="font-medium text-neutral-200">
           {task.title}
           <SubtaskProgress subtasks={task.subtasks} className="ml-2 align-middle" />
+          <AttachmentCount count={task.attachmentCount} className="ml-2 align-middle" />
         </div>
+        {!isCompact && task.tags?.length ? (
+          <div className="mt-1 flex flex-wrap gap-1">
+            <TagChips tags={task.tags} />
+          </div>
+        ) : null}
         {!isCompact && task.topics && <div className="text-xs text-neutral-500 mt-0.5">{task.topics}</div>}
       </>
     ),
@@ -92,23 +100,26 @@ function TaskTableRow({
       <>
         <div>{academicTypeLabel || 'N/A'}</div>
         {!isCompact && (
-          <div className="mt-0.5">{task.weightPercentage ? `${task.weightPercentage}%` : 'N/A'}</div>
+          <div className="mt-0.5 tabular-nums">{task.weightPercentage ? `${task.weightPercentage}%` : 'N/A'}</div>
         )}
       </>
     ),
     difficulty: (
-      <>
+      // Coluna em pilha: dificuldade, adiada e readiness ficam sempre na
+      // mesma ordem e alinhados a esquerda, sem alguns lado a lado e outros
+      // em linha propria conforme a largura.
+      <div className="flex flex-col items-start gap-1">
         <DifficultyBadge difficulty={task.difficulty} />
-        <PostponedIndicator count={task.postponedCount} className="mt-1" />
-        <TaskReadinessBadges task={task} className="mt-1" />
-      </>
+        <PostponedIndicator count={task.postponedCount} />
+        <TaskReadinessBadges task={task} variant="badge" />
+      </div>
     ),
     priority: task.priority ? (
       <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
     ) : (
       <span className="text-neutral-500">N/A</span>
     ),
-    status: <StatusBadge status={task.progressStatus} />,
+    status: <StatusBadge status={task.progressStatus} size="sm" />,
     grade: (
       <>
         <span className="font-medium text-blue-400">{task.targetGrade ?? 'N/A'}</span>
@@ -128,16 +139,23 @@ function TaskTableRow({
   };
 
   return (
-    <tr className="border-b border-neutral-800 hover:bg-neutral-800/30 transition-colors">
+    <tr
+      className={`border-b border-neutral-800 transition-colors duration-[var(--duration-quick)] ease-smooth-out ${
+        isSelected ? 'bg-violet-500/10' : 'hover:bg-neutral-800/30'
+      }`}
+    >
       {onToggleSelect && (
         <td className={`${cellPadding} align-middle print-hide`} onClick={(e) => e.stopPropagation()}>
-          <input
-            type="checkbox"
-            checked={!!isSelected}
-            onChange={() => onToggleSelect(task.id)}
-            className="accent-violet-500"
-            aria-label={t('ui.selectTaskNamed', { title: task.title })}
-          />
+          {/* Alvo de 40px (-m-3 p-3) sem aumentar a linha. */}
+          <label className="-m-3 flex w-fit cursor-pointer p-3">
+            <input
+              type="checkbox"
+              checked={!!isSelected}
+              onChange={() => onToggleSelect(task.id)}
+              className="h-4 w-4 cursor-pointer accent-violet-500"
+              aria-label={t('ui.selectTaskNamed', { title: task.title })}
+            />
+          </label>
         </td>
       )}
       {columnOrder.map((id) => (
@@ -145,7 +163,7 @@ function TaskTableRow({
           key={id}
           className={`${cellPadding} align-middle ${CENTERED_COLUMNS.has(id) ? 'text-center' : ''} ${
             id === 'title' ? 'font-medium text-white' : ''
-          } ${id === 'type' ? 'text-xs text-neutral-400' : ''} ${id === 'grade' ? 'text-xs' : ''}`}
+          } ${id === 'type' ? 'text-xs text-neutral-400' : ''} ${id === 'grade' ? 'text-xs tabular-nums' : ''}`}
           onClick={id === 'calendar' ? (e) => e.stopPropagation() : undefined}
         >
           {cellContent[id]}

@@ -16,8 +16,15 @@ function build(overrides: Record<string, unknown> = {}) {
     areaTeacherNote: {
       findMany: jest.fn().mockResolvedValue([]),
       upsert: jest.fn().mockResolvedValue({ areaId: AREA, teacherName: 'X' }),
+      createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
+    areaScheduleLink: { findMany: jest.fn().mockResolvedValue([]) },
+    classOccurrence: { groupBy: jest.fn().mockResolvedValue([]) },
+    $transaction: jest
+      .fn()
+      .mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops)),
     task: { findMany: jest.fn().mockResolvedValue([]) },
     gradeComponent: { findMany: jest.fn().mockResolvedValue([]) },
     academicPeriod: {
@@ -209,5 +216,165 @@ describe('teacherStatsForUser', () => {
     const { prisma, service } = build();
     expect((await service.teacherStatsForUser(USER)).size).toBe(0);
     expect(prisma.task.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('syncFromSchedule', () => {
+  const link = { areaId: AREA, scheduleSubject: 'PC' };
+  const occ = (professor: string | null, n: number, subject = 'PC') => ({
+    subject,
+    professor,
+    _count: { _all: n },
+  });
+
+  function withSchedule(
+    occurrences: ReturnType<typeof occ>[],
+    notes: Record<string, unknown>[],
+  ) {
+    return build({
+      areaScheduleLink: { findMany: jest.fn().mockResolvedValue([link]) },
+      classOccurrence: { groupBy: jest.fn().mockResolvedValue(occurrences) },
+      areaTeacherNote: {
+        findMany: jest.fn().mockResolvedValue(notes),
+        upsert: jest.fn(),
+        deleteMany: jest.fn(),
+        createMany: jest.fn().mockResolvedValue({ count: 1 }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    });
+  }
+
+  it('creates an auto note with the most frequent trimmed professor', async () => {
+    const { prisma, service } = withSchedule(
+      [occ(' Ana ', 2), occ('Ana', 1), occ('Rui', 2), occ('  ', 9)],
+      [],
+    );
+    await service.syncFromSchedule(USER);
+    expect(prisma.areaTeacherNote.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          userId: USER,
+          areaId: AREA,
+          teacherName: 'Ana',
+          autoFromSchedule: true,
+        },
+      ],
+      skipDuplicates: true,
+    });
+    expect(prisma.classOccurrence.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId: USER,
+          subject: { in: ['PC'] },
+          professor: { not: null },
+        },
+      }),
+    );
+  });
+
+  it('updates an auto note when the schedule teacher changed', async () => {
+    const { prisma, service } = withSchedule(
+      [occ('Rui', 3)],
+      [{ areaId: AREA, teacherName: 'Ana', autoFromSchedule: true }],
+    );
+    await service.syncFromSchedule(USER);
+    expect(prisma.areaTeacherNote.updateMany).toHaveBeenCalledWith({
+      where: { userId: USER, areaId: AREA, autoFromSchedule: true },
+      data: { teacherName: 'Rui' },
+    });
+    expect(prisma.areaTeacherNote.createMany).not.toHaveBeenCalled();
+  });
+
+  it('never overwrites a manual note', async () => {
+    const { prisma, service } = withSchedule(
+      [occ('Rui', 3)],
+      [{ areaId: AREA, teacherName: 'Ana', autoFromSchedule: false }],
+    );
+    await service.syncFromSchedule(USER);
+    expect(prisma.areaTeacherNote.updateMany).not.toHaveBeenCalled();
+    expect(prisma.areaTeacherNote.createMany).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('removes a stale auto note and leaves manual notes alone', async () => {
+    const { prisma, service } = withSchedule(
+      [],
+      [
+        { areaId: 'gone', teacherName: 'Ana', autoFromSchedule: true },
+        { areaId: 'manual', teacherName: 'Rui', autoFromSchedule: false },
+      ],
+    );
+    await service.syncFromSchedule(USER);
+    expect(prisma.areaTeacherNote.deleteMany).toHaveBeenCalledTimes(1);
+    expect(prisma.areaTeacherNote.deleteMany).toHaveBeenCalledWith({
+      where: { userId: USER, autoFromSchedule: true, areaId: { in: ['gone'] } },
+    });
+  });
+
+  it('groups spellings by teacherKey and keeps the most frequent one', async () => {
+    const { prisma, service } = withSchedule(
+      [
+        occ('ana silva', 1),
+        occ('Ana Silva', 2),
+        occ('ANA  SILVA', 1),
+        occ('Rui', 3),
+      ],
+      [],
+    );
+    await service.syncFromSchedule(USER);
+    expect(prisma.areaTeacherNote.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [expect.objectContaining({ teacherName: 'Ana Silva' })],
+      }),
+    );
+  });
+
+  it('breaks ties with a plain comparison', async () => {
+    const { prisma, service } = withSchedule(
+      [occ('Rui', 2), occ('Ana', 2)],
+      [],
+    );
+    await service.syncFromSchedule(USER);
+    expect(prisma.areaTeacherNote.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [expect.objectContaining({ teacherName: 'Ana' })],
+      }),
+    );
+  });
+
+  it('a failing sync does not break list or teacherStatsForUser', async () => {
+    const { prisma, service } = build({
+      areaScheduleLink: {
+        findMany: jest.fn().mockRejectedValue(new Error('secret db detail')),
+      },
+    });
+    const warn = jest
+      .spyOn(
+        (service as unknown as { logger: { warn: () => void } }).logger,
+        'warn',
+      )
+      .mockImplementation(() => undefined);
+    await expect(service.list(USER)).resolves.toEqual([]);
+    await expect(service.teacherStatsForUser(USER)).resolves.toEqual(new Map());
+    expect(prisma.areaTeacherNote.findMany).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(2);
+    for (const call of warn.mock.calls as unknown[][])
+      expect(JSON.stringify(call)).not.toContain('secret');
+  });
+
+  it('set marks the note as manual', async () => {
+    const { prisma, service } = build();
+    await service.set(USER, AREA, 'Maria');
+    expect(prisma.areaTeacherNote.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: {
+          userId: USER,
+          areaId: AREA,
+          teacherName: 'Maria',
+          autoFromSchedule: false,
+        },
+        update: { teacherName: 'Maria', autoFromSchedule: false },
+      }),
+    );
   });
 });
