@@ -17,7 +17,7 @@ describe('FinanceService.listOwedPayments', () => {
   it('filters by userId, orders newest first and caps the list', async () => {
     findMany.mockResolvedValue([]);
     await service.listOwedPayments('user-1');
-    const args = findMany.mock.calls[0][0] as {
+    const args = (findMany.mock.calls as unknown[][])[0][0] as {
       where: { userId: string };
       orderBy: { paidAt?: string }[];
       take: number;

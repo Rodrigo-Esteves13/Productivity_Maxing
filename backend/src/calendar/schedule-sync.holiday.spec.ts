@@ -12,7 +12,9 @@ describe('buildDesiredEvents holidays', () => {
   it('builds an all-day holiday event with label', () => {
     const events = buildDesiredEvents({
       ...base,
-      holidays: [{ commitmentId: 'c1', date: '2026-12-25', label: 'Christmas' }],
+      holidays: [
+        { commitmentId: 'c1', date: '2026-12-25', label: 'Christmas' },
+      ],
     });
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({

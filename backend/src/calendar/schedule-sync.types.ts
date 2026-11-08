@@ -1,5 +1,11 @@
 export type ScheduleEventKind =
-  'class' | 'work' | 'event' | 'travel' | 'study' | 'study_overtime' | 'holiday';
+  | 'class'
+  | 'work'
+  | 'event'
+  | 'travel'
+  | 'study'
+  | 'study_overtime'
+  | 'holiday';
 
 // Um evento que DEVIA existir no Google Calendar, calculado a partir do
 // horário, dos turnos e do plano de estudo.

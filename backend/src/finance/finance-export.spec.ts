@@ -4,6 +4,17 @@ import { MAX_FINANCE_ENTRIES_PER_USER } from './finance.constants';
 import type { FinancePricesService } from './finance-prices.service';
 import type { PrismaService } from '../prisma/prisma.service';
 
+interface QueryArgs {
+  where?: unknown;
+  take?: number;
+  select?: { doses: { where: unknown } };
+}
+
+// Primeiro argumento da primeira chamada de um mock, tipado (sem any).
+function firstArg(mock: jest.Mock): QueryArgs {
+  return (mock.mock.calls as unknown[][])[0][0] as QueryArgs;
+}
+
 describe('FinanceService.exportAll', () => {
   function setup() {
     const prisma = {
@@ -53,17 +64,17 @@ describe('FinanceService.exportAll', () => {
   it('scopes every query to the user and caps the rows', async () => {
     const { prisma, service } = setup();
     await service.exportAll('u1');
-    expect(prisma.financeSettings.findUnique.mock.calls[0][0].where).toEqual({
+    expect(firstArg(prisma.financeSettings.findUnique).where).toEqual({
       userId: 'u1',
     });
-    expect(prisma.financeAccount.findMany.mock.calls[0][0].where).toEqual({
+    expect(firstArg(prisma.financeAccount.findMany).where).toEqual({
       userId: 'u1',
     });
-    const entryArgs = prisma.financeEntry.findMany.mock.calls[0][0];
+    const entryArgs = firstArg(prisma.financeEntry.findMany);
     expect(entryArgs.where).toEqual({ userId: 'u1' });
     // Uma linha a mais para saber se cortou.
     expect(entryArgs.take).toBe(MAX_FINANCE_ENTRIES_PER_USER + 1);
-    const payArgs = prisma.financeOwedPayment.findMany.mock.calls[0][0];
+    const payArgs = firstArg(prisma.financeOwedPayment.findMany);
     expect(payArgs.where).toEqual({ userId: 'u1' });
     expect(payArgs.take).toBe(MAX_FINANCE_ENTRIES_PER_USER + 1);
   });

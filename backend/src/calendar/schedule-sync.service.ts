@@ -194,9 +194,14 @@ export class ScheduleSyncService {
 
     const [classes, allShifts, plan, existingRows] = await Promise.all([
       this.scheduleService.findRange(userId, today, rangeEnd),
-      this.workShiftsService.expandRange(userId, todayKey, toDateKey(rangeEnd), {
-        includeSkipped: true,
-      }),
+      this.workShiftsService.expandRange(
+        userId,
+        todayKey,
+        toDateKey(rangeEnd),
+        {
+          includeSkipped: true,
+        },
+      ),
       this.studyPlanService.generate(userId, days),
       this.prisma.calendarSyncedEvent.findMany({
         where: { userId, windowDate: { gte: today, lte: rangeEnd } },

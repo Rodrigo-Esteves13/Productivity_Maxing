@@ -10,7 +10,7 @@ import type { MedicationDisclaimerService } from './medication-disclaimer.servic
 import { getLisbonNow } from '../common/date-key.util';
 
 jest.mock('../common/date-key.util', () => ({
-  ...jest.requireActual('../common/date-key.util'),
+  ...jest.requireActual<Record<string, unknown>>('../common/date-key.util'),
   getLisbonNow: jest.fn(),
 }));
 
@@ -79,7 +79,10 @@ describe('computeReminderSlotStates', () => {
 describe('MedicationsService.reminderStatus', () => {
   it('queries only the caller, today, active daily reminders', async () => {
     const today = new Date('2026-01-01T00:00:00Z');
-    (getLisbonNow as jest.Mock).mockReturnValue({ today, nowMinutes: SLOT + 30 });
+    (getLisbonNow as jest.Mock).mockReturnValue({
+      today,
+      nowMinutes: SLOT + 30,
+    });
     const findMany = jest.fn().mockResolvedValue([
       {
         id: 'm1',
@@ -93,7 +96,10 @@ describe('MedicationsService.reminderStatus', () => {
       {} as MedicationDisclaimerService,
     );
     const out = await service.reminderStatus('u1');
-    const args = findMany.mock.calls[0][0];
+    const args = (findMany.mock.calls as unknown[][])[0][0] as {
+      where: unknown;
+      select: { doses: { where: unknown } };
+    };
     expect(args.where).toEqual({
       userId: 'u1',
       active: true,
