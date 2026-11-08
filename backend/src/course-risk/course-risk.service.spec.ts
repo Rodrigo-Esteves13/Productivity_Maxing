@@ -27,7 +27,9 @@ const USER_B = 'user-b';
 const PERIOD = {
   startDate: new Date('2026-09-01T00:00:00.000Z'),
   endDate: null,
+  program: { roundInterimGrades: false },
 };
+const ROUNDING_PERIOD = { ...PERIOD, program: { roundInterimGrades: true } };
 
 const RULES = { presetKey: 'test' } as unknown as CourseRiskInput['rules'];
 
@@ -44,7 +46,7 @@ interface TaskRow {
   estimatedMinutes: number | null;
   recalledStudyMinutes: number | null;
   postponedCount: number;
-  period: typeof PERIOD;
+  period: typeof PERIOD | typeof ROUNDING_PERIOD;
   studySessions: { startedAt: Date; endedAt: Date | null }[];
 }
 
@@ -880,5 +882,59 @@ describe('CourseRiskService', () => {
     expect(engine.mock.calls[0][0].components).toEqual([
       { label: 'Seminars', weightPct: 20, grade: 12 },
     ]);
+  });
+
+  describe('roundInterimGrades', () => {
+    const roundingDb = (period: typeof PERIOD | typeof ROUNDING_PERIOD) => {
+      const db = emptyDb();
+      db.tasks = [task({ realGrade: 15.5, period })];
+      db.components = [
+        {
+          userId: USER_A,
+          areaId: 'area-1',
+          periodId: 'p1',
+          name: 'Seminars',
+          weightPercentage: 20,
+          aggregation: 'AVERAGE',
+          bestOfCount: null,
+          entries: [{ grade: 14 }, { grade: 15 }],
+          period,
+        },
+      ];
+      return db;
+    };
+
+    it('selects the flag through the period program', async () => {
+      const { service, prisma } = build(roundingDb(PERIOD));
+      await service.list(USER_A);
+      const [query] = prisma.task.findMany.mock.calls[0] as unknown as [
+        { select: { period: unknown } },
+      ];
+      expect(query.select.period).toEqual({
+        select: {
+          startDate: true,
+          endDate: true,
+          program: { select: { roundInterimGrades: true } },
+        },
+      });
+    });
+
+    it('rounds each stored task and component grade when on', async () => {
+      const { service } = build(roundingDb(ROUNDING_PERIOD));
+      await service.list(USER_A);
+      expect(engine.mock.calls[0][0].components).toEqual([
+        { label: 'Exam', weightPct: 50, grade: 16 },
+        { label: 'Seminars', weightPct: 20, grade: 15 },
+      ]);
+    });
+
+    it('leaves the grades untouched when off', async () => {
+      const { service } = build(roundingDb(PERIOD));
+      await service.list(USER_A);
+      expect(engine.mock.calls[0][0].components).toEqual([
+        { label: 'Exam', weightPct: 50, grade: 15.5 },
+        { label: 'Seminars', weightPct: 20, grade: 14.5 },
+      ]);
+    });
   });
 });

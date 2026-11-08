@@ -447,7 +447,7 @@ export const extra: Record<string, string> = {
   "ui.deletedLower": "supprimé",
   "ui.userWillBeBanned": "{name} sera banni définitivement et déconnecté immédiatement, partout.",
   "ui.userWillBeSuspended": "{name} sera suspendu et déconnecté immédiatement ; le compte se réactive tout seul une fois la date ci-dessous passée.",
-  "ui.showArchivedCount": "Afficher les archivées ({count})",
+  "ui.showArchivedCount": "Afficher terminées depuis 30+ jours ({count})",
   "ui.postponedTimes": "reportée {count}x",
   "ui.offlineBanner": "Pas de connexion internet. Certaines actions peuvent ne pas fonctionner jusqu’au retour de la connexion.",
   "ui.nActive": "{count} actives",

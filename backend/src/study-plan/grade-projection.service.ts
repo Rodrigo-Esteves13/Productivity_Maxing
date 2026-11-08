@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolveFocusedStudyMinutes } from '../common/session-minutes.util';
 import { toDateKey } from '../common/date-key.util';
-import { parseGradeScale } from '../academic-programs/grade-average.util';
+import {
+  parseGradeScale,
+  roundInterimGrade,
+} from '../academic-programs/grade-average.util';
 import { ESTIMABLE_TASK_SELECT, StudyPlanService } from './study-plan.service';
 import {
   MIN_SAMPLES_OVERALL,
@@ -73,6 +76,8 @@ export class GradeProjectionService {
       }),
     ]);
 
+    const roundedIds = await this.interimRoundedTaskIds(userId, history);
+
     // Estudo de cada task avaliada: sessoes dela + sessoes da cadeira antes
     // do prazo (ver session-attribution.util.ts), ou o tempo lembrado.
     const overallSamples: GradeSample[] = [];
@@ -88,9 +93,13 @@ export class GradeProjectionService {
         continue;
       }
       const scale = parseGradeScale(task.gradeScale ?? DEFAULT_SCALE_TEXT);
+      const grade = roundInterimGrade(
+        task.realGrade,
+        roundedIds.has(task.id),
+      ) as number;
       const sample: GradeSample = {
         minutes,
-        fraction: gradeToFraction(task.realGrade, scale),
+        fraction: gradeToFraction(grade, scale),
       };
       overallSamples.push(sample);
       const list = samplesByArea.get(task.areaId) ?? [];
@@ -139,6 +148,27 @@ export class GradeProjectionService {
       tasks,
       backfillCandidates,
     );
+  }
+
+  /**
+   * Tasks avaliadas cujo programa arredonda as notas intercalares
+   * (roundInterimGrades): o modelo aprende com a nota que conta (15.5 -> 16).
+   * As notas-alvo e as projecoes nunca sao arredondadas.
+   */
+  private async interimRoundedTaskIds(
+    userId: string,
+    history: GradedTaskHistory[],
+  ): Promise<Set<string>> {
+    if (history.length === 0) return new Set();
+    const rows = await this.prisma.task.findMany({
+      where: {
+        userId,
+        id: { in: history.map((task) => task.id) },
+        period: { program: { userId, roundInterimGrades: true } },
+      },
+      select: { id: true },
+    });
+    return new Set(rows.map((row) => row.id));
   }
 
   private buildTask(

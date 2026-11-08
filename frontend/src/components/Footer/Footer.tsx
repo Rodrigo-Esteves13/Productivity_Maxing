@@ -53,6 +53,7 @@ export default function Footer() {
 
   const helpLinks: FooterLinkItem[] = [
     { label: 'nav.changelog', to: '/changelog' },
+    { label: 'status.footerLink', to: '/status' },
     ...(isAuthenticated
       ? [
           { label: 'feedback.open', onClick: () => setIsFeedbackOpen(true) },

@@ -6,6 +6,8 @@ export const layout: Record<string, string> = {
   'program.round.label': "Redondear la nota final de cada asignatura",
   'program.round.createHelp': "Redondea cada asignatura al entero más cercano antes de calcular la media ponderada por créditos, como registran la mayoría de las universidades. Cada periodo puede cambiarlo después.",
   'program.round.editHelp': "Valor por defecto para todos los periodos de este programa. Cada periodo puede cambiarlo individualmente.",
+  'program.roundInterim.label': "Redondear notas parciales",
+  'program.roundInterim.help': "Cada nota de examen o componente se redondea al entero antes de promediar (15,5 cuenta como 16).",
   'program.create.error': "No se pudo crear el programa. Inténtalo de nuevo.",
   'program.create.submit': "Crear programa",
   'program.settings': "Ajustes del programa",

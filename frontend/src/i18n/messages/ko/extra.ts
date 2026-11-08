@@ -447,7 +447,7 @@ export const extra: Record<string, string> = {
   "ui.deletedLower": "삭제됨",
   "ui.userWillBeBanned": "{name}은(는) 영구 차단되고 모든 곳에서 즉시 로그아웃돼요.",
   "ui.userWillBeSuspended": "{name}은(는) 정지되고 즉시 로그아웃돼요. 아래 날짜가 지나면 계정이 자동으로 다시 활성화돼요.",
-  "ui.showArchivedCount": "보관된 항목 표시 ({count})",
+  "ui.showArchivedCount": "30일 이상 전 완료 표시 ({count})",
   "ui.postponedTimes": "{count}번 미룸",
   "ui.offlineBanner": "인터넷에 연결돼 있지 않아요. 연결이 돌아올 때까지 일부 작업이 동작하지 않을 수 있어요.",
   "ui.nActive": "{count}개 활성",

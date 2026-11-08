@@ -31,7 +31,9 @@ import {
   CreateFinanceEntryDto,
   CreateFinanceGoalDto,
   CreateFinanceHoldingDto,
+  CreateOwedPaymentDto,
   FinanceAnalyticsQueryDto,
+  ImportFinanceEntriesDto,
   UpdateFinanceAccountDto,
   UpdateFinanceEntryDto,
   UpdateFinanceGoalDto,
@@ -39,6 +41,8 @@ import {
   UpdateFinanceSettingsDto,
 } from './dto/finance.dto';
 import {
+  FINANCE_EXPORT_PER_MINUTE,
+  FINANCE_IMPORT_PER_MINUTE,
   FINANCE_REFRESH_PER_MINUTE,
   FINANCE_WRITES_PER_MINUTE,
   IDEMPOTENCY_HEADER,
@@ -73,6 +77,26 @@ export class FinanceController {
     return this.finance.summary(user.id, month ?? '');
   }
 
+  // Literal antes de qualquer rota :id.
+  @Get('export')
+  @Throttle(perMinute(FINANCE_EXPORT_PER_MINUTE))
+  @ApiOperation({
+    summary:
+      'Full export: every entry (capped), received owed payments and account names.',
+  })
+  exportAll(@CurrentUser() user: AuthenticatedUser) {
+    return this.finance.exportAll(user.id);
+  }
+
+  @Get('owed-payments')
+  @ApiOperation({
+    summary:
+      'Latest partial payments received on money owed to you, newest first.',
+  })
+  owedPayments(@CurrentUser() user: AuthenticatedUser) {
+    return this.finance.listOwedPayments(user.id);
+  }
+
   @Get('analytics')
   @ApiOperation({
     summary:
@@ -93,6 +117,23 @@ export class FinanceController {
     @Body() dto: UpdateFinanceSettingsDto,
   ) {
     return this.finance.updateSettings(user.id, dto);
+  }
+
+  // Literal: nenhuma rota POST :id a apanha, mas fica antes por regra.
+  @Post('import')
+  @HttpCode(HttpStatus.OK)
+  @IdempotencyHeader()
+  @Throttle(perMinute(FINANCE_IMPORT_PER_MINUTE))
+  @ApiOperation({
+    summary:
+      'Imports income and expense rows from the CSV export. Skips exact duplicates and rows over the entry limit.',
+  })
+  importEntries(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ImportFinanceEntriesDto,
+    @Headers(IDEMPOTENCY_HEADER) key?: string,
+  ) {
+    return this.finance.importEntries(user.id, dto, key);
   }
 
   @Post('entries')
@@ -118,6 +159,21 @@ export class FinanceController {
     @Body() dto: UpdateFinanceEntryDto,
   ) {
     return this.finance.updateEntry(user.id, id, dto);
+  }
+
+  @Post('entries/:id/payments')
+  @IdempotencyHeader()
+  @Throttle(perMinute(FINANCE_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary: 'Records a partial payment of money someone owes you.',
+  })
+  addOwedPayment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateOwedPaymentDto,
+    @Headers(IDEMPOTENCY_HEADER) key?: string,
+  ) {
+    return this.finance.addOwedPayment(user.id, id, dto, key);
   }
 
   @Delete('entries/:id')

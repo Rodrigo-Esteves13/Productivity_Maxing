@@ -6,6 +6,8 @@ export const layout: Record<string, string> = {
   'program.round.label': "各科目の最終成績を丸める",
   'program.round.createHelp': "単位で加重した平均を計算する前に、各科目を最も近い整数に丸めます。多くの大学の成績記録と同じ方式です。期間ごとに後から変更できます。",
   'program.round.editHelp': "このプログラムのすべての期間の既定値です。期間ごとに個別に変更することもできます。",
+  'program.roundInterim.label': "中間評価を丸める",
+  'program.roundInterim.help': "各テストや要素の点数を平均前に整数に丸めます（15.5は16として計算）。",
   'program.create.error': "プログラムを作成できませんでした。もう一度お試しください。",
   'program.create.submit': "プログラムを作成",
   'program.settings': "プログラム設定",

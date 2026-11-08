@@ -6,6 +6,8 @@ export const layout: Record<string, string> = {
   'program.round.label': "Arredondar a nota final de cada disciplina",
   'program.round.createHelp': "Arredonda cada disciplina ao inteiro mais próximo antes de calcular a média ponderada pelos créditos - como a maioria das universidades regista as notas finais. Cada período pode alterar isto depois.",
   'program.round.editHelp': "Predefinição para todos os períodos deste programa. Cada período pode alterá-la individualmente.",
+  'program.roundInterim.label': "Arredondar notas intercalares",
+  'program.roundInterim.help': "Cada nota de teste ou componente é arredondada ao inteiro antes das médias (15,5 conta como 16).",
   'program.create.error': "Não foi possível criar o programa. Tenta de novo.",
   'program.create.submit': "Criar programa",
   'program.settings': "Definições do programa",

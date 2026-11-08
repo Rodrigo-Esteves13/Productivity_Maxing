@@ -1,6 +1,7 @@
 import type { DateCertainty } from '@prisma/client';
 import { calendarTitle, hasFirmDate } from '../common/task-readiness.util';
 import { MS_PER_DAY, MS_PER_MINUTE } from '../common/time.constants';
+import { OAUTH_HTTP_TIMEOUT_MS } from '../common/http-resilience.constants';
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { Provider } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -200,6 +201,7 @@ export class CalendarService {
         refresh_token: tokens.refreshToken,
         grant_type: 'refresh_token',
       }),
+      signal: AbortSignal.timeout(OAUTH_HTTP_TIMEOUT_MS),
     });
 
     if (!res.ok) {

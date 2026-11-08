@@ -40,6 +40,12 @@ export type PushMessageKey =
   | 'turmaInvited'
   | 'selfReminder'
   | 'absenceLimitNear'
+  | 'streakRisk'
+  | 'moneyReminder'
+  | 'budgetWarn'
+  | 'budgetOver'
+  | 'leisureBudgetWarn'
+  | 'leisureBudgetOver'
   | 'newDeviceLogin';
 
 interface Template {
@@ -158,6 +164,30 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Absence limit',
       body: 'You are close to the absence limit in {title}.',
     },
+    streakRisk: {
+      title: 'Streak at risk',
+      body: 'Your {count}-day streak ends at midnight. A short session keeps it.',
+    },
+    moneyReminder: {
+      title: 'Money reminder',
+      body: 'Items to check in Finance: {count}. Subscription renewals due tomorrow or money owed to you.',
+    },
+    budgetWarn: {
+      title: 'Budget alert',
+      body: 'You are close to your monthly budget. Check Finance before spending more.',
+    },
+    budgetOver: {
+      title: 'Budget exceeded',
+      body: 'You went over your monthly budget this month. Check Finance.',
+    },
+    leisureBudgetWarn: {
+      title: 'Leisure budget alert',
+      body: 'You are close to your leisure budget. Check Finance before spending more.',
+    },
+    leisureBudgetOver: {
+      title: 'Leisure budget exceeded',
+      body: 'You went over your leisure budget this month. Check Finance.',
+    },
     newDeviceLogin: {
       title: 'New sign-in',
       body: 'Signed in on {title}. If it was not you, sign that device out in Devices.',
@@ -271,6 +301,30 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     absenceLimitNear: {
       title: 'Limite de faltas',
       body: 'Estás perto do limite de faltas em {title}.',
+    },
+    streakRisk: {
+      title: 'Streak em risco',
+      body: 'A tua streak de {count} dias acaba à meia-noite. Uma sessão curta mantém-na.',
+    },
+    moneyReminder: {
+      title: 'Lembrete de dinheiro',
+      body: 'Itens a ver nas Finanças: {count}. Subscrições a renovar amanhã ou dinheiro que te devem.',
+    },
+    budgetWarn: {
+      title: 'Alerta de orçamento',
+      body: 'Estás perto do teu orçamento mensal. Vê as Finanças antes de gastares mais.',
+    },
+    budgetOver: {
+      title: 'Orçamento excedido',
+      body: 'Ultrapassaste o orçamento mensal este mês. Vê as Finanças.',
+    },
+    leisureBudgetWarn: {
+      title: 'Alerta de orçamento de lazer',
+      body: 'Estás perto do teu orçamento de lazer. Vê as Finanças antes de gastares mais.',
+    },
+    leisureBudgetOver: {
+      title: 'Orçamento de lazer excedido',
+      body: 'Ultrapassaste o orçamento de lazer este mês. Vê as Finanças.',
     },
     newDeviceLogin: {
       title: 'Novo início de sessão',
@@ -386,6 +440,30 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Límite de faltas',
       body: 'Estás cerca del límite de faltas en {title}.',
     },
+    streakRisk: {
+      title: 'Racha en riesgo',
+      body: 'Tu racha de {count} días termina a medianoche. Una sesión corta la mantiene.',
+    },
+    moneyReminder: {
+      title: 'Recordatorio de dinero',
+      body: 'Elementos por revisar en Finanzas: {count}. Suscripciones que se renuevan mañana o dinero que te deben.',
+    },
+    budgetWarn: {
+      title: 'Alerta de presupuesto',
+      body: 'Estás cerca de tu presupuesto mensual. Revisa Finanzas antes de gastar más.',
+    },
+    budgetOver: {
+      title: 'Presupuesto superado',
+      body: 'Superaste tu presupuesto mensual este mes. Revisa Finanzas.',
+    },
+    leisureBudgetWarn: {
+      title: 'Alerta de presupuesto de ocio',
+      body: 'Estás cerca de tu presupuesto de ocio. Revisa Finanzas antes de gastar más.',
+    },
+    leisureBudgetOver: {
+      title: 'Presupuesto de ocio superado',
+      body: 'Superaste tu presupuesto de ocio este mes. Revisa Finanzas.',
+    },
     newDeviceLogin: {
       title: 'Nuevo inicio de sesión',
       body: 'Sesión iniciada en {title}. Si no fuiste tú, cierra esa sesión en Dispositivos.',
@@ -450,11 +528,11 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     turmaDeadlineAdded: {
       title: '{name}',
-      body: 'Nouvelle échéance : {title}. Ajoute-la à tes tâches.',
+      body: '新截止日期：{title}。把它加入你的任务。',
     },
     turmaDeadlineMoved: {
       title: '{name}',
-      body: 'La date de {title} a changé. Ta tâche a été mise à jour.',
+      body: '{title} 的日期已更改。你的任务已更新。',
     },
     turmaPackShared: {
       title: '{name}',
@@ -487,6 +565,30 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     absenceLimitNear: {
       title: '缺勤上限',
       body: '你在 {title} 的缺勤次数已接近上限。',
+    },
+    streakRisk: {
+      title: '连续记录有风险',
+      body: '你的 {count} 天连续学习记录将在午夜结束。学习一小会儿即可保住。',
+    },
+    moneyReminder: {
+      title: '资金提醒',
+      body: '财务中需要查看的事项：{count} 项。包括明天续订的订阅，或别人欠你的款项。',
+    },
+    budgetWarn: {
+      title: '预算提醒',
+      body: '你的本月预算快用完了。继续消费前请先查看财务。',
+    },
+    budgetOver: {
+      title: '预算已超支',
+      body: '你本月的预算已超支。请查看财务。',
+    },
+    leisureBudgetWarn: {
+      title: '娱乐预算提醒',
+      body: '你的娱乐预算快用完了。继续消费前请先查看财务。',
+    },
+    leisureBudgetOver: {
+      title: '娱乐预算已超支',
+      body: '你本月的娱乐预算已超支。请查看财务。',
     },
     newDeviceLogin: {
       title: '新的登录',
@@ -564,11 +666,11 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     turmaDeadlineAdded: {
       title: '{name}',
-      body: 'Neue Frist: {title}. Füge sie deinen Aufgaben hinzu.',
+      body: '新しい締め切り：{title}。タスクに追加しましょう。',
     },
     turmaDeadlineMoved: {
       title: '{name}',
-      body: 'Das Datum von {title} hat sich geändert. Deine Aufgabe wurde aktualisiert.',
+      body: '{title} の日付が変わりました。タスクを更新しました。',
     },
     turmaPackShared: {
       title: '{name}',
@@ -601,6 +703,30 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     absenceLimitNear: {
       title: '欠席の上限',
       body: '{title} の欠席が上限に近づいています。',
+    },
+    streakRisk: {
+      title: '連続記録が危険です',
+      body: '{count}日連続の記録は深夜0時で途切れます。短い学習で守れます。',
+    },
+    moneyReminder: {
+      title: 'お金のリマインダー',
+      body: '家計で確認する項目：{count}件。明日更新されるサブスク、または貸したお金の期限です。',
+    },
+    budgetWarn: {
+      title: '予算アラート',
+      body: '今月の予算に近づいています。使う前に家計を確認してください。',
+    },
+    budgetOver: {
+      title: '予算超過',
+      body: '今月の予算を超えました。家計を確認してください。',
+    },
+    leisureBudgetWarn: {
+      title: '娯楽予算アラート',
+      body: '娯楽の予算に近づいています。使う前に家計を確認してください。',
+    },
+    leisureBudgetOver: {
+      title: '娯楽予算超過',
+      body: '今月の娯楽予算を超えました。家計を確認してください。',
     },
     newDeviceLogin: {
       title: '新しいログイン',
@@ -678,11 +804,11 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     turmaDeadlineAdded: {
       title: '{name}',
-      body: '新截止日期：{title}。把它加入你的任务。',
+      body: '새 마감: {title}. 내 할 일에 추가하세요.',
     },
     turmaDeadlineMoved: {
       title: '{name}',
-      body: '{title} 的日期已更改。你的任务已更新。',
+      body: '{title}의 날짜가 바뀌었습니다. 내 할 일이 업데이트되었습니다.',
     },
     turmaPackShared: {
       title: '{name}',
@@ -715,6 +841,30 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     absenceLimitNear: {
       title: '결석 한도',
       body: '{title}의 결석이 한도에 가까워졌어요.',
+    },
+    streakRisk: {
+      title: '연속 기록이 위험해요',
+      body: '{count}일 연속 기록이 자정에 끝나요. 짧게 공부하면 지킬 수 있어요.',
+    },
+    moneyReminder: {
+      title: '돈 알림',
+      body: '가계부에서 확인할 항목: {count}개. 내일 갱신되는 구독이나 받을 돈이 있어요.',
+    },
+    budgetWarn: {
+      title: '예산 알림',
+      body: '이번 달 예산에 가까워졌어요. 더 쓰기 전에 가계부를 확인하세요.',
+    },
+    budgetOver: {
+      title: '예산 초과',
+      body: '이번 달 예산을 넘었어요. 가계부를 확인하세요.',
+    },
+    leisureBudgetWarn: {
+      title: '여가 예산 알림',
+      body: '여가 예산에 가까워졌어요. 더 쓰기 전에 가계부를 확인하세요.',
+    },
+    leisureBudgetOver: {
+      title: '여가 예산 초과',
+      body: '이번 달 여가 예산을 넘었어요. 가계부를 확인하세요.',
     },
     newDeviceLogin: {
       title: '새 로그인',
@@ -796,11 +946,11 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     turmaDeadlineAdded: {
       title: '{name}',
-      body: '新しい締め切り：{title}。タスクに追加しましょう。',
+      body: 'Nouvelle échéance : {title}. Ajoute-la à tes tâches.',
     },
     turmaDeadlineMoved: {
       title: '{name}',
-      body: '{title} の日付が変わりました。タスクを更新しました。',
+      body: 'La date de {title} a changé. Ta tâche a été mise à jour.',
     },
     turmaPackShared: {
       title: '{name}',
@@ -829,6 +979,30 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     absenceLimitNear: {
       title: "Limite d'absences",
       body: "Tu approches de la limite d'absences en {title}.",
+    },
+    streakRisk: {
+      title: 'Série en danger',
+      body: 'Ta série de {count} jours se termine à minuit. Une courte session la sauve.',
+    },
+    moneyReminder: {
+      title: 'Rappel d’argent',
+      body: 'Éléments à vérifier dans Finances : {count}. Abonnements renouvelés demain ou argent qu’on te doit.',
+    },
+    budgetWarn: {
+      title: 'Alerte budget',
+      body: 'Tu approches de ton budget mensuel. Consulte Finances avant de dépenser plus.',
+    },
+    budgetOver: {
+      title: 'Budget dépassé',
+      body: 'Tu as dépassé ton budget mensuel ce mois-ci. Consulte Finances.',
+    },
+    leisureBudgetWarn: {
+      title: 'Alerte budget loisirs',
+      body: 'Tu approches de ton budget loisirs. Consulte Finances avant de dépenser plus.',
+    },
+    leisureBudgetOver: {
+      title: 'Budget loisirs dépassé',
+      body: 'Tu as dépassé ton budget loisirs ce mois-ci. Consulte Finances.',
     },
     newDeviceLogin: {
       title: 'Nouvelle connexion',
@@ -910,11 +1084,11 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     },
     turmaDeadlineAdded: {
       title: '{name}',
-      body: '새 마감: {title}. 내 할 일에 추가하세요.',
+      body: 'Neue Frist: {title}. Füge sie deinen Aufgaben hinzu.',
     },
     turmaDeadlineMoved: {
       title: '{name}',
-      body: '{title}의 날짜가 바뀌었습니다. 내 할 일이 업데이트되었습니다.',
+      body: 'Das Datum von {title} hat sich geändert. Deine Aufgabe wurde aktualisiert.',
     },
     turmaPackShared: {
       title: '{name}',
@@ -943,6 +1117,30 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     absenceLimitNear: {
       title: 'Fehlzeitenlimit',
       body: 'Du näherst dich dem Fehlzeitenlimit in {title}.',
+    },
+    streakRisk: {
+      title: 'Serie in Gefahr',
+      body: 'Deine {count}-Tage-Serie endet um Mitternacht. Eine kurze Einheit rettet sie.',
+    },
+    moneyReminder: {
+      title: 'Geld-Erinnerung',
+      body: 'Zu prüfen in Finanzen: {count}. Abos, die morgen verlängert werden, oder Geld, das man dir schuldet.',
+    },
+    budgetWarn: {
+      title: 'Budget-Warnung',
+      body: 'Du näherst dich deinem Monatsbudget. Sieh in Finanzen nach, bevor du mehr ausgibst.',
+    },
+    budgetOver: {
+      title: 'Budget überschritten',
+      body: 'Du hast dein Monatsbudget diesen Monat überschritten. Sieh in Finanzen nach.',
+    },
+    leisureBudgetWarn: {
+      title: 'Freizeitbudget-Warnung',
+      body: 'Du näherst dich deinem Freizeitbudget. Sieh in Finanzen nach, bevor du mehr ausgibst.',
+    },
+    leisureBudgetOver: {
+      title: 'Freizeitbudget überschritten',
+      body: 'Du hast dein Freizeitbudget diesen Monat überschritten. Sieh in Finanzen nach.',
     },
     newDeviceLogin: {
       title: 'Neue Anmeldung',

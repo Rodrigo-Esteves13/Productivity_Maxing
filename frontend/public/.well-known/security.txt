@@ -1,0 +1,5 @@
+Contact: mailto:support@pmaxing.pt
+Expires: 2027-10-31T00:00:00.000Z
+Preferred-Languages: en, pt
+Canonical: https://app.pmaxing.pt/.well-known/security.txt
+Policy: https://app.pmaxing.pt/privacy

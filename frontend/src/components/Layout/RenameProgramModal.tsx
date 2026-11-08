@@ -24,6 +24,7 @@ export default function RenameProgramModal({
   const { t } = useI18n();
   const [name, setName] = useState(program.name);
   const [roundFinalGrade, setRoundFinalGrade] = useState(program.roundFinalGrade);
+  const [roundInterimGrades, setRoundInterimGrades] = useState(program.roundInterimGrades);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,8 +33,9 @@ export default function RenameProgramModal({
     if (isOpen) {
       setName(program.name);
       setRoundFinalGrade(program.roundFinalGrade);
+      setRoundInterimGrades(program.roundInterimGrades);
     }
-  }, [isOpen, program.name, program.roundFinalGrade]);
+  }, [isOpen, program.name, program.roundFinalGrade, program.roundInterimGrades]);
 
   const handleClose = () => {
     setError(null);
@@ -47,7 +49,7 @@ export default function RenameProgramModal({
     setIsSubmitting(true);
     setError(null);
     try {
-      await updateProgram(program.id, { name: name.trim(), roundFinalGrade });
+      await updateProgram(program.id, { name: name.trim(), roundFinalGrade, roundInterimGrades });
       onRenamed();
       handleClose();
     } catch {
@@ -87,6 +89,27 @@ export default function RenameProgramModal({
             </span>
             <span className="block text-xs text-neutral-500">
               {t('program.round.editHelp')}
+            </span>
+          </span>
+        </label>
+
+        <label
+          htmlFor="rename-program-round-interim-grades"
+          className="flex items-start gap-2.5 rounded-lg border border-neutral-800 bg-neutral-900/50 p-3 cursor-pointer"
+        >
+          <input
+            id="rename-program-round-interim-grades"
+            type="checkbox"
+            checked={roundInterimGrades}
+            onChange={(e) => setRoundInterimGrades(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-800 text-violet-500 focus:ring-violet-500 focus:ring-offset-neutral-900"
+          />
+          <span>
+            <span className="block text-sm text-neutral-200">
+              {t('program.roundInterim.label')}
+            </span>
+            <span className="block text-xs text-neutral-500">
+              {t('program.roundInterim.help')}
             </span>
           </span>
         </label>

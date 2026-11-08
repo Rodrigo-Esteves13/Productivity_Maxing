@@ -14,6 +14,70 @@ import {
   MS_PER_SECOND,
 } from '../common/time.constants';
 import { MEDICATION_REMINDER_WINDOW_MINUTES } from '../wellbeing/wellbeing.constants';
+import {
+  CircuitBreaker,
+  CircuitOpenError,
+} from '../common/circuit-breaker.util';
+import {
+  PUSH_BREAKER_FAILURE_THRESHOLD,
+  PUSH_BREAKER_OPEN_MS,
+  PUSH_TIMEOUT_MS,
+  isProviderFailureStatus,
+} from '../common/http-resilience.constants';
+
+const HTTP_NOT_FOUND = 404;
+const HTTP_GONE = 410;
+
+// Erros de rede/timeout que contam como falha do servico de push. Tudo o resto
+// sem estado HTTP (ex: chaves p256dh/auth invalidas, validadas localmente pelo
+// web-push antes de qualquer pedido) e problema daquela subscricao: se
+// contasse, uma conta com subscricoes lixo abria o circuito do FCM para todos.
+const PUSH_NETWORK_ERROR_CODES: ReadonlySet<string> = new Set([
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'ECONNABORTED',
+  'ETIMEDOUT',
+  'ESOCKETTIMEDOUT',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+  'EPIPE',
+]);
+const PUSH_NETWORK_ERROR_NAMES: ReadonlySet<string> = new Set([
+  'AbortError',
+  'TimeoutError',
+]);
+// Mensagem do web-push quando o socket passa PUSH_TIMEOUT_MS.
+const PUSH_SOCKET_TIMEOUT_MESSAGE = 'socket timeout';
+
+/**
+ * So conta como falha do servico de push (breaker partilhado por servico):
+ * - WebPushError com 429 ou >= 500;
+ * - erro de rede/timeout real.
+ * 404/410 (subscricao morta), outros 4xx e erros locais de validacao nunca.
+ */
+export function isPushServiceFailure(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const { statusCode, code, name, message } = error as {
+    statusCode?: unknown;
+    code?: unknown;
+    name?: unknown;
+    message?: unknown;
+  };
+  if (typeof statusCode === 'number')
+    return isProviderFailureStatus(statusCode);
+  if (typeof code === 'string' && PUSH_NETWORK_ERROR_CODES.has(code)) {
+    return true;
+  }
+  if (typeof name === 'string' && PUSH_NETWORK_ERROR_NAMES.has(name)) {
+    return true;
+  }
+  return (
+    typeof message === 'string' &&
+    message.toLowerCase() === PUSH_SOCKET_TIMEOUT_MESSAGE
+  );
+}
 
 const MAX_SUBSCRIPTIONS_PER_USER = 10;
 
@@ -34,17 +98,24 @@ const ALLOWED_PUSH_HOST_SUFFIXES = [
   'push.apple.com',
 ];
 
-export function isAllowedPushEndpoint(endpoint: string): boolean {
+/** Servico de push (sufixo da lista) de um endpoint, ou null se nao for. */
+export function pushServiceOf(endpoint: string): string | null {
   try {
     const url = new URL(endpoint);
-    if (url.protocol !== 'https:') return false;
+    if (url.protocol !== 'https:') return null;
     const host = url.hostname.toLowerCase();
-    return ALLOWED_PUSH_HOST_SUFFIXES.some(
-      (suffix) => host === suffix || host.endsWith(`.${suffix}`),
+    return (
+      ALLOWED_PUSH_HOST_SUFFIXES.find(
+        (suffix) => host === suffix || host.endsWith(`.${suffix}`),
+      ) ?? null
     );
   } catch {
-    return false;
+    return null;
   }
+}
+
+export function isAllowedPushEndpoint(endpoint: string): boolean {
+  return pushServiceOf(endpoint) !== null;
 }
 
 export interface PushNotifyOptions {
@@ -79,8 +150,26 @@ export class PushService implements OnModuleInit {
   private readonly logger = new Logger(PushService.name);
   private enabled = false;
   private readonly lastNotifiedAt = new Map<string, number>();
+  // Um circuito por servico de push (FCM em baixo nao trava o Mozilla). No
+  // maximo um por sufixo permitido, por isso o mapa nunca cresce.
+  private readonly breakers = new Map<string, CircuitBreaker>();
 
   constructor(private readonly prisma: PrismaService) {}
+
+  private breakerFor(endpoint: string): CircuitBreaker {
+    const service = pushServiceOf(endpoint) ?? 'unknown';
+    let breaker = this.breakers.get(service);
+    if (!breaker) {
+      breaker = new CircuitBreaker({
+        name: `Web push ${service}`,
+        failureThreshold: PUSH_BREAKER_FAILURE_THRESHOLD,
+        openDurationMs: PUSH_BREAKER_OPEN_MS,
+        isFailure: isPushServiceFailure,
+      });
+      this.breakers.set(service, breaker);
+    }
+    return breaker;
+  }
 
   onModuleInit() {
     const publicKey = process.env.VAPID_PUBLIC_KEY;
@@ -250,19 +339,27 @@ export class PushService implements OnModuleInit {
           sentAt: Date.now(),
         });
         try {
-          await webpush.sendNotification(
-            {
-              endpoint: sub.endpoint,
-              keys: { p256dh: sub.p256dh, auth: sub.auth },
-            },
-            payload,
-            { TTL: pushTtlSeconds(key), urgency: 'high' },
+          await this.breakerFor(sub.endpoint).execute(() =>
+            webpush.sendNotification(
+              {
+                endpoint: sub.endpoint,
+                keys: { p256dh: sub.p256dh, auth: sub.auth },
+              },
+              payload,
+              {
+                TTL: pushTtlSeconds(key),
+                urgency: 'high',
+                timeout: PUSH_TIMEOUT_MS,
+              },
+            ),
           );
           return true;
         } catch (error) {
+          // Circuito aberto: nao envia nem apaga; a mudanca ja ficou no log.
+          if (error instanceof CircuitOpenError) return false;
           const status = (error as { statusCode?: number }).statusCode;
           // 404/410 = subscrição morta (browser desinstalado/permissão retirada).
-          if (status === 404 || status === 410) {
+          if (status === HTTP_NOT_FOUND || status === HTTP_GONE) {
             await this.prisma.pushSubscription
               .deleteMany({ where: { id: sub.id } })
               .catch(() => undefined);

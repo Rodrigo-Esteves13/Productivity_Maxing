@@ -6,6 +6,8 @@ export const layout: Record<string, string> = {
   'program.round.label': "과목별 최종 성적 반올림",
   'program.round.createHelp': "학점 가중 평균을 계산하기 전에 각 과목을 가장 가까운 정수로 반올림합니다. 대부분의 대학이 최종 성적을 기록하는 방식과 같습니다. 기간별로 나중에 변경할 수 있습니다.",
   'program.round.editHelp': "이 프로그램의 모든 기간에 적용되는 기본값입니다. 기간마다 개별적으로 바꿀 수 있습니다.",
+  'program.roundInterim.label': "중간 성적 반올림",
+  'program.roundInterim.help': "평균을 내기 전에 각 시험·항목 점수를 정수로 반올림합니다 (15.5는 16으로 계산).",
   'program.create.error': "프로그램을 만들 수 없습니다. 다시 시도해 주세요.",
   'program.create.submit': "프로그램 만들기",
   'program.settings': "프로그램 설정",

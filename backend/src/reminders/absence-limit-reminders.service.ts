@@ -194,18 +194,23 @@ export class AbsenceLimitRemindersService {
       .map((row) => row.subject)
       .join(SUBJECT_SEPARATOR);
     const extra = risky.length - MAX_SUBJECTS_IN_PUSH;
-    const delivered = await this.pushService.notifyUser(
-      user.id,
-      'absenceLimitNear',
-      {
-        title: extra > 0 ? `${shown} +${extra}` : shown,
-        url: SCHEDULE_PATH,
-      },
-    );
-    // Sem dispositivo que tenha recebido: tenta outra vez na proxima execucao.
-    if (delivered === 0) return false;
+    // Marcado ANTES do envio: uma execucao sobreposta ja o salta.
     this.notifiedWeek.set(user.id, week);
-    return true;
+    let delivered = 0;
+    try {
+      delivered = await this.pushService.notifyUser(
+        user.id,
+        'absenceLimitNear',
+        {
+          title: extra > 0 ? `${shown} +${extra}` : shown,
+          url: SCHEDULE_PATH,
+        },
+      );
+    } finally {
+      // Sem dispositivo que tenha recebido: desmarca, tenta na proxima.
+      if (delivered === 0) this.notifiedWeek.delete(user.id);
+    }
+    return delivered > 0;
   }
 
   private isQuietHour(

@@ -1,66 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
 import Card from '../../UI/Card';
 import Button from '../../UI/Button';
 import SegmentedControl from '../../UI/SegmentedControl';
 import { useI18n } from '../../../i18n/useI18n';
-import { useAmbientSoundPref } from '../../../hooks/useAmbientSoundPref';
-import { AMBIENT_KINDS, startAmbient, type AmbientKind, type AmbientPlayer } from '../../../lib/ambientNoise';
+import { useAmbientSound } from '../../../context/useAmbientSound';
+import { AMBIENT_KINDS } from '../../../lib/ambientNoise';
 
-// Som de fundo para abafar o barulho a volta durante o estudo. Toca so
-// enquanto esta pagina esta aberta e so depois de um clique (autoplay).
+// Som de fundo para abafar o barulho a volta durante o estudo. O motor de
+// audio vive no AmbientSoundProvider: continua a tocar ao mudar de pagina
+// (com controlo no pill global) e so comeca depois de um clique (autoplay).
 export default function AmbientSoundCard() {
   const { t } = useI18n();
-  const { pref, setPref } = useAmbientSoundPref();
-  const playerRef = useRef<AmbientPlayer | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [failed, setFailed] = useState(false);
-
-  // Sair da pagina desliga o som.
-  useEffect(() => () => playerRef.current?.stop(), []);
-
-  const play = (kind: AmbientKind) => {
-    playerRef.current?.stop();
-    try {
-      playerRef.current = startAmbient(kind, pref.volume);
-      setIsPlaying(true);
-      setFailed(false);
-    } catch {
-      // Browser sem Web Audio (muito antigo) ou bloqueado.
-      playerRef.current = null;
-      setIsPlaying(false);
-      setFailed(true);
-    }
-  };
-
-  const toggle = () => {
-    if (isPlaying) {
-      playerRef.current?.stop();
-      playerRef.current = null;
-      setIsPlaying(false);
-      return;
-    }
-    play(pref.kind);
-  };
-
-  const changeKind = (kind: AmbientKind) => {
-    setPref({ ...pref, kind });
-    if (isPlaying) play(kind);
-  };
-
-  const changeVolume = (volume: number) => {
-    setPref({ ...pref, volume });
-    playerRef.current?.setVolume(volume);
-  };
+  const { kind, volume, isPlaying, failed, toggle, setKind, setVolume } = useAmbientSound();
 
   return (
     <Card>
       <h2 className="mb-1 text-lg font-semibold text-white">{t('focus.ambient.title')}</h2>
-      <p className="mb-4 text-sm text-neutral-400">{t('focus.ambient.help')}</p>
+      <p className="mb-4 text-sm text-neutral-400">{t('ambientGlobal.help')}</p>
       <SegmentedControl
         size="sm"
-        options={AMBIENT_KINDS.map((kind) => ({ value: kind, label: t(`focus.ambient.kind.${kind}`) }))}
-        value={pref.kind}
-        onChange={changeKind}
+        options={AMBIENT_KINDS.map((k) => ({ value: k, label: t(`focus.ambient.kind.${k}`) }))}
+        value={kind}
+        onChange={setKind}
       />
       <label className="mt-4 flex items-center gap-3 text-sm text-neutral-300">
         <span className="shrink-0">{t('focus.ambient.volume')}</span>
@@ -69,8 +29,8 @@ export default function AmbientSoundCard() {
           min={0}
           max={1}
           step={0.05}
-          value={pref.volume}
-          onChange={(e) => changeVolume(Number(e.target.value))}
+          value={volume}
+          onChange={(e) => setVolume(Number(e.target.value))}
           className="w-full accent-violet-500"
         />
       </label>

@@ -145,15 +145,21 @@ function groupTasks(tasks: ScenarioTask[]): TaskGroup[] {
   return [...groups.values()];
 }
 
+const keepGrade = (grade: number) => grade;
+
 /**
  * Cenario de uma cadeira. `periodMedian` e a mediana das notas de TODAS as
  * cadeiras do periodo (fallback quando esta ainda nao tem notas).
+ * `roundComponentGrade` (roundInterimGrades do programa) arredonda a nota
+ * AGREGADA de cada componente so com entradas reais, uma vez, como em
+ * grade-scenario.ts: as entradas nunca sao arredondadas uma a uma.
  */
 export function buildCourseScenario(
   areaId: string,
   tasks: ScenarioTask[],
   components: ScenarioComponent[],
   periodMedian: number | null,
+  roundComponentGrade: (grade: number) => number = keepGrade,
 ): CourseScenario {
   const knownGrades = [
     ...tasks.flatMap((t) => (t.realGrade !== null ? [t.realGrade] : [])),
@@ -196,11 +202,12 @@ export function buildCourseScenario(
   }
 
   for (const component of components) {
-    const known = computeComponentGrade(
+    const aggregated = computeComponentGrade(
       component.grades,
       component.aggregation,
       component.bestOfCount,
     );
+    const known = aggregated === null ? null : roundComponentGrade(aggregated);
     current.push({ weight: component.weightPercentage, grade: known });
     projected.push({ weight: component.weightPercentage, grade: known });
 

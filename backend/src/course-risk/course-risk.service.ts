@@ -43,6 +43,8 @@ interface PeriodWindow {
 interface CourseGroup {
   areaId: string;
   period: PeriodWindow;
+  /** Opcao do programa do periodo (notas intercalares arredondadas). */
+  roundInterimGrades: boolean;
   tasks: RiskTaskRow[];
   components: RiskComponentRow[];
 }
@@ -147,7 +149,15 @@ function buildSummary(courses: CourseRiskOverviewRow[]): CourseRiskSummary {
   };
 }
 
-const PERIOD_SELECT = { select: { startDate: true, endDate: true } } as const;
+const PERIOD_SELECT = {
+  select: {
+    startDate: true,
+    endDate: true,
+    program: { select: { roundInterimGrades: true } },
+  },
+} as const;
+
+type GroupPeriod = PeriodWindow & { program: { roundInterimGrades: boolean } };
 
 @Injectable()
 export class CourseRiskService {
@@ -308,7 +318,11 @@ export class CourseRiskService {
           areaName: area.name,
           colorHex: area.colorHex,
           rules: resolved.rules,
-          components: buildRiskComponents(group.tasks, group.components),
+          components: buildRiskComponents(
+            group.tasks,
+            group.components,
+            group.roundInterimGrades,
+          ),
           ...sumStudyVsEstimate(group.tasks, now),
           absenceSharePct,
           absenceLimitPct,
@@ -394,13 +408,19 @@ export class CourseRiskService {
     const groupFor = (
       areaId: string,
       periodId: string | null,
-      period: PeriodWindow | null,
+      period: GroupPeriod | null,
     ): CourseGroup | null => {
       if (!periodId || !period) return null;
       const key = `${areaId}|${periodId}`;
       let group = groups.get(key);
       if (!group) {
-        group = { areaId, period, tasks: [], components: [] };
+        group = {
+          areaId,
+          period: { startDate: period.startDate, endDate: period.endDate },
+          roundInterimGrades: period.program.roundInterimGrades,
+          tasks: [],
+          components: [],
+        };
         groups.set(key, group);
       }
       return group;

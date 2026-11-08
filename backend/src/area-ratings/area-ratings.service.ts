@@ -61,11 +61,58 @@ export class AreaRatingsService {
       select: RATING_SELECT,
     });
 
+    if (sent.teacherRating !== undefined) {
+      await this.syncSameTeacher(userId, areaId, sent.teacherRating);
+    }
+
     // So apaga se a linha ficou vazia; nunca toca numa linha com valores.
     await this.prisma.areaRating.deleteMany({
       where: { userId, areaId, teacherRating: null, courseLiking: null },
     });
     return saved;
+  }
+
+  /**
+   * O mesmo docente (mesmo nome, sem distinguir maiusculas) em outras
+   * cadeiras do user: a nota do docente passa a ser a mesma. So toca nas
+   * linhas deste user.
+   */
+  private async syncSameTeacher(
+    userId: string,
+    areaId: string,
+    teacherRating: number | null,
+  ): Promise<void> {
+    const note = await this.prisma.areaTeacherNote.findUnique({
+      where: { userId_areaId: { userId, areaId } },
+      select: { teacherName: true },
+    });
+    const name = note?.teacherName.trim();
+    if (!name) return;
+    const sameTeacher = await this.prisma.areaTeacherNote.findMany({
+      where: {
+        userId,
+        areaId: { not: areaId },
+        teacherName: { equals: name, mode: 'insensitive' },
+      },
+      select: { areaId: true },
+    });
+    await Promise.all(
+      sameTeacher.map((other) =>
+        this.prisma.areaRating.upsert({
+          where: { userId_areaId: { userId, areaId: other.areaId } },
+          create: { userId, areaId: other.areaId, teacherRating },
+          update: { teacherRating },
+        }),
+      ),
+    );
+    await this.prisma.areaRating.deleteMany({
+      where: {
+        userId,
+        areaId: { in: sameTeacher.map((other) => other.areaId) },
+        teacherRating: null,
+        courseLiking: null,
+      },
+    });
   }
 
   /** Apagar uma avaliacao que nao existe nao e erro. */

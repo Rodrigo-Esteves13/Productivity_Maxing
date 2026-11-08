@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   getPassThreshold,
+  roundInterimGrade,
   parseGradeScale,
 } from '../academic-programs/grade-average.util';
 import { GradeProjectionService } from './grade-projection.service';
@@ -35,7 +36,7 @@ export class PlanScenarioService {
           select: {
             id: true,
             isArchived: true,
-            program: { select: { gradeScale: true } },
+            program: { select: { gradeScale: true, roundInterimGrades: true } },
           },
         },
       },
@@ -50,6 +51,8 @@ export class PlanScenarioService {
       courses: [],
     };
     if (!period || period.isArchived) return empty;
+    const roundGrade = (grade: number) =>
+      roundInterimGrade(grade, period.program.roundInterimGrades) as number;
 
     const [tasks, components, projection] = await Promise.all([
       this.prisma.task.findMany({
@@ -93,7 +96,7 @@ export class PlanScenarioService {
         areaId: task.areaId,
         title: task.title,
         weightPercentage: task.weightPercentage ?? 0,
-        realGrade: task.realGrade,
+        realGrade: task.realGrade === null ? null : roundGrade(task.realGrade),
         targetGrade: task.targetGrade,
         projectedGrade: projectedByTaskId.get(task.id) ?? null,
         isRecurring: task.recurrenceFrequency !== null,
@@ -111,13 +114,17 @@ export class PlanScenarioService {
         aggregation: component.aggregation,
         bestOfCount: component.bestOfCount,
         expectedEntries: component.expectedEntries,
+        // Entradas cruas: so a nota agregada do componente e arredondada
+        // (buildCourseScenario), a mesma regra de grade-scenario.ts.
         grades: component.entries.map((e) => e.grade),
       });
       componentsByArea.set(component.areaId, list);
     }
 
     const periodMedian = median([
-      ...tasks.flatMap((t) => (t.realGrade !== null ? [t.realGrade] : [])),
+      ...tasks.flatMap((t) =>
+        t.realGrade !== null ? [roundGrade(t.realGrade)] : [],
+      ),
       ...components.flatMap((c) => c.entries.map((e) => e.grade)),
     ]);
 
@@ -128,6 +135,7 @@ export class PlanScenarioService {
           tasksByArea.get(areaId) ?? [],
           componentsByArea.get(areaId) ?? [],
           periodMedian,
+          roundGrade,
         ),
         areaName: area.name,
         areaColorHex: area.colorHex,

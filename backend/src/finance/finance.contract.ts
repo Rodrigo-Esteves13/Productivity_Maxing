@@ -7,6 +7,12 @@
  * Rotas
  * -----------------------------------------------------------------------
  * GET    /finance?month=YYYY-MM          -> FinanceSummary          (CHANGED: campos novos, ver abaixo)
+ * GET    /finance/export                 -> FinanceExport { currency, truncated, accounts[{id,name}], entries[], owedPayments[] }
+ *                                            (NEW; todas as entradas ate MAX_FINANCE_ENTRIES_PER_USER; 10/min;
+ *                                            truncated true = entries ou owedPayments chegou ao teto e ha mais)
+ * POST   /finance/import                 body ImportFinanceEntriesBody -> 200 FinanceImportResult
+ *                                            (NEW; ate MAX_FINANCE_IMPORT_ROWS linhas, 10/min; Idempotency-Key
+ *                                            opcional; salta duplicados exatos e o que passar do teto)
  * GET    /finance/analytics?granularity=week|month&from=YYYY-MM-DD&to=YYYY-MM-DD
  *                                         -> FinanceAnalytics        (NEW; tudo opcional; to inclusive;
  *                                            omissao: month, ultimos 6 meses ate ao fim do mes atual;
@@ -469,6 +475,93 @@ export interface FinanceOwedItem {
   daysLate: number;
   /** Valor se pagar 30 dias depois do prazo (ou de hoje, se ja atrasado). null sem prazo. */
   lateScenario: { date: DateKey; valueCents: number } | null;
+  /** Pagamentos parciais ja recebidos, mais recente primeiro. */
+  payments: { id: string; amountCents: number; paidAt: DateKey }[];
+  paidCents: number;
+}
+
+/**
+ * POST /finance/entries/:id/payments { amountCents, paidAt } -> { remainingCents }.
+ * Cria uma entrada INCOME em paidAt e desce o principal da divida.
+ * Principal a 0 = a divida sai da lista.
+ * - amountCents acima do principal = 400 (para o valor com juros usar
+ *   "marcar como recebido", PATCH com receivedAt + amountCents).
+ * - A divida mudou entre a leitura e a escrita (outro separador, retry
+ *   sem chave) = 409 "This debt changed, reload and try again."; nada e
+ *   criado.
+ * - Conta para MAX_FINANCE_ENTRIES_PER_USER (400 no teto; saldar nao sobe
+ *   a contagem porque a divida sai).
+ * - Header opcional Idempotency-Key (uuid; sem clientRequestId no body):
+ *   repetir a chave em 24h devolve { remainingCents } atual sem pagar de
+ *   novo; depois das 24h = 409. Nao repetir com chave nova depois de um
+ *   409: o 409 aqui pode ser divida mudada, nao chave gasta.
+ */
+
+/** GET /finance/export. */
+export interface FinanceExport {
+  currency: string;
+  /** NEW. true se entries ou owedPayments foram cortados no teto. */
+  truncated: boolean;
+  accounts: { id: string; name: string }[];
+  entries: {
+    id: string;
+    kind: FinanceEntryKind;
+    amountCents: number;
+    category: string;
+    note: string | null;
+    date: DateKey;
+    frequency: FinanceFrequency | null;
+    accountId: string | null;
+    isOwed: boolean;
+    debtorName: string | null;
+    receivedAt: DateKey | null;
+  }[];
+  /** Pagamentos parciais (a entrada INCOME de cada um tambem esta em entries). */
+  owedPayments: {
+    id: string;
+    entryId: string | null;
+    debtorName: string | null;
+    amountCents: number;
+    paidAt: DateKey;
+  }[];
+}
+
+/**
+ * POST /finance/import. Linhas do CSV do export (so INCOME/EXPENSE). Sem
+ * campos de divida: entram como entradas simples. accountName liga a uma
+ * conta da propria pessoa com o mesmo nome (sem maiusculas), senao null.
+ * Duplicado = mesmo date, kind, category, amountCents e note de uma entrada
+ * que ja existe (contado como multiconjunto). O que passar do teto
+ * MAX_FINANCE_ENTRIES_PER_USER fica em skipped. Data invalida = 400 do lote.
+ */
+export interface ImportFinanceEntriesBody extends IdempotentBody {
+  rows: {
+    kind: FinanceEntryKind;
+    amountCents: number;
+    category: FinanceCategory;
+    note?: string;
+    date: DateKey;
+    frequency?: FinanceFrequency | null;
+    accountName?: string | null;
+  }[];
+}
+
+export interface FinanceImportResult {
+  imported: number;
+  /** Duplicados mais as linhas acima do teto. */
+  skipped: number;
+}
+
+/**
+ * GET /finance/owed-payments -> FinanceOwedPaymentRow[]. Ultimos 50
+ * pagamentos do utilizador (tambem de dividas ja saldadas), mais recente
+ * primeiro. debtorName null = pagamento sem nome guardado.
+ */
+export interface FinanceOwedPaymentRow {
+  id: string;
+  debtorName: string | null;
+  amountCents: number;
+  paidAt: DateKey;
 }
 
 export interface FinanceOwed {

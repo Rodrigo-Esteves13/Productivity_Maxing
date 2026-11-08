@@ -54,6 +54,10 @@ export const FINANCE_MIN_PAY_DAY = 1;
 export const FINANCE_MAX_PAY_DAY = 31;
 export const FINANCE_NOTE_MAX_LENGTH = 120;
 export const FINANCE_ACCOUNT_NAME_MAX_LENGTH = 60;
+export const FINANCE_MAX_AMOUNT_CENTS = 2_000_000_000;
+export const FINANCE_MAX_ENTRIES_PER_USER = 5000;
+// POST /finance/import: linhas por pedido (MAX_FINANCE_IMPORT_ROWS no backend).
+export const FINANCE_IMPORT_MAX_ROWS = 1000;
 export const FINANCE_SYMBOL_MAX_LENGTH = 20;
 export const HTTP_TOO_MANY_REQUESTS = 429;
 export const HTTP_CONFLICT = 409;
@@ -233,6 +237,8 @@ export interface FinanceOwedItem {
   overdue: boolean;
   daysLate: number;
   lateScenario: { date: string; valueCents: number } | null;
+  payments: { id: string; amountCents: number; paidAt: string }[];
+  paidCents: number;
 }
 
 export interface FinanceOwed {
@@ -378,6 +384,77 @@ export const createFinanceEntry = async (input: FinanceEntryInput, requestId: st
 
 export const updateFinanceEntry = async (id: string, changes: Partial<FinanceEntryInput>): Promise<FinanceEntry> =>
   (await api.patch<FinanceEntry>(`/finance/entries/${enc(id)}`, changes)).data;
+
+// requestId: optional Idempotency-Key; a retry with the same key does not pay twice.
+export const addFinanceOwedPayment = async (
+  id: string,
+  payment: { amountCents: number; paidAt: string },
+  requestId?: string,
+): Promise<{ remainingCents: number }> =>
+  (await api.post<{ remainingCents: number }>(`/finance/entries/${enc(id)}/payments`, payment, requestId ? idempotent(requestId) : undefined)).data;
+
+export interface FinanceOwedPaymentRow {
+  id: string;
+  debtorName: string | null;
+  amountCents: number;
+  paidAt: string;
+}
+
+export const getFinanceOwedPayments = async (): Promise<FinanceOwedPaymentRow[]> =>
+  (await api.get<FinanceOwedPaymentRow[]>('/finance/owed-payments')).data;
+
+export interface FinanceExportEntry {
+  id: string;
+  kind: FinanceEntryKind;
+  amountCents: number;
+  category: string;
+  note: string | null;
+  date: string;
+  frequency: FinanceFrequency | null;
+  accountId: string | null;
+  isOwed: boolean;
+  debtorName: string | null;
+  receivedAt: string | null;
+}
+
+export interface FinanceExportPayment {
+  id: string;
+  entryId: string | null;
+  debtorName: string | null;
+  amountCents: number;
+  paidAt: string;
+}
+
+export interface FinanceExport {
+  currency: string;
+  /** true when entries or owedPayments hit the server cap (older rows left out). */
+  truncated: boolean;
+  accounts: { id: string; name: string }[];
+  entries: FinanceExportEntry[];
+  owedPayments: FinanceExportPayment[];
+}
+
+export const getFinanceExport = async (): Promise<FinanceExport> => (await api.get<FinanceExport>('/finance/export')).data;
+
+/** Uma linha do CSV para POST /finance/import (campos vazios omitidos). */
+export interface FinanceImportRow {
+  kind: FinanceEntryKind;
+  amountCents: number;
+  category: string;
+  date: string;
+  note?: string;
+  frequency?: FinanceFrequency;
+  accountName?: string;
+}
+
+export interface FinanceImportResult {
+  imported: number;
+  /** Duplicates of existing entries plus rows over the entry limit. */
+  skipped: number;
+}
+
+export const importFinanceEntries = async (rows: FinanceImportRow[], requestId: string): Promise<FinanceImportResult> =>
+  (await api.post<FinanceImportResult>('/finance/import', { rows }, idempotent(requestId))).data;
 
 export const deleteFinanceEntry = async (id: string): Promise<void> => {
   await api.delete(`/finance/entries/${enc(id)}`);

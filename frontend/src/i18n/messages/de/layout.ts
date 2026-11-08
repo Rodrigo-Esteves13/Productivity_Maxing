@@ -6,6 +6,8 @@ export const layout: Record<string, string> = {
   'program.round.label': "Endnote jedes Fachs runden",
   'program.round.createHelp': "Rundet jedes Fach auf die nächste ganze Zahl, bevor der nach Credits gewichtete Durchschnitt berechnet wird - so wie die meisten Universitäten Endnoten erfassen. Einzelne Zeiträume können das später überschreiben.",
   'program.round.editHelp': "Standard für jeden Zeitraum in diesem Programm. Ein Zeitraum kann ihn einzeln überschreiben.",
+  'program.roundInterim.label': "Zwischennoten runden",
+  'program.roundInterim.help': "Jede Test- oder Komponentennote wird vor dem Mitteln auf eine ganze Zahl gerundet (15,5 zählt als 16).",
   'program.create.error': "Das Programm konnte nicht erstellt werden. Versuche es erneut.",
   'program.create.submit': "Programm erstellen",
   'program.settings': "Programmeinstellungen",

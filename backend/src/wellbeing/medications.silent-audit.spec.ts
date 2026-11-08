@@ -63,17 +63,39 @@ function setup(times: number[]) {
       findFirst: jest.fn(() => Promise.resolve({ times: medication.times })),
     },
     medicationDose: {
-      createMany: jest.fn(({ data }: { data: Omit<DoseRow, 'takenAt'>[] }) => {
-        for (const row of data) {
-          const dup = doses.some(
-            (d) =>
-              d.medicationId === row.medicationId &&
-              d.date.getTime() === row.date.getTime() &&
-              d.slotMinutes === row.slotMinutes,
+      // create com o unique [medicationId, date, slotMinutes]: duplicado = P2002.
+      create: jest.fn(({ data }: { data: Omit<DoseRow, 'takenAt'> }) => {
+        const dup = doses.some(
+          (d) =>
+            d.medicationId === data.medicationId &&
+            d.date.getTime() === data.date.getTime() &&
+            d.slotMinutes === data.slotMinutes,
+        );
+        if (dup)
+          return Promise.reject(
+            Object.assign(new Error('dup'), { code: 'P2002' }),
           );
-          if (!dup) doses.push({ ...row, takenAt: null });
+        doses.push({ ...data, takenAt: null });
+        return Promise.resolve({});
+      }),
+      updateMany: jest.fn(
+        ({ where, data }: { where: Where; data: Partial<DoseRow> }) => {
+          const hit = doses.filter((d) =>
+            matches(d as unknown as Record<string, unknown>, where),
+          );
+          for (const d of hit) Object.assign(d, data);
+          return Promise.resolve({ count: hit.length });
+        },
+      ),
+      deleteMany: jest.fn(({ where }: { where: Where }) => {
+        let count = 0;
+        for (let i = doses.length - 1; i >= 0; i--) {
+          if (matches(doses[i] as unknown as Record<string, unknown>, where)) {
+            doses.splice(i, 1);
+            count += 1;
+          }
         }
-        return Promise.resolve({ count: data.length });
+        return Promise.resolve({ count });
       }),
       upsert: jest.fn(
         ({
@@ -113,7 +135,7 @@ function setup(times: number[]) {
       assertAccepted: jest.fn().mockResolvedValue(undefined),
     } as unknown as MedicationDisclaimerService,
   );
-  return { service, push, doses };
+  return { service, push, doses, prisma };
 }
 
 describe('medication reminders (regression, area d)', () => {
@@ -290,5 +312,105 @@ describe('medication reminders (regression, area d)', () => {
     await service.sendDueReminders();
     expect(push.notifyUser).toHaveBeenCalledTimes(2);
     expect(doses).toHaveLength(1);
+  });
+});
+
+describe('medication reminders: claim before send', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('two concurrent runs (cron + scheduler on two instances) send one push', async () => {
+    const { service, push, doses, prisma } = setup([8 * 60]);
+    const other = new MedicationsService(
+      prisma as unknown as PrismaService,
+      push as unknown as PushService,
+      {
+        assertAccepted: jest.fn().mockResolvedValue(undefined),
+      } as unknown as MedicationDisclaimerService,
+    );
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-12-01T08:05:00Z'));
+    const results = await Promise.all([
+      service.sendDueReminders(),
+      other.sendDueReminders(),
+    ]);
+    expect(push.notifyUser).toHaveBeenCalledTimes(1);
+    expect(results.sort()).toEqual([0, 1]);
+    expect(doses).toHaveLength(1);
+    expect(doses[0].remindedAt).toBeInstanceOf(Date);
+  });
+
+  it('an unticked row is claimed by only one of two concurrent runs', async () => {
+    const { service, push, doses, prisma } = setup([8 * 60]);
+    const other = new MedicationsService(
+      prisma as unknown as PrismaService,
+      push as unknown as PushService,
+      {
+        assertAccepted: jest.fn().mockResolvedValue(undefined),
+      } as unknown as MedicationDisclaimerService,
+    );
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-12-01T07:00:00Z'));
+    for (const taken of [true, false]) {
+      await service.setDose('u1', 'm1', {
+        date: '2026-12-01',
+        slotMinutes: 480,
+        taken,
+      });
+    }
+    jest.setSystemTime(new Date('2026-12-01T08:05:00Z'));
+    await Promise.all([service.sendDueReminders(), other.sendDueReminders()]);
+    expect(push.notifyUser).toHaveBeenCalledTimes(1);
+    expect(doses).toHaveLength(1);
+  });
+
+  it('single-flight: overlapping calls on one instance share the run', async () => {
+    const { service, push, prisma } = setup([8 * 60]);
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-12-01T08:05:00Z'));
+    const first = service.sendDueReminders();
+    const second = service.sendDueReminders();
+    expect(second).toBe(first);
+    expect(await Promise.all([first, second])).toEqual([1, 1]);
+    expect(prisma.medication.findMany).toHaveBeenCalledTimes(1);
+    expect(push.notifyUser).toHaveBeenCalledTimes(1);
+    // Terminada a execucao, a seguinte corre de novo (e nao reenvia).
+    await service.sendDueReminders();
+    expect(prisma.medication.findMany).toHaveBeenCalledTimes(2);
+    expect(push.notifyUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('0 delivered releases the claim of an unticked row so the next run retries', async () => {
+    const { service, push, doses } = setup([8 * 60]);
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-12-01T07:00:00Z'));
+    for (const taken of [true, false]) {
+      await service.setDose('u1', 'm1', {
+        date: '2026-12-01',
+        slotMinutes: 480,
+        taken,
+      });
+    }
+    push.notifyUser.mockResolvedValueOnce(0);
+    jest.setSystemTime(new Date('2026-12-01T08:00:00Z'));
+    await service.sendDueReminders();
+    expect(doses).toHaveLength(1);
+    expect(doses[0].remindedAt).toBeNull();
+    jest.setSystemTime(new Date('2026-12-01T08:01:00Z'));
+    await service.sendDueReminders();
+    expect(push.notifyUser).toHaveBeenCalledTimes(2);
+    expect(doses[0].remindedAt).toBeInstanceOf(Date);
+  });
+
+  it('only loads users that are not banned and have a push device', async () => {
+    const { service, prisma } = setup([8 * 60]);
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-12-01T08:05:00Z'));
+    await service.sendDueReminders();
+    const [arg] = prisma.medication.findMany.mock.calls[0] as unknown as [
+      { where: Record<string, unknown> },
+    ];
+    expect(arg.where).toMatchObject({
+      user: { status: { not: 'BANNED' }, pushSubscriptions: { some: {} } },
+    });
   });
 });

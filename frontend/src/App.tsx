@@ -2,6 +2,7 @@ import AppRouter from './routes/AppRouter';
 import { AuthProvider } from './context/AuthContext';
 import { AcademicProvider } from './context/AcademicContext';
 import { StudySessionProvider } from './context/StudySessionProvider';
+import { AmbientSoundProvider } from './context/AmbientSoundProvider';
 import AccessibilityEffects from './components/Accessibility/AccessibilityEffects';
 import CompletionBurst from './components/Accessibility/CompletionBurst';
 import MaintenanceGate from './components/Maintenance/MaintenanceGate';
@@ -35,12 +36,16 @@ function App() {
                 every page) and the Focus page's own widget share this
                 exact state instead of polling independently. */}
             <StudySessionProvider>
-              <AcademicProvider>
-                <AccessibilityEffects />
-                <CompletionBurst />
-                <OnTimePrompt />
-                <AppRouter />
-              </AcademicProvider>
+              {/* Dono do audio do som de fundo (precisa da sessao ativa para
+                  parar quando ela acaba): fica montado ao mudar de pagina. */}
+              <AmbientSoundProvider>
+                <AcademicProvider>
+                  <AccessibilityEffects />
+                  <CompletionBurst />
+                  <OnTimePrompt />
+                  <AppRouter />
+                </AcademicProvider>
+              </AmbientSoundProvider>
             </StudySessionProvider>
           </AuthProvider>
         </AccountBlockedGate>

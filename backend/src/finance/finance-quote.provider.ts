@@ -8,6 +8,29 @@ import {
   QUOTE_TIMEOUT_MS,
   QUOTE_USER_AGENT,
 } from './finance.constants';
+import {
+  CircuitBreaker,
+  CircuitOpenError,
+} from '../common/circuit-breaker.util';
+import {
+  QUOTE_BREAKER_FAILURE_THRESHOLD,
+  QUOTE_BREAKER_OPEN_MS,
+  isProviderFailureStatus,
+} from '../common/http-resilience.constants';
+
+const QUOTE_CLIENT_NAME = 'Yahoo quotes';
+
+/** Resposta HTTP nao-OK do fornecedor (so o codigo, nunca o corpo). */
+class QuoteHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`HTTP ${status}`);
+  }
+}
+
+// So falhas do fornecedor abrem o circuito: um 404 de simbolo desconhecido
+// e uma resposta valida e nao conta.
+const isQuoteProviderFailure = (error: unknown) =>
+  !(error instanceof QuoteHttpError) || isProviderFailureStatus(error.status);
 
 export interface Quote {
   symbol: string;
@@ -67,35 +90,45 @@ export function parseChartQuote(
  * Yahoo Finance chart endpoint (publico, sem chave). Host fixo e simbolo
  * validado por regex antes de entrar no caminho: nao ha SSRF. Sem
  * redirects, com timeout. Qualquer falha fica no log como aviso curto.
+ * Com o Yahoo em baixo o circuito abre e os pedidos devolvem null logo (o
+ * FinancePricesService mantem o ultimo preco guardado).
  */
 @Injectable()
 export class YahooQuoteProvider implements QuoteProvider {
   private readonly logger = new Logger(YahooQuoteProvider.name);
+  private readonly breaker = new CircuitBreaker({
+    name: QUOTE_CLIENT_NAME,
+    failureThreshold: QUOTE_BREAKER_FAILURE_THRESHOLD,
+    openDurationMs: QUOTE_BREAKER_OPEN_MS,
+    isFailure: isQuoteProviderFailure,
+  });
 
   async fetchQuote(symbol: string): Promise<Quote | null> {
     if (!isValidQuoteSymbol(symbol)) return null;
     try {
-      const res = await fetch(
-        `${QUOTE_PROVIDER_BASE_URL}${encodeURIComponent(symbol)}`,
-        {
-          headers: {
-            Accept: 'application/json',
-            'User-Agent': QUOTE_USER_AGENT,
+      const body = await this.breaker.execute(async () => {
+        const res = await fetch(
+          `${QUOTE_PROVIDER_BASE_URL}${encodeURIComponent(symbol)}`,
+          {
+            headers: {
+              Accept: 'application/json',
+              'User-Agent': QUOTE_USER_AGENT,
+            },
+            redirect: 'error',
+            signal: AbortSignal.timeout(QUOTE_TIMEOUT_MS),
           },
-          redirect: 'error',
-          signal: AbortSignal.timeout(QUOTE_TIMEOUT_MS),
-        },
-      );
-      if (!res.ok) {
-        this.logger.warn(`Quote ${symbol} failed with HTTP ${res.status}`);
+        );
+        if (!res.ok) throw new QuoteHttpError(res.status);
+        return (await res.json()) as ChartResponse;
+      });
+      return parseChartQuote(symbol, body, new Date());
+    } catch (err) {
+      // Circuito aberto: a mudanca de estado ja ficou no log uma vez.
+      if (err instanceof CircuitOpenError) return null;
+      if (err instanceof QuoteHttpError) {
+        this.logger.warn(`Quote ${symbol} failed with HTTP ${err.status}`);
         return null;
       }
-      return parseChartQuote(
-        symbol,
-        (await res.json()) as ChartResponse,
-        new Date(),
-      );
-    } catch (err) {
       // So a mensagem: o objeto de erro pode trazer cabecalhos.
       this.logger.warn(
         `Quote ${symbol} failed: ${err instanceof Error ? err.message : 'unknown error'}`,

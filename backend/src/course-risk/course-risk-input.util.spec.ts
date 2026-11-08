@@ -50,6 +50,52 @@ describe('buildRiskComponents', () => {
     expect(result).toEqual([{ label: 'Quiz', weightPct: 10, grade: 12 }]);
   });
 
+  describe('roundInterimGrades', () => {
+    const tasks = [
+      row({ title: 'Exam', weightPercentage: 50, realGrade: 15.5 }),
+      row({
+        title: 'Quiz',
+        weightPercentage: 10,
+        realGrade: 12.5,
+        recurrenceFrequency: 'WEEKLY',
+      }),
+      row({
+        title: 'Quiz',
+        weightPercentage: 10,
+        realGrade: 14.25,
+        recurrenceFrequency: 'WEEKLY',
+      }),
+      row({ title: 'Final', weightPercentage: 40 }),
+    ];
+    const components = [
+      {
+        name: 'Seminars',
+        weightPercentage: 20,
+        aggregation: 'AVERAGE' as const,
+        bestOfCount: null,
+        entries: [{ grade: 15 }, { grade: 16 }],
+      },
+    ];
+
+    it('rounds every stored grade before averaging when on', () => {
+      expect(buildRiskComponents(tasks, components, true)).toEqual([
+        { label: 'Exam', weightPct: 50, grade: 16 },
+        { label: 'Final', weightPct: 40, grade: null },
+        { label: 'Quiz', weightPct: 10, grade: 13.5 },
+        { label: 'Seminars', weightPct: 20, grade: 16 },
+      ]);
+    });
+
+    it('leaves grades untouched when off', () => {
+      expect(buildRiskComponents(tasks, components, false)).toEqual([
+        { label: 'Exam', weightPct: 50, grade: 15.5 },
+        { label: 'Final', weightPct: 40, grade: null },
+        { label: 'Quiz', weightPct: 10, grade: 13.375 },
+        { label: 'Seminars', weightPct: 20, grade: 15.5 },
+      ]);
+    });
+  });
+
   it('keeps ungraded weighted tasks as pending and skips every unweighted task', () => {
     const result = buildRiskComponents(
       [

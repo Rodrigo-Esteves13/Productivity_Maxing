@@ -94,6 +94,23 @@ describe('AbsenceLimitRemindersService', () => {
     );
   });
 
+  it('overlapping runs never send twice (marked before the push)', async () => {
+    const { service, push } = setup(rows('Math', 8, 2));
+    let release: (n: number) => void = () => undefined;
+    push.notifyUser.mockImplementationOnce(
+      () => new Promise<number>((resolve) => (release = resolve)),
+    );
+    const first = service.sendWeeklyReminders();
+    for (let i = 0; i < 50 && push.notifyUser.mock.calls.length === 0; i++) {
+      await Promise.resolve();
+    }
+    expect(push.notifyUser).toHaveBeenCalledTimes(1);
+    expect(await service.sendWeeklyReminders()).toBe(0);
+    release(1);
+    expect(await first).toBe(1);
+    expect(push.notifyUser).toHaveBeenCalledTimes(1);
+  });
+
   it('sends when above the limit and groups courses in one push', async () => {
     const { service, push } = setup([
       ...rows('Math', 6, 4),

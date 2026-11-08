@@ -63,6 +63,29 @@ function collapseRecurringSeries<
   return result;
 }
 
+// Uma nota intercalar solta (para quem nao trabalha com GradedTaskLike, ex.
+// o motor de risco): mesma regra de withInterimRounding.
+export function roundInterimGrade(
+  grade: number | null,
+  roundInterimGrades: boolean,
+): number | null {
+  return grade === null || !roundInterimGrades ? grade : Math.round(grade);
+}
+
+// Notas intercalares (cada teste/componente) arredondadas ao inteiro antes
+// de entrarem nas medias: 15.5 conta como 16. Sem a opcao, devolve igual.
+export function withInterimRounding<T extends GradedTaskLike>(
+  items: T[],
+  roundInterimGrades: boolean,
+): T[] {
+  if (!roundInterimGrades) return items;
+  return items.map((item) =>
+    item.realGrade === null
+      ? item
+      : { ...item, realGrade: roundInterimGrade(item.realGrade, true) },
+  );
+}
+
 export interface WeightedAverageResult {
   average: number | null;
   gradedTaskCount: number;

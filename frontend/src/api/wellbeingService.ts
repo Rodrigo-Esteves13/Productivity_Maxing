@@ -7,6 +7,7 @@ import type {
   MedicationDaySlot,
   MedicationDisclaimerStatus,
   MedicationInput,
+  MedicationReminderStatus,
   MedicationIntake,
   MedicationIntakeInput,
   MoodLog,
@@ -32,6 +33,9 @@ export const getMedications = async (): Promise<Medication[]> =>
 
 export const getMedicationDay = async (date: string): Promise<MedicationDaySlot[]> =>
   (await api.get<MedicationDaySlot[]>('/wellbeing/medications/day', { params: { date } })).data;
+
+export const getMedicationReminderStatus = async (): Promise<MedicationReminderStatus> =>
+  (await api.get<MedicationReminderStatus>('/wellbeing/medications/reminder-status')).data;
 
 export const createMedication = async (input: MedicationInput): Promise<Medication> =>
   (await api.post<Medication>('/wellbeing/medications', input)).data;

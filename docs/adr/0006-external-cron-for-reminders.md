@@ -36,3 +36,15 @@ and deadlines already reminded are recorded (`MedicationDose.remindedAt`,
 Reminders arrive within the cron interval instead of hours late. The secret
 now lives in one more place (the cron service), so rotating `CRON_SECRET`
 means updating Render, the GitHub secret and the cron service together.
+
+## Addendum 2026-11-07: in-process medication scheduler
+
+The medication history showed reminders missing on days when no external call
+landed inside the 60 minute window (a dose at 07:00 only counts as due until
+08:00). The API now also runs `MedicationsService.sendDueReminders()` every
+minute through `@nestjs/schedule`
+(`backend/src/reminders/medication-reminder-scheduler.service.ts`). It is
+idempotent for the same reason as the cron endpoint (`remindedAt`). Set
+`MEDICATION_SCHEDULER_DISABLED=true` to turn it off, for example when several
+API instances run at once. A host that sleeps (free Render tier) still needs
+the external cron to wake it.

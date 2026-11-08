@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import EmptyState from '../UI/EmptyState';
 import ErrorState from '../UI/ErrorState';
@@ -12,10 +13,12 @@ import MedicationDisclaimerGate, { DisclaimerText } from './MedicationDisclaimer
 import SupportLinesPanel from './SupportLinesPanel';
 import MedicationPushWarning from './MedicationPushWarning';
 import { formatClock, formatDateTime } from '../../lib/timeFormat';
+import { useMedicationReminderStatus } from '../../hooks/useMedicationReminderStatus';
+import { APP_TIME_ZONE } from '../../lib/dateKey';
 import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
 import { MAX_DOSE_PAST_DAYS, type useMedications } from '../../hooks/useMedications';
-import type { Medication, MedicationDaySlot, MedicationIntake } from '../../types/models';
+import type { Medication, MedicationDaySlot, MedicationIntake, MedicationReminderSlotStatus } from '../../types/models';
 
 interface MedicationsCardProps {
   meds: ReturnType<typeof useMedications>;
@@ -57,6 +60,35 @@ function IntakeRow({ intake, onDelete }: { intake: MedicationIntake; onDelete: (
         <TrashIcon className="h-4 w-4" />
       </IconButton>
     </li>
+  );
+}
+
+// Uma linha por toma: o que aconteceu ao lembrete de hoje. Neutro, ambar
+// so quando o lembrete falhou.
+function ReminderStatusLine({ slot }: { slot: MedicationReminderSlotStatus }) {
+  const { t, lang } = useI18n();
+  const clock = formatClock(slot.slotMinutes);
+  const sentAt = slot.remindedAt
+    ? new Date(slot.remindedAt).toLocaleTimeString(lang, {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: APP_TIME_ZONE,
+      })
+    : '';
+  if (slot.state === 'missed') {
+    return (
+      <p className="text-xs text-amber-300">
+        {clock} · {t('medReminderStatus.missed')}{' '}
+        <Link to="/profile" className="underline hover:text-amber-200">
+          {t('medReminderStatus.missedHint')}
+        </Link>
+      </p>
+    );
+  }
+  return (
+    <p className="text-xs text-neutral-500">
+      {clock} · {t(`medReminderStatus.${slot.state}`, { time: sentAt, clock })}
+    </p>
   );
 }
 
@@ -108,6 +140,7 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
   const hasDaily = meds.medications.some((m) => m.active && m.schedule === 'DAILY');
   const hasReminders = meds.medications.some((m) => m.active && m.schedule === 'DAILY' && m.remindersEnabled);
   const accepted = meds.disclaimer?.accepted ?? false;
+  const reminderStatus = useMedicationReminderStatus(accepted && hasReminders, meds.medications);
   const asNeeded = meds.medications.filter((m) => m.active && m.schedule === 'AS_NEEDED');
 
   return (
@@ -266,6 +299,13 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
                       )}
                       <span className="truncate">{scheduleSummary(m, t)}</span>
                     </p>
+                    {m.active && m.remindersEnabled && m.schedule === 'DAILY' && (
+                      <div className="mt-0.5 space-y-0.5">
+                        {reminderStatus.slotsFor(m.id).map((slot) => (
+                          <ReminderStatusLine key={slot.slotMinutes} slot={slot} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
                     <button

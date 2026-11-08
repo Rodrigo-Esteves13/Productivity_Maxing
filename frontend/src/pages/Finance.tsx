@@ -14,6 +14,8 @@ import FinanceHoldings from '../components/Finance/FinanceHoldings';
 import FinanceAnalytics from '../components/Finance/FinanceAnalytics';
 import FinanceGoals from '../components/Finance/FinanceGoals';
 import FinanceOwed from '../components/Finance/FinanceOwed';
+import FinanceExportButton from '../components/Finance/FinanceExportButton';
+import FinanceImportButton from '../components/Finance/FinanceImportButton';
 import FinancePrivacyToggle from '../components/Finance/FinancePrivacyToggle';
 import PrivacyModeProvider from '../context/PrivacyModeProvider';
 import { useMoneyText, usePrivacyMode } from '../hooks/usePrivacyMode';
@@ -159,7 +161,11 @@ function FinanceContent() {
       <p className="mb-6 rounded-lg border border-amber-800/50 bg-amber-900/10 p-3 text-sm text-amber-300">
         {t('finance.disclaimer')}
       </p>
-      <FinancePrivacyToggle />
+      <div className="flex flex-wrap items-start gap-3">
+        <FinancePrivacyToggle />
+        <FinanceExportButton />
+        <FinanceImportButton onImported={finance.refresh} />
+      </div>
       <div className="mb-4 flex items-center gap-2">
         <IconButton label={t('finance.prevMonth')} onClick={() => setMonth((m) => shiftMonth(m, -1))}>
           <ChevronLeftIcon className="h-5 w-5" />
@@ -199,8 +205,10 @@ function FinanceContent() {
           <FinanceOwed
             owed={data.owed}
             held={data.heldByEmployer}
+            payments={finance.owedPayments}
             currency={currency}
             onReceived={(item, changes) => finance.updateEntry(item.entryId, changes)}
+            onPayment={(item, { requestId, ...payment }) => finance.addOwedPayment(item.entryId, payment, requestId)}
             onRemove={requestRemoveOwed}
           />
           <FinanceAnalytics refreshKey={finance.version} currency={currency} />

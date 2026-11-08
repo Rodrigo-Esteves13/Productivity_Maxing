@@ -50,25 +50,28 @@ function toRow(
 }
 
 // RFC 4180-style escaping: a field is quoted if it contains a comma, a
-// quote, or a newline, and any quote inside it is doubled. Plain fields
+// quote, a CR or a LF, and any quote inside it is doubled. Plain fields
 // (the vast majority: titles, area names, single-word statuses) are left
 // unquoted for a cleaner file, which is valid CSV either way.
 //
-// Before that: a leading apostrophe is prepended to any field starting
-// with =, +, -, or @ - Excel/Sheets/LibreOffice treat a cell starting
-// with one of those as a formula, so a task title or topics value like
-// `=cmd|'/c calc'!A1` would execute on open instead of showing as text
-// (CSV/formula injection). The apostrophe forces "treat as text" in
-// every major spreadsheet app without changing what's visually shown.
-const FORMULA_TRIGGER_CHARS = ['=', '+', '-', '@'];
+// Before that: an apostrophe is prepended to every line of the field that
+// starts with =, +, -, @, tab or CR - Excel/Sheets/LibreOffice treat a
+// cell starting with one of those as a formula, so a task title or topics
+// value like `=cmd|'/c calc'!A1` would execute on open instead of showing
+// as text (CSV/formula injection). Every line, not only the first: some
+// importers split a cell on CR/LF, so `rent\r=HYPERLINK(...)` would turn
+// its second line into a live formula. The apostrophe forces "treat as
+// text" in every major spreadsheet app without changing what's shown.
+const FORMULA_TRIGGER_AT_LINE_START = /(?<=^|[\r\n])[=+\-@\t\r]/g;
+const NEEDS_QUOTES = /[",\r\n]/;
 
 function neutralizeFormulaPrefix(value: string): string {
-  return FORMULA_TRIGGER_CHARS.includes(value.charAt(0)) ? `'${value}` : value;
+  return value.replace(FORMULA_TRIGGER_AT_LINE_START, "'$&");
 }
 
-function escapeCsvField(value: string): string {
+export function escapeCsvField(value: string): string {
   const safeValue = neutralizeFormulaPrefix(value);
-  if (/[",\n]/.test(safeValue)) {
+  if (NEEDS_QUOTES.test(safeValue)) {
     return `"${safeValue.replace(/"/g, '""')}"`;
   }
   return safeValue;

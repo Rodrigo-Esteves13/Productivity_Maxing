@@ -24,6 +24,8 @@ import {
   FailingRiskCard,
   PlanScenarioCard,
   RatingsSummaryCard,
+  PackUpdatesCard,
+  MoneySnapshotCard,
 } from './lazyCards';
 import type { DashboardWidgetKey } from '../../hooks/useDashboardWidgetPrefs';
 import type { AcademicProgram, AcademicTaskTypeOption, Area, Task } from '../../types/models';
@@ -48,6 +50,8 @@ export default function DashboardCardGrid({
   return (
     <MasonryGrid className="mb-6">
       {visibility.today && <TodayCard />}
+      {visibility.packUpdates && <PackUpdatesCard />}
+      {visibility.moneySnapshot && <MoneySnapshotCard />}
       {visibility.studyCapacity && <StudyCapacityCard />}
       {academicTasks.length > 0 && visibility.upcoming && (
         <UpcomingTasksCard tasks={academicTasks} areas={academicAreas} />

@@ -6,6 +6,8 @@ export const layout: Record<string, string> = {
   'program.round.label': "对每门课的最终成绩四舍五入",
   'program.round.createHelp': "在按学分加权计算平均分之前，先把每门课四舍五入为整数，与大多数大学记录最终成绩的方式一致。各学期之后可单独覆盖此设置。",
   'program.round.editHelp': "此项目内所有学期的默认设置。每个学期仍可单独覆盖。",
+  'program.roundInterim.label': "四舍五入阶段成绩",
+  'program.roundInterim.help': "取平均前将每次测验或组成部分的成绩四舍五入为整数（15.5按16计算）。",
   'program.create.error': "无法创建项目，请重试。",
   'program.create.submit': "创建项目",
   'program.settings': "项目设置",

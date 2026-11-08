@@ -14,7 +14,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { StudySessionsService } from './study-sessions.service';
 import { StartStudySessionDto } from './dto/start-study-session.dto';
@@ -22,6 +22,7 @@ import { StopStudySessionDto } from './dto/stop-study-session.dto';
 import { CreateManualSessionDto } from './dto/create-manual-session.dto';
 import { UpdateStudySessionDto } from './dto/update-study-session.dto';
 import { HeartbeatStudySessionDto } from './dto/heartbeat-study-session.dto';
+import { DistractionStatsQueryDto } from './dto/distraction-stats-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
@@ -136,6 +137,19 @@ export class StudySessionsController {
     const safeDays =
       Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 365) : 84;
     return this.studySessionsService.getDailyTotals(user.id, safeDays);
+  }
+
+  @Get('distraction-stats')
+  @Throttle(perMinute(30))
+  @ApiOperation({
+    summary:
+      'Distractions per hour of focus, by hour of day (Lisbon), Area and task effort, over the last N days. Buckets under the minimum sample are flagged lowSample.',
+  })
+  getDistractionStats(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: DistractionStatsQueryDto,
+  ) {
+    return this.studySessionsService.getDistractionStats(user.id, query.days);
   }
 
   @Get('streak')

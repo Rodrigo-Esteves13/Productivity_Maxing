@@ -25,4 +25,5 @@ export const COLOR_ID_BY_KIND = {
   travel: '8', // graphite
   study: '3', // grape
   study_overtime: '11', // tomato
+  holiday: '7', // peacock (dia sem trabalho: feriado do local)
 } as const;

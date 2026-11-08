@@ -33,6 +33,32 @@ describe('PlanScenarioService (posse)', () => {
     );
   });
 
+  it('arredonda a nota agregada do componente uma vez: [14.4, 14.6] da 15', async () => {
+    prisma.user.findUniqueOrThrow.mockResolvedValue({
+      activePeriod: {
+        id: 'p1',
+        isArchived: false,
+        program: { gradeScale: '0-20', roundInterimGrades: true },
+      },
+    });
+    prisma.gradeComponent.findMany.mockResolvedValueOnce([
+      {
+        areaId: 'a',
+        name: 'Quizzes',
+        weightPercentage: 100,
+        aggregation: 'AVERAGE',
+        bestOfCount: null,
+        expectedEntries: null,
+        entries: [{ grade: 14.4 }, { grade: 14.6 }],
+        area: { name: 'Algebra', colorHex: '#123456' },
+      },
+    ]);
+    const result = await service.build('u1');
+    expect(result.courses).toHaveLength(1);
+    expect(result.courses[0].currentAverage).toBe(15);
+    expect(result.courses[0].planFinal).toBe(15);
+  });
+
   it('periodo arquivado ou sem periodo devolve vazio sem consultar tasks', async () => {
     prisma.task.findMany.mockClear();
     prisma.user.findUniqueOrThrow.mockResolvedValue({ activePeriod: null });

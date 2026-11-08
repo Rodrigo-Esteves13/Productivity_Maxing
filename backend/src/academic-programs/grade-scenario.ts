@@ -2,7 +2,12 @@ import type { Prisma } from '@prisma/client';
 import { IsIn, IsOptional } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import type { PrismaService } from '../prisma/prisma.service';
-import { GRADED_TASK_SELECT, type GradedTaskLike } from './grade-average.util';
+import {
+  GRADED_TASK_SELECT,
+  roundInterimGrade,
+  withInterimRounding,
+  type GradedTaskLike,
+} from './grade-average.util';
 import { computeComponentGrade } from '../grade-components/grade-component.util';
 import { loadComponentGradedItems } from '../grade-components/grade-component-items';
 import type { GradeAggregationKind } from '../grade-components/grade-components.constants';
@@ -58,10 +63,16 @@ type AreaGradedItem = GradedTaskLike & { areaId: string };
 const areaKey = (areaId: string, periodId: string | null) =>
   `${areaId}|${periodId ?? ''}`;
 
-/** Logica pura do cenario 'plan' (sem BD), testavel a parte. */
+/**
+ * Logica pura do cenario 'plan' (sem BD), testavel a parte.
+ * roundInterimGrades (opcao do programa) so arredonda notas reais lancadas:
+ * alvos, medianas e componentes completados com valores do plano ficam
+ * como estao (sao hipoteticos).
+ */
 export function applyPlanScenario(
   tasks: PlanTaskRow[],
   components: PlanComponentRow[],
+  roundInterimGrades = false,
 ): AreaGradedItem[] {
   const byArea = new Map<string, number[]>();
   const byPeriod = new Map<string, number[]>();
@@ -71,8 +82,11 @@ export function applyPlanScenario(
     const p = periodId ?? '';
     byPeriod.set(p, [...(byPeriod.get(p) ?? []), grade]);
   };
+  const realGradeOf = (t: PlanTaskRow) =>
+    roundInterimGrade(t.realGrade, roundInterimGrades);
   for (const t of tasks) {
-    if (t.realGrade !== null) remember(t.areaId, t.periodId, t.realGrade);
+    const real = realGradeOf(t);
+    if (real !== null) remember(t.areaId, t.periodId, real);
   }
   for (const c of components) {
     for (const g of c.grades) remember(c.areaId, c.periodId, g);
@@ -90,8 +104,9 @@ export function applyPlanScenario(
       recurrenceFrequency: t.recurrenceFrequency,
       weightPercentage: t.weightPercentage,
     };
-    if (t.realGrade !== null) {
-      items.push({ ...base, realGrade: t.realGrade });
+    const real = realGradeOf(t);
+    if (real !== null) {
+      items.push({ ...base, realGrade: real });
       continue;
     }
     if (t.isArchivedPeriod || (t.weightPercentage ?? 0) <= 0) continue;
@@ -115,7 +130,9 @@ export function applyPlanScenario(
     items.push({
       areaId: c.areaId,
       periodId: c.periodId,
-      realGrade: grade,
+      // So a nota real (sem entradas do plano) e arredondada.
+      realGrade:
+        fill === null ? roundInterimGrade(grade, roundInterimGrades) : grade,
       weightPercentage: c.weightPercentage,
     });
   }
@@ -132,6 +149,7 @@ export async function loadScenarioGradedItems(
   taskWhere: Prisma.TaskWhereInput,
   componentWhere: Prisma.GradeComponentWhereInput,
   scenario: GradeScenario = 'real',
+  roundInterimGrades = false,
 ): Promise<AreaGradedItem[]> {
   if (scenario === 'real') {
     const [tasks, componentItems] = await Promise.all([
@@ -141,7 +159,10 @@ export async function loadScenarioGradedItems(
       }),
       loadComponentGradedItems(prisma, componentWhere),
     ]);
-    return [...tasks, ...componentItems];
+    return withInterimRounding(
+      [...tasks, ...componentItems],
+      roundInterimGrades,
+    );
   }
 
   const [tasks, components] = await Promise.all([
@@ -188,5 +209,6 @@ export async function loadScenarioGradedItems(
       grades: c.entries.map((e) => e.grade),
       isArchivedPeriod: c.period.isArchived,
     })),
+    roundInterimGrades,
   );
 }

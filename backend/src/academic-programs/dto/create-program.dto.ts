@@ -45,4 +45,14 @@ export class CreateProgramDto {
   @IsOptional()
   @IsBoolean()
   roundFinalGrade?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Whether each interim grade (test, component) is rounded to the nearest whole number before averaging, e.g. 15.5 counts as 16.',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  roundInterimGrades?: boolean;
 }

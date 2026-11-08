@@ -3,6 +3,7 @@ import { isAxiosError } from 'axios';
 import {
   HTTP_CONFLICT,
   HTTP_TOO_MANY_REQUESTS,
+  addFinanceOwedPayment,
   createFinanceAccount,
   createFinanceEntry,
   createFinanceGoal,
@@ -12,6 +13,7 @@ import {
   deleteFinanceGoal,
   deleteFinanceHolding,
   getFinance,
+  getFinanceOwedPayments,
   refreshFinanceHoldings,
   updateFinanceAccount,
   updateFinanceEntry,
@@ -21,6 +23,7 @@ import {
   type FinanceAccountInput,
   type FinanceEntryInput,
   type FinanceGoalInput,
+  type FinanceOwedPaymentRow,
   type FinanceHoldingInput,
   type FinanceHoldingUpdate,
   type FinanceSettings,
@@ -52,6 +55,20 @@ export function useFinance(month: string) {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  // Historico de pagamentos recebidos; volta a pedir a cada escrita (version).
+  const [owedPayments, setOwedPayments] = useState<FinanceOwedPaymentRow[]>([]);
+  useEffect(() => {
+    let active = true;
+    getFinanceOwedPayments()
+      .then((rows) => {
+        if (active) setOwedPayments(rows);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [version]);
 
   // true quando correu bem (para o formulario limpar).
   const run = useCallback(
@@ -87,6 +104,28 @@ export function useFinance(month: string) {
     [notify, reload],
   );
 
+  // Pagamento parcial: 409 aqui e "a divida mudou" (outro separador ja pagou),
+  // nao chave gasta, por isso NAO repete com chave nova; recarrega e avisa.
+  const runPayment = useCallback(
+    async (action: () => Promise<unknown>): Promise<boolean> => {
+      try {
+        await action();
+        await reload();
+        setVersion((v) => v + 1);
+        return true;
+      } catch (err) {
+        const changed = isAxiosError(err) && err.response?.status === HTTP_CONFLICT;
+        if (changed) {
+          await reload();
+          setVersion((v) => v + 1);
+        }
+        notify(translateNow(changed ? 'financeFixes.owed.conflict' : 'finance.saveError'), 'error');
+        return false;
+      }
+    },
+    [notify, reload],
+  );
+
   // 429 = o limite de pedidos de precos; mensagem propria em vez do erro generico.
   const refreshPrices = useCallback(async () => {
     setIsRefreshing(true);
@@ -107,11 +146,19 @@ export function useFinance(month: string) {
     data,
     error,
     version,
+    owedPayments,
     isRefreshing,
     refreshPrices,
+    // Depois de uma escrita feita fora destas acoes (importacao CSV).
+    refresh: async () => {
+      await reload();
+      setVersion((v) => v + 1);
+    },
     saveSettings: (changes: Partial<FinanceSettings>) => run(() => updateFinanceSettings(changes)),
     addEntry: (input: FinanceEntryInput, key: string) => runCreate(() => createFinanceEntry(input, key)),
     updateEntry: (id: string, changes: Partial<FinanceEntryInput>) => run(() => updateFinanceEntry(id, changes)),
+    addOwedPayment: (id: string, payment: { amountCents: number; paidAt: string }, key?: string) =>
+      runPayment(() => addFinanceOwedPayment(id, payment, key)),
     removeEntry: (id: string) => run(() => deleteFinanceEntry(id)),
     addAccount: (input: FinanceAccountInput, key: string) => runCreate(() => createFinanceAccount(input, key)),
     updateAccount: (id: string, changes: Partial<FinanceAccountInput>) => run(() => updateFinanceAccount(id, changes)),

@@ -1,5 +1,8 @@
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsEnum,
   IsNumber,
@@ -14,6 +17,7 @@ import {
   MaxLength,
   Min,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import {
   ApiProperty,
@@ -40,6 +44,7 @@ import {
   FINANCE_NOTE_MAX_LENGTH,
   INTEREST_RATE_DECIMALS,
   MAX_AMOUNT_CENTS,
+  MAX_FINANCE_IMPORT_ROWS,
   MAX_INTEREST_RATE_PCT,
   MAX_LATE_RISK_PCT,
   MAX_PAID_IN_ARREARS_MONTHS,
@@ -259,9 +264,78 @@ export class CreateFinanceEntryDto extends ClientRequestDto {
   receivedAt?: string | null;
 }
 
+export class CreateOwedPaymentDto {
+  @ApiProperty({ example: 5000 })
+  @IsInt()
+  @Min(1)
+  @Max(MAX_AMOUNT_CENTS)
+  amountCents: number;
+
+  @ApiProperty({ example: '2026-03-14' })
+  @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('paidAt') })
+  paidAt: string;
+}
+
 export class UpdateFinanceEntryDto extends PartialType(
   OmitType(CreateFinanceEntryDto, CLIENT_REQUEST_FIELD),
 ) {}
+
+// Uma linha do CSV do export. Sem campos de divida nem regras de salario:
+// entra como entrada simples (com repeticao opcional). A conta vem pelo
+// nome e so liga a uma conta da propria pessoa.
+export class ImportFinanceEntryRowDto {
+  @ApiProperty({ enum: FinanceEntryKind })
+  @IsEnum(FinanceEntryKind)
+  kind: FinanceEntryKind;
+
+  @ApiProperty({ example: 4250 })
+  @IsInt()
+  @Min(1)
+  @Max(MAX_AMOUNT_CENTS)
+  amountCents: number;
+
+  @ApiProperty({ enum: FINANCE_CATEGORIES })
+  @IsIn(FINANCE_CATEGORIES)
+  category: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(FINANCE_NOTE_MAX_LENGTH)
+  note?: string;
+
+  @ApiProperty({ example: '2026-10-28' })
+  @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('date') })
+  date: string;
+
+  @ApiPropertyOptional({ enum: FinanceFrequency, nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsEnum(FinanceFrequency)
+  frequency?: FinanceFrequency | null;
+
+  @ApiPropertyOptional({ example: 'Revolut', nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @Transform(trim)
+  @IsString()
+  @MaxLength(FINANCE_ACCOUNT_NAME_MAX_LENGTH)
+  accountName?: string | null;
+}
+
+export class ImportFinanceEntriesDto extends ClientRequestDto {
+  @ApiProperty({
+    type: [ImportFinanceEntryRowDto],
+    maxItems: MAX_FINANCE_IMPORT_ROWS,
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_FINANCE_IMPORT_ROWS)
+  @ValidateNested({ each: true })
+  @Type(() => ImportFinanceEntryRowDto)
+  rows: ImportFinanceEntryRowDto[];
+}
 
 export class CreateFinanceAccountDto extends ClientRequestDto {
   @ApiProperty({ example: 'Revolut' })
