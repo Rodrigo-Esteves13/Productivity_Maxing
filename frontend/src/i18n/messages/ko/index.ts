@@ -46,6 +46,10 @@ import { ambientGlobal } from './ambientGlobal';
 import { financeFixes } from './financeFixes';
 import { focusHours } from './focusHours';
 import { financeImport } from './financeImport';
+import { accentColor } from './accentColor';
+import { medFollowUp } from './medFollowUp';
+import { greeting } from './greeting';
+import { weightVsGrade } from './weightVsGrade';
 
 export const ko: Record<string, string> = {
   ...packs,
@@ -96,4 +100,8 @@ export const ko: Record<string, string> = {
   ...financeFixes,
   ...focusHours,
   ...financeImport,
+  ...accentColor,
+  ...medFollowUp,
+  ...greeting,
+  ...weightVsGrade,
 };

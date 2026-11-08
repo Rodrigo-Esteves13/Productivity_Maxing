@@ -13,6 +13,7 @@ import {
   getLisbonNow,
   parseDateKey,
 } from '../common/date-key.util';
+import { MS_PER_MINUTE } from '../common/time.constants';
 import {
   CreateMedicationDto,
   MedicationDoseDto,
@@ -22,6 +23,7 @@ import { MedicationDisclaimerService } from './medication-disclaimer.service';
 import {
   MAX_INTAKE_PAST_DAYS,
   MAX_MEDICATIONS_PER_USER,
+  MEDICATION_FOLLOW_UP_DELAY_MINUTES,
   MEDICATION_PATH,
   MEDICATION_REMINDER_WINDOW_MINUTES,
   MINUTES_PER_DAY,
@@ -81,6 +83,16 @@ function isUniqueViolation(error: unknown): boolean {
   return (error as { code?: unknown } | null)?.code === PRISMA_UNIQUE_VIOLATION;
 }
 
+// Chave de uma toma, sempre com o dono (userId).
+function slotWhere(userId: string, d: DatedDueDose) {
+  return {
+    userId,
+    medicationId: d.medicationId,
+    date: d.date,
+    slotMinutes: d.slotMinutes,
+  };
+}
+
 // Horas sem repetidos e por ordem: o mesmo minuto duas vezes seria a
 // mesma toma (e o unique da dose nao deixaria marcar as duas).
 function normalizeTimes(times: number[]): number[] {
@@ -131,6 +143,48 @@ export function findDueDoses(
   });
 }
 
+// Tomas a reavisar agora (segundo e ultimo aviso): ja avisadas ha pelo menos
+// MEDICATION_FOLLOW_UP_DELAY_MINUTES, ainda por tomar, sem segundo aviso, e
+// ainda dentro de MEDICATION_REMINDER_WINDOW_MINUTES depois da hora marcada.
+// `doses` traz as linhas do dia; `nowMinutes` como em findDueDoses.
+export function findFollowUpDoses(
+  medications: {
+    id: string;
+    name: string;
+    times: number[];
+    doses: {
+      slotMinutes: number;
+      takenAt: Date | null;
+      remindedAt: Date | null;
+      followUpRemindedAt: Date | null;
+    }[];
+  }[],
+  nowMinutes: number,
+  now: Date,
+): DueDose[] {
+  const delayMs = MEDICATION_FOLLOW_UP_DELAY_MINUTES * MS_PER_MINUTE;
+  return medications.flatMap((m) =>
+    m.doses
+      .filter((d) => {
+        const late = nowMinutes - d.slotMinutes;
+        return (
+          m.times.includes(d.slotMinutes) &&
+          d.takenAt === null &&
+          d.followUpRemindedAt === null &&
+          d.remindedAt !== null &&
+          now.getTime() - d.remindedAt.getTime() >= delayMs &&
+          late >= 0 &&
+          late <= MEDICATION_REMINDER_WINDOW_MINUTES
+        );
+      })
+      .map((d) => ({
+        medicationId: m.id,
+        name: m.name,
+        slotMinutes: d.slotMinutes,
+      })),
+  );
+}
+
 export type ReminderSlotState =
   'taken' | 'reminded' | 'due' | 'upcoming' | 'missed';
 
@@ -138,6 +192,7 @@ export interface ReminderSlotStatus {
   slotMinutes: number;
   state: ReminderSlotState;
   remindedAt: string | null;
+  followUpRemindedAt: string | null;
   takenAt: string | null;
 }
 
@@ -160,6 +215,7 @@ export function computeReminderSlotStates(
     slotMinutes: number;
     takenAt: Date | null;
     remindedAt: Date | null;
+    followUpRemindedAt?: Date | null;
   }[],
   nowMinutes: number,
 ): ReminderSlotStatus[] {
@@ -170,6 +226,7 @@ export function computeReminderSlotStates(
       const dose = bySlot.get(slotMinutes);
       const takenAt = dose?.takenAt ?? null;
       const remindedAt = dose?.remindedAt ?? null;
+      const followUpRemindedAt = dose?.followUpRemindedAt ?? null;
       const late = nowMinutes - slotMinutes;
       let state: ReminderSlotState;
       if (takenAt) state = 'taken';
@@ -181,6 +238,9 @@ export function computeReminderSlotStates(
         slotMinutes,
         state,
         remindedAt: remindedAt ? remindedAt.toISOString() : null,
+        followUpRemindedAt: followUpRemindedAt
+          ? followUpRemindedAt.toISOString()
+          : null,
         takenAt: takenAt ? takenAt.toISOString() : null,
       };
     });
@@ -330,7 +390,12 @@ export class MedicationsService {
         times: true,
         doses: {
           where: { userId, date: today },
-          select: { slotMinutes: true, takenAt: true, remindedAt: true },
+          select: {
+            slotMinutes: true,
+            takenAt: true,
+            remindedAt: true,
+            followUpRemindedAt: true,
+          },
         },
       },
       orderBy: { name: 'asc' },
@@ -395,7 +460,9 @@ export class MedicationsService {
   /**
    * Chamado pelo cron dos lembretes (RemindersService.run) e pelo agendador
    * interno (MedicationReminderSchedulerService). Um push por utilizador com
-   * as tomas a avisar agora. Devolve quantos foram avisados.
+   * as tomas a avisar agora, e outro (no maximo um por toma) com as tomas ja
+   * avisadas que continuam por tomar (ver findFollowUpDoses). Devolve
+   * quantos pushes chegaram a pelo menos um dispositivo.
    *
    * Single-flight: se ja ha uma execucao neste processo, devolve a mesma
    * promessa (o cron e o agendador nunca correm por cima um do outro). Entre
@@ -424,16 +491,27 @@ export class MedicationsService {
       });
     }
 
+    const now = new Date();
     const dueByUser = new Map<string, DatedDueDose[]>();
+    const followUpByUser = new Map<string, DatedDueDose[]>();
+    const add = (
+      map: Map<string, DatedDueDose[]>,
+      userId: string,
+      doses: DatedDueDose[],
+    ) => {
+      if (doses.length === 0) return;
+      map.set(userId, [...(map.get(userId) ?? []), ...doses]);
+    };
     for (const pass of passes) {
       const medications = await this.findReminderCandidates(pass.date);
       for (const m of medications) {
-        const due = findDueDoses([m], pass.nowMinutes).map((d) => ({
-          ...d,
-          date: pass.date,
-        }));
-        if (due.length === 0) continue;
-        dueByUser.set(m.userId, [...(dueByUser.get(m.userId) ?? []), ...due]);
+        const dated = (d: DueDose): DatedDueDose => ({ ...d, date: pass.date });
+        add(dueByUser, m.userId, findDueDoses([m], pass.nowMinutes).map(dated));
+        add(
+          followUpByUser,
+          m.userId,
+          findFollowUpDoses([m], pass.nowMinutes, now).map(dated),
+        );
       }
     }
 
@@ -474,15 +552,93 @@ export class MedicationsService {
       }
       if (delivered > 0) usersPushed += 1;
     }
+    let followUpsPushed = 0;
+    for (const [userId, due] of followUpByUser) {
+      if (await this.sendFollowUp(userId, due)) followUpsPushed += 1;
+    }
     if (usersPushed > 0) {
       this.logger.log(`Medicacao: ${usersPushed} utilizadores avisados`);
     }
-    return usersPushed;
+    if (followUpsPushed > 0) {
+      this.logger.log(`Medicacao: ${followUpsPushed} utilizadores reavisados`);
+    }
+    return usersPushed + followUpsPushed;
+  }
+
+  /**
+   * Segundo aviso de um utilizador. Mesmo padrao do primeiro: claim de cada
+   * toma (followUpRemindedAt, updateMany condicional: avisada, por tomar e
+   * sem segundo aviso), push so com o que ESTA execucao reclamou, e se nenhum
+   * dispositivo o recebeu liberta o claim para a proxima execucao tentar.
+   * Devolve true se o push chegou a algum dispositivo.
+   */
+  private async sendFollowUp(
+    userId: string,
+    due: DatedDueDose[],
+  ): Promise<boolean> {
+    const followUpRemindedAt = new Date();
+    const claimed: DatedDueDose[] = [];
+    try {
+      for (const d of due) {
+        const { count } = await this.prisma.medicationDose.updateMany({
+          where: {
+            ...slotWhere(userId, d),
+            takenAt: null,
+            remindedAt: { not: null },
+            followUpRemindedAt: null,
+          },
+          data: { followUpRemindedAt },
+        });
+        if (count > 0) claimed.push(d);
+      }
+    } catch (error) {
+      await this.releaseFollowUps(userId, claimed, followUpRemindedAt);
+      throw error;
+    }
+    if (claimed.length === 0) return false;
+    // Sem o nome do medicamento, como o primeiro aviso (ecra bloqueado).
+    let delivered = 0;
+    try {
+      delivered = await this.pushService.notifyUser(
+        userId,
+        'medicationFollowUp',
+        { url: MEDICATION_PATH },
+      );
+    } finally {
+      if (delivered === 0) {
+        await this.releaseFollowUps(userId, claimed, followUpRemindedAt);
+      }
+    }
+    return delivered > 0;
+  }
+
+  // Desfaz so o segundo aviso reclamado por esta execucao.
+  private async releaseFollowUps(
+    userId: string,
+    claimed: DatedDueDose[],
+    followUpRemindedAt: Date,
+  ) {
+    for (const d of claimed) {
+      try {
+        await this.prisma.medicationDose.updateMany({
+          where: { ...slotWhere(userId, d), takenAt: null, followUpRemindedAt },
+          data: { followUpRemindedAt: null },
+        });
+      } catch (error) {
+        // Sem libertar, a toma fica so sem segundo aviso (nunca a dobrar).
+        this.logger.warn(
+          `Medicacao: falhou libertar um segundo aviso (${
+            error instanceof Error ? error.name : 'erro'
+          })`,
+        );
+      }
+    }
   }
 
   // Medicamentos com lembrete e as doses desse dia que ja contam como
   // tratadas. Uma linha com takenAt e remindedAt a null (marcou e desmarcou
-  // antes da hora) NAO cancela o lembrete.
+  // antes da hora) NAO cancela o lembrete. As linhas ja avisadas servem
+  // tambem para escolher o segundo aviso (findFollowUpDoses).
   private findReminderCandidates(date: Date) {
     return this.prisma.medication.findMany({
       where: {
@@ -506,7 +662,12 @@ export class MedicationsService {
             date,
             OR: [{ takenAt: { not: null } }, { remindedAt: { not: null } }],
           },
-          select: { slotMinutes: true },
+          select: {
+            slotMinutes: true,
+            takenAt: true,
+            remindedAt: true,
+            followUpRemindedAt: true,
+          },
         },
       },
     });

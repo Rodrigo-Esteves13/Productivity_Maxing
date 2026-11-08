@@ -52,6 +52,7 @@ import ExamModePanel from '../components/Dashboard/ExamModePanel';
 import InstallAppCard from '../pwa/InstallAppCard';
 import { useI18n } from '../i18n/useI18n';
 import ToolbarButton from '../components/UI/ToolbarButton';
+import GreetingBanner from '../components/Dashboard/GreetingBanner';
 
 // Mensagem da tabela vazia: sem tasks nenhumas, so sem exames (modo exame)
 // ou nenhuma a passar nos filtros.
@@ -193,6 +194,7 @@ export default function Dashboard() {
   return (
     <PlanModeContext.Provider value={planModeValue}>
     <PageLayout>
+      {!isLoading && !error && <GreetingBanner tasks={tasks} />}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <PageHeader
           title={t('ui.analyticsDashboard')}

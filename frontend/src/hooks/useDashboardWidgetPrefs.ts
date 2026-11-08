@@ -29,6 +29,7 @@ export type DashboardWidgetKey =
   | 'targetVsReal'
   | 'productivityByType'
   | 'difficultyVsGrade'
+  | 'weightVsGrade'
   | 'failingRisk'
   | 'planScenario'
   | 'ratingsSummary'
@@ -65,6 +66,7 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   targetVsReal: 'widget.targetVsReal',
   productivityByType: 'widget.productivityByType',
   difficultyVsGrade: 'widget.difficultyVsGrade',
+  weightVsGrade: 'weightVsGrade.label',
   failingRisk: 'widget.failingRisk',
   planScenario: 'widget.planScenario',
   ratingsSummary: 'widget.ratingsSummary',
@@ -106,6 +108,7 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   targetVsReal: true,
   productivityByType: true,
   difficultyVsGrade: true,
+  weightVsGrade: true,
   failingRisk: true,
   planScenario: true,
   ratingsSummary: true,

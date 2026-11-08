@@ -9,6 +9,7 @@ import { MedicationsService } from '../wellbeing/medications.service';
 import { PersonalNotesService } from '../personal-notes/personal-notes.service';
 import { AbsenceLimitRemindersService } from './absence-limit-reminders.service';
 import { StreakRiskRemindersService } from './streak-risk-reminders.service';
+import { DueTodayRemindersService } from './due-today-reminders.service';
 import { MoneyRemindersService } from './money-reminders.service';
 import { BudgetAlertRemindersService } from './budget-alert-reminders.service';
 import { getFrontendUrl } from '../config/app.config';
@@ -43,6 +44,8 @@ export interface ReminderRunResult {
   absenceLimitUsersPushed: number;
   // Utilizadores avisados de que a streak de estudo esta em risco (diario).
   streakRiskUsersPushed: number;
+  // Utilizadores que receberam o resumo da manha "N tasks para hoje" (diario).
+  dueTodayUsersPushed: number;
   // Utilizadores avisados de subscricoes a renovar / dividas a receber (diario).
   moneyUsersPushed: number;
   // Utilizadores avisados de que o orcamento do mes chegou a 80% / 100%.
@@ -76,6 +79,7 @@ export class RemindersService {
     private readonly personalNotesService: PersonalNotesService,
     private readonly absenceLimitReminders: AbsenceLimitRemindersService,
     private readonly streakRiskReminders: StreakRiskRemindersService,
+    private readonly dueTodayReminders: DueTodayRemindersService,
     private readonly moneyReminders: MoneyRemindersService,
     private readonly budgetAlertReminders: BudgetAlertRemindersService,
   ) {}
@@ -174,6 +178,7 @@ export class RemindersService {
       personalRemindersSent: 0,
       absenceLimitUsersPushed: 0,
       streakRiskUsersPushed: 0,
+      dueTodayUsersPushed: 0,
       moneyUsersPushed: 0,
       budgetUsersPushed: 0,
       expiredPadsDeleted: 0,
@@ -257,6 +262,12 @@ export class RemindersService {
       this.logger.warn(
         `Aviso de streak em risco falhou: ${(error as Error).message}`,
       );
+    }
+
+    try {
+      result.dueTodayUsersPushed = await this.dueTodayReminders.sendReminders();
+    } catch (error) {
+      this.logger.warn(`Resumo do dia falhou: ${(error as Error).message}`);
     }
 
     try {

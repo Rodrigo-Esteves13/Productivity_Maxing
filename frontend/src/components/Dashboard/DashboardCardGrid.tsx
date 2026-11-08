@@ -21,6 +21,7 @@ import {
   TargetVsRealCard,
   ProductivityByTypeCard,
   DifficultyVsGradeCard,
+  WeightVsGradeCard,
   FailingRiskCard,
   PlanScenarioCard,
   RatingsSummaryCard,
@@ -110,6 +111,9 @@ export default function DashboardCardGrid({
       )}
       {visibility.difficultyVsGrade && academicTasks.length > 0 && activeProgram && (
         <DifficultyVsGradeCard tasks={academicTasks} scale={activeProgram.gradeScale} />
+      )}
+      {visibility.weightVsGrade && academicTasks.length > 0 && activeProgram && (
+        <WeightVsGradeCard tasks={academicTasks} scale={activeProgram.gradeScale} />
       )}
     </MasonryGrid>
   );

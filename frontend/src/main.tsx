@@ -6,10 +6,12 @@ import { initServiceWorker } from './pwa/registerSW';
 import { initInstallPrompt } from './pwa/installPrompt';
 import { reportWebVitals } from './lib/reportWebVitals';
 import { applyStoredPrefs } from './hooks/useAccessibilityPrefs';
+import { applyStoredAccent } from './lib/accentColor';
 import { applyStoredLanguage } from './i18n/storage';
 
 // Antes do primeiro render: tema, tamanho do texto e idioma ja aplicados.
 applyStoredPrefs();
+applyStoredAccent();
 applyStoredLanguage();
 // O pedido de instalacao do browser pode chegar antes de qualquer componente.
 initInstallPrompt();

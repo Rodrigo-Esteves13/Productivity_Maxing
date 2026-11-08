@@ -68,13 +68,20 @@ function IntakeRow({ intake, onDelete }: { intake: MedicationIntake; onDelete: (
 function ReminderStatusLine({ slot }: { slot: MedicationReminderSlotStatus }) {
   const { t, lang } = useI18n();
   const clock = formatClock(slot.slotMinutes);
-  const sentAt = slot.remindedAt
-    ? new Date(slot.remindedAt).toLocaleTimeString(lang, {
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: APP_TIME_ZONE,
-      })
-    : '';
+  const timeOf = (iso: string | null) =>
+    iso
+      ? new Date(iso).toLocaleTimeString(lang, {
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: APP_TIME_ZONE,
+        })
+      : '';
+  const sentAt = timeOf(slot.remindedAt);
+  // Segundo lembrete: so interessa enquanto a toma continua por tomar.
+  const followUp =
+    slot.state === 'reminded' && slot.followUpRemindedAt
+      ? ` · ${t('medFollowUp.sent', { time: timeOf(slot.followUpRemindedAt) })}`
+      : '';
   if (slot.state === 'missed') {
     return (
       <p className="text-xs text-amber-300">
@@ -88,6 +95,7 @@ function ReminderStatusLine({ slot }: { slot: MedicationReminderSlotStatus }) {
   return (
     <p className="text-xs text-neutral-500">
       {clock} · {t(`medReminderStatus.${slot.state}`, { time: sentAt, clock })}
+      {followUp}
     </p>
   );
 }

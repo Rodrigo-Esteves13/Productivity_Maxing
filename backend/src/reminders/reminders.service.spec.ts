@@ -4,6 +4,7 @@ import type { MedicationsService } from '../wellbeing/medications.service';
 import { RemindersService } from './reminders.service';
 import type { AbsenceLimitRemindersService } from './absence-limit-reminders.service';
 import type { StreakRiskRemindersService } from './streak-risk-reminders.service';
+import type { DueTodayRemindersService } from './due-today-reminders.service';
 import type { MoneyRemindersService } from './money-reminders.service';
 import type { BudgetAlertRemindersService } from './budget-alert-reminders.service';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -74,6 +75,9 @@ function setup(
     } as unknown as StreakRiskRemindersService,
     {
       sendReminders: jest.fn().mockResolvedValue(0),
+    } as unknown as DueTodayRemindersService,
+    {
+      sendReminders: jest.fn().mockResolvedValue(0),
     } as unknown as MoneyRemindersService,
     {
       sendReminders: jest.fn().mockResolvedValue(0),
@@ -139,6 +143,7 @@ describe('RemindersService.run', () => {
       personalRemindersSent: 0,
       absenceLimitUsersPushed: 0,
       streakRiskUsersPushed: 0,
+      dueTodayUsersPushed: 0,
       moneyUsersPushed: 0,
       budgetUsersPushed: 0,
       expiredPadsDeleted: 0,
@@ -193,6 +198,7 @@ describe('RemindersService.run', () => {
       personalRemindersSent: 0,
       absenceLimitUsersPushed: 0,
       streakRiskUsersPushed: 0,
+      dueTodayUsersPushed: 0,
       moneyUsersPushed: 0,
       budgetUsersPushed: 0,
       expiredPadsDeleted: 0,

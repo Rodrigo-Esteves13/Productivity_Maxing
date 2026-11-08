@@ -136,6 +136,7 @@ const MEDICATION_PUSH_TTL_SECONDS =
 const PUSH_TTL_SECONDS: Partial<Record<PushMessageKey, number>> = {
   medicationDue: MEDICATION_PUSH_TTL_SECONDS,
   medicationsDue: MEDICATION_PUSH_TTL_SECONDS,
+  medicationFollowUp: MEDICATION_PUSH_TTL_SECONDS,
 };
 
 export function pushTtlSeconds(key: PushMessageKey): number {

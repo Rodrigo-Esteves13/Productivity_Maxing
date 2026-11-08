@@ -13,6 +13,7 @@ interface DoseRow {
   date: Date;
   slotMinutes: number;
   remindedAt: Date | null;
+  followUpRemindedAt: Date | null;
   takenAt: Date | null;
 }
 
@@ -56,7 +57,12 @@ function setup(times: number[]) {
                     args.select.doses.where,
                   ),
               )
-              .map((d) => ({ slotMinutes: d.slotMinutes })),
+              .map((d) => ({
+                slotMinutes: d.slotMinutes,
+                takenAt: d.takenAt,
+                remindedAt: d.remindedAt,
+                followUpRemindedAt: d.followUpRemindedAt,
+              })),
           },
         ]),
       ),
@@ -64,20 +70,26 @@ function setup(times: number[]) {
     },
     medicationDose: {
       // create com o unique [medicationId, date, slotMinutes]: duplicado = P2002.
-      create: jest.fn(({ data }: { data: Omit<DoseRow, 'takenAt'> }) => {
-        const dup = doses.some(
-          (d) =>
-            d.medicationId === data.medicationId &&
-            d.date.getTime() === data.date.getTime() &&
-            d.slotMinutes === data.slotMinutes,
-        );
-        if (dup)
-          return Promise.reject(
-            Object.assign(new Error('dup'), { code: 'P2002' }),
+      create: jest.fn(
+        ({
+          data,
+        }: {
+          data: Omit<DoseRow, 'takenAt' | 'followUpRemindedAt'>;
+        }) => {
+          const dup = doses.some(
+            (d) =>
+              d.medicationId === data.medicationId &&
+              d.date.getTime() === data.date.getTime() &&
+              d.slotMinutes === data.slotMinutes,
           );
-        doses.push({ ...data, takenAt: null });
-        return Promise.resolve({});
-      }),
+          if (dup)
+            return Promise.reject(
+              Object.assign(new Error('dup'), { code: 'P2002' }),
+            );
+          doses.push({ ...data, takenAt: null, followUpRemindedAt: null });
+          return Promise.resolve({});
+        },
+      ),
       updateMany: jest.fn(
         ({ where, data }: { where: Where; data: Partial<DoseRow> }) => {
           const hit = doses.filter((d) =>
@@ -110,7 +122,7 @@ function setup(times: number[]) {
               slotMinutes: number;
             };
           };
-          create: Omit<DoseRow, 'remindedAt'>;
+          create: Omit<DoseRow, 'remindedAt' | 'followUpRemindedAt'>;
           update: { takenAt: Date | null };
         }) => {
           const key = where.medicationId_date_slotMinutes;
@@ -121,7 +133,12 @@ function setup(times: number[]) {
               d.slotMinutes === key.slotMinutes,
           );
           if (found) Object.assign(found, update);
-          else doses.push({ remindedAt: null, ...create });
+          else
+            doses.push({
+              remindedAt: null,
+              followUpRemindedAt: null,
+              ...create,
+            });
           return Promise.resolve({});
         },
       ),
@@ -137,6 +154,22 @@ function setup(times: number[]) {
   );
   return { service, push, doses, prisma };
 }
+
+const FOLLOW_UP_KEY = 'medicationFollowUp';
+
+// Pushes enviados com uma chave (primeiro aviso vs segundo aviso).
+function pushesWith(
+  push: { notifyUser: jest.Mock },
+  match: (key: string) => boolean,
+): number {
+  return (push.notifyUser.mock.calls as unknown[][]).filter((c) =>
+    match(c[1] as string),
+  ).length;
+}
+const firstReminders = (push: { notifyUser: jest.Mock }) =>
+  pushesWith(push, (k) => k !== FOLLOW_UP_KEY);
+const followUps = (push: { notifyUser: jest.Mock }) =>
+  pushesWith(push, (k) => k === FOLLOW_UP_KEY);
 
 describe('medication reminders (regression, area d)', () => {
   afterEach(() => jest.useRealTimers());
@@ -211,7 +244,9 @@ describe('medication reminders (regression, area d)', () => {
       jest.setSystemTime(new Date(`2026-12-01T${at}:00Z`));
       await service.sendDueReminders();
     }
-    expect(push.notifyUser).toHaveBeenCalledTimes(1);
+    expect(firstReminders(push)).toBe(1);
+    // E um unico segundo aviso, 15 min depois do primeiro.
+    expect(followUps(push)).toBe(1);
     expect(doses).toHaveLength(1);
     expect(doses[0].remindedAt).toBeInstanceOf(Date);
   });
@@ -243,9 +278,11 @@ describe('medication reminders (regression, area d)', () => {
       jest.setSystemTime(new Date(at));
       await service.sendDueReminders();
     }
-    expect(push.notifyUser).toHaveBeenCalledTimes(1);
+    expect(firstReminders(push)).toBe(1);
+    expect(followUps(push)).toBe(1);
     expect(doses).toHaveLength(1);
     expect(doses[0].date.toISOString()).toBe('2026-12-01T00:00:00.000Z');
+    expect(doses[0].followUpRemindedAt).toBeInstanceOf(Date);
   });
 
   it('D-01: a delayed cron run after midnight still reminds a 23:30 dose', async () => {
@@ -411,6 +448,115 @@ describe('medication reminders: claim before send', () => {
     ];
     expect(arg.where).toMatchObject({
       user: { status: { not: 'BANNED' }, pushSubscriptions: { some: {} } },
+    });
+  });
+});
+
+describe('medication reminders: follow-up (second and last push)', () => {
+  afterEach(() => jest.useRealTimers());
+
+  const runAt = async (service: MedicationsService, times: string[]) => {
+    for (const at of times) {
+      jest.setSystemTime(new Date(`2026-12-01T${at}:00Z`));
+      await service.sendDueReminders();
+    }
+  };
+
+  it('sends exactly one follow-up, only after the delay', async () => {
+    const { service, push, doses } = setup([8 * 60]);
+    jest.useFakeTimers();
+    await runAt(service, ['08:00', '08:14']);
+    expect(followUps(push)).toBe(0);
+    await runAt(service, ['08:15', '08:16', '08:30', '08:45', '09:00']);
+    expect(firstReminders(push)).toBe(1);
+    expect(followUps(push)).toBe(1);
+    expect(push.notifyUser).toHaveBeenLastCalledWith('u1', FOLLOW_UP_KEY, {
+      url: '/wellbeing',
+    });
+    expect(doses[0].followUpRemindedAt?.toISOString()).toBe(
+      '2026-12-01T08:15:00.000Z',
+    );
+  });
+
+  it('no follow-up once the dose is taken', async () => {
+    const { service, push } = setup([8 * 60]);
+    jest.useFakeTimers();
+    await runAt(service, ['08:00']);
+    jest.setSystemTime(new Date('2026-12-01T08:10:00Z'));
+    await service.setDose('u1', 'm1', {
+      date: '2026-12-01',
+      slotMinutes: 480,
+      taken: true,
+    });
+    await runAt(service, ['08:15', '08:30']);
+    expect(followUps(push)).toBe(0);
+  });
+
+  it('no follow-up past the reminder window', async () => {
+    const { service, push } = setup([8 * 60]);
+    jest.useFakeTimers();
+    // Primeiro aviso tardio (50 min), o segundo cairia aos 65 min.
+    await runAt(service, ['08:50', '09:05', '09:10']);
+    expect(firstReminders(push)).toBe(1);
+    expect(followUps(push)).toBe(0);
+  });
+
+  it('no follow-up when the first push reached no device', async () => {
+    const { service, push, doses } = setup([8 * 60]);
+    push.notifyUser.mockResolvedValue(0);
+    jest.useFakeTimers();
+    await runAt(service, ['08:00', '08:15', '08:30']);
+    expect(followUps(push)).toBe(0);
+    expect(doses).toHaveLength(0);
+  });
+
+  it('0 delivered releases the follow-up claim so the next run retries', async () => {
+    const { service, push, doses } = setup([8 * 60]);
+    jest.useFakeTimers();
+    await runAt(service, ['08:00']);
+    push.notifyUser.mockResolvedValueOnce(0);
+    await runAt(service, ['08:15']);
+    expect(followUps(push)).toBe(1);
+    expect(doses[0].followUpRemindedAt).toBeNull();
+    await runAt(service, ['08:16', '08:17']);
+    expect(followUps(push)).toBe(2);
+    expect(doses[0].followUpRemindedAt).toBeInstanceOf(Date);
+  });
+
+  it('two concurrent runs send one follow-up', async () => {
+    const { service, push, prisma } = setup([8 * 60]);
+    const other = new MedicationsService(
+      prisma as unknown as PrismaService,
+      push as unknown as PushService,
+      {
+        assertAccepted: jest.fn().mockResolvedValue(undefined),
+      } as unknown as MedicationDisclaimerService,
+    );
+    jest.useFakeTimers();
+    await runAt(service, ['08:00']);
+    jest.setSystemTime(new Date('2026-12-01T08:20:00Z'));
+    await Promise.all([service.sendDueReminders(), other.sendDueReminders()]);
+    expect(followUps(push)).toBe(1);
+  });
+
+  it('claims the follow-up scoped by userId and only an untaken reminded dose', async () => {
+    const { service, prisma } = setup([8 * 60]);
+    jest.useFakeTimers();
+    await runAt(service, ['08:00', '08:15']);
+    const claim = (
+      prisma.medicationDose.updateMany.mock.calls as unknown as [
+        { where: Record<string, unknown>; data: Record<string, unknown> },
+      ][]
+    )
+      .map((c) => c[0])
+      .find((a) => 'followUpRemindedAt' in a.data);
+    expect(claim?.where).toMatchObject({
+      userId: 'u1',
+      medicationId: 'm1',
+      slotMinutes: 480,
+      takenAt: null,
+      remindedAt: { not: null },
+      followUpRemindedAt: null,
     });
   });
 });

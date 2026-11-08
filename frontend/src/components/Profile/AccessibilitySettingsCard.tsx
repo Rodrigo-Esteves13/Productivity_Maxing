@@ -4,6 +4,8 @@ import { useI18n } from '../../i18n/useI18n';
 import ToggleRow from '../UI/ToggleRow';
 import Card from '../UI/Card';
 import { useDailyDigestPref } from '../../hooks/useDailyDigestPref';
+import GreetingPrefsSection from './GreetingPrefsSection';
+import AccentColorSection from './AccentColorSection';
 
 const FONT_SCALES: FontScale[] = ['normal', 'large', 'larger', 'largest'];
 
@@ -75,6 +77,7 @@ export default function AccessibilitySettingsCard() {
         </div>
       </fieldset>
 
+      <AccentColorSection />
       <div className="mt-5">
         <label htmlFor="language-select" className="text-sm font-medium text-neutral-200">
           {t('prefs.language')}
@@ -151,6 +154,7 @@ export default function AccessibilitySettingsCard() {
         checked={digest.enabled}
         onChange={digest.setEnabled}
       />
+      <GreetingPrefsSection />
     </Card>
   );
 }

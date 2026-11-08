@@ -1868,6 +1868,8 @@ export interface MedicationReminderSlotStatus {
   slotMinutes: number;
   state: MedicationReminderState;
   remindedAt: string | null;
+  // Segundo (e ultimo) lembrete, se foi enviado.
+  followUpRemindedAt: string | null;
   takenAt: string | null;
 }
 

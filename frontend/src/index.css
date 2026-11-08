@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./styles/themes.css";
+@import "./styles/accents.css";
 
 /*
  * "Nightshade" theme: a deep aubergine-black base with a vivid
