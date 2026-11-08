@@ -2199,6 +2199,9 @@ model MedicationDose {
   slotMinutes  Int
   takenAt      DateTime?
   remindedAt   DateTime?
+  // Segundo aviso (MEDICATION_FOLLOW_UP_DELAY_MINUTES depois do primeiro),
+  // reclamado antes de enviar como o remindedAt. No maximo um por toma.
+  followUpRemindedAt DateTime?
 
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   medication Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)

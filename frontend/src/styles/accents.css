@@ -1,0 +1,191 @@
+/*
+ * Cor de destaque (Profile > Appearance > Accent color). Mesmo truque dos
+ * temas: so redefine as variaveis --color-violet-* (e fuchsia-400), por isso
+ * nenhuma classe muda. O violeta por defeito nao tem atributo data-accent.
+ * Vem DEPOIS de themes.css (mesma especificidade, o ultimo ganha).
+ * Escuros: escala normal. Tema claro: escala invertida como em themes.css.
+ * Cyan e orange: 600/700 descem um degrau (texto branco sobre 600 ficava
+ * abaixo de 4.5:1) e no tema claro 400/500 usam o 700.
+ * Alto contraste: 400/500/600 clareados (tal como em index.css).
+ * Ficheiro gerado a partir de escalas fixas - editar os valores a vontade.
+ */
+
+:root[data-accent='blue'] {
+  --color-violet-50: #eff6ff;
+  --color-violet-100: #dbeafe;
+  --color-violet-200: #bfdbfe;
+  --color-violet-300: #93c5fd;
+  --color-violet-400: #60a5fa;
+  --color-violet-500: #3b82f6;
+  --color-violet-600: #2563eb;
+  --color-violet-700: #1d4ed8;
+  --color-violet-800: #1e40af;
+  --color-violet-900: #1e3a8a;
+  --color-violet-950: #172554;
+  --color-fuchsia-400: #93c5fd;
+}
+
+:root[data-accent='blue'][data-theme='light'] {
+  --color-violet-50: #172554;
+  --color-violet-100: #1e3a8a;
+  --color-violet-200: #1e40af;
+  --color-violet-300: #1d4ed8;
+  --color-violet-400: #2563eb;
+  --color-violet-500: #2563eb;
+  --color-violet-600: #1d4ed8;
+  --color-violet-700: #bfdbfe;
+  --color-violet-800: #dbeafe;
+  --color-violet-900: #eff6ff;
+  --color-violet-950: #eff6ff;
+  --color-fuchsia-400: #1d4ed8;
+}
+
+:root[data-accent='blue'][data-contrast='high']:not([data-theme='light']) {
+  --color-violet-400: #bfdbfe;
+  --color-violet-500: #93c5fd;
+  --color-violet-600: #60a5fa;
+}
+
+:root[data-accent='cyan'] {
+  --color-violet-50: #ecfeff;
+  --color-violet-100: #cffafe;
+  --color-violet-200: #a5f3fc;
+  --color-violet-300: #67e8f9;
+  --color-violet-400: #22d3ee;
+  --color-violet-500: #06b6d4;
+  --color-violet-600: #0e7490;
+  --color-violet-700: #155e75;
+  --color-violet-800: #155e75;
+  --color-violet-900: #164e63;
+  --color-violet-950: #083344;
+  --color-fuchsia-400: #67e8f9;
+}
+
+:root[data-accent='cyan'][data-theme='light'] {
+  --color-violet-50: #083344;
+  --color-violet-100: #164e63;
+  --color-violet-200: #155e75;
+  --color-violet-300: #0e7490;
+  --color-violet-400: #0e7490;
+  --color-violet-500: #0e7490;
+  --color-violet-600: #0e7490;
+  --color-violet-700: #a5f3fc;
+  --color-violet-800: #cffafe;
+  --color-violet-900: #ecfeff;
+  --color-violet-950: #ecfeff;
+  --color-fuchsia-400: #0e7490;
+}
+
+:root[data-accent='cyan'][data-contrast='high']:not([data-theme='light']) {
+  --color-violet-400: #a5f3fc;
+  --color-violet-500: #67e8f9;
+  --color-violet-600: #22d3ee;
+}
+
+:root[data-accent='pink'] {
+  --color-violet-50: #fdf2f8;
+  --color-violet-100: #fce7f3;
+  --color-violet-200: #fbcfe8;
+  --color-violet-300: #f9a8d4;
+  --color-violet-400: #f472b6;
+  --color-violet-500: #ec4899;
+  --color-violet-600: #db2777;
+  --color-violet-700: #be185d;
+  --color-violet-800: #9d174d;
+  --color-violet-900: #831843;
+  --color-violet-950: #500724;
+  --color-fuchsia-400: #f9a8d4;
+}
+
+:root[data-accent='pink'][data-theme='light'] {
+  --color-violet-50: #500724;
+  --color-violet-100: #831843;
+  --color-violet-200: #9d174d;
+  --color-violet-300: #be185d;
+  --color-violet-400: #db2777;
+  --color-violet-500: #db2777;
+  --color-violet-600: #be185d;
+  --color-violet-700: #fbcfe8;
+  --color-violet-800: #fce7f3;
+  --color-violet-900: #fdf2f8;
+  --color-violet-950: #fdf2f8;
+  --color-fuchsia-400: #be185d;
+}
+
+:root[data-accent='pink'][data-contrast='high']:not([data-theme='light']) {
+  --color-violet-400: #fbcfe8;
+  --color-violet-500: #f9a8d4;
+  --color-violet-600: #f472b6;
+}
+
+:root[data-accent='orange'] {
+  --color-violet-50: #fff7ed;
+  --color-violet-100: #ffedd5;
+  --color-violet-200: #fed7aa;
+  --color-violet-300: #fdba74;
+  --color-violet-400: #fb923c;
+  --color-violet-500: #f97316;
+  --color-violet-600: #c2410c;
+  --color-violet-700: #9a3412;
+  --color-violet-800: #9a3412;
+  --color-violet-900: #7c2d12;
+  --color-violet-950: #431407;
+  --color-fuchsia-400: #fdba74;
+}
+
+:root[data-accent='orange'][data-theme='light'] {
+  --color-violet-50: #431407;
+  --color-violet-100: #7c2d12;
+  --color-violet-200: #9a3412;
+  --color-violet-300: #c2410c;
+  --color-violet-400: #c2410c;
+  --color-violet-500: #c2410c;
+  --color-violet-600: #c2410c;
+  --color-violet-700: #fed7aa;
+  --color-violet-800: #ffedd5;
+  --color-violet-900: #fff7ed;
+  --color-violet-950: #fff7ed;
+  --color-fuchsia-400: #c2410c;
+}
+
+:root[data-accent='orange'][data-contrast='high']:not([data-theme='light']) {
+  --color-violet-400: #fed7aa;
+  --color-violet-500: #fdba74;
+  --color-violet-600: #fb923c;
+}
+
+:root[data-accent='red'] {
+  --color-violet-50: #fef2f2;
+  --color-violet-100: #fee2e2;
+  --color-violet-200: #fecaca;
+  --color-violet-300: #fca5a5;
+  --color-violet-400: #f87171;
+  --color-violet-500: #ef4444;
+  --color-violet-600: #dc2626;
+  --color-violet-700: #b91c1c;
+  --color-violet-800: #991b1b;
+  --color-violet-900: #7f1d1d;
+  --color-violet-950: #450a0a;
+  --color-fuchsia-400: #fca5a5;
+}
+
+:root[data-accent='red'][data-theme='light'] {
+  --color-violet-50: #450a0a;
+  --color-violet-100: #7f1d1d;
+  --color-violet-200: #991b1b;
+  --color-violet-300: #b91c1c;
+  --color-violet-400: #dc2626;
+  --color-violet-500: #dc2626;
+  --color-violet-600: #b91c1c;
+  --color-violet-700: #fecaca;
+  --color-violet-800: #fee2e2;
+  --color-violet-900: #fef2f2;
+  --color-violet-950: #fef2f2;
+  --color-fuchsia-400: #b91c1c;
+}
+
+:root[data-accent='red'][data-contrast='high']:not([data-theme='light']) {
+  --color-violet-400: #fecaca;
+  --color-violet-500: #fca5a5;
+  --color-violet-600: #f87171;
+}

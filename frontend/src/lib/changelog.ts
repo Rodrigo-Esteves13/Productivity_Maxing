@@ -10,6 +10,11 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: '2026-11-08',
     title: 'Money export, streak alert and sturdier integrations',
     items: [
+      'Profile, Appearance: pick an accent color (violet, blue, cyan, pink, orange or red) for buttons and highlights in every theme. It is saved on this device and Reset brings back violet.',
+      'Medication: if you have not marked a dose as taken 15 minutes after its reminder, you get one more push. It is never sent after you take the dose, and the reminder status shows when it was sent.',
+      'Dashboard: a greeting now opens the page with one short line about your progress, chosen from your own tasks (this week versus last week, overdue). You can set your own greeting text or hide the line in Profile, Appearance.',
+      'Notifications: if you have deadline push reminders on, you now get one push each morning with how many tasks are due today. It never shows task names.',
+      'Dashboard: a new Weight vs grade card shows whether you score higher or lower on heavier assessments, from your own graded tasks.',
       'Money: new Import CSV button (and a command palette entry) brings entries back from a file you exported. A preview shows what will be added, skips duplicates and lists rows with problems before anything is saved.',
       'Focus: a hint now shows your calmest hour of the day (fewest distractions) and warns when you are in your most distracted hour, based on your own sessions.',
       'Fixes from a full review: a partial payment can no longer be counted twice (two tabs or a retry), payments above the principal are refused with a clear message, and the CSV export flags when it was cut short and no longer doubles payments.',

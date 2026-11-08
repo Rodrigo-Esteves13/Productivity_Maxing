@@ -29,6 +29,7 @@ export type PushMessageKey =
   | 'deadlinesSoon'
   | 'medicationDue'
   | 'medicationsDue'
+  | 'medicationFollowUp'
   | 'turmaAnnouncement'
   | 'turmaPackShared'
   | 'turmaDeadlineAdded'
@@ -41,6 +42,7 @@ export type PushMessageKey =
   | 'selfReminder'
   | 'absenceLimitNear'
   | 'streakRisk'
+  | 'dueTodayDigest'
   | 'moneyReminder'
   | 'budgetWarn'
   | 'budgetOver'
@@ -124,6 +126,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Medication reminder',
       body: 'Time for a dose you planned. Check that you have not already taken it.',
     },
+    medicationFollowUp: {
+      title: 'Medication reminder',
+      body: 'A planned dose is still not marked as taken. Check that you have not already taken it.',
+    },
     turmaAnnouncement: {
       title: '{name}',
       body: 'New announcement: {title}',
@@ -167,6 +173,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     streakRisk: {
       title: 'Streak at risk',
       body: 'Your {count}-day streak ends at midnight. A short session keeps it.',
+    },
+    dueTodayDigest: {
+      title: "Today's tasks",
+      body: 'Tasks due today: {count}.',
     },
     moneyReminder: {
       title: 'Money reminder',
@@ -262,6 +272,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Lembrete de medicação',
       body: 'Está na hora de uma toma que planeaste. Confirma que ainda não a tomaste.',
     },
+    medicationFollowUp: {
+      title: 'Lembrete de medicação',
+      body: 'Uma toma planeada ainda não está marcada como tomada. Confirma que ainda não a tomaste.',
+    },
     turmaAnnouncement: {
       title: '{name}',
       body: 'Novo anúncio: {title}',
@@ -305,6 +319,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     streakRisk: {
       title: 'Streak em risco',
       body: 'A tua streak de {count} dias acaba à meia-noite. Uma sessão curta mantém-na.',
+    },
+    dueTodayDigest: {
+      title: 'Tarefas de hoje',
+      body: 'Tarefas para hoje: {count}.',
     },
     moneyReminder: {
       title: 'Lembrete de dinheiro',
@@ -400,6 +418,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Recordatorio de medicación',
       body: 'Es la hora de una toma que planificaste. Comprueba que no la has tomado ya.',
     },
+    medicationFollowUp: {
+      title: 'Recordatorio de medicación',
+      body: 'Una toma planificada aún no está marcada como tomada. Comprueba que no la has tomado ya.',
+    },
     turmaAnnouncement: {
       title: '{name}',
       body: 'Nuevo anuncio: {title}',
@@ -443,6 +465,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     streakRisk: {
       title: 'Racha en riesgo',
       body: 'Tu racha de {count} días termina a medianoche. Una sesión corta la mantiene.',
+    },
+    dueTodayDigest: {
+      title: 'Tareas de hoy',
+      body: 'Tareas para hoy: {count}.',
     },
     moneyReminder: {
       title: 'Recordatorio de dinero',
@@ -522,6 +548,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '用药提醒',
       body: '到了你计划的服药时间。请先确认你还没有服用过。',
     },
+    medicationFollowUp: {
+      title: '用药提醒',
+      body: '一次计划的服药仍未标记为已服用。请先确认你还没有服用过。',
+    },
     turmaAnnouncement: {
       title: '{name}',
       body: '新公告：{title}',
@@ -569,6 +599,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     streakRisk: {
       title: '连续记录有风险',
       body: '你的 {count} 天连续学习记录将在午夜结束。学习一小会儿即可保住。',
+    },
+    dueTodayDigest: {
+      title: '今日任务',
+      body: '今天到期的任务:{count}',
     },
     moneyReminder: {
       title: '资金提醒',
@@ -660,6 +694,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '服薬リマインダー',
       body: '予定していた服薬の時間です。すでに服用していないか確認してください。',
     },
+    medicationFollowUp: {
+      title: '服薬リマインダー',
+      body: '予定していた服薬がまだ服用済みになっていません。すでに服用していないか確認してください。',
+    },
     turmaAnnouncement: {
       title: '{name}',
       body: '新しいお知らせ：{title}',
@@ -707,6 +745,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     streakRisk: {
       title: '連続記録が危険です',
       body: '{count}日連続の記録は深夜0時で途切れます。短い学習で守れます。',
+    },
+    dueTodayDigest: {
+      title: '今日のタスク',
+      body: '今日が期限のタスク:{count}件',
     },
     moneyReminder: {
       title: 'お金のリマインダー',
@@ -798,6 +840,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '복약 알림',
       body: '계획한 복용 시간입니다. 이미 복용하지 않았는지 확인하세요.',
     },
+    medicationFollowUp: {
+      title: '복약 알림',
+      body: '계획한 복용이 아직 복용 완료로 표시되지 않았습니다. 이미 복용하지 않았는지 확인하세요.',
+    },
     turmaAnnouncement: {
       title: '{name}',
       body: '새 공지: {title}',
@@ -845,6 +891,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     streakRisk: {
       title: '연속 기록이 위험해요',
       body: '{count}일 연속 기록이 자정에 끝나요. 짧게 공부하면 지킬 수 있어요.',
+    },
+    dueTodayDigest: {
+      title: '오늘의 할 일',
+      body: '오늘 마감인 할 일: {count}개',
     },
     moneyReminder: {
       title: '돈 알림',
@@ -940,6 +990,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Rappel de médicament',
       body: "C'est l'heure d'une prise prévue. Vérifie que tu ne l'as pas déjà prise.",
     },
+    medicationFollowUp: {
+      title: 'Rappel de médicament',
+      body: "Une prise prévue n'est toujours pas marquée comme prise. Vérifie que tu ne l'as pas déjà prise.",
+    },
     turmaAnnouncement: {
       title: '{name}',
       body: 'Nouvelle annonce : {title}',
@@ -983,6 +1037,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     streakRisk: {
       title: 'Série en danger',
       body: 'Ta série de {count} jours se termine à minuit. Une courte session la sauve.',
+    },
+    dueTodayDigest: {
+      title: 'Tâches du jour',
+      body: "Tâches à rendre aujourd'hui : {count}.",
     },
     moneyReminder: {
       title: 'Rappel d’argent',
@@ -1078,6 +1136,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Medikamenten-Erinnerung',
       body: 'Zeit für eine geplante Einnahme. Prüfe, ob du sie nicht schon genommen hast.',
     },
+    medicationFollowUp: {
+      title: 'Medikamenten-Erinnerung',
+      body: 'Eine geplante Einnahme ist noch nicht als genommen markiert. Prüfe, ob du sie nicht schon genommen hast.',
+    },
     turmaAnnouncement: {
       title: '{name}',
       body: 'Neue Ankündigung: {title}',
@@ -1121,6 +1183,10 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     streakRisk: {
       title: 'Serie in Gefahr',
       body: 'Deine {count}-Tage-Serie endet um Mitternacht. Eine kurze Einheit rettet sie.',
+    },
+    dueTodayDigest: {
+      title: 'Heutige Aufgaben',
+      body: 'Heute fällige Aufgaben: {count}.',
     },
     moneyReminder: {
       title: 'Geld-Erinnerung',

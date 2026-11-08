@@ -4,7 +4,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { MedicationSchedule } from '@prisma/client';
-import { findDueDoses, MedicationsService } from './medications.service';
+import {
+  findDueDoses,
+  findFollowUpDoses,
+  MedicationsService,
+} from './medications.service';
+import {
+  MEDICATION_FOLLOW_UP_DELAY_MINUTES,
+  MEDICATION_REMINDER_WINDOW_MINUTES,
+} from './wellbeing.constants';
+import { MS_PER_MINUTE } from '../common/time.constants';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { PushService } from '../push/push.service';
 import type { MedicationDisclaimerService } from './medication-disclaimer.service';
@@ -32,6 +41,84 @@ describe('findDueDoses', () => {
 
   it('does not remind doses that are hours late', () => {
     expect(findDueDoses([med([480])], 480 + 120)).toEqual([]);
+  });
+});
+
+describe('findFollowUpDoses', () => {
+  const SLOT = 480;
+  const remindedAt = new Date('2026-12-01T08:00:00Z');
+  const delayMs = MEDICATION_FOLLOW_UP_DELAY_MINUTES * MS_PER_MINUTE;
+  const afterDelay = new Date(remindedAt.getTime() + delayMs);
+  const med = (
+    dose: Partial<{
+      takenAt: Date | null;
+      remindedAt: Date | null;
+      followUpRemindedAt: Date | null;
+    }> = {},
+    times = [SLOT],
+  ) => ({
+    id: 'm1',
+    name: 'Vitamin D',
+    times,
+    doses: [
+      {
+        slotMinutes: SLOT,
+        takenAt: null,
+        remindedAt,
+        followUpRemindedAt: null,
+        ...dose,
+      },
+    ],
+  });
+  const lateBy = (minutes: number) => SLOT + minutes;
+
+  it('a reminded, untaken dose after the delay', () => {
+    const out = findFollowUpDoses(
+      [med()],
+      lateBy(MEDICATION_FOLLOW_UP_DELAY_MINUTES),
+      afterDelay,
+    );
+    expect(out).toEqual([
+      { medicationId: 'm1', name: 'Vitamin D', slotMinutes: SLOT },
+    ]);
+  });
+
+  it('not before the delay', () => {
+    const early = new Date(afterDelay.getTime() - MS_PER_MINUTE);
+    expect(findFollowUpDoses([med()], lateBy(1), early)).toEqual([]);
+  });
+
+  it('not when taken, not reminded, or already followed up', () => {
+    const now = lateBy(MEDICATION_FOLLOW_UP_DELAY_MINUTES);
+    expect(
+      findFollowUpDoses([med({ takenAt: new Date() })], now, afterDelay),
+    ).toEqual([]);
+    expect(
+      findFollowUpDoses([med({ remindedAt: null })], now, afterDelay),
+    ).toEqual([]);
+    expect(
+      findFollowUpDoses(
+        [med({ followUpRemindedAt: new Date() })],
+        now,
+        afterDelay,
+      ),
+    ).toEqual([]);
+  });
+
+  it('not past the reminder window (inclusive edge)', () => {
+    const W = MEDICATION_REMINDER_WINDOW_MINUTES;
+    expect(findFollowUpDoses([med()], lateBy(W), afterDelay)).toHaveLength(1);
+    expect(findFollowUpDoses([med()], lateBy(W + 1), afterDelay)).toEqual([]);
+  });
+
+  it('not for a time no longer in the schedule', () => {
+    expect(
+      findFollowUpDoses(
+        [med({}, [SLOT + 60])],
+        lateBy(MEDICATION_FOLLOW_UP_DELAY_MINUTES),
+        afterDelay,
+      ),
+    ).toEqual([]);
   });
 });
 

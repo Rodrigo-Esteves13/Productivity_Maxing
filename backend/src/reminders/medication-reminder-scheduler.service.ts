@@ -15,7 +15,8 @@ export const MEDICATION_SCHEDULER_DISABLED_ENV =
  * todos os minutos. E idempotente: MedicationsService reclama cada toma
  * (remindedAt, condicional na BD) ANTES de enviar e e single-flight, por isso
  * o cron externo, este e outras instancias nunca enviam o mesmo aviso duas
- * vezes.
+ * vezes. O mesmo vale para o segundo aviso (followUpRemindedAt), que so
+ * chega a horas porque isto corre todos os minutos.
  */
 @Injectable()
 export class MedicationReminderSchedulerService {

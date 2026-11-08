@@ -34,6 +34,9 @@ export const MINUTES_PER_DAY = 1440;
 // Uma toma conta como "a horas de avisar" ate esta janela depois da hora
 // marcada; mais tarde que isso ja nao faz sentido apitar.
 export const MEDICATION_REMINDER_WINDOW_MINUTES = 60;
+// Segundo (e ultimo) aviso: se a toma foi avisada e continua por tomar este
+// tempo depois do primeiro push, manda mais um. So dentro da janela acima.
+export const MEDICATION_FOLLOW_UP_DELAY_MINUTES = 15;
 export const MEDICATION_PATH = '/wellbeing';
 
 // Medicacao "se necessario": registo por toma.

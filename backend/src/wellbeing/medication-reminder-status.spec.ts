@@ -56,6 +56,19 @@ describe('computeReminderSlotStates', () => {
     expect(s.takenAt).toBeNull();
   });
 
+  it('reports the follow-up time, null when none was sent', () => {
+    const remindedAt = new Date('2026-01-01T07:00:00Z');
+    const followUpRemindedAt = new Date('2026-01-01T07:15:00Z');
+    const out = computeReminderSlotStates(
+      [SLOT],
+      [{ slotMinutes: SLOT, takenAt: null, remindedAt, followUpRemindedAt }],
+      SLOT + 20,
+    )[0];
+    expect(out.state).toBe('reminded');
+    expect(out.followUpRemindedAt).toBe(followUpRemindedAt.toISOString());
+    expect(stateAt(SLOT + 20, { remindedAt }).followUpRemindedAt).toBeNull();
+  });
+
   it('taken wins over reminded', () => {
     const takenAt = new Date('2026-01-01T07:20:00Z');
     const s = stateAt(SLOT + 10, { takenAt, remindedAt: new Date() });
@@ -107,6 +120,10 @@ describe('MedicationsService.reminderStatus', () => {
       schedule: MedicationSchedule.DAILY,
     });
     expect(args.select.doses.where).toEqual({ userId: 'u1', date: today });
+    expect(
+      (args.select.doses as unknown as { select: Record<string, boolean> })
+        .select.followUpRemindedAt,
+    ).toBe(true);
     expect(out.windowMinutes).toBe(W);
     expect(out.medications[0].slots[0].state).toBe('due');
   });

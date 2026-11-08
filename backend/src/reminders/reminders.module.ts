@@ -8,6 +8,7 @@ import { RemindersController } from './reminders.controller';
 import { RemindersService } from './reminders.service';
 import { AbsenceLimitRemindersService } from './absence-limit-reminders.service';
 import { StreakRiskRemindersService } from './streak-risk-reminders.service';
+import { DueTodayRemindersService } from './due-today-reminders.service';
 import { MoneyRemindersService } from './money-reminders.service';
 import { BudgetAlertRemindersService } from './budget-alert-reminders.service';
 import { MedicationReminderSchedulerService } from './medication-reminder-scheduler.service';
@@ -25,6 +26,7 @@ import { MedicationReminderSchedulerService } from './medication-reminder-schedu
     RemindersService,
     AbsenceLimitRemindersService,
     StreakRiskRemindersService,
+    DueTodayRemindersService,
     MoneyRemindersService,
     BudgetAlertRemindersService,
     MedicationReminderSchedulerService,
