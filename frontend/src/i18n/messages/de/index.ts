@@ -36,6 +36,16 @@ import { approvalRules } from './approvalRules';
 import { risk } from './risk';
 import { teacher } from './teacher';
 import { ratings } from './ratings';
+import { status } from './status';
+import { packUpdatesWidget } from './packUpdatesWidget';
+import { distractionStats } from './distractionStats';
+import { financeExport } from './financeExport';
+import { medReminderStatus } from './medReminderStatus';
+import { moneySnapshot } from './moneySnapshot';
+import { ambientGlobal } from './ambientGlobal';
+import { financeFixes } from './financeFixes';
+import { focusHours } from './focusHours';
+import { financeImport } from './financeImport';
 
 export const de: Record<string, string> = {
   ...packs,
@@ -76,4 +86,14 @@ export const de: Record<string, string> = {
   ...risk,
   ...teacher,
   ...ratings,
+  ...status,
+  ...packUpdatesWidget,
+  ...distractionStats,
+  ...financeExport,
+  ...medReminderStatus,
+  ...moneySnapshot,
+  ...ambientGlobal,
+  ...financeFixes,
+  ...focusHours,
+  ...financeImport,
 };

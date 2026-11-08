@@ -14,6 +14,7 @@ import { UpdatePeriodDto } from './dto/update-period.dto';
 import {
   computeCreditWeightedAverage,
   computeCreditsSummary,
+  withInterimRounding,
   resolveRoundFinalGrade,
   GRADED_TASK_SELECT,
 } from './grade-average.util';
@@ -250,11 +251,13 @@ export class PeriodsService {
       period.programId,
     );
     // Tasks + seminarios/participacao (GradeComponent), no cenario pedido.
+    // So as notas reais sao arredondadas (nunca as preenchidas pelo plano).
     const items = await loadScenarioGradedItems(
       this.prisma,
       { periodId: id },
       { periodId: id },
       scenario,
+      program.roundInterimGrades,
     );
     const areas = await this.prisma.area.findMany({
       where: accessibleAreaWhere(userId),
@@ -294,7 +297,10 @@ export class PeriodsService {
       }),
       loadComponentGradedItems(this.prisma, { userId, periodId: id }),
     ]);
-    const items = [...tasks, ...componentItems];
+    const items = withInterimRounding(
+      [...tasks, ...componentItems],
+      program.roundInterimGrades,
+    );
     const shouldRound = resolveRoundFinalGrade(
       program.roundFinalGrade,
       period.roundFinalGrade,

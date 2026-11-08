@@ -447,7 +447,7 @@ export const extra: Record<string, string> = {
   "ui.deletedLower": "已删除",
   "ui.userWillBeBanned": "{name} 将被永久封禁，并立即在所有地方退出登录。",
   "ui.userWillBeSuspended": "{name} 将被暂停并立即退出登录，到下方日期后账户会自动恢复。",
-  "ui.showArchivedCount": "显示已归档（{count}）",
+  "ui.showArchivedCount": "显示30天前完成的（{count}）",
   "ui.postponedTimes": "已推迟 {count} 次",
   "ui.offlineBanner": "没有网络连接。在连接恢复前，部分操作可能无法使用。",
   "ui.nActive": "{count} 个启用",

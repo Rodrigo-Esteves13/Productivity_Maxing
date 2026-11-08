@@ -697,6 +697,8 @@ export interface AcademicProgram {
   // nearest whole number before the credit-weighted average is computed.
   // Periods can override this individually (see AcademicPeriod.roundFinalGrade).
   roundFinalGrade: boolean;
+  // Each interim grade (test, component) is rounded before averaging (15.5 counts as 16).
+  roundInterimGrades: boolean;
 }
 
 export interface AcademicPeriod {
@@ -1858,4 +1860,18 @@ export interface Flashcard {
   reps: number;
   lapses: number;
   createdAt: string;
+}
+
+export type MedicationReminderState = 'taken' | 'reminded' | 'due' | 'upcoming' | 'missed';
+
+export interface MedicationReminderSlotStatus {
+  slotMinutes: number;
+  state: MedicationReminderState;
+  remindedAt: string | null;
+  takenAt: string | null;
+}
+
+export interface MedicationReminderStatus {
+  windowMinutes: number;
+  medications: { medicationId: string; slots: MedicationReminderSlotStatus[] }[];
 }

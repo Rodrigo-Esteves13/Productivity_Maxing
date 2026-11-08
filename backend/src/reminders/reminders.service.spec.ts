@@ -3,6 +3,9 @@ import type { PadsService } from '../pads/pads.service';
 import type { MedicationsService } from '../wellbeing/medications.service';
 import { RemindersService } from './reminders.service';
 import type { AbsenceLimitRemindersService } from './absence-limit-reminders.service';
+import type { StreakRiskRemindersService } from './streak-risk-reminders.service';
+import type { MoneyRemindersService } from './money-reminders.service';
+import type { BudgetAlertRemindersService } from './budget-alert-reminders.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { MailService } from '../mail/mail.service';
 import type { PushService } from '../push/push.service';
@@ -66,11 +69,37 @@ function setup(
     {
       sendWeeklyReminders: jest.fn().mockResolvedValue(0),
     } as unknown as AbsenceLimitRemindersService,
+    {
+      sendReminders: jest.fn().mockResolvedValue(0),
+    } as unknown as StreakRiskRemindersService,
+    {
+      sendReminders: jest.fn().mockResolvedValue(0),
+    } as unknown as MoneyRemindersService,
+    {
+      sendReminders: jest.fn().mockResolvedValue(0),
+    } as unknown as BudgetAlertRemindersService,
   );
   return { service, prisma, mail, push };
 }
 
 describe('RemindersService.run', () => {
+  it('single-flight: an overlapping call gets the in-flight run', async () => {
+    const prefs = {
+      deadlineEmailReminders: false,
+      deadlinePushReminders: true,
+    };
+    const { service, prisma, push } = setup([task('a', 'u1', prefs)]);
+    const first = service.run(NOW);
+    const second = service.run(NOW);
+    expect(second).toBe(first);
+    await Promise.all([first, second]);
+    expect(prisma.task.findMany).toHaveBeenCalledTimes(1);
+    expect(push.notifyUser).toHaveBeenCalledTimes(1);
+    // Terminada, a proxima chamada corre outra vez.
+    await service.run(NOW);
+    expect(prisma.task.findMany).toHaveBeenCalledTimes(2);
+  });
+
   it('only asks Prisma for users with at least one reminder channel on', async () => {
     const { service, prisma } = setup([]);
     await service.run(NOW);
@@ -109,6 +138,9 @@ describe('RemindersService.run', () => {
       medicationUsersPushed: 0,
       personalRemindersSent: 0,
       absenceLimitUsersPushed: 0,
+      streakRiskUsersPushed: 0,
+      moneyUsersPushed: 0,
+      budgetUsersPushed: 0,
       expiredPadsDeleted: 0,
       staleSessionsDeleted: 0,
     });
@@ -160,6 +192,9 @@ describe('RemindersService.run', () => {
       medicationUsersPushed: 0,
       personalRemindersSent: 0,
       absenceLimitUsersPushed: 0,
+      streakRiskUsersPushed: 0,
+      moneyUsersPushed: 0,
+      budgetUsersPushed: 0,
       expiredPadsDeleted: 0,
       staleSessionsDeleted: 0,
     });

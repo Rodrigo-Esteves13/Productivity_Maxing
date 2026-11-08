@@ -122,6 +122,15 @@ export class WellbeingController {
     return this.medications.day(user.id, query.date);
   }
 
+  @Get('medications/reminder-status')
+  @ApiOperation({
+    summary:
+      'Reminder state today (taken, reminded, due, upcoming, missed) per dose of your daily medications with reminders on.',
+  })
+  medicationReminderStatus(@CurrentUser() user: AuthenticatedUser) {
+    return this.medications.reminderStatus(user.id);
+  }
+
   @Get('medications/history')
   @ApiOperation({
     summary:

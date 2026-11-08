@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type SyntheticEvent } from 'react';
+import { lazy, Suspense, useEffect, useState, type SyntheticEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { loginRequest, resendVerificationRequest } from '../api/userService';
@@ -31,7 +31,7 @@ export default function Login() {
     path: '/login',
   });
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated, isAuthLoading } = useAuth();
   const [searchParams] = useSearchParams();
   // e.g. Login reached from SharedNotebookEntry.tsx's "Log in" button on
   // an AUTHORIZED share, so the person lands back where they started
@@ -41,6 +41,13 @@ export default function Login() {
   const safeRedirect = redirectParam && isSafeRedirectPath(redirectParam) ? redirectParam : null;
 
   const [email, setEmail] = useState('');
+
+  // Sessao ja valida (ex: tab suspensa que voltou ao /login): nao mostra o
+  // formulario, segue para o destino.
+  useEffect(() => {
+    if (isAuthLoading || !isAuthenticated) return;
+    navigate(safeRedirect ?? '/dashboard', { replace: true });
+  }, [isAuthLoading, isAuthenticated, safeRedirect, navigate]);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   // Distinto de `error`: SUSPENDED/BANNED não é "credenciais erradas",

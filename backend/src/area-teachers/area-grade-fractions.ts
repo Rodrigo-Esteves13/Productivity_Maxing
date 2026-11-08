@@ -3,6 +3,7 @@ import {
   computeWeightedAverage,
   GRADED_TASK_SELECT,
   parseGradeScale,
+  withInterimRounding,
   type AreaGradedTaskLike,
 } from '../academic-programs/grade-average.util';
 import { loadComponentGradedItems } from '../grade-components/grade-component-items';
@@ -38,12 +39,20 @@ export async function loadAreaGradeFractions(
         program: { userId },
         ...(periodIds ? { id: { in: periodIds } } : {}),
       },
-      select: { id: true, program: { select: { gradeScale: true } } },
+      select: {
+        id: true,
+        program: { select: { gradeScale: true, roundInterimGrades: true } },
+      },
     }),
   ]);
 
   const scaleByPeriod = new Map(
     periods.map((p) => [p.id, parseGradeScale(p.program.gradeScale)]),
+  );
+  // Opcao do programa de cada periodo: nota intercalar arredondada na escala
+  // original, antes de normalizar para 0-1.
+  const roundByPeriod = new Map(
+    periods.map((p) => [p.id, p.program.roundInterimGrades]),
   );
   const fallbackScale = parseGradeScale('');
   const normalised: AreaGradedTaskLike[] = [...tasks, ...componentItems]
@@ -51,10 +60,13 @@ export async function loadAreaGradeFractions(
     .map((item) => {
       const scale =
         (item.periodId && scaleByPeriod.get(item.periodId)) || fallbackScale;
+      const roundInterim =
+        (item.periodId && roundByPeriod.get(item.periodId)) || false;
+      const [rounded] = withInterimRounding([item], roundInterim);
       return {
-        ...item,
+        ...rounded,
         realGrade:
-          ((item.realGrade as number) - scale.min) / (scale.max - scale.min),
+          ((rounded.realGrade as number) - scale.min) / (scale.max - scale.min),
       };
     });
 

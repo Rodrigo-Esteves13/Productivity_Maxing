@@ -2,10 +2,16 @@
 // muitas vezes em 429/403 (rateLimitExceeded) e 5xx passageiros, e a pessoa
 // tinha de carregar em "sync" varias vezes. Aqui volta-se a tentar com
 // espera exponencial (respeitando Retry-After) antes de dar erro.
+import { GOOGLE_API_TIMEOUT_MS } from '../common/http-resilience.constants';
 
 export const GOOGLE_MAX_RETRIES = 4;
 export const GOOGLE_RETRY_BASE_MS = 500;
 export const GOOGLE_RETRY_MAX_MS = 8_000;
+// Um pedido que estourou o timeout so e repetido isto de vezes: a Google
+// pendurada faria cada operacao esperar GOOGLE_MAX_RETRIES timeouts e o
+// sync inteiro demorar quase uma hora.
+export const GOOGLE_MAX_TIMEOUT_RETRIES = 1;
+const TIMEOUT_ERROR_NAME = 'TimeoutError';
 
 const HTTP_FORBIDDEN = 403;
 const HTTP_TOO_MANY_REQUESTS = 429;
@@ -47,18 +53,30 @@ export function retryDelayMs(
   );
 }
 
+const isTimeoutError = (error: unknown): boolean =>
+  (error as { name?: string } | null)?.name === TIMEOUT_ERROR_NAME;
+
 export async function googleFetch(
   url: string,
   init: RequestInit,
   sleep: Sleep = defaultSleep,
 ): Promise<Response> {
+  let timeouts = 0;
   for (let attempt = 0; ; attempt++) {
     const isLast = attempt >= GOOGLE_MAX_RETRIES;
     let res: Response;
     try {
-      res = await fetch(url, init);
+      // Timeout novo em cada tentativa: um pedido pendurado nao prende o sync.
+      res = await fetch(url, {
+        ...init,
+        signal: init.signal ?? AbortSignal.timeout(GOOGLE_API_TIMEOUT_MS),
+      });
     } catch (error) {
-      // Falha de rede: repete; na ultima tentativa propaga.
+      // Falha de rede: repete; na ultima tentativa propaga. Timeout: no
+      // maximo GOOGLE_MAX_TIMEOUT_RETRIES repeticoes.
+      if (isTimeoutError(error) && timeouts++ >= GOOGLE_MAX_TIMEOUT_RETRIES) {
+        throw error;
+      }
       if (isLast) throw error;
       await sleep(retryDelayMs(attempt, null));
       continue;

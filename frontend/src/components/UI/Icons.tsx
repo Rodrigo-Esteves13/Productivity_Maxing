@@ -104,6 +104,11 @@ export {
   User as UserIcon,
   // Pagina Money: atualizar precos das posicoes.
   RefreshCw as RefreshIcon,
+  // Controlo global do som de fundo do Focus.
+  Volume2 as VolumeIcon,
+  VolumeX as VolumeOffIcon,
+  // Cartao "Money snapshot" do Dashboard.
+  Wallet as WalletIcon,
 } from 'lucide-react';
 
 export function GoogleIcon(props: SVGProps<SVGSVGElement>) {

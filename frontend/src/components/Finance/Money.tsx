@@ -7,8 +7,12 @@ import { useI18n } from '../../i18n/useI18n';
 type MoneyFormatter = (cents: number, currency: string) => string;
 
 interface PrivateTextProps {
-  /** Monta o texto; `money` devolve o valor real ou a mascara. */
-  render: (money: MoneyFormatter) => string;
+  /**
+   * Monta o texto; `money` devolve o valor real ou a mascara. `masked` diz se
+   * o modo privacidade esta a esconder (para texto que nao e dinheiro, como
+   * o nome de uma subscricao).
+   */
+  render: (money: MoneyFormatter, masked: boolean) => string;
   className?: string;
 }
 
@@ -31,7 +35,7 @@ export function PrivateText({ render, className = '' }: PrivateTextProps) {
     if (!enabled) setRevealed(false);
   }, [enabled]);
 
-  if (!hidden) return <span className={className}>{render((cents, currency) => formatMoney(cents, currency, lang))}</span>;
+  if (!hidden) return <span className={className}>{render((cents, currency) => formatMoney(cents, currency, lang), false)}</span>;
   return (
     <button
       type="button"
@@ -40,7 +44,7 @@ export function PrivateText({ render, className = '' }: PrivateTextProps) {
       title={t('finance.privacy.reveal')}
       className={`cursor-pointer rounded-sm bg-transparent p-0 text-inherit focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 ${className}`}
     >
-      {render(() => PRIVACY_MASK)}
+      {render(() => PRIVACY_MASK, true)}
     </button>
   );
 }

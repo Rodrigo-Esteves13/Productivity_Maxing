@@ -10,6 +10,7 @@ import {
 import { SessionStateService } from '../../account-status/session-state.service';
 import { OAuthAccountConflictException } from '../exceptions/oauth-account-conflict.exception';
 import { GOOGLE_REVOKE_URL } from '../google-oauth.constants';
+import { OAUTH_HTTP_TIMEOUT_MS } from '../../common/http-resilience.constants';
 import { neutralizePreexistingCredential } from '../oauth-merge.policy';
 import {
   shouldSyncProviderAvatar,
@@ -330,6 +331,7 @@ export class OAuthIdentityService {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({ token: refreshToken }),
+          signal: AbortSignal.timeout(OAUTH_HTTP_TIMEOUT_MS),
         });
         // Best-effort: se a Google já não reconhece o token (ex: pessoa
         // revogou manualmente em myaccount.google.com/permissions antes),

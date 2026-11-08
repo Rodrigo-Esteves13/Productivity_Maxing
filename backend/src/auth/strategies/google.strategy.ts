@@ -10,6 +10,7 @@ import {
 } from '../cookie.config';
 import { isValidLoginState } from '../guards/oauth-guard.helpers';
 import { GOOGLE_TOKENINFO_URL } from '../google-oauth.constants';
+import { OAUTH_HTTP_TIMEOUT_MS } from '../../common/http-resilience.constants';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
@@ -118,7 +119,9 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       // Log explícito aqui: done(err) devolve sempre "Internal server
       // error" genérico ao browser (não é um HttpException), por isso sem
       // isto a causa real nunca aparecia em lado nenhum, nem no terminal.
-      this.logger.error('Falha no callback OAuth Google', err as Error);
+      this.logger.error(
+        `Falha no callback OAuth Google: ${(err as Error).message}`,
+      );
       done(err as Error, undefined);
     }
   }
@@ -134,11 +137,13 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     accessToken: string,
   ): Promise<string | undefined> {
     try {
-      const res = await fetch(
-        `${GOOGLE_TOKENINFO_URL}?access_token=${encodeURIComponent(
-          accessToken,
-        )}`,
-      );
+      // POST com o token no corpo: nunca vai para URLs nem logs de proxy.
+      const res = await fetch(GOOGLE_TOKENINFO_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ access_token: accessToken }),
+        signal: AbortSignal.timeout(OAUTH_HTTP_TIMEOUT_MS),
+      });
       if (!res.ok) {
         this.logger.warn(
           `tokeninfo devolveu ${res.status} ao verificar o scope concedido`,
@@ -149,8 +154,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       return data.scope;
     } catch (err) {
       this.logger.warn(
-        'Falha ao consultar tokeninfo para obter o scope',
-        err as Error,
+        `Falha ao consultar tokeninfo para obter o scope: ${(err as Error).message}`,
       );
       return undefined;
     }

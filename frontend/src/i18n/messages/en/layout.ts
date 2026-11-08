@@ -6,6 +6,8 @@ export const layout: Record<string, string> = {
   'program.round.label': "Round each subject's final grade",
   'program.round.createHelp': "Rounds each subject to the nearest whole number before computing the credit-weighted average - matches how most universities record final grades. Individual periods can override this later.",
   'program.round.editHelp': "Default for every period in this program. A period can still override it individually.",
+  'program.roundInterim.label': "Round interim grades",
+  'program.roundInterim.help': "Each test or component grade is rounded to a whole number before averaging (15.5 counts as 16).",
   'program.create.error': "Could not create the program. Try again.",
   'program.create.submit': "Create program",
   'program.settings': "Program settings",

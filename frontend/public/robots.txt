@@ -12,6 +12,7 @@ Allow: /privacy
 Allow: /terms
 Allow: /eula
 Allow: /dmca
+Allow: /status
 Disallow: /dashboard
 Disallow: /tasks
 Disallow: /focus

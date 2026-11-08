@@ -7,6 +7,7 @@ import IdleSessionPrompt from './focus/IdleSessionPrompt';
 import TimerEndPrompt from './focus/TimerEndPrompt';
 import RateFocusPrompt from './focus/RateFocusPrompt';
 import SessionClock from './focus/SessionClock';
+import AmbientMiniControl from './focus/AmbientMiniControl';
 import { useI18n } from '../../i18n/useI18n';
 
 // Mounted once, app-wide (see AppRouter.tsx, next to CommandPalette) - not
@@ -59,6 +60,7 @@ export default function GlobalStudyTimer() {
               {timerPlan === null ? label : t('ui.labelLeft', { label })}
             </span>
           </div>
+          <AmbientMiniControl />
           <button
             type="button"
             onClick={() => void handleStop()}

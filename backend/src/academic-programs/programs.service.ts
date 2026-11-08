@@ -49,6 +49,7 @@ export class ProgramsService {
         order: dto.order ?? 0,
         // Omitted (undefined) falls through to the schema default (true).
         roundFinalGrade: dto.roundFinalGrade,
+        roundInterimGrades: dto.roundInterimGrades,
       },
     });
   }
@@ -107,7 +108,11 @@ export class ProgramsService {
   ) {
     const program = await this.findOwnedOrThrow(userId, id);
     // Tasks + seminarios/participacao (GradeComponent), no cenario pedido.
-    const items = await this.programItems(id, scenario);
+    const items = await this.programItems(
+      id,
+      scenario,
+      program.roundInterimGrades,
+    );
     const areas = await this.prisma.area.findMany({
       where: accessibleAreaWhere(userId),
       select: { id: true, credits: true },
@@ -139,7 +144,11 @@ export class ProgramsService {
     scenario: GradeScenario = 'real',
   ) {
     const program = await this.findOwnedOrThrow(userId, id);
-    const items = await this.programItems(id, scenario);
+    const items = await this.programItems(
+      id,
+      scenario,
+      program.roundInterimGrades,
+    );
     const areas = await this.prisma.area.findMany({
       where: accessibleAreaWhere(userId),
       select: { id: true, name: true, credits: true },
@@ -174,7 +183,11 @@ export class ProgramsService {
       select: { id: true, credits: true },
     });
 
-    const items = await this.programItems(id, scenario);
+    const items = await this.programItems(
+      id,
+      scenario,
+      program.roundInterimGrades,
+    );
 
     return periods.map((period) => {
       const shouldRound = resolveRoundFinalGrade(
@@ -197,13 +210,19 @@ export class ProgramsService {
   }
 
   // Tasks + componentes de todos os periodos deste programa (o chamador ja
-  // validou a posse com findOwnedOrThrow).
-  private programItems(programId: string, scenario: GradeScenario) {
+  // validou a posse com findOwnedOrThrow). O loader so arredonda as notas
+  // reais, nunca as preenchidas pelo cenario 'plan'.
+  private async programItems(
+    programId: string,
+    scenario: GradeScenario,
+    roundInterimGrades: boolean,
+  ) {
     return loadScenarioGradedItems(
       this.prisma,
       { period: { programId } },
       { period: { programId } },
       scenario,
+      roundInterimGrades,
     );
   }
 }

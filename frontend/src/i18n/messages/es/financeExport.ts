@@ -1,0 +1,17 @@
+export const financeExport: Record<string, string> = {
+  'financeExport.button': "Exportar CSV",
+  'financeExport.hint': "Descarga todos tus ingresos, gastos y deudas en un archivo de hoja de cálculo.",
+  'financeExport.error': "No se pudieron exportar tus datos de dinero.",
+  'financeExport.palette': "Exportar dinero en CSV",
+  'financeExport.paymentNote': "Pago parcial recibido",
+  'financeExport.col.date': "Fecha",
+  'financeExport.col.kind': "Tipo",
+  'financeExport.col.category': "Categoría",
+  'financeExport.col.amount': "Importe",
+  'financeExport.col.note': "Nota",
+  'financeExport.col.account': "Cuenta",
+  'financeExport.col.repeats': "Se repite",
+  'financeExport.col.isOwed': "Me deben",
+  'financeExport.col.debtor': "Deudor",
+  'financeExport.col.received': "Recibido el",
+};

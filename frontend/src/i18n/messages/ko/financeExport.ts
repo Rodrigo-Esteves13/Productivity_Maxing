@@ -1,0 +1,17 @@
+export const financeExport: Record<string, string> = {
+  'financeExport.button': "CSV 내보내기",
+  'financeExport.hint': "모든 수입, 지출, 빌려준 돈을 스프레드시트 파일로 내려받습니다.",
+  'financeExport.error': "돈 데이터를 내보내지 못했습니다.",
+  'financeExport.palette': "돈 데이터를 CSV로 내보내기",
+  'financeExport.paymentNote': "일부 금액 수령",
+  'financeExport.col.date': "날짜",
+  'financeExport.col.kind': "종류",
+  'financeExport.col.category': "카테고리",
+  'financeExport.col.amount': "금액",
+  'financeExport.col.note': "메모",
+  'financeExport.col.account': "계좌",
+  'financeExport.col.repeats': "반복",
+  'financeExport.col.isOwed': "받을 돈",
+  'financeExport.col.debtor': "채무자",
+  'financeExport.col.received': "수령일",
+};

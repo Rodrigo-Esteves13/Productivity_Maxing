@@ -63,6 +63,7 @@ import {
   TurmaNote,
   TurmaSubjectEntry,
   Changelog,
+  Status,
   NotFound,
   ResetPassword,
   VerifyEmail,
@@ -120,6 +121,7 @@ export default function AppRouter() {
           <Route path="/finance" element={<PrivateRoute><Finance /></PrivateRoute>} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           {/* Públicas - o consent screen do Google OAuth aponta para estas */}
+          <Route path="/status" element={<Status />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/eula" element={<Eula />} />

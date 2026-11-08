@@ -48,6 +48,7 @@ export const Turmas = lazyWithPreload(() => import('../pages/Turmas'));
 export const TurmaPage = lazyWithPreload(() => import('../pages/TurmaPage'));
 export const TurmaNote = lazyWithPreload(() => import('../pages/TurmaNote'));
 export const TurmaSubjectEntry = lazyWithPreload(() => import('../pages/TurmaSubjectEntry'));
+export const Status = lazyWithPreload(() => import('../pages/Status'));
 export const Changelog = lazyWithPreload(() => import('../pages/Changelog'));
 export const NotFound = lazyWithPreload(() => import('../pages/NotFound'));
 export const ResetPassword = lazyWithPreload(() => import('../pages/ResetPassword'));
@@ -73,6 +74,7 @@ const BY_SECTION: Record<string, { preload: () => Promise<unknown> }> = {
   pad: Pad,
   turmas: Turmas,
   changelog: Changelog,
+  status: Status,
   agent: Agent,
   developer: Developer,
   devices: Devices,

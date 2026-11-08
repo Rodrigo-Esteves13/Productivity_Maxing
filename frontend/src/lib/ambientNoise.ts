@@ -42,36 +42,82 @@ const fillBrown: Filler = (out) => {
 
 const FILLERS: Record<AmbientKind, Filler> = { white: fillWhite, pink: fillPink, brown: fillBrown };
 
-export interface AmbientPlayer {
+export interface AmbientEngine {
+  /** Comeca (ou troca para outro tipo de ruido). Tem de vir de um clique (autoplay); pode lancar. */
+  play: (kind: AmbientKind, volume: number) => void;
   setVolume: (volume: number) => void;
+  /** Desliga e fecha o AudioContext. Pode voltar a chamar play() depois. */
   stop: () => void;
 }
 
-/** Comeca a tocar. Tem de ser chamado a partir de um clique (autoplay). */
-export function startAmbient(kind: AmbientKind, volume: number): AmbientPlayer {
-  const context = new AudioContext();
-  const buffer = context.createBuffer(1, context.sampleRate * BUFFER_SECONDS, context.sampleRate);
-  FILLERS[kind](buffer.getChannelData(0));
+interface Voice {
+  source: AudioBufferSourceNode;
+  gain: GainNode;
+}
 
-  const source = context.createBufferSource();
-  source.buffer = buffer;
-  source.loop = true;
-  const gain = context.createGain();
-  gain.gain.setValueAtTime(0, context.currentTime);
-  gain.gain.linearRampToValueAtTime(volume, context.currentTime + FADE_SECONDS);
-  source.connect(gain).connect(context.destination);
-  source.start();
+// Um unico AudioContext por sessao de som: so e criado no primeiro play()
+// (dentro do clique) e fechado no stop(). Trocar de tipo faz crossfade na
+// mesma context em vez de abrir outra.
+export function createAmbientEngine(): AmbientEngine {
+  let context: AudioContext | null = null;
+  let master: GainNode | null = null;
+  let voice: Voice | null = null;
+  let buffers = new Map<AmbientKind, AudioBuffer>();
+
+  const bufferFor = (ctx: AudioContext, kind: AmbientKind): AudioBuffer => {
+    const cached = buffers.get(kind);
+    if (cached) return cached;
+    const buffer = ctx.createBuffer(1, ctx.sampleRate * BUFFER_SECONDS, ctx.sampleRate);
+    FILLERS[kind](buffer.getChannelData(0));
+    buffers.set(kind, buffer);
+    return buffer;
+  };
+
+  // Ancora a rampa no valor atual: depois de um setTargetAtTime a rampa
+  // partia do ultimo evento agendado e dava um estalo.
+  const fadeOut = (ctx: AudioContext, target: Voice) => {
+    const now = ctx.currentTime;
+    target.gain.gain.cancelScheduledValues(now);
+    target.gain.gain.setValueAtTime(target.gain.gain.value, now);
+    target.gain.gain.linearRampToValueAtTime(0, now + FADE_SECONDS);
+    target.source.stop(now + FADE_SECONDS);
+  };
 
   return {
-    setVolume: (next) => gain.gain.setTargetAtTime(next, context.currentTime, FADE_SECONDS / 4),
+    play: (kind, volume) => {
+      if (!context || !master) {
+        context = new AudioContext();
+        master = context.createGain();
+        master.gain.value = volume;
+        master.connect(context.destination);
+        buffers = new Map();
+      }
+      if (context.state === 'suspended') void context.resume();
+      const source = context.createBufferSource();
+      source.buffer = bufferFor(context, kind);
+      source.loop = true;
+      const gain = context.createGain();
+      gain.gain.setValueAtTime(0, context.currentTime);
+      gain.gain.linearRampToValueAtTime(1, context.currentTime + FADE_SECONDS);
+      source.connect(gain).connect(master);
+      source.start();
+      master.gain.setTargetAtTime(volume, context.currentTime, FADE_SECONDS / 4);
+      if (voice) fadeOut(context, voice);
+      voice = { source, gain };
+    },
+    setVolume: (next) => {
+      if (context && master) master.gain.setTargetAtTime(next, context.currentTime, FADE_SECONDS / 4);
+    },
     stop: () => {
-      // Ancora a rampa no valor atual: depois de um setTargetAtTime (volume)
-      // a rampa partia do ultimo evento agendado e dava um estalo.
-      const now = context.currentTime;
-      gain.gain.cancelScheduledValues(now);
-      gain.gain.setValueAtTime(gain.gain.value, now);
-      gain.gain.linearRampToValueAtTime(0, now + FADE_SECONDS);
-      window.setTimeout(() => void context.close(), FADE_SECONDS * 1000);
+      const closing = context;
+      const current = voice;
+      context = null;
+      master = null;
+      voice = null;
+      buffers = new Map();
+      if (!closing) return;
+      if (current) fadeOut(closing, current);
+      window.setTimeout(() => void closing.close(), FADE_SECONDS * 1000);
     },
   };
 }

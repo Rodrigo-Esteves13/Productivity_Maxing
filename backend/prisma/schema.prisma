@@ -298,6 +298,7 @@ model User {
   turmaDeadlineTasks    TurmaDeadlineTask[]
   financeSettings       FinanceSettings?
   financeEntries        FinanceEntry[]
+  financeOwedPayments   FinanceOwedPayment[]
   financeGoals          FinanceGoal[]
   financeAccounts       FinanceAccount[]
   financeHoldings       FinanceHolding[]
@@ -518,6 +519,9 @@ model AcademicProgram {
   // AcademicPeriod.roundFinalGrade can override this per period; null
   // there means "inherit this default".
   roundFinalGrade Boolean  @default(true)
+  // true = cada nota intercalar (teste, componente) e arredondada ao inteiro
+  // antes das medias (15.5 conta como 16). false = notas como foram dadas.
+  roundInterimGrades Boolean @default(false)
 
   user           User             @relation("UserPrograms", fields: [userId], references: [id], onDelete: Cascade)
   periods        AcademicPeriod[]
@@ -2544,11 +2548,32 @@ model FinanceEntry {
 
   user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   account FinanceAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  owedPayments FinanceOwedPayment[]
 
   @@unique([userId, clientRequestId])
   @@index([userId, date])
   @@index([userId, isOwed])
   @@index([accountId])
+}
+
+/// Pagamento parcial de uma divida a favor da pessoa (FinanceEntry.isOwed).
+/// Cada pagamento tambem cria uma entrada INCOME normal; o principal em
+/// divida desce. Quando chega a 0 a divida e apagada e o historico fica aqui
+/// (entryId passa a null, debtorName guarda o nome).
+model FinanceOwedPayment {
+  id          String   @id @default(uuid())
+  userId      String
+  entryId     String?
+  debtorName  String?  @db.VarChar(80)
+  amountCents Int
+  paidAt      DateTime
+  createdAt   DateTime @default(now())
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entry FinanceEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
+
+  @@index([userId, paidAt])
+  @@index([entryId])
 }
 
 enum FinanceAccountType {

@@ -1,5 +1,9 @@
 import type { RiskComponentInput } from '../approval-rules/approval-rules.types';
 import { computeComponentGrade } from '../grade-components/grade-component.util';
+import {
+  roundInterimGrade,
+  withInterimRounding,
+} from '../academic-programs/grade-average.util';
 import type { GradeAggregationKind } from '../grade-components/grade-components.constants';
 import { resolveStudyMinutes } from '../common/session-minutes.util';
 import { absenceShare, MIN_HELD_CLASSES } from '../schedule/absence-limit.util';
@@ -36,11 +40,15 @@ export interface RiskComponentRow {
  * Task sem peso nao e componente (nao conta nada para o risco, ao contrario
  * das medias simples): senao virava um componente de 1% que disparava as
  * regras duras (nota minima por componente) com muito pouca informacao.
+ * roundInterimGrades (opcao do programa): cada nota de task e de componente
+ * e arredondada ao inteiro antes de qualquer conta (15.5 conta como 16).
  */
 export function buildRiskComponents(
-  tasks: RiskTaskRow[],
+  rawTasks: RiskTaskRow[],
   components: RiskComponentRow[],
+  roundInterimGrades = false,
 ): RiskComponentInput[] {
+  const tasks = withInterimRounding(rawTasks, roundInterimGrades);
   const result: RiskComponentInput[] = [];
   const series = new Map<
     string,
@@ -83,10 +91,13 @@ export function buildRiskComponents(
     result.push({
       label: component.name,
       weightPct: component.weightPercentage,
-      grade: computeComponentGrade(
-        component.entries.map((e) => e.grade),
-        component.aggregation,
-        component.bestOfCount,
+      grade: roundInterimGrade(
+        computeComponentGrade(
+          component.entries.map((e) => e.grade),
+          component.aggregation,
+          component.bestOfCount,
+        ),
+        roundInterimGrades,
       ),
     });
   }

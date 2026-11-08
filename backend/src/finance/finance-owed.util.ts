@@ -60,6 +60,14 @@ export interface OwedInput {
   latePaymentRiskPct: number | null;
   interestRatePct: number | null;
   interestKind: FinanceInterestKind | null;
+  /** Pagamentos parciais ja recebidos (o principal em divida ja os desconta). */
+  payments?: { id: string; amountCents: number; paidAt: Date }[];
+}
+
+export interface OwedPaymentItem {
+  id: string;
+  amountCents: number;
+  paidAt: string;
 }
 
 export interface OwedItem {
@@ -84,6 +92,9 @@ export interface OwedItem {
   daysLate: number;
   /** Valor se pagar OWED_LATE_SCENARIO_DAYS depois do prazo (ou de hoje, se ja passou). */
   lateScenario: { date: string; valueCents: number } | null;
+  /** Pagamentos parciais, do mais recente para o mais antigo. */
+  payments: OwedPaymentItem[];
+  paidCents: number;
 }
 
 /** Uma divida vista hoje. */
@@ -98,6 +109,13 @@ export function owedItem(o: OwedInput, today: Date): OwedItem {
     : valueTodayCents;
   const overdue = o.expectedDate !== null && o.expectedDate < today;
   const risk = o.latePaymentRiskPct ?? 0;
+  const payments = [...(o.payments ?? [])]
+    .sort((a, b) => b.paidAt.getTime() - a.paidAt.getTime())
+    .map((p) => ({
+      id: p.id,
+      amountCents: p.amountCents,
+      paidAt: toDateKey(p.paidAt),
+    }));
   const lateFrom = overdue ? today : o.expectedDate;
   const lateDate = lateFrom
     ? addUtcDays(lateFrom, OWED_LATE_SCENARIO_DAYS)
@@ -122,6 +140,8 @@ export function owedItem(o: OwedInput, today: Date): OwedItem {
     lateScenario: lateDate
       ? { date: toDateKey(lateDate), valueCents: value(lateDate) }
       : null,
+    payments,
+    paidCents: payments.reduce((a, p) => a + p.amountCents, 0),
   };
 }
 

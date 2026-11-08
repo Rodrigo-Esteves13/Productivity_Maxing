@@ -94,6 +94,49 @@ export const getStudyHeatmap = async (): Promise<HeatmapCell[]> => {
   return response.data;
 };
 
+// Distracoes por hora de foco (hora do dia em Lisboa, Area, esforco da task).
+// `lowSample`: amostra pequena, mostrar como sinal inicial. `focusHours` e o
+// denominador de `distractionsPerHour`.
+export interface DistractionBucket {
+  sessions: number;
+  totalMinutes: number;
+  distractions: number;
+  focusHours: number;
+  distractionsPerHour: number;
+  lowSample: boolean;
+}
+
+export interface DistractionHourBucket extends DistractionBucket {
+  hour: number;
+}
+
+export interface DistractionAreaBucket extends DistractionBucket {
+  areaId: string | null;
+  areaName: string | null;
+  areaColorHex: string | null;
+}
+
+export interface DistractionEffortBucket extends DistractionBucket {
+  effort: string;
+}
+
+export interface DistractionStats {
+  windowDays: number;
+  minSessions: number;
+  totalSessions: number;
+  byHour: DistractionHourBucket[];
+  byArea: DistractionAreaBucket[];
+  byEffort: DistractionEffortBucket[];
+}
+
+export const getDistractionStats = async (days?: number, signal?: AbortSignal): Promise<DistractionStats> => {
+  const response = await api.get<DistractionStats>('/study-sessions/distraction-stats', {
+    params: days ? { days } : undefined,
+    signal,
+  });
+  return response.data;
+};
+
 // Per-day totals for the last `days` days (today included) - powers the
 // activity heatmap/streak widget on the Dashboard.
 export interface DailyStudyTotal {

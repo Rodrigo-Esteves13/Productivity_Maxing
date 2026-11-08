@@ -1,4 +1,3 @@
-import { MINUTES_PER_DAY, MINUTES_PER_HOUR } from '../common/time.constants';
 import {
   BadRequestException,
   ConflictException,
@@ -16,17 +15,19 @@ import {
   toDateKey,
 } from '../common/date-key.util';
 import { CalendarService } from './calendar.service';
-import { buildDesiredEvents, diffEvents } from './schedule-sync.builder';
+import {
+  buildDesiredEvents,
+  diffEvents,
+  isAllDayEvent,
+  toGoogleEventBody,
+} from './schedule-sync.builder';
 import { ItineraryService } from '../schedule/itinerary.service';
 import { flattenItinerary } from '../schedule/itinerary.builder';
 import {
-  CALENDAR_TIME_ZONE,
-  COLOR_ID_BY_KIND,
   GOOGLE_CONCURRENCY,
   MAX_OPERATIONS_PER_SYNC,
   MAX_PREVIEW_ITEMS,
   MAX_REMOVE_ALL_PER_REQUEST,
-  PMAXING_EVENT_MARKER,
 } from './schedule-sync.constants';
 import type {
   DesiredEvent,
@@ -191,9 +192,11 @@ export class ScheduleSyncService {
     const rangeEnd = addUtcDays(today, days - 1);
     const todayKey = toDateKey(today);
 
-    const [classes, shifts, plan, existingRows] = await Promise.all([
+    const [classes, allShifts, plan, existingRows] = await Promise.all([
       this.scheduleService.findRange(userId, today, rangeEnd),
-      this.workShiftsService.expandRange(userId, todayKey, toDateKey(rangeEnd)),
+      this.workShiftsService.expandRange(userId, todayKey, toDateKey(rangeEnd), {
+        includeSkipped: true,
+      }),
       this.studyPlanService.generate(userId, days),
       this.prisma.calendarSyncedEvent.findMany({
         where: { userId, windowDate: { gte: today, lte: rangeEnd } },
@@ -210,6 +213,20 @@ export class ScheduleSyncService {
       }),
     ]);
 
+    // Turnos que acontecem vs. dias de feriado sem trabalho (so esses ficam
+    // de fora do itinerario e passam a evento "No work").
+    const shifts = allShifts.filter((s) => !s.skipped);
+    // Um evento por local e dia, mesmo com varios turnos nesse dia.
+    const holidayByKey = new Map(
+      allShifts
+        .filter((s) => s.skipped === 'HOLIDAY')
+        .map((s) => [
+          `${s.commitmentId}:${s.date}`,
+          { commitmentId: s.commitmentId, date: s.date, label: s.label },
+        ]),
+    );
+    const holidays = [...holidayByKey.values()];
+
     const classInputs = classes.map((c) => ({
       id: c.id,
       date: toDateKey(c.date),
@@ -221,6 +238,7 @@ export class ScheduleSyncService {
     );
 
     const desired = buildDesiredEvents({
+      holidays,
       classes: classes.map((c) => ({
         id: c.id,
         date: toDateKey(c.date),
@@ -294,40 +312,13 @@ export class ScheduleSyncService {
 
   // --------------------------------------------------------------- Google
 
-  private toGoogleDateTime(date: string, minutes: number): string {
-    // 24:00 não existe em RFC3339: meia-noite é 00:00 do dia seguinte.
-    const dayOffset = Math.floor(minutes / MINUTES_PER_DAY);
-    const dayKey = toDateKey(addUtcDays(parseDateKey(date), dayOffset));
-    const inDay = minutes % MINUTES_PER_DAY;
-    const hh = String(Math.floor(inDay / MINUTES_PER_HOUR)).padStart(2, '0');
-    const mm = String(inDay % MINUTES_PER_HOUR).padStart(2, '0');
-    return `${dayKey}T${hh}:${mm}:00`;
-  }
-
   private toGoogleEvent(event: DesiredEvent) {
-    return {
-      summary: event.title,
-      description: event.description ?? undefined,
-      location: event.location ?? undefined,
-      start: {
-        dateTime: this.toGoogleDateTime(event.date, event.startMinutes),
-        timeZone: CALENDAR_TIME_ZONE,
-      },
-      end: {
-        dateTime: this.toGoogleDateTime(event.date, event.endMinutes),
-        timeZone: CALENDAR_TIME_ZONE,
-      },
-      colorId: COLOR_ID_BY_KIND[event.kind],
-      // Sem notificações: aulas e blocos de estudo em massa não devem
-      // apitar no telemóvel a cada evento.
-      reminders: { useDefault: false },
-      extendedProperties: { private: { pmaxing: PMAXING_EVENT_MARKER } },
-    };
+    return toGoogleEventBody(event);
   }
 
   private async googleRequest(
     ctx: CalendarContext,
-    method: 'POST' | 'PATCH' | 'DELETE',
+    method: 'POST' | 'PATCH' | 'PUT' | 'DELETE',
     eventId: string | null,
     body?: unknown,
   ): Promise<Response> {
@@ -388,9 +379,12 @@ export class ScheduleSyncService {
     desired: DesiredEvent,
     existing: ExistingSyncedEvent,
   ): Promise<void> {
+    // Dia inteiro: PUT substitui o evento todo. Um PATCH juntaria o `date`
+    // novo ao `dateTime` antigo (feriados criados como bloco 00:00-24:00) e
+    // a Google rejeitava a mistura.
     const res = await this.googleRequest(
       ctx,
-      'PATCH',
+      isAllDayEvent(desired) ? 'PUT' : 'PATCH',
       existing.googleEventId,
       this.toGoogleEvent(desired),
     );

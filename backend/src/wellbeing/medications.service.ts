@@ -67,6 +67,20 @@ interface DatedDueDose extends DueDose {
   date: Date;
 }
 
+// Como esta execucao ficou com a toma: criou a linha, ou marcou a linha de
+// um "desmarcar". Diz como desfazer o claim se o push nao chegar.
+type ClaimKind = 'created' | 'updated';
+
+interface ClaimedDose extends DatedDueDose {
+  how: ClaimKind;
+}
+
+const PRISMA_UNIQUE_VIOLATION = 'P2002';
+
+function isUniqueViolation(error: unknown): boolean {
+  return (error as { code?: unknown } | null)?.code === PRISMA_UNIQUE_VIOLATION;
+}
+
 // Horas sem repetidos e por ordem: o mesmo minuto duas vezes seria a
 // mesma toma (e o unique da dose nao deixaria marcar as duas).
 function normalizeTimes(times: number[]): number[] {
@@ -117,10 +131,67 @@ export function findDueDoses(
   });
 }
 
+export type ReminderSlotState =
+  'taken' | 'reminded' | 'due' | 'upcoming' | 'missed';
+
+export interface ReminderSlotStatus {
+  slotMinutes: number;
+  state: ReminderSlotState;
+  remindedAt: string | null;
+  takenAt: string | null;
+}
+
+export interface MedicationReminderStatus {
+  medicationId: string;
+  slots: ReminderSlotStatus[];
+}
+
+export interface MedicationReminderStatusView {
+  windowMinutes: number;
+  medications: MedicationReminderStatus[];
+}
+
+// Estado de cada toma de hoje para o ecra de diagnostico. `doses` so deve
+// trazer as linhas de hoje. A janela e inclusiva: exatamente WINDOW minutos
+// depois ainda e "due".
+export function computeReminderSlotStates(
+  times: number[],
+  doses: {
+    slotMinutes: number;
+    takenAt: Date | null;
+    remindedAt: Date | null;
+  }[],
+  nowMinutes: number,
+): ReminderSlotStatus[] {
+  const bySlot = new Map(doses.map((d) => [d.slotMinutes, d]));
+  return [...times]
+    .sort((a, b) => a - b)
+    .map((slotMinutes) => {
+      const dose = bySlot.get(slotMinutes);
+      const takenAt = dose?.takenAt ?? null;
+      const remindedAt = dose?.remindedAt ?? null;
+      const late = nowMinutes - slotMinutes;
+      let state: ReminderSlotState;
+      if (takenAt) state = 'taken';
+      else if (remindedAt) state = 'reminded';
+      else if (late < 0) state = 'upcoming';
+      else if (late <= MEDICATION_REMINDER_WINDOW_MINUTES) state = 'due';
+      else state = 'missed';
+      return {
+        slotMinutes,
+        state,
+        remindedAt: remindedAt ? remindedAt.toISOString() : null,
+        takenAt: takenAt ? takenAt.toISOString() : null,
+      };
+    });
+}
+
 // Lembretes de medicacao e registo das tomas. Nao e conselho medico.
 @Injectable()
 export class MedicationsService {
   private readonly logger = new Logger(MedicationsService.name);
+  // Execucao de sendDueReminders em curso (single-flight).
+  private reminderRun: Promise<number> | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -243,6 +314,36 @@ export class MedicationsService {
       );
   }
 
+  // Diagnostico dos lembretes de hoje: so do proprio utilizador, so
+  // medicamentos diarios, ativos e com lembrete ligado.
+  async reminderStatus(userId: string): Promise<MedicationReminderStatusView> {
+    const { today, nowMinutes } = getLisbonNow();
+    const medications = await this.prisma.medication.findMany({
+      where: {
+        userId,
+        active: true,
+        remindersEnabled: true,
+        schedule: MedicationSchedule.DAILY,
+      },
+      select: {
+        id: true,
+        times: true,
+        doses: {
+          where: { userId, date: today },
+          select: { slotMinutes: true, takenAt: true, remindedAt: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+    return {
+      windowMinutes: MEDICATION_REMINDER_WINDOW_MINUTES,
+      medications: medications.map((m) => ({
+        medicationId: m.id,
+        slots: computeReminderSlotStates(m.times, m.doses, nowMinutes),
+      })),
+    };
+  }
+
   async setDose(
     userId: string,
     medicationId: string,
@@ -292,10 +393,25 @@ export class MedicationsService {
   }
 
   /**
-   * Chamado pelo cron dos lembretes (RemindersService.run). Um push por
-   * utilizador com as tomas a avisar agora. Devolve quantos foram avisados.
+   * Chamado pelo cron dos lembretes (RemindersService.run) e pelo agendador
+   * interno (MedicationReminderSchedulerService). Um push por utilizador com
+   * as tomas a avisar agora. Devolve quantos foram avisados.
+   *
+   * Single-flight: se ja ha uma execucao neste processo, devolve a mesma
+   * promessa (o cron e o agendador nunca correm por cima um do outro). Entre
+   * instancias, quem impede o envio a dobrar e o claim de cada toma (ver
+   * claimSlot).
    */
-  async sendDueReminders(): Promise<number> {
+  sendDueReminders(): Promise<number> {
+    if (this.reminderRun) return this.reminderRun;
+    const run = this.runDueReminders().finally(() => {
+      this.reminderRun = null;
+    });
+    this.reminderRun = run;
+    return run;
+  }
+
+  private async runDueReminders(): Promise<number> {
     const { today, nowMinutes } = getLisbonNow();
     // O cron corre de 15 em 15 min (e o GitHub atrasa): uma toma as 23:50
     // so fica "a horas" depois da meia-noite. Na primeira hora do dia
@@ -323,19 +439,40 @@ export class MedicationsService {
 
     let usersPushed = 0;
     for (const [userId, due] of dueByUser) {
+      // Claim antes de enviar: so avisa as tomas que ESTA execucao marcou.
+      // Outra execucao (cron externo, agendador, outra instancia) que leu as
+      // mesmas tomas perde o claim e nao envia.
+      const remindedAt = new Date();
+      const claimed: ClaimedDose[] = [];
+      try {
+        for (const d of due) {
+          const how = await this.claimSlot(userId, d, remindedAt);
+          if (how) claimed.push({ ...d, how });
+        }
+      } catch (error) {
+        // Claims a meio sem push: desfaz para a proxima execucao avisar.
+        await this.releaseClaims(userId, claimed, remindedAt);
+        throw error;
+      }
+      if (claimed.length === 0) continue;
       // Sem o nome do medicamento: a notificacao aparece no ecra bloqueado
       // e o nome e dado de saude. O texto lembra de confirmar que ainda nao
       // tomou, para evitar uma toma a dobrar.
-      const medicationCount = new Set(due.map((d) => d.medicationId)).size;
-      const delivered = await this.pushService.notifyUser(
-        userId,
-        medicationCount === 1 ? 'medicationDue' : 'medicationsDue',
-        { url: MEDICATION_PATH },
-      );
-      // Sem dispositivo com push: nao marca, tenta na proxima execucao.
-      if (delivered === 0) continue;
-      usersPushed += 1;
-      await this.markReminded(userId, due);
+      const medicationCount = new Set(claimed.map((d) => d.medicationId)).size;
+      let delivered = 0;
+      try {
+        delivered = await this.pushService.notifyUser(
+          userId,
+          medicationCount === 1 ? 'medicationDue' : 'medicationsDue',
+          { url: MEDICATION_PATH },
+        );
+      } finally {
+        // Sem dispositivo com push: liberta o claim, tenta na proxima execucao.
+        if (delivered === 0) {
+          await this.releaseClaims(userId, claimed, remindedAt);
+        }
+      }
+      if (delivered > 0) usersPushed += 1;
     }
     if (usersPushed > 0) {
       this.logger.log(`Medicacao: ${usersPushed} utilizadores avisados`);
@@ -352,7 +489,12 @@ export class MedicationsService {
         active: true,
         remindersEnabled: true,
         schedule: MedicationSchedule.DAILY,
-        user: { status: { not: UserStatus.BANNED } },
+        // Sem dispositivo com push nunca ha aviso: sem isto o mesmo user era
+        // revisto (e o claim feito e desfeito) a cada minuto.
+        user: {
+          status: { not: UserStatus.BANNED },
+          pushSubscriptions: { some: {} },
+        },
       },
       select: {
         id: true,
@@ -370,29 +512,76 @@ export class MedicationsService {
     });
   }
 
-  // Upsert (e nao createMany com skipDuplicates): se ja existe a linha de
-  // um "desmarcar", o remindedAt tem de ficar gravado, senao o mesmo
-  // lembrete repetia-se a cada execucao do cron durante a janela.
-  private async markReminded(userId: string, due: DatedDueDose[]) {
-    const remindedAt = new Date();
-    for (const d of due) {
-      await this.prisma.medicationDose.upsert({
-        where: {
-          medicationId_date_slotMinutes: {
-            medicationId: d.medicationId,
-            date: d.date,
-            slotMinutes: d.slotMinutes,
-          },
-        },
-        create: {
-          userId,
-          medicationId: d.medicationId,
-          date: d.date,
-          slotMinutes: d.slotMinutes,
-          remindedAt,
-        },
-        update: { remindedAt },
+  /**
+   * Marca uma toma como avisada so se ainda ninguem a tratou. Atomico na BD:
+   * - linha de um "desmarcar" (takenAt e remindedAt a null): updateMany
+   *   condicional; o remindedAt tem de ficar gravado, senao o mesmo lembrete
+   *   repetia-se a cada execucao durante a janela;
+   * - sem linha: create; se outra execucao a criou primeiro (ou o user marcou
+   *   a toma entretanto), o unique [medicationId, date, slotMinutes] da P2002
+   *   e esta execucao nao avisa.
+   * Uma toma ja tomada (takenAt) nunca e reclamada.
+   */
+  private async claimSlot(
+    userId: string,
+    d: DatedDueDose,
+    remindedAt: Date,
+  ): Promise<ClaimKind | null> {
+    const slot = {
+      userId,
+      medicationId: d.medicationId,
+      date: d.date,
+      slotMinutes: d.slotMinutes,
+    };
+    const { count } = await this.prisma.medicationDose.updateMany({
+      where: { ...slot, takenAt: null, remindedAt: null },
+      data: { remindedAt },
+    });
+    if (count > 0) return 'updated';
+    try {
+      await this.prisma.medicationDose.create({
+        data: { ...slot, remindedAt },
       });
+      return 'created';
+    } catch (error) {
+      if (isUniqueViolation(error)) return null;
+      throw error;
+    }
+  }
+
+  // Desfaz so o claim desta execucao (mesmo remindedAt e ainda por tomar):
+  // a linha criada e apagada, a de um "desmarcar" volta a remindedAt null.
+  private async releaseClaims(
+    userId: string,
+    claimed: ClaimedDose[],
+    remindedAt: Date,
+  ) {
+    for (const d of claimed) {
+      const where = {
+        userId,
+        medicationId: d.medicationId,
+        date: d.date,
+        slotMinutes: d.slotMinutes,
+        takenAt: null,
+        remindedAt,
+      };
+      try {
+        if (d.how === 'created') {
+          await this.prisma.medicationDose.deleteMany({ where });
+        } else {
+          await this.prisma.medicationDose.updateMany({
+            where,
+            data: { remindedAt: null },
+          });
+        }
+      } catch (error) {
+        // Sem libertar, a toma fica so por avisar (nunca a dobrar).
+        this.logger.warn(
+          `Medicacao: falhou libertar um claim (${
+            error instanceof Error ? error.name : 'erro'
+          })`,
+        );
+      }
     }
   }
 

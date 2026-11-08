@@ -29,13 +29,17 @@ import {
   CreateFinanceEntryDto,
   CreateFinanceGoalDto,
   CreateFinanceHoldingDto,
+  CreateOwedPaymentDto,
   FinanceAnalyticsQueryDto,
+  ImportFinanceEntriesDto,
+  ImportFinanceEntryRowDto,
   UpdateFinanceAccountDto,
   UpdateFinanceEntryDto,
   UpdateFinanceGoalDto,
   UpdateFinanceHoldingDto,
   UpdateFinanceSettingsDto,
 } from './dto/finance.dto';
+import type { FinanceImportResult } from './finance.contract';
 import {
   DEFAULT_ANALYTICS_GRANULARITY,
   DEFAULT_ANALYTICS_MONTHS,
@@ -51,6 +55,7 @@ import {
   MAX_FINANCE_HOLDINGS_PER_USER,
   MAX_OCCURRENCES_PER_RULE,
   MAX_PAID_IN_ARREARS_MONTHS,
+  OWED_PAYMENTS_HISTORY_LIMIT,
   SUBSCRIPTIONS_CATEGORY,
   UNASSIGNED_BUCKET,
 } from './finance.constants';
@@ -89,6 +94,26 @@ import { FinancePricesService } from './finance-prices.service';
 
 const MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
 const UNIQUE_VIOLATION = 'P2002';
+
+/**
+ * Chave de duplicado da importacao: mesmo dia, tipo, categoria, valor e nota
+ * (nota vazia = sem nota). JSON evita colisoes com separadores na nota.
+ */
+export function importDedupeKey(row: {
+  date: Date;
+  kind: FinanceEntryKind;
+  category: string;
+  amountCents: number;
+  note: string | null;
+}): string {
+  return JSON.stringify([
+    toDateKey(row.date),
+    row.kind,
+    row.category,
+    row.amountCents,
+    row.note ?? '',
+  ]);
+}
 
 /**
  * Chave de idempotencia do header ou do body (uuid). As duas tem de bater
@@ -187,7 +212,7 @@ export function summarize(
 
 /** Entradas com pelo menos uma ocorrencia possivel em [start, end). */
 export function overlappingEntriesWhere(
-  userId: string,
+  userId: string | Prisma.StringFilter,
   start: Date,
   end: Date,
 ): Prisma.FinanceEntryWhereInput {
@@ -518,8 +543,11 @@ export function withOwed(
 }
 
 /** Linha do Prisma para o util (Decimal da taxa passa a number). */
-const owedInput = (e: FinanceEntry): OwedInput => ({
+const owedInput = (
+  e: FinanceEntry & { owedPayments?: OwedInput['payments'] },
+): OwedInput => ({
   ...e,
+  payments: e.owedPayments,
   interestRatePct:
     e.interestRatePct === null ? null : Number(e.interestRatePct),
 });
@@ -620,6 +648,11 @@ export class FinanceService {
       this.prisma.financeEntry.findMany({
         where: { userId, isOwed: true, receivedAt: null },
         orderBy: [{ expectedDate: 'asc' }, { createdAt: 'asc' }],
+        include: {
+          owedPayments: {
+            select: { id: true, amountCents: true, paidAt: true },
+          },
+        },
       }),
     ]);
     const occurrences = materialize(entries, start, end, today);
@@ -943,6 +976,329 @@ export class FinanceService {
   ) {
     const rule = resolveRule(dto, existing);
     return { ...rule, ...resolveOwed(dto, existing, rule) };
+  }
+
+  /**
+   * Pagamento parcial de uma divida: desce o principal, cria a entrada INCOME
+   * do dia e regista o pagamento. Chegando a 0 a divida sai da lista.
+   * Idempotency-Key opcional: fica no clientRequestId da entrada INCOME
+   * criada (FinanceOwedPayment nao tem coluna propria); repetir a chave
+   * devolve o principal atual sem pagar outra vez.
+   */
+  async addOwedPayment(
+    userId: string,
+    id: string,
+    dto: CreateOwedPaymentDto,
+    headerKey?: string,
+  ): Promise<{ remainingCents: number }> {
+    const result = await this.idempotent<{
+      createdAt: Date;
+      remainingCents?: number;
+    }>(
+      resolveRequestKey(headerKey, undefined),
+      (key) =>
+        this.prisma.financeEntry.findFirst({
+          where: {
+            userId,
+            clientRequestId: key,
+            kind: FinanceEntryKind.INCOME,
+          },
+          select: { createdAt: true },
+        }),
+      (key) => this.payOwed(userId, id, dto, key),
+    );
+    if (result.remainingCents !== undefined) {
+      return { remainingCents: result.remainingCents };
+    }
+    // Repeticao: o pagamento ja foi feito; devolve o que ainda falta.
+    const current = await this.prisma.financeEntry.findFirst({
+      where: { id, userId, isOwed: true, receivedAt: null },
+      select: { amountCents: true },
+    });
+    return { remainingCents: current?.amountCents ?? 0 };
+  }
+
+  /**
+   * Escrita condicional: so desce o principal se a divida ainda estiver
+   * igual ao que foi lido. Dois separadores ou um retry a pagar ao mesmo
+   * tempo: o segundo nao encontra a linha igual (count 0) e da 409, sem
+   * criar a segunda entrada INCOME.
+   */
+  private async payOwed(
+    userId: string,
+    id: string,
+    dto: CreateOwedPaymentDto,
+    clientRequestId: string | null,
+  ) {
+    const owed = await this.prisma.financeEntry.findFirst({
+      where: { id, userId, isOwed: true, receivedAt: null },
+    });
+    if (!owed) throw new NotFoundException('Owed entry not found.');
+    const paidAt = parseDay(dto.paidAt, 'paidAt');
+    if (paidAt < owed.date) {
+      throw new BadRequestException('paidAt must not be before date.');
+    }
+    if (dto.amountCents > owed.amountCents) {
+      throw new BadRequestException(
+        'Amount is above what is still owed as principal. Use Mark as received for the full amount.',
+      );
+    }
+    const amountCents = dto.amountCents;
+    const remainingCents = owed.amountCents - amountCents;
+    return this.prisma.$transaction(async (tx) => {
+      const unchanged = {
+        id,
+        userId,
+        isOwed: true,
+        receivedAt: null,
+        amountCents: owed.amountCents,
+      };
+      const { count } =
+        remainingCents > 0
+          ? await tx.financeEntry.updateMany({
+              where: unchanged,
+              data: { amountCents: { decrement: amountCents } },
+            })
+          : await tx.financeEntry.deleteMany({ where: unchanged });
+      if (count === 0) {
+        throw new ConflictException('This debt changed, reload and try again.');
+      }
+      // Depois da escrita: ao saldar, a divida apagada liberta o lugar.
+      const entryCount = await tx.financeEntry.count({ where: { userId } });
+      if (entryCount >= MAX_FINANCE_ENTRIES_PER_USER) {
+        throw new BadRequestException(
+          `You can have at most ${MAX_FINANCE_ENTRIES_PER_USER} entries.`,
+        );
+      }
+      const income = await tx.financeEntry.create({
+        data: {
+          userId,
+          clientRequestId,
+          kind: FinanceEntryKind.INCOME,
+          amountCents,
+          category: owed.category,
+          note: owed.debtorName ?? owed.note,
+          date: paidAt,
+          accountId: owed.accountId,
+        },
+        select: { createdAt: true },
+      });
+      await tx.financeOwedPayment.create({
+        data: {
+          userId,
+          entryId: remainingCents > 0 ? owed.id : null,
+          debtorName: owed.debtorName,
+          amountCents,
+          paidAt,
+        },
+      });
+      return { createdAt: income.createdAt, remainingCents };
+    });
+  }
+
+  /**
+   * Exportacao completa (CSV no frontend): todas as entradas (teto igual ao
+   * limite por utilizador), pagamentos recebidos e nomes das contas. Pede
+   * uma linha a mais para saber se cortou (truncated).
+   */
+  async exportAll(userId: string) {
+    const [settings, accounts, entries, payments] = await Promise.all([
+      this.prisma.financeSettings.findUnique({
+        where: { userId },
+        select: { currency: true },
+      }),
+      this.prisma.financeAccount.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
+        take: MAX_FINANCE_ACCOUNTS_PER_USER,
+        select: { id: true, name: true },
+      }),
+      this.prisma.financeEntry.findMany({
+        where: { userId },
+        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+        take: MAX_FINANCE_ENTRIES_PER_USER + 1,
+        select: {
+          id: true,
+          kind: true,
+          amountCents: true,
+          category: true,
+          note: true,
+          date: true,
+          recurring: true,
+          frequency: true,
+          accountId: true,
+          isOwed: true,
+          debtorName: true,
+          receivedAt: true,
+        },
+      }),
+      this.prisma.financeOwedPayment.findMany({
+        where: { userId },
+        orderBy: [{ paidAt: 'desc' }, { createdAt: 'desc' }],
+        take: MAX_FINANCE_ENTRIES_PER_USER + 1,
+        select: {
+          id: true,
+          entryId: true,
+          debtorName: true,
+          amountCents: true,
+          paidAt: true,
+        },
+      }),
+    ]);
+    const truncated =
+      entries.length > MAX_FINANCE_ENTRIES_PER_USER ||
+      payments.length > MAX_FINANCE_ENTRIES_PER_USER;
+    return {
+      currency: settings?.currency ?? DEFAULT_FINANCE_CURRENCY,
+      truncated,
+      accounts,
+      entries: entries.slice(0, MAX_FINANCE_ENTRIES_PER_USER).map((e) => ({
+        id: e.id,
+        kind: e.kind,
+        amountCents: e.amountCents,
+        category: e.category,
+        note: e.note,
+        date: toDateKey(e.date),
+        frequency: resolveFrequency(e),
+        accountId: e.accountId,
+        isOwed: e.isOwed,
+        debtorName: e.debtorName,
+        receivedAt: e.receivedAt ? toDateKey(e.receivedAt) : null,
+      })),
+      owedPayments: payments
+        .slice(0, MAX_FINANCE_ENTRIES_PER_USER)
+        .map((p) => ({
+          id: p.id,
+          entryId: p.entryId,
+          debtorName: p.debtorName,
+          amountCents: p.amountCents,
+          paidAt: toDateKey(p.paidAt),
+        })),
+    };
+  }
+
+  /**
+   * Importacao CSV (o formato do export). Nunca confia no dedupe do cliente:
+   * numa so transacao salta duplicados exatos das entradas que ja existem
+   * (contados como multiconjunto: duas linhas iguais no ficheiro contra uma
+   * na base importam uma) e corta no teto de entradas. A conta vem pelo nome
+   * (sem maiusculas) e so liga a contas da propria pessoa; senao fica sem.
+   * Idempotency-Key fica no clientRequestId da primeira linha criada; a
+   * repeticao devolve quantas linhas esse lote criou (todas com o mesmo
+   * createdAt: o now() do Postgres e o do inicio da transacao).
+   */
+  async importEntries(
+    userId: string,
+    dto: ImportFinanceEntriesDto,
+    headerKey?: string,
+  ): Promise<FinanceImportResult> {
+    const { rows } = dto;
+    // Datas validadas antes de abrir a transacao (2026-02-31 = 400).
+    const dates = rows.map((row) => parseDay(row.date, 'date'));
+    const result = await this.idempotent<{
+      createdAt: Date;
+      imported?: number;
+    }>(
+      resolveRequestKey(headerKey, dto.clientRequestId),
+      (key) =>
+        this.prisma.financeEntry.findFirst({
+          where: { userId, clientRequestId: key },
+          select: { createdAt: true },
+        }),
+      (key) => this.insertImport(userId, rows, dates, key),
+    );
+    const imported =
+      result.imported ??
+      (await this.prisma.financeEntry.count({
+        where: { userId, createdAt: result.createdAt },
+      }));
+    return { imported, skipped: rows.length - imported };
+  }
+
+  private insertImport(
+    userId: string,
+    rows: ImportFinanceEntryRowDto[],
+    dates: Date[],
+    clientRequestId: string | null,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const uniqueDates = [
+        ...new Map(dates.map((d) => [d.getTime(), d])).values(),
+      ];
+      const count = await tx.financeEntry.count({ where: { userId } });
+      const accounts = await tx.financeAccount.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
+        take: MAX_FINANCE_ACCOUNTS_PER_USER,
+        select: { id: true, name: true },
+      });
+      const existing = await tx.financeEntry.findMany({
+        where: { userId, date: { in: uniqueDates } },
+        select: {
+          date: true,
+          kind: true,
+          category: true,
+          amountCents: true,
+          note: true,
+        },
+      });
+      // Nome repetido (sem maiusculas): ganha a conta mais antiga.
+      const accountIds = new Map<string, string>();
+      for (const a of accounts) {
+        const name = a.name.trim().toLowerCase();
+        if (!accountIds.has(name)) accountIds.set(name, a.id);
+      }
+      const existingCounts = new Map<string, number>();
+      for (const e of existing) {
+        const key = importDedupeKey(e);
+        existingCounts.set(key, (existingCounts.get(key) ?? 0) + 1);
+      }
+      const room = Math.max(0, MAX_FINANCE_ENTRIES_PER_USER - count);
+      const data: Prisma.FinanceEntryCreateManyInput[] = [];
+      rows.forEach((row, i) => {
+        const note = row.note || null;
+        const key = importDedupeKey({ ...row, note, date: dates[i] });
+        const left = existingCounts.get(key) ?? 0;
+        if (left > 0) {
+          existingCounts.set(key, left - 1);
+          return;
+        }
+        if (data.length >= room) return;
+        const frequency = row.frequency ?? null;
+        data.push({
+          userId,
+          clientRequestId: data.length === 0 ? clientRequestId : null,
+          kind: row.kind,
+          amountCents: row.amountCents,
+          category: row.category,
+          note,
+          date: dates[i],
+          frequency,
+          recurring: frequency !== null,
+          accountId: row.accountName
+            ? (accountIds.get(row.accountName.trim().toLowerCase()) ?? null)
+            : null,
+        });
+      });
+      if (data.length > 0) await tx.financeEntry.createMany({ data });
+      return { createdAt: new Date(), imported: data.length };
+    });
+  }
+
+  /** Ultimos pagamentos recebidos, incluindo os de dividas ja saldadas. */
+  async listOwedPayments(userId: string) {
+    const rows = await this.prisma.financeOwedPayment.findMany({
+      where: { userId },
+      orderBy: [{ paidAt: 'desc' }, { createdAt: 'desc' }],
+      take: OWED_PAYMENTS_HISTORY_LIMIT,
+      select: { id: true, debtorName: true, amountCents: true, paidAt: true },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      debtorName: r.debtorName,
+      amountCents: r.amountCents,
+      paidAt: toDateKey(r.paidAt),
+    }));
   }
 
   async removeEntry(userId: string, id: string): Promise<void> {

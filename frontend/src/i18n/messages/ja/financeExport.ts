@@ -1,0 +1,17 @@
+export const financeExport: Record<string, string> = {
+  'financeExport.button': "CSVをエクスポート",
+  'financeExport.hint': "収入、支出、貸しているお金をすべてスプレッドシートファイルとしてダウンロードします。",
+  'financeExport.error': "お金のデータをエクスポートできませんでした。",
+  'financeExport.palette': "お金をCSVでエクスポート",
+  'financeExport.paymentNote': "一部入金を受け取りました",
+  'financeExport.col.date': "日付",
+  'financeExport.col.kind': "種類",
+  'financeExport.col.category': "カテゴリ",
+  'financeExport.col.amount': "金額",
+  'financeExport.col.note': "メモ",
+  'financeExport.col.account': "口座",
+  'financeExport.col.repeats': "繰り返し",
+  'financeExport.col.isOwed': "貸している",
+  'financeExport.col.debtor': "相手",
+  'financeExport.col.received': "受け取り日",
+};

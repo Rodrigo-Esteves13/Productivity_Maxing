@@ -30,3 +30,5 @@ export const RatingsSummaryCard = lazy(() => import('./RatingsSummaryCard'));
 export const PlanScenarioCard = lazy(() => import('./PlanScenarioCard'));
 export const GradeNeededCalculator = lazy(() => import('./GradeNeededCalculator'));
 export const TaskImportModal = lazy(() => import('./TaskImportModal'));
+export const PackUpdatesCard = lazy(() => import('./PackUpdatesCard'));
+export const MoneySnapshotCard = lazy(() => import('./MoneySnapshotCard'));

@@ -9,6 +9,7 @@ import {
   OAUTH_LOGIN_STATE_COOKIE,
 } from '../cookie.config';
 import { isValidLoginState } from '../guards/oauth-guard.helpers';
+import { OAUTH_HTTP_TIMEOUT_MS } from '../../common/http-resilience.constants';
 
 @Injectable()
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
@@ -105,6 +106,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
           'User-Agent': 'Productivity-Maxing',
           Accept: 'application/vnd.github+json',
         },
+        signal: AbortSignal.timeout(OAUTH_HTTP_TIMEOUT_MS),
       });
 
       if (!res.ok) return null;

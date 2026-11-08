@@ -1,0 +1,17 @@
+export const financeExport: Record<string, string> = {
+  'financeExport.button': "导出 CSV",
+  'financeExport.hint': "将你所有的收入、支出和借出的钱下载为电子表格文件。",
+  'financeExport.error': "无法导出你的资金数据。",
+  'financeExport.palette': "将资金导出为 CSV",
+  'financeExport.paymentNote': "已收到部分还款",
+  'financeExport.col.date': "日期",
+  'financeExport.col.kind': "类型",
+  'financeExport.col.category': "类别",
+  'financeExport.col.amount': "金额",
+  'financeExport.col.note': "备注",
+  'financeExport.col.account': "账户",
+  'financeExport.col.repeats': "重复",
+  'financeExport.col.isOwed': "别人欠我",
+  'financeExport.col.debtor': "欠款人",
+  'financeExport.col.received': "收款日期",
+};

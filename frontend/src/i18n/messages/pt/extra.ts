@@ -447,7 +447,7 @@ export const extra: Record<string, string> = {
   "ui.deletedLower": "apagado",
   "ui.userWillBeBanned": "{name} vai ser banido permanentemente e terminar sessão de imediato, em todo o lado.",
   "ui.userWillBeSuspended": "{name} vai ser suspenso e terminar sessão de imediato - a conta reativa-se sozinha quando passar a data abaixo.",
-  "ui.showArchivedCount": "Mostrar arquivadas ({count})",
+  "ui.showArchivedCount": "Mostrar concluídas há 30+ dias ({count})",
   "ui.postponedTimes": "adiada {count}x",
   "ui.offlineBanner": "Sem ligação à internet. Algumas ações podem não funcionar até a ligação voltar.",
   "ui.nActive": "{count} ativas",

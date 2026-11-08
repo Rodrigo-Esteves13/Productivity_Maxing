@@ -8,6 +8,9 @@ import { PadsService } from '../pads/pads.service';
 import { MedicationsService } from '../wellbeing/medications.service';
 import { PersonalNotesService } from '../personal-notes/personal-notes.service';
 import { AbsenceLimitRemindersService } from './absence-limit-reminders.service';
+import { StreakRiskRemindersService } from './streak-risk-reminders.service';
+import { MoneyRemindersService } from './money-reminders.service';
+import { BudgetAlertRemindersService } from './budget-alert-reminders.service';
 import { getFrontendUrl } from '../config/app.config';
 import { deleteStaleUserSessions } from '../auth/services/user-sessions.service';
 import { getLisbonNow, toDateKey } from '../common/date-key.util';
@@ -38,6 +41,12 @@ export interface ReminderRunResult {
   personalRemindersSent: number;
   // Utilizadores avisados de que estao perto do limite de faltas (semanal).
   absenceLimitUsersPushed: number;
+  // Utilizadores avisados de que a streak de estudo esta em risco (diario).
+  streakRiskUsersPushed: number;
+  // Utilizadores avisados de subscricoes a renovar / dividas a receber (diario).
+  moneyUsersPushed: number;
+  // Utilizadores avisados de que o orcamento do mes chegou a 80% / 100%.
+  budgetUsersPushed: number;
   expiredPadsDeleted: number;
   // Sessoes de dispositivo expiradas/revogadas apagadas nesta execucao.
   staleSessionsDeleted: number;
@@ -55,6 +64,8 @@ const TASKS_PATH = '/tasks';
 @Injectable()
 export class RemindersService {
   private readonly logger = new Logger(RemindersService.name);
+  // Execucao de run() em curso (single-flight).
+  private inFlight: Promise<ReminderRunResult> | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -64,9 +75,26 @@ export class RemindersService {
     private readonly padsService: PadsService,
     private readonly personalNotesService: PersonalNotesService,
     private readonly absenceLimitReminders: AbsenceLimitRemindersService,
+    private readonly streakRiskReminders: StreakRiskRemindersService,
+    private readonly moneyReminders: MoneyRemindersService,
+    private readonly budgetAlertReminders: BudgetAlertRemindersService,
   ) {}
 
-  async run(now = new Date()): Promise<ReminderRunResult> {
+  /**
+   * Single-flight: um pedido do cron que chega com outra execucao ainda em
+   * curso (cron atrasado que dispara duas vezes, retry do GitHub) recebe a
+   * mesma promessa em vez de correr outra vez por cima e repetir avisos.
+   */
+  run(now = new Date()): Promise<ReminderRunResult> {
+    if (this.inFlight) return this.inFlight;
+    const run = this.runOnce(now).finally(() => {
+      this.inFlight = null;
+    });
+    this.inFlight = run;
+    return run;
+  }
+
+  private async runOnce(now: Date): Promise<ReminderRunResult> {
     const window = { gt: now, lte: new Date(now.getTime() + LOOKAHEAD_MS) };
     const tasks = await this.prisma.task.findMany({
       where: {
@@ -145,6 +173,9 @@ export class RemindersService {
       medicationUsersPushed: 0,
       personalRemindersSent: 0,
       absenceLimitUsersPushed: 0,
+      streakRiskUsersPushed: 0,
+      moneyUsersPushed: 0,
+      budgetUsersPushed: 0,
       expiredPadsDeleted: 0,
       staleSessionsDeleted: 0,
     };
@@ -216,6 +247,30 @@ export class RemindersService {
     } catch (error) {
       this.logger.warn(
         `Aviso de limite de faltas falhou: ${(error as Error).message}`,
+      );
+    }
+
+    try {
+      result.streakRiskUsersPushed =
+        await this.streakRiskReminders.sendReminders();
+    } catch (error) {
+      this.logger.warn(
+        `Aviso de streak em risco falhou: ${(error as Error).message}`,
+      );
+    }
+
+    try {
+      result.moneyUsersPushed = await this.moneyReminders.sendReminders();
+    } catch (error) {
+      this.logger.warn(`Aviso de dinheiro falhou: ${(error as Error).message}`);
+    }
+
+    try {
+      result.budgetUsersPushed =
+        await this.budgetAlertReminders.sendReminders();
+    } catch (error) {
+      this.logger.warn(
+        `Aviso de orcamento falhou: ${(error as Error).message}`,
       );
     }
 

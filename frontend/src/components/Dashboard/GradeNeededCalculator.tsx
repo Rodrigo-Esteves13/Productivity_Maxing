@@ -6,6 +6,8 @@ import { computeWeightCoverage } from '../../utils/weightCoverage';
 import DashboardCard from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
 import { fillNodes } from '../../i18n/fillNodes';
+import { useAcademic } from '../../context/useAcademic';
+import { roundInterimGrade } from '../../lib/interimGrade';
 
 interface GradeNeededCalculatorProps {
   tasks: Task[];
@@ -22,6 +24,7 @@ const WHOLE_PERIOD_VALUE = '__whole_period__';
 // Dashboard already has loaded - no new endpoint needed.
 export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeededCalculatorProps) {
   const { t } = useI18n();
+  const { activeProgram } = useAcademic();
   const max = scaleMax(scale);
   const areasWithTasks = useMemo(() => {
     const ids = new Set(tasks.map((t) => t.areaId));
@@ -38,8 +41,11 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
   const graded = scopedTasks.filter((t) => t.realGrade !== null);
   const ungraded = scopedTasks.filter((t) => t.realGrade === null);
 
+  // Notas reais com a mesma regra de arredondamento que o backend usa nas
+  // medias (opcao roundInterimGrades do programa ativo).
+  const roundInterim = activeProgram?.roundInterimGrades ?? false;
   const weightedSumGraded = graded.reduce(
-    (sum, t) => sum + t.realGrade! * (t.weightPercentage ?? 1),
+    (sum, t) => sum + roundInterimGrade(t.realGrade!, roundInterim) * (t.weightPercentage ?? 1),
     0,
   );
   const totalWeightGraded = graded.reduce((sum, t) => sum + (t.weightPercentage ?? 1), 0);

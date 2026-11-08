@@ -6,6 +6,8 @@ export const layout: Record<string, string> = {
   'program.round.label': "Arrondir la note finale de chaque matière",
   'program.round.createHelp': "Arrondit chaque matière à l'entier le plus proche avant de calculer la moyenne pondérée par les crédits, comme le font la plupart des universités. Chaque période peut le modifier ensuite.",
   'program.round.editHelp': "Valeur par défaut pour chaque période de ce programme. Une période peut toujours la modifier individuellement.",
+  'program.roundInterim.label': "Arrondir les notes intermédiaires",
+  'program.roundInterim.help': "Chaque note de test ou de composante est arrondie à l'entier avant la moyenne (15,5 compte comme 16).",
   'program.create.error': "Impossible de créer le programme. Réessayez.",
   'program.create.submit': "Créer le programme",
   'program.settings': "Paramètres du programme",

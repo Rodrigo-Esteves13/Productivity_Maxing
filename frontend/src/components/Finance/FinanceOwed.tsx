@@ -5,7 +5,7 @@ import IconButton from '../UI/IconButton';
 import { TrashIcon } from '../UI/Icons';
 import FinanceSubmitButton from './FinanceSubmitButton';
 import Money, { PrivateText } from './Money';
-import type { FinanceHeldByEmployer, FinanceOwed as OwedData, FinanceOwedItem } from '../../api/financeService';
+import type { FinanceHeldByEmployer, FinanceOwed as OwedData, FinanceOwedItem, FinanceOwedPaymentRow } from '../../api/financeService';
 import { formatPercent, parseMoneyInput } from '../../lib/money';
 import { toLocalDateKey } from '../../lib/dateKey';
 import { useIdempotentSubmit } from '../../hooks/useIdempotentSubmit';
@@ -18,14 +18,23 @@ export interface ReceivedChanges {
 
 const dayLabel = (day: string, lang: string) => new Date(`${day}T00:00:00`).toLocaleDateString(lang);
 
+export interface OwedPaymentChanges {
+  paidAt: string;
+  amountCents: number;
+  /** Idempotency-Key of this attempt (a retry does not pay twice). */
+  requestId?: string;
+}
+
 interface ReceivedFormProps {
   item: FinanceOwedItem;
-  onSubmit: (changes: ReceivedChanges) => Promise<boolean>;
+  onSubmit: (changes: ReceivedChanges, requestId: string) => Promise<boolean>;
   onCancel: () => void;
+  // Pagamento parcial: o valor e obrigatorio e a divida continua aberta.
+  partial?: boolean;
 }
 
 // "Marcar como recebido": dia (nao antes do emprestimo) e valor recebido opcional.
-function ReceivedForm({ item, onSubmit, onCancel }: ReceivedFormProps) {
+function ReceivedForm({ item, onSubmit, onCancel, partial = false }: ReceivedFormProps) {
   const { t } = useI18n();
   const { submit, isSubmitting } = useIdempotentSubmit();
   const [day, setDay] = useState(toLocalDateKey(new Date()));
@@ -35,21 +44,26 @@ function ReceivedForm({ item, onSubmit, onCancel }: ReceivedFormProps) {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const cents = amount.trim() ? parseMoneyInput(amount) : null;
-    if (!day || day < item.since || (amount.trim() && (cents === null || cents <= 0))) {
+    if (!day || day < item.since || (partial || amount.trim() ? cents === null || cents <= 0 : false)) {
       setError(t('finance.owed.invalidReceived'));
+      return;
+    }
+    // Pagamento parcial so ate ao principal; o valor com juros vai por "Marcar como recebido".
+    if (partial && cents !== null && cents > item.principalCents) {
+      setError(t('financeFixes.owed.paymentAbovePrincipal'));
       return;
     }
     setError('');
     const changes: ReceivedChanges = { receivedAt: day, ...(cents !== null && { amountCents: cents }) };
-    if (await submit(() => onSubmit(changes))) onCancel();
+    if (await submit((key) => onSubmit(changes, key))) onCancel();
   };
 
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
       <Input label={t('finance.owed.receivedOn')} type="date" min={item.since} value={day} onChange={(e) => setDay(e.target.value)} />
-      <Input label={t('finance.owed.receivedAmount')} inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
+      <Input label={t(partial ? 'finance.owed.paymentAmount' : 'finance.owed.receivedAmount')} inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
       <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-        <FinanceSubmitButton isSubmitting={isSubmitting}>{t('finance.owed.confirmReceived')}</FinanceSubmitButton>
+        <FinanceSubmitButton isSubmitting={isSubmitting}>{t(partial ? 'finance.owed.confirmPayment' : 'finance.owed.confirmReceived')}</FinanceSubmitButton>
         <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
           {t('common.cancel')}
         </button>
@@ -63,12 +77,13 @@ interface OwedRowProps {
   item: FinanceOwedItem;
   currency: string;
   onReceived: (item: FinanceOwedItem, changes: ReceivedChanges) => Promise<boolean>;
+  onPayment: (item: FinanceOwedItem, payment: OwedPaymentChanges) => Promise<boolean>;
   onRemove: (item: FinanceOwedItem) => void;
 }
 
-function OwedRow({ item, currency, onReceived, onRemove }: OwedRowProps) {
+function OwedRow({ item, currency, onReceived, onPayment, onRemove }: OwedRowProps) {
   const { t, lang } = useI18n();
-  const [receiving, setReceiving] = useState(false);
+  const [mode, setMode] = useState<'received' | 'payment' | null>(null);
   const hasInterest = item.interestKind !== 'NONE' && item.interestRatePct !== null;
   return (
     <li className="py-3">
@@ -119,12 +134,35 @@ function OwedRow({ item, currency, onReceived, onRemove }: OwedRowProps) {
           />
         </p>
       )}
-      {receiving ? (
-        <ReceivedForm item={item} onSubmit={(changes) => onReceived(item, changes)} onCancel={() => setReceiving(false)} />
+      {item.payments.length > 0 && (
+        <ul className="mt-2 space-y-0.5 text-xs text-neutral-500">
+          {item.payments.map((p) => (
+            <li key={p.id}>
+              {dayLabel(p.paidAt, lang)}: <Money cents={p.amountCents} currency={currency} />
+            </li>
+          ))}
+        </ul>
+      )}
+      {mode ? (
+        <ReceivedForm
+          item={item}
+          partial={mode === 'payment'}
+          onSubmit={(changes, requestId) =>
+            mode === 'payment'
+              ? onPayment(item, { paidAt: changes.receivedAt, amountCents: changes.amountCents ?? 0, requestId })
+              : onReceived(item, changes)
+          }
+          onCancel={() => setMode(null)}
+        />
       ) : (
-        <button type="button" onClick={() => setReceiving(true)} className="mt-2 text-sm text-violet-400 hover:text-violet-300">
-          {t('finance.owed.markReceived')}
-        </button>
+        <div className="mt-2 flex flex-wrap gap-4">
+          <button type="button" onClick={() => setMode('payment')} className="text-sm text-violet-400 hover:text-violet-300">
+            {t('finance.owed.addPayment')}
+          </button>
+          <button type="button" onClick={() => setMode('received')} className="text-sm text-violet-400 hover:text-violet-300">
+            {t('finance.owed.markReceived')}
+          </button>
+        </div>
       )}
     </li>
   );
@@ -133,14 +171,16 @@ function OwedRow({ item, currency, onReceived, onRemove }: OwedRowProps) {
 interface FinanceOwedProps {
   owed: OwedData;
   held: FinanceHeldByEmployer;
+  payments: FinanceOwedPaymentRow[];
   currency: string;
   onReceived: OwedRowProps['onReceived'];
+  onPayment: OwedRowProps['onPayment'];
   onRemove: OwedRowProps['onRemove'];
 }
 
 // Dinheiro que me devem (fora do saldo ate ser recebido) e dinheiro retido
 // pelo empregador (so informativo).
-export default function FinanceOwed({ owed, held, currency, onReceived, onRemove }: FinanceOwedProps) {
+export default function FinanceOwed({ owed, held, payments, currency, onReceived, onPayment, onRemove }: FinanceOwedProps) {
   const { t, lang } = useI18n();
   return (
     <>
@@ -167,11 +207,33 @@ export default function FinanceOwed({ owed, held, currency, onReceived, onRemove
             </dl>
             <ul className="divide-y divide-neutral-800">
               {owed.items.map((item) => (
-                <OwedRow key={item.entryId} item={item} currency={currency} onReceived={onReceived} onRemove={onRemove} />
+                <OwedRow key={item.entryId} item={item} currency={currency} onReceived={onReceived} onPayment={onPayment} onRemove={onRemove} />
               ))}
             </ul>
           </>
         )}
+      </Card>
+      <Card className="mb-6">
+        <details>
+          <summary className="cursor-pointer text-sm font-semibold text-neutral-200">{t('finance.owed.history.title')}</summary>
+          {payments.length === 0 ? (
+            <p className="mt-3 text-sm text-neutral-500">{t('finance.owed.history.empty')}</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-neutral-800 text-sm">
+              {payments.map((p) => (
+                <li key={p.id} className="flex flex-wrap justify-between gap-2 py-1.5">
+                  <span className="text-neutral-300">
+                    {p.debtorName ?? t('finance.owed.history.unknown')}
+                    <span className="text-neutral-500"> · {dayLabel(p.paidAt, lang)}</span>
+                  </span>
+                  <span className="tabular-nums text-neutral-200">
+                    <Money cents={p.amountCents} currency={currency} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </details>
       </Card>
       {held.items.length > 0 && (
         <Card className="mb-6">

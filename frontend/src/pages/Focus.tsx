@@ -3,11 +3,14 @@ import PageHeader from '../components/Layout/PageHeader';
 import MasonryGrid from '../components/UI/MasonryGrid';
 import StudySessionWidget from '../components/Study/StudySessionWidget';
 import BestTimesHeatmap from '../components/Study/BestTimesHeatmap';
+import DistractionStatsCard from '../components/Study/focus/DistractionStatsCard';
 import TodayBlocks from '../components/Study/focus/TodayBlocks';
 import DayProgressCard from '../components/Study/focus/DayProgressCard';
 import StudyNowHint from '../components/Study/focus/StudyNowHint';
 import SessionHistoryCard from '../components/Study/focus/SessionHistoryCard';
 import AmbientSoundCard from '../components/Study/focus/AmbientSoundCard';
+import { useDistractionStats } from '../hooks/useDistractionStats';
+import { useActiveStudySession } from '../context/useActiveStudySession';
 import { useStudyPlan } from '../hooks/useStudyPlan';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useI18n } from '../i18n/useI18n';
@@ -17,6 +20,9 @@ export default function Focus() {
   useDocumentTitle('Focus');
   // Um so pedido do plano, partilhado pelo progresso do dia e pelos blocos.
   const { plan, isLoading, error } = useStudyPlan(1);
+  // Um so pedido das estatisticas de distracao, partilhado pelo cartao e pela dica.
+  const { activeSession } = useActiveStudySession();
+  const distraction = useDistractionStats(activeSession?.id ?? null);
 
   return (
     <PageLayout>
@@ -26,7 +32,7 @@ export default function Focus() {
       />
 
       <div className="mb-6 space-y-3 empty:hidden">
-        <StudyNowHint />
+        <StudyNowHint distractionStats={distraction.stats} />
       </div>
 
       {/* Masonry em vez de duas colunas fixas: o historico de sessoes e muito
@@ -43,6 +49,7 @@ export default function Focus() {
         <TodayBlocks plan={plan} isLoading={isLoading} error={error} />
         <SessionHistoryCard />
         <BestTimesHeatmap />
+        <DistractionStatsCard stats={distraction.stats} isLoading={distraction.isLoading} error={distraction.error} />
       </MasonryGrid>
     </PageLayout>
   );

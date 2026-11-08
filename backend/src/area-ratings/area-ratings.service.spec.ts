@@ -13,6 +13,10 @@ const AREA = 'area-1';
 function build(overrides: Record<string, unknown> = {}) {
   const prisma = {
     area: { findFirst: jest.fn().mockResolvedValue({ id: AREA }) },
+    areaTeacherNote: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     areaRating: {
       findMany: jest.fn().mockResolvedValue([]),
       findUnique: jest.fn().mockResolvedValue(null),
@@ -38,6 +42,30 @@ function build(overrides: Record<string, unknown> = {}) {
     service: new AreaRatingsService(prisma as unknown as PrismaService),
   };
 }
+
+describe('AreaRatingsService same teacher', () => {
+  it('copies the teacher rating to other areas of the same teacher', async () => {
+    const { prisma, service } = build({
+      areaTeacherNote: {
+        findUnique: jest.fn().mockResolvedValue({ teacherName: ' Ana Silva ' }),
+        findMany: jest.fn().mockResolvedValue([{ areaId: 'area-2' }]),
+      },
+    });
+    await service.set(USER, AREA, { teacherRating: 5 });
+    expect(prisma.areaRating.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId_areaId: { userId: USER, areaId: 'area-2' } },
+        update: { teacherRating: 5 },
+      }),
+    );
+  });
+
+  it('does not touch other areas when only the liking changes', async () => {
+    const { prisma, service } = build();
+    await service.set(USER, AREA, { courseLiking: 3 });
+    expect(prisma.areaTeacherNote.findUnique).not.toHaveBeenCalled();
+  });
+});
 
 describe('AreaRatingsService ownership', () => {
   it('list only reads the caller rows', async () => {
@@ -163,6 +191,10 @@ describe('AreaRatingsService concurrent partial PUTs', () => {
     };
     const prisma = {
       area: { findFirst: jest.fn().mockResolvedValue({ id: AREA }) },
+      areaTeacherNote: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       areaRating,
     };
     return {

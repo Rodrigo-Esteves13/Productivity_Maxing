@@ -34,6 +34,7 @@ export const updateProgram = async (
     order?: number;
     isActive?: boolean;
     roundFinalGrade?: boolean;
+    roundInterimGrades?: boolean;
   },
 ): Promise<AcademicProgram> => {
   const response = await api.patch<AcademicProgram>(`/programs/${id}`, data);

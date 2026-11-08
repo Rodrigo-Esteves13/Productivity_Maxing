@@ -7,6 +7,51 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-11-08',
+    title: 'Money export, streak alert and sturdier integrations',
+    items: [
+      'Money: new Import CSV button (and a command palette entry) brings entries back from a file you exported. A preview shows what will be added, skips duplicates and lists rows with problems before anything is saved.',
+      'Focus: a hint now shows your calmest hour of the day (fewest distractions) and warns when you are in your most distracted hour, based on your own sessions.',
+      'Fixes from a full review: a partial payment can no longer be counted twice (two tabs or a retry), payments above the principal are refused with a clear message, and the CSV export flags when it was cut short and no longer doubles payments.',
+      'Medication, streak, money and budget reminders can no longer be sent twice when two timers overlap, and bad push subscriptions can no longer block notifications for everyone.',
+      'The plan card, grade calculator and report card now round interim grades the same way, so the same course shows the same average everywhere.',
+      'Holidays with no work appear in Google Calendar as all-day events.',
+      'Focus: the ambient sound keeps playing when you go to other pages, with a small volume and sound control in the focus timer at the top.',
+      'Dashboard: a new Money snapshot widget (off by default, turn it on in the widget settings) shows your balance, month end forecast, overdue money owed and the next subscription renewal. It follows privacy mode.',
+      'Money: you get one push when your monthly spending reaches 80 percent and another at 100 percent of your budget, and the same for your leisure budget. Messages never show amounts.',
+      'Medication: each reminded medication now shows the reminder status of today (sent at, missed, next reminder) so you can see whether notifications are working.',
+      'Money: a single daily push now warns about subscriptions renewing tomorrow and money owed to you that is due tomorrow (overdue debts once a week). It never shows names or amounts.',
+      'Fixed: Turma deadline push notifications were in the wrong language for Chinese, Japanese, Korean, French and German.',
+      'Fixed: medication reminders could be skipped for a whole day when the outside timer did not call in time. The app now checks every minute by itself.',
+      'Money: new Export CSV button (and a command palette entry) downloads all your entries, accounts and partial payments in one file that opens in Excel.',
+      'A push notification now warns you in the evening when a streak of 3 or more days is about to end because you have not studied or finished a task today.',
+      'Distance, price and push services now stop retrying for a while when they are down, so the app stays fast and falls back to your last known values.',
+    ],
+  },
+  {
+    date: '2026-11-07',
+    title: 'Status page, pack updates widget and distraction stats',
+    items: [
+      'New public Status page (/status) shows whether the app and its database are up, refreshed every 30 seconds. It is linked in the footer and the command palette.',
+      'Dashboard: a new widget lists task pack updates waiting for your approval, with Accept and Decline. You can hide it in the widget settings.',
+      'Focus: a new card shows your distractions per hour of the day, per course and per task effort, with an early signal warning when there are few sessions.',
+    ],
+  },
+  {
+    date: '2026-11-06',
+    title: 'Partial payments, holidays in Google Calendar and interim rounding',
+    items: [
+      'Money owed to you: record partial payments with the date you received each one. Every payment becomes an income entry and the amount still owed goes down.',
+      'Google Calendar sync: on national holidays where a workplace is set to not work, a "No work" event now appears that day.',
+      'Rating a teacher updates the same rating for every other course of yours with that teacher.',
+      'Program settings: new option to round interim grades, so a 15.5 test counts as 16 in your averages.',
+      'Fixed: a tab left suspended no longer lands on the login screen while your session is still valid.',
+      'Money: a collapsed "Recent payments" list shows the partial payments you received, including from debts already settled.',
+      'Rounding interim grades now also applies to course risk, grade projections, the plan card and teacher rating stats, not only the averages.',
+      'The "Show archived" tick on tasks now says it covers tasks completed 30 or more days ago, which is what it always did.',
+    ],
+  },
+  {
     date: '2026-11-01',
     title: 'Money: goal plans, money owed to you and privacy mode',
     items: [

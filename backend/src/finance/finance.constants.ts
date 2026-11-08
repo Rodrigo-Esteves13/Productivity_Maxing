@@ -14,6 +14,12 @@ export const MAX_FINANCE_GOALS_PER_USER = 100;
 export const MAX_FINANCE_ACCOUNTS_PER_USER = 50;
 export const MAX_FINANCE_HOLDINGS_PER_USER = 100;
 export const FINANCE_WRITES_PER_MINUTE = 60;
+export const FINANCE_EXPORT_PER_MINUTE = 10;
+// Importacao CSV (POST /finance/import). O body JSON tem o teto de 100kb do
+// Express, por isso o frontend parte o ficheiro em lotes (por linhas e por
+// bytes); com o teto de entradas por pessoa chegam poucos pedidos.
+export const MAX_FINANCE_IMPORT_ROWS = 1000;
+export const FINANCE_IMPORT_PER_MINUTE = 10;
 export const FINANCE_NOTE_MAX_LENGTH = 120;
 export const FINANCE_GOAL_NAME_MAX_LENGTH = 80;
 export const FINANCE_ACCOUNT_NAME_MAX_LENGTH = 60;
@@ -43,6 +49,11 @@ export const FINANCE_CATEGORIES = [
 export type FinanceCategory = (typeof FINANCE_CATEGORIES)[number];
 export const LEISURE_CATEGORY: FinanceCategory = 'LEISURE';
 export const SUBSCRIPTIONS_CATEGORY: FinanceCategory = 'SUBSCRIPTIONS';
+
+// Aviso push do orcamento mensal (budget-alert-reminders.service.ts): percentagem
+// do limite gasta no mes (Lisboa) a partir da qual se avisa, uma vez cada.
+export const BUDGET_ALERT_WARN_PCT = 80;
+export const BUDGET_ALERT_OVER_PCT = 100;
 
 // Moedas aceites (ISO 4217); so muda a forma como o frontend mostra.
 export const FINANCE_CURRENCIES = [
@@ -88,6 +99,8 @@ export const INTEREST_RATE_DECIMALS = 3;
 export const DAYS_PER_YEAR = 365;
 // Cenario "paga tarde": valor se pagar estes dias depois do prazo.
 export const OWED_LATE_SCENARIO_DAYS = 30;
+// Historico de pagamentos recebidos (GET /finance/owed-payments).
+export const OWED_PAYMENTS_HISTORY_LIMIT = 50;
 
 // Idempotencia dos POST: mesmo user + mesma chave dentro da janela devolve
 // a linha ja criada. Fora da janela a chave ja usada da 409.

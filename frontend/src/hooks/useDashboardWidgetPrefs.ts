@@ -31,7 +31,9 @@ export type DashboardWidgetKey =
   | 'difficultyVsGrade'
   | 'failingRisk'
   | 'planScenario'
-  | 'ratingsSummary';
+  | 'ratingsSummary'
+  | 'packUpdates'
+  | 'moneySnapshot';
 
 // Chaves i18n (traduzidas com t() em DashboardWidgetToggles).
 export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
@@ -66,6 +68,8 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   failingRisk: 'widget.failingRisk',
   planScenario: 'widget.planScenario',
   ratingsSummary: 'widget.ratingsSummary',
+  packUpdates: 'packUpdatesWidget.label',
+  moneySnapshot: 'moneySnapshot.label',
 };
 
 const STORAGE_KEY = 'dashboard-widget-prefs';
@@ -105,6 +109,9 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   failingRisk: true,
   planScenario: true,
   ratingsSummary: true,
+  packUpdates: true,
+  // Dados novos no ecra (dinheiro): desligado ate a pessoa ligar.
+  moneySnapshot: false,
 };
 
 function loadPrefs(): Record<DashboardWidgetKey, boolean> {

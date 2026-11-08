@@ -6,10 +6,8 @@ import {
 } from '../common/time.constants';
 import {
   addUtcDays,
-  diffUtcDays,
   getLisbonNow,
   lisbonDayBounds,
-  parseDateKey,
   toDateKey,
   toLisbonDateKey,
   toLisbonWeekdayHour,
@@ -22,11 +20,17 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { walkStreak } from './study-streak.util';
 import { StartStudySessionDto } from './dto/start-study-session.dto';
 import { StopStudySessionDto } from './dto/stop-study-session.dto';
 import { CreateManualSessionDto } from './dto/create-manual-session.dto';
 import { UpdateStudySessionDto } from './dto/update-study-session.dto';
 import { HeartbeatStudySessionDto } from './dto/heartbeat-study-session.dto';
+import {
+  aggregateDistractionStats,
+  DISTRACTION_STATS_DEFAULT_DAYS,
+  type DistractionStats,
+} from './distraction-stats.util';
 import {
   MAX_SESSION_MINUTES,
   validateSessionWindow,
@@ -111,15 +115,7 @@ export interface HeatmapCell {
   sessionCount: number;
 }
 
-// Streak freeze rules: earn 1 freeze every FREEZE_EARN_INTERVAL_DAYS of
-// consecutive study, banked up to FREEZE_MAX_BANKED at once. A banked
-// freeze auto-covers exactly one missed day in the past (streak doesn't
-// grow that day, but doesn't reset either) - the whole point is a single
-// off day doesn't wipe out weeks of consistency. Deliberately NOT
-// unlimited/easy to earn: if freezes were cheap the streak would stop
-// meaning anything.
-const FREEZE_EARN_INTERVAL_DAYS = 7;
-const FREEZE_MAX_BANKED = 2;
+// Streak freeze rules live in study-streak.util.ts (walkStreak).
 
 export interface StudyStreak {
   currentStreak: number;
@@ -570,6 +566,46 @@ export class StudySessionsService {
   }
 
   /**
+   * Distracoes por hora do dia / Area / esforco da task, nas sessoes
+   * terminadas dos ultimos `days` dias (dias de Lisboa). Ver
+   * aggregateDistractionStats para as regras (amostra minima, denominadores).
+   */
+  async getDistractionStats(
+    userId: string,
+    days: number = DISTRACTION_STATS_DEFAULT_DAYS,
+  ): Promise<DistractionStats> {
+    const firstDay = addUtcDays(getLisbonNow().today, -(days - 1));
+    const since = lisbonDayBounds(toDateKey(firstDay)).start;
+
+    const sessions = await this.prisma.studySession.findMany({
+      where: { userId, endedAt: { not: null }, startedAt: { gte: since } },
+      select: {
+        startedAt: true,
+        endedAt: true,
+        distractionCount: true,
+        area: { select: { id: true, name: true, colorHex: true } },
+        task: {
+          select: {
+            effort: true,
+            area: { select: { id: true, name: true, colorHex: true } },
+          },
+        },
+      },
+    });
+
+    return aggregateDistractionStats(
+      sessions.map((session) => ({
+        startedAt: session.startedAt,
+        endedAt: session.endedAt,
+        distractionCount: session.distractionCount,
+        area: session.area ?? session.task?.area ?? null,
+        task: session.task ? { effort: session.task.effort } : null,
+      })),
+      days,
+    );
+  }
+
+  /**
    * Total study time per Area, across every finished session ever logged
    * - powers TimeByAreaCard.tsx on the Dashboard ("where does my study
    * time actually go"). A session's Area is resolved as
@@ -673,39 +709,9 @@ export class StudySessionsService {
       };
     }
 
-    const today = getLisbonNow().today;
-    const todayKey = toDateKey(today);
-    const firstDay = parseDateKey(toLisbonDateKey(sessions[0].startedAt));
-    const totalDays = diffUtcDays(firstDay, today) + 1;
-
-    let currentStreak = 0;
-    let longestStreak = 0;
-    let freezesAvailable = 0;
-    let freezesUsedTotal = 0;
-
-    for (let i = 0; i < totalDays; i++) {
-      const dayKey = toDateKey(addUtcDays(firstDay, i));
-      const isToday = dayKey === todayKey;
-
-      if (activeDays.has(dayKey)) {
-        currentStreak += 1;
-        if (currentStreak % FREEZE_EARN_INTERVAL_DAYS === 0) {
-          freezesAvailable = Math.min(freezesAvailable + 1, FREEZE_MAX_BANKED);
-        }
-      } else if (isToday) {
-        // Not over yet - leave currentStreak as-is, don't spend a freeze,
-        // don't reset. `atRisk` below tells the frontend the rest.
-      } else if (freezesAvailable > 0) {
-        freezesAvailable -= 1;
-        freezesUsedTotal += 1;
-        // Streak survives the gap, but a frozen day doesn't itself extend
-        // the streak - only real study days do.
-      } else {
-        currentStreak = 0;
-      }
-
-      longestStreak = Math.max(longestStreak, currentStreak);
-    }
+    const todayKey = toDateKey(getLisbonNow().today);
+    const { currentStreak, longestStreak, freezesAvailable, freezesUsedTotal } =
+      walkStreak(activeDays, toLisbonDateKey(sessions[0].startedAt), todayKey);
 
     return {
       currentStreak,
