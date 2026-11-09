@@ -54,6 +54,7 @@ import {
   WeeklyReview,
   Wellbeing,
   ReportCard,
+  PeriodReview,
   Ratings,
   CourseRisk,
   Pad,
@@ -105,6 +106,7 @@ export default function AppRouter() {
           <Route path="/ratings" element={<PrivateRoute><Ratings /></PrivateRoute>} />
           <Route path="/risk" element={<PrivateRoute><CourseRisk /></PrivateRoute>} />
           <Route path="/report-card" element={<PrivateRoute><ReportCard /></PrivateRoute>} />
+          <Route path="/period-review" element={<PrivateRoute><PeriodReview /></PrivateRoute>} />
           {/* Publicas, como o dontpad: ler e escrever sem conta. */}
           <Route path="/pad" element={<Pad />} />
           <Route path="/pad/:slug" element={<Pad />} />

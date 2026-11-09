@@ -8,6 +8,7 @@ import EmptyState from '../components/UI/EmptyState';
 import ErrorState from '../components/UI/ErrorState';
 import TableSkeleton from '../components/UI/TableSkeleton';
 import DeviceSessionRow from '../components/Devices/DeviceSessionRow';
+import SecurityActivityExportButton from '../components/Devices/SecurityActivityExportButton';
 import { useFeedback } from '../context/useFeedback';
 import { useI18n } from '../i18n/useI18n';
 import { parseUserAgent } from '../lib/userAgent';
@@ -93,6 +94,14 @@ export default function Devices() {
           ))}
         </ul>
       )}
+
+      <div className="mt-6 flex flex-col gap-2 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-white">{t('securityExport.title')}</p>
+          <p className="mt-1 text-xs text-neutral-400">{t('securityExport.description')}</p>
+        </div>
+        <SecurityActivityExportButton />
+      </div>
 
       <p className="mt-4 text-xs text-neutral-500">{t('devices.help')}</p>
       <p className="mt-2 text-xs text-neutral-500">{t('devices.newDeviceNote')}</p>

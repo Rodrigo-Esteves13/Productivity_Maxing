@@ -25,6 +25,8 @@ import { GoogleCalendarLinkGuard } from './guards/google-calendar-link.guard';
 import { AccountStatusModule } from '../account-status/account-status.module';
 import { UserSessionsService } from './services/user-sessions.service';
 import { NewDeviceAlertService } from './services/new-device-alert.service';
+import { SecurityActivityService } from './services/security-activity.service';
+import { SecurityActivityController } from './security-activity.controller';
 import { PushCoreModule } from '../push/push-core.module';
 import { SecurityLogsCoreModule } from '../security-logs/security-logs-core.module';
 import { ACCESS_TOKEN_TTL_SECONDS } from './session.constants';
@@ -45,11 +47,12 @@ import { ACCESS_TOKEN_TTL_SECONDS } from './session.constants';
       signOptions: { expiresIn: ACCESS_TOKEN_TTL_SECONDS },
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, SecurityActivityController],
   providers: [
     AuthService,
     UserSessionsService,
     NewDeviceAlertService,
+    SecurityActivityService,
     SupabaseClientsService,
     AccountGuardService,
     OAuthIdentityService,

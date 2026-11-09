@@ -27,6 +27,9 @@ import {
   RatingsSummaryCard,
   PackUpdatesCard,
   MoneySnapshotCard,
+  WeeklyChallengeCard,
+  StatusSummaryCard,
+  AreaConsistencyCard,
 } from './lazyCards';
 import type { DashboardWidgetKey } from '../../hooks/useDashboardWidgetPrefs';
 import type { AcademicProgram, AcademicTaskTypeOption, Area, Task } from '../../types/models';
@@ -52,6 +55,12 @@ export default function DashboardCardGrid({
     <MasonryGrid className="mb-6">
       {visibility.today && <TodayCard />}
       {visibility.packUpdates && <PackUpdatesCard />}
+      {visibility.weeklyChallenge && academicTasks.length > 0 && (
+        <WeeklyChallengeCard tasks={academicTasks} />
+      )}
+      {visibility.statusSummary && academicTasks.length > 0 && (
+        <StatusSummaryCard tasks={academicTasks} areas={academicAreas} />
+      )}
       {visibility.moneySnapshot && <MoneySnapshotCard />}
       {visibility.studyCapacity && <StudyCapacityCard />}
       {academicTasks.length > 0 && visibility.upcoming && (
@@ -114,6 +123,13 @@ export default function DashboardCardGrid({
       )}
       {visibility.weightVsGrade && academicTasks.length > 0 && activeProgram && (
         <WeightVsGradeCard tasks={academicTasks} scale={activeProgram.gradeScale} />
+      )}
+      {visibility.areaConsistency && academicTasks.length > 0 && activeProgram && (
+        <AreaConsistencyCard
+          tasks={academicTasks}
+          areas={academicAreas}
+          scale={activeProgram.gradeScale}
+        />
       )}
     </MasonryGrid>
   );

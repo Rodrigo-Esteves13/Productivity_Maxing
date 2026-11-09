@@ -121,6 +121,17 @@ export const SITE_PAGES: SitePage[] = [
     related: [
       { to: '/classes', labelKey: 'related.reportCard.classes' },
       { to: '/tasks', labelKey: 'related.reportCard.tasks' },
+      { to: '/period-review', labelKey: 'periodReview.related.review' },
+    ],
+  },
+  {
+    path: '/period-review',
+    labelKey: 'periodReview.title',
+    section: 'study',
+    parent: '/areas',
+    related: [
+      { to: '/report-card', labelKey: 'periodReview.related.reportCard' },
+      { to: '/focus', labelKey: 'periodReview.related.focus' },
     ],
   },
   {

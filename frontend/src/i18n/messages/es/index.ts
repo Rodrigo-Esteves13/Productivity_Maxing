@@ -46,6 +46,12 @@ import { ambientGlobal } from './ambientGlobal';
 import { financeFixes } from './financeFixes';
 import { focusHours } from './focusHours';
 import { financeImport } from './financeImport';
+import { periodReview } from './periodReview';
+import { areaConsistency } from './areaConsistency';
+import { statusSummary } from './statusSummary';
+import { securityExport } from './securityExport';
+import { chartExport } from './chartExport';
+import { weeklyChallenge } from './weeklyChallenge';
 import { accentColor } from './accentColor';
 import { medFollowUp } from './medFollowUp';
 import { greeting } from './greeting';
@@ -100,6 +106,12 @@ export const es: Record<string, string> = {
   ...financeFixes,
   ...focusHours,
   ...financeImport,
+  ...periodReview,
+  ...areaConsistency,
+  ...statusSummary,
+  ...securityExport,
+  ...chartExport,
+  ...weeklyChallenge,
   ...accentColor,
   ...medFollowUp,
   ...greeting,

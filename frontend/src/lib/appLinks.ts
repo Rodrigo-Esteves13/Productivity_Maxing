@@ -31,3 +31,17 @@ export const turmaLinkedEntryPath = (turmaId: string, linkId: string, entryId: s
 
 /** Login que volta para `returnTo` depois de entrar (ver Login.tsx). */
 export const loginPathReturningTo = (returnTo: string): string => `/login?redirect=${encodeURIComponent(returnTo)}`;
+
+/** Caminhos de autenticacao: nunca servem de destino depois do login. */
+const AUTH_PATH_PREFIXES = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/set-password', '/auth'];
+
+/**
+ * Login para onde mandar uma sessao que terminou a meio: guarda a pagina atual
+ * (caminho + query) para o Login voltar a ela. Sem destino util (raiz ou
+ * paginas de autenticacao) fica o /login simples.
+ */
+export const loginPathAfterSessionEnded = (pathname: string, search = ''): string => {
+  const isAuthPath = AUTH_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  if (pathname === '/' || isAuthPath) return '/login';
+  return loginPathReturningTo(pathname + search);
+};

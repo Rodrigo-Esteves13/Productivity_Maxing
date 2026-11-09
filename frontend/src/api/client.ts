@@ -4,6 +4,7 @@ import { getCsrfToken, getSessionUserId, setCsrfToken } from './csrfStore';
 import { MAINTENANCE_EVENT } from '../lib/maintenanceEvents';
 import { ACCOUNT_BLOCKED_EVENT } from '../lib/accountBlockedEvents';
 import { API_BASE_URL } from './apiBaseUrl';
+import { loginPathAfterSessionEnded } from '../lib/appLinks';
 
 // Create the base Axios instance
 const api = axios.create({
@@ -269,7 +270,7 @@ function handleSessionEnded(error: { response?: { status?: number } }, url?: str
     // Evita reload se já lá estamos (ex: várias chamadas em paralelo a
     // falharem ao mesmo tempo).
     if (window.location.pathname !== '/login') {
-      window.location.href = '/login';
+      window.location.href = loginPathAfterSessionEnded(window.location.pathname, window.location.search);
     }
   }
   return Promise.reject(error);

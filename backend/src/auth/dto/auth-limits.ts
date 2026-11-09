@@ -14,3 +14,6 @@ export const REFRESH_REQUESTS_PER_MINUTE = 30;
 export const REFRESH_IP_CEILING_PER_MINUTE = 300;
 export const SESSION_REVOKE_REQUESTS_PER_MINUTE = 20;
 export const SESSION_REVOKE_OTHERS_REQUESTS_PER_MINUTE = 5;
+// Export "Download my security activity" (pagina Devices): le varias tabelas,
+// por isso um teto baixo chega e sobra para o uso normal.
+export const SECURITY_ACTIVITY_EXPORT_REQUESTS_PER_MINUTE = 5;

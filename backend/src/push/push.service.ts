@@ -7,7 +7,12 @@ import {
 import * as webpush from 'web-push';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubscribePushDto } from './dto/subscribe-push.dto';
-import { buildPushText, type PushMessageKey } from './push-messages';
+import {
+  buildPushActionLabel,
+  buildPushText,
+  type PushActionId,
+  type PushMessageKey,
+} from './push-messages';
 import {
   MS_PER_DAY,
   MS_PER_MINUTE,
@@ -125,6 +130,41 @@ export interface PushNotifyOptions {
   count?: number;
   /** Caminho dentro da app a abrir ao clicar (sempre relativo). */
   url: string;
+  /**
+   * Botao "Tomei" (so nos lembretes de medicacao, ver DOSE_ACTION_KEYS):
+   * token assinado que so marca uma toma (medication-dose-action.token.ts).
+   */
+  doseAction?: { token: string };
+}
+
+// Avisos que podem levar o botao "Tomei". Qualquer outro ignora doseAction.
+const DOSE_ACTION_KEYS: ReadonlySet<PushMessageKey> = new Set([
+  'medicationDue',
+  'medicationsDue',
+  'medicationFollowUp',
+]);
+export const DOSE_ACTION_ID: PushActionId = 'taken';
+
+/** Campos extra do payload para o botao "Tomei" (vazio se nao se aplica). */
+export function doseActionPayload(
+  lang: string,
+  key: PushMessageKey,
+  options: PushNotifyOptions,
+): {
+  actions?: { action: PushActionId; title: string }[];
+  actionToken?: string;
+} {
+  const token = options.doseAction?.token;
+  if (!token || !DOSE_ACTION_KEYS.has(key)) return {};
+  return {
+    actions: [
+      {
+        action: DOSE_ACTION_ID,
+        title: buildPushActionLabel(lang, DOSE_ACTION_ID),
+      },
+    ],
+    actionToken: token,
+  };
 }
 
 // Quanto tempo o serviço de push guarda um aviso para um telemóvel offline.
@@ -338,6 +378,7 @@ export class PushService implements OnModuleInit {
           tag: key,
           // Hora do envio: o SW mostra-a em vez da hora a que chegou.
           sentAt: Date.now(),
+          ...doseActionPayload(sub.lang, key, options),
         });
         try {
           await this.breakerFor(sub.endpoint).execute(() =>

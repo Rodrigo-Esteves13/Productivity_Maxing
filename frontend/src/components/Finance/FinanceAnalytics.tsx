@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import Card from '../UI/Card';
 import EmptyState from '../UI/EmptyState';
+import ExportChartButton from '../UI/ExportChartButton';
 import ErrorState from '../UI/ErrorState';
 import ProgressBar from '../UI/ProgressBar';
 import SegmentedControl from '../UI/SegmentedControl';
@@ -31,6 +32,7 @@ const DONUT_INNER_RADIUS = '60%';
 const DONUT_OUTER_RADIUS = '100%';
 const SLICE_GAP_PX = 2;
 const AXIS_FONT_SIZE = 11;
+const EXPORT_FILENAME_SLUG = 'income-vs-expenses';
 const Y_AXIS_WIDTH = 48;
 
 interface FinanceAnalyticsProps {
@@ -126,6 +128,7 @@ interface AnalyticsBodyProps {
 function AnalyticsBody({ data, granularity, money, compact }: AnalyticsBodyProps) {
   const { t, lang } = useI18n();
   const { enabled: privacyOn } = usePrivacyMode();
+  const barChartRef = useRef<HTMLDivElement>(null);
   const { currency } = data;
   const rows = useMemo<ChartRow[]>(
     () =>
@@ -186,9 +189,12 @@ function AnalyticsBody({ data, granularity, money, compact }: AnalyticsBodyProps
 
       <section aria-labelledby="finance-flow-title">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h4 id="finance-flow-title" className="text-sm font-semibold text-neutral-200">
-            {t('finance.incomeVsExpenses')}
-          </h4>
+          <div className="flex items-center gap-1">
+            <h4 id="finance-flow-title" className="text-sm font-semibold text-neutral-200">
+              {t('finance.incomeVsExpenses')}
+            </h4>
+            <ExportChartButton containerRef={barChartRef} filenameSlug={EXPORT_FILENAME_SLUG} disabled={privacyOn} />
+          </div>
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-400">
             <li className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-sm bg-cyan-400" aria-hidden="true" />
@@ -204,7 +210,7 @@ function AnalyticsBody({ data, granularity, money, compact }: AnalyticsBodyProps
             </li>
           </ul>
         </div>
-        <div className={`${BAR_CHART_HEIGHT_CLASS} w-full`} aria-hidden="true">
+        <div ref={barChartRef} className={`${BAR_CHART_HEIGHT_CLASS} w-full`} aria-hidden="true">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barGap={SLICE_GAP_PX}>
               <CartesianGrid stroke={GRID_COLOR} strokeDasharray="3 3" vertical={false} />

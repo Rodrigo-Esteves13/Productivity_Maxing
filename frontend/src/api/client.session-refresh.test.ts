@@ -92,7 +92,7 @@ describe('api client session refresh', () => {
     const { api, calls } = await setup({ refreshOk: false });
     await expect(api.get('/tasks')).rejects.toBeInstanceOf(AxiosError);
     expect(calls.refresh).toBe(1);
-    expect(location.href).toBe('/login');
+    expect(location.href).toBe('/login?redirect=%2Ftasks');
   });
 
   // Falha passageira do refresh (rede, 429, 5xx): a sessao pode estar valida,
@@ -168,7 +168,7 @@ describe('api client session refresh', () => {
   it('treats a 403 from the refresh as a lost session', async () => {
     const { api } = await setupFlakyRefresh(403);
     await expect(api.get('/tasks')).rejects.toBeInstanceOf(AxiosError);
-    expect(location.href).toBe('/login');
+    expect(location.href).toBe('/login?redirect=%2Ftasks');
   });
 
   it('shares one refresh between parallel 401s even when it fails transiently', async () => {
@@ -211,7 +211,7 @@ describe('api client session refresh', () => {
     await expect(api.get('/tasks')).rejects.toBeInstanceOf(AxiosError);
     expect(refreshes).toBe(1);
     expect(dataCalls).toBe(2);
-    expect(location.href).toBe('/login');
+    expect(location.href).toBe('/login?redirect=%2Ftasks');
   });
 
   it('serialises the refresh across tabs with a Web Lock when available', async () => {

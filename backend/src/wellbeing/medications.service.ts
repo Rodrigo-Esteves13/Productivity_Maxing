@@ -3,10 +3,12 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { MedicationSchedule, Prisma, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { PushService } from '../push/push.service';
+import { PushService, type PushNotifyOptions } from '../push/push.service';
+import { MedicationDoseActionTokenService } from './medication-dose-action.token';
 import {
   addUtcDays,
   diffUtcDays,
@@ -47,6 +49,11 @@ export interface MedicationView {
   remindersEnabled: boolean;
   active: boolean;
   schedule: MedicationSchedule;
+}
+
+// Resposta do botao "Tomei": nunca traz dados da toma nem do medicamento.
+export interface DoseActionResult {
+  status: 'taken' | 'already-taken';
 }
 
 export interface MedicationDaySlot {
@@ -257,6 +264,9 @@ export class MedicationsService {
     private readonly prisma: PrismaService,
     private readonly pushService: PushService,
     private readonly disclaimer: MedicationDisclaimerService,
+    // Sem dependencias proprias: o valor por omissao serve os testes que
+    // constroem o servico a mao; em runtime o Nest injeta o provider.
+    private readonly doseActions: MedicationDoseActionTokenService = new MedicationDoseActionTokenService(),
   ) {}
 
   list(userId: string): Promise<MedicationView[]> {
@@ -542,7 +552,7 @@ export class MedicationsService {
         delivered = await this.pushService.notifyUser(
           userId,
           medicationCount === 1 ? 'medicationDue' : 'medicationsDue',
-          { url: MEDICATION_PATH },
+          { url: MEDICATION_PATH, ...this.doseActionFor(userId, claimed) },
         );
       } finally {
         // Sem dispositivo com push: liberta o claim, tenta na proxima execucao.
@@ -602,7 +612,7 @@ export class MedicationsService {
       delivered = await this.pushService.notifyUser(
         userId,
         'medicationFollowUp',
-        { url: MEDICATION_PATH },
+        { url: MEDICATION_PATH, ...this.doseActionFor(userId, claimed) },
       );
     } finally {
       if (delivered === 0) {
@@ -744,6 +754,103 @@ export class MedicationsService {
         );
       }
     }
+  }
+
+  /**
+   * Botao "Tomei" do push: so quando o aviso e de UMA toma (sem ambiguidade
+   * sobre o que marcar). Varias tomas no mesmo aviso (medicationsDue, ou duas
+   * horas do mesmo medicamento) ficam sem botao: abrir a app e escolher.
+   * Uma falha a assinar nunca impede o lembrete, so tira o botao.
+   */
+  private doseActionFor(
+    userId: string,
+    claimed: DatedDueDose[],
+  ): Pick<PushNotifyOptions, 'doseAction'> {
+    if (claimed.length !== 1) return {};
+    const [dose] = claimed;
+    try {
+      const token = this.doseActions.issue({
+        userId,
+        medicationId: dose.medicationId,
+        date: dose.date,
+        slotMinutes: dose.slotMinutes,
+      });
+      return { doseAction: { token } };
+    } catch (error) {
+      this.logger.warn(
+        `Medicacao: sem botao "Tomei" (${
+          error instanceof Error ? error.name : 'erro'
+        })`,
+      );
+      return {};
+    }
+  }
+
+  /**
+   * POST /wellbeing/medications/dose-action (botao "Tomei" da notificacao).
+   * O token e a unica credencial: diz o dono, o medicamento, o dia e a hora.
+   * Nunca recebe userId de fora. Marca so essa toma como tomada:
+   * - token invalido, expirado, de outro tipo, ou toma que ja nao existe
+   *   (medicamento apagado/de outro user, hora mudada) -> 401 generico;
+   * - toma ja tomada ou token ja usado -> 200 sem escrever nada.
+   */
+  async takeDoseFromAction(token: string): Promise<DoseActionResult> {
+    const claims = this.doseActions.verify(token);
+    if (!claims) throw this.invalidDoseAction();
+    if (this.doseActions.wasConsumed(claims)) {
+      return { status: 'already-taken' };
+    }
+    const medication = await this.prisma.medication.findFirst({
+      where: {
+        id: claims.medicationId,
+        userId: claims.userId,
+        schedule: MedicationSchedule.DAILY,
+        user: { status: { not: UserStatus.BANNED } },
+      },
+      select: { times: true },
+    });
+    if (!medication || !medication.times.includes(claims.slotMinutes)) {
+      throw this.invalidDoseAction();
+    }
+    const slot = {
+      userId: claims.userId,
+      medicationId: claims.medicationId,
+      date: parseDateKey(claims.dateKey),
+      slotMinutes: claims.slotMinutes,
+    };
+    const status = await this.markSlotTaken(slot);
+    this.doseActions.markConsumed(claims);
+    return { status };
+  }
+
+  // Marca a toma so se ainda nao esta tomada (nunca muda um takenAt antigo).
+  private async markSlotTaken(slot: {
+    userId: string;
+    medicationId: string;
+    date: Date;
+    slotMinutes: number;
+  }): Promise<DoseActionResult['status']> {
+    const takenAt = new Date();
+    const setTaken = () =>
+      this.prisma.medicationDose.updateMany({
+        where: { ...slot, takenAt: null },
+        data: { takenAt },
+      });
+    if ((await setTaken()).count > 0) return 'taken';
+    try {
+      await this.prisma.medicationDose.create({ data: { ...slot, takenAt } });
+      return 'taken';
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+      // A linha ja existe: ou ja estava tomada, ou foi criada agora mesmo.
+      return (await setTaken()).count > 0 ? 'taken' : 'already-taken';
+    }
+  }
+
+  private invalidDoseAction(): UnauthorizedException {
+    return new UnauthorizedException(
+      'This reminder action is no longer valid. Open the app to mark the dose.',
+    );
   }
 
   private notFound(): NotFoundException {

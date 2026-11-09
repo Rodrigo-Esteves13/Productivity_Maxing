@@ -20,12 +20,16 @@ import { MedicationSchedule } from '@prisma/client';
 import { DATE_KEY_PATTERN } from '../../common/date-key.util';
 import {
   LOCALE_PATTERN,
+  MAX_DOSE_ACTION_TOKEN_LENGTH,
   MAX_INTAKE_NOTE_LENGTH,
   MAX_MEDICATION_DOSAGE_LENGTH,
   MAX_MEDICATION_NAME_LENGTH,
   MAX_TIMES_PER_MEDICATION,
   MINUTES_PER_DAY,
 } from '../wellbeing.constants';
+
+// header.payload.signature, cada parte em base64url.
+const JWT_SHAPE_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 
 export class CreateMedicationDto {
   @ApiProperty({ example: 'Vitamin D' })
@@ -120,6 +124,19 @@ export class MedicationDoseDto {
   })
   @IsBoolean()
   taken: boolean;
+}
+
+// Corpo do botao "Tomei" da notificacao: so o token. Nunca userId nem ids
+// de toma (o ValidationPipe com forbidNonWhitelisted recusa campos extra).
+export class MedicationDoseActionDto {
+  @ApiProperty({
+    description:
+      'Signed single-dose token from the reminder notification (JWT, three base64url parts).',
+  })
+  @IsString()
+  @MaxLength(MAX_DOSE_ACTION_TOKEN_LENGTH)
+  @Matches(JWT_SHAPE_PATTERN, { message: 'token is malformed.' })
+  token: string;
 }
 
 export class MedicationDayQueryDto {
