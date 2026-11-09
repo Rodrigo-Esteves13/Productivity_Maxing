@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import type { PeriodComparisonEntry } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import ExportChartButton from '../UI/ExportChartButton';
 
 interface GpaTrendChartProps {
   entries: PeriodComparisonEntry[];
@@ -24,6 +25,8 @@ const GLOW_STROKES = [
   { width: 13, opacity: 0.06 },
   { width: 8, opacity: 0.14 },
 ] as const;
+
+const EXPORT_FILENAME_SLUG = 'gpa-trend';
 
 // Parses a "0-20" style scale into its numeric floor/ceiling.
 function parseScale(scale: string): { min: number; max: number } {
@@ -133,6 +136,7 @@ function TrendDot(props: TrendDotRenderProps & { isLast?: boolean }) {
 // through a gap.
 export default function GpaTrendChart({ entries, scale, cumulativeAverage }: GpaTrendChartProps) {
   const { t } = useI18n();
+  const chartRef = useRef<HTMLDivElement>(null);
   const { min: scaleMin, max: scaleMax } = useMemo(() => parseScale(scale), [scale]);
 
   const data = useMemo(
@@ -151,7 +155,7 @@ export default function GpaTrendChart({ entries, scale, cumulativeAverage }: Gpa
   const zoomed = domainMin > scaleMin || domainMax < scaleMax;
 
   return (
-    <div className="relative h-72 w-full">
+    <div ref={chartRef} className="relative h-72 w-full">
       {/* Soft ambient glow behind the chart, purely decorative */}
       <div className="pointer-events-none absolute -inset-x-24 -top-14 h-64 bg-radial-[closest-side] from-violet-500/8 via-violet-500/5 to-transparent" />
 
@@ -159,6 +163,12 @@ export default function GpaTrendChart({ entries, scale, cumulativeAverage }: Gpa
         <p className="absolute right-1 top-0 text-[10px] text-neutral-500">
           {t('ui.zoomedToOfScale', { domainMin: domainMin, domainMax: domainMax, scaleMin: scaleMin, scaleMax: scaleMax })}</p>
       )}
+
+      <ExportChartButton
+        containerRef={chartRef}
+        filenameSlug={EXPORT_FILENAME_SLUG}
+        className="absolute left-0 top-0 z-10"
+      />
 
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 20, right: 12, bottom: 0, left: 0 }}>

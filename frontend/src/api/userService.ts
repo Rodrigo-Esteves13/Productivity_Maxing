@@ -1,6 +1,7 @@
 // src/api/userService.ts
 import api, { refreshSession } from './client';
 import { fetchAllPages } from './fetchAllPages';
+import type { SecurityActivityExport } from '../utils/securityActivityCsv';
 import type {
   DeviceSession,
   User,
@@ -176,6 +177,13 @@ export const revokeDeviceSession = async (id: string): Promise<void> => {
 
 export const revokeOtherDeviceSessions = async (): Promise<void> => {
   await api.post('/auth/sessions/revoke-others');
+};
+
+// Export "Download my security activity" (pagina Devices): so a propria
+// conta, sem hashes nem tokens. O CSV e montado em utils/securityActivityCsv.
+export const getSecurityActivityExport = async (): Promise<SecurityActivityExport> => {
+  const response = await api.get<SecurityActivityExport>('/auth/security-activity/export');
+  return response.data;
 };
 
 // USER ENDPOINTS

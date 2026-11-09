@@ -40,6 +40,7 @@ export const DmcaPolicy = lazyWithPreload(() => import('../pages/DmcaPolicy'));
 export const WeeklyReview = lazyWithPreload(() => import('../pages/WeeklyReview'));
 export const Wellbeing = lazyWithPreload(() => import('../pages/Wellbeing'));
 export const ReportCard = lazyWithPreload(() => import('../pages/ReportCard'));
+export const PeriodReview = lazyWithPreload(() => import('../pages/PeriodReview'));
 export const Ratings = lazyWithPreload(() => import('../pages/Ratings'));
 export const CourseRisk = lazyWithPreload(() => import('../pages/CourseRisk'));
 export const Pad = lazyWithPreload(() => import('../pages/Pad'));
@@ -69,6 +70,7 @@ const BY_SECTION: Record<string, { preload: () => Promise<unknown> }> = {
   review: WeeklyReview,
   wellbeing: Wellbeing,
   'report-card': ReportCard,
+  'period-review': PeriodReview,
   ratings: Ratings,
   risk: CourseRisk,
   pad: Pad,

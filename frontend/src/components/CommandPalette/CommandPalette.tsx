@@ -168,6 +168,12 @@ const NAV_COMMANDS: NavCommand[] = [
     keywords: ['report card', 'transcript', 'boletim', 'pauta', 'grades', 'notas', 'semester', 'semestre', 'print', 'imprimir', 'pdf', 'credits', 'ects'],
   },
   {
+    id: 'nav-period-review',
+    labelKey: 'periodReview.title',
+    path: '/period-review',
+    keywords: ['period in review', 'wrapped', 'recap', 'year in review', 'resumo', 'resumo anual', 'balanco', 'balanço', 'semester recap', 'highlights', 'stats', 'streak', 'best day'],
+  },
+  {
     id: 'nav-turmas',
     labelKey: 'nav.turmas',
     path: '/classes',

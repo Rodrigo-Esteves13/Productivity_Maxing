@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { useFocusTrend } from '../../hooks/useFocusTrend';
 import { useI18n } from '../../i18n/useI18n';
 import { FULL_PERCENT } from '../../lib/percent';
 import { RATING_MAX, RATING_MIN } from '../../lib/rating';
 import type { FocusTrendWeek } from '../../types/models';
+import ExportChartButton from '../UI/ExportChartButton';
 import LegendItem from '../UI/LegendItem';
 
 // Semanas com algum dado (foco ou nota) para o grafico fazer sentido.
@@ -15,6 +16,7 @@ const FOCUS_COLOR = 'var(--color-violet-400)';
 const GRADE_COLOR = 'var(--color-neutral-300)';
 const GRID_COLOR = 'var(--color-neutral-800)';
 const AXIS_COLOR = 'var(--color-neutral-500)';
+const EXPORT_FILENAME_SLUG = 'focus-vs-grade-trend';
 const AXIS_TICKS = [0, 50, 100];
 
 interface ChartPoint {
@@ -69,6 +71,7 @@ function TrendTooltip({ active, payload }: TooltipProps) {
 // a relacao a formar-se antes de haver dados para o modelo concluir.
 export default function FocusTrendChart() {
   const { t } = useI18n();
+  const chartRef = useRef<HTMLDivElement>(null);
   const { weeks, isLoading, error } = useFocusTrend();
   const points = useMemo(() => toPoints(weeks ?? []), [weeks]);
 
@@ -77,8 +80,11 @@ export default function FocusTrendChart() {
 
   return (
     <div className="mt-4">
-      <p className="mb-1 text-xs text-neutral-500">{t('focusTrend.title')}</p>
-      <div className={CHART_HEIGHT_CLASS}>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <p className="text-xs text-neutral-500">{t('focusTrend.title')}</p>
+        <ExportChartButton containerRef={chartRef} filenameSlug={EXPORT_FILENAME_SLUG} />
+      </div>
+      <div ref={chartRef} className={CHART_HEIGHT_CLASS}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={points} margin={{ top: 4, right: 4, bottom: 0, left: -24 }}>
             <CartesianGrid stroke={GRID_COLOR} vertical={false} />

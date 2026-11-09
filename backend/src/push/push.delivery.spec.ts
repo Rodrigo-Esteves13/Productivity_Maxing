@@ -1,5 +1,6 @@
 import * as webpush from 'web-push';
 import { DEFAULT_PUSH_TTL_SECONDS, PushService } from './push.service';
+import { buildPushActionLabel, PUSH_LANGUAGES } from './push-messages';
 
 jest.mock('web-push', () => ({
   setVapidDetails: jest.fn(),
@@ -44,6 +45,41 @@ describe('PushService delivery options', () => {
       tag: 'medicationDue',
       sentAt: new Date('2026-12-01T08:00:00Z').getTime(),
     });
+  });
+
+  it('medication reminder with a dose token: "taken" action in the subscription language', async () => {
+    await makeService().notifyUser('u1', 'medicationFollowUp', {
+      url: '/wellbeing',
+      doseAction: { token: 'a.b.c' },
+    });
+    const [, payload] = (webpush.sendNotification as jest.Mock).mock
+      .calls[0] as [unknown, string];
+    expect(JSON.parse(payload)).toMatchObject({
+      actions: [{ action: 'taken', title: 'Taken' }],
+      actionToken: 'a.b.c',
+    });
+  });
+
+  it('a dose token on any other notification is dropped', async () => {
+    await makeService().notifyUser('u1', 'friendRequest', {
+      name: 'A',
+      url: '/friends',
+      doseAction: { token: 'a.b.c' },
+    });
+    const [, payload] = (webpush.sendNotification as jest.Mock).mock
+      .calls[0] as [unknown, string];
+    const parsed = JSON.parse(payload) as Record<string, unknown>;
+    expect(parsed.actions).toBeUndefined();
+    expect(parsed.actionToken).toBeUndefined();
+  });
+
+  it('every push language has a "taken" label', () => {
+    for (const lang of PUSH_LANGUAGES) {
+      const label = buildPushActionLabel(lang, 'taken');
+      expect(label.length).toBeGreaterThan(0);
+    }
+    expect(buildPushActionLabel('pt', 'taken')).toBe('Tomei');
+    expect(buildPushActionLabel('xx', 'taken')).toBe('Taken');
   });
 
   it('other notifications keep the default TTL', async () => {

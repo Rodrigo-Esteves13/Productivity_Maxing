@@ -39,6 +39,20 @@ export const MEDICATION_REMINDER_WINDOW_MINUTES = 60;
 export const MEDICATION_FOLLOW_UP_DELAY_MINUTES = 15;
 export const MEDICATION_PATH = '/wellbeing';
 
+// Botao "Tomei" na notificacao (POST /wellbeing/medications/dose-action):
+// o service worker nao tem sessao nem token CSRF, por isso o push leva um
+// token assinado so para marcar UMA toma (ver medication-dose-action.token.ts).
+// Vale tanto como o proprio push (MEDICATION_REMINDER_WINDOW_MINUTES).
+export const MEDICATION_DOSE_ACTION_PURPOSE = 'med-taken';
+// Rotulo da derivacao do segredo: este token nunca vale como sessao nem como
+// nenhum outro token assinado a partir do JWT_SECRET.
+export const MEDICATION_DOSE_ACTION_KEY_LABEL = 'med-dose-action-v1';
+// Um JWT HS256 com estes claims tem ~350 caracteres; folga sem aceitar lixo.
+export const MAX_DOSE_ACTION_TOKEN_LENGTH = 1024;
+export const DOSE_ACTION_REQUESTS_PER_MINUTE = 10;
+// Teto da memoria de tokens ja usados (anti-replay em memoria).
+export const MAX_CONSUMED_DOSE_ACTION_TOKENS = 10_000;
+
 // Medicacao "se necessario": registo por toma.
 export const MAX_INTAKES_PER_DAY = 30;
 export const MAX_INTAKE_NOTE_LENGTH = 200;

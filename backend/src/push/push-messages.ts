@@ -1215,6 +1215,28 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
   },
 };
 
+// Botoes de acao das notificacoes (Notification.actions). Hoje so o "Tomei"
+// dos lembretes de medicacao (ver push-sw.js, acao 'taken').
+export type PushActionId = 'taken';
+
+const ACTION_LABELS: Record<PushLanguage, Record<PushActionId, string>> = {
+  en: { taken: 'Taken' },
+  pt: { taken: 'Tomei' },
+  es: { taken: 'Tomada' },
+  zh: { taken: '已服用' },
+  ja: { taken: '服用済み' },
+  ko: { taken: '복용함' },
+  fr: { taken: 'Prise' },
+  de: { taken: 'Genommen' },
+};
+
+export function buildPushActionLabel(lang: string, id: PushActionId): string {
+  const dict =
+    (ACTION_LABELS as Record<string, (typeof ACTION_LABELS)['en']>)[lang] ??
+    ACTION_LABELS.en;
+  return dict[id] ?? ACTION_LABELS.en[id];
+}
+
 export function buildPushText(
   lang: string,
   key: PushMessageKey,

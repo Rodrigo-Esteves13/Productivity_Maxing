@@ -34,7 +34,10 @@ export type DashboardWidgetKey =
   | 'planScenario'
   | 'ratingsSummary'
   | 'packUpdates'
-  | 'moneySnapshot';
+  | 'moneySnapshot'
+  | 'weeklyChallenge'
+  | 'statusSummary'
+  | 'areaConsistency';
 
 // Chaves i18n (traduzidas com t() em DashboardWidgetToggles).
 export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
@@ -72,6 +75,9 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   ratingsSummary: 'widget.ratingsSummary',
   packUpdates: 'packUpdatesWidget.label',
   moneySnapshot: 'moneySnapshot.label',
+  weeklyChallenge: 'weeklyChallenge.title',
+  statusSummary: 'statusSummary.title',
+  areaConsistency: 'areaConsistency.title',
 };
 
 const STORAGE_KEY = 'dashboard-widget-prefs';
@@ -115,6 +121,9 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   packUpdates: true,
   // Dados novos no ecra (dinheiro): desligado ate a pessoa ligar.
   moneySnapshot: false,
+  weeklyChallenge: true,
+  statusSummary: true,
+  areaConsistency: true,
 };
 
 function loadPrefs(): Record<DashboardWidgetKey, boolean> {

@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
@@ -42,8 +42,33 @@ reactCompiler.rolldown.filter = {
   },
 };
 
+// URL da API para o service worker (public/push-sw.js nao passa pelo Vite e
+// nao ve import.meta.env). Escrito no build em push-sw-config.js, importado
+// pelo sw.js antes do push-sw.js: o botao "Tomei" das notificacoes de
+// medicacao faz POST aqui. Mesmo valor e fallback que src/api/apiBaseUrl.ts.
+const PUSH_SW_CONFIG_FILE = 'push-sw-config.js';
+const DEV_API_URL = 'http://localhost:3000';
+function pushSwConfig(): Plugin {
+  let apiBaseUrl = DEV_API_URL;
+  return {
+    name: 'pmaxing-push-sw-config',
+    apply: 'build',
+    configResolved(config) {
+      apiBaseUrl = String(config.env.VITE_API_URL || DEV_API_URL).replace(/\/$/, '');
+    },
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: PUSH_SW_CONFIG_FILE,
+        // JSON.stringify: o valor entra como string JS, nunca como codigo.
+        source: `self.PMAXING_API_BASE_URL = ${JSON.stringify(apiBaseUrl)};\n`,
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), babel({ presets: [reactCompiler] }), tailwindcss(), VitePWA({
+  plugins: [react(), babel({ presets: [reactCompiler] }), tailwindcss(), pushSwConfig(), VitePWA({
     // 'autoUpdate' -> o SW troca de versão sozinho no próximo load,
     // sem precisar de o user aceitar um prompt de "nova versão disponível".
     // Combinado com o registerSW.ts (que força skipWaiting), garante que
@@ -100,7 +125,8 @@ export default defineConfig({
       }]
     },
     workbox: {
-      importScripts: ['push-sw.js'],
+      // A config primeiro: o push-sw.js le self.PMAXING_API_BASE_URL.
+      importScripts: [PUSH_SW_CONFIG_FILE, 'push-sw.js'],
       // Só JS/CSS/fontes/ícones do build entram no precache (imutáveis,
       // têm hash no nome). NUNCA HTML aqui - o index.html é sempre
       // pedido à rede para apanhar deploys novos (ver a regra de

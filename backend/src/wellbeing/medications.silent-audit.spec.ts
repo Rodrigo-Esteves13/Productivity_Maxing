@@ -470,9 +470,12 @@ describe('medication reminders: follow-up (second and last push)', () => {
     await runAt(service, ['08:15', '08:16', '08:30', '08:45', '09:00']);
     expect(firstReminders(push)).toBe(1);
     expect(followUps(push)).toBe(1);
-    expect(push.notifyUser).toHaveBeenLastCalledWith('u1', FOLLOW_UP_KEY, {
-      url: '/wellbeing',
-    });
+    // Single dose: also carries the "Taken" token (medication-dose-action.spec.ts).
+    expect(push.notifyUser).toHaveBeenLastCalledWith(
+      'u1',
+      FOLLOW_UP_KEY,
+      expect.objectContaining({ url: '/wellbeing' }),
+    );
     expect(doses[0].followUpRemindedAt?.toISOString()).toBe(
       '2026-12-01T08:15:00.000Z',
     );
