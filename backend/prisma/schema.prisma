@@ -302,6 +302,10 @@ model User {
   financeGoals          FinanceGoal[]
   financeAccounts       FinanceAccount[]
   financeHoldings       FinanceHolding[]
+  // Marcadores dos avisos periodicos ja enviados (ver SentNotification).
+  sentNotifications     SentNotification[]
+  // Dias de descanso da streak de estudo pedidos pelo user (ver StreakFreeze).
+  streakFreezes         StreakFreeze[]
 
   // Pedidos de recurso contra a própria suspensão/ban (AccountBlockedPage
   // no frontend) - ver o modelo UserAppeal. appealsResolved é o lado do
@@ -992,6 +996,41 @@ model SentReminder {
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, taskDate])
+}
+
+/// Dia de descanso pedido explicitamente pelo user para a streak de estudo:
+/// esse dia nao conta para o comprimento mas tambem nao parte a sequencia.
+/// `dateKey` e o dia de Lisboa (YYYY-MM-DD). Limite semanal e janela
+/// permitida (hoje/ontem) validados no StreakFreezesService.
+model StreakFreeze {
+  id        String   @id @default(uuid())
+  userId    String
+  dateKey   String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dateKey])
+  @@index([userId, createdAt])
+}
+
+/// Dedupe duravel dos avisos periodicos por user (resumo do dia, streak em
+/// risco, dinheiro, orcamento, limite de faltas, resumo mensal). Uma linha por
+/// [user, tipo, periodo]: sobrevive a restarts/deploys, ao contrario de um Map
+/// em memoria. `kind` vem de SENT_NOTIFICATION_KIND e `periodKey` e o dia
+/// (YYYY-MM-DD), a semana ISO ou o mes (YYYY-MM) do aviso. Linhas antigas sao
+/// apagadas na limpeza do RemindersService.run.
+model SentNotification {
+  id        String   @id @default(uuid())
+  userId    String
+  kind      String
+  periodKey String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, periodKey])
+  @@index([createdAt])
 }
 
 /// Item de checklist dentro de uma Task. Propositadamente MUITO mais simples
@@ -2551,7 +2590,9 @@ model FinanceEntry {
 
   user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   account FinanceAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
-  owedPayments FinanceOwedPayment[]
+  owedPayments FinanceOwedPayment[] @relation("OwedPaymentDebt")
+  // Pagamento parcial que criou esta entrada INCOME (se houver).
+  owedPaymentIncome FinanceOwedPayment? @relation("OwedPaymentIncome")
 
   @@unique([userId, clientRequestId])
   @@index([userId, date])
@@ -2570,10 +2611,19 @@ model FinanceOwedPayment {
   debtorName  String?  @db.VarChar(80)
   amountCents Int
   paidAt      DateTime
+  // Entrada INCOME criada por este pagamento (desfazer apaga-a). null nos
+  // pagamentos anteriores a esta coluna ou se a pessoa apagou a entrada
+  // (SetNull: o pagamento fica, o desfazer diz que a entrada nao existe).
+  incomeEntryId String? @unique
+  // So no pagamento que saldou a divida (a divida e apagada nesse momento):
+  // copia dos campos da divida e dos pagamentos anteriores para a repor ao
+  // desfazer. Formato em finance-owed-undo.util.ts.
+  settledDebt Json?
   createdAt   DateTime @default(now())
 
-  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  entry FinanceEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entry       FinanceEntry? @relation("OwedPaymentDebt", fields: [entryId], references: [id], onDelete: SetNull)
+  incomeEntry FinanceEntry? @relation("OwedPaymentIncome", fields: [incomeEntryId], references: [id], onDelete: SetNull)
 
   @@index([userId, paidAt])
   @@index([entryId])

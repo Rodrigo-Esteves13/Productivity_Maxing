@@ -7,6 +7,9 @@ import type { StreakRiskRemindersService } from './streak-risk-reminders.service
 import type { DueTodayRemindersService } from './due-today-reminders.service';
 import type { MoneyRemindersService } from './money-reminders.service';
 import type { BudgetAlertRemindersService } from './budget-alert-reminders.service';
+import type { MonthlyDigestService } from './monthly-digest.service';
+import type { SentNotificationService } from './sent-notification.service';
+import { SENT_NOTIFICATION_RETENTION_DAYS } from './sent-notification.constants';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { MailService } from '../mail/mail.service';
 import type { PushService } from '../push/push.service';
@@ -41,7 +44,7 @@ function task(id: string, userId: string, prefs: Prefs) {
 
 function setup(
   tasks: ReturnType<typeof task>[],
-  opts: { mailOk?: boolean; pushDelivered?: number } = {},
+  opts: { mailOk?: boolean; pushDelivered?: number; purged?: number } = {},
 ) {
   const prisma = {
     task: { findMany: jest.fn().mockResolvedValue(tasks) },
@@ -53,6 +56,9 @@ function setup(
   };
   const push = {
     notifyUser: jest.fn().mockResolvedValue(opts.pushDelivered ?? 1),
+  };
+  const sentNotifications = {
+    purgeOlderThan: jest.fn().mockResolvedValue(opts.purged ?? 0),
   };
   const service = new RemindersService(
     prisma as unknown as PrismaService,
@@ -82,11 +88,32 @@ function setup(
     {
       sendReminders: jest.fn().mockResolvedValue(0),
     } as unknown as BudgetAlertRemindersService,
+    {
+      sendDigests: jest.fn().mockResolvedValue(0),
+    } as unknown as MonthlyDigestService,
+    sentNotifications as unknown as SentNotificationService,
   );
-  return { service, prisma, mail, push };
+  return { service, prisma, mail, push, sentNotifications };
 }
 
 describe('RemindersService.run', () => {
+  it('purges old sent-notification markers with the retention constant', async () => {
+    const { service, sentNotifications } = setup([], { purged: 3 });
+    const result = await service.run(NOW);
+    expect(sentNotifications.purgeOlderThan).toHaveBeenCalledWith(
+      SENT_NOTIFICATION_RETENTION_DAYS,
+      NOW,
+    );
+    expect(result.sentNotificationsPurged).toBe(3);
+  });
+
+  it('a failing marker purge does not fail the run', async () => {
+    const { service, sentNotifications } = setup([]);
+    sentNotifications.purgeOlderThan.mockRejectedValue(new Error('db down'));
+    const result = await service.run(NOW);
+    expect(result.sentNotificationsPurged).toBe(0);
+  });
+
   it('single-flight: an overlapping call gets the in-flight run', async () => {
     const prefs = {
       deadlineEmailReminders: false,
@@ -146,8 +173,10 @@ describe('RemindersService.run', () => {
       dueTodayUsersPushed: 0,
       moneyUsersPushed: 0,
       budgetUsersPushed: 0,
+      monthlyDigestSent: 0,
       expiredPadsDeleted: 0,
       staleSessionsDeleted: 0,
+      sentNotificationsPurged: 0,
     });
   });
 
@@ -201,8 +230,10 @@ describe('RemindersService.run', () => {
       dueTodayUsersPushed: 0,
       moneyUsersPushed: 0,
       budgetUsersPushed: 0,
+      monthlyDigestSent: 0,
       expiredPadsDeleted: 0,
       staleSessionsDeleted: 0,
+      sentNotificationsPurged: 0,
     });
   });
 

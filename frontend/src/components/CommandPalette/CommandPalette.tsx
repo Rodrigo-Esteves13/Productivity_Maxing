@@ -75,6 +75,12 @@ const NAV_COMMANDS: NavCommand[] = [
     path: '/dashboard?plan=on',
     keywords: ['plan', 'plano', 'what if', 'e se', 'target', 'alvo', 'projection', 'projecao', 'expected grade', 'nota esperada'],
   },
+  {
+    id: 'nav-single-task-mode',
+    labelKey: 'singleTaskMode.paletteLabel',
+    path: '/dashboard?single=on',
+    keywords: ['single task', 'one task', 'uma tarefa', 'most urgent', 'mais urgente', 'challenge', 'desafio', 'focus', 'foco'],
+  },
   { id: 'nav-tasks', labelKey: 'nav.tasks', path: '/tasks' },
   {
     id: 'nav-task-templates',

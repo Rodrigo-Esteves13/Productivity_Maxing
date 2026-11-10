@@ -8,4 +8,11 @@ export const streakFreeze: Record<string, string> = {
   'streakFreeze.help.weeklyFreeze': "Um dia falhado por semana (segunda a domingo) e perdoado automaticamente.",
   'streakFreeze.restUsed': "Dia de descanso usado: {count}",
   'streakFreeze.restUsedHint': "Os dias de descanso nao somam nem quebram a streak.",
+  'streakFreeze.claim.button': "Usar dia de descanso",
+  'streakFreeze.claim.active': "Dia de descanso ativo",
+  'streakFreeze.claim.activeHint': "Hoje e dia de descanso: a tua streak de estudo nao aumenta nem quebra.",
+  'streakFreeze.claim.undo': "Desfazer",
+  'streakFreeze.claim.hint': "Nao estudar hoje sem quebrar a streak. Ate {max} por semana (segunda a domingo).",
+  'streakFreeze.claim.left': "{count} restante(s) esta semana",
+  'streakFreeze.claim.error': "Nao foi possivel atualizar o dia de descanso. Tenta outra vez.",
 };

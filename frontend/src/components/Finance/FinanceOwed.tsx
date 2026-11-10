@@ -2,13 +2,16 @@ import { useState, type FormEvent } from 'react';
 import Card from '../UI/Card';
 import Input from '../UI/Input';
 import IconButton from '../UI/IconButton';
-import { TrashIcon } from '../UI/Icons';
+import ConfirmDialog from '../UI/ConfirmDialog';
+import { TrashIcon, UndoIcon } from '../UI/Icons';
 import FinanceSubmitButton from './FinanceSubmitButton';
 import Money, { PrivateText } from './Money';
 import type { FinanceHeldByEmployer, FinanceOwed as OwedData, FinanceOwedItem, FinanceOwedPaymentRow } from '../../api/financeService';
 import { formatPercent, parseMoneyInput } from '../../lib/money';
 import { toLocalDateKey } from '../../lib/dateKey';
 import { useIdempotentSubmit } from '../../hooks/useIdempotentSubmit';
+import { useMoneyText } from '../../hooks/usePrivacyMode';
+import { undoErrorKey } from '../../lib/financeUndo';
 import { useI18n } from '../../i18n/useI18n';
 
 export interface ReceivedChanges {
@@ -176,12 +179,48 @@ interface FinanceOwedProps {
   onReceived: OwedRowProps['onReceived'];
   onPayment: OwedRowProps['onPayment'];
   onRemove: OwedRowProps['onRemove'];
+  /** Undoes a partial payment; rejects with the API error so the dialog can show it. */
+  onUndoPayment: (paymentId: string) => Promise<void>;
+}
+
+// Desfazer um pagamento do historico: confirmacao, estado "a desfazer" e
+// erro dentro do proprio dialogo (fica aberto ate correr bem ou cancelar).
+function useUndoPayment(onUndoPayment: FinanceOwedProps['onUndoPayment']) {
+  const { t } = useI18n();
+  const [target, setTarget] = useState<FinanceOwedPaymentRow | null>(null);
+  const [isBusy, setIsBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return {
+    target,
+    isBusy,
+    error,
+    open: (payment: FinanceOwedPaymentRow) => {
+      setError(null);
+      setTarget(payment);
+    },
+    cancel: () => setTarget(null),
+    confirm: async () => {
+      if (!target) return;
+      setIsBusy(true);
+      setError(null);
+      try {
+        await onUndoPayment(target.id);
+        setTarget(null);
+      } catch (err) {
+        setError(t(undoErrorKey(err)));
+      } finally {
+        setIsBusy(false);
+      }
+    },
+  };
 }
 
 // Dinheiro que me devem (fora do saldo ate ser recebido) e dinheiro retido
 // pelo empregador (so informativo).
-export default function FinanceOwed({ owed, held, payments, currency, onReceived, onPayment, onRemove }: FinanceOwedProps) {
+export default function FinanceOwed({ owed, held, payments, currency, onReceived, onPayment, onRemove, onUndoPayment }: FinanceOwedProps) {
   const { t, lang } = useI18n();
+  const moneyText = useMoneyText();
+  const undo = useUndoPayment(onUndoPayment);
   return (
     <>
       <Card className="mb-6">
@@ -221,13 +260,21 @@ export default function FinanceOwed({ owed, held, payments, currency, onReceived
           ) : (
             <ul className="mt-3 divide-y divide-neutral-800 text-sm">
               {payments.map((p) => (
-                <li key={p.id} className="flex flex-wrap justify-between gap-2 py-1.5">
+                <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-1.5">
                   <span className="text-neutral-300">
                     {p.debtorName ?? t('finance.owed.history.unknown')}
                     <span className="text-neutral-500"> · {dayLabel(p.paidAt, lang)}</span>
                   </span>
-                  <span className="tabular-nums text-neutral-200">
+                  <span className="flex items-center gap-1 tabular-nums text-neutral-200">
                     <Money cents={p.amountCents} currency={currency} />
+                    <IconButton
+                      label={t('financeUndo.button')}
+                      tone="danger"
+                      disabled={undo.isBusy}
+                      onClick={() => undo.open(p)}
+                    >
+                      <UndoIcon className="h-4 w-4" />
+                    </IconButton>
                   </span>
                 </li>
               ))}
@@ -257,6 +304,23 @@ export default function FinanceOwed({ owed, held, payments, currency, onReceived
             ))}
           </ul>
         </Card>
+      )}
+      {undo.target && (
+        <ConfirmDialog
+          title={t('financeUndo.confirmTitle')}
+          message={t('financeUndo.confirmMessage', {
+            amount: moneyText(undo.target.amountCents, currency),
+            name: undo.target.debtorName ?? t('finance.owed.history.unknown'),
+            date: dayLabel(undo.target.paidAt, lang),
+          })}
+          confirmLabel={undo.isBusy ? t('financeUndo.undoing') : t('financeUndo.confirm')}
+          cancelLabel={t('common.cancel')}
+          tone="danger"
+          isBusy={undo.isBusy}
+          error={undo.error}
+          onConfirm={() => void undo.confirm()}
+          onCancel={undo.cancel}
+        />
       )}
     </>
   );

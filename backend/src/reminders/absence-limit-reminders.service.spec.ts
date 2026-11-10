@@ -6,6 +6,7 @@ import {
   isoWeekKey,
   USER_BATCH_SIZE,
 } from './absence-limit-reminders.service';
+import { FakeSentNotificationService } from './sent-notification.fake';
 
 const MONDAY = new Date('2026-10-19T10:00:00.000Z');
 const NEXT_MONDAY = new Date('2026-10-26T10:00:00.000Z');
@@ -57,11 +58,13 @@ function setup(
   const push = {
     notifyUser: jest.fn().mockResolvedValue(opts.delivered ?? 1),
   };
+  const sent = new FakeSentNotificationService();
   const service = new AbsenceLimitRemindersService(
     prisma as unknown as PrismaService,
     push as unknown as PushService,
+    sent.asService(),
   );
-  return { service, prisma, push };
+  return { service, prisma, push, sent };
 }
 
 function pushedTitle(fn: jest.Mock): string {

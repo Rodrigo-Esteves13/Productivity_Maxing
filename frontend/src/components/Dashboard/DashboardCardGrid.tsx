@@ -1,3 +1,5 @@
+import { Fragment } from 'react';
+import type { ReactNode } from 'react';
 import MasonryGrid from '../UI/MasonryGrid';
 import {
   TodayCard,
@@ -30,6 +32,7 @@ import {
   WeeklyChallengeCard,
   StatusSummaryCard,
   AreaConsistencyCard,
+  XpLevelCard,
 } from './lazyCards';
 import type { DashboardWidgetKey } from '../../hooks/useDashboardWidgetPrefs';
 import type { AcademicProgram, AcademicTaskTypeOption, Area, Task } from '../../types/models';
@@ -40,6 +43,8 @@ interface DashboardCardGridProps {
   academicTaskTypes: AcademicTaskTypeOption[];
   activeProgram: AcademicProgram | null;
   visibility: Record<DashboardWidgetKey, boolean>;
+  // Ordem dos cartoes (ids do grid, sem repetidos).
+  order: readonly DashboardWidgetKey[];
 }
 
 // Os cartoes de analise do Dashboard. Cada um decide sozinho (via
@@ -50,87 +55,97 @@ export default function DashboardCardGrid({
   academicTaskTypes,
   activeProgram,
   visibility,
+  order,
 }: DashboardCardGridProps) {
+  // Cada cartao com a sua condicao de render (inalterada); a ordem so decide
+  // a posicao. Falso/null nao ocupa lugar no MasonryGrid.
+  const cards: Partial<Record<DashboardWidgetKey, ReactNode>> = {
+    today: visibility.today && <TodayCard />,
+    packUpdates: visibility.packUpdates && <PackUpdatesCard />,
+    weeklyChallenge: visibility.weeklyChallenge && academicTasks.length > 0 && (
+      <WeeklyChallengeCard tasks={academicTasks} />
+    ),
+    statusSummary: visibility.statusSummary && academicTasks.length > 0 && (
+      <StatusSummaryCard tasks={academicTasks} areas={academicAreas} />
+    ),
+    moneySnapshot: visibility.moneySnapshot && <MoneySnapshotCard />,
+    studyCapacity: visibility.studyCapacity && <StudyCapacityCard />,
+    upcoming: academicTasks.length > 0 && visibility.upcoming && (
+      <UpcomingTasksCard tasks={academicTasks} areas={academicAreas} />
+    ),
+    failingRisk: visibility.failingRisk && <FailingRiskCard />,
+    ratingsSummary: visibility.ratingsSummary && <RatingsSummaryCard />,
+    atRisk: academicTasks.length > 0 && visibility.atRisk && (
+      <AtRiskTasksCard tasks={academicTasks} areas={academicAreas} />
+    ),
+    deadlineOverlap: academicTasks.length > 0 && visibility.deadlineOverlap && (
+      <DeadlineOverlapCard tasks={academicTasks} areas={academicAreas} />
+    ),
+    areaBreakdown: academicAreas.length > 0 && activeProgram && visibility.areaBreakdown && (
+      <AreaBreakdownCard
+        tasks={academicTasks}
+        areas={academicAreas}
+        scale={activeProgram.gradeScale}
+      />
+    ),
+    studyActivity: academicAreas.length > 0 && activeProgram && visibility.studyActivity && (
+      <StudyActivityCard />
+    ),
+    examCountdown: visibility.examCountdown && academicTasks.length > 0 && (
+      <ExamCountdownCard tasks={academicTasks} areas={academicAreas} />
+    ),
+    testGaps: visibility.testGaps && academicTasks.length > 0 && (
+      <TestGapsCard tasks={academicTasks} areas={academicAreas} />
+    ),
+    staleTasks: visibility.staleTasks && academicTasks.length > 0 && (
+      <StaleTasksCard tasks={academicTasks} areas={academicAreas} />
+    ),
+    timeByArea: visibility.timeByArea && <TimeByAreaCard />,
+    courseForecast: visibility.courseForecast && <CourseForecastCard />,
+    gradeProjection: visibility.gradeProjection && <GradeProjectionCard />,
+    planScenario: visibility.planScenario && <PlanScenarioCard />,
+    focusEffect: visibility.focusEffect && <FocusEffectCard />,
+    estimationAccuracy: visibility.estimationAccuracy && <EstimationAccuracyCard />,
+    deadlineCompliance: visibility.deadlineCompliance && academicTasks.length > 0 && (
+      <DeadlineComplianceCard tasks={academicTasks} />
+    ),
+    weekdayLoad: visibility.weekdayLoad && academicTasks.length > 0 && (
+      <WeekdayLoadCard tasks={academicTasks} />
+    ),
+    procrastinationWeekday: visibility.procrastinationWeekday && academicTasks.length > 0 && (
+      <ProcrastinationWeekdayCard tasks={academicTasks} />
+    ),
+    targetVsReal: visibility.targetVsReal && academicTasks.length > 0 && activeProgram && (
+      <TargetVsRealCard
+        tasks={academicTasks}
+        areas={academicAreas}
+        scale={activeProgram.gradeScale}
+      />
+    ),
+    productivityByType: visibility.productivityByType && academicTasks.length > 0 && (
+      <ProductivityByTypeCard tasks={academicTasks} academicTaskTypes={academicTaskTypes} />
+    ),
+    difficultyVsGrade: visibility.difficultyVsGrade && academicTasks.length > 0 && activeProgram && (
+      <DifficultyVsGradeCard tasks={academicTasks} scale={activeProgram.gradeScale} />
+    ),
+    weightVsGrade: visibility.weightVsGrade && academicTasks.length > 0 && activeProgram && (
+      <WeightVsGradeCard tasks={academicTasks} scale={activeProgram.gradeScale} />
+    ),
+    areaConsistency: visibility.areaConsistency && academicTasks.length > 0 && activeProgram && (
+      <AreaConsistencyCard
+        tasks={academicTasks}
+        areas={academicAreas}
+        scale={activeProgram.gradeScale}
+      />
+    ),
+    xpLevel: visibility.xpLevel && academicTasks.length > 0 && <XpLevelCard tasks={academicTasks} />,
+  };
+
   return (
     <MasonryGrid className="mb-6">
-      {visibility.today && <TodayCard />}
-      {visibility.packUpdates && <PackUpdatesCard />}
-      {visibility.weeklyChallenge && academicTasks.length > 0 && (
-        <WeeklyChallengeCard tasks={academicTasks} />
-      )}
-      {visibility.statusSummary && academicTasks.length > 0 && (
-        <StatusSummaryCard tasks={academicTasks} areas={academicAreas} />
-      )}
-      {visibility.moneySnapshot && <MoneySnapshotCard />}
-      {visibility.studyCapacity && <StudyCapacityCard />}
-      {academicTasks.length > 0 && visibility.upcoming && (
-        <UpcomingTasksCard tasks={academicTasks} areas={academicAreas} />
-      )}
-      {visibility.failingRisk && <FailingRiskCard />}
-      {visibility.ratingsSummary && <RatingsSummaryCard />}
-      {academicTasks.length > 0 && visibility.atRisk && (
-        <AtRiskTasksCard tasks={academicTasks} areas={academicAreas} />
-      )}
-      {academicTasks.length > 0 && visibility.deadlineOverlap && (
-        <DeadlineOverlapCard tasks={academicTasks} areas={academicAreas} />
-      )}
-      {academicAreas.length > 0 && activeProgram && visibility.areaBreakdown && (
-        <AreaBreakdownCard
-          tasks={academicTasks}
-          areas={academicAreas}
-          scale={activeProgram.gradeScale}
-        />
-      )}
-      {academicAreas.length > 0 && activeProgram && visibility.studyActivity && (
-        <StudyActivityCard />
-      )}
-      {visibility.examCountdown && academicTasks.length > 0 && (
-        <ExamCountdownCard tasks={academicTasks} areas={academicAreas} />
-      )}
-      {visibility.testGaps && academicTasks.length > 0 && (
-        <TestGapsCard tasks={academicTasks} areas={academicAreas} />
-      )}
-      {visibility.staleTasks && academicTasks.length > 0 && (
-        <StaleTasksCard tasks={academicTasks} areas={academicAreas} />
-      )}
-      {visibility.timeByArea && <TimeByAreaCard />}
-      {visibility.courseForecast && <CourseForecastCard />}
-      {visibility.gradeProjection && <GradeProjectionCard />}
-      {visibility.planScenario && <PlanScenarioCard />}
-      {visibility.focusEffect && <FocusEffectCard />}
-      {visibility.estimationAccuracy && <EstimationAccuracyCard />}
-      {visibility.deadlineCompliance && academicTasks.length > 0 && (
-        <DeadlineComplianceCard tasks={academicTasks} />
-      )}
-      {visibility.weekdayLoad && academicTasks.length > 0 && (
-        <WeekdayLoadCard tasks={academicTasks} />
-      )}
-      {visibility.procrastinationWeekday && academicTasks.length > 0 && (
-        <ProcrastinationWeekdayCard tasks={academicTasks} />
-      )}
-      {visibility.targetVsReal && academicTasks.length > 0 && activeProgram && (
-        <TargetVsRealCard
-          tasks={academicTasks}
-          areas={academicAreas}
-          scale={activeProgram.gradeScale}
-        />
-      )}
-      {visibility.productivityByType && academicTasks.length > 0 && (
-        <ProductivityByTypeCard tasks={academicTasks} academicTaskTypes={academicTaskTypes} />
-      )}
-      {visibility.difficultyVsGrade && academicTasks.length > 0 && activeProgram && (
-        <DifficultyVsGradeCard tasks={academicTasks} scale={activeProgram.gradeScale} />
-      )}
-      {visibility.weightVsGrade && academicTasks.length > 0 && activeProgram && (
-        <WeightVsGradeCard tasks={academicTasks} scale={activeProgram.gradeScale} />
-      )}
-      {visibility.areaConsistency && academicTasks.length > 0 && activeProgram && (
-        <AreaConsistencyCard
-          tasks={academicTasks}
-          areas={academicAreas}
-          scale={activeProgram.gradeScale}
-        />
-      )}
+      {order.map((key) => (
+        <Fragment key={key}>{cards[key] || null}</Fragment>
+      ))}
     </MasonryGrid>
   );
 }

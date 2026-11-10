@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { getFrontendUrl, getMailFromName } from '../config/app.config';
-import { MS_PER_SECOND } from '../common/time.constants';
+import { MINUTES_PER_HOUR, MS_PER_SECOND } from '../common/time.constants';
 import {
   deadlineEmailText,
   fillMailTemplate,
   MAIL_DATE_LOCALE,
+  monthlyDigestEmailText,
   newDeviceEmailText,
   resolveMailLanguage,
 } from './mail-messages';
@@ -235,6 +236,46 @@ export class MailService {
   }
 
   /**
+   * Resumo do mes anterior (ver MonthlyDigestService). Nunca lanca: devolve
+   * se o SMTP aceitou, para o servico so dar o mes por enviado nesse caso.
+   */
+  async sendMonthlyDigestEmail(
+    to: string,
+    digest: MonthlyDigestEmailData,
+    reviewLink: string,
+    lang = 'en',
+  ): Promise<boolean> {
+    const transporter = this.getTransporter();
+    if (!transporter) return false;
+
+    const fromEmail = process.env.SMTP_FROM_EMAIL ?? process.env.SMTP_USER;
+    const fromName = getMailFromName();
+    const { subject, html } = renderMonthlyDigestEmail(
+      digest,
+      reviewLink,
+      lang,
+      getFrontendUrl(),
+    );
+
+    try {
+      await transporter.sendMail({
+        from: `"${fromName}" <${fromEmail}>`,
+        to,
+        subject,
+        html,
+      });
+      this.logger.log(`Resumo mensal enviado para ${maskEmail(to)}`);
+      return true;
+    } catch (err) {
+      this.logger.error(
+        `Erro ao enviar resumo mensal para ${maskEmail(to)}`,
+        err,
+      );
+      return false;
+    }
+  }
+
+  /**
    * Alerta de inicio de sessao num dispositivo novo (ver NewDeviceAlertService).
    * O IP chega ja mascarado e nunca se mostra completo. Nunca lanca: devolve
    * se o SMTP aceitou, so para o chamador poder registar.
@@ -303,6 +344,78 @@ export class MailService {
       return false;
     }
   }
+}
+
+// Dados do resumo mensal. `month` e a chave "YYYY-MM" do mes resumido.
+export interface MonthlyDigestEmailData {
+  month: string;
+  completedCount: number;
+  studyMinutes: number;
+  averageGrade: number | null;
+  overdueCount: number;
+  // Nome escrito pelo user (area privada): sempre escapado ao montar o HTML.
+  topAreaName: string | null;
+}
+
+const MONTH_FIRST_DAY_SUFFIX = '-01T00:00:00.000Z';
+
+/**
+ * Assunto e HTML do resumo mensal (puro, para testar). Todo o texto que vai
+ * para o HTML passa por escapeHtml, incluindo o nome da area.
+ */
+export function renderMonthlyDigestEmail(
+  digest: MonthlyDigestEmailData,
+  reviewLink: string,
+  lang: string,
+  frontendUrl: string,
+): { subject: string; html: string } {
+  const language = resolveMailLanguage(lang);
+  const locale = MAIL_DATE_LOCALE[language];
+  const text = monthlyDigestEmailText(language);
+  const month = new Intl.DateTimeFormat(locale, {
+    timeZone: 'UTC',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(`${digest.month}${MONTH_FIRST_DAY_SUFFIX}`));
+  const numbers = new Intl.NumberFormat(locale);
+  const hours = Math.floor(digest.studyMinutes / MINUTES_PER_HOUR);
+  const minutes = digest.studyMinutes % MINUTES_PER_HOUR;
+
+  const rows: [string, string][] = [
+    [text.completedLabel, numbers.format(digest.completedCount)],
+    [
+      text.studyLabel,
+      fillMailTemplate(text.studyValue, {
+        hours: numbers.format(hours),
+        minutes: numbers.format(minutes),
+      }),
+    ],
+  ];
+  if (digest.averageGrade !== null) {
+    rows.push([text.gradeLabel, numbers.format(digest.averageGrade)]);
+  }
+  rows.push([text.overdueLabel, numbers.format(digest.overdueCount)]);
+  if (digest.topAreaName) {
+    rows.push([text.topAreaLabel, digest.topAreaName]);
+  }
+  const lines = rows
+    .map(
+      ([label, value]) =>
+        `<strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}`,
+    )
+    .join('<br />');
+
+  return {
+    subject: fillMailTemplate(text.subject, { month }),
+    html: renderActionEmail({
+      title: escapeHtml(fillMailTemplate(text.title, { month })),
+      intro: `${escapeHtml(fillMailTemplate(text.intro, { month }))}<br /><br />${lines}`,
+      buttonLabel: escapeHtml(text.button),
+      link: escapeHtml(reviewLink),
+      footer: escapeHtml(text.footer),
+      frontendUrl,
+    }),
+  };
 }
 
 function escapeHtml(value: string): string {

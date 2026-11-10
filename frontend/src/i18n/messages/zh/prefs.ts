@@ -24,7 +24,7 @@ export const prefs: Record<string, string> = {
   'prefs.notificationsTitle': "通知",
   'prefs.savedToAccount': "已保存到你的账户。",
   'prefs.reminders': "截止日期提醒",
-  'prefs.remindersHelp': "待办任务到期前约 24 小时发送一封邮件。遵守免打扰时段。",
+  'prefs.remindersHelp': "待办任务到期前约 24 小时发送一封邮件。遵守免打扰时段。每月 1 日还会发送一封月度总结邮件。",
   'prefs.pushReminders': "截止日期推送通知",
   'prefs.pushRemindersHelp': "待办任务到期前约 24 小时，在你于下方开启了通知的设备上发送一条通知。遵守免打扰时段。",
   'prefs.spacedReviews': "间隔复习",

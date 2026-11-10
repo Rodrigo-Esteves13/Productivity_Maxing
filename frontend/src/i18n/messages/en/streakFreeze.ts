@@ -8,4 +8,11 @@ export const streakFreeze: Record<string, string> = {
   'streakFreeze.help.weeklyFreeze': "One missed day per week (Monday to Sunday) is forgiven automatically.",
   'streakFreeze.restUsed': "Rest day used: {count}",
   'streakFreeze.restUsedHint': "Rest days neither add to nor break your streak.",
+  'streakFreeze.claim.button': "Use a rest day",
+  'streakFreeze.claim.active': "Rest day active",
+  'streakFreeze.claim.activeHint': "Today is a rest day: your study streak neither grows nor breaks.",
+  'streakFreeze.claim.undo': "Undo",
+  'streakFreeze.claim.hint': "Skip studying today without breaking your streak. Up to {max} per week (Monday to Sunday).",
+  'streakFreeze.claim.left': "{count} left this week",
+  'streakFreeze.claim.error': "Could not update the rest day. Try again.",
 };

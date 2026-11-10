@@ -1,0 +1,15 @@
+export const financeUndo: Record<string, string> = {
+  'financeUndo.button': "Annuler le paiement",
+  'financeUndo.confirmTitle': "Annuler ce paiement ?",
+  'financeUndo.confirmMessage': "Retirer le paiement de {amount} de {name} du {date} ? Son revenu est supprimé et le montant revient à ce qui vous est dû.",
+  'financeUndo.confirm': "Annuler le paiement",
+  'financeUndo.undoing': "Annulation...",
+  'financeUndo.done': "Paiement annulé.",
+  'financeUndo.doneNoIncome': "Paiement annulé. Son revenu est introuvable, vérifiez votre liste de revenus.",
+  'financeUndo.doneNoDebt': "Paiement annulé. La dette n'existe plus, elle n'a donc pas été rétablie.",
+  'financeUndo.doneOnlyPayment': "Paiement retiré. Son revenu et la dette sont introuvables, vérifiez votre liste de revenus.",
+  'financeUndo.notFound': "Ce paiement a déjà été annulé.",
+  'financeUndo.conflict': "Cette dette a déjà été marquée comme reçue, le paiement ne peut donc pas être annulé.",
+  'financeUndo.rateLimited': "Trop de requêtes. Réessayez dans une minute.",
+  'financeUndo.error': "Impossible d'annuler le paiement.",
+};

@@ -1,0 +1,15 @@
+export const financeUndo: Record<string, string> = {
+  'financeUndo.button': "Zahlung rückgängig machen",
+  'financeUndo.confirmTitle': "Diese Zahlung rückgängig machen?",
+  'financeUndo.confirmMessage': "Die Zahlung von {amount} von {name} am {date} entfernen? Die zugehörige Einnahme wird gelöscht und der Betrag zählt wieder zur offenen Schuld.",
+  'financeUndo.confirm': "Zahlung rückgängig machen",
+  'financeUndo.undoing': "Wird rückgängig gemacht...",
+  'financeUndo.done': "Zahlung rückgängig gemacht.",
+  'financeUndo.doneNoIncome': "Zahlung rückgängig gemacht. Die zugehörige Einnahme wurde nicht gefunden, prüfe deine Einnahmenliste.",
+  'financeUndo.doneNoDebt': "Zahlung rückgängig gemacht. Die Schuld existiert nicht mehr und wurde daher nicht wiederhergestellt.",
+  'financeUndo.doneOnlyPayment': "Zahlung entfernt. Die zugehörige Einnahme und die Schuld wurden nicht gefunden, prüfe deine Einnahmenliste.",
+  'financeUndo.notFound': "Diese Zahlung wurde bereits rückgängig gemacht.",
+  'financeUndo.conflict': "Diese Schuld wurde bereits als erhalten markiert, daher kann die Zahlung nicht rückgängig gemacht werden.",
+  'financeUndo.rateLimited': "Zu viele Anfragen. Versuche es in einer Minute erneut.",
+  'financeUndo.error': "Die Zahlung konnte nicht rückgängig gemacht werden.",
+};

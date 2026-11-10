@@ -5,6 +5,7 @@ import {
   MONEY_REMINDER_USER_BATCH_SIZE,
   MoneyRemindersService,
 } from './money-reminders.service';
+import { FakeSentNotificationService } from './sent-notification.fake';
 
 // Novembro: Lisboa = UTC. 2026-11-06 e sexta-feira, 2026-11-09 segunda.
 const FRIDAY_NOON = new Date('2026-11-06T12:00:00.000Z');
@@ -86,11 +87,13 @@ function setup(opts: Opts = {}) {
   const push = {
     notifyUser: jest.fn().mockResolvedValue(opts.delivered ?? 1),
   };
+  const sent = new FakeSentNotificationService();
   const service = new MoneyRemindersService(
     prisma as unknown as PrismaService,
     push as unknown as PushService,
+    sent.asService(),
   );
-  return { service, prisma, push };
+  return { service, prisma, push, sent };
 }
 
 describe('MoneyRemindersService', () => {

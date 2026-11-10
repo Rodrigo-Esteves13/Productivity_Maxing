@@ -2,6 +2,8 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { PushService } from '../push/push.service';
 import { BudgetAlertRemindersService } from './budget-alert-reminders.service';
 import { MONEY_REMINDER_USER_BATCH_SIZE } from './money-reminders.service';
+import { FakeSentNotificationService } from './sent-notification.fake';
+import { SENT_NOTIFICATION_KIND } from './sent-notification.constants';
 
 // Novembro: Lisboa = UTC. 2026-11-06 e sexta-feira.
 const FRIDAY_NOON = new Date('2026-11-06T12:00:00.000Z');
@@ -70,11 +72,13 @@ function setup(opts: Opts = {}) {
   const push = {
     notifyUser: jest.fn().mockResolvedValue(opts.delivered ?? 1),
   };
+  const sent = new FakeSentNotificationService();
   const service = new BudgetAlertRemindersService(
     prisma as unknown as PrismaService,
     push as unknown as PushService,
+    sent.asService(),
   );
-  return { service, prisma, push, state };
+  return { service, prisma, push, state, sent };
 }
 
 describe('BudgetAlertRemindersService', () => {
@@ -123,6 +127,25 @@ describe('BudgetAlertRemindersService', () => {
       (c) => c[1],
     );
     expect(keys).toEqual(['budgetWarn', 'budgetOver', 'budgetOver']);
+  });
+
+  it('"over" stores durable markers for both levels of the month', async () => {
+    const { service, sent } = setup({ rows: [spend('u1', 10_000)] });
+    expect(await service.sendReminders()).toBe(1);
+    expect([...sent.rows].sort()).toEqual(
+      [
+        FakeSentNotificationService.keyOf(
+          'u1',
+          SENT_NOTIFICATION_KIND.BUDGET_TOTAL_OVER,
+          '2026-11',
+        ),
+        FakeSentNotificationService.keyOf(
+          'u1',
+          SENT_NOTIFICATION_KIND.BUDGET_TOTAL_WARN,
+          '2026-11',
+        ),
+      ].sort(),
+    );
   });
 
   it('says over at 100% of the monthly budget', async () => {

@@ -20,6 +20,7 @@ import {
   updateFinanceGoal,
   updateFinanceHolding,
   updateFinanceSettings,
+  undoFinanceOwedPayment,
   type FinanceAccountInput,
   type FinanceEntryInput,
   type FinanceGoalInput,
@@ -32,6 +33,7 @@ import {
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
 import { KEY_CONFLICT, type SubmitOutcome } from '../lib/idempotency';
+import { isUndoGone, undoResultKey } from '../lib/financeUndo';
 
 // Separador Finance de um mes. Depois de cada alteracao volta a pedir o
 // resumo: as somas, saldos e projecoes sao feitos no backend.
@@ -126,6 +128,27 @@ export function useFinance(month: string) {
     [notify, reload],
   );
 
+  // Desfazer pagamento: o erro sobe para o dialogo de confirmacao mostrar.
+  // 404 (ja desfeito noutro separador) tambem recarrega a lista.
+  const undoOwedPayment = useCallback(
+    async (paymentId: string): Promise<void> => {
+      try {
+        const result = await undoFinanceOwedPayment(paymentId);
+        await reload();
+        setVersion((v) => v + 1);
+        const key = undoResultKey(result);
+        notify(translateNow(key), key === 'financeUndo.done' ? 'success' : 'info');
+      } catch (err) {
+        if (isUndoGone(err)) {
+          await reload();
+          setVersion((v) => v + 1);
+        }
+        throw err;
+      }
+    },
+    [notify, reload],
+  );
+
   // 429 = o limite de pedidos de precos; mensagem propria em vez do erro generico.
   const refreshPrices = useCallback(async () => {
     setIsRefreshing(true);
@@ -159,6 +182,7 @@ export function useFinance(month: string) {
     updateEntry: (id: string, changes: Partial<FinanceEntryInput>) => run(() => updateFinanceEntry(id, changes)),
     addOwedPayment: (id: string, payment: { amountCents: number; paidAt: string }, key?: string) =>
       runPayment(() => addFinanceOwedPayment(id, payment, key)),
+    undoOwedPayment,
     removeEntry: (id: string) => run(() => deleteFinanceEntry(id)),
     addAccount: (input: FinanceAccountInput, key: string) => runCreate(() => createFinanceAccount(input, key)),
     updateAccount: (id: string, changes: Partial<FinanceAccountInput>) => run(() => updateFinanceAccount(id, changes)),

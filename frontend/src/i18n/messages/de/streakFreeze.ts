@@ -8,4 +8,11 @@ export const streakFreeze: Record<string, string> = {
   'streakFreeze.help.weeklyFreeze': "Ein verpasster Tag pro Woche (Montag bis Sonntag) wird automatisch verziehen.",
   'streakFreeze.restUsed': "Ruhetag genutzt: {count}",
   'streakFreeze.restUsedHint': "Ruhetage zahlen nicht mit und unterbrechen die Serie nicht.",
+  'streakFreeze.claim.button': "Ruhetag nutzen",
+  'streakFreeze.claim.active': "Ruhetag aktiv",
+  'streakFreeze.claim.activeHint': "Heute ist ein Ruhetag: deine Lernserie waechst nicht und bricht nicht ab.",
+  'streakFreeze.claim.undo': "Rueckgaengig",
+  'streakFreeze.claim.hint': "Heute nicht lernen, ohne die Serie zu brechen. Bis zu {max} pro Woche (Montag bis Sonntag).",
+  'streakFreeze.claim.left': "Noch {count} diese Woche",
+  'streakFreeze.claim.error': "Ruhetag konnte nicht aktualisiert werden. Versuche es erneut.",
 };

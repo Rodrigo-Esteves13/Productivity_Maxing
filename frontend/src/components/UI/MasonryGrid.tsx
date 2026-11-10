@@ -1,4 +1,4 @@
-import { Children, Suspense, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import { Children, Suspense, isValidElement, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useColumnCount } from '../../hooks/useColumnCount';
 import { layoutTwoColumns, resetToFlow } from '../../lib/masonryLayout';
@@ -89,7 +89,7 @@ export default function MasonryGrid({ children, className = '', stretchLast = tr
         // há o gap). empty:hidden esconde o wrapper de um cartão que
         // renderiza null, para não deixar buraco nem gap.
         <div
-          key={index}
+          key={isValidElement(item) && item.key !== null ? item.key : index}
           className="flex flex-col empty:hidden [&>*]:flex-1 [&>*]:mb-0"
         >
           <Suspense fallback={null}>{item}</Suspense>

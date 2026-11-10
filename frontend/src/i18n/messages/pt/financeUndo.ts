@@ -1,0 +1,15 @@
+export const financeUndo: Record<string, string> = {
+  'financeUndo.button': "Desfazer pagamento",
+  'financeUndo.confirmTitle': "Desfazer este pagamento?",
+  'financeUndo.confirmMessage': "Remover o pagamento de {amount} de {name} em {date}? A receita associada é apagada e o valor volta a ficar em dívida.",
+  'financeUndo.confirm': "Desfazer pagamento",
+  'financeUndo.undoing': "A desfazer...",
+  'financeUndo.done': "Pagamento desfeito.",
+  'financeUndo.doneNoIncome': "Pagamento desfeito. A receita associada não foi encontrada, confirma a tua lista de receitas.",
+  'financeUndo.doneNoDebt': "Pagamento desfeito. A dívida já não existe, por isso não foi reposta.",
+  'financeUndo.doneOnlyPayment': "Pagamento removido. A receita associada e a dívida não foram encontradas, confirma a tua lista de receitas.",
+  'financeUndo.notFound': "Este pagamento já foi desfeito.",
+  'financeUndo.conflict': "Esta dívida já foi marcada como recebida, por isso o pagamento não pode ser desfeito.",
+  'financeUndo.rateLimited': "Demasiados pedidos. Tenta novamente daqui a um minuto.",
+  'financeUndo.error': "Não foi possível desfazer o pagamento.",
+};

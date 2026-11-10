@@ -12,6 +12,9 @@ import { StreakRiskRemindersService } from './streak-risk-reminders.service';
 import { DueTodayRemindersService } from './due-today-reminders.service';
 import { MoneyRemindersService } from './money-reminders.service';
 import { BudgetAlertRemindersService } from './budget-alert-reminders.service';
+import { MonthlyDigestService } from './monthly-digest.service';
+import { SentNotificationService } from './sent-notification.service';
+import { SENT_NOTIFICATION_RETENTION_DAYS } from './sent-notification.constants';
 import { getFrontendUrl } from '../config/app.config';
 import { deleteStaleUserSessions } from '../auth/services/user-sessions.service';
 import { getLisbonNow, toDateKey } from '../common/date-key.util';
@@ -50,9 +53,13 @@ export interface ReminderRunResult {
   moneyUsersPushed: number;
   // Utilizadores avisados de que o orcamento do mes chegou a 80% / 100%.
   budgetUsersPushed: number;
+  // Utilizadores que receberam o resumo mensal por email (dia 1 do mes).
+  monthlyDigestSent: number;
   expiredPadsDeleted: number;
   // Sessoes de dispositivo expiradas/revogadas apagadas nesta execucao.
   staleSessionsDeleted: number;
+  // Marcadores antigos de avisos periodicos apagados nesta execucao.
+  sentNotificationsPurged: number;
 }
 
 // Um aviso push por user e por execucao: a primeira task (a mais proxima)
@@ -82,6 +89,8 @@ export class RemindersService {
     private readonly dueTodayReminders: DueTodayRemindersService,
     private readonly moneyReminders: MoneyRemindersService,
     private readonly budgetAlertReminders: BudgetAlertRemindersService,
+    private readonly monthlyDigest: MonthlyDigestService,
+    private readonly sentNotifications: SentNotificationService,
   ) {}
 
   /**
@@ -181,8 +190,10 @@ export class RemindersService {
       dueTodayUsersPushed: 0,
       moneyUsersPushed: 0,
       budgetUsersPushed: 0,
+      monthlyDigestSent: 0,
       expiredPadsDeleted: 0,
       staleSessionsDeleted: 0,
+      sentNotificationsPurged: 0,
     };
     const tasksLink = `${getFrontendUrl()}${TASKS_PATH}`;
 
@@ -285,6 +296,12 @@ export class RemindersService {
       );
     }
 
+    try {
+      result.monthlyDigestSent = await this.monthlyDigest.sendDigests();
+    } catch (error) {
+      this.logger.warn(`Resumo mensal falhou: ${(error as Error).message}`);
+    }
+
     // Limpeza dos pads sem edicoes ha 90 dias; falhar aqui nao para os
     // lembretes (ja enviados acima).
     try {
@@ -305,6 +322,20 @@ export class RemindersService {
     } catch (error) {
       this.logger.warn(
         `Limpeza de sessoes expiradas falhou: ${(error as Error).message}`,
+      );
+    }
+
+    // Marcadores de avisos periodicos (SentNotification) ja fora de qualquer
+    // periodo ativo: a tabela nao cresce para sempre.
+    try {
+      result.sentNotificationsPurged =
+        await this.sentNotifications.purgeOlderThan(
+          SENT_NOTIFICATION_RETENTION_DAYS,
+          now,
+        );
+    } catch (error) {
+      this.logger.warn(
+        `Limpeza de marcadores de avisos falhou: ${(error as Error).message}`,
       );
     }
 

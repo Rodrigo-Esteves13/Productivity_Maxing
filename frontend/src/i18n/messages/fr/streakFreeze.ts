@@ -8,4 +8,11 @@ export const streakFreeze: Record<string, string> = {
   'streakFreeze.help.weeklyFreeze': "Un jour manque par semaine (du lundi au dimanche) est pardonne automatiquement.",
   'streakFreeze.restUsed': "Jour de repos utilise : {count}",
   'streakFreeze.restUsedHint': "Les jours de repos ne comptent pas et ne cassent pas la serie.",
+  'streakFreeze.claim.button': "Prendre un jour de repos",
+  'streakFreeze.claim.active': "Jour de repos actif",
+  'streakFreeze.claim.activeHint': "Aujourd'hui est un jour de repos : ta serie d'etude ne grandit pas et ne se brise pas.",
+  'streakFreeze.claim.undo': "Annuler",
+  'streakFreeze.claim.hint': "Ne pas etudier aujourd'hui sans briser ta serie. Jusqu'a {max} par semaine (du lundi au dimanche).",
+  'streakFreeze.claim.left': "{count} restant(s) cette semaine",
+  'streakFreeze.claim.error': "Impossible de mettre a jour le jour de repos. Reessaie.",
 };

@@ -33,10 +33,11 @@ import ProgramsOverviewCard from '../components/Dashboard/ProgramsOverviewCard';
 import CreditsAccumulatedCard from '../components/Dashboard/CreditsAccumulatedCard';
 import { DashboardWidgetToggles } from '../components/Dashboard/DashboardWidgetToggles';
 import { useDashboardWidgetPrefs } from '../hooks/useDashboardWidgetPrefs';
+import { useDashboardWidgetOrder } from '../hooks/useDashboardWidgetOrder';
 import { useTableDensity } from '../hooks/useTableDensity';
 import { useShowArchivedTasks } from '../hooks/useShowArchivedTasks';
 import { isTaskArchived } from '../utils/taskArchive';
-import { PrinterIcon, UploadIcon, SlidersIcon, GraduationCapIcon, TargetIcon } from '../components/UI/Icons';
+import { PrinterIcon, UploadIcon, SlidersIcon, GraduationCapIcon, TargetIcon, EyeIcon } from '../components/UI/Icons';
 import PlanModeBanner from '../components/Dashboard/PlanModeBanner';
 import { PlanModeContext, type PlanModeContextValue } from '../context/plan-mode-context';
 import { usePlanModePref } from '../hooks/usePlanMode';
@@ -47,6 +48,8 @@ import BulkActionsBar from '../components/Dashboard/BulkActionsBar';
 import TaskExportButtons from '../components/Dashboard/TaskExportButtons';
 import { ACADEMIC_TASK_TYPE_KEY } from '../lib/constants';
 import { useExamMode } from '../hooks/useExamMode';
+import { useSingleTaskMode } from '../hooks/useSingleTaskMode';
+import SingleTaskView from '../components/Dashboard/SingleTaskView';
 import { examModeVisibility, isExamTask } from '../lib/examMode';
 import ExamModePanel from '../components/Dashboard/ExamModePanel';
 import InstallAppCard from '../pwa/InstallAppCard';
@@ -67,6 +70,8 @@ const EXAM_MODE_PARAM = 'exam';
 const EXAM_MODE_OFF = 'off';
 // ?plan=on / ?plan=off (Ctrl+K), mesmo formato do modo exame.
 const PLAN_MODE_PARAM = 'plan';
+// ?single=on / ?single=off (Ctrl+K), mesmo formato do modo exame.
+const SINGLE_TASK_PARAM = 'single';
 
 export default function Dashboard() {
   const { t } = useI18n();
@@ -91,9 +96,11 @@ export default function Dashboard() {
   });
 
   const { visibility, toggle } = useDashboardWidgetPrefs();
+  const widgetOrder = useDashboardWidgetOrder();
   const { density, toggleDensity } = useTableDensity();
   const { showArchived, toggleShowArchived } = useShowArchivedTasks();
   const { isExamMode, setIsExamMode } = useExamMode();
+  const { isSingleTaskMode, setIsSingleTaskMode } = useSingleTaskMode();
   // Em modo exame os cartoes ficam escondidos sem mexer nas preferencias
   // de cada um: ao sair do modo volta tudo como estava.
   const cardVisibility = useMemo(
@@ -105,6 +112,18 @@ export default function Dashboard() {
   const examParam = searchParams.get(EXAM_MODE_PARAM);
   const { isPlanMode, setIsPlanMode } = usePlanModePref();
   const planParam = searchParams.get(PLAN_MODE_PARAM);
+  const singleParam = searchParams.get(SINGLE_TASK_PARAM);
+  useEffect(() => {
+    if (singleParam === null) return;
+    setIsSingleTaskMode(singleParam !== EXAM_MODE_OFF);
+    setSearchParams(
+      (params) => {
+        params.delete(SINGLE_TASK_PARAM);
+        return params;
+      },
+      { replace: true },
+    );
+  }, [singleParam, setIsSingleTaskMode, setSearchParams]);
   useEffect(() => {
     if (planParam === null) return;
     setIsPlanMode(planParam !== EXAM_MODE_OFF);
@@ -231,6 +250,16 @@ export default function Dashboard() {
           <ToolbarButton
             tone="muted"
             size="md"
+            pressed={isSingleTaskMode}
+            onClick={() => setIsSingleTaskMode((prev) => !prev)}
+            title={t('singleTaskMode.toggleHelp')}
+          >
+            <EyeIcon />
+            {t('singleTaskMode.toggle')}
+          </ToolbarButton>
+          <ToolbarButton
+            tone="muted"
+            size="md"
             pressed={isPlanMode}
             onClick={() => setIsPlanMode((prev) => !prev)}
             title={t('planMode.toggleHelp')}
@@ -258,10 +287,19 @@ export default function Dashboard() {
               {t('ui.showArchivedCount', { count: archivedCount })}
             </label>
           )}
-          <DashboardWidgetToggles visibility={visibility} toggle={toggle} />
+          <DashboardWidgetToggles visibility={visibility} toggle={toggle} orderControls={widgetOrder} />
         </div>
       </div>
 
+      {isSingleTaskMode && !isLoading && !error ? (
+        <SingleTaskView
+          tasks={academicTasks}
+          areas={academicAreas}
+          onComplete={completeOne}
+          onExit={() => setIsSingleTaskMode(false)}
+        />
+      ) : (
+      <>
       <InstallAppCard />
 
       {isPlanMode && <PlanModeBanner onTurnOff={() => setIsPlanMode(false)} />}
@@ -305,6 +343,7 @@ export default function Dashboard() {
           academicTaskTypes={academicTaskTypes}
           activeProgram={activeProgram}
           visibility={cardVisibility}
+          order={widgetOrder.order}
         />
       )}
 
@@ -372,6 +411,9 @@ export default function Dashboard() {
             </>
           )}
         </div>
+      )}
+
+      </>
       )}
 
       {isImportModalOpen && (

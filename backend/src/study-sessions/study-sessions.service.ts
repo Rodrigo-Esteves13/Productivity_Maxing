@@ -127,6 +127,8 @@ export interface StudyStreak {
   // ao frontend um sinal para mostrar "ainda podes salvar a streak de
   // hoje" sem o backend decidir COMO mostrar isso.
   atRisk: boolean;
+  // Hoje e um dia de descanso pedido (StreakFreeze): a streak nao corre risco.
+  restDayToday: boolean;
 }
 
 export interface TaskPriorityRow {
@@ -686,11 +688,21 @@ export class StudySessionsService {
    * frontend instead: "no freeze needed yet, but nothing logged today".
    */
   async getStreak(userId: string): Promise<StudyStreak> {
-    const sessions = await this.prisma.studySession.findMany({
-      where: { userId, endedAt: { not: null } },
-      select: { startedAt: true },
-      orderBy: { startedAt: 'asc' },
-    });
+    const [sessions, freezes] = await Promise.all([
+      this.prisma.studySession.findMany({
+        where: { userId, endedAt: { not: null } },
+        select: { startedAt: true },
+        orderBy: { startedAt: 'asc' },
+      }),
+      // Dias de descanso pedidos (StreakFreeze): fazem ponte na streak.
+      this.prisma.streakFreeze.findMany({
+        where: { userId },
+        select: { dateKey: true },
+      }),
+    ]);
+    const frozenDays = new Set(freezes.map((f) => f.dateKey));
+    const todayKey = toDateKey(getLisbonNow().today);
+    const restDayToday = frozenDays.has(todayKey);
 
     // Dias de Lisboa, nao de UTC: uma sessao as 00:30 de Lisboa no verao
     // contava para o dia anterior e podia partir a sequencia.
@@ -706,12 +718,17 @@ export class StudySessionsService {
         freezesUsedTotal: 0,
         activeToday: false,
         atRisk: false,
+        restDayToday,
       };
     }
 
-    const todayKey = toDateKey(getLisbonNow().today);
     const { currentStreak, longestStreak, freezesAvailable, freezesUsedTotal } =
-      walkStreak(activeDays, toLisbonDateKey(sessions[0].startedAt), todayKey);
+      walkStreak(
+        activeDays,
+        toLisbonDateKey(sessions[0].startedAt),
+        todayKey,
+        frozenDays,
+      );
 
     return {
       currentStreak,
@@ -719,7 +736,8 @@ export class StudySessionsService {
       freezesAvailable,
       freezesUsedTotal,
       activeToday: activeDays.has(todayKey),
-      atRisk: currentStreak > 0 && !activeDays.has(todayKey),
+      atRisk: currentStreak > 0 && !activeDays.has(todayKey) && !restDayToday,
+      restDayToday,
     };
   }
 

@@ -164,6 +164,8 @@ export interface StudyStreak {
   freezesUsedTotal: number;
   activeToday: boolean;
   atRisk: boolean;
+  // Today is a claimed rest day (POST /streak-freezes): the streak is safe.
+  restDayToday: boolean;
 }
 
 export const getStudyStreak = async (): Promise<StudyStreak> => {

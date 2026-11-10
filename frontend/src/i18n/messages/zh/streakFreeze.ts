@@ -8,4 +8,11 @@ export const streakFreeze: Record<string, string> = {
   'streakFreeze.help.weeklyFreeze': "每周(周一到周日)有一天未完成会被自动原谅。",
   'streakFreeze.restUsed': "已使用休息日:{count}",
   'streakFreeze.restUsedHint': "休息日不会增加也不会中断连续记录。",
+  'streakFreeze.claim.button': "使用休息日",
+  'streakFreeze.claim.active': "休息日已启用",
+  'streakFreeze.claim.activeHint': "今天是休息日：你的学习连续天数既不增加也不会中断。",
+  'streakFreeze.claim.undo': "撤销",
+  'streakFreeze.claim.hint': "今天不学习也不会中断连续记录。每周最多 {max} 次（周一至周日）。",
+  'streakFreeze.claim.left': "本周剩余 {count} 次",
+  'streakFreeze.claim.error': "无法更新休息日，请重试。",
 };
