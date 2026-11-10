@@ -14,6 +14,10 @@ import {
   DUE_TODAY_DIGEST_START_MINUTES,
   DUE_TODAY_DIGEST_USER_BATCH_SIZE,
 } from './due-today-reminders.constants';
+import { SentNotificationService } from './sent-notification.service';
+import { SENT_NOTIFICATION_KIND } from './sent-notification.constants';
+
+const KIND = SENT_NOTIFICATION_KIND.DUE_TODAY_DIGEST;
 
 /** 08:00-12:00 em Lisboa (`nowMinutes` = minutos desde a meia-noite). */
 export function isInDueTodayDigestWindow(nowMinutes: number): boolean {
@@ -40,22 +44,19 @@ interface CandidateUser {
  *   as horas de silencio do user sao respeitadas.
  * - Tasks bloqueadas ou com data por marcar/surpresa nao contam (so prazos
  *   reais que da para cumprir, como o "Hoje").
- * - Sem tabela nova, o dedupe diario e em memoria (como o aviso de streak;
- *   so ha uma instancia no Render). So fica marcado quando algum dispositivo
- *   recebeu. Risco residual aceite: um restart dentro da janela pode reenviar
- *   o resumo uma vez.
- * - Quem tem 0 tasks hoje nao e memorizado: uma task criada mais tarde, ainda
+ * - Dedupe diario duravel em SentNotification (sobrevive a restarts). So
+ *   fica marcado quando algum dispositivo recebeu.
+ * - Quem tem 0 tasks hoje nao e marcado: uma task criada mais tarde, ainda
  *   dentro da janela, passa a contar na execucao seguinte.
  */
 @Injectable()
 export class DueTodayRemindersService {
   private readonly logger = new Logger(DueTodayRemindersService.name);
-  // userId -> dia (YYYY-MM-DD, Lisboa) em que foi avisado.
-  private readonly notifiedDay = new Map<string, string>();
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly pushService: PushService,
+    private readonly sentNotifications: SentNotificationService,
   ) {}
 
   // O relogio vem de getLisbonNow() (hora de Lisboa).
@@ -63,10 +64,6 @@ export class DueTodayRemindersService {
     const { today, nowMinutes } = getLisbonNow();
     if (!isInDueTodayDigestWindow(nowMinutes)) return 0;
     const dayKey = toDateKey(today);
-    // Dia novo: esquece os anteriores (o mapa nao cresce sem fim).
-    for (const [userId, day] of this.notifiedDay) {
-      if (day !== dayKey) this.notifiedDay.delete(userId);
-    }
 
     let sent = 0;
     let cursor: string | undefined;
@@ -107,11 +104,15 @@ export class DueTodayRemindersService {
     dayKey: string,
     nowMinutes: number,
   ): Promise<number> {
-    const pending = users.filter(
-      (u) =>
-        this.notifiedDay.get(u.id) !== dayKey &&
-        !this.isQuietHour(u, nowMinutes),
+    const awake = users.filter((u) => !this.isQuietHour(u, nowMinutes));
+    if (awake.length === 0) return 0;
+    // 1 query: quem ja foi avisado hoje (marcador duravel).
+    const notified = await this.sentNotifications.claimedUserIds(
+      awake.map((u) => u.id),
+      KIND,
+      dayKey,
     );
+    const pending = awake.filter((u) => !notified.has(u.id));
     if (pending.length === 0) return 0;
 
     // 1 query para a pagina toda: quantas tasks pendentes vencem hoje, por
@@ -136,7 +137,9 @@ export class DueTodayRemindersService {
       const count = countByUser.get(user.id) ?? 0;
       if (count === 0) continue;
       // Marcado ANTES do envio: uma execucao sobreposta ja o salta.
-      this.notifiedDay.set(user.id, dayKey);
+      if (!(await this.sentNotifications.claim(user.id, KIND, dayKey))) {
+        continue;
+      }
       let delivered = 0;
       try {
         delivered = await this.pushService.notifyUser(
@@ -146,7 +149,9 @@ export class DueTodayRemindersService {
         );
       } finally {
         // Sem dispositivo que tenha recebido: desmarca, tenta na proxima.
-        if (delivered === 0) this.notifiedDay.delete(user.id);
+        if (delivered === 0) {
+          await this.sentNotifications.release(user.id, KIND, dayKey);
+        }
       }
       if (delivered > 0) sent += 1;
     }

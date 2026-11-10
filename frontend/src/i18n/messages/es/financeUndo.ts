@@ -1,0 +1,15 @@
+export const financeUndo: Record<string, string> = {
+  'financeUndo.button': "Deshacer pago",
+  'financeUndo.confirmTitle': "¿Deshacer este pago?",
+  'financeUndo.confirmMessage': "¿Quitar el pago de {amount} de {name} del {date}? Se borra su ingreso y el importe vuelve a lo que te deben.",
+  'financeUndo.confirm': "Deshacer pago",
+  'financeUndo.undoing': "Deshaciendo...",
+  'financeUndo.done': "Pago deshecho.",
+  'financeUndo.doneNoIncome': "Pago deshecho. No se encontró su ingreso, revisa tu lista de ingresos.",
+  'financeUndo.doneNoDebt': "Pago deshecho. La deuda ya no existe, así que no se ha restaurado.",
+  'financeUndo.doneOnlyPayment': "Pago eliminado. No se encontraron su ingreso ni la deuda, revisa tu lista de ingresos.",
+  'financeUndo.notFound': "Este pago ya se había deshecho.",
+  'financeUndo.conflict': "Esta deuda ya se marcó como recibida, así que el pago no se puede deshacer.",
+  'financeUndo.rateLimited': "Demasiadas solicitudes. Inténtalo de nuevo en un minuto.",
+  'financeUndo.error': "No se pudo deshacer el pago.",
+};

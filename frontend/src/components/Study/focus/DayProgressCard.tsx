@@ -9,6 +9,7 @@ import { formatDuration } from '../../../lib/timeFormat';
 import { minutesSince, startOfLocalDay, type SessionSpan } from '../../../lib/studyWindow';
 import { useI18n } from '../../../i18n/useI18n';
 import DueTodayList from './DueTodayList';
+import StreakRestDayButton from '../StreakRestDayButton';
 
 // Sessoes que podem tocar no dia de hoje: as de ontem a noite que passaram
 // da meia-noite entram, so a parte de hoje conta.
@@ -23,7 +24,7 @@ export default function DayProgressCard({ dailyLimitMinutes }: DayProgressCardPr
   const { t } = useI18n();
   const { activeSession } = useActiveStudySession();
   const { sessions } = useSessionHistory(HISTORY_DAYS, activeSession?.id ?? null);
-  const { data: streak } = useLoadOnce(getStudyStreak, activeSession?.id ?? null);
+  const { data: streak, reload: reloadStreak } = useLoadOnce(getStudyStreak, activeSession?.id ?? null);
 
   // De minuto a minuto: com uma sessao a correr, o anel avanca sozinho.
   const now = useNow();
@@ -62,6 +63,11 @@ export default function DayProgressCard({ dailyLimitMinutes }: DayProgressCardPr
                 ? t(streak.atRisk ? 'ui.dayStreakAtRisk' : 'ui.dayStreak', { count: streak.currentStreak })
                 : t('ui.noStreakYetASession')}
             </p>
+          )}
+          {streak && (streak.currentStreak > 0 || streak.restDayToday) && (
+            <div className="mt-1.5">
+              <StreakRestDayButton refreshKey={activeSession?.id ?? null} onChange={reloadStreak} />
+            </div>
           )}
         </div>
       </div>

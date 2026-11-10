@@ -1,0 +1,15 @@
+export const financeUndo: Record<string, string> = {
+  'financeUndo.button': "支払いを取り消す",
+  'financeUndo.confirmTitle': "この支払いを取り消しますか？",
+  'financeUndo.confirmMessage': "{date} の {name} からの {amount} の支払いを削除しますか？対応する収入は削除され、金額は貸しているお金に戻ります。",
+  'financeUndo.confirm': "支払いを取り消す",
+  'financeUndo.undoing': "取り消し中...",
+  'financeUndo.done': "支払いを取り消しました。",
+  'financeUndo.doneNoIncome': "支払いを取り消しました。対応する収入が見つからなかったため、収入の一覧を確認してください。",
+  'financeUndo.doneNoDebt': "支払いを取り消しました。貸しているお金の記録がもう存在しないため、復元されませんでした。",
+  'financeUndo.doneOnlyPayment': "支払いを削除しました。対応する収入と貸しているお金の記録が見つからなかったため、収入の一覧を確認してください。",
+  'financeUndo.notFound': "この支払いはすでに取り消されています。",
+  'financeUndo.conflict': "この貸しているお金はすでに受け取り済みのため、支払いを取り消せません。",
+  'financeUndo.rateLimited': "リクエストが多すぎます。1分後にもう一度お試しください。",
+  'financeUndo.error': "支払いを取り消せませんでした。",
+};

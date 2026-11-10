@@ -10,6 +10,10 @@ import {
 } from '../common/date-key.util';
 import { MINUTES_PER_HOUR } from '../common/time.constants';
 import { walkStreak } from '../study-sessions/study-streak.util';
+import { SentNotificationService } from './sent-notification.service';
+import { SENT_NOTIFICATION_KIND } from './sent-notification.constants';
+
+const KIND = SENT_NOTIFICATION_KIND.STREAK_RISK;
 
 // So avisa quem ja tem uma sequencia que vale a pena salvar.
 export const STREAK_RISK_MIN_DAYS = 3;
@@ -46,26 +50,26 @@ interface CandidateUser {
  * - A streak vem de walkStreak (a mesma do GET /study-sessions/streak). Hoje
  *   nunca e "falha"; se ha um freeze guardado, falhar hoje gasta o freeze e a
  *   streak sobrevive, por isso NAO e risco e nao se avisa.
+ * - Quem pediu dia de descanso para hoje (StreakFreeze) nao e avisado; os
+ *   dias de descanso passados fazem ponte na streak.
  * - Quem desligou as notificacoes (sem dispositivos push) nem entra na query;
  *   as horas de silencio do user sao respeitadas.
- * - Sem tabela nova, o dedupe diario e em memoria (como o aviso de limite de
- *   faltas e PushService.notifyUserOnce; so ha uma instancia no Render). So
- *   fica marcado quando algum dispositivo recebeu. Risco residual aceite: um
- *   restart dentro da janela (20:00-22:00) pode reenviar o aviso uma vez.
+ * - Dedupe diario duravel em SentNotification (sobrevive a restarts). So
+ *   fica marcado quando algum dispositivo recebeu.
  * - Quem nao precisa de aviso hoje (ja estudou, ou streak curta) e memorizado
- *   por dia e saltado nas execucoes seguintes, sem refazer as queries.
+ *   por dia (so em memoria: e uma otimizacao, nao o dedupe) e saltado nas
+ *   execucoes seguintes, sem refazer as queries.
  */
 @Injectable()
 export class StreakRiskRemindersService {
   private readonly logger = new Logger(StreakRiskRemindersService.name);
-  // userId -> dia (YYYY-MM-DD, Lisboa) em que foi avisado.
-  private readonly notifiedDay = new Map<string, string>();
   // userId -> dia em que ficou provado que nao ha nada a avisar.
   private readonly settledDay = new Map<string, string>();
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly pushService: PushService,
+    private readonly sentNotifications: SentNotificationService,
   ) {}
 
   // O relogio vem de getLisbonNow() (hora de Lisboa).
@@ -73,11 +77,9 @@ export class StreakRiskRemindersService {
     const { today, nowMinutes } = getLisbonNow();
     if (!isInStreakRiskWindow(nowMinutes)) return 0;
     const dayKey = toDateKey(today);
-    // Dia novo: esquece os anteriores (os mapas nao crescem sem fim).
-    for (const map of [this.notifiedDay, this.settledDay]) {
-      for (const [userId, day] of map) {
-        if (day !== dayKey) map.delete(userId);
-      }
+    // Dia novo: esquece os anteriores (o mapa nao cresce sem fim).
+    for (const [userId, day] of this.settledDay) {
+      if (day !== dayKey) this.settledDay.delete(userId);
     }
 
     let sent = 0;
@@ -118,12 +120,19 @@ export class StreakRiskRemindersService {
     dayKey: string,
     nowMinutes: number,
   ): Promise<number> {
-    const pending = users.filter(
+    const unsettled = users.filter(
       (u) =>
-        this.notifiedDay.get(u.id) !== dayKey &&
         this.settledDay.get(u.id) !== dayKey &&
         !this.isQuietHour(u, nowMinutes),
     );
+    if (unsettled.length === 0) return 0;
+    // 1 query: quem ja foi avisado hoje (marcador duravel).
+    const notified = await this.sentNotifications.claimedUserIds(
+      unsettled.map((u) => u.id),
+      KIND,
+      dayKey,
+    );
+    const pending = unsettled.filter((u) => !notified.has(u.id));
     if (pending.length === 0) return 0;
 
     // Passo 1 (1 query para a pagina toda): quem ja estudou hoje. So conta
@@ -150,9 +159,35 @@ export class StreakRiskRemindersService {
     const idle = pending.filter((u) => !studyingToday.has(u.id));
     if (idle.length === 0) return 0;
 
-    // Passo 2 (1 query): historico dos restantes, para calcular a streak.
+    // Passo 2 (1 query): dias de descanso pedidos (StreakFreeze). Quem
+    // descansa hoje nao esta em risco: fica resolvido no dia. Os outros dias
+    // de descanso entram no calculo da streak (fazem ponte).
+    const freezes = await this.prisma.streakFreeze.findMany({
+      where: { userId: { in: idle.map((u) => u.id) } },
+      select: { userId: true, dateKey: true },
+    });
+    const frozenByUser = new Map<string, Set<string>>();
+    for (const row of freezes) {
+      let days = frozenByUser.get(row.userId);
+      if (!days) {
+        days = new Set();
+        frozenByUser.set(row.userId, days);
+      }
+      days.add(row.dateKey);
+    }
+    const restless = idle.filter((u) => {
+      if (!frozenByUser.get(u.id)?.has(dayKey)) return true;
+      this.settledDay.set(u.id, dayKey);
+      return false;
+    });
+    if (restless.length === 0) return 0;
+
+    // Passo 3 (1 query): historico dos restantes, para calcular a streak.
     const history = await this.prisma.studySession.findMany({
-      where: { userId: { in: idle.map((u) => u.id) }, endedAt: { not: null } },
+      where: {
+        userId: { in: restless.map((u) => u.id) },
+        endedAt: { not: null },
+      },
       select: { userId: true, startedAt: true },
     });
     const daysByUser = new Map<string, Set<string>>();
@@ -173,11 +208,13 @@ export class StreakRiskRemindersService {
     }
 
     let sent = 0;
-    for (const user of idle) {
+    for (const user of restless) {
       const days = daysByUser.get(user.id);
       const firstDay = firstDayByUser.get(user.id);
       const streak =
-        days && firstDay ? walkStreak(days, firstDay, dayKey) : null;
+        days && firstDay
+          ? walkStreak(days, firstDay, dayKey, frozenByUser.get(user.id))
+          : null;
       // Com freeze guardado, falhar hoje nao parte a streak: nao e risco.
       const atRisk =
         streak !== null &&
@@ -188,7 +225,9 @@ export class StreakRiskRemindersService {
         continue;
       }
       // Marcado ANTES do envio: uma execucao sobreposta ja o salta.
-      this.notifiedDay.set(user.id, dayKey);
+      if (!(await this.sentNotifications.claim(user.id, KIND, dayKey))) {
+        continue;
+      }
       let delivered = 0;
       try {
         delivered = await this.pushService.notifyUser(user.id, 'streakRisk', {
@@ -197,7 +236,9 @@ export class StreakRiskRemindersService {
         });
       } finally {
         // Sem dispositivo que tenha recebido: desmarca, tenta na proxima.
-        if (delivered === 0) this.notifiedDay.delete(user.id);
+        if (delivered === 0) {
+          await this.sentNotifications.release(user.id, KIND, dayKey);
+        }
       }
       if (delivered > 0) sent += 1;
     }

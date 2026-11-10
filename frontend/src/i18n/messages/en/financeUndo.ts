@@ -1,0 +1,15 @@
+export const financeUndo: Record<string, string> = {
+  'financeUndo.button': "Undo payment",
+  'financeUndo.confirmTitle': "Undo this payment?",
+  'financeUndo.confirmMessage': "Remove the {amount} payment from {name} on {date}? Its income entry is deleted and the amount goes back to what is owed.",
+  'financeUndo.confirm': "Undo payment",
+  'financeUndo.undoing': "Undoing...",
+  'financeUndo.done': "Payment undone.",
+  'financeUndo.doneNoIncome': "Payment undone. Its income entry was not found, so check your income list.",
+  'financeUndo.doneNoDebt': "Payment undone. The debt no longer exists, so it was not restored.",
+  'financeUndo.doneOnlyPayment': "Payment removed. Its income entry and the debt were not found, so check your income list.",
+  'financeUndo.notFound': "This payment was already undone.",
+  'financeUndo.conflict': "This debt was already marked as received, so the payment cannot be undone.",
+  'financeUndo.rateLimited': "Too many requests. Try again in a minute.",
+  'financeUndo.error': "Could not undo the payment.",
+};

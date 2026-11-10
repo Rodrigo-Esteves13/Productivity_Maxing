@@ -61,6 +61,7 @@ export const FINANCE_IMPORT_MAX_ROWS = 1000;
 export const FINANCE_SYMBOL_MAX_LENGTH = 20;
 export const HTTP_TOO_MANY_REQUESTS = 429;
 export const HTTP_CONFLICT = 409;
+export const HTTP_NOT_FOUND = 404;
 export const IDEMPOTENCY_HEADER = 'Idempotency-Key';
 export const FINANCE_INTEREST_KINDS: FinanceInterestKind[] = ['NONE', 'SIMPLE', 'MONTHLY_COMPOUND'];
 export const FINANCE_GOAL_STATUSES: GoalPlanStatus[] = ['ON_TRACK', 'AT_RISK', 'UNREALISTIC', 'NO_DEADLINE', 'DONE'];
@@ -402,6 +403,18 @@ export interface FinanceOwedPaymentRow {
 
 export const getFinanceOwedPayments = async (): Promise<FinanceOwedPaymentRow[]> =>
   (await api.get<FinanceOwedPaymentRow[]>('/finance/owed-payments')).data;
+
+export interface FinanceOwedPaymentUndoResult {
+  /** false: older payment without a link to its income entry (or that entry was deleted by hand). */
+  incomeEntryRemoved: boolean;
+  /** false: the debt no longer exists and could not be restored. */
+  debtRestored: boolean;
+  remainingCents: number | null;
+}
+
+// Undoes a partial payment: 404 when it was already undone or is not yours.
+export const undoFinanceOwedPayment = async (paymentId: string): Promise<FinanceOwedPaymentUndoResult> =>
+  (await api.delete<FinanceOwedPaymentUndoResult>(`/finance/owed-payments/${enc(paymentId)}`)).data;
 
 export interface FinanceExportEntry {
   id: string;

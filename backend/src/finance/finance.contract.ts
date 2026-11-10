@@ -17,6 +17,7 @@
  *                                         -> FinanceAnalytics        (NEW; tudo opcional; to inclusive;
  *                                            omissao: month, ultimos 6 meses ate ao fim do mes atual;
  *                                            maximo 731 dias)
+ * DELETE /finance/owed-payments/:paymentId -> FinanceOwedPaymentUndoResult (NEW; desfaz um pagamento parcial)
  * PUT    /finance/settings               body UpdateFinanceSettingsBody -> FinanceSettings (balanceCents DEPRECATED)
  * POST   /finance/entries                body CreateFinanceEntryBody -> FinanceEntryRow   (CHANGED: campos novos)
  * PATCH  /finance/entries/:id            body Partial<CreateFinanceEntryBody> -> FinanceEntryRow (NEW)
@@ -562,6 +563,24 @@ export interface FinanceOwedPaymentRow {
   debtorName: string | null;
   amountCents: number;
   paidAt: DateKey;
+}
+
+/**
+ * DELETE /finance/owed-payments/:paymentId -> 200 FinanceOwedPaymentUndoResult.
+ * Desfaz um pagamento parcial numa so transacao: apaga o pagamento, apaga a
+ * entrada INCOME que ele criou e devolve o valor a divida (ou repoe a divida
+ * se esse pagamento a tinha saldado). Pagamento de outra pessoa ou ja
+ * desfeito = 404 sem efeitos. Divida entretanto marcada como recebida = 409.
+ * - incomeEntryRemoved false: pagamento antigo (antes da ligacao) ou entrada
+ *   apagada a mao; nada e adivinhado por valor/data.
+ * - debtRestored false: a divida ja nao existe e nao ha copia para a repor.
+ * - remainingCents: principal em divida depois de desfazer (null se nao ha
+ *   divida aberta).
+ */
+export interface FinanceOwedPaymentUndoResult {
+  incomeEntryRemoved: boolean;
+  debtRestored: boolean;
+  remainingCents: number | null;
 }
 
 export interface FinanceOwed {

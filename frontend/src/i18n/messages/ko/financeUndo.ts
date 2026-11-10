@@ -1,0 +1,15 @@
+export const financeUndo: Record<string, string> = {
+  'financeUndo.button': "결제 취소",
+  'financeUndo.confirmTitle': "이 결제를 취소할까요?",
+  'financeUndo.confirmMessage': "{date}에 {name}님이 보낸 {amount} 결제를 삭제할까요? 연결된 수입이 삭제되고 금액은 받을 돈으로 다시 돌아갑니다.",
+  'financeUndo.confirm': "결제 취소",
+  'financeUndo.undoing': "취소하는 중...",
+  'financeUndo.done': "결제를 취소했습니다.",
+  'financeUndo.doneNoIncome': "결제를 취소했습니다. 연결된 수입을 찾지 못했으니 수입 목록을 확인하세요.",
+  'financeUndo.doneNoDebt': "결제를 취소했습니다. 받을 돈 기록이 더 이상 없어서 복원하지 않았습니다.",
+  'financeUndo.doneOnlyPayment': "결제를 삭제했습니다. 연결된 수입과 받을 돈 기록을 찾지 못했으니 수입 목록을 확인하세요.",
+  'financeUndo.notFound': "이 결제는 이미 취소되었습니다.",
+  'financeUndo.conflict': "이 받을 돈은 이미 받음으로 표시되어 결제를 취소할 수 없습니다.",
+  'financeUndo.rateLimited': "요청이 너무 많습니다. 1분 후에 다시 시도하세요.",
+  'financeUndo.error': "결제를 취소하지 못했습니다.",
+};

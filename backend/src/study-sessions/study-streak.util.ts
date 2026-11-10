@@ -22,6 +22,8 @@ export interface StreakWalk {
   freezesUsedTotal: number;
 }
 
+const NO_FROZEN_DAYS: ReadonlySet<string> = new Set();
+
 /**
  * Walks day by day from `firstDayKey` to `todayKey` over the set of Lisbon
  * day keys with activity. Pure: shared by the streak endpoint and the
@@ -29,11 +31,16 @@ export interface StreakWalk {
  *
  * Today is never treated as a "miss" even with zero activity so far - the
  * day isn't over yet.
+ *
+ * `frozenDays` are rest days the user claimed explicitly (StreakFreeze
+ * rows): a frozen day without activity is bridged, it neither extends the
+ * streak nor breaks it, and it does not spend an earned freeze.
  */
 export function walkStreak(
   activeDays: ReadonlySet<string>,
   firstDayKey: string,
   todayKey: string,
+  frozenDays: ReadonlySet<string> = NO_FROZEN_DAYS,
 ): StreakWalk {
   const firstDay = parseDateKey(firstDayKey);
   const totalDays = diffUtcDays(firstDay, parseDateKey(todayKey)) + 1;
@@ -52,6 +59,8 @@ export function walkStreak(
       if (currentStreak % FREEZE_EARN_INTERVAL_DAYS === 0) {
         freezesAvailable = Math.min(freezesAvailable + 1, FREEZE_MAX_BANKED);
       }
+    } else if (frozenDays.has(dayKey)) {
+      // Claimed rest day: bridged, the streak neither grows nor resets.
     } else if (isToday) {
       // Not over yet - leave currentStreak as-is, don't spend a freeze,
       // don't reset.

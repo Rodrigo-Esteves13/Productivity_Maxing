@@ -8,6 +8,7 @@ import {
   DueTodayRemindersService,
   isInDueTodayDigestWindow,
 } from './due-today-reminders.service';
+import { FakeSentNotificationService } from './sent-notification.fake';
 
 // Novembro: Lisboa = UTC. Hoje = 2026-11-06.
 const MORNING = new Date('2026-11-06T08:15:00.000Z');
@@ -24,6 +25,8 @@ interface Opts {
   // userId -> tasks pendentes a vencer hoje.
   dueByUser?: Record<string, number>;
   delivered?: number;
+  // Marcadores duraveis partilhados (simula um restart com a mesma base).
+  sent?: FakeSentNotificationService;
 }
 
 function setup(opts: Opts = {}) {
@@ -49,11 +52,13 @@ function setup(opts: Opts = {}) {
   const push = {
     notifyUser: jest.fn().mockResolvedValue(opts.delivered ?? 1),
   };
+  const sent = opts.sent ?? new FakeSentNotificationService();
   const service = new DueTodayRemindersService(
     prisma as unknown as PrismaService,
     push as unknown as PushService,
+    sent.asService(),
   );
-  return { service, prisma, push };
+  return { service, prisma, push, sent };
 }
 
 describe('DueTodayRemindersService', () => {
@@ -149,6 +154,15 @@ describe('DueTodayRemindersService', () => {
     jest.setSystemTime(new Date('2026-11-06T09:30:00.000Z'));
     expect(await service.sendReminders()).toBe(0);
     expect(push.notifyUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('never sends twice after a restart (durable marker)', async () => {
+    const first = setup();
+    expect(await first.service.sendReminders()).toBe(1);
+    const restarted = setup({ sent: first.sent });
+    jest.setSystemTime(new Date('2026-11-06T09:30:00.000Z'));
+    expect(await restarted.service.sendReminders()).toBe(0);
+    expect(restarted.push.notifyUser).not.toHaveBeenCalled();
   });
 
   it('sends again the next day', async () => {

@@ -6,6 +6,7 @@ import {
   STREAK_RISK_USER_BATCH_SIZE,
   StreakRiskRemindersService,
 } from './streak-risk-reminders.service';
+import { FakeSentNotificationService } from './sent-notification.fake';
 
 // Novembro: Lisboa = UTC. Hoje = 2026-11-06.
 const EVENING = new Date('2026-11-06T20:30:00.000Z');
@@ -34,6 +35,8 @@ interface Opts {
   // Sessoes de hoje ainda a decorrer (endedAt null).
   activeToday?: string[];
   tasksToday?: string[];
+  // Dias de descanso pedidos (StreakFreeze).
+  freezes?: { userId: string; dateKey: string }[];
   delivered?: number;
 }
 
@@ -71,15 +74,20 @@ function setup(opts: Opts = {}) {
           (opts.tasksToday ?? []).map((userId) => ({ userId })),
         ),
     },
+    streakFreeze: {
+      findMany: jest.fn().mockResolvedValue(opts.freezes ?? []),
+    },
   };
   const push = {
     notifyUser: jest.fn().mockResolvedValue(opts.delivered ?? 1),
   };
+  const sent = new FakeSentNotificationService();
   const service = new StreakRiskRemindersService(
     prisma as unknown as PrismaService,
     push as unknown as PushService,
+    sent.asService(),
   );
-  return { service, prisma, push };
+  return { service, prisma, push, sent };
 }
 
 describe('StreakRiskRemindersService', () => {
@@ -164,6 +172,33 @@ describe('StreakRiskRemindersService', () => {
     const { service, push } = setup({ history: lastDays('u1', 7) });
     expect(await service.sendReminders()).toBe(0);
     expect(push.notifyUser).not.toHaveBeenCalled();
+  });
+
+  it('does not send when today is a claimed rest day', async () => {
+    const { service, push, prisma } = setup({
+      freezes: [{ userId: 'u1', dateKey: '2026-11-06' }],
+    });
+    expect(await service.sendReminders()).toBe(0);
+    expect(push.notifyUser).not.toHaveBeenCalled();
+    // Resolvido no dia: nem chega a carregar o historico.
+    expect(prisma.studySession.findMany).toHaveBeenCalledTimes(1);
+    const [freezeArgs] = prisma.streakFreeze.findMany.mock.calls[0] as [
+      { where: { userId: { in: string[] } } },
+    ];
+    expect(freezeArgs.where.userId.in).toEqual(['u1']);
+  });
+
+  it('a past rest day bridges the gap, so the streak is still at risk', async () => {
+    // Estudou 2, 3 e 4 dias atras; ontem (05) foi dia de descanso.
+    const { service, push } = setup({
+      history: [2, 3, 4].map((d) => ({ userId: 'u1', startedAt: dayAt(d) })),
+      freezes: [{ userId: 'u1', dateKey: '2026-11-05' }],
+    });
+    expect(await service.sendReminders()).toBe(1);
+    expect(push.notifyUser).toHaveBeenCalledWith('u1', 'streakRisk', {
+      count: 3,
+      url: '/focus',
+    });
   });
 
   it('does not send when the streak is already broken', async () => {

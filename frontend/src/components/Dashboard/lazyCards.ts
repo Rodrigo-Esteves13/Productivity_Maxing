@@ -36,3 +36,4 @@ export const MoneySnapshotCard = lazy(() => import('./MoneySnapshotCard'));
 export const WeeklyChallengeCard = lazy(() => import('./WeeklyChallengeCard'));
 export const StatusSummaryCard = lazy(() => import('./StatusSummaryCard'));
 export const AreaConsistencyCard = lazy(() => import('./AreaConsistencyCard'));
+export const XpLevelCard = lazy(() => import('./XpLevelCard'));

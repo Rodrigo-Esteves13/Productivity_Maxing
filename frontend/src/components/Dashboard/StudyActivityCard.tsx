@@ -13,6 +13,7 @@ import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { lisbonTodayKey } from '../../lib/dateKey';
 import { useI18n } from '../../i18n/useI18n';
 import { fillNodes } from '../../i18n/fillNodes';
+import StreakRestDayButton from '../Study/StreakRestDayButton';
 
 const WINDOW_DAYS = 84; // ~12 weeks, GitHub-contributions-style grid
 const DEFAULT_GOAL_MINUTES = 60;
@@ -87,6 +88,13 @@ export default function StudyActivityCard() {
     };
   }, []);
 
+  // Depois de pedir/desfazer um dia de descanso: so a streak muda.
+  const reloadStreak = () => {
+    getStudyStreak()
+      .then(setStreak)
+      .catch((err) => console.error('Failed to reload study streak:', err));
+  };
+
   if (isLoading) return null;
 
   const hasAnyData = days.some((d) => d.totalMinutes > 0);
@@ -146,6 +154,11 @@ export default function StudyActivityCard() {
           </span>
         )}
       </div>
+      {streak && (streak.currentStreak > 0 || streak.restDayToday) && (
+        <div className="mb-3">
+          <StreakRestDayButton onChange={reloadStreak} />
+        </div>
+      )}
 
       <div className="flex gap-1 overflow-x-auto pb-1">
         {weeks.map((week, wIndex) => (

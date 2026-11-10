@@ -97,6 +97,20 @@ export class FinanceController {
     return this.finance.listOwedPayments(user.id);
   }
 
+  // Literal (owed-payments) antes das rotas entries/:id; 404 se nao for da pessoa.
+  @Delete('owed-payments/:paymentId')
+  @Throttle(perMinute(FINANCE_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary:
+      'Undoes a partial payment: removes it and its income entry and gives the amount back to the debt.',
+  })
+  undoOwedPayment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('paymentId', ParseUUIDPipe) paymentId: string,
+  ) {
+    return this.finance.undoOwedPayment(user.id, paymentId);
+  }
+
   @Get('analytics')
   @ApiOperation({
     summary:

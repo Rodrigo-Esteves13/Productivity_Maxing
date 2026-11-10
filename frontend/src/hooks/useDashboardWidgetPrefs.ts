@@ -37,7 +37,8 @@ export type DashboardWidgetKey =
   | 'moneySnapshot'
   | 'weeklyChallenge'
   | 'statusSummary'
-  | 'areaConsistency';
+  | 'areaConsistency'
+  | 'xpLevel';
 
 // Chaves i18n (traduzidas com t() em DashboardWidgetToggles).
 export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
@@ -78,6 +79,7 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   weeklyChallenge: 'weeklyChallenge.title',
   statusSummary: 'statusSummary.title',
   areaConsistency: 'areaConsistency.title',
+  xpLevel: 'xpLevel.title',
 };
 
 const STORAGE_KEY = 'dashboard-widget-prefs';
@@ -124,6 +126,7 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   weeklyChallenge: true,
   statusSummary: true,
   areaConsistency: true,
+  xpLevel: true,
 };
 
 function loadPrefs(): Record<DashboardWidgetKey, boolean> {

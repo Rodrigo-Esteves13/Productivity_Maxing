@@ -11,7 +11,9 @@ import { StreakRiskRemindersService } from './streak-risk-reminders.service';
 import { DueTodayRemindersService } from './due-today-reminders.service';
 import { MoneyRemindersService } from './money-reminders.service';
 import { BudgetAlertRemindersService } from './budget-alert-reminders.service';
+import { MonthlyDigestService } from './monthly-digest.service';
 import { MedicationReminderSchedulerService } from './medication-reminder-scheduler.service';
+import { SentNotificationService } from './sent-notification.service';
 
 @Module({
   imports: [
@@ -29,7 +31,9 @@ import { MedicationReminderSchedulerService } from './medication-reminder-schedu
     DueTodayRemindersService,
     MoneyRemindersService,
     BudgetAlertRemindersService,
+    MonthlyDigestService,
     MedicationReminderSchedulerService,
+    SentNotificationService,
   ],
 })
 export class RemindersModule {}

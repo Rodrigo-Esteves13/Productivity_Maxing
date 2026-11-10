@@ -14,13 +14,17 @@ import {
   absenceRisk,
   DEFAULT_ABSENCE_LIMIT_PCT,
 } from '../schedule/absence-limit.util';
+import { SentNotificationService } from './sent-notification.service';
+import { SENT_NOTIFICATION_KIND } from './sent-notification.constants';
+
+const KIND = SENT_NOTIFICATION_KIND.ABSENCE_LIMIT;
 
 const SCHEDULE_PATH = '/schedule';
 // Nao acorda ninguem de madrugada mesmo sem horas de silencio configuradas.
 const EARLIEST_SEND_MINUTES = 9 * MINUTES_PER_HOUR;
 // Janela de envio deterministica (hora de Lisboa): so segunda-feira, das 09:00
-// as 21:00. Como nao ha tabela para "avisado nesta semana", a janela e o
-// dedupe que sobrevive a restarts: fora dela nunca se envia. O cron externo
+// as 21:00. O dedupe semanal e o marcador duravel em SentNotification; a
+// janela continua a garantir que fora dela nunca se envia. O cron externo
 // pode correr com 4-6h de intervalo (docs/adr/0006-external-cron-for-reminders.md),
 // por isso 12h garante pelo menos uma execucao dentro da janela, e o fim as
 // 21:00 evita pushes noturnos (uma janela ate terca 09:00 ficaria inutil a
@@ -65,26 +69,23 @@ export function isInSendWindow(today: Date, nowMinutes: number): boolean {
  * Limitacoes conhecidas:
  * - O limite de faltas e uma preferencia so do cliente (localStorage), por
  *   isso aqui vale sempre o valor por omissao (25%).
- * - Sem tabela nova (nao ha onde guardar "avisado nesta semana" por user), o
- *   dedupe semanal e em memoria, como PushService.notifyUserOnce (so ha uma
- *   instancia no Render). So fica marcado quando algum dispositivo recebeu.
- *   Risco residual aceite: um restart/redeploy DENTRO da janela de segunda
- *   (09:00-21:00 Lisboa) apaga o Map e pode reenviar o aviso uma vez. Fora da
- *   janela nao ha reenvio, e o custo de um push duplicado e baixo, nao justifica
- *   uma tabela so para isto.
- * - Utilizadores sem risco hoje sao memorizados por dia (memo em memoria) e
- *   saltados ate ao dia seguinte, para nao refazer a query de 15 em 15 min.
+ * - Dedupe semanal duravel em SentNotification (periodo = semana ISO),
+ *   sobrevive a restarts/redeploys dentro da janela. So fica marcado quando
+ *   algum dispositivo recebeu.
+ * - Utilizadores sem risco hoje sao memorizados por dia (memo em memoria, so
+ *   uma otimizacao) e saltados ate ao dia seguinte, para nao refazer a query
+ *   de 15 em 15 min.
  */
 @Injectable()
 export class AbsenceLimitRemindersService {
   private readonly logger = new Logger(AbsenceLimitRemindersService.name);
-  private readonly notifiedWeek = new Map<string, string>();
   // userId -> dia (YYYY-MM-DD, Lisboa) em que foi avaliado sem risco.
   private readonly evaluatedNoRisk = new Map<string, string>();
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly pushService: PushService,
+    private readonly sentNotifications: SentNotificationService,
   ) {}
 
   // O relogio vem de getLisbonNow() (hora de Lisboa).
@@ -93,10 +94,7 @@ export class AbsenceLimitRemindersService {
     if (!isInSendWindow(today, nowMinutes)) return 0;
     const week = isoWeekKey(today);
     const dayKey = toDateKey(today);
-    // Semana/dia novo: esquece os anteriores (os mapas nao crescem sem fim).
-    for (const [userId, sentWeek] of this.notifiedWeek) {
-      if (sentWeek !== week) this.notifiedWeek.delete(userId);
-    }
+    // Dia novo: esquece os anteriores (o mapa nao cresce sem fim).
     for (const [userId, day] of this.evaluatedNoRisk) {
       if (day !== dayKey) this.evaluatedNoRisk.delete(userId);
     }
@@ -124,7 +122,14 @@ export class AbsenceLimitRemindersService {
         orderBy: { id: 'asc' },
         take: USER_BATCH_SIZE,
       });
+      // 1 query por pagina: quem ja foi avisado nesta semana.
+      const notified = await this.sentNotifications.claimedUserIds(
+        users.map((u) => u.id),
+        KIND,
+        week,
+      );
       for (const user of users) {
+        if (notified.has(user.id)) continue;
         // Um user que falha nao pode abortar a corrida dos seguintes (a ordem
         // e deterministica, os mesmos ficariam sempre sem aviso). Log so com o id.
         try {
@@ -160,7 +165,6 @@ export class AbsenceLimitRemindersService {
     ctx: { today: Date; nowMinutes: number; week: string; dayKey: string },
   ): Promise<boolean> {
     const { today, nowMinutes, week, dayKey } = ctx;
-    if (this.notifiedWeek.get(user.id) === week) return false;
     if (this.evaluatedNoRisk.get(user.id) === dayKey) return false;
     if (this.isQuietHour(user, nowMinutes)) return false;
 
@@ -195,7 +199,9 @@ export class AbsenceLimitRemindersService {
       .join(SUBJECT_SEPARATOR);
     const extra = risky.length - MAX_SUBJECTS_IN_PUSH;
     // Marcado ANTES do envio: uma execucao sobreposta ja o salta.
-    this.notifiedWeek.set(user.id, week);
+    if (!(await this.sentNotifications.claim(user.id, KIND, week))) {
+      return false;
+    }
     let delivered = 0;
     try {
       delivered = await this.pushService.notifyUser(
@@ -208,7 +214,9 @@ export class AbsenceLimitRemindersService {
       );
     } finally {
       // Sem dispositivo que tenha recebido: desmarca, tenta na proxima.
-      if (delivered === 0) this.notifiedWeek.delete(user.id);
+      if (delivered === 0) {
+        await this.sentNotifications.release(user.id, KIND, week);
+      }
     }
     return delivered > 0;
   }

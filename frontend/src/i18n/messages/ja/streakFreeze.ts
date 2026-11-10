@@ -8,4 +8,11 @@ export const streakFreeze: Record<string, string> = {
   'streakFreeze.help.weeklyFreeze': "毎週(月曜から日曜)1日分の未達成は自動的に免除されます。",
   'streakFreeze.restUsed': "休息日を使用: {count}",
   'streakFreeze.restUsedHint': "休息日は連続記録に加算も中断もされません。",
+  'streakFreeze.claim.button': "休息日を使う",
+  'streakFreeze.claim.active': "休息日 適用中",
+  'streakFreeze.claim.activeHint': "今日は休息日です。学習ストリークは増えも途切れもしません。",
+  'streakFreeze.claim.undo': "元に戻す",
+  'streakFreeze.claim.hint': "ストリークを途切れさせずに今日は休めます。週に最大 {max} 回（月曜から日曜）。",
+  'streakFreeze.claim.left': "今週の残り {count} 回",
+  'streakFreeze.claim.error': "休息日を更新できませんでした。もう一度お試しください。",
 };

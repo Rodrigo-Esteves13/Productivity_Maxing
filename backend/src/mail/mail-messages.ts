@@ -272,6 +272,147 @@ export function newDeviceEmailText(
   return NEW_DEVICE_EMAIL[resolveMailLanguage(lang)];
 }
 
+// Resumo mensal por email (ver MonthlyDigestService). Usa a mesma
+// preferencia dos lembretes de prazos por email (deadlineEmailReminders).
+interface MonthlyDigestEmailText {
+  /** {month} */
+  subject: string;
+  /** {month} */
+  title: string;
+  /** {month} */
+  intro: string;
+  completedLabel: string;
+  studyLabel: string;
+  /** {hours} {minutes} */
+  studyValue: string;
+  gradeLabel: string;
+  overdueLabel: string;
+  topAreaLabel: string;
+  button: string;
+  footer: string;
+}
+
+const MONTHLY_DIGEST_EMAIL: Record<MailLanguage, MonthlyDigestEmailText> = {
+  en: {
+    subject: 'Your {month} in review',
+    title: 'Your month in review: {month}',
+    intro: 'Here is how {month} went.',
+    completedLabel: 'Tasks completed',
+    studyLabel: 'Study time',
+    studyValue: '{hours}h {minutes}m',
+    gradeLabel: 'Average grade',
+    overdueLabel: 'Overdue at month end',
+    topAreaLabel: 'Most studied area',
+    button: 'Open my review',
+    footer:
+      'You get this because deadline email reminders are on. Turn them off any time in Profile > Preferences.',
+  },
+  pt: {
+    subject: 'O teu mês de {month} em resumo',
+    title: 'Resumo do mês: {month}',
+    intro: 'Eis como correu {month}.',
+    completedLabel: 'Tarefas concluídas',
+    studyLabel: 'Tempo de estudo',
+    studyValue: '{hours}h {minutes}min',
+    gradeLabel: 'Nota média',
+    overdueLabel: 'Em atraso no fim do mês',
+    topAreaLabel: 'Área mais estudada',
+    button: 'Abrir a minha revisão',
+    footer:
+      'Recebes isto porque os lembretes de prazos por email estão ligados. Desliga-os quando quiseres em Perfil > Preferências.',
+  },
+  es: {
+    subject: 'Tu resumen de {month}',
+    title: 'Resumen del mes: {month}',
+    intro: 'Así fue {month}.',
+    completedLabel: 'Tareas completadas',
+    studyLabel: 'Tiempo de estudio',
+    studyValue: '{hours} h {minutes} min',
+    gradeLabel: 'Nota media',
+    overdueLabel: 'Atrasadas al final del mes',
+    topAreaLabel: 'Área más estudiada',
+    button: 'Abrir mi revisión',
+    footer:
+      'Recibes esto porque los recordatorios de plazos por email están activados. Desactívalos cuando quieras en Perfil > Preferencias.',
+  },
+  fr: {
+    subject: 'Ton bilan de {month}',
+    title: 'Bilan du mois : {month}',
+    intro: 'Voici comment s’est passé {month}.',
+    completedLabel: 'Tâches terminées',
+    studyLabel: 'Temps d’étude',
+    studyValue: '{hours} h {minutes} min',
+    gradeLabel: 'Note moyenne',
+    overdueLabel: 'En retard en fin de mois',
+    topAreaLabel: 'Domaine le plus étudié',
+    button: 'Ouvrir mon bilan',
+    footer:
+      'Tu reçois ceci parce que les rappels d’échéance par email sont activés. Désactive-les quand tu veux dans Profil > Préférences.',
+  },
+  de: {
+    subject: 'Dein Rückblick auf {month}',
+    title: 'Monatsrückblick: {month}',
+    intro: 'So lief dein {month}.',
+    completedLabel: 'Erledigte Aufgaben',
+    studyLabel: 'Lernzeit',
+    studyValue: '{hours} Std. {minutes} Min.',
+    gradeLabel: 'Durchschnittsnote',
+    overdueLabel: 'Überfällig zum Monatsende',
+    topAreaLabel: 'Meistgelernter Bereich',
+    button: 'Meinen Rückblick öffnen',
+    footer:
+      'Du bekommst das, weil Fristerinnerungen per E-Mail aktiv sind. Du kannst sie jederzeit unter Profil > Einstellungen ausschalten.',
+  },
+  ja: {
+    subject: '{month} の振り返り',
+    title: '今月の振り返り: {month}',
+    intro: '{month} のまとめです。',
+    completedLabel: '完了したタスク',
+    studyLabel: '学習時間',
+    studyValue: '{hours} 時間 {minutes} 分',
+    gradeLabel: '平均成績',
+    overdueLabel: '月末時点の期限切れ',
+    topAreaLabel: '最も学習した分野',
+    button: '振り返りを開く',
+    footer:
+      'メールでの期限リマインダーがオンのため、このメールが届いています。プロフィール > 設定からいつでもオフにできます。',
+  },
+  ko: {
+    subject: '{month} 돌아보기',
+    title: '이번 달 돌아보기: {month}',
+    intro: '{month} 요약입니다.',
+    completedLabel: '완료한 작업',
+    studyLabel: '공부 시간',
+    studyValue: '{hours}시간 {minutes}분',
+    gradeLabel: '평균 성적',
+    overdueLabel: '월말 기준 기한 초과',
+    topAreaLabel: '가장 많이 공부한 분야',
+    button: '돌아보기 열기',
+    footer:
+      '이메일 마감 알림이 켜져 있어서 이 메일을 받았습니다. 프로필 > 환경설정에서 언제든지 끌 수 있습니다.',
+  },
+  zh: {
+    subject: '{month} 月度回顾',
+    title: '本月回顾：{month}',
+    intro: '这是你 {month} 的总结。',
+    completedLabel: '已完成任务',
+    studyLabel: '学习时长',
+    studyValue: '{hours} 小时 {minutes} 分钟',
+    gradeLabel: '平均成绩',
+    overdueLabel: '月末逾期',
+    topAreaLabel: '学习最多的领域',
+    button: '打开我的回顾',
+    footer:
+      '你收到这封邮件是因为开启了邮件截止提醒。可随时在 个人资料 > 偏好设置 中关闭。',
+  },
+};
+
+export function monthlyDigestEmailText(
+  lang: string | null | undefined,
+): MonthlyDigestEmailText {
+  return MONTHLY_DIGEST_EMAIL[resolveMailLanguage(lang)];
+}
+
 // Substitui {nome} pelos valores dados (texto simples; o HTML e escapado
 // por quem monta o email).
 export function fillMailTemplate(

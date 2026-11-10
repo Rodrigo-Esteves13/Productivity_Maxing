@@ -101,6 +101,9 @@ export const DAYS_PER_YEAR = 365;
 export const OWED_LATE_SCENARIO_DAYS = 30;
 // Historico de pagamentos recebidos (GET /finance/owed-payments).
 export const OWED_PAYMENTS_HISTORY_LIMIT = 50;
+// Versao do formato FinanceOwedPayment.settledDebt (finance-owed-undo.util.ts).
+// Outra versao nao e lida: o desfazer nao repoe a divida.
+export const SETTLED_DEBT_SNAPSHOT_VERSION = 1;
 
 // Idempotencia dos POST: mesmo user + mesma chave dentro da janela devolve
 // a linha ja criada. Fora da janela a chave ja usada da 409.

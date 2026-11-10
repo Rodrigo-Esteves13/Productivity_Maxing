@@ -6,6 +6,10 @@ import { addUtcDays, getLisbonNow, toDateKey } from '../common/date-key.util';
 import { MINUTES_PER_HOUR } from '../common/time.constants';
 import { SUBSCRIPTIONS_CATEGORY } from '../finance/finance.constants';
 import { occurrencesInRange } from '../finance/finance-schedule.util';
+import { SentNotificationService } from './sent-notification.service';
+import { SENT_NOTIFICATION_KIND } from './sent-notification.constants';
+
+const KIND = SENT_NOTIFICATION_KIND.MONEY_REMINDER;
 
 // Janela de envio (hora de Lisboa): horas de dia, nunca de madrugada. O cron
 // externo corre de 15 em 15 min (docs/adr/0006-external-cron-for-reminders.md),
@@ -46,20 +50,17 @@ interface CandidateUser {
  * - Quem nao tem dispositivos push nem entra na query; banidos tambem nao; as
  *   horas de silencio do user sao respeitadas.
  * - Queries em lote por pagina de users (2 por pagina), nunca por user.
- * - Sem tabela nova, o dedupe diario e em memoria (como o aviso de streak e o
- *   de limite de faltas; so ha uma instancia no Render). So fica marcado
- *   quando algum dispositivo recebeu. Risco residual aceite: um restart dentro
- *   da janela (09:00-20:00) pode reenviar o aviso uma vez nesse dia.
+ * - Dedupe diario duravel em SentNotification (sobrevive a restarts). So
+ *   fica marcado quando algum dispositivo recebeu.
  */
 @Injectable()
 export class MoneyRemindersService {
   private readonly logger = new Logger(MoneyRemindersService.name);
-  // userId -> dia (YYYY-MM-DD, Lisboa) em que foi avisado.
-  private readonly notifiedDay = new Map<string, string>();
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly pushService: PushService,
+    private readonly sentNotifications: SentNotificationService,
   ) {}
 
   // O relogio vem de getLisbonNow() (hora de Lisboa).
@@ -67,10 +68,6 @@ export class MoneyRemindersService {
     const { today, nowMinutes } = getLisbonNow();
     if (!isInMoneyReminderWindow(nowMinutes)) return 0;
     const dayKey = toDateKey(today);
-    // Dia novo: esquece os anteriores (o mapa nao cresce sem fim).
-    for (const [userId, day] of this.notifiedDay) {
-      if (day !== dayKey) this.notifiedDay.delete(userId);
-    }
 
     let sent = 0;
     let cursor: string | undefined;
@@ -111,11 +108,15 @@ export class MoneyRemindersService {
     dayKey: string,
     nowMinutes: number,
   ): Promise<number> {
-    const pending = users.filter(
-      (u) =>
-        this.notifiedDay.get(u.id) !== dayKey &&
-        !this.isQuietHour(u, nowMinutes),
+    const awake = users.filter((u) => !this.isQuietHour(u, nowMinutes));
+    if (awake.length === 0) return 0;
+    // 1 query: quem ja foi avisado hoje (marcador duravel).
+    const notified = await this.sentNotifications.claimedUserIds(
+      awake.map((u) => u.id),
+      KIND,
+      dayKey,
     );
+    const pending = awake.filter((u) => !notified.has(u.id));
     if (pending.length === 0) return 0;
 
     const ids = pending.map((u) => u.id);
@@ -186,7 +187,9 @@ export class MoneyRemindersService {
       const count = countByUser.get(user.id);
       if (!count) continue;
       // Marcado ANTES do envio: uma execucao sobreposta ja o salta.
-      this.notifiedDay.set(user.id, dayKey);
+      if (!(await this.sentNotifications.claim(user.id, KIND, dayKey))) {
+        continue;
+      }
       let delivered = 0;
       try {
         delivered = await this.pushService.notifyUser(
@@ -196,7 +199,9 @@ export class MoneyRemindersService {
         );
       } finally {
         // Sem dispositivo que tenha recebido: desmarca, tenta na proxima.
-        if (delivered === 0) this.notifiedDay.delete(user.id);
+        if (delivered === 0) {
+          await this.sentNotifications.release(user.id, KIND, dayKey);
+        }
       }
       if (delivered > 0) sent += 1;
     }

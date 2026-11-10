@@ -10,6 +10,13 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: '2026-11-08',
     title: 'Money export, streak alert and sturdier integrations',
     items: [
+      'Study: a new Use a rest day button on the focus page and the study activity card protects your study streak on a day you cannot study. You get one rest day per week, only for today, and never on a day you already studied. Streak reminders skip a rest day.',
+      'Money: a mistaken partial payment on money owed to you can now be undone with the Undo button in the payment history. It removes the payment and the income entry it created, and brings the debt back if that payment had settled it. Payments made before this update only remove the payment itself.',
+      'Dashboard: in Customize widgets you can now move each widget up or down and reset the order. The order is saved on this device.',
+      'Reminders: the system now remembers which reminders and emails it already sent, so a server restart or deploy can no longer send you the same one twice.',
+      'Dashboard: a new Single task mode button (also in the command palette) hides everything except your most urgent task, with a Mark as done button. Overdue tasks come first, then the nearest deadline.',
+      'Email: if deadline email reminders are on, you now also get one summary email on the first day of each month with what you finished, time studied, average grade and overdue tasks from the month before. It is skipped when there is nothing to report.',
+      'Dashboard: a new Level card turns finished tasks into XP, more for harder tasks and for finishing on time, with a bar to your next level. It is just a fun indicator and you can hide it in the widget settings.',
       'Study: a new Period in review page (command palette: Period in review) gives you big-number cards for the selected period: tasks completed, study time, best study day, best course average, most productive weekday and longest study streak.',
       'Dashboard: a new Area consistency card ranks your courses by how steady your grades and on-time work are, so you can see where results swing the most.',
       'Medication: reminder notifications for a single dose now have a Taken button, so you can mark the dose as taken without opening the app. It only works for that dose, for the next hour.',

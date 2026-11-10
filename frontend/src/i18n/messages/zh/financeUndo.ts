@@ -1,0 +1,15 @@
+export const financeUndo: Record<string, string> = {
+  'financeUndo.button': "撤销付款",
+  'financeUndo.confirmTitle': "撤销这笔付款？",
+  'financeUndo.confirmMessage': "删除 {name} 在 {date} 支付的 {amount}？对应的收入会被删除，金额会重新计入欠你的钱。",
+  'financeUndo.confirm': "撤销付款",
+  'financeUndo.undoing': "正在撤销...",
+  'financeUndo.done': "付款已撤销。",
+  'financeUndo.doneNoIncome': "付款已撤销。未找到对应的收入，请检查你的收入列表。",
+  'financeUndo.doneNoDebt': "付款已撤销。这笔欠款已不存在，因此未恢复。",
+  'financeUndo.doneOnlyPayment': "付款已删除。未找到对应的收入和欠款，请检查你的收入列表。",
+  'financeUndo.notFound': "这笔付款已被撤销。",
+  'financeUndo.conflict': "这笔欠款已标记为已收到，因此无法撤销付款。",
+  'financeUndo.rateLimited': "请求过多。请一分钟后再试。",
+  'financeUndo.error': "无法撤销付款。",
+};

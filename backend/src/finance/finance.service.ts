@@ -39,7 +39,10 @@ import {
   UpdateFinanceHoldingDto,
   UpdateFinanceSettingsDto,
 } from './dto/finance.dto';
-import type { FinanceImportResult } from './finance.contract';
+import type {
+  FinanceImportResult,
+  FinanceOwedPaymentUndoResult,
+} from './finance.contract';
 import {
   DEFAULT_ANALYTICS_GRANULARITY,
   DEFAULT_ANALYTICS_MONTHS,
@@ -76,6 +79,11 @@ import {
   summarizeOwed,
   type OwedInput,
 } from './finance-owed.util';
+import {
+  buildSettledDebtSnapshot,
+  parseSettledDebtSnapshot,
+  restoredDebtData,
+} from './finance-owed-undo.util';
 import {
   bucketize,
   materialize,
@@ -1053,6 +1061,15 @@ export class FinanceService {
         receivedAt: null,
         amountCents: owed.amountCents,
       };
+      // Ao saldar a divida e apagada e o SetNull tira o entryId aos
+      // pagamentos anteriores: guarda-os antes, para o desfazer os religar.
+      const earlier =
+        remainingCents > 0
+          ? []
+          : await tx.financeOwedPayment.findMany({
+              where: { userId, entryId: id },
+              select: { id: true },
+            });
       const { count } =
         remainingCents > 0
           ? await tx.financeEntry.updateMany({
@@ -1081,15 +1098,22 @@ export class FinanceService {
           date: paidAt,
           accountId: owed.accountId,
         },
-        select: { createdAt: true },
+        select: { id: true, createdAt: true },
       });
       await tx.financeOwedPayment.create({
         data: {
           userId,
           entryId: remainingCents > 0 ? owed.id : null,
+          incomeEntryId: income.id,
           debtorName: owed.debtorName,
           amountCents,
           paidAt,
+          ...(remainingCents === 0 && {
+            settledDebt: buildSettledDebtSnapshot(
+              owed,
+              earlier.map((p) => p.id),
+            ),
+          }),
         },
       });
       return { createdAt: income.createdAt, remainingCents };
@@ -1299,6 +1323,114 @@ export class FinanceService {
       amountCents: r.amountCents,
       paidAt: toDateKey(r.paidAt),
     }));
+  }
+
+  /**
+   * Desfaz um pagamento parcial lancado por engano. Numa so transacao e
+   * sempre com userId: apaga o pagamento, apaga a entrada INCOME que ele
+   * criou (pela ligacao incomeEntryId; pagamentos antigos sem ligacao NAO
+   * procuram por valor/data, nao ha correspondencia exata garantida) e
+   * devolve o valor ao principal. Se foi o pagamento que saldou a divida
+   * (divida apagada), repoe-a a partir da copia settledDebt e religa os
+   * pagamentos anteriores. Pagamento de outra pessoa ou ja desfeito: 404
+   * sem efeitos. Divida entretanto marcada como recebida: 409 (rollback).
+   */
+  async undoOwedPayment(
+    userId: string,
+    paymentId: string,
+  ): Promise<FinanceOwedPaymentUndoResult> {
+    return this.prisma.$transaction(async (tx) => {
+      const payment = await tx.financeOwedPayment.findFirst({
+        where: { id: paymentId, userId },
+        select: {
+          entryId: true,
+          incomeEntryId: true,
+          amountCents: true,
+          settledDebt: true,
+        },
+      });
+      if (!payment) throw new NotFoundException('Payment not found.');
+      // Condicional: um segundo pedido em simultaneo nao apaga nada (404).
+      const { count } = await tx.financeOwedPayment.deleteMany({
+        where: { id: paymentId, userId },
+      });
+      if (count === 0) throw new NotFoundException('Payment not found.');
+      const incomeEntryRemoved = payment.incomeEntryId
+        ? (
+            await tx.financeEntry.deleteMany({
+              where: { id: payment.incomeEntryId, userId },
+            })
+          ).count > 0
+        : false;
+
+      if (payment.entryId) {
+        const reverted = await tx.financeEntry.updateMany({
+          where: {
+            id: payment.entryId,
+            userId,
+            isOwed: true,
+            receivedAt: null,
+          },
+          data: { amountCents: { increment: payment.amountCents } },
+        });
+        if (reverted.count === 0) {
+          throw new ConflictException(
+            'This debt was already marked as received, so this payment cannot be undone.',
+          );
+        }
+        const debt = await tx.financeEntry.findFirst({
+          where: { id: payment.entryId, userId },
+          select: { amountCents: true },
+        });
+        return {
+          incomeEntryRemoved,
+          debtRestored: true,
+          remainingCents: debt?.amountCents ?? null,
+        };
+      }
+
+      // Sem divida ligada: saldada por este pagamento (com copia) ou apagada.
+      const snapshot = parseSettledDebtSnapshot(payment.settledDebt);
+      if (!snapshot) {
+        return {
+          incomeEntryRemoved,
+          debtRestored: false,
+          remainingCents: null,
+        };
+      }
+      const account = snapshot.accountId
+        ? await tx.financeAccount.findFirst({
+            where: { id: snapshot.accountId, userId },
+            select: { id: true },
+          })
+        : null;
+      await tx.financeEntry.create({
+        data: restoredDebtData(
+          snapshot,
+          userId,
+          payment.amountCents,
+          account?.id ?? null,
+        ),
+        select: { id: true },
+      });
+      const entryCount = await tx.financeEntry.count({ where: { userId } });
+      if (entryCount > MAX_FINANCE_ENTRIES_PER_USER) {
+        throw new BadRequestException(
+          `You can have at most ${MAX_FINANCE_ENTRIES_PER_USER} entries.`,
+        );
+      }
+      if (snapshot.paymentIds.length > 0) {
+        await tx.financeOwedPayment.updateMany({
+          where: { userId, id: { in: snapshot.paymentIds }, entryId: null },
+          data: { entryId: snapshot.id },
+        });
+      }
+      return {
+        incomeEntryRemoved,
+        debtRestored: true,
+        remainingCents: payment.amountCents,
+      };
+    });
   }
 
   async removeEntry(userId: string, id: string): Promise<void> {

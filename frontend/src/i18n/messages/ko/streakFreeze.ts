@@ -8,4 +8,11 @@ export const streakFreeze: Record<string, string> = {
   'streakFreeze.help.weeklyFreeze': "매주(월요일부터 일요일) 하루의 미활동은 자동으로 면제됩니다.",
   'streakFreeze.restUsed': "휴식일 사용: {count}",
   'streakFreeze.restUsedHint': "휴식일은 연속 기록에 더해지지도 끊기지도 않습니다.",
+  'streakFreeze.claim.button': "휴식일 사용",
+  'streakFreeze.claim.active': "휴식일 적용 중",
+  'streakFreeze.claim.activeHint': "오늘은 휴식일입니다. 학습 스트릭이 늘지도 끊기지도 않습니다.",
+  'streakFreeze.claim.undo': "실행 취소",
+  'streakFreeze.claim.hint': "스트릭을 끊지 않고 오늘 쉬세요. 주당 최대 {max}회 (월요일부터 일요일).",
+  'streakFreeze.claim.left': "이번 주 {count}회 남음",
+  'streakFreeze.claim.error': "휴식일을 업데이트할 수 없습니다. 다시 시도하세요.",
 };

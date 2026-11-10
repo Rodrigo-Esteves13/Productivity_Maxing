@@ -24,7 +24,7 @@ export const prefs: Record<string, string> = {
   'prefs.notificationsTitle': "Notificações",
   'prefs.savedToAccount': "Guardado na tua conta.",
   'prefs.reminders': "Lembretes de prazos",
-  'prefs.remindersHelp': "Um email cerca de 24h antes de uma tarefa pendente terminar. Respeita as horas de silêncio.",
+  'prefs.remindersHelp': "Um email cerca de 24h antes de uma tarefa pendente terminar. Respeita as horas de silêncio. Também um email-resumo no dia 1 de cada mês.",
   'prefs.pushReminders': "Notificações push de prazos",
   'prefs.pushRemindersHelp': "Uma notificação cerca de 24h antes de uma tarefa pendente terminar, nos dispositivos onde ligaste as notificações abaixo. Respeita as horas de silêncio.",
   'prefs.spacedReviews': "Revisões espaçadas",

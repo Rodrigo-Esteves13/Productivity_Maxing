@@ -21,6 +21,10 @@ const debt = {
   note: null,
   accountId: 'a1',
   date: new Date('2026-10-01T00:00:00Z'),
+  expectedDate: null,
+  latePaymentRiskPct: null,
+  interestRatePct: null,
+  interestKind: null,
 };
 
 const KEY = '11111111-1111-4111-8111-111111111111';
@@ -30,12 +34,17 @@ function setup(owed: typeof debt | null = debt) {
   const tx = {
     financeEntry: {
       findFirst: jest.fn().mockResolvedValue(owed),
-      create: jest.fn().mockResolvedValue({ createdAt: CREATED_AT }),
+      create: jest
+        .fn()
+        .mockResolvedValue({ id: 'inc1', createdAt: CREATED_AT }),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
       count: jest.fn().mockResolvedValue(0),
     },
-    financeOwedPayment: { create: jest.fn().mockResolvedValue({}) },
+    financeOwedPayment: {
+      create: jest.fn().mockResolvedValue({}),
+      findMany: jest.fn().mockResolvedValue([{ id: 'p0' }]),
+    },
   };
   const prisma = {
     ...tx,
@@ -107,9 +116,16 @@ describe('FinanceService.addOwedPayment', () => {
       data: expect.objectContaining({
         userId: 'u1',
         entryId: 'd1',
+        incomeEntryId: 'inc1',
         amountCents: 2500,
       }) as unknown,
     });
+    // Divida continua aberta: sem copia para repor.
+    const [[call]] = prisma.financeOwedPayment.create.mock.calls as [
+      [{ data: Record<string, unknown> }],
+    ];
+    expect(call.data).not.toHaveProperty('settledDebt');
+    expect(prisma.financeOwedPayment.findMany).not.toHaveBeenCalled();
     expect(prisma.financeEntry.updateMany).toHaveBeenCalledWith({
       where: unchanged,
       data: { amountCents: { decrement: 2500 } },
@@ -144,8 +160,20 @@ describe('FinanceService.addOwedPayment', () => {
     expect(prisma.financeOwedPayment.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         entryId: null,
+        incomeEntryId: 'inc1',
         amountCents: 10000,
+        settledDebt: expect.objectContaining({
+          id: 'd1',
+          debtorName: 'Ana',
+          accountId: 'a1',
+          paymentIds: ['p0'],
+        }) as unknown,
       }) as unknown,
+    });
+    // Pagamentos anteriores lidos antes de apagar a divida (SetNull).
+    expect(prisma.financeOwedPayment.findMany).toHaveBeenCalledWith({
+      where: { userId: 'u1', entryId: 'd1' },
+      select: { id: true },
     });
     expect(prisma.financeEntry.updateMany).not.toHaveBeenCalled();
   });

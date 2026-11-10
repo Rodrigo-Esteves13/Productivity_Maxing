@@ -16,12 +16,30 @@ import {
   isInMoneyReminderWindow,
   MONEY_REMINDER_USER_BATCH_SIZE,
 } from './money-reminders.service';
+import { SentNotificationService } from './sent-notification.service';
+import {
+  SENT_NOTIFICATION_KIND,
+  type SentNotificationKind,
+} from './sent-notification.constants';
 
 const FINANCE_PATH = '/finance';
 const MONTH_KEY_LENGTH = 'YYYY-MM'.length;
+const KEY_SEPARATOR = '|';
 
 type BudgetScope = 'total' | 'leisure';
 type BudgetLevel = 'warn' | 'over';
+
+// Tipo do marcador duravel por limite e por nivel (periodo = mes).
+const KINDS: Record<BudgetScope, Record<BudgetLevel, SentNotificationKind>> = {
+  total: {
+    warn: SENT_NOTIFICATION_KIND.BUDGET_TOTAL_WARN,
+    over: SENT_NOTIFICATION_KIND.BUDGET_TOTAL_OVER,
+  },
+  leisure: {
+    warn: SENT_NOTIFICATION_KIND.BUDGET_LEISURE_WARN,
+    over: SENT_NOTIFICATION_KIND.BUDGET_LEISURE_OVER,
+  },
+};
 
 // Texto por limite e por nivel (sem valores nem percentagens no ecra de
 // bloqueio).
@@ -56,20 +74,18 @@ interface Limit {
  * - Quem nao tem dispositivos push, limite definido ou esta banido nem entra na
  *   query; as horas de silencio e a janela 09:00-20:00 (Lisboa) sao respeitadas.
  * - Queries em lote por pagina de users (1 de users + 1 de entradas).
- * - Sem tabela nova, o dedupe e em memoria (como o aviso de dinheiro; so ha uma
- *   instancia no Render). So fica marcado quando algum dispositivo recebeu.
- *   Risco residual aceite: um restart reenvia, uma vez, o aviso do nivel em que
- *   o user se encontra nesse mes.
+ * - Dedupe mensal duravel em SentNotification (um tipo por limite e nivel,
+ *   periodo = mes), sobrevive a restarts. So fica marcado quando algum
+ *   dispositivo recebeu.
  */
 @Injectable()
 export class BudgetAlertRemindersService {
   private readonly logger = new Logger(BudgetAlertRemindersService.name);
-  // `${YYYY-MM}|${userId}|${scope}|${level}` ja avisados.
-  private readonly notified = new Set<string>();
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly pushService: PushService,
+    private readonly sentNotifications: SentNotificationService,
   ) {}
 
   /** Utilizadores avisados nesta execucao. */
@@ -77,10 +93,6 @@ export class BudgetAlertRemindersService {
     const { today, nowMinutes } = getLisbonNow();
     if (!isInMoneyReminderWindow(nowMinutes)) return 0;
     const month = toDateKey(today).slice(0, MONTH_KEY_LENGTH);
-    // Mes novo: esquece os anteriores (o set nao cresce sem fim).
-    for (const key of this.notified) {
-      if (!key.startsWith(`${month}|`)) this.notified.delete(key);
-    }
 
     let sent = 0;
     let cursor: string | undefined;
@@ -136,11 +148,17 @@ export class BudgetAlertRemindersService {
     month: string,
     nowMinutes: number,
   ): Promise<number> {
+    const awake = users.filter((u) => !this.isQuietHour(u, nowMinutes));
+    if (awake.length === 0) return 0;
+    // 1 query por tipo (4 por pagina): marcadores duraveis deste mes.
+    const claimed = await this.claimedKeys(
+      awake.map((u) => u.id),
+      month,
+    );
     const limitsByUser = new Map<string, Limit[]>();
-    for (const user of users) {
-      if (this.isQuietHour(user, nowMinutes)) continue;
+    for (const user of awake) {
       const limits = this.limitsOf(user).filter(
-        (l) => !this.notified.has(this.keyOf(month, user.id, l.scope, 'over')),
+        (l) => !claimed.has(this.keyOf(user.id, l.scope, 'over')),
       );
       if (limits.length > 0) limitsByUser.set(user.id, limits);
     }
@@ -199,18 +217,21 @@ export class BudgetAlertRemindersService {
       for (const limit of limits) {
         const level = this.levelOf(sums[limit.scope], limit.cents);
         if (!level) continue;
-        if (this.notified.has(this.keyOf(month, userId, limit.scope, level))) {
+        if (claimed.has(this.keyOf(userId, limit.scope, level))) continue;
+        // Marcado ANTES do envio: uma execucao sobreposta ja o salta (o claim
+        // falha). Passar o "over" cobre tambem o "warn" (nunca avisa o nivel
+        // mais baixo depois do mais alto).
+        const kind = KINDS[limit.scope][level];
+        if (!(await this.sentNotifications.claim(userId, kind, month))) {
           continue;
         }
-        // Marcado ANTES do envio: uma execucao sobreposta ja o salta. Passar o
-        // "over" cobre tambem o "warn" (nunca avisa o nivel mais baixo depois
-        // do mais alto).
-        const keys = [this.keyOf(month, userId, limit.scope, level)];
+        const added: SentNotificationKind[] = [kind];
         if (level === 'over') {
-          keys.push(this.keyOf(month, userId, limit.scope, 'warn'));
+          const warnKind = KINDS[limit.scope].warn;
+          if (await this.sentNotifications.claim(userId, warnKind, month)) {
+            added.push(warnKind);
+          }
         }
-        const added = keys.filter((key) => !this.notified.has(key));
-        for (const key of added) this.notified.add(key);
         let count = 0;
         try {
           count = await this.pushService.notifyUser(
@@ -222,7 +243,9 @@ export class BudgetAlertRemindersService {
           // Sem dispositivo que tenha recebido: desmarca so o que marcou aqui,
           // tenta outra vez na proxima execucao.
           if (count === 0) {
-            for (const key of added) this.notified.delete(key);
+            for (const addedKind of added) {
+              await this.sentNotifications.release(userId, addedKind, month);
+            }
           }
         }
         if (count > 0) delivered = true;
@@ -253,13 +276,29 @@ export class BudgetAlertRemindersService {
     return null;
   }
 
-  private keyOf(
+  /** Chaves `userId|kind` dos marcadores deste mes, para os users dados. */
+  private async claimedKeys(
+    userIds: string[],
     month: string,
-    userId: string,
-    scope: BudgetScope,
-    level: BudgetLevel,
-  ): string {
-    return `${month}|${userId}|${scope}|${level}`;
+  ): Promise<Set<string>> {
+    const kinds = Object.values(KINDS).flatMap((byLevel) =>
+      Object.values(byLevel),
+    );
+    const sets = await Promise.all(
+      kinds.map((kind) =>
+        this.sentNotifications.claimedUserIds(userIds, kind, month),
+      ),
+    );
+    const keys = new Set<string>();
+    kinds.forEach((kind, i) => {
+      for (const userId of sets[i])
+        keys.add(`${userId}${KEY_SEPARATOR}${kind}`);
+    });
+    return keys;
+  }
+
+  private keyOf(userId: string, scope: BudgetScope, level: BudgetLevel) {
+    return `${userId}${KEY_SEPARATOR}${KINDS[scope][level]}`;
   }
 
   private isQuietHour(user: CandidateUser, nowMinutes: number): boolean {

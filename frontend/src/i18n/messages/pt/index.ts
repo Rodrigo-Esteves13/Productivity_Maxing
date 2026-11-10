@@ -46,6 +46,10 @@ import { ambientGlobal } from './ambientGlobal';
 import { financeFixes } from './financeFixes';
 import { focusHours } from './focusHours';
 import { financeImport } from './financeImport';
+import { financeUndo } from './financeUndo';
+import { widgetOrder } from './widgetOrder';
+import { singleTaskMode } from './singleTaskMode';
+import { xpLevel } from './xpLevel';
 import { periodReview } from './periodReview';
 import { areaConsistency } from './areaConsistency';
 import { statusSummary } from './statusSummary';
@@ -106,6 +110,10 @@ export const pt: Record<string, string> = {
   ...financeFixes,
   ...focusHours,
   ...financeImport,
+  ...financeUndo,
+  ...widgetOrder,
+  ...singleTaskMode,
+  ...xpLevel,
   ...periodReview,
   ...areaConsistency,
   ...statusSummary,

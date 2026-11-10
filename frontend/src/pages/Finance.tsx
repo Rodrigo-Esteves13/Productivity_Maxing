@@ -210,6 +210,7 @@ function FinanceContent() {
             onReceived={(item, changes) => finance.updateEntry(item.entryId, changes)}
             onPayment={(item, { requestId, ...payment }) => finance.addOwedPayment(item.entryId, payment, requestId)}
             onRemove={requestRemoveOwed}
+            onUndoPayment={finance.undoOwedPayment}
           />
           <FinanceAnalytics refreshKey={finance.version} currency={currency} />
           <div id="finance-accounts" tabIndex={-1}>
