@@ -10,6 +10,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: '2026-11-08',
     title: 'Money export, streak alert and sturdier integrations',
     items: [
+      'Tasks: a new Timeline view (next to Grid and Board) shows a simple Gantt chart. Each open task is a bar from today, or from when it opens, to its deadline over the next 8 weeks. Overdue tasks are red and clicking a bar opens the task.',
+      'Profile: a new Push notification types card lets you turn off each periodic push on its own (streak at risk, today\'s tasks, money, budget, absence limit, almost there, anniversary). Medication, shares and request pushes always stay on.',
+      'Profile: your avatar now gets a colored frame that evolves with your finished tasks (Starter, then Bronze at 10, Silver at 50, Gold at 100 and Legend at 500), and the tier shows next to your role.',
+      'Profile: a new Badges card shows milestones for finished tasks (1 to 500), study streak (3 to 100 days) and finished projects, with a progress bar for each. The best streak is remembered on this device.',
+      'Notifications: you now get one push on your account anniversary at 1, 3 and 6 months, and then every year ("You have been using the app for N months"). It is sent once, between 10:00 and 20:00, and respects your quiet hours.',
+      'Notifications: when a course has 85% or more of its grade weight already graded, you get one push saying how much is left ("Almost there"). It is sent once per course, between 09:00 and 21:00, and respects your quiet hours.',
       'Study: a new Use a rest day button on the focus page and the study activity card protects your study streak on a day you cannot study. You get one rest day per week, only for today, and never on a day you already studied. Streak reminders skip a rest day.',
       'Money: a mistaken partial payment on money owed to you can now be undone with the Undo button in the payment history. It removes the payment and the income entry it created, and brings the debt back if that payment had settled it. Payments made before this update only remove the payment itself.',
       'Dashboard: in Customize widgets you can now move each widget up or down and reset the order. The order is saved on this device.',

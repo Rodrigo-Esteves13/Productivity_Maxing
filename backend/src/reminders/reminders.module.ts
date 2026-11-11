@@ -4,6 +4,9 @@ import { PushModule } from '../push/push.module';
 import { WellbeingModule } from '../wellbeing/wellbeing.module';
 import { PadsModule } from '../pads/pads.module';
 import { PersonalNotesModule } from '../personal-notes/personal-notes.module';
+import { CourseRiskModule } from '../course-risk/course-risk.module';
+import { AccountAnniversaryRemindersService } from './account-anniversary-reminders.service';
+import { GradeAlmostThereRemindersService } from './grade-almost-there-reminders.service';
 import { RemindersController } from './reminders.controller';
 import { RemindersService } from './reminders.service';
 import { AbsenceLimitRemindersService } from './absence-limit-reminders.service';
@@ -22,12 +25,15 @@ import { SentNotificationService } from './sent-notification.service';
     WellbeingModule,
     PadsModule,
     PersonalNotesModule,
+    CourseRiskModule,
   ],
   controllers: [RemindersController],
   providers: [
     RemindersService,
     AbsenceLimitRemindersService,
     StreakRiskRemindersService,
+    GradeAlmostThereRemindersService,
+    AccountAnniversaryRemindersService,
     DueTodayRemindersService,
     MoneyRemindersService,
     BudgetAlertRemindersService,

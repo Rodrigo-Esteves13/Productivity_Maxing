@@ -76,6 +76,7 @@ export class AuthService {
       quietHoursEnd?: number | null;
       deadlineEmailReminders?: boolean;
       deadlinePushReminders?: boolean;
+      mutedPushKinds?: string[];
       spacedReviewsEnabled?: boolean;
       notesPrivateByDefault?: boolean;
     },
@@ -111,6 +112,9 @@ export class AuthService {
           : {}),
         ...(data.deadlinePushReminders != null
           ? { deadlinePushReminders: data.deadlinePushReminders }
+          : {}),
+        ...(data.mutedPushKinds != null
+          ? { mutedPushKinds: [...new Set(data.mutedPushKinds)] }
           : {}),
         ...(data.spacedReviewsEnabled != null
           ? { spacedReviewsEnabled: data.spacedReviewsEnabled }

@@ -597,6 +597,8 @@ export interface User {
   // Preferencias (Profile > Preferences).
   deadlineEmailReminders?: boolean;
   deadlinePushReminders?: boolean;
+  // Tipos de aviso push desligados (ver lib/pushKinds.ts).
+  mutedPushKinds?: string[];
   spacedReviewsEnabled?: boolean;
   // Entradas novas do Notebook nascem escondidas dos amigos.
   notesPrivateByDefault?: boolean;

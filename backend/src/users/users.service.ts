@@ -223,6 +223,7 @@ export class UsersService {
         dailyStudyLimitMinutes: true,
         deadlineEmailReminders: true,
         deadlinePushReminders: true,
+        mutedPushKinds: true,
         spacedReviewsEnabled: true,
         notesPrivateByDefault: true,
         twoFactorEnabledAt: true,

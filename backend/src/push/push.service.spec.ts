@@ -166,3 +166,41 @@ describe('PushService.getStatus', () => {
     expect(count).not.toHaveBeenCalled();
   });
 });
+
+describe('PushService muted kinds', () => {
+  function makeService(muted: string[]) {
+    const prisma = {
+      pushSubscription: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            endpoint: 'https://fcm.googleapis.com/x',
+            p256dh: 'a',
+            auth: 'b',
+            lang: 'en',
+          },
+        ]),
+      },
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ mutedPushKinds: muted }),
+      },
+    };
+    const service = new PushService(prisma as never);
+    (service as unknown as { enabled: boolean }).enabled = true;
+    return { service, prisma };
+  }
+
+  it('reports a muted periodic kind as handled without sending', async () => {
+    const { service, prisma } = makeService(['streakRisk']);
+    const delivered = await service.notifyUser('u1', 'streakRisk', {
+      url: '/',
+    });
+    expect(delivered).toBe(1);
+    expect(prisma.user.findUnique).toHaveBeenCalledTimes(1);
+  });
+
+  it('never looks up mutes for kinds that cannot be muted', async () => {
+    const { service, prisma } = makeService(['pushTest']);
+    await service.notifyUser('u1', 'pushTest', { url: '/' });
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+});

@@ -46,6 +46,10 @@ import { ambientGlobal } from './ambientGlobal';
 import { financeFixes } from './financeFixes';
 import { focusHours } from './focusHours';
 import { financeImport } from './financeImport';
+import { timeline } from './timeline';
+import { pushKinds } from './pushKinds';
+import { avatarTier } from './avatarTier';
+import { badges } from './badges';
 import { financeUndo } from './financeUndo';
 import { widgetOrder } from './widgetOrder';
 import { singleTaskMode } from './singleTaskMode';
@@ -110,6 +114,10 @@ export const ko: Record<string, string> = {
   ...financeFixes,
   ...focusHours,
   ...financeImport,
+  ...timeline,
+  ...pushKinds,
+  ...avatarTier,
+  ...badges,
   ...financeUndo,
   ...widgetOrder,
   ...singleTaskMode,

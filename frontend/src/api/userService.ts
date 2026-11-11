@@ -204,6 +204,7 @@ export const updateUserProfile = async (data: {
   quietHoursEnd?: number | null;
   deadlineEmailReminders?: boolean;
   deadlinePushReminders?: boolean;
+  mutedPushKinds?: string[];
   spacedReviewsEnabled?: boolean;
   notesPrivateByDefault?: boolean;
 }): Promise<User> => {

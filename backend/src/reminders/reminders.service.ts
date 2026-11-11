@@ -9,6 +9,8 @@ import { MedicationsService } from '../wellbeing/medications.service';
 import { PersonalNotesService } from '../personal-notes/personal-notes.service';
 import { AbsenceLimitRemindersService } from './absence-limit-reminders.service';
 import { StreakRiskRemindersService } from './streak-risk-reminders.service';
+import { AccountAnniversaryRemindersService } from './account-anniversary-reminders.service';
+import { GradeAlmostThereRemindersService } from './grade-almost-there-reminders.service';
 import { DueTodayRemindersService } from './due-today-reminders.service';
 import { MoneyRemindersService } from './money-reminders.service';
 import { BudgetAlertRemindersService } from './budget-alert-reminders.service';
@@ -53,6 +55,10 @@ export interface ReminderRunResult {
   moneyUsersPushed: number;
   // Utilizadores avisados de que o orcamento do mes chegou a 80% / 100%.
   budgetUsersPushed: number;
+  // Utilizadores avisados de que uma cadeira esta quase toda avaliada (diario).
+  almostThereUsersPushed: number;
+  // Utilizadores avisados de um marco de aniversario da conta (diario).
+  anniversaryUsersPushed: number;
   // Utilizadores que receberam o resumo mensal por email (dia 1 do mes).
   monthlyDigestSent: number;
   expiredPadsDeleted: number;
@@ -91,6 +97,8 @@ export class RemindersService {
     private readonly budgetAlertReminders: BudgetAlertRemindersService,
     private readonly monthlyDigest: MonthlyDigestService,
     private readonly sentNotifications: SentNotificationService,
+    private readonly gradeAlmostThere: GradeAlmostThereRemindersService,
+    private readonly accountAnniversary: AccountAnniversaryRemindersService,
   ) {}
 
   /**
@@ -190,6 +198,8 @@ export class RemindersService {
       dueTodayUsersPushed: 0,
       moneyUsersPushed: 0,
       budgetUsersPushed: 0,
+      almostThereUsersPushed: 0,
+      anniversaryUsersPushed: 0,
       monthlyDigestSent: 0,
       expiredPadsDeleted: 0,
       staleSessionsDeleted: 0,
@@ -293,6 +303,22 @@ export class RemindersService {
     } catch (error) {
       this.logger.warn(
         `Aviso de orcamento falhou: ${(error as Error).message}`,
+      );
+    }
+
+    try {
+      result.almostThereUsersPushed =
+        await this.gradeAlmostThere.sendReminders();
+    } catch (error) {
+      this.logger.warn(`Aviso quase la falhou: ${(error as Error).message}`);
+    }
+
+    try {
+      result.anniversaryUsersPushed =
+        await this.accountAnniversary.sendReminders();
+    } catch (error) {
+      this.logger.warn(
+        `Aviso de aniversario falhou: ${(error as Error).message}`,
       );
     }
 

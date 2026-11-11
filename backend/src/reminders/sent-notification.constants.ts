@@ -11,6 +11,8 @@ export const SENT_NOTIFICATION_KIND = {
   BUDGET_LEISURE_OVER: 'budget-leisure-over',
   ABSENCE_LIMIT: 'absence-limit',
   MONTHLY_DIGEST: 'monthly-digest',
+  GRADE_ALMOST_THERE: 'grade-almost-there',
+  ACCOUNT_ANNIVERSARY: 'account-anniversary',
 } as const;
 
 export type SentNotificationKind =

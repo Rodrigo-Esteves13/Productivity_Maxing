@@ -10,5 +10,6 @@ import { CourseRiskController } from './course-risk.controller';
   imports: [PrismaModule, AuthModule, AreaTeachersModule, ApprovalRulesModule],
   controllers: [CourseRiskController],
   providers: [CourseRiskService],
+  exports: [CourseRiskService],
 })
 export class CourseRiskModule {}
