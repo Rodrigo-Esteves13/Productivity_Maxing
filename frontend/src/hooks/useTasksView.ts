@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
-export type TasksView = 'grid' | 'board';
+export type TasksView = 'grid' | 'board' | 'timeline';
 
-export const TASKS_VIEWS: readonly TasksView[] = ['grid', 'board'];
+export const TASKS_VIEWS: readonly TasksView[] = ['grid', 'board', 'timeline'];
 const DEFAULT_VIEW: TasksView = 'grid';
 const STORAGE_KEY = 'pm-tasks-view';
 

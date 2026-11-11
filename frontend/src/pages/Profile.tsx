@@ -22,6 +22,8 @@ import ActionButton from '../components/UI/ActionButton';
 import { PencilIcon } from '../components/UI/Icons';
 import { useAuth } from '../context/useAuth';
 import { useI18n } from '../i18n/useI18n';
+import PushKindsCard from '../components/Profile/PushKindsCard';
+import BadgesCard from '../components/Profile/BadgesCard';
 
 // Ancoras do "Nesta pagina": sao muitos cartoes de definicoes e a pagina
 // e longa, sobretudo no telemovel (uma coluna).
@@ -75,6 +77,8 @@ export default function Profile() {
 
       <ProfileHeaderCard user={user} initials={initials} stats={stats} isLoadingStats={stats.isLoading} />
 
+      <BadgesCard stats={stats} />
+
       {/* Duas colunas a partir de lg: numa so coluna de 768px a pagina tinha
           metade do ecra vazio e o dobro do scroll. Sem esticar o ultimo
           cartao de cada coluna (sao formularios, ficava um fundo vazio). */}
@@ -83,6 +87,7 @@ export default function Profile() {
         <Anchor id="notifications"><PreferencesCard user={user} onUserUpdate={updateUser} /></Anchor>
         <Anchor id="install"><InstallAppCard alwaysShow className="" /></Anchor>
         <Anchor id="push"><PushNotificationsCard /></Anchor>
+        <Anchor id="push-kinds"><PushKindsCard user={user} onUserUpdate={updateUser} /></Anchor>
         <Anchor id="two-factor"><TwoFactorCard user={user} onUserUpdate={updateUser} /></Anchor>
         <Anchor id="appearance"><AccessibilitySettingsCard /></Anchor>
         <Anchor id="commute"><CommuteSettingsCard user={user} onUserUpdate={updateUser} /></Anchor>

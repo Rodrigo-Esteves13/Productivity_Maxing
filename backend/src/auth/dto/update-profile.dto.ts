@@ -1,5 +1,8 @@
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
+  IsIn,
   IsOptional,
   IsString,
   IsInt,
@@ -11,6 +14,7 @@ import {
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { CommuteMode } from '@prisma/client';
+import { MUTABLE_PUSH_KEYS } from '../../push/push-messages';
 
 // Usado por PATCH /auth/me. De propósito só tem campos de texto/número
 // simples: o avatar tem o seu próprio endpoint (POST /auth/me/avatar)
@@ -103,6 +107,17 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   deadlinePushReminders?: boolean;
+
+  @ApiPropertyOptional({
+    example: ['streakRisk'],
+    enum: MUTABLE_PUSH_KEYS,
+    description: 'Periodic push kinds the user turned off.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MUTABLE_PUSH_KEYS.length)
+  @IsIn(MUTABLE_PUSH_KEYS, { each: true })
+  mutedPushKinds?: string[];
 
   @ApiPropertyOptional({
     example: true,

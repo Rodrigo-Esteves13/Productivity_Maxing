@@ -616,6 +616,7 @@ export class AuthController {
         emailVerifiedAt: true,
         deadlineEmailReminders: true,
         deadlinePushReminders: true,
+        mutedPushKinds: true,
         spacedReviewsEnabled: true,
         notesPrivateByDefault: true,
         // Só para twoFactorEnabled (o segredo nunca sai do backend).
@@ -663,6 +664,7 @@ export class AuthController {
       quietHoursEnd: dto.quietHoursEnd,
       deadlineEmailReminders: dto.deadlineEmailReminders,
       deadlinePushReminders: dto.deadlinePushReminders,
+      mutedPushKinds: dto.mutedPushKinds,
       spacedReviewsEnabled: dto.spacedReviewsEnabled,
       notesPrivateByDefault: dto.notesPrivateByDefault,
     });

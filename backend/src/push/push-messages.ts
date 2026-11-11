@@ -41,6 +41,8 @@ export type PushMessageKey =
   | 'turmaInvited'
   | 'selfReminder'
   | 'absenceLimitNear'
+  | 'gradeAlmostThere'
+  | 'accountAnniversary'
   | 'streakRisk'
   | 'dueTodayDigest'
   | 'moneyReminder'
@@ -49,6 +51,26 @@ export type PushMessageKey =
   | 'leisureBudgetWarn'
   | 'leisureBudgetOver'
   | 'newDeviceLogin';
+
+// Avisos periodicos que o user pode desligar um a um (Profile > Preferences).
+// Os que respondem a uma acao do user (partilhas, medicamentos, pedidos) nunca
+// se desligam aqui.
+export const MUTABLE_PUSH_KEYS = [
+  'streakRisk',
+  'dueTodayDigest',
+  'moneyReminder',
+  'budgetWarn',
+  'budgetOver',
+  'leisureBudgetWarn',
+  'leisureBudgetOver',
+  'absenceLimitNear',
+  'gradeAlmostThere',
+  'accountAnniversary',
+] as const satisfies readonly PushMessageKey[];
+
+export function isMutablePushKey(key: string): boolean {
+  return (MUTABLE_PUSH_KEYS as readonly string[]).includes(key);
+}
 
 interface Template {
   title: string;
@@ -169,6 +191,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     absenceLimitNear: {
       title: 'Absence limit',
       body: 'You are close to the absence limit in {title}.',
+    },
+    gradeAlmostThere: {
+      title: 'Almost there',
+      body: '{title}: only {count}% of the grade is still to be graded.',
+    },
+    accountAnniversary: {
+      title: 'Account anniversary',
+      body: 'You have been using the app for {count} months. Keep it going.',
     },
     streakRisk: {
       title: 'Streak at risk',
@@ -316,6 +346,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Limite de faltas',
       body: 'Estás perto do limite de faltas em {title}.',
     },
+    gradeAlmostThere: {
+      title: 'Quase lá',
+      body: '{title}: só falta avaliar {count}% da nota.',
+    },
+    accountAnniversary: {
+      title: 'Aniversário da conta',
+      body: 'Já usas a app há {count} meses. Continua assim.',
+    },
     streakRisk: {
       title: 'Streak em risco',
       body: 'A tua streak de {count} dias acaba à meia-noite. Uma sessão curta mantém-na.',
@@ -462,6 +500,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: 'Límite de faltas',
       body: 'Estás cerca del límite de faltas en {title}.',
     },
+    gradeAlmostThere: {
+      title: 'Casi listo',
+      body: '{title}: solo falta evaluar el {count}% de la nota.',
+    },
+    accountAnniversary: {
+      title: 'Aniversario de la cuenta',
+      body: 'Llevas {count} meses usando la app. Sigue así.',
+    },
     streakRisk: {
       title: 'Racha en riesgo',
       body: 'Tu racha de {count} días termina a medianoche. Una sesión corta la mantiene.',
@@ -595,6 +641,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     absenceLimitNear: {
       title: '缺勤上限',
       body: '你在 {title} 的缺勤次数已接近上限。',
+    },
+    gradeAlmostThere: {
+      title: '快完成了',
+      body: '{title}：只剩 {count}% 的成绩尚未评定。',
+    },
+    accountAnniversary: {
+      title: '账号纪念日',
+      body: '你已经使用本应用 {count} 个月了，继续加油。',
     },
     streakRisk: {
       title: '连续记录有风险',
@@ -742,6 +796,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: '欠席の上限',
       body: '{title} の欠席が上限に近づいています。',
     },
+    gradeAlmostThere: {
+      title: 'もうすぐ',
+      body: '{title}: 成績の残りは {count}% だけです。',
+    },
+    accountAnniversary: {
+      title: 'アカウント記念日',
+      body: 'アプリを使い始めて {count} か月になりました。この調子で。',
+    },
     streakRisk: {
       title: '連続記録が危険です',
       body: '{count}日連続の記録は深夜0時で途切れます。短い学習で守れます。',
@@ -887,6 +949,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     absenceLimitNear: {
       title: '결석 한도',
       body: '{title}의 결석이 한도에 가까워졌어요.',
+    },
+    gradeAlmostThere: {
+      title: '거의 다 왔어요',
+      body: '{title}: 성적의 {count}%만 남았어요.',
+    },
+    accountAnniversary: {
+      title: '계정 기념일',
+      body: '앱을 쓴 지 {count}개월이 됐어요. 계속 힘내요.',
     },
     streakRisk: {
       title: '연속 기록이 위험해요',
@@ -1034,6 +1104,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
       title: "Limite d'absences",
       body: "Tu approches de la limite d'absences en {title}.",
     },
+    gradeAlmostThere: {
+      title: 'Presque fini',
+      body: '{title} : il ne reste que {count} % de la note à évaluer.',
+    },
+    accountAnniversary: {
+      title: 'Anniversaire du compte',
+      body: "Tu utilises l'app depuis {count} mois. Continue comme ça.",
+    },
     streakRisk: {
       title: 'Série en danger',
       body: 'Ta série de {count} jours se termine à minuit. Une courte session la sauve.',
@@ -1179,6 +1257,14 @@ const MESSAGES: Record<PushLanguage, Record<PushMessageKey, Template>> = {
     absenceLimitNear: {
       title: 'Fehlzeitenlimit',
       body: 'Du näherst dich dem Fehlzeitenlimit in {title}.',
+    },
+    gradeAlmostThere: {
+      title: 'Fast geschafft',
+      body: '{title}: Nur noch {count} % der Note stehen aus.',
+    },
+    accountAnniversary: {
+      title: 'Konto-Jubiläum',
+      body: 'Du nutzt die App seit {count} Monaten. Weiter so.',
     },
     streakRisk: {
       title: 'Serie in Gefahr',

@@ -3,6 +3,8 @@ import type { PadsService } from '../pads/pads.service';
 import type { MedicationsService } from '../wellbeing/medications.service';
 import { RemindersService } from './reminders.service';
 import type { AbsenceLimitRemindersService } from './absence-limit-reminders.service';
+import type { AccountAnniversaryRemindersService } from './account-anniversary-reminders.service';
+import type { GradeAlmostThereRemindersService } from './grade-almost-there-reminders.service';
 import type { StreakRiskRemindersService } from './streak-risk-reminders.service';
 import type { DueTodayRemindersService } from './due-today-reminders.service';
 import type { MoneyRemindersService } from './money-reminders.service';
@@ -92,6 +94,12 @@ function setup(
       sendDigests: jest.fn().mockResolvedValue(0),
     } as unknown as MonthlyDigestService,
     sentNotifications as unknown as SentNotificationService,
+    {
+      sendReminders: jest.fn().mockResolvedValue(0),
+    } as unknown as GradeAlmostThereRemindersService,
+    {
+      sendReminders: jest.fn().mockResolvedValue(0),
+    } as unknown as AccountAnniversaryRemindersService,
   );
   return { service, prisma, mail, push, sentNotifications };
 }
@@ -173,6 +181,8 @@ describe('RemindersService.run', () => {
       dueTodayUsersPushed: 0,
       moneyUsersPushed: 0,
       budgetUsersPushed: 0,
+      almostThereUsersPushed: 0,
+      anniversaryUsersPushed: 0,
       monthlyDigestSent: 0,
       expiredPadsDeleted: 0,
       staleSessionsDeleted: 0,
@@ -230,6 +240,8 @@ describe('RemindersService.run', () => {
       dueTodayUsersPushed: 0,
       moneyUsersPushed: 0,
       budgetUsersPushed: 0,
+      almostThereUsersPushed: 0,
+      anniversaryUsersPushed: 0,
       monthlyDigestSent: 0,
       expiredPadsDeleted: 0,
       staleSessionsDeleted: 0,

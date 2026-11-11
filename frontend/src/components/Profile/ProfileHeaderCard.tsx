@@ -1,4 +1,5 @@
 import Avatar from './Avatar';
+import { avatarTierFor } from '../../lib/avatarTier';
 import ProfileStat from './ProfileStat';
 import type { User } from '../../types/models';
 import type { ProfileStats } from '../../utils/profileStats';
@@ -16,6 +17,7 @@ interface ProfileHeaderCardProps {
 
 export default function ProfileHeaderCard({ user, initials, stats, isLoadingStats }: ProfileHeaderCardProps) {
   const { t } = useI18n();
+  const tier = avatarTierFor(stats.completed);
   const { mode, setMode, resetMode, isDefault } = useStreakRestPref();
   const restOptions: { value: StreakRestMode; label: string }[] = [
     { value: 'none', label: t('streakFreeze.mode.none') },
@@ -25,13 +27,16 @@ export default function ProfileHeaderCard({ user, initials, stats, isLoadingStat
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-6 sm:p-8">
       <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
-        <Avatar initials={initials} avatarUrl={user.avatarUrl} alt={t('ui.avatar')} size="lg" />
+        <Avatar initials={initials} avatarUrl={user.avatarUrl} alt={t('ui.avatar')} size="lg" ringClass={tier.ringClass} />
 
         <div className="text-center sm:text-left">
           <h2 className="text-2xl font-bold text-white">{user.name || t('ui.anonymousUser')}</h2>
           <p className="text-neutral-400">{user.email}</p>
           <span className="inline-block mt-2 px-3 py-1 bg-neutral-800 text-xs font-medium rounded-md text-neutral-300">
             {user.role}
+          </span>
+          <span className="inline-block mt-2 ml-2 px-3 py-1 bg-neutral-800 text-xs font-medium rounded-md text-neutral-300">
+            {t(`avatarTier.${tier.key}`)}
           </span>
         </div>
       </div>

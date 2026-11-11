@@ -95,6 +95,12 @@ const NAV_COMMANDS: NavCommand[] = [
     keywords: ['kanban', 'board', 'quadro', 'columns', 'colunas', 'status', 'estado', 'drag'],
   },
   {
+    id: 'nav-tasks-timeline',
+    labelKey: 'timeline.paletteLabel',
+    path: '/tasks?view=timeline',
+    keywords: ['gantt', 'timeline', 'cronograma', 'linha do tempo', 'schedule', 'deadlines', 'prazos'],
+  },
+  {
     id: 'nav-focus',
     labelKey: 'nav.focus',
     path: '/focus',

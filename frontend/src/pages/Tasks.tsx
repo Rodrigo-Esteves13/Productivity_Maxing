@@ -19,6 +19,7 @@ import { useTasksPage } from '../hooks/useTasksPage';
 import { useTaskShortcuts } from '../hooks/useTaskShortcuts';
 import { useShowArchivedTasks } from '../hooks/useShowArchivedTasks';
 import { useTaskSortMode } from '../hooks/useTaskSortMode';
+import TaskTimeline from '../components/Tasks/TaskTimeline';
 import { TASKS_VIEWS, isTasksView, useTasksView, type TasksView } from '../hooks/useTasksView';
 import { isTaskArchived } from '../utils/taskArchive';
 import { sortTasks } from '../utils/taskSorting';
@@ -31,6 +32,7 @@ const VIEW_PARAM = 'view';
 const VIEW_LABEL_KEY: Record<TasksView, string> = {
   grid: 'board.view.grid',
   board: 'board.view.board',
+  timeline: 'timeline.view',
 };
 
 export default function Tasks() {
@@ -201,6 +203,8 @@ export default function Tasks() {
               onSelect={handleSelectTask}
               onChangeStatus={changeTaskStatus}
             />
+          ) : view === 'timeline' ? (
+            <TaskTimeline tasks={sortedTasks} onSelect={handleSelectTask} />
           ) : (
             <TaskGrid
               tasks={sortedTasks}

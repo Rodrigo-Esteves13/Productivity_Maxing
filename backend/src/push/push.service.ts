@@ -10,6 +10,7 @@ import { SubscribePushDto } from './dto/subscribe-push.dto';
 import {
   buildPushActionLabel,
   buildPushText,
+  isMutablePushKey,
   type PushActionId,
   type PushMessageKey,
 } from './push-messages';
@@ -354,6 +355,15 @@ export class PushService implements OnModuleInit {
     return { configured: true, devices, delivered };
   }
 
+  private async isMuted(userId: string, key: PushMessageKey): Promise<boolean> {
+    if (!isMutablePushKey(key)) return false;
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { mutedPushKinds: true },
+    });
+    return user?.mutedPushKinds.includes(key) ?? false;
+  }
+
   private async deliverToUser(
     userId: string,
     key: PushMessageKey,
@@ -362,6 +372,11 @@ export class PushService implements OnModuleInit {
     const subs = await this.prisma.pushSubscription.findMany({
       where: { userId },
     });
+    // Tipo desligado pelo user: nada a enviar. Conta como entregue para os
+    // avisos periodicos nao desmarcarem o marcador e repetirem a tentativa.
+    if (subs.length > 0 && (await this.isMuted(userId, key))) {
+      return { devices: subs.length, delivered: subs.length };
+    }
     if (subs.length === 0) {
       this.logger.log(
         `Push "${key}": o utilizador não tem dispositivos registados.`,
