@@ -20,6 +20,7 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 import { perMinute } from '../common/throttle.util';
 import { FlashcardsService } from './flashcards.service';
 import {
+  BulkFlashcardsDto,
   CreateFlashcardDto,
   ListFlashcardsQueryDto,
   ReviewFlashcardDto,
@@ -59,6 +60,16 @@ export class FlashcardsController {
     @Body() dto: CreateFlashcardDto,
   ) {
     return this.cards.create(user.id, dto);
+  }
+
+  @Post('bulk')
+  @WRITE
+  @ApiOperation({ summary: 'Creates several flashcards at once (import).' })
+  createMany(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: BulkFlashcardsDto,
+  ) {
+    return this.cards.createMany(user.id, dto);
   }
 
   @Patch(':id')

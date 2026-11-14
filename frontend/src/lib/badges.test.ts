@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { computeBadges, readBestStreak, rememberBestStreak } from './badges';
+import { computeBadges, earnedIds, newlyEarned, readBestStreak, rememberBestStreak } from './badges';
 
 describe('computeBadges', () => {
   it('marks earned badges and caps progress at the target', () => {
@@ -24,5 +24,17 @@ describe('best streak', () => {
     expect(rememberBestStreak(5)).toBe(5);
     expect(rememberBestStreak(2)).toBe(5);
     expect(readBestStreak()).toBe(5);
+  });
+});
+
+describe('newlyEarned', () => {
+  const badges = computeBadges({ completed: 12, streak: 0, projects: 0 });
+  it('seeds silently when there is no baseline', () => {
+    expect(newlyEarned(null, badges)).toEqual([]);
+  });
+  it('returns only badges earned since the baseline', () => {
+    const fresh = newlyEarned(['completed:1'], badges);
+    expect(fresh.map((b) => b.target)).toEqual([10]);
+    expect(newlyEarned(earnedIds(badges), badges)).toEqual([]);
   });
 });

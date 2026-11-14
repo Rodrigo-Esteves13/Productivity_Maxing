@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertAreaAccessible } from '../areas/area-access';
 import {
+  BulkFlashcardsDto,
   CreateFlashcardDto,
   ListFlashcardsQueryDto,
   UpdateFlashcardDto,
@@ -74,6 +75,33 @@ export class FlashcardsService {
       },
       select: SELECT,
     });
+  }
+
+  /** Importacao em bloco: tudo ou nada, respeitando o limite por utilizador. */
+  async createMany(userId: string, dto: BulkFlashcardsDto) {
+    const areaIds = [
+      ...new Set(
+        dto.cards.map((c) => c.areaId).filter((id): id is string => !!id),
+      ),
+    ];
+    for (const areaId of areaIds) {
+      await assertAreaAccessible(this.prisma, userId, areaId);
+    }
+    const count = await this.prisma.flashcard.count({ where: { userId } });
+    if (count + dto.cards.length > MAX_FLASHCARDS_PER_USER) {
+      throw new BadRequestException(
+        `You can keep at most ${MAX_FLASHCARDS_PER_USER} flashcards.`,
+      );
+    }
+    const result = await this.prisma.flashcard.createMany({
+      data: dto.cards.map((c) => ({
+        userId,
+        front: c.front,
+        back: c.back,
+        areaId: c.areaId ?? null,
+      })),
+    });
+    return { created: result.count };
   }
 
   async update(userId: string, id: string, dto: UpdateFlashcardDto) {

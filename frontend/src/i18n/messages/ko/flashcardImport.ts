@@ -1,0 +1,13 @@
+export const flashcardImport: Record<string, string> = {
+  'flashcardImport.title': "카드 가져오기",
+  'flashcardImport.help': "한 줄에 카드 한 장: 앞면과 뒷면을 탭(Quizlet, Anki 내보내기), 세미콜론 또는 쉼표로 구분해 붙여넣으세요.",
+  'flashcardImport.text': "카드",
+  'flashcardImport.placeholder': "hello\t안녕\ngoodbye;잘 가",
+  'flashcardImport.summary': "{ready}장 가져올 준비됨, {skipped}줄 건너뜀.",
+  'flashcardImport.action': "카드 {count}장 가져오기",
+  'flashcardImport.skip.noSeparator': "{line}번째 줄: 탭, 세미콜론, 쉼표가 없어요.",
+  'flashcardImport.skip.empty': "{line}번째 줄: 앞면 또는 뒷면이 비었어요.",
+  'flashcardImport.skip.tooLong': "{line}번째 줄: 텍스트가 너무 길어요.",
+  'flashcardImport.skip.duplicate': "{line}번째 줄: 이미 있는 카드예요.",
+  'flashcardImport.button': "텍스트에서 카드 가져오기",
+};

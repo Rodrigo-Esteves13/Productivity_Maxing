@@ -8,4 +8,7 @@ export const accentColor: Record<string, string> = {
   'accentColor.option.pink': "ピンク",
   'accentColor.option.orange': "オレンジ",
   'accentColor.option.red': "レッド",
+  'accentColor.option.amber': "アンバー",
+  'accentColor.option.fuchsia': "フクシア",
+  'accentColor.locked': "{name}: 完了タスク {count} 件で解放",
 };

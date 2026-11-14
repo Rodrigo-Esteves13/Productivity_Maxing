@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import type { Area, Task } from '../../types/models';
-import { mostUrgentTask } from '../../lib/mostUrgentTask';
+import { pickForEnergy } from '../../lib/energyMatch';
+import { useMoodToday } from '../../hooks/useMoodToday';
+import { useStartFiveMinutes } from '../../hooks/useStartFiveMinutes';
 import { formatTaskDue } from '../../lib/taskReadiness';
 import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import { useI18n } from '../../i18n/useI18n';
 import EmptyState from '../UI/EmptyState';
 import ToolbarButton from '../UI/ToolbarButton';
-import { CheckIcon, XIcon } from '../UI/Icons';
+import { CheckIcon, ClockIcon, XIcon } from '../UI/Icons';
 
 interface SingleTaskViewProps {
   tasks: Task[];
@@ -20,7 +22,10 @@ interface SingleTaskViewProps {
 export default function SingleTaskView({ tasks, areas, onComplete, onExit }: SingleTaskViewProps) {
   const { t } = useI18n();
   const [isCompleting, setIsCompleting] = useState(false);
-  const task = useMemo(() => mostUrgentTask(tasks), [tasks]);
+  const { log: mood } = useMoodToday();
+  const energy = mood?.energy ?? null;
+  const { task, byEnergy } = useMemo(() => pickForEnergy(tasks, energy), [tasks, energy]);
+  const { startFiveMinutes, canStart, minutes } = useStartFiveMinutes();
   const areaName = useMemo(
     () => (task ? areas.find((area) => area.id === task.areaId)?.name ?? '' : ''),
     [task, areas],
@@ -55,6 +60,11 @@ export default function SingleTaskView({ tasks, areas, onComplete, onExit }: Sin
   return (
     <section className="mb-6 rounded-xl border border-neutral-800 bg-neutral-900/50 p-8 text-center">
       <p className="text-xs uppercase tracking-wide text-neutral-500">{t('singleTaskMode.label')}</p>
+      {byEnergy && (
+        <p className="mt-2 inline-block rounded-full border border-violet-700 px-2 py-0.5 text-xs text-violet-300" title={t('energyMatch.pickedHelp')}>
+          {t('energyMatch.picked', { energy: energy ?? '' })}
+        </p>
+      )}
       <h2 className="mt-3 text-3xl font-semibold text-neutral-100 break-words">{task.title}</h2>
       {areaName && <p className="mt-2 text-sm text-neutral-400">{areaName}</p>}
       <p className="mt-4 text-lg text-neutral-300">{formatTaskDue(task)}</p>
@@ -71,6 +81,12 @@ export default function SingleTaskView({ tasks, areas, onComplete, onExit }: Sin
           <CheckIcon />
           {t('singleTaskMode.markDone')}
         </button>
+        {canStart && (
+          <ToolbarButton tone="muted" size="md" title={t('startFive.help', { minutes })} onClick={() => void startFiveMinutes(task)}>
+            <ClockIcon />
+            {t('startFive.button', { minutes })}
+          </ToolbarButton>
+        )}
         {exitButton}
       </div>
     </section>

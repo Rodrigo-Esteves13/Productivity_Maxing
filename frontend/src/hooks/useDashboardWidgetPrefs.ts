@@ -38,7 +38,8 @@ export type DashboardWidgetKey =
   | 'weeklyChallenge'
   | 'statusSummary'
   | 'areaConsistency'
-  | 'xpLevel';
+  | 'xpLevel'
+  | 'typeBalance';
 
 // Chaves i18n (traduzidas com t() em DashboardWidgetToggles).
 export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
@@ -80,6 +81,7 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   statusSummary: 'statusSummary.title',
   areaConsistency: 'areaConsistency.title',
   xpLevel: 'xpLevel.title',
+  typeBalance: 'typeBalance.title',
 };
 
 const STORAGE_KEY = 'dashboard-widget-prefs';
@@ -127,6 +129,7 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   statusSummary: true,
   areaConsistency: true,
   xpLevel: true,
+  typeBalance: true,
 };
 
 function loadPrefs(): Record<DashboardWidgetKey, boolean> {

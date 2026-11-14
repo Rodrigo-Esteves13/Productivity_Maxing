@@ -1,7 +1,7 @@
 // Cor de destaque da app. O violeta e o valor por defeito e nao leva atributo
 // no <html>; as restantes ativam um bloco de styles/accents.css que redefine
 // as variaveis --color-violet-*. Sem verde de proposito.
-export const ACCENT_IDS = ['violet', 'blue', 'cyan', 'pink', 'orange', 'red'] as const;
+export const ACCENT_IDS = ['violet', 'blue', 'cyan', 'pink', 'orange', 'red', 'amber', 'fuchsia'] as const;
 export type AccentId = (typeof ACCENT_IDS)[number];
 
 export const DEFAULT_ACCENT: AccentId = 'violet';
@@ -16,7 +16,20 @@ export const ACCENT_SWATCHES: Record<AccentId, string> = {
   pink: '#ec4899',
   orange: '#f97316',
   red: '#ef4444',
+  amber: '#f59e0b',
+  fuchsia: '#d946ef',
 };
+
+// Cores extra desbloqueadas por tasks concluidas (ver lib/avatarTier.ts):
+// valor = minimo de tasks concluidas. As restantes estao sempre livres.
+export const ACCENT_UNLOCK_COMPLETED: Partial<Record<AccentId, number>> = {
+  amber: 100,
+  fuchsia: 500,
+};
+
+export function isAccentUnlocked(id: AccentId, completed: number): boolean {
+  return completed >= (ACCENT_UNLOCK_COMPLETED[id] ?? 0);
+}
 
 export function isAccentId(value: unknown): value is AccentId {
   return typeof value === 'string' && (ACCENT_IDS as readonly string[]).includes(value);

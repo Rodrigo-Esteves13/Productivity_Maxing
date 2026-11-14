@@ -25,6 +25,8 @@ export interface TaskWriteInput {
   effort?: Effort | null;
   dateCertainty?: DateCertainty;
   isBlocked?: boolean;
+  // Outra task que tem de estar concluida primeiro (null = nenhuma).
+  blockedByTaskId?: string | null;
   availableFrom?: string | null;
   // Trabalho em duas fases: dia da entrega (antes da apresentacao em `date`).
   submissionDate?: string | null;
@@ -850,6 +852,7 @@ export interface Task {
   dateCertainty: DateCertainty;
   // Ainda nao da para comecar: bloqueada sem data, ou abre em availableFrom.
   isBlocked: boolean;
+  blockedByTaskId?: string | null;
   availableFrom: string | null;
   // Trabalho em duas fases: entrega neste dia, apresentacao em `date`.
   submissionDate?: string | null;

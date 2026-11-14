@@ -28,6 +28,48 @@ export function computeBadges(values: BadgeValues): BadgeProgress[] {
   );
 }
 
+// Chave i18n do nome: o singular (target 1) tem texto proprio.
+export function badgeLabelKey(badge: Pick<BadgeProgress, 'metric' | 'target'>): string {
+  const singular = badge.target === 1 && (badge.metric === 'completed' || badge.metric === 'projects');
+  return singular ? `badges.${badge.metric}One` : `badges.${badge.metric}`;
+}
+
+export function badgeId(badge: Pick<BadgeProgress, 'metric' | 'target'>): string {
+  return `${badge.metric}:${badge.target}`;
+}
+
+export const EARNED_BADGES_STORAGE_KEY = 'pmaxing.earnedBadges';
+
+/** null = ainda nao ha base de comparacao neste dispositivo. */
+export function readEarnedBadgeIds(): string[] | null {
+  try {
+    const raw = localStorage.getItem(EARNED_BADGES_STORAGE_KEY);
+    if (raw === null) return null;
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveEarnedBadgeIds(ids: readonly string[]): void {
+  try {
+    localStorage.setItem(EARNED_BADGES_STORAGE_KEY, JSON.stringify(ids));
+  } catch {
+    // sem armazenamento: o aviso pode repetir-se numa proxima sessao
+  }
+}
+
+export function earnedIds(badges: readonly BadgeProgress[]): string[] {
+  return badges.filter((b) => b.earned).map(badgeId);
+}
+
+/** Conquistas ganhas que ainda nao estavam na base; vazio sem base (so semeia). */
+export function newlyEarned(previous: readonly string[] | null, badges: readonly BadgeProgress[]): BadgeProgress[] {
+  if (previous === null) return [];
+  return badges.filter((b) => b.earned && !previous.includes(badgeId(b)));
+}
+
 export const BEST_STREAK_STORAGE_KEY = 'pmaxing.bestStreak';
 
 export function readBestStreak(): number {

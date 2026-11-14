@@ -6,4 +6,7 @@ export const badges: Record<string, string> = {
   'badges.projects': "Finish {target} projects",
   'badges.earned': "Earned",
   'badges.hint': "Just for fun. Badges are based on your finished tasks and your best streak on this device.",
+  'badges.unlocked': "Badge earned: {name}",
+  'badges.completedOne': "Finish your first task",
+  'badges.projectsOne': "Finish your first project",
 };

@@ -37,3 +37,4 @@ export const WeeklyChallengeCard = lazy(() => import('./WeeklyChallengeCard'));
 export const StatusSummaryCard = lazy(() => import('./StatusSummaryCard'));
 export const AreaConsistencyCard = lazy(() => import('./AreaConsistencyCard'));
 export const XpLevelCard = lazy(() => import('./XpLevelCard'));
+export const TypeBalanceCard = lazy(() => import('./TypeBalanceCard'));

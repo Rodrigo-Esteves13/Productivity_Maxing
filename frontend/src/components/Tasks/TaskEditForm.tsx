@@ -4,6 +4,7 @@ import { collectTags } from '../../lib/taskTags';
 import type { Task, TaskTypeOption, AcademicTaskTypeOption, PriorityOption, TaskFormSubmission } from '../../types/models';
 import TaskFormFields, { type TaskFormFieldValues } from './TaskFormFields';
 import DayLoadHint from './DayLoadHint';
+import { openBlockerOptions } from '../../lib/taskBlockers';
 import RecurrenceFields from './RecurrenceFields';
 import { recurrenceFromTask, recurrencePayload, type RecurrenceValue } from '../../lib/recurrence';
 import FormError from '../UI/FormError';
@@ -56,6 +57,7 @@ function buildInitialValues(task: Task): TaskFormFieldValues {
     effort: task.effort ?? '',
     dateCertainty: task.dateCertainty ?? DEFAULT_DATE_CERTAINTY,
     isBlocked: task.isBlocked ?? false,
+    blockedByTaskId: task.blockedByTaskId ?? '',
     // Guardado a meia-noite UTC do dia: o dia e a parte da data do ISO.
     availableFrom: task.availableFrom ? task.availableFrom.split('T')[0] : '',
     submissionDate: task.submissionDate ? task.submissionDate.split('T')[0] : '',
@@ -103,6 +105,7 @@ export default function TaskEditForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const blockerOptions = useMemo(() => openBlockerOptions(existingTasks, task.id), [existingTasks, task.id]);
   const tagSuggestions = useMemo(() => collectTags(existingTasks), [existingTasks]);
 
   const updateField = useCallback((field: keyof TaskFormFieldValues, value: string | boolean | string[]) => {
@@ -142,6 +145,7 @@ export default function TaskEditForm({
         values={formData}
         onChange={updateField}
         taskId={task.id}
+        blockerOptions={blockerOptions}
         areas={areas}
         taskTypes={taskTypes}
         academicTaskTypes={academicTaskTypes}
@@ -153,7 +157,12 @@ export default function TaskEditForm({
         tagSuggestions={tagSuggestions}
       />
 
-      <DayLoadHint date={formData.date} tasks={existingTasks} excludeTaskId={task.id} />
+      <DayLoadHint
+        date={formData.date}
+        tasks={existingTasks}
+        excludeTaskId={task.id}
+        onPickDate={(value) => updateField('date', value)}
+      />
 
       <RecurrenceFields idPrefix="edit-task" value={recurrence} onChange={setRecurrence} />
 

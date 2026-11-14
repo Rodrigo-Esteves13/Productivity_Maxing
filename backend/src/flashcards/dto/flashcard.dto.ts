@@ -1,5 +1,9 @@
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsIn,
   IsNotEmpty,
@@ -12,6 +16,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { FLASHCARD_GRADES, type FlashcardGrade } from '../flashcard-schedule';
 import {
   FLASHCARD_BACK_MAX,
+  FLASHCARD_BULK_MAX,
   FLASHCARD_FRONT_MAX,
 } from '../flashcards.constants';
 
@@ -37,6 +42,16 @@ export class CreateFlashcardDto {
   @IsOptional()
   @IsUUID()
   areaId?: string | null;
+}
+
+export class BulkFlashcardsDto {
+  @ApiProperty({ type: () => [CreateFlashcardDto] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(FLASHCARD_BULK_MAX)
+  @ValidateNested({ each: true })
+  @Type(() => CreateFlashcardDto)
+  cards: CreateFlashcardDto[];
 }
 
 export class UpdateFlashcardDto {

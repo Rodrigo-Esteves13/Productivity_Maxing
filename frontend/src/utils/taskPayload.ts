@@ -45,6 +45,7 @@ export function buildTaskPayload(
     effort,
     dateCertainty,
     availableFrom,
+    blockedByTaskId,
     submissionDate,
     ...rest
   } = formData;
@@ -72,6 +73,7 @@ export function buildTaskPayload(
     // "YYYY-MM-DD" isolado = meia-noite UTC desse dia (mesma regra do `date`
     // sem hora, ver buildTaskDate). Vazio = ja disponivel.
     availableFrom: availableFrom ? new Date(availableFrom).toISOString() : null,
+    blockedByTaskId: blockedByTaskId || null,
     // Uma data so tem sentido com prazo marcado; num palpite volta a uma fase.
     submissionDate:
       submissionDate && hasFirmDate({ dateCertainty: (dateCertainty || DEFAULT_DATE_CERTAINTY) as DateCertainty })

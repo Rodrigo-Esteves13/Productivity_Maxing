@@ -339,6 +339,7 @@ export default function Dashboard() {
       {!isLoading && !error && (
         <DashboardCardGrid
           academicTasks={cardTasks}
+          allTasks={tasks}
           academicAreas={academicAreas}
           academicTaskTypes={academicTaskTypes}
           activeProgram={activeProgram}

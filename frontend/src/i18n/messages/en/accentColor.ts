@@ -8,4 +8,7 @@ export const accentColor: Record<string, string> = {
   'accentColor.option.pink': "Pink",
   'accentColor.option.orange': "Orange",
   'accentColor.option.red': "Red",
+  'accentColor.option.amber': "Amber",
+  'accentColor.option.fuchsia': "Fuchsia",
+  'accentColor.locked': "{name}: unlocks at {count} finished tasks",
 };

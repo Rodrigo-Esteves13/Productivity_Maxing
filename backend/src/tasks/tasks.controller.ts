@@ -170,6 +170,11 @@ export class TasksController {
     return this.tasksService.importTasks(user.id, dto);
   }
 
+  @Get(':id/changes')
+  listChanges(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.tasksService.listChanges(user.id, id);
+  }
+
   @Get(':id')
   findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.tasksService.findOne(user.id, id);

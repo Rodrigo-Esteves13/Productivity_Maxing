@@ -1,6 +1,7 @@
 import type { Task, TaskTypeOption, AcademicTaskTypeOption, Subtask } from '../../types/models';
 import SubtaskChecklist from './SubtaskChecklist';
 import TaskAttachmentsSection from './TaskAttachmentsSection';
+import TaskHistorySection from './TaskHistorySection';
 import StatusBadge from '../UI/StatusBadge';
 import { useEnumLabel } from '../../hooks/useEnumLabel';
 import DifficultyBadge from '../UI/DifficultyBadge';
@@ -110,6 +111,11 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       {onSubtasksChange && (
         <DetailRow label={t('taskFiles.title')}>
           <TaskAttachmentsSection taskId={task.id} />
+        </DetailRow>
+      )}
+      {onSubtasksChange && (
+        <DetailRow label={t('taskHistory.label')}>
+          <TaskHistorySection taskId={task.id} />
         </DetailRow>
       )}
       {recurrenceLabel(task) && (

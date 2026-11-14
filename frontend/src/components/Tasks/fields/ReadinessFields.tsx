@@ -11,6 +11,9 @@ interface ReadinessFieldsProps {
   dateCertainty: string;
   isBlocked: boolean;
   availableFrom: string;
+  blockedByTaskId: string;
+  blockerOptions: { id: string; title: string }[];
+  onBlockedByChange: (value: string) => void;
   onEffortChange: (value: string) => void;
   onDateCertaintyChange: (value: string) => void;
   onIsBlockedChange: (value: boolean) => void;
@@ -27,6 +30,9 @@ export default function ReadinessFields({
   dateCertainty,
   isBlocked,
   availableFrom,
+  blockedByTaskId,
+  blockerOptions,
+  onBlockedByChange,
   onEffortChange,
   onDateCertaintyChange,
   onIsBlockedChange,
@@ -94,6 +100,25 @@ export default function ReadinessFields({
           </span>
         </label>
       </div>
+
+      {blockerOptions.length > 0 && (
+        <FormField label={t('taskBlocker.label')} htmlFor={`${idPrefix}-blocked-by`}>
+          <Select
+            id={`${idPrefix}-blocked-by`}
+            value={blockedByTaskId}
+            onChange={(e) => onBlockedByChange(e.target.value)}
+            className="w-full"
+          >
+            <option value="">{t('taskBlocker.none')}</option>
+            {blockerOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.title}
+              </option>
+            ))}
+          </Select>
+          <p className="mt-1 text-xs text-neutral-500">{t('taskBlocker.help')}</p>
+        </FormField>
+      )}
     </div>
   );
 }

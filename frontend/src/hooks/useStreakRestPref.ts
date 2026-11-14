@@ -27,6 +27,11 @@ function write(mode: StreakRestMode) {
   listeners.forEach((listener) => listener());
 }
 
+/** Valor atual fora de React (ex: avisos de conquistas). */
+export function readStreakRestMode(): StreakRestMode {
+  return current;
+}
+
 function subscribe(listener: () => void) {
   listeners.add(listener);
   return () => {

@@ -1,0 +1,13 @@
+export const flashcardImport: Record<string, string> = {
+  'flashcardImport.title': "导入卡片",
+  'flashcardImport.help': "每行一张卡片：正面和背面用制表符（Quizlet 和 Anki 导出）、分号或逗号分隔。",
+  'flashcardImport.text': "卡片",
+  'flashcardImport.placeholder': "hello\t你好\ngoodbye;再见",
+  'flashcardImport.summary': "{ready} 张可导入，已跳过 {skipped} 行。",
+  'flashcardImport.action': "导入 {count} 张卡片",
+  'flashcardImport.skip.noSeparator': "第 {line} 行：没有制表符、分号或逗号。",
+  'flashcardImport.skip.empty': "第 {line} 行：正面或背面为空。",
+  'flashcardImport.skip.tooLong': "第 {line} 行：文本过长。",
+  'flashcardImport.skip.duplicate': "第 {line} 行：你已经有这张卡片了。",
+  'flashcardImport.button': "从文本导入卡片",
+};
