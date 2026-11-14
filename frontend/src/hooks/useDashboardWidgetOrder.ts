@@ -39,6 +39,7 @@ export const GRID_WIDGET_DEFAULT_ORDER: readonly DashboardWidgetKey[] = [
   'weightVsGrade',
   'areaConsistency',
   'xpLevel',
+  'typeBalance',
 ];
 
 function loadOrder(): DashboardWidgetKey[] {

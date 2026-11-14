@@ -8,6 +8,7 @@ import {
   getTaskMetadata,
   deleteTask,
   reorderTasks,
+  bulkRescheduleTasks,
 } from '../api/userService';
 import { syncTaskToCalendar, unsyncTaskFromCalendar } from '../api/calendarService';
 import { addSubtasksBulk } from '../api/subtasksService';
@@ -517,8 +518,25 @@ export function useTasksPage() {
     [tasks, notify],
   );
 
+  // Aplica um plano de "replanear atrasadas": uma chamada por dia de destino.
+  const replanTasks = async (moves: { id: string; date: string }[]): Promise<boolean> => {
+    const byDate = new Map<string, string[]>();
+    for (const move of moves) byDate.set(move.date, [...(byDate.get(move.date) ?? []), move.id]);
+    try {
+      for (const [date, ids] of byDate) await bulkRescheduleTasks(ids, new Date(date).toISOString());
+    } catch {
+      setError(translateNow('replan.error'));
+      return false;
+    } finally {
+      const controller = new AbortController();
+      void fetchTasks(controller.signal);
+    }
+    return true;
+  };
+
   return {
     tasks,
+    replanTasks,
     areas,
     taskTypes,
     academicTaskTypes,

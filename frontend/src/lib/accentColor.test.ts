@@ -33,3 +33,14 @@ describe('accentColor', () => {
     }
   });
 });
+
+describe('accent unlocks', () => {
+  it('keeps base colors free and gates amber and fuchsia by finished tasks', async () => {
+    const { isAccentUnlocked } = await import('./accentColor');
+    expect(isAccentUnlocked('violet', 0)).toBe(true);
+    expect(isAccentUnlocked('amber', 99)).toBe(false);
+    expect(isAccentUnlocked('amber', 100)).toBe(true);
+    expect(isAccentUnlocked('fuchsia', 499)).toBe(false);
+    expect(isAccentUnlocked('fuchsia', 500)).toBe(true);
+  });
+});

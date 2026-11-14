@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useI18n } from '../../i18n/useI18n';
-import { computeBadges, rememberBestStreak } from '../../lib/badges';
+import { badgeLabelKey, computeBadges, earnedIds, rememberBestStreak, saveEarnedBadgeIds } from '../../lib/badges';
 import type { ProfileStats } from '../../utils/profileStats';
 
 interface BadgesCardProps {
@@ -20,6 +20,11 @@ export default function BadgesCard({ stats }: BadgesCardProps) {
       }),
     [stats.completed, stats.streak, stats.projects],
   );
+  // Base de comparacao do aviso de conquista nova (ver BadgeUnlockWatcher).
+  // Enquanto os dados carregam nao se grava: 0 tasks nao e o estado real.
+  useEffect(() => {
+    if (stats.completed > 0 || stats.projects > 0) saveEarnedBadgeIds(earnedIds(badges));
+  }, [badges, stats.completed, stats.projects]);
   const earnedCount = badges.filter((b) => b.earned).length;
 
   return (
@@ -37,7 +42,7 @@ export default function BadgesCard({ stats }: BadgesCardProps) {
             }`}
           >
             <p className="text-sm font-medium text-white">
-              {t(`badges.${badge.metric}`, { target: badge.target })}
+              {t(badgeLabelKey(badge), { target: badge.target })}
             </p>
             <div className="mt-2 h-1.5 rounded-full bg-neutral-800" aria-hidden="true">
               <div

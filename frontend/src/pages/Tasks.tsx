@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import TaskGrid from '../components/Tasks/TaskGrid';
@@ -20,6 +20,9 @@ import { useTaskShortcuts } from '../hooks/useTaskShortcuts';
 import { useShowArchivedTasks } from '../hooks/useShowArchivedTasks';
 import { useTaskSortMode } from '../hooks/useTaskSortMode';
 import TaskTimeline from '../components/Tasks/TaskTimeline';
+import TaskMatrix from '../components/Tasks/TaskMatrix';
+import ReplanOverdueModal from '../components/Tasks/ReplanOverdueModal';
+import { overdueTasks } from '../lib/replanOverdue';
 import { TASKS_VIEWS, isTasksView, useTasksView, type TasksView } from '../hooks/useTasksView';
 import { isTaskArchived } from '../utils/taskArchive';
 import { sortTasks } from '../utils/taskSorting';
@@ -33,6 +36,7 @@ const VIEW_LABEL_KEY: Record<TasksView, string> = {
   grid: 'board.view.grid',
   board: 'board.view.board',
   timeline: 'timeline.view',
+  matrix: 'eisenhower.view',
 };
 
 export default function Tasks() {
@@ -40,6 +44,7 @@ export default function Tasks() {
   useDocumentTitle('Tasks');
   const {
     tasks,
+    replanTasks,
     areas,
     taskTypes,
     academicTaskTypes,
@@ -89,6 +94,9 @@ export default function Tasks() {
       { replace: true },
     );
   }, [viewParam, setView, setSearchParams]);
+
+  const [isReplanOpen, setIsReplanOpen] = useState(false);
+  const overdueCount = useMemo(() => overdueTasks(tasks).length, [tasks]);
 
   const viewOptions: SegmentedOption<TasksView>[] = TASKS_VIEWS.map((value) => ({
     value,
@@ -151,6 +159,9 @@ export default function Tasks() {
               {t('packs.openLink')}
             </Link>
             <SegmentedControl options={viewOptions} value={view} onChange={setView} />
+            {overdueCount > 0 && (
+              <ActionButton onClick={() => setIsReplanOpen(true)}>{t('replan.button', { count: overdueCount })}</ActionButton>
+            )}
             <TaskSortControl
               sortMode={sortMode}
               onChange={setSortMode}
@@ -203,6 +214,8 @@ export default function Tasks() {
               onSelect={handleSelectTask}
               onChangeStatus={changeTaskStatus}
             />
+          ) : view === 'matrix' ? (
+            <TaskMatrix tasks={sortedTasks} onSelect={handleSelectTask} />
           ) : view === 'timeline' ? (
             <TaskTimeline tasks={sortedTasks} onSelect={handleSelectTask} />
           ) : (
@@ -220,6 +233,8 @@ export default function Tasks() {
           )}
         </div>
       )}
+
+      {isReplanOpen && <ReplanOverdueModal tasks={tasks} onApply={replanTasks} onClose={() => setIsReplanOpen(false)} />}
 
       {/* Modal de criação */}
       <Modal isOpen={isCreateModalOpen} onClose={closeCreateModal} title={t('ui.createNewTask')}>

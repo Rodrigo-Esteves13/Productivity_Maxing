@@ -1,0 +1,856 @@
+PMAXING IDEIAS v7 (14/11/2026)
+Base: v6 (em baixo, inalterada) + pesquisa docs/research/feature-research-2026-11.md + estado real do codigo.
+
+==================================================
+A. ESTADO: ITENS DA v6 JA FEITOS (riscar na lista de baixo)
+==================================================
+Feitos nesta ronda (11-14/11):
+- Badges / conquistas com toast ao desbloquear (BadgesCard, BadgeUnlockWatcher)
+- Easter eggs (toast de badge)
+- Avatar tier (anel no avatar por nivel)
+- Recompensa desbloqueavel (cores extra amber/fuchsia aos 100/500 tasks)
+- Notificacao "quase la" (UC 85% a <100% avaliada)
+- Aniversario da conta (1, 3, 6 meses, depois anual)
+- Configuracao granular de notificacoes (mutedPushKinds, card Push notification types)
+- Historico de alteracoes da task (#24, TaskChange, GET /tasks/:id/changes)
+- Dependencias entre tasks (#16, blockedByTaskId, desbloqueio ao completar)
+- Vista timeline / Gantt (#11)
+- Matriz de Eisenhower (vista Matrix)
+- Sugestao de difficulty
+- Auto-categorizacao (sugestao de area)
+- Quebra em subtasks (checklist a partir dos topicos)
+- Redistribuir carga (sugestao de dia mais leve no form)
+- Replan de tasks em atraso (ReplanOverdueModal)
+- Equilibrio de tipos de task (widget typeBalance)
+- Import Quizlet / Anki (texto TAB, virgula, ponto e virgula; POST /flashcards/bulk)
+
+Ja feitos em sessoes anteriores mas nao riscados na v6:
+- Accent color picker, reordenar widgets do dashboard, saudacao personalizada, tags
+- XP e niveis, desafio semanal, streak freeze, modo single task (#176)
+- Digest mensal, alerta de streak em risco
+- Exportacao de graficos (PNG), exportacao do log de auditoria
+- Follow-up de medicacao, period review, funcionalidades de financas
+- Consistencia por area, resumo de estado, peso vs nota
+
+==================================================
+B. IDEIAS NOVAS N49+ (da pesquisa de mercado, ordenadas por valor/custo)
+==================================================
+Legenda: esforco S/M/L, mig = precisa migracao Prisma.
+
+QUICK WINS (S, sem migracao)
+N49. Alerta estudo tarde demais: 3 das ultimas 7 sessoes acabaram depois da 01:00, card no Wellbeing e push opcional (off por defeito). S, sem mig.
+N50. Timer flutuante (Picture-in-Picture): pop do timer de foco para janela sempre por cima (Document PiP API, esconder botao sem suporte). S, sem mig. (substitui N31)
+N51. Conversao de notas: Report card mostra 0-100, letra ECTS aproximada, GPA US 4.0 aproximado, com aviso de aproximacao. S, sem mig.
+N52. Padrao do semestre: semanas mais pesadas do semestre em periodos passados (deadlines, adiamentos, humor). Card no Period in review. S, sem mig.
+N53. Brain dump para tasks: botao "Make task" numa nota pessoal abre TaskForm preenchido (parser quick-add + sugestao de area). S, sem mig.
+N54. Flashcards para hoje: widget no dashboard + push diario opcional "N cartas para rever". S, sem mig.
+N55. Funil de tasks: criadas, iniciadas, completas, a tempo, por periodo. S, sem mig.
+N56. Guardar Period in review como imagem (reusar chartExport). S, sem mig.
+
+TOP (por ordem)
+N57. Modo teste de flashcards (tipo Quizlet Test): escolha multipla com distratores de outras cartas, resposta escrita, V/F, nota final e revisao das erradas. S/M, sem mig.
+N58. Exam scheduler de flashcards (tipo RemNote): intervalos nunca passam a data do proximo exame da UC, banner "Exame em N dias, X cartas por dia". M, sem mig.
+N59. Cartas cloze: {{resposta}} na carta, ou selecionar texto no caderno e "Make card". M, sem mig.
+N60. Ritual diario de plano e fecho (tipo Sunsama): manha escolhe tasks vs capacidade, noite marca feito, move resto para dia leve, uma linha de reflexao. M, mig para cross-device (DailyPlan), v1 em localStorage sem mig.
+N61. Tempo livre comum na turma (tipo When2meet): heatmap semanal so com contagens (nunca nomes de eventos), so membros com partilha ativa, "3 melhores slots". M, sem mig.
+N62. Planeamento inverso de trabalhos: template (pesquisa, esboco, rascunho, revisao, final) com checkpoints datados a partir da entrega, 10% buffer, evita dias carregados. M, mig (Subtask.dueOn).
+N63. Lixo de tasks com restaurar (30 dias): soft delete, undo toast, purge cron, recheck 100% peso ao restaurar, calendario remove/recria. M, mig (Task.deletedAt). Resolve #9 (delete sem undo).
+N64. Time blocking na semana: arrastar task para a grelha reserva bloco; study plan e Google Calendar respeitam. L, mig (PlannedBlock).
+N65. Habit tracker com grelha e meta semanal (ex 3x/semana), streak atual e melhor, sem criar task por dia. M, mig (Habit, HabitCheckIn).
+N66. Focar com amigos (tipo Forest Plant Together): presenca opt-in, sala partilhada com mesmo timer, polling 30s, sem video. M, mig (User.shareFocusPresence, FocusRoom, StudySession.roomId).
+N67. Registo de duvidas por UC: lista de duvidas abertas, resolver com resposta, chip "N duvidas" no card e no exam mode. S/M, mig (AreaQuestion).
+N68. Registo de sono e efeito no foco: horas dormidas no check-in, correlacao com foco, minutos de estudo e distracoes do dia seguinte, divida de sono nos sinais de burnout. M, mig (MoodLog.sleepHours, bedtimeMinutes).
+N69. Push "sai ate as HH:MM" no dia do exame, com tempo de viagem em cache (nunca chamar Maps no envio). M, sem mig.
+N70. Progresso do curso e previsao de conclusao: creditos totais, % feita, periodo previsto ao ritmo atual. S, mig (AcademicProgram.totalCredits).
+N71. Recursos por UC: links (Moodle, slides, livro, gravacoes) e lista de leitura com "done". URLs so guardados, nunca buscados pelo servidor (sem SSRF), so http/https. S, mig (AreaResource).
+N72. Opcao FSRS para flashcards com slider de retencao alvo, SM-2 continua default. M, mig (Flashcard.stability, difficulty, User.flashcardScheduler, targetRetention).
+N73. Quadro semanal de estudo entre amigos/turma (opt-in): minutos e tasks, nunca notas nem nomes de tasks, botao "Parabens" 1 por amigo por semana. M, mig (User.shareWeeklyStats, Kudos).
+
+==================================================
+C. REJEITADAS (e porque)
+==================================================
+- Tutor IA, resumos IA, gerar flashcards com IA, syllabus PDF para tasks com LLM: API paga, conteudo sai da plataforma, mais um segredo.
+- Webhooks genericos, Zapier/Make, webhook Discord: pedidos a URLs do utilizador (SSRF) e segredos.
+- Import de aulas por URL iCal (N9), scraping do Moodle: SSRF, credenciais da universidade, ToS. Upload de .ics ja existe.
+- Salas de estudo com video/audio: WebRTC precisa de TURN (custo) e moderacao. N66 cobre a responsabilizacao.
+- Apple Health, Google Fit, Wise, Revolut, bancos: segredos OAuth, dados de saude e financeiros.
+- Lembretes por geofence / "estou na faculdade": PWA nao corre localizacao em background, risco de privacidade.
+- Benchmark anonimo contra colegas da UC: turmas pequenas, notas re-identificaveis.
+- Banco comunitario de exames antigos: copyright e moderacao.
+- Bots Telegram/WhatsApp/Slack: tokens e superficie de ataque. Web push chega.
+- Offline completo com escrita em fila: L com resolucao de conflitos em muitos modelos.
+- Campos custom por area/tipo, motor de regras do utilizador: complexo, pouco valor.
+- Mascote, skins sazonais, modo retro: pouco valor, estilo puxa para emoji.
+- Link de portfolio publico: pouco valor, expoe dados.
+- Passkeys (N12): bom para seguranca, fica no roadmap de seguranca (M, mig, @simplewebauthn/server).
+
+==================================================
+D. PROXIMOS A FAZER (ordem sugerida)
+==================================================
+1. N57 modo teste de flashcards
+2. N49 alerta estudo tarde
+3. N54 flashcards para hoje (widget + push)
+4. N53 brain dump para tasks
+5. N51 conversao de notas
+6. N50 timer PiP
+7. N55 funil de tasks
+8. N52 padrao do semestre
+9. N58 exam scheduler de flashcards
+10. N63 lixo de tasks (precisa migracao)
+
+==================================================
+v6 ORIGINAL EM BAIXO
+==================================================
+
+PRODUCTIVITY MAXING — BANCO DE IDEIAS (ATUALIZADO)
+====================================================
+Lista original de 400 ideias, com as já implementadas removidas.
+Feitas e excluídas desta lista: #3 (Today view), #19 (Duplicar task),
+#27 (Snooze de task), #61 (Modo foco), #68 (Previsão de nota),
+#101/#183 (API token pessoal / página Developer), #135 (Export JSON),
+#189 (Pomodoro integrado), #239 (Sugestão de melhor hora do dia por tipo
+de task), #47 (Contador de créditos ECTS acumulados), #5 (Bulk actions -
+BulkActionsBar), #32 (Simulador "e se"
+de nota final - CreditSimulator), #33 (Alerta de meta matematicamente
+impossível - flag "impossible" no GradeNeededCalculator), #48 (Simulador
+de nota necessária - GradeNeededCalculator). Também já feito, fora da
+lista original: check-in de overdue (pergunta diária se uma task fora de
+prazo já está concluída), Export CSV de tasks/notas, Export para Markdown,
+Import de Excel para criar tasks (SheetJS), Alerta de sobreposição de
+exames/entregas na mesma data (DeadlineOverlapCard, 31/07), Print-friendly
+dashboard (botão Print + @media print no index.css), Peso ainda por
+avaliar por Area (badge "X% of grade so far" no AreaBreakdownCard),
+Alerta de sobrecarga (OverloadAlertCard, 01/08), #40 (Sparkline de
+evolução de nota por Area - Sparkline.tsx no AreaBreakdownCard, 01/08),
+#12 (Modo compacto/detalhado na tabela - useTableDensity.ts, 01/08),
+#26 (Atalhos de teclado N/C/E/Del na página Tasks - useTaskShortcuts.ts,
+01/08), #20 (Mover task entre Areas - dropdown rápido no TaskCard,
+02/08), #23 (Campo de notas/journaling por task - Textarea.tsx +
+migração Prisma, 02/08), #7 (Pin/favoritar tasks - isPinned no schema,
+02/08), #8 (Arquivar tasks antigas concluídas - computado a partir de
+completedAt/progressStatus, sem coluna nova; toggle "Show archived" no
+Dashboard e em Tasks, 22/08).
+
+Backlog de infraestrutura/qualidade (lista à parte, não fazia parte das
+400 ideias originais) - feito 02/08: Dependabot (.github/dependabot.yml),
+logs estruturados em JSON (JsonLogger, substituindo o logger de texto do
+Nest), modo de manutenção elegante (MaintenanceGuard no backend +
+MaintenanceGate/MaintenancePage no frontend), error boundary com relato
+automático de crash (ErrorBoundary.tsx -> POST /telemetry/client-error),
+monitorização de Core Web Vitals (reportWebVitals.ts -> POST
+/telemetry/web-vitals), testes E2E com Playwright (login + criar task),
+Storybook (Button/StatusBadge/Sparkline), CI/CD no GitHub Actions
+(build+lint+test em cada PR, suite E2E incluída), testes de carga com k6
+para a época de exames, e 5 ADRs em docs/adr/ a documentar decisões de
+arquitetura já tomadas. Ainda por instalar: `web-vitals` e
+`@playwright/test` no frontend (package.json não veio no zip original).
+
+Ronda de SEO/segurança/performance (22/08, sessão à parte - não eram ideias
+da lista, foi um pedido direto): meta description/canonical/og:image/JSON-LD
+por página pública, robots.txt (com bloqueio a AI crawlers)/llms.txt/
+sitemap.xml, página 404 real (era um redirect silencioso), EULA (agente
+Windows) + DMCA policy, sourcemaps ocultos em produção, code-splitting por
+rota, Cache-Control para assets com hash (imutável) vs index.html, FAQ +
+CTA sticky mobile na Home, captura de UTM (só local, sessionStorage).
+Bugs reais encontrados e corrigidos: o Context de Auth/Academic recriava o
+objeto `value` a cada render (causava re-render em cascata da app inteira
+ao autenticar) - agora useMemo/useCallback; Dashboard/Tasks esperavam pela
+cadeia toda Auth->Academic antes de pedir Areas/Metadata (que não dependem
+de período nenhum) e ainda disparavam o fetch de tasks duas vezes (uma com
+period undefined); import de Excel fazia até 3 queries sequenciais por
+linha - agora pré-carrega tudo em memória e cria em paralelo controlado
+(runWithConcurrencyLimit); PrismaService sem connection_limit explícito
+(ficava ao critério do default por CPU do Prisma); CsrfGuard bloqueava com
+403 os pedidos de telemetria (web-vitals disparava antes do token CSRF
+estar em memória) - novo decorator @SkipCsrf(); cache em memória (não
+Redis - só há uma instância no Render) para GET /tasks/meta, invalidado no
+write; compressão gzip no backend; imagens PNG otimizadas via optipng.
+
+Feature #22 - Prioridade manual (22-23/08): implementada duas vezes. Primeira
+versão como enum fixo (LOW/MEDIUM/HIGH); Rodrigo pediu para ser gerível pelo
+admin em runtime em vez de fixo no código, por isso foi reescrita como
+catálogo próprio - novo `model Priority` (key/label/colorHex/order/isActive,
+mesmo padrão do TaskType), `PrioritiesModule`/Controller/Service em
+`/admin/priorities`, nova secção "Priorities" na página `/task-types`
+(tabela + formulário, reaproveitando TaskTypesTable/TaskTypeForm quase
+byte-a-byte). `Task.priorityId` ficou opcional (nullable), diferente de
+`taskTypeId` (obrigatório) - decisão deliberada para não exigir backfill
+obrigatório de toda a task existente numa primeira migração.
+PriorityBadge.tsx passou de cores fixas por key para `colorHex` dinâmico
+(renomear uma prioridade no painel não podia deixar de bater com a cor).
+Migração da segunda versão teve de ser escrita à mão (não o diff cru do
+Prisma): havia 114 tasks já com `priority` definida quando o schema mudou,
+e por acaso a tabela nova também se chama "Priority" - Postgres não deixa
+um enum type e uma tabela partilharem nome ao mesmo tempo, por isso a
+migração teve de: guardar o valor antigo como texto, só depois apagar a
+coluna/enum (liberta o nome), criar a tabela, semear LOW/MEDIUM/HIGH, e
+só então repor os 114 valores via join pela key. Zero perda de dados.
+Skeleton loaders (batch à parte, mesmo pedido "para todas as páginas, não
+só a Dashboard"): 3 primitivas genéricas (CardGridSkeleton, TableSkeleton,
+FormSkeleton) substituindo o LoadingState em Tasks/Areas/Developer/Users/
+Security/TaskTypes/Profile/Agent; achado à parte no Profile - as stats
+dentro do ProfileHeaderCard mostravam um "-" estático em vez de skeleton,
+corrigido (ProfileStat.tsx ganhou um prop isLoading).
+
+Feature #21 - contador de "adiada Nx" (23/08): `Task.postponedCount`, Int,
+nunca decresce. Incrementado no backend (tasks.service.ts update()),
+comparando a nova data com a antiga - conta QUALQUER forma de adiar (botão
+rápido "+1 Day" e edição manual do form), não só um caminho específico.
+Mostrado sempre no TaskDetailView; nos cards/tabela só a partir de 2x
+(PostponedIndicator.tsx) para não gerar ruído visual num simples
+reagendamento pontual, que é normal e não é procrastinação.
+
+FEITO 31/10 (fora da lista, infraestrutura): request-id por pedido
+(x-request-id, AsyncLocalStorage, campo requestId em cada linha do JsonLogger -
+common/middleware/request-id.middleware.ts, common/request-context.ts),
+/health/live e /health/ready (health.controller.ts), aviso de query lenta >500ms
+(SLOW_QUERY_MS, prisma.service.ts logIfSlowQuery), paginacao por cursor opcional
+em GET /tasks e GET /notebook/entries|entry-summaries (common/pagination.util.ts
+paginate/listOrPage + CursorPaginationDto: sem cursor/paginated=true devolve o
+array de sempre (cortado a 1000 com header x-result-truncated; o frontend segue as paginas), com eles {items,nextCursor}), sessoes por dispositivo com
+refresh token rotativo (ver acima). Comentario do pooler no schema.prisma
+corrigido.
+
+Em curso / próximo (Fase 4): Google Calendar completo.
+Ainda por fazer, planeado: agente Go generalizado (Fase 5), distribuição
+do agente como executável, PWA.
+
+----------------------------------------------------------------------
+VISTAS E NAVEGAÇÃO
+----------------------------------------------------------------------
+~~1. Kanban board (drag-and-drop entre colunas de status)~~ (feito 20/10: vista Board em Tasks - components/Tasks/TaskBoard.tsx, hooks/useTasksView.ts; select de estado em cada cartao para teclado/telemovel)
+~~2. Vista de calendário mensal/semanal~~ (feito 20/10: Schedule com Week/Month - components/Schedule/MonthGrid.tsx, lib/monthAgenda.ts)
+~~8. Arquivar tasks antigas concluídas~~ (feito 22/08)
+9. Undo da última ação (parcial 20/10: Undo no toast ao marcar como feita, em massa ou por swipe - hooks/useCompleteWithUndo.ts; apagar continua sem undo, precisava de soft delete)
+11. Vista "Gantt" simples para projetos com várias etapas
+~~13. Ordenação customizável de colunas (drag to reorder)~~ (já feito, nunca riscado: hooks/useTasksTableColumnOrder.ts + drag no TasksTableHeader)
+14. Breadcrumbs/histórico de navegação dentro da app (parcial: UI/Breadcrumbs.tsx já usado em AdminUserProfile, FriendNotes, FriendNoteEntry)
+
+----------------------------------------------------------------------
+MECÂNICA DE TASKS
+----------------------------------------------------------------------
+~~15. Subtasks/checklist dentro de uma task~~ (feito 11/10: model Subtask, sem peso/nota)
+16. Dependências entre tasks (bloqueadas até outra terminar)
+~~17. Tasks recorrentes (diária/semanal/mensal)~~ (feito 12/10)
+~~18. Templates de task reutilizáveis~~ (feito 24/10: lib/taskTemplates.ts + hooks/useTaskTemplates.ts + Tasks/TaskTemplatePicker.tsx no TaskForm; só localStorage, guarda checklist e repetição)
+~~21. Task "adiada" com contador de quantas vezes foi adiada~~ (feito 23/08)
+~~22. Prioridade manual (alta/média/baixa) independente da dificuldade~~ (feito 23/08, como catálogo gerível por admin, não enum fixo)
+24. Histórico de alterações de uma task (quem mudou o quê, quando)
+~~25. Quick add em linguagem natural~~ (feito 11/10: Ctrl+K + "+", agora com Area e prioridade no texto)
+28. Task "modelo" que gera várias subtasks automaticamente
+~~29. Campo de estimativa de tempo vs tempo real gasto~~ (já feito 06/08 - duration prediction, `estimatedMinutes`, nunca tinha sido riscado nesta lista)
+30. Etiquetas/tags livres, além de Area e Type
+
+----------------------------------------------------------------------
+ACADÉMICO
+----------------------------------------------------------------------
+~~31. GPA/média geral ponderada no Profile~~ (feito no Dashboard: GpaSummary.tsx + GpaTrendChart.tsx)
+34-38. (Fase 4: Google Calendar — em curso)
+~~41. Agrupar Areas por semestre/ano letivo~~ (feito: AcademicPeriod + usedInPeriod no seletor)
+~~42. Arquivo de semestres antigos~~ (feito: AcademicPeriod.isArchived)
+~~43. Comparação entre semestres~~ (já feito, nunca riscado: GET /programs/:id/periods-comparison + GpaTrendChart.tsx)
+44. Import do Moodle via scraping
+45. Import de horário letivo (CSV/ICS)
+46. Parser de syllabus em PDF → sugestão automática de tasks
+Vista "por UC" agregando todas as Areas dessa cadeira
+~~Registo de faltas/presenças~~ (feito 20/10, ver N17)
+Ligação a bibliografia/recursos por UC
+~~Contagem decrescente para época de exames~~ (feito: ExamCountdownCard.tsx)
+
+----------------------------------------------------------------------
+GAMIFICAÇÃO E MOTIVAÇÃO
+----------------------------------------------------------------------
+Badges/conquistas por marcos
+~~Heatmap de atividade estilo GitHub (dias mais/menos produtivos no ano)~~ (já existia: StudyActivityCard.tsx, grelha de 12 semanas)
+Leaderboard opt-in entre colegas
+Stats card SVG embutível no README
+Streak com "freeze" (dia de descanso sem quebrar)
+Níveis/XP por tasks concluídas
+Avatar que evolui visualmente com o progresso
+Desafios semanais auto-gerados ("completa 5 tasks esta semana")
+~~Comparação "eu vs. eu mesmo" (esta semana vs semana passada)~~ (já existia: StudyActivityCard.tsx)
+Certificado/resumo gerado no fim do semestre
+~~Sons/microanimações de recompensa ao completar~~ (feito 24/10 sem som: components/Accessibility/CompletionBurst.tsx + lib/completionFeedback.ts, desligável em Profile)
+"Streak insurance" — usar pontos ganhos para salvar um streak
+Mapa de conquistas tipo "árvore de skills"
+Ranking pessoal de Areas mais consistentes
+Frase motivacional diária baseada no progresso real
+Recompensa desbloqueável (tema/cor extra) por marcos
+Contagem de "dias produtivos consecutivos" separada de streak de tasks
+Modo "desafio" — esconde tudo exceto a task mais urgente
+
+----------------------------------------------------------------------
+AUTOMAÇÃO E IA
+----------------------------------------------------------------------
+Quebra automática de task grande em subtasks sugeridas
+Deteção de padrões de procrastinação
+Sugestão de "próximo passo" com prioridade calculada
+Auto-categorização de Area/Type ao criar task por título
+Resumo semanal gerado automaticamente
+Gerador de flashcards a partir dos "topics"
+Assistente de planeamento ("distribui este trabalho pelos próximos 10 dias")
+~~Deteção de conflitos de datas ao criar task~~ (já existia: DayLoadHint.tsx)
+Sugestão de difficulty com base no histórico de tasks parecidas
+Auto-arquivamento de tasks concluídas há +90 dias
+Resumo em linguagem natural do estado atual ("estás bem em X, atrasado em Y")
+Chatbot interno para perguntas tipo "quanto falta para a média subir a 16?"
+~~Deteção de tasks "esquecidas" (nunca tocadas há muito tempo)~~ (já existia: StaleTasksCard.tsx)
+Sugestão automática de horário de estudo com base em padrões passados
+Auto-split de peso quando várias entregas parciais da mesma avaliação
+Alertas inteligentes só quando o risco é real (não notificar por notificar)
+Geração automática de plano de estudo pré-exame
+
+----------------------------------------------------------------------
+BLOQUEIO E ANTI-PROCRASTINAÇÃO (extensão do agente Go — Fase 5)
+----------------------------------------------------------------------
+Bloquear outras apps além do League (Steam, Discord, Spotify) quando "Very Behind"
+Bloqueio de sites (extensão browser ou DNS local) sincronizado com o agente Go
+Níveis de bloqueio progressivos (aviso → bloqueio parcial → bloqueio total)
+Janela de "pausa negociada" — 10 min de folga antes do bloqueio ativar
+Estatísticas de tempo bloqueado por semana
+Modo "focus session" que ativa o bloqueio manualmente por tempo definido
+Whitelist de apps sempre permitidas mesmo em bloqueio
+Notificação no Discord quando o bloqueio é ativado
+Auto-desbloqueio ao completar a task mais atrasada
+Configuração por utilizador de quais apps/status disparam o bloqueio
+Modo "exame" — bloqueio agressivo nos dias antes de uma entrega crítica
+Histórico/log de quando e porquê o bloqueio disparou
+Integração do agente com o "modo foco"
+Relatório mensal "app mais bloqueada" tipo Wrapped
+
+----------------------------------------------------------------------
+INTEGRAÇÕES
+----------------------------------------------------------------------
+~~Feed .ics subscrivable (alternativa leve ao Calendar sync)~~ (feito 11/10)
+Webhook Discord para avisos de overdue
+~~Integração com Notion/Obsidian (export de notas)~~ (feito 20/10: export do Notebook para Markdown, entrada ou cadeira inteira - lib/notebookMarkdown.ts)
+Zapier/Make webhook genérico
+Sincronização com Todoist/TickTick (import inicial)
+Slack/Discord slash command para criar task
+Extensão de browser para quick-add
+Widget para Android/iOS home screen
+Apple Shortcuts / atalhos Siri
+Integração com Anki (flashcards)
+Login via passkey/WebAuthn
+Export direto para Google Sheets
+Bot de Telegram para lembretes e quick-add
+Integração com GitHub (issues como tasks académicas de projeto)
+Sincronização com calendário da faculdade (iCal público, se existir)
+
+----------------------------------------------------------------------
+NOTIFICAÇÕES
+----------------------------------------------------------------------
+~~Email de prazo a 24h (usa o mail module já existente)~~ (feito 12/10, N4)
+~~Push notifications no browser~~ (feito 16-19/10: partilhas, propostas e prazos)
+Notificação no dia com resumo do que vence hoje
+~~Resumo semanal automático (email/in-app)~~ (feito 12/10: WeeklyReview + email)
+Alerta de streak em risco (ainda não fizeste nada hoje)
+Notificação de "quase lá" quando falta pouco peso para fechar a média
+Digest mensal por email
+Notificação de aniversário de conta / "há X meses a usar a app"
+Configuração granular de que tipo de notificação querer receber
+~~Modo "não incomodar" configurável por horário~~ (feito: quiet hours nos lembretes)
+
+----------------------------------------------------------------------
+COLABORAÇÃO E SOCIAL
+----------------------------------------------------------------------
+Areas partilhadas com colegas (grupo de trabalho) (parcial 23/10: Turmas - turmas/*, pages/Turmas.tsx; cadeiras do caderno partilhadas com a turma)
+Link público read-only tipo portfólio
+Comentários numa task partilhada
+Vista "encarregado de educação" opcional read-only
+~~Convite por link para colega entrar numa Area partilhada~~ (feito 23/10 como código de convite da Turma)
+Atribuição de subtasks a diferentes membros do grupo
+Chat simples dentro de uma Area partilhada
+Votação/consenso sobre prazos internos do grupo
+Exportar relatório de contribuição individual num trabalho de grupo
+Feed de atividade da Area partilhada
+
+----------------------------------------------------------------------
+DADOS E ANALYTICS
+----------------------------------------------------------------------
+~~Dashboard de "tempo gasto por Area"~~ (já existia: TimeByAreaCard.tsx)
+~~Relatório PDF de boletim de notas por semestre~~ (feito 24/10: pages/ReportCard.tsx + GET /periods/:id/report-card em periods.service.ts getReportCard; imprimir/PDF via .print-ink no index.css)
+~~Comparação de dificuldade percebida vs nota obtida~~ (feito 24/10: components/Dashboard/DifficultyVsGradeCard.tsx + utils/difficultyVsGrade.ts, widget difficultyVsGrade)
+~~Distribuição de tasks por dia da semana~~ (feito: WeekdayLoadCard.tsx)
+~~Taxa de cumprimento de prazos ao longo do tempo~~ (feito: DeadlineComplianceCard.tsx)
+Análise de correlação entre weight e nota real
+Exportação de gráficos como imagem
+"Ano em revisão" resumo anual tipo Spotify Wrapped
+~~Relatório de produtividade por tipo de task~~ (já existia: ProductivityByTypeCard.tsx)
+~~Métricas de precisão de estimativa (estimado vs real)~~ (feito: EstimationAccuracyCard.tsx)
+~~Funil de progresso (target → real, por Area, agregado)~~ (já existia: TargetVsRealCard.tsx)
+Comparação entre múltiplos users (anónima, benchmarking pessoal)
+
+----------------------------------------------------------------------
+PERSONALIZAÇÃO E UI
+----------------------------------------------------------------------
+~~Tema claro opcional~~ (feito 13/10: 6 temas)
+Accent color picker (além do preto+violeta fixo)
+~~Ordem de colunas customizável e persistente~~ (feito: useTasksTableColumnOrder.ts)
+Dashboard com widgets reordenáveis (drag)
+Ícones/emoji custom por Area
+Fundo/wallpaper subtil customizável
+Fontes alternativas (accessibility)
+~~Modo alto contraste~~ (já existia: highContrast em useAccessibilityPrefs.ts)
+~~Tamanho de fonte ajustável~~ (feito 13/10)
+Layout alternativo tipo "cards" em vez de tabela
+Saudação personalizada configurável
+
+----------------------------------------------------------------------
+SEGURANÇA E CONTA
+----------------------------------------------------------------------
+~~2FA / TOTP~~ (feito 12/10, desligado por omissão)
+Passkeys/WebAuthn
+~~Log de sessões ativas com opção de terminar remotamente~~ (feito 31/10: model UserSession, GET/DELETE /auth/sessions, pages/Devices.tsx em /devices, refresh token rotativo com deteção de reutilização)
+~~Alerta de login de novo dispositivo/localização~~ (feito 31/10, ver N36)
+Exportação de log de auditoria pessoal
+Modo "conta congelada" temporário
+Verificação de email obrigatória mais visível/forçada
+Recuperação de conta via múltiplos métodos
+
+----------------------------------------------------------------------
+MOBILE / PWA
+----------------------------------------------------------------------
+Modo offline com cache básico
+Sincronização em background quando volta a rede
+~~Gestos touch (swipe para completar/adiar)~~ (feito 20/10: SwipeableRow.tsx + hooks/useSwipe.ts nos cartões de Tasks e do Dashboard mobile; direita = feita com Undo, esquerda = amanhã se em atraso)
+Widget de homescreen com tasks do dia
+~~Notificações push nativas via PWA~~ (feito 16-19/10)
+~~Instalação guiada ("Add to Home Screen") com onboarding~~ (feito 20/10: pwa/InstallAppCard.tsx no Dashboard e Profile; botao Install no Chrome/Edge/Android, passos do Safari no iPhone/iPad)
+~~Vibração/haptics ao completar task no telemóvel~~ (feito 24/10: celebrateCompletion em lib/completionFeedback.ts, navigator.vibrate)
+~~Atalho de app icon com ações rápidas~~ (feito 20/10: shortcuts no manifest em vite.config.ts - New task (/tasks?new=1), Today, Schedule, Focus)
+
+----------------------------------------------------------------------
+IMPORT/EXPORT E INTEROPERABILIDADE
+----------------------------------------------------------------------
+Import de outras apps de produtividade (Todoist, Notion, TickTick)
+Import de CSV genérico com mapeamento de colunas
+Migração assistida de dados de outro user para admin
+Backup automático agendado
+Sincronização bidirecional com Google Sheets
+
+----------------------------------------------------------------------
+DEVELOPER / API
+----------------------------------------------------------------------
+Documentação Swagger pública (parcial, sem dados sensíveis)
+Rate limit visível por API key no painel
+Webhooks configuráveis (task criada/completa/atrasada)
+SDK/wrapper simples em Python para scripts pessoais
+Playground de API dentro da própria app
+
+----------------------------------------------------------------------
+BEM-ESTAR E EQUILÍBRIO
+----------------------------------------------------------------------
+~~Alerta de sobrecarga ("tens 8 entregas esta semana, cuidado")~~ (feito: OverloadAlertCard.tsx)
+Sugestão de redistribuir carga entre dias
+Registo de humor/energia associado a tasks (opcional) (parcial 21/10: check-in diário de humor/energia/stress - Wellbeing/MoodCheckInCard.tsx; ainda não por task)
+~~Modo "semana de exames" que simplifica a UI ao essencial~~ (feito 20/10, ver N7)
+Lembrete de hidratação/pausas físicas (leve, opcional)
+Estatística de equilíbrio (académico vs hábitos vs projetos)
+~~Alerta de burnout (streak alta mas satisfação/humor a cair)~~ (feito 24/10: wellbeing/burnout.util.ts detectBurnout, campo burnout em GET /wellbeing/insights, Wellbeing/BurnoutAlertCard.tsx)
+
+----------------------------------------------------------------------
+EXTRA / DIVERSOS
+----------------------------------------------------------------------
+Easter eggs visuais ao atingir marcos grandes
+Modo "apresentação" para mostrar o dashboard sem dados sensíveis
+~~Changelog/"novidades" in-app a cada release~~ (feito 11/10: /changelog)
+~~Onboarding checklist interativo para novos users~~ (feito 11/10)
+
+----------------------------------------------------------------------
+ESTUDO AVANÇADO / APRENDIZAGEM
+----------------------------------------------------------------------
+~~Spaced repetition system (revisões espaçadas automáticas por tópico)~~ (feito 12/10: revisões a 1/3/7 dias, N10)
+Tutor IA conversacional dentro da app
+Grupos de estudo — encontrar colegas da mesma UC dentro da app
+Modo "explicar para aprender"
+Banco de exames antigos ligado por UC (upload comunitário)
+Simulador de exame cronometrado
+Mapa mental automático a partir dos "topics" de uma Area
+Registo de dúvidas por resolver, por UC
+Integração com apontamentos (import de Notion/OneNote)
+Sugestão de ordem de estudo ótima
+Modo "co-estudo" — sessão sincronizada com um colega
+Biblioteca pessoal de fórmulas/cheat sheets por UC
+Auto-geração de resumo de aula a partir de notas soltas
+~~Rastreador de horas de estudo por UC vs horas letivas~~ (feito 24/10: GET /schedule/study-vs-class, schedule/study-vs-class.util.ts, Schedule/StudyVsClassCard.tsx)
+
+----------------------------------------------------------------------
+FINANCEIRO / ORÇAMENTO ESTUDANTIL
+----------------------------------------------------------------------
+Tracker de despesas académicas (livros, propinas, material)
+Alerta de prazos de pagamento de propinas
+Orçamento mensal simples ligado ao calendário académico
+Registo de bolsas/apoios e prazos de candidatura
+Divisão de despesas de grupo
+Contador de custo-por-ECTS
+Lembrete de renovação de assinaturas de software académico
+Simulador de poupança para objetivos
+Integração com Wise/Revolut
+Relatório anual de despesas académicas para efeitos de IRS
+
+----------------------------------------------------------------------
+SAÚDE E SONO
+----------------------------------------------------------------------
+Registo de horas de sono ligado à produtividade do dia seguinte
+Alerta "estás a estudar tarde demais outra vez"
+Correlação entre exercício físico e nota/produtividade
+Lembrete de pausas obrigatórias em sessões longas
+Integração com Apple Health/Google Fit
+Modo "semana difícil" que ajusta expectativas automaticamente
+~~Diário de bem-estar opcional (1 linha por dia)~~ (feito 21/10: MoodLog.note no check-in diário)
+Alerta de sobrecarga sustentada
+Sugestão de dia de descanso planeado antes de uma época de exames
+~~Check-in emocional rápido (emoji) antes de abrir o dashboard~~ (feito 21/10 na página Wellbeing, sem emoji: MoodCheckInCard.tsx)
+
+----------------------------------------------------------------------
+AUTO-AGENDAMENTO E TIME-BLOCKING
+----------------------------------------------------------------------
+Geração automática de agenda semanal a partir das tasks pendentes
+Time-blocking visual (arrasta tasks para slots no calendário)
+Deteção de "tempo livre" real com base no que já está marcado
+Reagendamento automático de tasks não cumpridas para o dia seguinte (parcial 20/10: versão manual - "Move to" Hoje/Amanhã/data na seleção do Dashboard, PATCH /tasks/bulk-reschedule; a automática precisa de cron)
+Buffer automático entre tasks para evitar sobreposição
+Modo "encaixa isto hoje"
+Sincronização de time-blocks com o Google Calendar
+Alerta de dia sobrecarregado antes de aceitares nova task
+Replaneamento em cascata se uma task atrasa
+Vista "semana ideal" vs "semana real" lado a lado
+Sugestão de deadline realista ao criar uma task nova
+
+----------------------------------------------------------------------
+LOCALIZAÇÃO E CONTEXTO
+----------------------------------------------------------------------
+Lembrete geofenced ("chegaste à biblioteca, começa a task X")
+Deteção automática de "estou na faculdade"
+Modo "em viagem" que simplifica notificações
+Sugestão de local de estudo com base em padrões passados
+Check-in de local de estudo
+Integração com salas livres da faculdade (se existir API/scraping)
+Alerta de trânsito antes de um exame com base na localização
+Modo "biblioteca silenciosa" — silencia todas as notificações
+
+----------------------------------------------------------------------
+MARKETPLACE E COMUNIDADE
+----------------------------------------------------------------------
+Marketplace de templates de task partilhados pela comunidade
+Marketplace de temas visuais criados por users
+Sistema de plugins para a comunidade estender a app
+Votação pública de features (roadmap aberto tipo Canny)
+Página pública de roadmap bonita (embebe as tuas issues do GitHub)
+Fórum/comunidade de users
+Programa de referral
+Badge de "early adopter"
+Showcase de setups/dashboards de outros users (opt-in)
+Concursos periódicos da comunidade
+
+----------------------------------------------------------------------
+MULTI-CONTA / ESCALA INSTITUCIONAL
+----------------------------------------------------------------------
+Suporte multi-instituição (não só ISMAI)
+Perfis de curso pré-configurados
+White-label para outras faculdades adotarem a app
+Multi-conta no mesmo browser
+Conta "família" ligando estudante e encarregado de educação
+Importação de plano curricular oficial da faculdade
+Sugestão automática de Areas com base no curso escolhido no onboarding
+Sincronização entre conta pessoal e conta institucional
+Modelo de dados para pós-graduação/mestrado
+Suporte para sistemas de notas não-portugueses
+
+----------------------------------------------------------------------
+ADMIN E OPERAÇÕES INTERNAS
+----------------------------------------------------------------------
+Dashboard de analytics para o admin (users ativos, retenção, churn)
+Feature flags para lançar funcionalidades gradualmente
+Modo de impersonação (admin vê a app como um user)
+Página de status pública (status.pmaxing.pt, usa o /health já existente)
+Sistema de tickets de suporte in-app
+Painel de moderação de conteúdo partilhado
+Métricas de erro/crash reporting (Sentry ou equivalente)
+A/B testing de layouts do dashboard
+Auditoria de ações administrativas
+Exportação de métricas de negócio (DAU/MAU)
+Sistema de anúncios in-app (avisos de manutenção)
+Backup automático agendado com alertas se falhar
+Painel de saúde de infraestrutura (Render, Netlify, Supabase, num só sítio)
+
+----------------------------------------------------------------------
+EXTENSÕES E DISPOSITIVOS
+----------------------------------------------------------------------
+Extensão de browser dedicada (quick-add + bloqueio de sites)
+App companion para Apple Watch / Wear OS
+CLI para power users (pmaxing task add "...")
+Extensão VS Code
+Widget de desktop (Windows/macOS)
+Integração com Raycast/Alfred
+App para Linux via Electron/Tauri
+Atalho de voz (Siri/Google Assistant)
+Extensão para Obsidian
+Bot de WhatsApp para lembretes
+Live widget no ecrã de bloqueio (iOS 16+/Android)
+Suporte a Stream Deck
+
+----------------------------------------------------------------------
+ROADMAP PÚBLICO E COMUNICAÇÃO
+----------------------------------------------------------------------
+Página "novidades" pública com histórico de releases
+Newsletter mensal automática
+Blog técnico ligado à app
+Página "sobre" contando a história do projeto
+Secção de testemunhos de users
+Live changelog no footer com link para o commit/PR
+Modo "beta tester" opt-in
+~~Formulário de feedback estruturado~~ (feito 16/10: Send feedback com rating e página)
+Página de comparação com alternativas (Notion, Todoist) — SEO
+Vídeo/demo interativa na homepage
+
+----------------------------------------------------------------------
+SEGURANÇA E PRIVACIDADE AVANÇADA
+----------------------------------------------------------------------
+Encriptação client-side de notas sensíveis (zero-knowledge)
+~~Exportação de relatório de privacidade (que dados existem sobre ti)~~ (já existia: export de dados, UsersService.exportUserData)
+Modo "conta anónima" para explorar sem dar dados reais
+Verificação de integridade de dados (checksums no export)
+Alertas de segurança proativos (password reutilizada, fraca, etc.)
+Rotação automática de tokens OAuth armazenados
+~~Modo "apagar tudo agora" com confirmação dupla (GDPR)~~ (já existia: apagar conta no Profile, AuthService.deleteAccount)
+Bug bounty informal / página de disclosure responsável
+Certificação/selo de segurança visível na homepage
+Sessões com expiração configurável pelo user (parcial 31/10: access JWT 15 min + refresh 30 dias fixos em auth/session.constants.ts; falta o user escolher)
+
+----------------------------------------------------------------------
+GRUPO DE ESTUDO / SOCIAL AVANÇADO
+----------------------------------------------------------------------
+Matching automático de colegas da mesma UC
+Sessões de estudo em grupo com vídeo/áudio embutido
+Quadro branco partilhado numa Area de grupo
+Sistema de "peer review" de trabalhos antes da entrega
+Enquetes rápidas dentro de uma Area partilhada
+Atribuição automática e justa de subtasks num grupo
+Relatório de esforço comparado entre membros do grupo
+Chat de voz rápido numa Area de grupo
+Templates de acta de reunião ligados a uma Area
+Sistema de "dá os parabéns" entre colegas
+
+----------------------------------------------------------------------
+AUTOMAÇÃO AVANÇADA / REGRAS CONDICIONAIS
+----------------------------------------------------------------------
+Motor de regras "se X então Y" configurável pelo user
+Auto-mudança de prioridade se prazo se aproxima e progresso está baixo
+Auto-criação de task de revisão X dias depois de completar uma entrega
+Regras de auto-arquivamento configuráveis
+Auto-tag de tasks com base em palavras-chave do título
+Disparo automático de email ao encarregado de educação se muito atrasado
+Auto-ajuste de weight se a UC mudar de estrutura de avaliação a meio do semestre
+Regras de bloqueio do agente Go configuráveis por condição
+Webhooks condicionais
+Auto-sugestão de reagendar tasks em conflito
+Regras de silêncio automático de notificações em certas janelas horárias
+Motor de scoring customizável (o user define os pesos do "priority score")
+
+----------------------------------------------------------------------
+PERSONALIZAÇÃO DE DADOS / CUSTOM FIELDS
+----------------------------------------------------------------------
+Campos customizados por Area (ex: "nome do professor", "sala")
+Campos customizados por Task Type
+Cores/ícones customizados por AcademicTaskType, não só por Area
+Unidades de nota configuráveis (0-20, 0-100, A-F)
+Fórmulas de cálculo de nota final customizáveis por UC
+Campos obrigatórios configuráveis por Area
+~~Ordenação customizada de Areas (drag to reorder)~~ (feito 24/10: hooks/useAreaOrder.ts + lib/areaOrder.ts, drag ou Alt+setas em Areas/AreaGrid.tsx; seguido no form de task e filtros do Dashboard; só localStorage)
+Metadados extra em JSON livre por task
+Templates de Area completos (Area + Types associados + estrutura)
+Perfis de configuração exportáveis/importáveis entre users
+
+----------------------------------------------------------------------
+ONBOARDING E CRESCIMENTO (GROWTH)
+----------------------------------------------------------------------
+Wizard de onboarding que sugere Areas com base no curso
+Conta demo pública
+Tour guiado interativo na primeira visita
+~~Checklist de setup inicial com progresso visível~~ (feito 11/10)
+Sugestão de import de dados de outra app no onboarding
+Email de boas-vindas com dicas de uso
+Prompt de reativação para users inativos há muito tempo
+Programa de embaixadores em universidades
+Landing pages específicas por curso
+SEO/conteúdo educativo (blog sobre produtividade académica)
+
+----------------------------------------------------------------------
+ACESSIBILIDADE E INTERNACIONALIZAÇÃO
+----------------------------------------------------------------------
+Suporte multi-idioma (inglês, espanhol, além do português)  [FEITO 13/10 - parcial onde indicado nas notas]
+Leitor de ecrã totalmente testado (ARIA labels completos)  [FEITO 13/10 - parcial onde indicado nas notas]
+Navegação 100% por teclado sem rato  [FEITO 13/10 - parcial onde indicado nas notas]
+Modo de daltonismo (paletas alternativas para os badges de status)  [FEITO 13/10 - parcial onde indicado nas notas]
+Legendas/transcrição se algum dia tiveres conteúdo em vídeo
+Redução de movimento (respeitar prefers-reduced-motion)  [FEITO 13/10 - parcial onde indicado nas notas]
+Texto ajustável e zoom sem quebrar layout  [FEITO 13/10 - parcial onde indicado nas notas]
+Suporte RTL preparado  [FEITO 13/10 - parcial onde indicado nas notas]
+
+----------------------------------------------------------------------
+ANALYTICS AVANÇADO / BENCHMARKING
+----------------------------------------------------------------------
+Benchmark anónimo "como estás comparado a outros na mesma UC"
+~~Previsão de risco de reprovação com aviso antecipado~~ (feito 24/10: utils/failingRisk.ts computeFailingRisk + Dashboard/FailingRiskCard.tsx, widget failingRisk)
+~~Análise de "que dificuldade real teve cada trabalho" vs a que marcaste~~ (coberto 24/10 pelo DifficultyVsGradeCard)
+Correlação entre streak e nota
+Relatório de "onde perdes mais tempo" por tipo de task
+Funil de conversão de tasks (criadas → em progresso → concluídas → no prazo)
+Análise de sazonalidade (que semanas do semestre são sempre piores)
+Comparação de performance entre Areas do mesmo peso/dificuldade
+Índice de "saúde académica" agregando várias métricas num só número
+Relatório exportável para orientador/mentor académico
+
+----------------------------------------------------------------------
+DIVERSÃO / EXPERIMENTAL
+----------------------------------------------------------------------
+Modo "história" — jornada académica narrada como progresso de RPG
+Easter egg sonoro ao bater recorde pessoal
+Mascote da app que reage ao teu progresso
+Modo "retro" — visual inspirado em terminal/DOS
+Wallpapers gerados automaticamente com as tuas estatísticas do mês
+Mini-jogo de recompensa ao completar streak grande
+Playlist sugerida por tipo de task (foco vs criativo)
+Citações aleatórias de figuras académicas/tech ao abrir a app
+Modo "confete" configurável
+Skin sazonal (Natal, época de exames, etc.) opcional
+
+----------------------------------------------------------------------
+ROBUSTEZ TÉCNICA / DX
+----------------------------------------------------------------------
+Testes E2E automatizados (Playwright)
+CI/CD com preview deploys por PR
+Storybook para os componentes UI reutilizáveis
+Monitorização de performance real de users (Core Web Vitals)
+Error boundary com relatório automático de crash no frontend
+Feature de "modo manutenção" elegante
+Logs estruturados (JSON) em vez de texto livre
+Testes de carga no backend antes de picos (época de exames)
+Documentação de arquitetura (ADRs)
+Dependabot/Renovate para dependências
+
+
+----------------------------------------------------------------------
+FEITO 11/10 (fora da lista original)
+----------------------------------------------------------------------
+Olho nas tasks do Dashboard (abre /tasks?open=id), apagar aulas importadas,
+nota do aviso "app nao verificada" no GoogleCalendarCard, checklist de
+onboarding, aviso de dia/semana carregada ao escolher a data (DayLoadHint),
+feed .ics subscrivivel (GET /feed/<token>.ics), changelog in-app (/changelog),
+verificacao de email completa mas DESLIGADA (REQUIRE_EMAIL_VERIFICATION).
+
+----------------------------------------------------------------------
+IDEIAS NOVAS (11/10)
+----------------------------------------------------------------------
+N1. (FEITO) Subtasks: arrastar para reordenar (o endpoint PATCH /subtasks/reorder ja existe)
+N2. (FEITO) Subtasks: "converter em task" (promove um passo a task com peso/data)
+N3. (FEITO 24/10, via #18) Template com checklist - um modelo guarda tipo + checklist, por isso cobre o "checklist por tipo"
+N4. (FEITO, via cron externo) Email de prazo a 24h + resumo semanal por email (cron no Render)
+N5. (FEITO 20/10) Widget "Hoje": tasks de hoje + proximo bloco de estudo + proxima aula numa so vista - components/Dashboard/TodayCard.tsx, hooks/useTodayOverview.ts
+N6. (FEITO 20/10) Pesquisa global por texto nas notas das tasks e subtasks (Ctrl+K) - CommandPalette.tsx + lib/textSearch.ts, sem acentos, com excerto
+N7. (FEITO 20/10) Modo "semana de exames": esconde tasks nao-exame e mostra contagem decrescente - botao Exam mode no Dashboard (hooks/useExamMode.ts, lib/examMode.ts, ExamModePanel.tsx), Ctrl+K
+N8. (FEITO) Revisao semanal automatica: o que fechaste, o que adiaste (postponedCount), tempo estudado
+N9. Importar aulas por URL do .ics (re-sync automatico em vez de upload manual)
+N10. (FEITO) Estudo espacado: ao fechar uma task academica, agendar revisoes a 1/3/7 dias
+N11. (FEITO 24/10) Partilhar o feed .ics so com tasks - ?only=tasks em GET /feed/:token.ics (parseFeedScope em calendar-feed.service.ts), toggle no CalendarFeedCard
+N12. Login com passkey (WebAuthn) como alternativa a 2FA/TOTP
+N13. (FEITO 24/10) Anexos por task - model TaskAttachment (migração add_task_attachments), tasks/task-attachments.service.ts + controller, Tasks/TaskAttachmentsSection.tsx no TaskDetailView
+N14. Heatmap de procrastinacao: dias da semana em que mais adias
+N15. (FEITO 16-19/10, só prazos) PWA com notificacoes push para prazos e fim de pomodoro
+
+FEITO 12/10: 2FA TOTP (desligado), tasks recorrentes, lembretes por email (cron externo), weekly review, revisoes espacadas, subtasks reordenar/converter.
+
+FEITO 13/10: import substitui horario, plano de estudo com ritmo+consolidacao, replicar turno, temas (6), idiomas EN/PT/ES, daltonismo, reduzir movimento.
+
+FEITO 13/10 (2): folgas fixas por local (daysOff), Area nos blocos de estudo, sync da foto de perfil do provider, Notebook (Share persiste, quadro branco on-demand, lightbox), pagina partilhada com layout, scope Google calendar.app.created nas paginas legais.
+
+FEITO 14-20/10 (fora da lista ou já riscado acima): grade components, social
+(amigos, código de amigo, pedidos de leitura de notas, convites por nota com
+papéis), push de partilhas/prazos, 8 idiomas carregados a pedido, task packs,
+commute automático (Google Distance Matrix + cache TravelTime, itinerário
+inteligente), Notebook a carregar entradas a pedido, contador de palavras no
+Notebook (lib/wordCount.ts), Ctrl+K nas notas/passos das tasks (N6), export do
+Notebook para Markdown.
+
+IDEIAS NOVAS (20/10)
+N16. (FEITO 20/10) Contador de palavras/caracteres no editor partilhado - components/Notebook/entry/NotesCounter.tsx, usado tambem no editor do dono
+N17. (FEITO 20/10) Registo de faltas/presenças por aula - ClassOccurrence.attended (migração add_class_attendance), PATCH /schedule/:id/attendance, GET /schedule/attendance, AttendanceToggle na vista semanal + AttendanceCard; entrada do caderno ligada à aula marca presença sozinha
+N18. (FEITO 20/10) Vista semanal do Schedule mostra os prazos das tasks (exames em destaque, clicar abre a task) e dias/datas na lingua da app - WeekDayCell.tsx (DeadlineEntry), lib/monthAgenda.ts (buildDeadlineChips), hooks/useScheduleTasks.ts
+N19. (FEITO 20/10) Tipos de task e subtipos académicos traduzidos (Academic/Habit/Project..., Test/Practical Assignment...) enquanto o admin não os renomeia - lib/catalogLabel.ts + hooks/useCatalogLabel.ts (substitui priorityLabel)
+
+FEITO 21-23/10 (fora da lista): página Wellbeing (check-in humor/energia/stress,
+lembretes de medicação, correlações humor vs foco), Notebook com undo/redo,
+autosave desligável e entradas privadas; Turmas (delegado, avisos, notas,
+ficheiros, cadeiras partilhadas) e Pads estilo dontpad; preview de PDF/texto
+nos anexos do caderno.
+
+IDEIAS NOVAS (24/10)
+N20. (FEITO 24/10) Limite de faltas por disciplina: aviso "perto"/"acima" do limite (25% por omissão, configurável) - lib/attendanceLimit.ts, hooks/useAbsenceLimitPref.ts, AttendanceCard.tsx
+N21. (FEITO 24/10) Limpar do storage as fotos/anexos do Notebook ao apagar a conta - notebook/notebook-account-cleanup.util.ts removeNotebookFilesOfDeletedUser, chamado no AuthService.deleteAccount
+N22. (FEITO 31/10 - reminders/absence-limit-reminders.service.ts, schedule/absence-limit.util.ts; so segundas 09-21h Lisboa, minimo 4 aulas dadas, limite 25% por omissao porque a preferencia vive no cliente) Push semanal "estás perto do limite de faltas em X" (usa o cron de lembretes que já existe)
+N23. Indicador de ficheiros nos cartões/tabela de tasks (_count.attachments no TASK_INCLUDE)
+N24. Modelos de task sincronizados entre dispositivos (hoje só localStorage; precisaria de model TaskTemplate)
+
+FEITO 25/10 (fora da lista): esforco por task separado da dificuldade (escala
+o tempo estimado no plano de estudo), certeza da data (exata/aproximada/por
+marcar/surpresa: as duas ultimas nunca ficam em atraso, surpresa = estar
+pronto em 7 dias), tasks bloqueadas / "abre a partir de" (fora do plano, dos
+atrasos e do agente), sync de task packs com aprovacao (o dono publica, cada
+colega aceita ou recusa: TaskPackUpdate), regra do agente "bloquear durante
+sessao de Focus" (GET /agent/config/focus), botao "Got distracted" no Focus
+(StudySession.distractionCount), som ambiente gerado no browser (brown/pink/
+white), rotas /turmas -> /classes (redirect das antigas) e /delegado ->
+/representative.
+
+IDEIAS NOVAS (25/10)
+N25. (FEITO 31/10 - lib/classTimeSuggestion.ts, Tasks/ClassTimeSuggestionHint.tsx; so aparece com os campos de hora visiveis, nome exato antes de parcial) Teste com hora da aula: se a task e de um tipo de evento (teste/exame) e
+     nesse dia ha aula dessa cadeira no horario, preencher sozinho a hora do
+     teste com o inicio da aula e a duracao com a da aula (sugestao no form,
+     com "Usar hora da aula", nunca sobrepor uma hora escrita a mao).
+N26. (FEITO 25/10 - GET /study-plan/plan-scenario, study-plan/plan-scenario.util.ts, Dashboard/PlanScenarioCard.tsx, widget planScenario) Cartao "If all goes according to plan" no Dashboard: nota final de cada
+     cadeira se tirares a nota-alvo em tudo o que falta e cumprires o plano de
+     estudo, lado a lado com a projecao atual (e a diferenca). Decisao para as
+     componentes de comportamento (presencas, participacao, mini-avaliacoes
+     sem alvo): usar a MEDIANA das tuas notas ja lancadas nessa cadeira (se nao
+     houver, a mediana das tuas notas nas outras cadeiras do periodo; se nada,
+     fica de fora e o cartao diz isso). Mediana em vez de media para uma nota
+     muito boa/ma nao puxar tudo.
+N27. (FEITO 25/10, 8 linguas, check-i18n a 0) Traducao (PT/ES/FR/DE/ZH/JA/KO) das chaves novas de 25/10: readiness.*,
+     packs.publish.*, packs.updates.*, focus.distractions.*, focus.ambient.*,
+     agent.focusRule.*, enum.LIGHT..SURPRISE, import.unknownEffort (por agora
+     so EN; nas outras linguas aparece a chave crua).
+N28. Packs: o dono editar um item diretamente no pacote (hoje so publica o que
+     mudou nas SUAS tasks de origem; se apagou a task de origem, o item fica
+     congelado).
+N29. Widget no Dashboard com as atualizacoes de pacotes por aprovar (hoje: aviso
+     na pagina Tasks e secao em /task-packs).
+N30. (FEITO 31/10 - PATCH /tasks/bulk-effort, lib/taskReadinessFilter.ts, filtros no Dashboard e BulkActionsBar) Filtro e vistas guardadas por esforco e por "bloqueada/por marcar"; bulk
+     action "definir esforco".
+N31. Focus: o som ambiente continuar a tocar ao mudar de pagina (hoje so com a
+     pagina Focus aberta) e um timer em Picture-in-Picture (Document PiP) para
+     ver o tempo por cima de outras janelas.
+N32. Focus: estatisticas de distracoes (por hora do dia, cadeira e esforco da
+     task) ao lado do heatmap de melhores horas.
+N33. Agente: mostrar o tempo da sessao de Focus no icone do tray e uma
+     blocklist propria do Focus (diferente da dos prazos).
+N34. Focus no telemovel: notificacao persistente com o tempo da sessao e botao
+     "Got distracted" na propria notificacao (PWA).
+N35. (FEITO 25/10 - TasksService.update countPostpone:false) Aceitar uma atualizacao de pacote que muda a data nao devia contar como
+     "adiada" (postponedCount) - hoje conta, porque passa pelo update normal.
+
+IDEIAS NOVAS (31/10)
+N36. (FEITO 31/10 - auth/services/new-device-alert.service.ts, email + push) Alerta de login em novo dispositivo: ao criar uma UserSession com userAgent/ipMasked nunca vistos nas sessoes anteriores do user, mandar email (MailService) e push a dizer "Chrome em Windows, IP 1.2.3.x" com link para /devices. Sem schema novo (compara com as UserSession existentes).
+N37. (FEITO 31/10 so Tasks e Notebook: api/fetchAllPages.ts segue as paginas; Turmas continua por fazer) Paginacao das listas de Turmas sem limite (turma-notes primeiro, depois files, announcements, deadlines, packs, invites, programs) com o mesmo paginate()/CursorPaginationDto; mais "Load more" no frontend para Tasks e Notebook ().
+N38. (schema.prisma editado 31/10; falta correr `npx prisma migrate dev --name task_user_period_sort_idx`) Indice composto Task(userId, periodId, sortOrder, date) para a ordenacao paginada de GET /tasks (nome sugerido da migracao: task_user_period_sort_idx).
+N39. Outbox/fila de jobs duravel (tabela Job com FOR UPDATE SKIP LOCKED, retries e dead-letter) para lembretes, emails e push; hoje dependem de um cron externo a chamar POST /internal/reminders/run (ver docs/adr/0006).
+N40. Idempotency-Key em POST de criacao e nos bulk (import, bulk-delete) para um retry do cliente nao duplicar dados.
+N41. Duracao da sessao escolhida pelo user (1 / 7 / 30 dias) em /devices; passa a UserSession.expiresAt/sliding window.
+N42. Circuit breaker + timeout nos clientes externos sem protecao (Maps/Distance Matrix, web-push) como o retry que o Google Calendar ja tem (calendar/google-fetch.util.ts).
+N43. (FEITO 31/10 - cursor desconhecido ou de outro user devolve 400 'Invalid cursor') Cursor invalido em GET /tasks?cursor=lixo devolve 200 com lista vazia; devolver 400 (hoje e lenient).
+N44. Pagina publica /status que le /health/ready (cobre "Pagina de status publica" da lista de Admin) e usar /health/live como health check no Render.
+N45. (FEITO 31/10 - area-teachers/, AreaTeacherNote) Campo "docente" por cadeira (Area.teacherName, texto livre, privado; opcional entidade Teacher se for reutilizado entre cadeiras). So entra no risco como contexto honesto: media das tuas notas com esse docente vs as tuas outras cadeiras (calculado dos teus dados, sem rating subjetivo). Nunca partilhado via Turmas/social. Migracao sugerida: `npx prisma migrate dev --name area_teacher_name`.
+N46. (FEITO 31/10 - approval-rules/, ApprovalRuleSet) Modelo de regras de aprovacao data-driven e agnostico de pais (ApprovalRuleSet por programa/cadeira): escala min/max/nota de passagem, arredondamento (ex: 9.5 sobe), nota minima por componente (ex: 6), maximo de componentes abaixo de um 2o limiar (ex: 1 abaixo de 8), pistas avaliacao continua vs exame vs recurso (exame/recurso 100%, uma so tentativa). Preset pt-PT estilo ISMAI + espaco para outros paises. Migracao sugerida: `npx prisma migrate dev --name approval_rule_set`.
+N47. (FEITO 31/10 - course-risk/, risk-engine.ts, FailingRiskCard) Upgrade do widget failingRisk (Dashboard) para risco por cadeira com score e lista de razoes: nota ja obtida e peso restante (6 num componente de 70% = risco extremo), regras duras violadas, nota necessaria vs viabilidade ('impossible'), tempo de estudo vs estimado, limite de faltas, tarefas adiadas, docente (N45). Sem dados => nao mostra nada. Motor de regras puro com testes (9.4/9.5, componente 5.9, dois abaixo de 8, exame/recurso 100%, sem dados).
+N48. (FEITO 31/10 - area-ratings/, pagina /ratings) Avaliacao pessoal de docente e cadeira (1-5: "gosto do docente", "gosto da cadeira") por Area, privada como a nota de docente (N45). Estatistica geral no Insights/Dashboard cruzando gosto do docente, gosto da cadeira, foco medio (StudySession.focusRating agregado por cadeira), tempo de estudo e nota final: quadrantes (gosto/nao gosto x nota acima/abaixo da tua media), correlacoes simples com amostra minima e contagens visiveis, medias por docente. So informativa (nao entra no score de risco). Migracao sugerida: `npx prisma migrate dev --name area_personal_ratings`.

@@ -9,6 +9,7 @@ import {
   IsInt,
   IsUrl,
   IsBoolean,
+  IsUUID,
   IsArray,
   ArrayMaxSize,
   Min,
@@ -194,6 +195,15 @@ export class CreateTaskDto {
   @IsOptional()
   @IsBoolean()
   isBlocked?: boolean;
+
+  @ApiPropertyOptional({
+    example: '0b7e1c1a-0000-4000-8000-000000000000',
+    description:
+      'Another task of yours that must be completed first. While it is open this task stays blocked, and it unblocks when that task is completed. null clears it.',
+  })
+  @IsOptional()
+  @IsUUID()
+  blockedByTaskId?: string | null;
 
   @ApiPropertyOptional({
     example: '2026-11-10T00:00:00Z',

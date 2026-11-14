@@ -2,4 +2,6 @@ export const FLASHCARD_FRONT_MAX = 300;
 export const FLASHCARD_BACK_MAX = 2000;
 export const MAX_FLASHCARDS_PER_USER = 2000;
 export const FLASHCARD_WRITES_PER_MINUTE = 60;
+// Cartoes por pedido de importacao em bloco (POST /flashcards/bulk).
+export const FLASHCARD_BULK_MAX = 100;
 export const FLASHCARD_LIST_LIMIT = 2000;

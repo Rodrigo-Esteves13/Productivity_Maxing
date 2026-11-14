@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   createFlashcard,
+  createFlashcards,
   deleteFlashcard,
   getFlashcards,
   reviewFlashcard,
@@ -8,6 +9,7 @@ import {
   type FlashcardInput,
 } from '../api/flashcardsService';
 import type { Flashcard, FlashcardGrade } from '../types/models';
+import { chunkCards } from '../lib/flashcardImport';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
 
@@ -51,6 +53,16 @@ export function useFlashcards() {
       setCards((prev) => [...prev, card]);
     });
 
+  // Importacao em blocos (o backend aceita ate IMPORT_BATCH_MAX por pedido).
+  const importMany = (inputs: FlashcardInput[]) =>
+    run(async () => {
+      try {
+        for (const batch of chunkCards(inputs)) await createFlashcards(batch);
+      } finally {
+        load();
+      }
+    });
+
   const update = (id: string, input: FlashcardInput) => run(async () => replace(await updateFlashcard(id, input)));
 
   const remove = (id: string) =>
@@ -61,5 +73,5 @@ export function useFlashcards() {
 
   const review = (id: string, grade: FlashcardGrade) => run(async () => replace(await reviewFlashcard(id, grade)));
 
-  return { cards, isLoading, error, reload: load, create, update, remove, review };
+  return { cards, isLoading, error, reload: load, create, importMany, update, remove, review };
 }

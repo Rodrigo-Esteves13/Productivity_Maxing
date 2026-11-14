@@ -18,6 +18,7 @@ const clearedEdit: TaskFormFieldValues = {
   effort: '',
   dateCertainty: 'EXACT',
   isBlocked: false,
+  blockedByTaskId: '',
   availableFrom: '',
   submissionDate: '',
   priority: '',

@@ -13,6 +13,7 @@ import { FeedbackProvider } from './context/FeedbackProvider';
 import I18nProvider from './i18n/I18nProvider';
 import { LucideProvider } from 'lucide-react';
 import OnTimePrompt from './components/Tasks/OnTimePrompt';
+import BadgeUnlockWatcher from './components/Accessibility/BadgeUnlockWatcher';
 
 // Tamanho por defeito dos icones (ver components/UI/Icons.tsx).
 const ICON_SIZE_PX = 16;
@@ -43,6 +44,7 @@ function App() {
                   <AccessibilityEffects />
                   <CompletionBurst />
                   <OnTimePrompt />
+                  <BadgeUnlockWatcher />
                   <AppRouter />
                 </AcademicProvider>
               </AmbientSoundProvider>

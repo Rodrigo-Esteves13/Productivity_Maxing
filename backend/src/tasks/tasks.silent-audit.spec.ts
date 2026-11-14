@@ -63,6 +63,7 @@ function taskRow(overrides: Record<string, unknown> = {}) {
 function setup(existing: ReturnType<typeof taskRow>) {
   const prisma = {
     task: {
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       findFirst: jest
         .fn()
         .mockResolvedValueOnce(existing)

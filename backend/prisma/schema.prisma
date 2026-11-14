@@ -858,6 +858,12 @@ model Task {
   isBlocked     Boolean   @default(false)
   availableFrom DateTime?
 
+  // Dependencia: so da para comecar quando OUTRA task do mesmo user estiver
+  // concluida (ver tasks/task-blocker.ts). Apagar a outra task limpa isto.
+  blockedByTaskId String?
+  blockedByTask   Task?   @relation("TaskDependency", fields: [blockedByTaskId], references: [id], onDelete: SetNull)
+  dependents      Task[]  @relation("TaskDependency")
+
   // Task importada de um pacote (ver TaskPack): de que item veio e que
   // versao desse item ja tem aplicada. Quando o dono do pacote o atualiza,
   // nasce um TaskPackUpdate por task importada, que o user aceita ou recusa;
@@ -949,6 +955,8 @@ model Task {
   turmaDeadlineLink TurmaDeadlineTask?
   // Ficheiros da task (enunciado em PDF, etc.), ver model TaskAttachment.
   attachments       TaskAttachment[]
+  // Historico de alteracoes (ver model TaskChange).
+  changes           TaskChange[]
 
   // Nenhuma destas é indexada automaticamente só por ser FK no Postgres:
   // - userId: TasksService.findAll/findOne/update/remove filtram sempre
@@ -962,6 +970,7 @@ model Task {
   //   (?periodId= nos endpoints existentes, fase 2) - mesma lógica dos
   //   índices acima, sem isto degrada para scan à medida que a tabela cresce.
   @@index([userId])
+  @@index([blockedByTaskId])
   @@index([packItemId])
   @@index([spacedReviewOfTaskId])
   @@index([areaId])
@@ -2810,4 +2819,20 @@ model Flashcard {
 
   @@index([userId, dueAt])
   @@index([userId, areaId])
+}
+
+/// Uma alteracao a um campo de uma task (historico mostrado no detalhe).
+/// Valores guardados como texto ja normalizado (ver tasks/task-change-diff.ts).
+model TaskChange {
+  id        String   @id @default(uuid())
+  taskId    String
+  field     String
+  fromValue String?
+  toValue   String?
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  /// Leitura: "as alteracoes desta task, mais recentes primeiro".
+  @@index([taskId, createdAt])
 }

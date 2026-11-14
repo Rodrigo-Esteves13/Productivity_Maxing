@@ -95,6 +95,12 @@ const NAV_COMMANDS: NavCommand[] = [
     keywords: ['kanban', 'board', 'quadro', 'columns', 'colunas', 'status', 'estado', 'drag'],
   },
   {
+    id: 'nav-tasks-matrix',
+    labelKey: 'eisenhower.paletteLabel',
+    path: '/tasks?view=matrix',
+    keywords: ['eisenhower', 'matrix', 'matriz', 'urgent', 'urgente', 'important', 'importante', 'quadrants'],
+  },
+  {
     id: 'nav-tasks-timeline',
     labelKey: 'timeline.paletteLabel',
     path: '/tasks?view=timeline',
@@ -255,6 +261,7 @@ const NAV_COMMANDS: NavCommand[] = [
   { id: 'nav-task-packs', labelKey: 'nav.taskPacks', path: '/task-packs', keywords: ['share tasks', 'import'] },
   { id: 'nav-areas', labelKey: 'nav.areas', path: '/areas', keywords: ['courses', 'subjects', 'propose', 'select courses', 'selecionar disciplinas', 'select', 'selecionar', 'bulk', 'em massa', 'approval rules', 'regras de aprovacao', 'custom rules', 'regras personalizadas', 'teacher', 'professor', 'docente'] },
   { id: 'nav-areas-select', labelKey: 'nav.areasSelect', path: '/areas?select=1', keywords: ['bulk', 'em massa', 'approval rules', 'regras de aprovacao', 'select all', 'selecionar tudo', 'multiple', 'varias'] },
+  { id: 'nav-flashcards-test', labelKey: 'flashcardTest.paletteLabel', path: '/flashcards?test=1', keywords: ['practice test', 'teste', 'quiz', 'exam', 'exame', 'multiple choice', 'escolha multipla', 'flashcards'] },
   { id: 'nav-flashcards', labelKey: 'nav.flashcards', path: '/flashcards', keywords: ['flashcards', 'cards', 'cartoes', 'revisao', 'review', 'spaced repetition', 'repeticao espacada', 'study', 'estudar', 'anki'] },
   { id: 'nav-users', labelKey: 'nav.admin.users', path: '/users', adminOnly: true },
   { id: 'nav-task-types', labelKey: 'nav.admin.taskTypes', path: '/task-types', adminOnly: true },

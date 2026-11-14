@@ -6,4 +6,7 @@ export const badges: Record<string, string> = {
   'badges.projects': "Termina {target} proyectos",
   'badges.earned': "Conseguido",
   'badges.hint': "Solo por diversión. Los logros se basan en tus tareas terminadas y tu mejor racha en este dispositivo.",
+  'badges.unlocked': "Logro conseguido: {name}",
+  'badges.completedOne': "Termina tu primera tarea",
+  'badges.projectsOne': "Termina tu primer proyecto",
 };

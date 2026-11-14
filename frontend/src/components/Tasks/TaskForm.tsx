@@ -7,6 +7,10 @@ import { DEFAULT_DATE_CERTAINTY } from '../../lib/taskReadiness';
 import { getApiMessage } from '../../lib/httpError';
 import type { Task, TaskTypeOption, AcademicTaskTypeOption, PriorityOption, TaskFormSubmission } from '../../types/models';
 import DayLoadHint from './DayLoadHint';
+import { openBlockerOptions } from '../../lib/taskBlockers';
+import DifficultySuggestionHint from './DifficultySuggestionHint';
+import AreaSuggestionHint from './AreaSuggestionHint';
+import { MIN_TOPICS_FOR_SUGGESTION, mergeStepsIntoChecklist, topicsToSteps } from '../../lib/checklistFromTopics';
 import RecurrenceFields from './RecurrenceFields';
 import TaskTemplatePicker from './TaskTemplatePicker';
 import { pickTemplateFields, templateFieldsFor, type TaskTemplate } from '../../lib/taskTemplates';
@@ -68,6 +72,7 @@ export default function TaskForm({
     effort: '',
     dateCertainty: DEFAULT_DATE_CERTAINTY,
     isBlocked: false,
+    blockedByTaskId: '',
     availableFrom: '',
     submissionDate: '',
     // priorities[0] (não 'MEDIUM' fixo) - Priority passou a ser um
@@ -98,6 +103,8 @@ export default function TaskForm({
     calendarDurationMinutes: '60',
   });
 
+  const topicSteps = useMemo(() => topicsToSteps(formData.topics), [formData.topics]);
+  const blockerOptions = useMemo(() => openBlockerOptions(existingTasks), [existingTasks]);
   const tagSuggestions = useMemo(() => collectTags(existingTasks), [existingTasks]);
 
   const updateField = (field: keyof TaskFormFieldValues, value: string | boolean | string[]) => {
@@ -161,6 +168,7 @@ export default function TaskForm({
       <TaskTemplatePicker onApply={applyTemplate} buildDraft={buildTemplateDraft} suggestedName={formData.title} />
 
       <TaskFormFields
+        blockerOptions={blockerOptions}
         idPrefix="create-task"
         values={formData}
         onChange={updateField}
@@ -174,7 +182,28 @@ export default function TaskForm({
         tagSuggestions={tagSuggestions}
       />
 
-      <DayLoadHint date={formData.date} tasks={existingTasks} />
+      <DayLoadHint
+        date={formData.date}
+        tasks={existingTasks}
+        onPickDate={(value) => setFormData((prev) => ({ ...prev, date: value }))}
+      />
+
+      <AreaSuggestionHint
+        title={formData.title}
+        areas={areas}
+        tasks={existingTasks}
+        currentAreaId={formData.areaId}
+        onApply={(areaId) => setFormData((prev) => ({ ...prev, areaId }))}
+      />
+
+      <DifficultySuggestionHint
+        tasks={existingTasks}
+        areaId={formData.areaId}
+        type={formData.type}
+        difficulties={difficulties}
+        current={formData.difficulty}
+        onApply={(value) => setFormData((prev) => ({ ...prev, difficulty: value }))}
+      />
 
       <RecurrenceFields idPrefix="create-task" value={recurrence} onChange={setRecurrence} />
 
@@ -190,6 +219,15 @@ export default function TaskForm({
           placeholder={t('ui.readChapter1SolveWorksheet')}
           className="w-full rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-violet-600"
         />
+        {topicSteps.length >= MIN_TOPICS_FOR_SUGGESTION && (
+          <button
+            type="button"
+            onClick={() => setChecklistText((current) => mergeStepsIntoChecklist(current, topicSteps))}
+            className="mt-1 text-xs font-semibold text-violet-300 hover:text-violet-200"
+          >
+            {t('checklistFromTopics.apply')}
+          </button>
+        )}
       </div>
 
       <div className="pt-4 flex justify-end gap-3 border-t border-neutral-800">

@@ -6,6 +6,7 @@ import { OVERLOAD_THRESHOLD, OVERLOAD_WINDOW_DAYS } from '../../utils/detectOver
 import { AlertTriangleIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
 import { hasFirmDate } from '../../lib/taskReadiness';
+import { suggestLighterDay } from '../../lib/lighterDay';
 
 interface DayLoadHintProps {
   // "YYYY-MM-DD" escolhido no formulario.
@@ -13,6 +14,8 @@ interface DayLoadHintProps {
   tasks: Task[];
   // A propria task em edicao nao conta para a carga.
   excludeTaskId?: string;
+  // Se vier, oferece mover a data para um dia mais livre.
+  onPickDate?: (date: string) => void;
 }
 
 // Tasks sem hora ficam a meia-noite UTC (o dia e o do ISO); com hora usa-se o
@@ -37,7 +40,7 @@ function formatHours(minutes: number): string {
 // Aviso ao escolher a data: esse dia, ou os 7 dias a partir dele, ja estao
 // carregados? Mesmo criterio do OverloadAlertCard (contagem de tasks por
 // fazer), so frontend, sobre as tasks que a pagina ja tem.
-export default function DayLoadHint({ date, tasks, excludeTaskId }: DayLoadHintProps) {
+export default function DayLoadHint({ date, tasks, excludeTaskId, onPickDate }: DayLoadHintProps) {
   const { t } = useI18n();
   const load = useMemo(() => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
@@ -53,7 +56,9 @@ export default function DayLoadHint({ date, tasks, excludeTaskId }: DayLoadHintP
       return offset >= 0 && offset < OVERLOAD_WINDOW_DAYS;
     });
     const estimated = sameDay.reduce((sum, t) => sum + (t.estimatedMinutes ?? 0), 0);
-    return { sameDay, inWindow, estimated };
+    const counts = new Map<string, number>();
+    for (const task of pending) counts.set(dayKeyOf(task), (counts.get(dayKeyOf(task)) ?? 0) + 1);
+    return { sameDay, inWindow, estimated, lighterDay: suggestLighterDay(date, counts) };
   }, [date, tasks, excludeTaskId]);
 
   if (!load) return null;
@@ -80,6 +85,18 @@ export default function DayLoadHint({ date, tasks, excludeTaskId }: DayLoadHintP
         {heavyWeek && (
           <p>
             {t('ui.heavyStretchPendingTasksFall', { inWindowCount: load.inWindow.length })}</p>
+        )}
+        {onPickDate && load.lighterDay && (
+          <p className="flex flex-wrap items-center gap-2">
+            <span>{t('lighterDay.text', { date: new Date(`${load.lighterDay}T00:00:00`).toLocaleDateString() })}</span>
+            <button
+              type="button"
+              onClick={() => onPickDate(load.lighterDay as string)}
+              className="rounded-md border border-amber-700 px-2 py-0.5 font-semibold hover:bg-amber-900/40"
+            >
+              {t('lighterDay.apply')}
+            </button>
+          </p>
         )}
       </div>
     </div>

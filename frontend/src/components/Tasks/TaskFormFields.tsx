@@ -33,6 +33,8 @@ export interface TaskFormFieldValues {
   effort: string;
   dateCertainty: string;
   isBlocked: boolean;
+  // '' = nenhuma; senao o id da task que tem de estar concluida primeiro.
+  blockedByTaskId: string;
   // "YYYY-MM-DD" ou "" (ja disponivel).
   availableFrom: string;
   // Trabalho em duas fases: dia da entrega, "" = uma so fase.
@@ -81,6 +83,8 @@ interface TaskFormFieldsProps {
   showRealGrade?: boolean;
   showProgressStatus?: boolean;
   tagSuggestions?: string[];
+  // Tasks que podem ser escolhidas como bloqueador (abertas, sem a propria).
+  blockerOptions?: { id: string; title: string }[];
 }
 
 export default function TaskFormFields({
@@ -97,6 +101,7 @@ export default function TaskFormFields({
   showRealGrade = false,
   showProgressStatus = false,
   tagSuggestions,
+  blockerOptions = [],
 }: TaskFormFieldsProps) {
   const { isAcademic, availableAcademicTypes, selectedArea, isTypeLockedByArea, filteredAreas } =
     useTaskTypeLogic({
@@ -193,6 +198,9 @@ export default function TaskFormFields({
         dateCertainty={values.dateCertainty}
         isBlocked={values.isBlocked}
         availableFrom={values.availableFrom}
+        blockedByTaskId={values.blockedByTaskId}
+        blockerOptions={blockerOptions}
+        onBlockedByChange={(v) => onChange('blockedByTaskId', v)}
         onEffortChange={(v) => onChange('effort', v)}
         onDateCertaintyChange={(v) => onChange('dateCertainty', v)}
         onIsBlockedChange={(v) => onChange('isBlocked', v)}

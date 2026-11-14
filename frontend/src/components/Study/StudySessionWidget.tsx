@@ -19,6 +19,8 @@ import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
 import { useI18n } from '../../i18n/useI18n';
 import Card from '../UI/Card';
+import ToggleRow from '../UI/ToggleRow';
+import { isWakeLockSupported, useKeepScreenOnPref, useWakeLock } from '../../hooks/useWakeLock';
 import { formatTaskDue, hasFirmDate } from '../../lib/taskReadiness';
 
 // Data curta para o rótulo da task no dropdown (ex: "20 Set") - timeZone
@@ -47,6 +49,8 @@ export default function StudySessionWidget() {
   } = useStudySession();
   // O tempo vem do <SessionClock>: este formulario nao renderiza 1x/s.
   const { timerPlan } = useActiveStudySession();
+  const { keepScreenOn, setKeepScreenOn } = useKeepScreenOnPref();
+  useWakeLock(keepScreenOn && Boolean(activeSession));
   const { stopSession } = useStopSession();
 
   const [plan, setPlan] = useState<TimerPlan | null>(null);
@@ -162,6 +166,17 @@ export default function StudySessionWidget() {
               sessionId={activeSession.id}
               initialCount={activeSession.distractionCount ?? 0}
             />
+            {isWakeLockSupported() && (
+              <div className="mt-3 flex justify-center text-left">
+                <ToggleRow
+                  variant="inline"
+                  label={t('wakeLock.label')}
+                  description={t('wakeLock.help')}
+                  checked={keepScreenOn}
+                  onChange={setKeepScreenOn}
+                />
+              </div>
+            )}
           </div>
 
           {isStopping ? (

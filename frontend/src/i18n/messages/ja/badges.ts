@@ -6,4 +6,7 @@ export const badges: Record<string, string> = {
   'badges.projects': "{target} 件のプロジェクトを完了",
   'badges.earned': "獲得済み",
   'badges.hint': "お楽しみ用です。バッジは完了したタスクと、この端末での最高の連続記録に基づきます。",
+  'badges.unlocked': "バッジを獲得: {name}",
+  'badges.completedOne': "最初のタスクを完了",
+  'badges.projectsOne': "最初のプロジェクトを完了",
 };

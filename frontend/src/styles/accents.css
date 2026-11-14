@@ -189,3 +189,75 @@
   --color-violet-500: #fca5a5;
   --color-violet-600: #f87171;
 }
+
+:root[data-accent='amber'] {
+  --color-violet-50: #fffbeb;
+  --color-violet-100: #fef3c7;
+  --color-violet-200: #fde68a;
+  --color-violet-300: #fcd34d;
+  --color-violet-400: #fbbf24;
+  --color-violet-500: #f59e0b;
+  --color-violet-600: #b45309;
+  --color-violet-700: #92400e;
+  --color-violet-800: #92400e;
+  --color-violet-900: #78350f;
+  --color-violet-950: #451a03;
+  --color-fuchsia-400: #fcd34d;
+}
+
+:root[data-accent='amber'][data-theme='light'] {
+  --color-violet-50: #451a03;
+  --color-violet-100: #78350f;
+  --color-violet-200: #92400e;
+  --color-violet-300: #b45309;
+  --color-violet-400: #b45309;
+  --color-violet-500: #b45309;
+  --color-violet-600: #b45309;
+  --color-violet-700: #fde68a;
+  --color-violet-800: #fef3c7;
+  --color-violet-900: #fffbeb;
+  --color-violet-950: #fffbeb;
+  --color-fuchsia-400: #b45309;
+}
+
+:root[data-accent='amber'][data-contrast='high']:not([data-theme='light']) {
+  --color-violet-400: #fde68a;
+  --color-violet-500: #fcd34d;
+  --color-violet-600: #fbbf24;
+}
+
+:root[data-accent='fuchsia'] {
+  --color-violet-50: #fdf4ff;
+  --color-violet-100: #fae8ff;
+  --color-violet-200: #f5d0fe;
+  --color-violet-300: #f0abfc;
+  --color-violet-400: #e879f9;
+  --color-violet-500: #d946ef;
+  --color-violet-600: #a21caf;
+  --color-violet-700: #86198f;
+  --color-violet-800: #86198f;
+  --color-violet-900: #701a75;
+  --color-violet-950: #4a044e;
+  --color-fuchsia-400: #f0abfc;
+}
+
+:root[data-accent='fuchsia'][data-theme='light'] {
+  --color-violet-50: #4a044e;
+  --color-violet-100: #701a75;
+  --color-violet-200: #86198f;
+  --color-violet-300: #a21caf;
+  --color-violet-400: #a21caf;
+  --color-violet-500: #a21caf;
+  --color-violet-600: #a21caf;
+  --color-violet-700: #f5d0fe;
+  --color-violet-800: #fae8ff;
+  --color-violet-900: #fdf4ff;
+  --color-violet-950: #fdf4ff;
+  --color-fuchsia-400: #a21caf;
+}
+
+:root[data-accent='fuchsia'][data-contrast='high']:not([data-theme='light']) {
+  --color-violet-400: #f5d0fe;
+  --color-violet-500: #f0abfc;
+  --color-violet-600: #e879f9;
+}

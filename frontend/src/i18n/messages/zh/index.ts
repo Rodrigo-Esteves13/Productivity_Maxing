@@ -46,6 +46,20 @@ import { ambientGlobal } from './ambientGlobal';
 import { financeFixes } from './financeFixes';
 import { focusHours } from './focusHours';
 import { financeImport } from './financeImport';
+import { wakeLock } from './wakeLock';
+import { startFive } from './startFive';
+import { energyMatch } from './energyMatch';
+import { flashcardTest } from './flashcardTest';
+import { eisenhower } from './eisenhower';
+import { replan } from './replan';
+import { flashcardImport } from './flashcardImport';
+import { lighterDay } from './lighterDay';
+import { typeBalance } from './typeBalance';
+import { taskBlocker } from './taskBlocker';
+import { checklistFromTopics } from './checklistFromTopics';
+import { areaSuggestion } from './areaSuggestion';
+import { difficultySuggestion } from './difficultySuggestion';
+import { taskHistory } from './taskHistory';
 import { timeline } from './timeline';
 import { pushKinds } from './pushKinds';
 import { avatarTier } from './avatarTier';
@@ -114,6 +128,20 @@ export const zh: Record<string, string> = {
   ...financeFixes,
   ...focusHours,
   ...financeImport,
+  ...wakeLock,
+  ...startFive,
+  ...energyMatch,
+  ...flashcardTest,
+  ...eisenhower,
+  ...replan,
+  ...flashcardImport,
+  ...lighterDay,
+  ...typeBalance,
+  ...taskBlocker,
+  ...checklistFromTopics,
+  ...areaSuggestion,
+  ...difficultySuggestion,
+  ...taskHistory,
   ...timeline,
   ...pushKinds,
   ...avatarTier,

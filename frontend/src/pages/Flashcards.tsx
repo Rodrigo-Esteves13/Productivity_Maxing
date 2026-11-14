@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import Button from '../components/UI/Button';
@@ -8,7 +9,10 @@ import Select from '../components/UI/Select';
 import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import CardEditor from '../components/Flashcards/CardEditor';
 import DeckList from '../components/Flashcards/DeckList';
+import ImportCardsModal from '../components/Flashcards/ImportCardsModal';
 import ReviewSession from '../components/Flashcards/ReviewSession';
+import PracticeTest from '../components/Flashcards/PracticeTest';
+import { TEST_MIN_CARDS } from '../lib/flashcardTest';
 import { isDue } from '../components/Flashcards/decks';
 import ConfirmActionDialog from '../components/Turma/ConfirmActionDialog';
 import { useConfirmAction } from '../hooks/useConfirmAction';
@@ -29,12 +33,16 @@ type EditorState = null | 'new' | Flashcard;
 export default function Flashcards() {
   const { t } = useI18n();
   useDocumentTitle(t('flashcards.title'));
-  const { cards, isLoading, error, reload, create, update, remove, review } = useFlashcards();
+  const { cards, isLoading, error, reload, create, importMany, update, remove, review } = useFlashcards();
   const { areas } = useNotebookAreas();
   const areaById = useAreaLookup(areas);
   const [filter, setFilter] = useState(ALL);
   const [editor, setEditor] = useState<EditorState>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const [queue, setQueue] = useState<Flashcard[] | null>(null);
+  // ?test=1 (paleta) abre logo o teste de pratica.
+  const [searchParams] = useSearchParams();
+  const [isTesting, setIsTesting] = useState(searchParams.get('test') === '1');
   const confirm = useConfirmAction(t('flashcards.saveError'));
 
   const visible = useMemo(
@@ -42,6 +50,8 @@ export default function Flashcards() {
       filter === ALL ? cards : cards.filter((c) => (filter === NO_AREA ? c.areaId === null : c.areaId === filter)),
     [cards, filter],
   );
+  // So abre o teste quando ha cartas suficientes no filtro.
+  const showTest = isTesting && visible.length >= TEST_MIN_CARDS;
   const due = useMemo(() => visible.filter((c) => isDue(c, Date.now())), [visible]);
 
   const requestRemove = (card: Flashcard) =>
@@ -63,10 +73,17 @@ export default function Flashcards() {
         title={t('flashcards.title')}
         description={t('flashcards.description')}
         action={
-          !queue && (
+          !queue &&
+          !showTest && (
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" onClick={() => setEditor('new')}>
                 {t('flashcards.newCard')}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setIsImporting(true)}>
+                {t('flashcardImport.button')}
+              </Button>
+              <Button variant="secondary" size="sm" disabled={visible.length < TEST_MIN_CARDS} onClick={() => setIsTesting(true)}>
+                {t('flashcardTest.button')}
               </Button>
               <Button size="sm" disabled={due.length === 0} onClick={startSession}>
                 {t('flashcards.study', { count: due.length })}
@@ -77,6 +94,8 @@ export default function Flashcards() {
       />
       {queue ? (
         <ReviewSession queue={queue} onGrade={review} onExit={() => setQueue(null)} />
+      ) : showTest ? (
+        <PracticeTest cards={visible} onExit={() => setIsTesting(false)} />
       ) : isLoading ? (
         <CardGridSkeleton cards={3} />
       ) : error ? (
@@ -110,6 +129,15 @@ export default function Flashcards() {
           areas={areas}
           onSubmit={(input) => (editor === 'new' ? create(input) : update(editor.id, input))}
           onClose={() => setEditor(null)}
+        />
+      )}
+      {isImporting && (
+        <ImportCardsModal
+          areas={areas}
+          existingFronts={cards.map((c) => c.front)}
+          defaultAreaId={filter && filter !== NO_AREA ? filter : null}
+          onImport={(imported, areaId) => importMany(imported.map((card) => ({ ...card, areaId })))}
+          onClose={() => setIsImporting(false)}
         />
       )}
       <ConfirmActionDialog state={confirm} />

@@ -8,4 +8,7 @@ export const accentColor: Record<string, string> = {
   'accentColor.option.pink': "분홍",
   'accentColor.option.orange': "주황",
   'accentColor.option.red': "빨강",
+  'accentColor.option.amber': "앰버",
+  'accentColor.option.fuchsia': "푸크시아",
+  'accentColor.locked': "{name}: 완료한 작업 {count}개에서 해제",
 };

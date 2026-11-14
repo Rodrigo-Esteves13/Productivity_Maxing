@@ -15,6 +15,9 @@ export const getFlashcards = async (): Promise<Flashcard[]> => (await api.get<Fl
 export const createFlashcard = async (input: FlashcardInput): Promise<Flashcard> =>
   (await api.post<Flashcard>('/flashcards', input)).data;
 
+export const createFlashcards = async (cards: FlashcardInput[]): Promise<number> =>
+  (await api.post<{ created: number }>('/flashcards/bulk', { cards })).data.created;
+
 export const updateFlashcard = async (id: string, input: Partial<FlashcardInput>): Promise<Flashcard> =>
   (await api.patch<Flashcard>(url(id), input)).data;
 

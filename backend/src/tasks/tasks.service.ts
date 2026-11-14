@@ -45,6 +45,8 @@ import {
 import type { CursorPaginationDto } from '../common/dto/cursor-pagination.dto';
 import { listOrPage, type ListMeta } from '../common/pagination.util';
 import { TaskAttachmentsService } from './task-attachments.service';
+import { assertBlockerValid, unblockDependents } from './task-blocker';
+import { diffTaskFields, type TaskSnapshot } from './task-change-diff';
 import {
   ACTIONABLE_DEADLINE_WHERE,
   hasFirmDate,
@@ -92,6 +94,9 @@ type TaskWithIncludes = Prisma.TaskGetPayload<{
 // PgBouncer session mode here, see PrismaService) even if several users
 // import at the same time.
 const IMPORT_CREATE_CONCURRENCY = 10;
+
+// Quantas alteracoes o historico de uma task devolve.
+const TASK_CHANGES_PAGE_SIZE = 100;
 
 // Revisões espaçadas: quantos dias depois de concluir, e duração estimada.
 const SPACED_REVIEW_OFFSETS_DAYS = [1, 3, 7];
@@ -164,6 +169,8 @@ export class TasksService {
     // A Area tem de ser oficial ou privada DESTE user: o FK sozinho aceita
     // qualquer UUID existente, incluindo o de uma Area privada de outro.
     await assertAreaAccessible(this.prisma, userId, dto.areaId);
+    // Dependencia: valida o bloqueador e nasce bloqueada enquanto ele estiver aberto.
+    const blockerPatch = await this.blockerPatch(userId, undefined, rest);
     const typeIds = await this.resolveTypes(type, academicType);
     const priorityId = await this.resolvePriorityId(priority);
 
@@ -199,6 +206,7 @@ export class TasksService {
       const task = await this.prisma.task.create({
         data: {
           ...rest,
+          ...blockerPatch,
           date: new Date(date),
           userId, // Agora temos a certeza absoluta que o ID não está vazio!
           periodId: resolvedPeriodId,
@@ -464,6 +472,13 @@ export class TasksService {
           }
         : {};
 
+    // Dependencia: so se valida quando o PATCH a traz.
+    // So quando o bloqueador MUDA: reenviar o mesmo nao volta a bloquear uma task que o user desbloqueou.
+    const blockerPatch =
+      rest.blockedByTaskId !== existing.blockedByTaskId
+        ? await this.blockerPatch(userId, id, rest)
+        : {};
+
     // Mudar de Area: mesma regra do create() (oficial ou minha).
     if (rest.areaId !== undefined && rest.areaId !== existing.areaId) {
       await assertAreaAccessible(this.prisma, userId, rest.areaId);
@@ -572,6 +587,7 @@ export class TasksService {
       where: { id, userId },
       data: {
         ...rest,
+        ...blockerPatch,
         ...(date ? { date: new Date(date) } : {}),
         ...typeIds,
         ...completedAtUpdate,
@@ -605,16 +621,81 @@ export class TasksService {
       include: TASK_INCLUDE,
     });
 
+    await this.recordChanges(id, existing, task);
+
     // Acabou de passar a COMPLETED: próxima ocorrência (se repete) e
     // revisões espaçadas (se o user ativou). As tasks novas vão na resposta
     // para o frontend as mostrar sem recarregar.
     const spawnedTasks = justCompleted
       ? await this.spawnFollowUps(userId, task)
       : [];
+    if (justCompleted) await unblockDependents(this.prisma, userId, id);
     return {
       ...this.toResponse(task),
       ...(spawnedTasks.length > 0 ? { spawnedTasks } : {}),
     };
+  }
+
+  /**
+   * Valida o bloqueador pedido (se vier) e devolve o que acrescentar aos dados
+   * gravados: bloqueada enquanto o bloqueador estiver por concluir.
+   */
+  private async blockerPatch(
+    userId: string,
+    taskId: string | undefined,
+    input: { blockedByTaskId?: string | null },
+  ): Promise<{ isBlocked?: boolean }> {
+    if (!input.blockedByTaskId) return {};
+    const { blockerOpen } = await assertBlockerValid(
+      this.prisma,
+      userId,
+      taskId,
+      input.blockedByTaskId,
+    );
+    return blockerOpen ? { isBlocked: true } : {};
+  }
+
+  /**
+   * Guarda no historico os campos que este PATCH mudou. Best-effort: falhar
+   * aqui nunca pode falhar a edicao que o user acabou de fazer.
+   */
+  private async recordChanges(
+    taskId: string,
+    before: TaskSnapshot,
+    after: TaskSnapshot,
+  ): Promise<void> {
+    const rows = diffTaskFields(before, after);
+    if (rows.length === 0) return;
+    try {
+      await this.prisma.taskChange.createMany({
+        data: rows.map((row) => ({ taskId, ...row })),
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Historico da task ${taskId} nao gravado: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  /** Alteracoes de uma task do user, mais recentes primeiro. */
+  async listChanges(userId: string, taskId: string) {
+    const task = await this.prisma.task.findFirst({
+      where: { id: taskId, userId },
+      select: { id: true },
+    });
+    if (!task) throw new NotFoundException('Task not found.');
+    return this.prisma.taskChange.findMany({
+      where: { taskId },
+      orderBy: { createdAt: 'desc' },
+      take: TASK_CHANGES_PAGE_SIZE,
+      select: {
+        id: true,
+        field: true,
+        fromValue: true,
+        toValue: true,
+        createdAt: true,
+      },
+    });
   }
 
   /**

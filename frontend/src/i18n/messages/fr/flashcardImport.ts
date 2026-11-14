@@ -1,0 +1,13 @@
+export const flashcardImport: Record<string, string> = {
+  'flashcardImport.title': "Importer des cartes",
+  'flashcardImport.help': "Colle une carte par ligne : recto puis verso, séparés par une tabulation (exports Quizlet et Anki), un point-virgule ou une virgule.",
+  'flashcardImport.text': "Cartes",
+  'flashcardImport.placeholder': "hello\tbonjour\ngoodbye;au revoir",
+  'flashcardImport.summary': "{ready} prêtes à importer, {skipped} ignorées.",
+  'flashcardImport.action': "Importer {count} cartes",
+  'flashcardImport.skip.noSeparator': "Ligne {line} : ni tabulation, ni point-virgule, ni virgule.",
+  'flashcardImport.skip.empty': "Ligne {line} : recto ou verso vide.",
+  'flashcardImport.skip.tooLong': "Ligne {line} : texte trop long.",
+  'flashcardImport.skip.duplicate': "Ligne {line} : tu as déjà cette carte.",
+  'flashcardImport.button': "Importer des cartes depuis un texte",
+};

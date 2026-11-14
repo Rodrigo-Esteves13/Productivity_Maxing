@@ -33,12 +33,15 @@ import {
   StatusSummaryCard,
   AreaConsistencyCard,
   XpLevelCard,
+  TypeBalanceCard,
 } from './lazyCards';
 import type { DashboardWidgetKey } from '../../hooks/useDashboardWidgetPrefs';
 import type { AcademicProgram, AcademicTaskTypeOption, Area, Task } from '../../types/models';
 
 interface DashboardCardGridProps {
   academicTasks: Task[];
+  // Todas as tasks do periodo (qualquer tipo), para o cartao de equilibrio.
+  allTasks: Task[];
   academicAreas: Area[];
   academicTaskTypes: AcademicTaskTypeOption[];
   activeProgram: AcademicProgram | null;
@@ -51,6 +54,7 @@ interface DashboardCardGridProps {
 // visibility + dados) se aparece; o MasonryGrid trata de nao deixar buracos.
 export default function DashboardCardGrid({
   academicTasks,
+  allTasks,
   academicAreas,
   academicTaskTypes,
   activeProgram,
@@ -139,6 +143,7 @@ export default function DashboardCardGrid({
       />
     ),
     xpLevel: visibility.xpLevel && academicTasks.length > 0 && <XpLevelCard tasks={academicTasks} />,
+    typeBalance: visibility.typeBalance && allTasks.length > 0 && <TypeBalanceCard tasks={allTasks} />,
   };
 
   return (
