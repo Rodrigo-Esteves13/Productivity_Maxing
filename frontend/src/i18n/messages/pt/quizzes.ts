@@ -138,6 +138,7 @@ export const quizzes: Record<string, string> = {
   'quizzes.results.cardsError': "Não foi possível criar as flashcards.",
   'quizzes.results.partialNote': "Tentativa parcial: {answered} de {planned} respondidas. As perguntas sem resposta não contam.",
   'quizzes.results.cardsAsk': "Erraste {count}. Queres adicioná-las às flashcards?",
+  'quizzes.results.cardsAskSome': "Erraste {wrong}. {already} já estão nas flashcards de tentativas anteriores. Adicionar as outras {count}?",
   'quizzes.results.cardsAdd': "Adicionar {count} às flashcards",
   'quizzes.results.cardsNotNow': "Agora não",
   'quizzes.results.cardsAlready': "As tuas respostas erradas já estão nas flashcards.",
@@ -222,4 +223,9 @@ export const quizzes: Record<string, string> = {
   'quizzes.calc.mixHelp': "Cerca de um quarto das perguntas vem dos geradores que ligaste.",
   'quizzes.calc.saveError': "Não foi possível guardar os geradores.",
   'quizzes.calc.answers': "Respostas: {count}",
+  'quizzes.pool.label': "Perguntas:",
+  'quizzes.pool.all': "Todas ({count})",
+  'quizzes.pool.unseen': "Não vistas ({count})",
+  'quizzes.pool.wrong': "Erradas ({count})",
+  'quizzes.pool.unseenWrong': "Não vistas + erradas ({count})",
 };

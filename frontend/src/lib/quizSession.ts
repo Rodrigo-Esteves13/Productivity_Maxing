@@ -314,6 +314,24 @@ export function wrongQuestions(quiz: Quiz, stats: QuizStats): QuizQuestion[] {
   });
 }
 
+// Conjunto de perguntas de onde o exame e a pratica escolhem.
+export type QuestionPool = 'all' | 'unseen' | 'wrong' | 'unseenWrong';
+export const QUESTION_POOLS: QuestionPool[] = ['all', 'unseen', 'wrong', 'unseenWrong'];
+
+const isUnseen = (stats: QuizStats, id: string) => (statOf(stats, id)?.seen ?? 0) === 0;
+
+// Nunca vistas, so as erradas (area de erradas) ou as duas juntas.
+export function poolQuestions(quiz: Quiz, stats: QuizStats, pool: QuestionPool): QuizQuestion[] {
+  if (pool === 'all') return quiz.questions;
+  const wrong = new Set(wrongQuestions(quiz, stats).map((q) => q.id));
+  return quiz.questions.filter((q) => {
+    const unseen = isUnseen(stats, q.id);
+    if (pool === 'unseen') return unseen;
+    if (pool === 'wrong') return wrong.has(q.id);
+    return unseen || wrong.has(q.id);
+  });
+}
+
 export interface SessionScore {
   correct: number;
   total: number;

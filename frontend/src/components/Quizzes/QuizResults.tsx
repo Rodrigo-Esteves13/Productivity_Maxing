@@ -58,6 +58,12 @@ export default function QuizResults({ session, planned, score, unsentWrong, isSe
   const wrong = score.results.filter((r) => !r.right).length;
   const isPartial = planned > score.total;
   const showAsk = unsentWrong > 0 && !askDismissed;
+  // Erradas que ja estao nas flashcards (de tentativas anteriores) nao voltam a ser oferecidas.
+  const alreadySent = wrong - unsentWrong;
+  const cardsAsk =
+    alreadySent > 0
+      ? t('quizzes.results.cardsAskSome', { wrong, already: alreadySent, count: unsentWrong })
+      : t('quizzes.results.cardsAsk', { count: unsentWrong });
   const timing = useMemo(() => attemptTiming(score, durationMs), [score, durationMs]);
   const byTopic = useMemo(() => scoreByTopicWorstFirst(score), [score]);
   const byKind = useMemo(() => scoreByKind(score), [score]);
@@ -119,8 +125,8 @@ export default function QuizResults({ session, planned, score, unsentWrong, isSe
           </div>
         </div>
         {showAsk && (
-          <div role="group" aria-label={t('quizzes.results.cardsAsk', { count: unsentWrong })} className="mt-5 rounded-lg border border-violet-500/40 bg-violet-950/20 p-3">
-            <p className="text-sm text-neutral-200">{t('quizzes.results.cardsAsk', { count: unsentWrong })}</p>
+          <div role="group" aria-label={cardsAsk} className="mt-5 rounded-lg border border-violet-500/40 bg-violet-950/20 p-3">
+            <p className="text-sm text-neutral-200">{cardsAsk}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Button size="sm" disabled={isSendingCards} onClick={onSendToFlashcards}>
                 {t('quizzes.results.cardsAdd', { count: unsentWrong })}

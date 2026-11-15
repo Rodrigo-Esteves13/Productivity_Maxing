@@ -138,6 +138,7 @@ export const quizzes: Record<string, string> = {
   'quizzes.results.cardsError': "Die Karteikarten konnten nicht erstellt werden.",
   'quizzes.results.partialNote': "Teilweiser Versuch: {answered} von {planned} beantwortet. Unbeantwortete Fragen zählen nicht.",
   'quizzes.results.cardsAsk': "Du hast {count} falsch beantwortet. Zu den Karteikarten hinzufügen?",
+  'quizzes.results.cardsAskSome': "Du hast {wrong} falsch. {already} sind schon aus früheren Versuchen in den Karteikarten. Die anderen {count} hinzufügen?",
   'quizzes.results.cardsAdd': "{count} zu den Karteikarten hinzufügen",
   'quizzes.results.cardsNotNow': "Jetzt nicht",
   'quizzes.results.cardsAlready': "Deine falschen Antworten sind schon in den Karteikarten.",
@@ -222,4 +223,9 @@ export const quizzes: Record<string, string> = {
   'quizzes.calc.mixHelp': "Etwa ein Viertel der Fragen stammt aus den Generatoren, die du aktiviert hast.",
   'quizzes.calc.saveError': "Die Generatoren konnten nicht gespeichert werden.",
   'quizzes.calc.answers': "{count} Antworten",
+  'quizzes.pool.label': "Fragen:",
+  'quizzes.pool.all': "Alle ({count})",
+  'quizzes.pool.unseen': "Noch nicht gesehen ({count})",
+  'quizzes.pool.wrong': "Falsch ({count})",
+  'quizzes.pool.unseenWrong': "Nicht gesehen + falsch ({count})",
 };
