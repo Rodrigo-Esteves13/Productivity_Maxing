@@ -324,7 +324,8 @@ describe('sanitizeQuizDiagram: string injection ends as harmless plain text', ()
     const result = sanitizeQuizDiagram(raw);
     const diagram = result.diagram;
     expect(diagram).not.toBeNull();
-    const texts = [diagram!.nodes[0].label, diagram!.nodes[0].sub, diagram!.links[0]?.label ?? '', diagram!.labels[0].text, diagram!.areas[0].label];
+    // Um bloco sem fecho ("<svg ...>") leva o resto do texto, por isso a etiqueta pode sair.
+    const texts = [diagram!.nodes[0].label, diagram!.nodes[0].sub, diagram!.links[0]?.label ?? '', diagram!.labels[0]?.text ?? '', diagram!.areas[0].label];
     texts.forEach((text) => {
       expect(text).not.toMatch(HARMFUL);
       expect(Array.from(text).some((c) => c.charCodeAt(0) < TAB)).toBe(false);

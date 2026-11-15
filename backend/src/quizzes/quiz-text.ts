@@ -6,43 +6,76 @@
 // nada (nem conta como perigoso). O servidor depende disto para aceitar so
 // quizzes que ja chegam na forma canonica (ver recheckCanonicalQuiz).
 
+// O markup e tirado por um leitor de uma so passagem (stripMarkup), nunca por
+// .replace(regex, ''): cada '<' e lido uma vez, os regex com flag 'y' so
+// testam o que comeca exatamente nesse '<', e o resultado e construido a parte.
+
 // Etiquetas HTML conhecidas: so estas sao removidas, para nao comer texto
-// como "<interface>" ou "a < b" em perguntas tecnicas. [^<>] (e nao [^>])
-// para que "<b<b<b..." nao faca a procura voltar ao fim do texto a cada "<".
+// como "<interface>" ou "a < b" em perguntas tecnicas.
 const HTML_TAGS =
   'a|abbr|audio|b|base|blockquote|body|br|button|code|del|details|div|em|embed|form|frame|frameset|h[1-6]|head|hr|html|i|iframe|img|input|ins|kbd|label|li|link|mark|math|meta|object|ol|option|p|pre|s|script|select|small|source|span|strong|style|sub|summary|sup|svg|table|tbody|td|template|textarea|th|thead|tr|u|ul|video';
-const TAG = new RegExp(`<\\/?(?:${HTML_TAGS})\\b[^<>]*>`, 'gi');
-// Blocos cujo conteudo tambem sai (codigo ou estilos, nunca texto util). O
-// conteudo para no proximo "<bloco" ou "</bloco", por isso a procura e linear.
-const DROP_BLOCK =
-  /<(script|style|iframe|object|embed|template|svg|math)\b[^<>]*>(?:(?!<\/?\1\b)[\s\S])*<\/\1\s*>/gi;
-const BREAK = /<br\b[^<>]*>/gi;
-const BOLD = /<\/?(?:b|strong)\b[^<>]*>/gi;
-const ITALIC = /<\/?(?:i|em)\b[^<>]*>/gi;
-const CODE = /<\/?code\b[^<>]*>/gi;
+// Etiqueta conhecida (aberta ou fechada, qualquer caixa). Acaba no primeiro
+// '>': as aspas nao sao lidas, por isso em '<b title="a>b">' a etiqueta e
+// '<b title="a>' e 'b">' fica como texto (inofensivo: sem '<' nao abre nada).
+// [^<>] (e nao [^>]) para que "<b<b<b..." nao faca a procura ir ao fim do
+// texto a cada "<".
+const KNOWN_TAG = new RegExp(`<(\\/?)(${HTML_TAGS})\\b[^<>]*>`, 'iy');
+// Blocos cujo conteudo tambem sai (codigo ou estilos, nunca texto util), ate a
+// etiqueta de fecho; sem fecho, ate ao fim do texto.
+const DROP_BLOCK_NAMES = [
+  'script',
+  'style',
+  'iframe',
+  'object',
+  'embed',
+  'template',
+  'svg',
+  'math',
+];
+const BLOCK_CLOSE = new Map(
+  DROP_BLOCK_NAMES.map((name) => [
+    name,
+    new RegExp(`<\\/${name}\\b[^<>]*>`, 'gi'),
+  ]),
+);
+const BREAK_TAG = 'br';
+// <b>, <i> e <code> passam a markdown minimo (com markdown ligado).
+const MARKDOWN_TAGS = new Map([
+  ['b', '**'],
+  ['strong', '**'],
+  ['i', '*'],
+  ['em', '*'],
+  ['code', '`'],
+]);
+// Comentarios HTML saem inteiros; sem fecho, ate ao fim do texto.
+const COMMENT_OPEN = '<!--';
+const COMMENT_CLOSE = '-->';
 const DANGER_TAG_NAMES =
   'script|iframe|object|embed|style|svg|img|link|meta|form|base|frame';
 // Conteudo perigoso (conta no aviso 'content'). Cada parte tem a sua
 // neutralizacao abaixo, por isso o texto limpo nunca volta a corresponder.
 const DANGER = new RegExp(
-  `<\\s*\\/?\\s*(?:${DANGER_TAG_NAMES})\\b|javascript\\s*:|vbscript\\s*:|data\\s*:\\s*text\\/html|<\\/?[a-z][a-z0-9-]*[\\s/][^<>]*\\bon[a-z]+\\s*=`,
+  `<\\s*(?:\\/\\s*)?(?:${DANGER_TAG_NAMES})\\b|javascript\\s*:|vbscript\\s*:|data\\s*:\\s*text\\/html|<\\/?[a-z][a-z0-9-]*[\\s/][^<>]*\\bon[a-z]+\\s*=`,
   'i',
 );
-// "<" de uma etiqueta perigosa que nao saiu acima (ex.: "< script", sem ">").
+// "<" de uma etiqueta perigosa que nao saiu como etiqueta conhecida (ex.:
+// "< script", sem ">"): o '<' sai. "\s*(?:\/\s*)?" (e nao "\s*\/?\s*", que e
+// ambiguo) para que "<" seguido de muitos espacos nao custe tempo quadratico.
 const DANGER_TAG_START = new RegExp(
-  `<(?=\\s*\\/?\\s*(?:${DANGER_TAG_NAMES})\\b)`,
-  'gi',
+  `<\\s*(?:\\/\\s*)?(?:${DANGER_TAG_NAMES})\\b`,
+  'iy',
 );
-const SCHEME = /javascript\s*:|vbscript\s*:|data\s*:\s*text\/html/gi;
-// "<" de uma etiqueta com atributo de evento (ex.: "<foo onerror=x>"); texto
-// como "a < b; x.onclick = f" fica igual.
-const HANDLER_TAG_START = /<(?=\/?[a-z][a-z0-9-]*[\s/][^<>]*\bon[a-z]+\s*=)/gi;
+// "<" de uma etiqueta com atributo de evento (ex.: "<foo onerror=x>"): o '<'
+// sai. Texto como "a < b; x.onclick = f" fica igual.
+const HANDLER_TAG_START = /<\/?[a-z][a-z0-9-]*[\s/][^<>]*\bon[a-z]+\s*=/iy;
 // Rede final: nenhum '<' fica colado a uma letra, '!', '?' ou '/', por isso
-// nenhuma etiqueta, comentario ou atributo de HTML sobrevive, faca o que
-// fizerem as regras acima. O '<' passa ao sinal de largura total (mesmo
-// numero de code points), e '<interface>' continua legivel.
-const TAG_OPEN_GUARD = /<(?=[a-z!/?])/gi;
+// nenhuma etiqueta, comentario ou atributo de HTML sobrevive. O '<' passa ao
+// sinal de largura total (mesmo numero de code points), e '<interface>'
+// continua legivel.
+const TAG_OPENER = /<[a-z!/?]/iy;
 const SAFE_LESS_THAN = '＜';
+const LESS_THAN = '<';
+const SCHEME = /javascript\s*:|vbscript\s*:|data\s*:\s*text\/html/gi;
 const ENTITY = /&(#x[0-9a-f]+|#\d+|[a-z]+);/gi;
 const ENTITIES: Record<string, string> = {
   amp: '&',
@@ -139,6 +172,104 @@ export interface QuizTextResult {
   dangerous: boolean;
 }
 
+// O que um '<' (e o que se lhe segue) produz, e onde a leitura continua.
+interface MarkupStep {
+  emit: string;
+  next: number;
+}
+
+// Regex com flag 'y': so corresponde se comecar exatamente em `index`.
+function matchAt(
+  pattern: RegExp,
+  text: string,
+  index: number,
+): RegExpExecArray | null {
+  pattern.lastIndex = index;
+  return pattern.exec(text);
+}
+
+function readKnownTag(
+  text: string,
+  tag: RegExpExecArray,
+  markdown: boolean,
+): MarkupStep {
+  const end = tag.index + tag[0].length;
+  const closing = tag[1] === '/';
+  const name = tag[2].toLowerCase();
+  const blockClose = BLOCK_CLOSE.get(name);
+  if (blockClose && !closing) {
+    blockClose.lastIndex = end;
+    const close = blockClose.exec(text);
+    return {
+      emit: '',
+      next: close ? close.index + close[0].length : text.length,
+    };
+  }
+  if (name === BREAK_TAG && !closing) return { emit: '\n', next: end };
+  const mark = MARKDOWN_TAGS.get(name);
+  return { emit: markdown && mark ? mark : '', next: end };
+}
+
+// Le o markup que comeca no '<' em `at`.
+function readAngle(text: string, at: number, markdown: boolean): MarkupStep {
+  if (text.startsWith(COMMENT_OPEN, at)) {
+    const close = text.indexOf(COMMENT_CLOSE, at + COMMENT_OPEN.length);
+    return {
+      emit: '',
+      next: close === -1 ? text.length : close + COMMENT_CLOSE.length,
+    };
+  }
+  const tag = matchAt(KNOWN_TAG, text, at);
+  if (tag) return readKnownTag(text, tag, markdown);
+  if (
+    matchAt(DANGER_TAG_START, text, at) ||
+    matchAt(HANDLER_TAG_START, text, at)
+  )
+    return { emit: '', next: at + 1 };
+  if (matchAt(TAG_OPENER, text, at))
+    return { emit: SAFE_LESS_THAN, next: at + 1 };
+  return { emit: LESS_THAN, next: at + 1 };
+}
+
+// Tira o markup numa so passagem, da esquerda para a direita. Nunca aumenta o
+// numero de code points: etiquetas, blocos e comentarios saem ou encolhem
+// ('<b>' passa a '**', '<br>' a '\n') e '<' passa a '＜' (um por um). Tirar
+// uma etiqueta pode juntar '<' e texto ("<<b>script>"): a passagem seguinte
+// (ver converge) trata disso.
+function stripMarkup(text: string, markdown: boolean): string {
+  const parts: string[] = [];
+  let pos = 0;
+  for (
+    let at = text.indexOf(LESS_THAN);
+    at !== -1;
+    at = text.indexOf(LESS_THAN, pos)
+  ) {
+    parts.push(text.slice(pos, at));
+    const step = readAngle(text, at, markdown);
+    parts.push(step.emit);
+    pos = step.next;
+  }
+  parts.push(text.slice(pos));
+  return parts.join('');
+}
+
+// Tira "javascript:", "vbscript:" e "data:text/html", tambem sem .replace.
+function stripSchemes(text: string): string {
+  const parts: string[] = [];
+  let pos = 0;
+  SCHEME.lastIndex = 0;
+  for (
+    let found = SCHEME.exec(text);
+    found !== null;
+    found = SCHEME.exec(text)
+  ) {
+    parts.push(text.slice(pos, found.index));
+    pos = found.index + found[0].length;
+  }
+  parts.push(text.slice(pos));
+  return parts.join('');
+}
+
 // Uma passagem de limpeza. Nunca aumenta o numero de code points.
 function cleanPass(
   text: string,
@@ -147,18 +278,10 @@ function cleanPass(
 ): string {
   let out = stripUnsafeChars(decodeEntities(stripUnsafeChars(text)));
   if (DANGER.test(out)) flag.dangerous = true;
-  out = out
-    .replace(DROP_BLOCK, '')
-    .replace(BREAK, '\n')
-    .replace(BOLD, options.markdown ? '**' : '')
-    .replace(ITALIC, options.markdown ? '*' : '')
-    .replace(CODE, options.markdown ? '`' : '')
-    .replace(TAG, '')
-    .replace(DANGER_TAG_START, '')
-    .replace(SCHEME, '')
-    .replace(HANDLER_TAG_START, '')
-    .replace(TAG_OPEN_GUARD, SAFE_LESS_THAN)
-    .replace(/\r\n?/g, '\n');
+  out = stripSchemes(stripMarkup(out, options.markdown)).replace(
+    /\r\n?/g,
+    '\n',
+  );
   out = trimLineEnds(out).replace(/\n{3,}/g, '\n\n');
   if (!options.multiline) out = out.replace(/\s+/g, ' ');
   return out.trim();
