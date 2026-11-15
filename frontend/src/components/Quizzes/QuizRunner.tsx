@@ -17,6 +17,7 @@ import {
   QUIZ_HEARTBEAT_MS,
   resumeSession,
   touchSession,
+  wasAnswered,
   type QuizSession,
   type SessionItem,
 } from '../../lib/quizSession';
@@ -31,7 +32,8 @@ interface QuizRunnerProps {
   questions: Map<string, QuizQuestion>;
   session: QuizSession;
   onChange: (session: QuizSession) => void;
-  onFinish: () => void;
+  // countBlanks: as em branco contam como erradas (senao so contam as respondidas).
+  onFinish: (countBlanks?: boolean) => void;
 }
 
 // Respondida so depois de o aluno mexer: uma pergunta de ordenar ja vem
@@ -67,6 +69,15 @@ export default function QuizRunner({ questions, session, onChange, onFinish }: Q
     [session.items, questions],
   );
 
+  // Respondidas de verdade (como na correcao): mexidas no exame, confirmadas na pratica.
+  const doneCount = useMemo(
+    () => session.items.filter((it) => { const q = questions.get(it.id); return q ? wasAnswered(q, it, session.mode) : false; }).length,
+    [session.items, session.mode, questions],
+  );
+  const [askEnd, setAskEnd] = useState(false);
+  // Terminar com perguntas por responder pergunta primeiro o que fazer com elas.
+  const requestFinish = useCallback(() => (doneCount < total ? setAskEnd(true) : onFinish()), [doneCount, total, onFinish]);
+
   // Tentativa retomada (refresh ou site fechado): o tempo fechado nao gasta exame.
   const mountSession = useRef(session);
   const [resumed, setResumed] = useState(false);
@@ -93,9 +104,9 @@ export default function QuizRunner({ questions, session, onChange, onFinish }: Q
   const canCheck = instant && !item.checked && question !== undefined && isAnswered(question, item.response);
   const primary = useCallback(() => {
     if (canCheck) return patchItem({ checked: true });
-    if (isLast) return onFinish();
+    if (isLast) return requestFinish();
     go(session.index + 1);
-  }, [canCheck, patchItem, isLast, onFinish, go, session.index]);
+  }, [canCheck, patchItem, isLast, requestFinish, go, session.index]);
 
   useEffect(() => {
     if (resumed && remainingMs === 0) onFinish();
@@ -105,12 +116,16 @@ export default function QuizRunner({ questions, session, onChange, onFinish }: Q
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+      // Enter avanca em todos os tipos: resposta escrita, select de associar e
+      // as setas de ordenar (sem mexer outra vez no item). So o aviso de
+      // terminar e as areas de texto longo ficam com o Enter normal.
       if (e.key === 'Enter') {
+        if (target?.tagName === 'TEXTAREA' || target?.closest('[role=alertdialog]')) return;
         e.preventDefault();
         primary();
         return;
       }
+      if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
       const n = Number(e.key);
       if (!question || !CHOICE_KINDS.has(question.kind) || !Number.isInteger(n) || n < 1 || n > Math.min(MAX_OPTION_KEY, item.perm.length)) return;
       if (instant && item.checked) return;
@@ -141,11 +156,29 @@ export default function QuizRunner({ questions, session, onChange, onFinish }: Q
               {formatElapsed(Math.ceil(remainingMs / MS_PER_SECOND))}
             </span>
           )}
-          <Button variant="secondary" size="sm" onClick={onFinish}>
+          <Button variant="secondary" size="sm" onClick={requestFinish}>
             {t('quizzes.run.finish')}
           </Button>
         </div>
       </div>
+
+      {askEnd && (
+        <div role="alertdialog" aria-label={t('quizzes.run.endEarly.title', { answered: doneCount, total })} className="mb-4 rounded-lg border border-amber-400/50 bg-amber-950/20 p-3">
+          <p className="text-sm font-medium text-neutral-100">{t('quizzes.run.endEarly.title', { answered: doneCount, total })}</p>
+          <p className="mt-1 text-sm text-neutral-400">{t('quizzes.run.endEarly.help')}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => onFinish(false)}>
+              {t('quizzes.run.endEarly.early')}
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setAskEnd(false)}>
+              {t('quizzes.run.endEarly.keepGoing')}
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => onFinish(true)}>
+              {t('quizzes.run.endEarly.countBlanks')}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="mb-4 flex flex-wrap gap-1.5" role="navigation" aria-label={t('quizzes.run.dots')}>
         {session.items.map((it, i) => {

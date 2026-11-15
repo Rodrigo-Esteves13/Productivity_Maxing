@@ -228,4 +228,9 @@ export const quizzes: Record<string, string> = {
   'quizzes.pool.unseen': "Noch nicht gesehen ({count})",
   'quizzes.pool.wrong': "Falsch ({count})",
   'quizzes.pool.unseenWrong': "Nicht gesehen + falsch ({count})",
+  'quizzes.run.endEarly.title': "Du hast {answered} von {total} beantwortet.",
+  'quizzes.run.endEarly.help': "Jetzt beenden: Nur die beantworteten Fragen zählen, mit der tatsächlich genutzten Zeit. Unbeantwortete zählen nicht als falsch.",
+  'quizzes.run.endEarly.early': "Jetzt beenden",
+  'quizzes.run.endEarly.keepGoing': "Weitermachen",
+  'quizzes.run.endEarly.countBlanks': "Beenden, leere zählen als falsch",
 };

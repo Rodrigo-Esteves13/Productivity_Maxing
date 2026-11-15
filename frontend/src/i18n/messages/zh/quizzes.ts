@@ -228,4 +228,9 @@ export const quizzes: Record<string, string> = {
   'quizzes.pool.unseen': "未做过 ({count})",
   'quizzes.pool.wrong': "答错 ({count})",
   'quizzes.pool.unseenWrong': "未做过 + 答错 ({count})",
+  'quizzes.run.endEarly.title': "你已回答 {total} 题中的 {answered} 题。",
+  'quizzes.run.endEarly.help': "提前结束：只计算你已回答的题目和实际用时，未回答的题不算错。",
+  'quizzes.run.endEarly.early': "提前结束",
+  'quizzes.run.endEarly.keepGoing': "继续作答",
+  'quizzes.run.endEarly.countBlanks': "结束，未答题算错",
 };

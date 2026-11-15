@@ -228,4 +228,9 @@ export const quizzes: Record<string, string> = {
   'quizzes.pool.unseen': "안 본 문제 ({count})",
   'quizzes.pool.wrong': "틀린 문제 ({count})",
   'quizzes.pool.unseenWrong': "안 본 문제 + 틀린 문제 ({count})",
+  'quizzes.run.endEarly.title': "{total}문제 중 {answered}문제에 답했어요.",
+  'quizzes.run.endEarly.help': "지금 끝내기: 답한 문제만 실제로 쓴 시간으로 채점해요. 답하지 않은 문제는 틀린 것으로 세지 않아요.",
+  'quizzes.run.endEarly.early': "지금 끝내기",
+  'quizzes.run.endEarly.keepGoing': "계속하기",
+  'quizzes.run.endEarly.countBlanks': "끝내고 빈 문제는 오답 처리",
 };

@@ -228,4 +228,9 @@ export const quizzes: Record<string, string> = {
   'quizzes.pool.unseen': "No vistas ({count})",
   'quizzes.pool.wrong': "Falladas ({count})",
   'quizzes.pool.unseenWrong': "No vistas + falladas ({count})",
+  'quizzes.run.endEarly.title': "Has respondido {answered} de {total}.",
+  'quizzes.run.endEarly.help': "Terminar ya: solo cuentan las preguntas que respondiste, con el tiempo que usaste. Las que quedan sin responder no cuentan como falladas.",
+  'quizzes.run.endEarly.early': "Terminar ya",
+  'quizzes.run.endEarly.keepGoing': "Seguir",
+  'quizzes.run.endEarly.countBlanks': "Terminar, las vacías cuentan como falladas",
 };

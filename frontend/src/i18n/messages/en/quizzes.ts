@@ -228,4 +228,9 @@ export const quizzes: Record<string, string> = {
   'quizzes.pool.unseen': "Not seen ({count})",
   'quizzes.pool.wrong': "Wrong ({count})",
   'quizzes.pool.unseenWrong': "Not seen + wrong ({count})",
+  'quizzes.run.endEarly.title': "You answered {answered} of {total}.",
+  'quizzes.run.endEarly.help': "End early: only the questions you answered count, with the time you actually used. Unanswered ones are not marked wrong.",
+  'quizzes.run.endEarly.early': "End early",
+  'quizzes.run.endEarly.keepGoing': "Keep going",
+  'quizzes.run.endEarly.countBlanks': "Finish, unanswered count as wrong",
 };
