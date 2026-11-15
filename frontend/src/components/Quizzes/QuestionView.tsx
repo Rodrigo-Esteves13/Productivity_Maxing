@@ -1,13 +1,13 @@
-import { useContext } from 'react';
+import { useContext, useRef, useState, type PointerEvent } from 'react';
 import Input from '../UI/Input';
 import Select from '../UI/Select';
 import IconButton from '../UI/IconButton';
-import { ArrowDownIcon, ArrowUpIcon } from '../UI/Icons';
+import { ArrowDownIcon, ArrowUpIcon, GripVerticalIcon } from '../UI/Icons';
 import QuizRichText from './QuizRichText';
 import QuizDiagram from './QuizDiagram';
 import { useI18n } from '../../i18n/useI18n';
 import type { QuizQuestion, QuizResponse } from '../../lib/quizFormat';
-import { correctAnswerText, gradeQuestion, NO_MATCH, type SessionItem } from '../../lib/quizSession';
+import { correctAnswerText, dropIndex, gradeQuestion, moveOrder, NO_MATCH, type SessionItem } from '../../lib/quizSession';
 import { QuizFiguresContext } from '../../lib/quizFigures';
 import { stripQuizMarkdown } from '../../lib/quizMarkdown';
 
@@ -48,11 +48,9 @@ export function QuestionPrompt({ question: q }: { question: QuizQuestion }) {
   );
 }
 
-const move = (list: number[], from: number, to: number) => {
-  const next = [...list];
-  [next[from], next[to]] = [next[to], next[from]];
-  return next;
-};
+const HALF = 2;
+// No toque so a pega arrasta, para o resto da linha continuar a fazer scroll.
+const MOUSE_POINTER = 'mouse';
 
 export default function QuestionView({ question: q, item, onChange, reveal, showVerdict = true, hidePrompt = false }: QuestionViewProps) {
   const { t } = useI18n();
@@ -60,6 +58,38 @@ export default function QuestionView({ question: q, item, onChange, reveal, show
   const readOnly = !onChange || reveal;
   const set = (patch: Partial<QuizResponse>) => onChange?.({ ...r, ...patch });
   const isChoice = q.kind === 'single' || q.kind === 'multi' || q.kind === 'truefalse';
+  const orderList = useRef<HTMLOListElement>(null);
+  // Item (indice original) a ser arrastado na pergunta de ordenar.
+  const [dragged, setDragged] = useState<number | null>(null);
+
+  const startDrag = (e: PointerEvent<HTMLLIElement>, original: number) => {
+    if (readOnly || e.button !== 0) return;
+    const target = e.target as Element;
+    if (target.closest('button')) return;
+    if (e.pointerType !== MOUSE_POINTER && !target.closest('[data-drag-handle]')) return;
+    e.preventDefault();
+    setDragged(original);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Ponteiro ja libertado: o arrasto segue pelos eventos da propria lista.
+    }
+  };
+
+  const dragOver = (e: PointerEvent<HTMLLIElement>) => {
+    if (dragged === null || !orderList.current) return;
+    const from = r.order.indexOf(dragged);
+    const mids = Array.from(orderList.current.children)
+      .filter((_, pos) => pos !== from)
+      .map((row) => {
+        const box = row.getBoundingClientRect();
+        return box.top + box.height / HALF;
+      });
+    const to = dropIndex(mids, e.clientY);
+    if (to !== from) set({ order: moveOrder(r.order, from, to) });
+  };
+
+  const endDrag = () => setDragged(null);
 
   const choose = (original: number) => {
     if (readOnly) return;
@@ -102,17 +132,29 @@ export default function QuestionView({ question: q, item, onChange, reveal, show
       )}
 
       {q.kind === 'order' && (
-        <ol className="space-y-2">
+        <ol ref={orderList} className="space-y-2">
           {r.order.map((original, pos) => (
-            <li key={original} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${reveal ? (original === pos ? 'border-violet-400' : 'border-red-500') : 'border-neutral-700'}`}>
+            <li
+              key={original}
+              onPointerDown={(e) => startDrag(e, original)}
+              onPointerMove={dragOver}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${reveal ? (original === pos ? 'border-violet-400' : 'border-red-500') : 'border-neutral-700'} ${readOnly ? '' : 'cursor-grab select-none hover:border-neutral-500'} ${dragged === original ? 'cursor-grabbing border-violet-500 bg-violet-950/30' : ''}`}
+            >
+              {!readOnly && (
+                <span data-drag-handle title={t('ui.dragToReorder')} className="touch-none text-neutral-500">
+                  <GripVerticalIcon className="h-4 w-4" aria-hidden="true" />
+                </span>
+              )}
               <span className="w-5 font-mono text-xs text-neutral-500">{pos + 1}</span>
               <QuizRichText text={q.items[original]} className="flex-1" />
               {!readOnly && (
                 <>
-                  <IconButton label={t('quizzes.run.moveUp')} disabled={pos === 0} onClick={() => set({ order: move(r.order, pos, pos - 1) })}>
+                  <IconButton label={t('quizzes.run.moveUp')} disabled={pos === 0} onClick={() => set({ order: moveOrder(r.order, pos, pos - 1) })}>
                     <ArrowUpIcon className="h-4 w-4" />
                   </IconButton>
-                  <IconButton label={t('quizzes.run.moveDown')} disabled={pos === r.order.length - 1} onClick={() => set({ order: move(r.order, pos, pos + 1) })}>
+                  <IconButton label={t('quizzes.run.moveDown')} disabled={pos === r.order.length - 1} onClick={() => set({ order: moveOrder(r.order, pos, pos + 1) })}>
                     <ArrowDownIcon className="h-4 w-4" />
                   </IconButton>
                 </>

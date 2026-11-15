@@ -6,7 +6,15 @@ import Input from '../UI/Input';
 import ProgressBar from '../UI/ProgressBar';
 import TabBar from '../UI/TabBar';
 import ToggleChip from '../UI/ToggleChip';
+import ToggleRow from '../UI/ToggleRow';
 import QuestionView, { QuestionPrompt } from './QuestionView';
+import QuizStatsPanel from './QuizStatsPanel';
+import QuizWrongArea from './QuizWrongArea';
+import QuizEvolutionChart from './QuizEvolutionChart';
+import type { LastWrongAnswers } from '../../hooks/useQuizSession';
+import { evolution } from '../../lib/quizInsights';
+import { CALC_SIZES, generatedShare, makeGenerated } from '../../lib/quizPlay';
+import { GENERATOR_KINDS, type GeneratorKind } from '../../lib/quizGenerators';
 import { useI18n } from '../../i18n/useI18n';
 import type { QuizDetail } from '../../api/quizzesService';
 import { formatElapsed } from '../../lib/formatDuration';
@@ -19,6 +27,9 @@ import {
   pickExam,
   pickPractice,
   PRACTICE_SIZES,
+  shuffle,
+  statOf,
+  timesWrong,
   topicMastery,
   wasAnswered,
   wrongQuestions,
@@ -28,7 +39,7 @@ import {
 import { stripQuizMarkdown } from '../../lib/quizMarkdown';
 import { foldText } from '../../lib/textSearch';
 
-type HomeTab = 'modes' | 'bank' | 'history';
+type HomeTab = 'modes' | 'wrong' | 'stats' | 'bank' | 'history';
 const SECONDS_PER_MINUTE = 60;
 const PERCENT = 100;
 
@@ -41,11 +52,33 @@ interface QuizHomeProps {
   // Termina ja: so as respondidas contam (ou nada se for curta demais).
   onFinishNow: () => void;
   onDiscard: () => void;
+  // Ultima resposta errada de cada pergunta (neste dispositivo).
+  lastWrongAnswers: LastWrongAnswers;
+  // Perguntas do ultimo exame: o proximo evita repeti-las.
+  lastExamIds: string[];
+  onReset: (kind: 'history' | 'stats' | 'wrong') => void;
+  onDismissWrong: (questionId: string) => void;
+  // Geradores de calculo ligados neste quiz (perguntas feitas pela app).
+  generators: GeneratorKind[];
+  onSaveGenerators: (next: GeneratorKind[]) => void;
 }
 
 // Inicio de um quiz: modos (exame, pratica, erradas), dominio por topico,
 // banco de perguntas e historico, como no quiz de exemplo.
-export default function QuizHome({ quiz, session, onStart, onResume, onFinishNow, onDiscard }: QuizHomeProps) {
+export default function QuizHome({
+  quiz,
+  session,
+  onStart,
+  onResume,
+  onFinishNow,
+  onDiscard,
+  lastWrongAnswers,
+  lastExamIds,
+  onReset,
+  onDismissWrong,
+  generators,
+  onSaveGenerators,
+}: QuizHomeProps) {
   const { t, lang } = useI18n();
   const [tab, setTab] = useState<HomeTab>('modes');
   const [examSize, setExamSize] = useState<number>(EXAM_SIZES[0]);
@@ -53,6 +86,22 @@ export default function QuizHome({ quiz, session, onStart, onResume, onFinishNow
   const [kinds, setKinds] = useState<QuizKind[]>([]);
   const [practiceSize, setPracticeSize] = useState<number>(PRACTICE_SIZES[0]);
   const [search, setSearch] = useState('');
+  const [weakFirst, setWeakFirst] = useState(false);
+  const [mixGenerated, setMixGenerated] = useState(true);
+  const [calcKinds, setCalcKinds] = useState<GeneratorKind[]>([]);
+  const [calcSize, setCalcSize] = useState<number>(CALC_SIZES[0]);
+  const hasGenerators = generators.length > 0;
+  const mixing = hasGenerators && mixGenerated;
+  // Junta ~25% de perguntas geradas a uma escolha do banco (se ligado).
+  const withMix = (size: number, pick: (n: number) => QuizQuestion[]) => {
+    if (!mixing) return pick(size);
+    const g = generatedShare(size);
+    return shuffle([...pick(size - g), ...makeGenerated(generators, g, t)]);
+  };
+  const calcChosen = calcKinds.filter((k) => generators.includes(k));
+  const toggleGenerator = (kind: GeneratorKind) =>
+    onSaveGenerators(GENERATOR_KINDS.filter((k) => (k === kind ? !generators.includes(k) : generators.includes(k))));
+  const points = useMemo(() => evolution(quiz.attempts), [quiz.attempts]);
 
   const presentKinds = useMemo(() => QUIZ_KINDS.filter((k) => quiz.questions.some((q) => q.kind === k)), [quiz.questions]);
   const wrong = useMemo(() => wrongQuestions(quiz, quiz.stats), [quiz]);
@@ -84,6 +133,8 @@ export default function QuizHome({ quiz, session, onStart, onResume, onFinishNow
         onChange={setTab}
         items={[
           { value: 'modes', label: t('quizzes.home.modes') },
+          { value: 'wrong', label: t('quizzes.mode.wrong'), count: wrong.length },
+          { value: 'stats', label: t('quizzes.home.stats') },
           { value: 'bank', label: t('quizzes.home.bank'), count: quiz.questions.length },
           { value: 'history', label: t('quizzes.home.history'), count: quiz.attempts.length },
         ]}
@@ -124,7 +175,22 @@ export default function QuizHome({ quiz, session, onStart, onResume, onFinishNow
                   </ToggleChip>
                 ))}
               </div>
-              <Button size="sm" className="mt-4" onClick={() => onStart('exam', pickExam(quiz, examSize))}>
+              <div className="mt-3">
+                <ToggleRow
+                  variant="inline"
+                  label={t('quizzes.home.weakFirst')}
+                  description={t('quizzes.home.weakFirstHelp')}
+                  checked={weakFirst}
+                  onChange={setWeakFirst}
+                />
+              </div>
+              <Button
+                size="sm"
+                className="mt-4"
+                onClick={() =>
+                  onStart('exam', withMix(examSize, (n) => pickExam(quiz, n, Math.random, { weak: weakFirst, stats: quiz.stats, avoid: lastExamIds })))
+                }
+              >
                 {t('quizzes.home.startExam')}
               </Button>
             </Card>
@@ -154,18 +220,85 @@ export default function QuizHome({ quiz, session, onStart, onResume, onFinishNow
                   </ToggleChip>
                 ))}
               </div>
-              <Button size="sm" className="mt-4" disabled={practicePool === 0} onClick={() => onStart('practice', pickPractice(quiz, topics, kinds, practiceSize))}>
+              {hasGenerators && (
+                <div className="mt-3">
+                  <ToggleRow
+                    variant="inline"
+                    label={t('quizzes.calc.mix')}
+                    description={t('quizzes.calc.mixHelp')}
+                    checked={mixGenerated}
+                    onChange={setMixGenerated}
+                  />
+                </div>
+              )}
+              <Button
+                size="sm"
+                className="mt-4"
+                disabled={practicePool === 0}
+                onClick={() => onStart('practice', withMix(practiceSize, (n) => pickPractice(quiz, topics, kinds, n)))}
+              >
                 {t('quizzes.home.startPractice', { count: Math.min(practiceSize, practicePool) })}
               </Button>
             </Card>
             <Card>
               <h2 className="font-semibold text-white">{t('quizzes.mode.wrong')}</h2>
               <p className="mt-1 text-sm text-neutral-400">{t('quizzes.home.wrongHelp', { count: wrong.length })}</p>
-              <Button size="sm" className="mt-4" disabled={wrong.length === 0} onClick={() => onStart('wrong', wrong)}>
-                {t('quizzes.home.startWrong')}
-              </Button>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button size="sm" disabled={wrong.length === 0} onClick={() => onStart('wrong', wrong)}>
+                  {t('quizzes.home.startWrong')}
+                </Button>
+                <Button size="sm" variant="secondary" disabled={wrong.length === 0} onClick={() => setTab('wrong')}>
+                  {t('quizzes.home.seeWrong')}
+                </Button>
+              </div>
             </Card>
           </div>
+          <Card>
+            <h2 className="font-semibold text-white">{t('quizzes.calc.title')}</h2>
+            <p className="mt-1 text-sm text-neutral-400">{hasGenerators ? t('quizzes.calc.help') : t('quizzes.calc.empty')}</p>
+            {hasGenerators && (
+              <>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {generators.map((kind) => (
+                    <ToggleChip
+                      key={kind}
+                      size="sm"
+                      pressed={calcChosen.includes(kind)}
+                      title={t(`quizGen.${kind}.desc`)}
+                      onClick={() => setCalcKinds((p) => toggle(p, kind))}
+                    >
+                      {t(`quizGen.${kind}.name`)}
+                    </ToggleChip>
+                  ))}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {CALC_SIZES.map((n) => (
+                    <ToggleChip key={n} size="sm" pressed={calcSize === n} onClick={() => setCalcSize(n)}>
+                      {n}
+                    </ToggleChip>
+                  ))}
+                </div>
+                <Button
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => onStart('practice', makeGenerated(calcChosen.length ? calcChosen : generators, calcSize, t))}
+                >
+                  {t('quizzes.calc.start', { count: calcSize })}
+                </Button>
+              </>
+            )}
+            <details className="mt-4">
+              <summary className="cursor-pointer text-sm text-violet-300">{t('quizzes.calc.manage')}</summary>
+              <p className="mt-2 text-xs text-neutral-500">{t('quizzes.calc.manageHelp')}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {GENERATOR_KINDS.map((kind) => (
+                  <ToggleChip key={kind} size="sm" pressed={generators.includes(kind)} title={t(`quizGen.${kind}.desc`)} onClick={() => toggleGenerator(kind)}>
+                    {t(`quizGen.${kind}.name`)}
+                  </ToggleChip>
+                ))}
+              </div>
+            </details>
+          </Card>
           <Card>
             <h2 className="font-semibold text-white">{t('quizzes.home.mastery')}</h2>
             <ul className="mt-3 space-y-3">
@@ -183,6 +316,27 @@ export default function QuizHome({ quiz, session, onStart, onResume, onFinishNow
         </>
       )}
 
+      {tab === 'wrong' && (
+        <QuizWrongArea
+          quiz={quiz}
+          wrong={wrong}
+          lastWrongAnswers={lastWrongAnswers}
+          onPractise={(list) => onStart('wrong', list)}
+          onDismiss={onDismissWrong}
+          onClearAll={() => onReset('wrong')}
+        />
+      )}
+
+      {tab === 'stats' && (
+        <QuizStatsPanel
+          quiz={quiz}
+          wrongNow={wrong.length}
+          generators={generators}
+          onPractise={(list) => onStart('practice', list)}
+          onPractiseGenerator={(kind) => onStart('practice', makeGenerated([kind], PRACTICE_SIZES[0], t))}
+        />
+      )}
+
       {tab === 'bank' && (
         <>
           <Input aria-label={t('quizzes.bank.search')} placeholder={t('quizzes.bank.search')} value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -196,6 +350,11 @@ export default function QuizHome({ quiz, session, onStart, onResume, onFinishNow
                     <p className="mb-2 text-xs uppercase tracking-wide text-neutral-500">
                       {stripQuizMarkdown(q.topic)} · {t(`quizzes.kind.${q.kind}`)}
                     </p>
+                    {statOf(quiz.stats, q.id) && (
+                      <p className="mb-2 text-xs text-neutral-500">
+                        {t('quizzes.bank.statLine', { seen: statOf(quiz.stats, q.id)?.seen ?? 0, right: statOf(quiz.stats, q.id)?.correct ?? 0, wrong: timesWrong(statOf(quiz.stats, q.id)) })}
+                      </p>
+                    )}
                     <div className="space-y-3">
                       <QuestionPrompt question={q} />
                     </div>
@@ -213,6 +372,24 @@ export default function QuizHome({ quiz, session, onStart, onResume, onFinishNow
         </>
       )}
 
+      {tab === 'history' && (
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="secondary" disabled={quiz.attempts.length === 0} onClick={() => onReset('history')}>
+            {t('quizzes.reset.history.button')}
+          </Button>
+          <Button size="sm" variant="secondary" disabled={Object.keys(quiz.stats).length === 0} onClick={() => onReset('stats')}>
+            {t('quizzes.reset.stats.button')}
+          </Button>
+        </div>
+      )}
+      {tab === 'history' && quiz.attempts.length > 0 && (
+        <Card>
+          <h2 className="font-semibold text-white">{t('quizzes.stats.evolution', { count: points.length })}</h2>
+          <div className="mt-3">
+            <QuizEvolutionChart points={points} />
+          </div>
+        </Card>
+      )}
       {tab === 'history' &&
         (quiz.attempts.length === 0 ? (
           <EmptyState message={t('quizzes.history.empty')} />

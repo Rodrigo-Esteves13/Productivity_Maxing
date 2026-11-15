@@ -39,11 +39,15 @@ export interface QuizDetail extends QuizSummary {
   figures: Record<string, QuizDiagram>;
   stats: QuizStats;
   attempts: QuizAttemptRecord[];
+  // Geradores de calculo ligados neste quiz (lib/quizGenerators); antigos nao trazem.
+  generators?: string[];
 }
 
 export interface AttemptResult {
   questionId: string;
   correct: boolean;
+  // Tempo ativo nesta pergunta (ms).
+  timeMs?: number;
 }
 
 const url = (id: string) => `/quizzes/${encodeURIComponent(id)}`;
@@ -74,3 +78,23 @@ export const submitQuizAttempt = async (
   planned: number,
 ): Promise<{ attempt: QuizAttemptRecord; stats: QuizStats; lastScorePct: number }> =>
   (await api.post(`${url(id)}/attempts`, { mode: MODE_TO_API[mode], durationMs, results, planned })).data;
+
+// Apaga o historico de tentativas deste quiz.
+export const clearQuizAttempts = async (id: string): Promise<void> => {
+  await api.delete(`${url(id)}/attempts`);
+};
+
+// Repoe o dominio (estatisticas por pergunta) a zero.
+export const resetQuizStats = async (id: string): Promise<void> => {
+  await api.delete(`${url(id)}/stats`);
+};
+
+// Tira perguntas da area de erradas (todas, ou so uma).
+export const dismissQuizWrong = async (id: string, questionId?: string): Promise<void> => {
+  await api.delete(questionId ? `${url(id)}/wrong/${encodeURIComponent(questionId)}` : `${url(id)}/wrong`);
+};
+
+// Liga ou desliga os geradores de calculo deste quiz.
+export const updateQuizGenerators = async (id: string, generators: string[]): Promise<void> => {
+  await api.patch(url(id), { generators });
+};

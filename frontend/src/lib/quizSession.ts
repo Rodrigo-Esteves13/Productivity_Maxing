@@ -55,6 +55,14 @@ export interface QuestionStat {
   seen: number;
   correct: number;
   last: boolean;
+  // Tempo ativo somado a responder (ms) e quantas respostas trouxeram tempo.
+  timeMs?: number;
+  timed?: number;
+  // Relogio do servidor (epoch ms), 0 = nunca.
+  lastAt?: number;
+  wrongAt?: number;
+  // Tirada da lista de erradas pelo aluno; volta a entrar ao errar outra vez.
+  dismissed?: boolean;
 }
 export type QuizStats = Record<string, QuestionStat>;
 
@@ -162,10 +170,13 @@ export const QUIZ_MIN_ANSWERED = 1;
 
 export type AttemptOutcome = 'complete' | 'partial' | 'discard';
 
+// O tempo desde a ultima interacao vai para a pergunta aberta (session.index):
+// mudar de pergunta tem de chamar isto antes de mudar o indice.
 export function touchSession(session: QuizSession, now: number = Date.now()): QuizSession {
   const last = session.lastActiveAt ?? session.startedAt;
   const gap = Math.max(0, Math.min(now - last, QUIZ_IDLE_GAP_MS));
-  return { ...session, activeMs: (session.activeMs ?? 0) + gap, lastActiveAt: now, lastSeenAt: now };
+  const items = gap === 0 ? session.items : session.items.map((it, i) => (i === session.index ? { ...it, timeMs: it.timeMs + gap } : it));
+  return { ...session, items, activeMs: (session.activeMs ?? 0) + gap, lastActiveAt: now, lastSeenAt: now };
 }
 
 export const heartbeatSession = (session: QuizSession, now: number = Date.now()): QuizSession => ({ ...session, lastSeenAt: now });
@@ -226,8 +237,58 @@ export const QUIZ_CARDS_SENT_MAX_QUIZZES = 50;
 export const mergeSentIds = (prev: readonly string[], added: readonly string[], max: number = QUIZ_CARDS_SENT_MAX_IDS): string[] =>
   [...new Set([...prev, ...added])].slice(-max);
 
-export function pickExam(quiz: Quiz, size: number, rand: Rand = Math.random): QuizQuestion[] {
-  return shuffle(quiz.questions, rand).slice(0, size);
+// Pesos da escolha do exame (como no quiz de exemplo).
+export const EXAM_WEIGHT = {
+  unseen: 1.2,
+  lastWrong: 2.5,
+  perWrong: 0.6,
+  perRight: 0.15,
+  inWrongList: 1.5,
+  lastExam: -2,
+} as const;
+
+export interface ExamPickOptions {
+  // Da prioridade ao que falhaste e ao que ainda nao viste.
+  weak?: boolean;
+  stats?: QuizStats;
+  // Perguntas do exame anterior: ficam para o fim da fila.
+  avoid?: readonly string[];
+}
+
+// Exame equilibrado por topico: vai buscar uma pergunta a cada topico a vez,
+// cada topico ordenado pelo peso (aleatorio, pontos fracos, exame anterior).
+export function pickExam(quiz: Quiz, size: number, rand: Rand = Math.random, options: ExamPickOptions = {}): QuizQuestion[] {
+  const stats = options.stats ?? {};
+  const avoid = new Set(options.avoid ?? []);
+  const weight = (q: QuizQuestion) => {
+    let w = rand();
+    const s = statOf(stats, q.id);
+    if (options.weak) {
+      if (!s) w += EXAM_WEIGHT.unseen;
+      else {
+        if (!s.last) w += EXAM_WEIGHT.lastWrong;
+        w += Math.max(0, s.seen - s.correct) * EXAM_WEIGHT.perWrong - s.correct * EXAM_WEIGHT.perRight;
+        if (!s.last && !s.dismissed) w += EXAM_WEIGHT.inWrongList;
+      }
+    }
+    if (avoid.has(q.id)) w += EXAM_WEIGHT.lastExam;
+    return w;
+  };
+  const byTopic = new Map<string, { w: number; q: QuizQuestion }[]>();
+  quiz.questions.forEach((q) => {
+    const list = byTopic.get(q.topic) ?? [];
+    list.push({ w: weight(q), q });
+    byTopic.set(q.topic, list);
+  });
+  const queues = shuffle([...byTopic.values()], rand).map((list) => list.sort((a, b) => b.w - a.w).map((x) => x.q));
+  const out: QuizQuestion[] = [];
+  const limit = Math.min(size, quiz.questions.length);
+  for (let round = 0; out.length < limit; round += 1) {
+    queues.forEach((queue) => {
+      if (out.length < limit && round < queue.length) out.push(queue[round]);
+    });
+  }
+  return shuffle(out, rand);
 }
 
 export function pickPractice(quiz: Quiz, topics: string[], kinds: QuizKind[], size: number, rand: Rand = Math.random): QuizQuestion[] {
@@ -237,8 +298,21 @@ export function pickPractice(quiz: Quiz, topics: string[], kinds: QuizKind[], si
   return shuffle(pool, rand).slice(0, size);
 }
 
-export const wrongQuestions = (quiz: Quiz, stats: QuizStats): QuizQuestion[] =>
-  quiz.questions.filter((q) => statOf(stats, q.id)?.last === false);
+export const timesWrong = (s: QuestionStat | undefined): number => (s ? Math.max(0, s.seen - s.correct) : 0);
+
+// Area de erradas: falhada da ultima vez e nao tirada da lista. As que falhaste
+// mais vezes primeiro, depois as mais recentes.
+export function wrongQuestions(quiz: Quiz, stats: QuizStats): QuizQuestion[] {
+  const inList = quiz.questions.filter((q) => {
+    const s = statOf(stats, q.id);
+    return s?.last === false && !s.dismissed;
+  });
+  return inList.sort((a, b) => {
+    const sa = statOf(stats, a.id);
+    const sb = statOf(stats, b.id);
+    return timesWrong(sb) - timesWrong(sa) || (sb?.wrongAt ?? 0) - (sa?.wrongAt ?? 0);
+  });
+}
 
 export interface SessionScore {
   correct: number;
@@ -420,4 +494,31 @@ export function sessionFitsQuiz(session: QuizSession, quiz: Pick<Quiz, 'question
       match.length <= q.left.length
     );
   });
+}
+
+// Ordenar por arrasto: tira o item de `from` e mete-o em `to` (os outros deslizam).
+export function moveOrder(list: readonly number[], from: number, to: number): number[] {
+  const next = [...list];
+  if (from < 0 || from >= next.length || to < 0 || to >= next.length) return next;
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
+}
+
+// Posicao onde largar: quantas das outras linhas tem o meio acima do ponteiro.
+export function dropIndex(otherMidpoints: readonly number[], pointerY: number): number {
+  return otherMidpoints.filter((mid) => mid < pointerY).length;
+}
+
+// Resposta guardada neste dispositivo (ultima errada): mesma validacao da sessao.
+export const parseStoredResponse = (raw: unknown): QuizResponse | null => parseResponse(raw);
+
+// A resposta so aponta para opcoes, itens e colunas que existem nesta pergunta.
+export function responseFitsQuestion(q: QuizQuestion, r: QuizResponse): boolean {
+  return (
+    allBelow(r.selected, q.options.length) &&
+    allBelow(r.order, q.items.length) &&
+    allBelow(r.match, q.right.length, NO_MATCH) &&
+    r.match.length <= q.left.length
+  );
 }

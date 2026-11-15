@@ -2,9 +2,11 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
+  ArrayUnique,
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -21,9 +23,12 @@ import {
   QUIZ_MAX_QUESTIONS,
   QUIZ_TITLE_MAX,
 } from '../quiz-format';
-import { QUIZ_ATTEMPT_MAX_DURATION_MS } from '../quizzes.constants';
-
-const QUESTION_ID = /^[\w-]{1,48}$/;
+import { GENERATOR_KINDS, type GeneratorKind } from '../quiz-generators';
+import {
+  QUIZ_ATTEMPT_MAX_DURATION_MS,
+  QUIZ_QUESTION_ID,
+  QUIZ_QUESTION_MAX_TIME_MS,
+} from '../quizzes.constants';
 
 // O quiz chega como texto (canonicalQuizText), nunca como objeto: assim nao
 // passa pelo class-transformer (quadratico em objetos largos, e reescrevia o
@@ -38,19 +43,35 @@ export class ImportQuizDto {
 }
 
 export class UpdateQuizDto {
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
   @MaxLength(QUIZ_TITLE_MAX)
-  title!: string;
+  title?: string;
+
+  // Tipos de geradores ligados (lista fechada, sem repetidos).
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(GENERATOR_KINDS.length)
+  @IsIn(GENERATOR_KINDS, { each: true })
+  @ArrayUnique()
+  generators?: GeneratorKind[];
 }
 
 export class AttemptResultDto {
   @IsString()
-  @Matches(QUESTION_ID)
+  @Matches(QUIZ_QUESTION_ID)
   questionId!: string;
 
   @IsBoolean()
   correct!: boolean;
+
+  // Tempo ativo gasto nesta resposta (opcional; clientes antigos nao enviam).
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(QUIZ_QUESTION_MAX_TIME_MS)
+  timeMs?: number;
 }
 
 export class SubmitAttemptDto {

@@ -10,15 +10,28 @@ import {
   recheckCanonicalQuiz,
   sanitizeQuizText,
 } from './quiz-check';
+import { genStatKey, normalizeGenerators } from './quiz-generators';
 import { sanitizeQuizDiagram, type QuizDiagram } from './quiz-diagram';
 import { QUIZ_TITLE_MAX, type Quiz } from './quiz-format';
 import { ImportQuizDto, SubmitAttemptDto, UpdateQuizDto } from './dto/quiz.dto';
-import { MAX_QUIZZES_PER_USER, QUIZ_ATTEMPTS_KEPT } from './quizzes.constants';
+import {
+  MAX_QUIZZES_PER_USER,
+  QUIZ_ATTEMPTS_KEPT,
+  QUIZ_QUESTION_ID,
+} from './quizzes.constants';
 
 export interface QuestionStat {
   seen: number;
   correct: number;
   last: boolean;
+  // Tempo ativo acumulado (ms) e quantas respostas trouxeram tempo.
+  timeMs: number;
+  timed: number;
+  // Relogio do servidor (epoch ms); 0 = nunca.
+  lastAt: number;
+  wrongAt: number;
+  // Tirada da lista de erradas pelo utilizador (volta a false ao errar).
+  dismissed: boolean;
 }
 export type QuizStats = Record<string, QuestionStat>;
 
@@ -52,6 +65,21 @@ const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const isReservedKey = (key: string): boolean =>
   FORBIDDEN_KEYS.has(key) || key in Object.prototype;
 
+// Numero guardado lido sem confiar na BD: inteiro seguro >= 0, senao 0.
+const safeCount = (v: unknown): number =>
+  typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 ? v : 0;
+
+const EMPTY_STAT: QuestionStat = {
+  seen: 0,
+  correct: 0,
+  last: false,
+  timeMs: 0,
+  timed: 0,
+  lastAt: 0,
+  wrongAt: 0,
+  dismissed: false,
+};
+
 // Figuras guardadas, lidas sem confiar na BD: cada uma volta a passar pela
 // validacao dos diagramas; o que nao for um diagrama valido (ex.: SVG antigo) sai.
 function readFigures(raw: Prisma.JsonValue): Record<string, QuizDiagram> {
@@ -79,9 +107,14 @@ function readStats(raw: Prisma.JsonValue): QuizStats {
     ) {
       const s = v as Record<string, unknown>;
       out[id] = {
-        seen: Number(s.seen) || 0,
-        correct: Number(s.correct) || 0,
+        seen: safeCount(s.seen),
+        correct: safeCount(s.correct),
         last: s.last === true,
+        timeMs: safeCount(s.timeMs),
+        timed: safeCount(s.timed),
+        lastAt: safeCount(s.lastAt),
+        wrongAt: safeCount(s.wrongAt),
+        dismissed: s.dismissed === true,
       };
     }
   });
@@ -141,6 +174,7 @@ export class QuizzesService {
         topics: true,
         questions: true,
         figures: true,
+        generators: true,
         stats: true,
         attempts: {
           orderBy: { finishedAt: 'desc' },
@@ -153,6 +187,7 @@ export class QuizzesService {
     return {
       ...quiz,
       figures: readFigures(quiz.figures),
+      generators: normalizeGenerators(quiz.generators),
       stats: readStats(quiz.stats),
     };
   }
@@ -196,14 +231,29 @@ export class QuizzesService {
   }
 
   async update(userId: string, id: string, dto: UpdateQuizDto) {
-    const title = sanitizeQuizText(dto.title, QUIZ_TITLE_MAX, undefined, false);
-    if (!title) throw new BadRequestException('The title cannot be empty.');
+    if (dto.title === undefined && dto.generators === undefined) {
+      throw new BadRequestException('Nothing to update.');
+    }
+    const data: Prisma.QuizUpdateManyMutationInput = {};
+    if (dto.title !== undefined) {
+      const title = sanitizeQuizText(
+        dto.title,
+        QUIZ_TITLE_MAX,
+        undefined,
+        false,
+      );
+      if (!title) throw new BadRequestException('The title cannot be empty.');
+      data.title = title;
+    }
+    if (dto.generators !== undefined) {
+      data.generators = normalizeGenerators(dto.generators);
+    }
     const { count } = await this.prisma.quiz.updateMany({
       where: { id, userId },
-      data: { title },
+      data,
     });
     if (count === 0) throw new NotFoundException(NOT_FOUND);
-    return { id, title };
+    return { id, ...data };
   }
 
   async remove(userId: string, id: string) {
@@ -223,13 +273,18 @@ export class QuizzesService {
       if (locked.length === 0) throw new NotFoundException(NOT_FOUND);
       const quiz = await tx.quiz.findFirst({
         where: { id, userId },
-        select: { questions: true, stats: true },
+        select: { questions: true, generators: true, stats: true },
       });
       if (!quiz) throw new NotFoundException(NOT_FOUND);
 
       const known = questionIds(quiz.questions);
+      // Chaves gen-<tipo> dos geradores ligados: podem repetir (cada uma conta).
+      const genKeys = new Set(
+        normalizeGenerators(quiz.generators).map(genStatKey),
+      );
       const seen = new Set<string>();
       const results = dto.results.filter((r) => {
+        if (genKeys.has(r.questionId)) return true;
         if (!known.has(r.questionId) || seen.has(r.questionId)) return false;
         seen.add(r.questionId);
         return true;
@@ -239,14 +294,20 @@ export class QuizzesService {
       }
 
       const stats = readStats(quiz.stats);
-      results.forEach(({ questionId, correct }) => {
+      const now = Date.now();
+      results.forEach(({ questionId, correct, timeMs }) => {
         const prev = Object.hasOwn(stats, questionId)
           ? stats[questionId]
-          : { seen: 0, correct: 0, last: false };
+          : EMPTY_STAT;
         stats[questionId] = {
           seen: prev.seen + 1,
           correct: prev.correct + (correct ? 1 : 0),
           last: correct,
+          timeMs: prev.timeMs + (timeMs ?? 0),
+          timed: prev.timed + (timeMs === undefined ? 0 : 1),
+          lastAt: now,
+          wrongAt: correct ? prev.wrongAt : now,
+          dismissed: correct ? prev.dismissed : false,
         };
       });
       const correct = results.filter((r) => r.correct).length;
@@ -254,7 +315,7 @@ export class QuizzesService {
       // Planeadas: nunca menos que as respondidas nem mais que as do quiz.
       const planned = Math.min(
         Math.max(dto.planned ?? 0, results.length),
-        known.size,
+        Math.max(known.size, results.length),
       );
 
       const old = await tx.quizAttempt.findMany({
@@ -286,6 +347,83 @@ export class QuizzesService {
         where: { id: { in: old.map((a) => a.id) }, userId },
       });
       return { attempt, stats, lastScorePct };
+    });
+  }
+
+  /**
+   * Corre uma escrita com a linha do quiz trancada (so do dono): leituras e
+   * gravacoes das estatisticas ficam em serie, como em submitAttempt.
+   */
+  private lockedWrite(
+    userId: string,
+    id: string,
+    run: (
+      tx: Prisma.TransactionClient,
+      quiz: { stats: Prisma.JsonValue },
+    ) => Promise<void>,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<{ id: string }[]>`
+        SELECT "id" FROM "Quiz" WHERE "id" = ${id} AND "userId" = ${userId} FOR UPDATE`;
+      if (locked.length === 0) throw new NotFoundException(NOT_FOUND);
+      const quiz = await tx.quiz.findFirst({
+        where: { id, userId },
+        select: { stats: true },
+      });
+      if (!quiz) throw new NotFoundException(NOT_FOUND);
+      await run(tx, quiz);
+    });
+  }
+
+  private async saveStats(
+    tx: Prisma.TransactionClient,
+    id: string,
+    stats: QuizStats,
+  ) {
+    await tx.quiz.update({
+      where: { id },
+      data: { stats: { ...stats } as unknown as Prisma.InputJsonValue },
+    });
+  }
+
+  /** Apaga o historico de tentativas do quiz e a ultima nota. */
+  clearAttempts(userId: string, id: string) {
+    return this.lockedWrite(userId, id, async (tx) => {
+      await tx.quizAttempt.deleteMany({ where: { quizId: id, userId } });
+      await tx.quiz.update({ where: { id }, data: { lastScorePct: null } });
+    });
+  }
+
+  /** Poe as estatisticas por pergunta a zero. */
+  clearStats(userId: string, id: string) {
+    return this.lockedWrite(userId, id, async (tx) => {
+      await this.saveStats(tx, id, Object.create(null) as QuizStats);
+    });
+  }
+
+  /** Tira da lista de erradas todas as perguntas (last === false). */
+  dismissWrong(userId: string, id: string) {
+    return this.lockedWrite(userId, id, async (tx, quiz) => {
+      const stats = readStats(quiz.stats);
+      Object.values(stats).forEach((s) => {
+        if (!s.last) s.dismissed = true;
+      });
+      await this.saveStats(tx, id, stats);
+    });
+  }
+
+  /** Tira uma pergunta da lista de erradas; id invalido = 400, desconhecido = 404. */
+  dismissWrongOne(userId: string, id: string, questionId: string) {
+    if (!QUIZ_QUESTION_ID.test(questionId)) {
+      throw new BadRequestException('Invalid question id.');
+    }
+    return this.lockedWrite(userId, id, async (tx, quiz) => {
+      const stats = readStats(quiz.stats);
+      if (isReservedKey(questionId) || !Object.hasOwn(stats, questionId)) {
+        throw new NotFoundException('Question not found.');
+      }
+      stats[questionId].dismissed = true;
+      await this.saveStats(tx, id, stats);
     });
   }
 }

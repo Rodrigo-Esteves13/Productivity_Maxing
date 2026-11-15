@@ -12,11 +12,18 @@ import {
   checkQuizText,
   recheckCanonicalQuiz,
 } from './quiz-check';
-import { ImportQuizDto, SubmitAttemptDto } from './dto/quiz.dto';
+import {
+  AttemptResultDto,
+  ImportQuizDto,
+  SubmitAttemptDto,
+  UpdateQuizDto,
+} from './dto/quiz.dto';
+import { GENERATOR_KINDS } from './quiz-generators';
 import { QUIZ_MAX_FILE_BYTES, QUIZ_MAX_QUESTIONS } from './quiz-format';
 import {
   MAX_QUIZZES_PER_USER,
   QUIZ_IMPORT_BODY_LIMIT,
+  QUIZ_QUESTION_MAX_TIME_MS,
 } from './quizzes.constants';
 
 // Tempo maximo (folgado) do caminho DTO + servico para ~1 MB de texto hostil.
@@ -447,7 +454,9 @@ describe('QuizzesService', () => {
         { questionId: 'ghost', correct: true },
       ],
     });
-    expect(out.stats).toEqual({ q1: { seen: 2, correct: 1, last: false } });
+    expect({ ...out.stats }).toMatchObject({
+      q1: { seen: 2, correct: 1, last: false },
+    });
     expect(out.lastScorePct).toBe(0);
     expect(firstArg(prisma.quizAttempt.create).data).toMatchObject({
       total: 1,
@@ -504,7 +513,7 @@ describe('QuizzesService', () => {
         results: [{ questionId: 'q1', correct }],
       });
     await Promise.all([attempt(true), attempt(false), attempt(true)]);
-    expect(stats).toEqual({ q1: { seen: 3, correct: 2, last: true } });
+    expect(stats).toMatchObject({ q1: { seen: 3, correct: 2, last: true } });
   });
 
   it('keeps stats right for ids named like Object.prototype members', async () => {
@@ -527,9 +536,9 @@ describe('QuizzesService', () => {
       valueOf: { seen: 3, correct: 2, last: true },
       hasOwnProperty: { seen: 1, correct: 1, last: true },
     };
-    expect({ ...out.stats }).toEqual(expected);
+    expect({ ...out.stats }).toMatchObject(expected);
     const written = firstArg(prisma.quiz.update).data as { stats: unknown };
-    expect(JSON.parse(JSON.stringify(written.stats))).toEqual(expected);
+    expect(JSON.parse(JSON.stringify(written.stats))).toMatchObject(expected);
   });
 
   it('defaults planned to the accepted results and never goes below it', async () => {
@@ -602,6 +611,382 @@ describe('QuizzesService', () => {
         mode: 'EXAM',
         durationMs: 1,
         results: [{ questionId: 'x', correct: true }],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+const OWNER_QUIZ = (stats: unknown) => ({ questions: [QUESTION], stats });
+const NOW = 1_700_000_000_000;
+const EARLIER = 1_600_000_000_000;
+const THIRTY = 30;
+const STATS_ID = 'q1';
+
+// Estatisticas gravadas pela primeira chamada de quiz.update.
+const savedStats = (prisma: { quiz: { update: jest.Mock } }) =>
+  (firstArg(prisma.quiz.update).data as { stats: Record<string, unknown> })
+    .stats;
+
+const attemptOf = (results: AttemptResultDto[]) => ({
+  mode: 'PRACTICE' as const,
+  durationMs: 1,
+  results,
+});
+
+describe('QuizzesService stats (time, wrong area)', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('reads old rows with defaults and invalid numbers as 0', async () => {
+    const { service } = setup({
+      quiz: {
+        id: 'quiz',
+        stats: {
+          old: { seen: 2, correct: 1, last: true },
+          bad: {
+            seen: -1,
+            correct: 1.5,
+            last: 'yes',
+            timeMs: Number.MAX_SAFE_INTEGER + 2,
+            timed: '3',
+            lastAt: null,
+            wrongAt: [1],
+            dismissed: 1,
+          },
+        },
+      },
+    });
+    const out = await service.get('u1', 'quiz');
+    expect({ ...out.stats }).toEqual({
+      old: {
+        seen: 2,
+        correct: 1,
+        last: true,
+        timeMs: 0,
+        timed: 0,
+        lastAt: 0,
+        wrongAt: 0,
+        dismissed: false,
+      },
+      bad: {
+        seen: 0,
+        correct: 0,
+        last: false,
+        timeMs: 0,
+        timed: 0,
+        lastAt: 0,
+        wrongAt: 0,
+        dismissed: false,
+      },
+    });
+  });
+
+  it('accumulates timeMs and counts only answers that carry it', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(NOW);
+    const { service } = setup({
+      quiz: OWNER_QUIZ({
+        q1: { seen: 1, correct: 1, last: true, timeMs: 500, timed: 1 },
+      }),
+    });
+    const out = await service.submitAttempt(
+      'u1',
+      'quiz',
+      attemptOf([{ questionId: 'q1', correct: true, timeMs: 700 }]),
+    );
+    expect(out.stats.q1).toMatchObject({ timeMs: 1200, timed: 2, lastAt: NOW });
+    const b = setup({ quiz: OWNER_QUIZ({}) });
+    const noTime = await b.service.submitAttempt(
+      'u1',
+      'quiz',
+      attemptOf([{ questionId: 'q1', correct: true }]),
+    );
+    expect(noTime.stats.q1).toMatchObject({ timeMs: 0, timed: 0 });
+  });
+
+  it('caps the per-answer timeMs through the DTO', async () => {
+    const errorsOf = async (timeMs: unknown) =>
+      (
+        await validate(
+          plainToInstance(SubmitAttemptDto, {
+            mode: 'EXAM',
+            durationMs: 1,
+            results: [{ questionId: 'q1', correct: true, timeMs }],
+          }),
+        )
+      ).length;
+    expect(QUIZ_QUESTION_MAX_TIME_MS).toBe(THIRTY * 60 * 1000);
+    expect(await errorsOf(undefined)).toBe(0);
+    expect(await errorsOf(0)).toBe(0);
+    expect(await errorsOf(QUIZ_QUESTION_MAX_TIME_MS)).toBe(0);
+    expect(await errorsOf(QUIZ_QUESTION_MAX_TIME_MS + 1)).toBe(1);
+    expect(await errorsOf(-1)).toBe(1);
+    expect(await errorsOf(1.5)).toBe(1);
+    expect(await errorsOf('9')).toBe(1);
+  });
+
+  it('sets wrongAt on a wrong answer and resets dismissed', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(NOW);
+    const stat = {
+      seen: 1,
+      correct: 0,
+      last: false,
+      wrongAt: EARLIER,
+      lastAt: EARLIER,
+      dismissed: true,
+    };
+    const wrong = setup({ quiz: OWNER_QUIZ({ q1: stat }) });
+    const a = await wrong.service.submitAttempt(
+      'u1',
+      'quiz',
+      attemptOf([{ questionId: 'q1', correct: false }]),
+    );
+    expect(a.stats.q1).toMatchObject({
+      wrongAt: NOW,
+      lastAt: NOW,
+      dismissed: false,
+    });
+    const right = setup({ quiz: OWNER_QUIZ({ q1: stat }) });
+    const b = await right.service.submitAttempt(
+      'u1',
+      'quiz',
+      attemptOf([{ questionId: 'q1', correct: true }]),
+    );
+    expect(b.stats.q1).toMatchObject({
+      wrongAt: EARLIER,
+      lastAt: NOW,
+      dismissed: true,
+      last: true,
+    });
+  });
+});
+
+describe('QuizzesService clear and dismiss endpoints', () => {
+  const stats = {
+    q1: { seen: 2, correct: 1, last: false },
+    q2: { seen: 1, correct: 1, last: true },
+  };
+
+  it('are owner only: 404 and nothing written for another user', async () => {
+    const { service, prisma } = setup();
+    await expect(service.clearAttempts('u2', 'quiz')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await expect(service.clearStats('u2', 'quiz')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await expect(service.dismissWrong('u2', 'quiz')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await expect(
+      service.dismissWrongOne('u2', 'quiz', STATS_ID),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(rawCall(prisma.$queryRaw, 3).values).toEqual(['quiz', 'u2']);
+    expect(prisma.quiz.update).not.toHaveBeenCalled();
+    expect(prisma.quizAttempt.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('lock the quiz row before reading', async () => {
+    const calls = [
+      (s: QuizzesService) => s.clearAttempts('u1', 'quiz'),
+      (s: QuizzesService) => s.clearStats('u1', 'quiz'),
+      (s: QuizzesService) => s.dismissWrong('u1', 'quiz'),
+      (s: QuizzesService) => s.dismissWrongOne('u1', 'quiz', 'q1'),
+    ];
+    for (const call of calls) {
+      const { service, prisma } = setup({ quiz: { stats } });
+      await call(service);
+      expect(rawCall(prisma.$queryRaw).sql).toBe(
+        'SELECT "id" FROM "Quiz" WHERE "id" = ? AND "userId" = ? FOR UPDATE',
+      );
+      expect(prisma.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+        prisma.quiz.findFirst.mock.invocationCallOrder[0],
+      );
+    }
+  });
+
+  it('clearAttempts deletes this quiz attempts and nulls lastScorePct', async () => {
+    const { service, prisma } = setup({ quiz: { stats } });
+    await service.clearAttempts('u1', 'quiz');
+    expect(firstArg(prisma.quizAttempt.deleteMany).where).toEqual({
+      quizId: 'quiz',
+      userId: 'u1',
+    });
+    expect(firstArg(prisma.quiz.update).data).toEqual({ lastScorePct: null });
+  });
+
+  it('clearStats writes an empty stats object', async () => {
+    const { service, prisma } = setup({ quiz: { stats } });
+    await service.clearStats('u1', 'quiz');
+    expect(savedStats(prisma)).toEqual({});
+  });
+
+  it('dismissWrong flags only the stats with last === false', async () => {
+    const { service, prisma } = setup({ quiz: { stats } });
+    await service.dismissWrong('u1', 'quiz');
+    const out = savedStats(prisma) as Record<string, { dismissed: boolean }>;
+    expect(out.q1.dismissed).toBe(true);
+    expect(out.q2.dismissed).toBe(false);
+  });
+
+  it('dismissWrongOne flags one stat and keeps the rest', async () => {
+    const { service, prisma } = setup({ quiz: { stats } });
+    await service.dismissWrongOne('u1', 'quiz', 'q1');
+    const out = savedStats(prisma) as Record<string, { dismissed: boolean }>;
+    expect(out.q1.dismissed).toBe(true);
+    expect(out.q2.dismissed).toBe(false);
+  });
+
+  it('dismissWrongOne refuses unknown, reserved and malformed ids', async () => {
+    const { service, prisma } = setup({
+      quiz: {
+        stats: { ...stats, toString: { seen: 1, correct: 0, last: false } },
+      },
+    });
+    for (const id of [
+      'ghost',
+      '__proto__',
+      'constructor',
+      'toString',
+      'valueOf',
+    ]) {
+      await expect(
+        service.dismissWrongOne('u1', 'quiz', id),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    }
+    for (const id of ['', 'a b', 'x'.repeat(49), '../q1']) {
+      expect(() => service.dismissWrongOne('u1', 'quiz', id)).toThrow(
+        BadRequestException,
+      );
+    }
+    expect(prisma.quiz.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('QuizzesService generators', () => {
+  const owner = (generators: unknown, stats: unknown = {}) => ({
+    questions: [QUESTION],
+    generators,
+    stats,
+  });
+  const GEN_REPEATS = 3;
+
+  it('get returns only known kinds, unique, in enum order', async () => {
+    const { service } = setup({
+      quiz: {
+        figures: {},
+        stats: {},
+        generators: ['ospfCost', 'bogus', 'wildcard', 'ospfCost', 7],
+      },
+    });
+    const out = await service.get('u1', 'quiz');
+    expect(out.generators).toEqual(['wildcard', 'ospfCost']);
+  });
+
+  it('get returns an empty list for rows without generators', async () => {
+    const { service } = setup({ quiz: { figures: {}, stats: {} } });
+    expect((await service.get('u1', 'quiz')).generators).toEqual([]);
+  });
+
+  it('update dedupes generators and keeps the enum order', async () => {
+    const { service, prisma } = setup({ quiz: {} });
+    const out = await service.update('u1', 'quiz', {
+      generators: ['summarize', 'wildcard', 'summarize'],
+    });
+    expect(out).toEqual({ id: 'quiz', generators: ['wildcard', 'summarize'] });
+    expect(firstArg(prisma.quiz.updateMany).data).toEqual({
+      generators: ['wildcard', 'summarize'],
+    });
+  });
+
+  it('update changes title and generators together or alone', async () => {
+    const { service, prisma } = setup({ quiz: {} });
+    await service.update('u1', 'quiz', { title: ' New ', generators: [] });
+    expect(firstArg(prisma.quiz.updateMany).data).toEqual({
+      title: 'New',
+      generators: [],
+    });
+  });
+
+  it('update with neither title nor generators is a 400', async () => {
+    const { service, prisma } = setup({ quiz: {} });
+    await expect(service.update('u1', 'quiz', {})).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.quiz.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('validates the generators field through the DTO', async () => {
+    const errorsOf = async (body: Record<string, unknown>) =>
+      (await validate(plainToInstance(UpdateQuizDto, body))).map(
+        (e) => e.property,
+      );
+    expect(await errorsOf({ generators: ['wildcard'] })).toEqual([]);
+    expect(await errorsOf({ title: 'x' })).toEqual([]);
+    expect(await errorsOf({ generators: [...GENERATOR_KINDS] })).toEqual([]);
+    expect(await errorsOf({ generators: ['nope'] })).toEqual(['generators']);
+    expect(await errorsOf({ generators: ['wildcard', 'wildcard'] })).toEqual([
+      'generators',
+    ]);
+    expect(
+      await errorsOf({ generators: [...GENERATOR_KINDS, 'wildcard'] }),
+    ).toEqual(['generators']);
+    expect(await errorsOf({ generators: 'wildcard' })).toEqual(['generators']);
+    expect(await errorsOf({ title: '' })).toEqual(['title']);
+  });
+
+  it('counts every repeated gen key as one answer in stats and attempt', async () => {
+    const { service, prisma } = setup({ quiz: owner(['wildcard']) });
+    const out = await service.submitAttempt('u1', 'quiz', {
+      mode: 'PRACTICE',
+      durationMs: 1,
+      results: [
+        { questionId: 'gen-wildcard', correct: true, timeMs: 1000 },
+        { questionId: 'gen-wildcard', correct: false, timeMs: 2000 },
+        { questionId: 'gen-wildcard', correct: true },
+        { questionId: 'q1', correct: true },
+        { questionId: 'q1', correct: false },
+      ],
+    });
+    expect({ ...out.stats }).toMatchObject({
+      'gen-wildcard': {
+        seen: GEN_REPEATS,
+        correct: 2,
+        last: true,
+        timeMs: 3000,
+        timed: 2,
+      },
+      q1: { seen: 1, correct: 1 },
+    });
+    expect(firstArg(prisma.quizAttempt.create).data).toMatchObject({
+      total: GEN_REPEATS + 1,
+      correct: 3,
+    });
+    expect(out.lastScorePct).toBe(75);
+  });
+
+  it('ignores a gen key of a kind that is not enabled', async () => {
+    const { service, prisma } = setup({ quiz: owner(['wildcard']) });
+    const out = await service.submitAttempt('u1', 'quiz', {
+      mode: 'PRACTICE',
+      durationMs: 1,
+      results: [
+        { questionId: 'gen-ospfCost', correct: true },
+        { questionId: 'gen-wildcard', correct: true },
+        { questionId: 'gen-bogus', correct: true },
+      ],
+    });
+    expect(Object.keys(out.stats)).toEqual(['gen-wildcard']);
+    expect(firstArg(prisma.quizAttempt.create).data).toMatchObject({
+      total: 1,
+    });
+  });
+
+  it('refuses an attempt of only disabled gen keys', async () => {
+    const { service } = setup({ quiz: owner([]) });
+    await expect(
+      service.submitAttempt('u1', 'quiz', {
+        mode: 'PRACTICE',
+        durationMs: 1,
+        results: [{ questionId: 'gen-wildcard', correct: true }],
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
