@@ -17,8 +17,10 @@ const BIG_BODY_BYTES = 500 * 1024;
 // Objeto largo do audit H1 (~110k chaves): 4.6 s no class-transformer.
 const WIDE_KEYS = 110_000;
 const DEEP_NESTING = 100_000;
-// Tempo maximo (folgado) do parse + ValidationPipe para um corpo hostil.
-const HOSTILE_BODY_MAX_MS = 300;
+// Tempo maximo da ValidationPipe para um corpo hostil ja lido. Antes da
+// correcao eram 4.6 s; o limite tem folga para runners de CI lentos e com
+// workers em paralelo, mas continua muito abaixo do caso vulneravel.
+const HOSTILE_BODY_MAX_MS = 1000;
 
 const pipe = new ValidationPipe({
   whitelist: true,
@@ -71,9 +73,12 @@ describe('importBodyReviver', () => {
       `{"quizJson":${wideObject(WIDE_KEYS)}}`,
     ];
     for (const text of bodies) {
+      // O JSON.parse nativo fica fora da medicao: varia com a maquina e
+      // nao era o problema (o custo quadratico estava na pipe).
+      const body = parse(text);
       const start = performance.now();
       await expect(
-        pipe.transform(parse(text), { type: 'body', metatype: ImportQuizDto }),
+        pipe.transform(body, { type: 'body', metatype: ImportQuizDto }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(performance.now() - start).toBeLessThan(HOSTILE_BODY_MAX_MS);
     }

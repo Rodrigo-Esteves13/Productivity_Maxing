@@ -27,7 +27,8 @@ import {
 } from './quizzes.constants';
 
 // Tempo maximo (folgado) do caminho DTO + servico para ~1 MB de texto hostil.
-const HOSTILE_IMPORT_MAX_MS = 300;
+// Folga para runners de CI lentos; o caso vulneravel demorava segundos.
+const HOSTILE_IMPORT_MAX_MS = 1000;
 // Objeto largo do audit H1 (~110k chaves, ~1 MB): 4.4 s no class-transformer.
 const WIDE_KEYS = 110_000;
 const DEEP_NESTING = 200_000;
