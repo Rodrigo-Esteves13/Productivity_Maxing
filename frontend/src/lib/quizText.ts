@@ -33,6 +33,12 @@ const SCHEME = /javascript\s*:|vbscript\s*:|data\s*:\s*text\/html/gi;
 // "<" de uma etiqueta com atributo de evento (ex.: "<foo onerror=x>"); texto
 // como "a < b; x.onclick = f" fica igual.
 const HANDLER_TAG_START = /<(?=\/?[a-z][a-z0-9-]*[\s/][^<>]*\bon[a-z]+\s*=)/gi;
+// Rede final: nenhum '<' fica colado a uma letra, '!', '?' ou '/', por isso
+// nenhuma etiqueta, comentario ou atributo de HTML sobrevive, faca o que
+// fizerem as regras acima. O '<' passa ao sinal de largura total (mesmo
+// numero de code points), e '<interface>' continua legivel.
+const TAG_OPEN_GUARD = /<(?=[a-z!/?])/gi;
+const SAFE_LESS_THAN = '＜';
 const ENTITY = /&(#x[0-9a-f]+|#\d+|[a-z]+);/gi;
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 const MAX_CODE_POINT = 0x10ffff;
@@ -131,6 +137,7 @@ function cleanPass(text: string, options: QuizTextOptions, flag: { dangerous: bo
     .replace(DANGER_TAG_START, '')
     .replace(SCHEME, '')
     .replace(HANDLER_TAG_START, '')
+    .replace(TAG_OPEN_GUARD, SAFE_LESS_THAN)
     .replace(/\r\n?/g, '\n');
   out = trimLineEnds(out).replace(/\n{3,}/g, '\n\n');
   if (!options.multiline) out = out.replace(/\s+/g, ' ');

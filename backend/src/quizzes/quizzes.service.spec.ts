@@ -255,7 +255,8 @@ describe('QuizzesService import (strict canonical rule)', () => {
     // Chaves com nome de prototipo, em cima e dentro de uma pergunta.
     const protoKeys = ['__proto__', 'constructor', 'toString', 'valueOf'];
     for (const key of protoKeys) {
-      await expectRefused(BASE.replace('{', `{"${key}":{"x":1},`));
+      // Insere a chave logo a seguir ao '{' inicial do objeto de topo.
+      await expectRefused(`{"${key}":{"x":1},${BASE.slice(1)}`);
       await expectRefused(BASE.replace('{"id"', `{"${key}":1,"id"`));
     }
     const reordered = JSON.stringify(

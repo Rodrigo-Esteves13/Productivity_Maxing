@@ -226,6 +226,6 @@ describe('sanitizeQuizText is a fixpoint', () => {
   });
 
   it('keeps technical text that is not HTML', () => {
-    expect(sanitizeQuizText('interface <name> and a < b; x.onclick = f', 100)).toBe('interface <name> and a < b; x.onclick = f');
+    expect(sanitizeQuizText('interface <name> and a < b; x.onclick = f', 100)).toBe('interface ＜name> and a < b; x.onclick = f');
   });
 });

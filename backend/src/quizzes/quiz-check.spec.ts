@@ -58,8 +58,12 @@ describe('sanitizeQuizText', () => {
   });
 
   it('keeps technical angle brackets that are not HTML', () => {
+    // '<' colado a letras passa ao sinal de largura total (rede final anti-etiqueta).
     expect(sanitizeQuizText('interface <name> and a < b', 100)).toBe(
-      'interface <name> and a < b',
+      'interface ＜name> and a < b',
+    );
+    expect(sanitizeQuizText('<<script>alert(1)</script>', 100)).not.toMatch(
+      /<[a-z!/?]/i,
     );
   });
 

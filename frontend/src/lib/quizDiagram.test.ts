@@ -338,7 +338,7 @@ describe('sanitizeQuizDiagram: string injection ends as harmless plain text', ()
 
   it('leaves a non-HTML tag such as </text> as literal text (React escapes it)', () => {
     const diagram = clean(base({ nodes: [node('r1', { label: '</text><script>alert(1)</script>' }), node('r2')] }));
-    expect(diagram.nodes[0].label).toBe('</text>');
+    expect(diagram.nodes[0].label).toBe('＜/text>');
   });
 
   it('turns markup into plain text without markdown markers', () => {
@@ -353,7 +353,7 @@ describe('sanitizeQuizDiagram: string injection ends as harmless plain text', ()
 
   it('keeps technical angle brackets that are not HTML', () => {
     const diagram = clean(base({ nodes: [node('r1', { label: 'cost < 10 <interface>' }), node('r2')] }));
-    expect(diagram.nodes[0].label).toBe('cost < 10 <interface>');
+    expect(diagram.nodes[0].label).toBe('cost < 10 ＜interface>');
   });
 
   it('collapses whitespace and line breaks to single spaces', () => {
