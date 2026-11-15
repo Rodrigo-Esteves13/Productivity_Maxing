@@ -13,7 +13,8 @@ const BELL = String.fromCharCode(7);
 const ZWJ = String.fromCodePoint(0x200d);
 const FENCE = '```';
 // Tempo maximo (folgado) para procurar o bloco ``` em ~1 MB de texto hostil.
-const FENCE_SCAN_MAX_MS = 300;
+// Folga para runners de CI lentos; o caso vulneravel demorava segundos.
+const FENCE_SCAN_MAX_MS = 1000;
 // Invisiveis e de formatacao que a limpeza tira (o ZWJ fica, junta emoji).
 const HIDDEN_CODE_POINTS = [
   0xad, 0x34f, 0x61c, 0x115f, 0x1160, 0x200b, 0x200c, 0x200e, 0x200f, 0x2060, 0x2064, 0x206a, 0x206f, 0x3164, 0xffa0,

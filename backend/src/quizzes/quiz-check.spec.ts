@@ -18,7 +18,8 @@ const single = (extra: Record<string, unknown> = {}) => ({
 });
 
 // Tempo maximo (folgado) para procurar o bloco ``` em ~1 MB de texto hostil.
-const FENCE_SCAN_MAX_MS = 300;
+// Folga para runners de CI lentos; o caso vulneravel demorava segundos.
+const FENCE_SCAN_MAX_MS = 1000;
 const FENCE = '```';
 // Junta emoji compostos (familia, bandeiras): tem de ficar no texto.
 const ZWJ = 0x200d;

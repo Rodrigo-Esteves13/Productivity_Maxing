@@ -138,6 +138,7 @@ export const quizzes: Record<string, string> = {
   'quizzes.results.cardsError': "플래시카드를 만들 수 없습니다.",
   'quizzes.results.partialNote': "부분 시도: {planned}문제 중 {answered}문제 답변. 답하지 않은 문제는 점수에 포함되지 않습니다.",
   'quizzes.results.cardsAsk': "{count}문제를 틀렸습니다. 플래시카드에 추가할까요?",
+  'quizzes.results.cardsAskSome': "{wrong}문제를 틀렸어요. {already}문제는 이전 시도에서 이미 플래시카드에 있어요. 나머지 {count}문제를 추가할까요?",
   'quizzes.results.cardsAdd': "{count}문제를 플래시카드에 추가",
   'quizzes.results.cardsNotNow': "나중에",
   'quizzes.results.cardsAlready': "틀린 문제는 이미 플래시카드에 있습니다.",
@@ -222,4 +223,9 @@ export const quizzes: Record<string, string> = {
   'quizzes.calc.mixHelp': "문제의 약 4분의 1이 켜 둔 생성기에서 나옵니다.",
   'quizzes.calc.saveError': "생성기를 저장하지 못했습니다.",
   'quizzes.calc.answers': "답 {count}개",
+  'quizzes.pool.label': "문제:",
+  'quizzes.pool.all': "전체 ({count})",
+  'quizzes.pool.unseen': "안 본 문제 ({count})",
+  'quizzes.pool.wrong': "틀린 문제 ({count})",
+  'quizzes.pool.unseenWrong': "안 본 문제 + 틀린 문제 ({count})",
 };

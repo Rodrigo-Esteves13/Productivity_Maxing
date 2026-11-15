@@ -7,6 +7,7 @@ import ProgressBar from '../UI/ProgressBar';
 import TabBar from '../UI/TabBar';
 import ToggleChip from '../UI/ToggleChip';
 import ToggleRow from '../UI/ToggleRow';
+import SegmentedControl from '../UI/SegmentedControl';
 import QuestionView, { QuestionPrompt } from './QuestionView';
 import QuizStatsPanel from './QuizStatsPanel';
 import QuizWrongArea from './QuizWrongArea';
@@ -26,13 +27,16 @@ import {
   MS_PER_SECOND,
   pickExam,
   pickPractice,
+  poolQuestions,
   PRACTICE_SIZES,
+  QUESTION_POOLS,
   shuffle,
   statOf,
   timesWrong,
   topicMastery,
   wasAnswered,
   wrongQuestions,
+  type QuestionPool,
   type QuizMode,
   type QuizSession,
 } from '../../lib/quizSession';
@@ -87,6 +91,14 @@ export default function QuizHome({
   const [practiceSize, setPracticeSize] = useState<number>(PRACTICE_SIZES[0]);
   const [search, setSearch] = useState('');
   const [weakFirst, setWeakFirst] = useState(false);
+  // De onde o exame e a pratica escolhem: todas, nunca vistas, erradas ou as duas.
+  const [pool, setPool] = useState<QuestionPool>('all');
+  const poolCounts = useMemo(
+    () => Object.fromEntries(QUESTION_POOLS.map((p) => [p, poolQuestions(quiz, quiz.stats, p).length])) as Record<QuestionPool, number>,
+    [quiz],
+  );
+  const poolQuiz = useMemo(() => ({ ...quiz, questions: poolQuestions(quiz, quiz.stats, pool) }), [quiz, pool]);
+  const poolSize = poolQuiz.questions.length;
   const [mixGenerated, setMixGenerated] = useState(true);
   const [calcKinds, setCalcKinds] = useState<GeneratorKind[]>([]);
   const [calcSize, setCalcSize] = useState<number>(CALC_SIZES[0]);
@@ -106,7 +118,7 @@ export default function QuizHome({
   const presentKinds = useMemo(() => QUIZ_KINDS.filter((k) => quiz.questions.some((q) => q.kind === k)), [quiz.questions]);
   const wrong = useMemo(() => wrongQuestions(quiz, quiz.stats), [quiz]);
   const mastery = useMemo(() => topicMastery(quiz, quiz.stats), [quiz]);
-  const practicePool = pickPractice(quiz, topics, kinds, quiz.questions.length).length;
+  const practicePool = pickPractice(poolQuiz, topics, kinds, poolSize).length;
   const bank = useMemo(() => {
     const needle = foldText(search.trim());
     return quiz.questions.filter(
@@ -123,7 +135,8 @@ export default function QuizHome({
     }).length;
   }, [session, quiz.questions]);
   const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
-  const examSizes = EXAM_SIZES.filter((n) => n < quiz.questions.length);
+  const examSizes = EXAM_SIZES.filter((n) => n < poolSize);
+  const examCount = Math.min(examSize, poolSize);
 
   return (
     <div className="space-y-4">
@@ -164,13 +177,22 @@ export default function QuizHome({
               </div>
             </Card>
           )}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-neutral-400">{t('quizzes.pool.label')}</span>
+            <SegmentedControl
+              size="sm"
+              value={pool}
+              onChange={setPool}
+              options={QUESTION_POOLS.map((value) => ({ value, label: t(`quizzes.pool.${value}`, { count: poolCounts[value] }) }))}
+            />
+          </div>
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <h2 className="font-semibold text-white">{t('quizzes.mode.exam')}</h2>
               <p className="mt-1 text-sm text-neutral-400">{t('quizzes.home.examHelp', { seconds: quiz.secondsPerQuestion })}</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {[...examSizes, quiz.questions.length].map((n) => (
-                  <ToggleChip key={n} size="sm" pressed={examSize === n} onClick={() => setExamSize(n)}>
+                {[...examSizes, poolSize].filter((n) => n > 0).map((n) => (
+                  <ToggleChip key={n} size="sm" pressed={examCount === n} onClick={() => setExamSize(n)}>
                     {t('quizzes.home.examSize', { count: n, minutes: Math.ceil((n * quiz.secondsPerQuestion) / SECONDS_PER_MINUTE) })}
                   </ToggleChip>
                 ))}
@@ -188,7 +210,7 @@ export default function QuizHome({
                 size="sm"
                 className="mt-4"
                 onClick={() =>
-                  onStart('exam', withMix(examSize, (n) => pickExam(quiz, n, Math.random, { weak: weakFirst, stats: quiz.stats, avoid: lastExamIds })))
+                  onStart('exam', withMix(examCount, (n) => pickExam(poolQuiz, n, Math.random, { weak: weakFirst, stats: quiz.stats, avoid: lastExamIds })))
                 }
               >
                 {t('quizzes.home.startExam')}
@@ -235,7 +257,7 @@ export default function QuizHome({
                 size="sm"
                 className="mt-4"
                 disabled={practicePool === 0}
-                onClick={() => onStart('practice', withMix(practiceSize, (n) => pickPractice(quiz, topics, kinds, n)))}
+                onClick={() => onStart('practice', withMix(practiceSize, (n) => pickPractice(poolQuiz, topics, kinds, n)))}
               >
                 {t('quizzes.home.startPractice', { count: Math.min(practiceSize, practicePool) })}
               </Button>

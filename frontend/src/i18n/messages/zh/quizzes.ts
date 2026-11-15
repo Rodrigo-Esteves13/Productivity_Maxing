@@ -138,6 +138,7 @@ export const quizzes: Record<string, string> = {
   'quizzes.results.cardsError': "无法创建闪卡。",
   'quizzes.results.partialNote': "部分作答：{planned} 题中已答 {answered} 题。未作答的题目不计分。",
   'quizzes.results.cardsAsk': "你答错了 {count} 题。要加入闪卡吗？",
+  'quizzes.results.cardsAskSome': "你答错了 {wrong} 题。其中 {already} 题已在之前的尝试中加入闪卡。要添加其余 {count} 题吗？",
   'quizzes.results.cardsAdd': "将 {count} 题加入闪卡",
   'quizzes.results.cardsNotNow': "暂不",
   'quizzes.results.cardsAlready': "你的错题已在闪卡中。",
@@ -222,4 +223,9 @@ export const quizzes: Record<string, string> = {
   'quizzes.calc.mixHelp': "大约四分之一的题目来自你启用的生成器。",
   'quizzes.calc.saveError': "无法保存生成器。",
   'quizzes.calc.answers': "{count} 个答案",
+  'quizzes.pool.label': "题目：",
+  'quizzes.pool.all': "全部 ({count})",
+  'quizzes.pool.unseen': "未做过 ({count})",
+  'quizzes.pool.wrong': "答错 ({count})",
+  'quizzes.pool.unseenWrong': "未做过 + 答错 ({count})",
 };

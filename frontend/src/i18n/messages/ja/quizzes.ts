@@ -138,6 +138,7 @@ export const quizzes: Record<string, string> = {
   'quizzes.results.cardsError': "フラッシュカードを作成できませんでした。",
   'quizzes.results.partialNote': "一部のみの挑戦: {planned}問中{answered}問に回答。未回答の問題は数えません。",
   'quizzes.results.cardsAsk': "{count}問間違えました。フラッシュカードに追加しますか?",
+  'quizzes.results.cardsAskSome': "{wrong}問不正解でした。そのうち{already}問は以前の挑戦で既にフラッシュカードにあります。残りの{count}問を追加しますか？",
   'quizzes.results.cardsAdd': "{count}問をフラッシュカードに追加",
   'quizzes.results.cardsNotNow': "今はしない",
   'quizzes.results.cardsAlready': "間違えた問題はすでにフラッシュカードにあります。",
@@ -222,4 +223,9 @@ export const quizzes: Record<string, string> = {
   'quizzes.calc.mixHelp': "問題の約4分の1は、有効にしたジェネレーターから出ます。",
   'quizzes.calc.saveError': "ジェネレーターを保存できませんでした。",
   'quizzes.calc.answers': "{count} 個の答え",
+  'quizzes.pool.label': "問題:",
+  'quizzes.pool.all': "すべて ({count})",
+  'quizzes.pool.unseen': "未出題 ({count})",
+  'quizzes.pool.wrong': "不正解 ({count})",
+  'quizzes.pool.unseenWrong': "未出題 + 不正解 ({count})",
 };

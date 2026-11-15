@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_RESPONSE, QUIZ_FORMAT_ID, type Quiz, type QuizQuestion } from './quizFormat';
-import { makeItem, pickExam, scoreSession, startSession, touchSession, wrongQuestions, QUIZ_IDLE_GAP_MS, type QuizStats } from './quizSession';
+import { makeItem, pickExam, poolQuestions, scoreSession, startSession, touchSession, wrongQuestions, QUIZ_IDLE_GAP_MS, type QuizStats } from './quizSession';
 import {
   attemptTiming,
   evolution,
@@ -153,5 +153,15 @@ describe('pickExam', () => {
     expect(picked.sort()).toEqual(['a1', 'b1']);
     const avoided = pickExam(quiz, 2, fixed, { avoid: ['a1', 'b1'] }).map((x) => x.id);
     expect(avoided.sort()).toEqual(['a2', 'b2']);
+  });
+});
+
+describe('question pool', () => {
+  it('filters not seen, wrong and both', () => {
+    const ids = (pool: Parameters<typeof poolQuestions>[2]) => poolQuestions(quiz, stats, pool).map((x) => x.id);
+    expect(ids('all')).toEqual(['a1', 'a2', 'b1', 'b2']);
+    expect(ids('unseen')).toEqual(['b2']);
+    expect(ids('wrong')).toEqual(['a1']);
+    expect(ids('unseenWrong')).toEqual(['a1', 'b2']);
   });
 });

@@ -138,6 +138,7 @@ export const quizzes: Record<string, string> = {
   'quizzes.results.cardsError': "Impossible de créer les cartes mémoire.",
   'quizzes.results.partialNote': "Tentative partielle : {answered} sur {planned} répondues. Les questions sans réponse ne comptent pas.",
   'quizzes.results.cardsAsk': "Tu as {count} erreur(s). Les ajouter aux cartes mémoire ?",
+  'quizzes.results.cardsAskSome': "Tu en as raté {wrong}. {already} sont déjà dans tes cartes mémoire depuis des tentatives précédentes. Ajouter les {count} autres ?",
   'quizzes.results.cardsAdd': "Ajouter {count} aux cartes mémoire",
   'quizzes.results.cardsNotNow': "Pas maintenant",
   'quizzes.results.cardsAlready': "Tes mauvaises réponses sont déjà dans les cartes mémoire.",
@@ -222,4 +223,9 @@ export const quizzes: Record<string, string> = {
   'quizzes.calc.mixHelp': "Environ un quart des questions vient des générateurs que tu as activés.",
   'quizzes.calc.saveError': "Impossible d'enregistrer les générateurs.",
   'quizzes.calc.answers': "{count} réponses",
+  'quizzes.pool.label': "Questions :",
+  'quizzes.pool.all': "Toutes ({count})",
+  'quizzes.pool.unseen': "Jamais vues ({count})",
+  'quizzes.pool.wrong': "Ratées ({count})",
+  'quizzes.pool.unseenWrong': "Jamais vues + ratées ({count})",
 };
