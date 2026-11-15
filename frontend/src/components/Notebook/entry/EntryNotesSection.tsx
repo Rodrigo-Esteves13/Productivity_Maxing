@@ -9,6 +9,7 @@ import NotebookTableEditor from '../NotebookTableEditor';
 import CaseTransformBar from '../CaseTransformBar';
 import EntrySectionHeader from './EntrySectionHeader';
 import NotesCounter from './NotesCounter';
+import { openLinkOnModClick } from '../../../lib/ctrlClickLink';
 
 interface EntryNotesSectionProps {
   isEditing: boolean;
@@ -69,6 +70,7 @@ export default function EntryNotesSection({
         <div className={`grid gap-3 ${isToolsPanelOpen ? 'md:grid-cols-[1fr_18rem]' : 'grid-cols-1'}`}>
           <div>
             <textarea
+              onClick={openLinkOnModClick}
               ref={textareaRef}
               value={textContent}
               onChange={(e) => onTextChange(e.target.value)}

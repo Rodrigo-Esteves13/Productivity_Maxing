@@ -18,6 +18,7 @@ import { EMPTY_RECURRENCE, recurrencePayload, type RecurrenceValue } from '../..
 import { collectTags } from '../../lib/taskTags';
 import { todayKey } from '../../lib/dateKey';
 import { useI18n } from '../../i18n/useI18n';
+import { openLinkOnModClick } from '../../lib/ctrlClickLink';
 
 const DEFAULT_PROGRESS_STATUS = 'ON_TRACK';
 
@@ -212,6 +213,7 @@ export default function TaskForm({
           {t('ui.checklist')} <span className="text-neutral-500 font-normal">{t('ui.optionalOneStepPerLine')}</span>
         </label>
         <textarea
+          onClick={openLinkOnModClick}
           id="create-task-checklist"
           value={checklistText}
           onChange={(e) => setChecklistText(e.target.value)}

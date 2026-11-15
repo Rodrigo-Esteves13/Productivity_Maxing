@@ -7,6 +7,7 @@ export const nav: Record<string, string> = {
   'nav.areas': "科目",
   'nav.areasSelect': "选择科目",
   'nav.flashcards': "闪卡",
+  'nav.quizzes': "测验",
   'nav.profile': "个人资料",
   'nav.developer': "开发者",
   'nav.agent': "助手",

@@ -1,4 +1,5 @@
 import { useId, type TextareaHTMLAttributes } from 'react';
+import { openLinkOnModClick } from '../../lib/ctrlClickLink';
 
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
@@ -8,7 +9,7 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 // association - see the comment there for why that matters (a bare
 // `label` prop with no explicit `id` used to leave the <label> and field
 // disconnected).
-export default function Textarea({ label, id, className = '', ...rest }: TextareaProps) {
+export default function Textarea({ label, id, className = '', onClick, ...rest }: TextareaProps) {
   const generatedId = useId();
   const resolvedId = id ?? generatedId;
 
@@ -16,6 +17,10 @@ export default function Textarea({ label, id, className = '', ...rest }: Textare
     <textarea
       id={resolvedId}
       className={`w-full block border border-neutral-700 bg-neutral-900 text-white rounded-lg px-3 py-2.5 text-base placeholder:text-neutral-500 transition-[border-color,box-shadow] duration-[var(--duration-quick)] ease-smooth-out hover:border-neutral-600 focus:outline-none focus:ring-2 focus:ring-violet-600/50 focus:border-violet-500 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      // Ctrl/Cmd+clique num link escrito abre-o num separador novo.
+      onClick={(e) => {
+        if (!openLinkOnModClick(e)) onClick?.(e);
+      }}
       {...rest}
     />
   );

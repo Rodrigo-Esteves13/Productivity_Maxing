@@ -34,6 +34,7 @@ import { ApprovalRulesModule } from './approval-rules/approval-rules.module';
 import { AreaInterestsModule } from './area-interests/area-interests.module';
 import { AreaTeachersModule } from './area-teachers/area-teachers.module';
 import { FlashcardsModule } from './flashcards/flashcards.module';
+import { QuizzesModule } from './quizzes/quizzes.module';
 import { AreaRatingsModule } from './area-ratings/area-ratings.module';
 import { CourseRiskModule } from './course-risk/course-risk.module';
 import { BannedIpsModule } from './banned-ips/banned-ips.module';
@@ -93,6 +94,7 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
     AreaInterestsModule,
     AreaTeachersModule,
     FlashcardsModule,
+    QuizzesModule,
     AreaRatingsModule,
     CourseRiskModule,
     BannedIpsModule,

@@ -27,8 +27,9 @@ export const ACCENT_UNLOCK_COMPLETED: Partial<Record<AccentId, number>> = {
   fuchsia: 500,
 };
 
-export function isAccentUnlocked(id: AccentId, completed: number): boolean {
-  return completed >= (ACCENT_UNLOCK_COMPLETED[id] ?? 0);
+// Admins tem tudo desbloqueado, sem depender do numero de tasks.
+export function isAccentUnlocked(id: AccentId, completed: number, isAdmin = false): boolean {
+  return isAdmin || completed >= (ACCENT_UNLOCK_COMPLETED[id] ?? 0);
 }
 
 export function isAccentId(value: unknown): value is AccentId {

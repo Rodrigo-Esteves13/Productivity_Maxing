@@ -14,6 +14,7 @@ import { useTurmaDetail, useTurmaNote } from '../hooks/useTurmas';
 import { useConfirmAction } from '../hooks/useConfirmAction';
 import { useI18n } from '../i18n/useI18n';
 import { TURMAS_PATH, turmaPath } from '../lib/appLinks';
+import { openLinkOnModClick } from '../lib/ctrlClickLink';
 
 // Nota da turma: titulo e texto que gravam sozinhos, com aviso de conflito
 // quando outro membro grava ao mesmo tempo. Sem permissao, so leitura.
@@ -74,6 +75,7 @@ export default function TurmaNote() {
             className="mb-3 w-full bg-transparent text-2xl font-bold text-white placeholder:text-neutral-600 focus:outline-none"
           />
           <textarea
+            onClick={openLinkOnModClick}
             value={doc.content}
             onChange={(e) => note.change({ ...doc, content: e.target.value })}
             readOnly={!canEdit}

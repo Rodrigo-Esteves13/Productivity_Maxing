@@ -471,6 +471,8 @@ model User {
   notebookChangeProposals        NotebookChangeProposal[]
   approvalRuleSets               ApprovalRuleSet[]
   flashcards                     Flashcard[]
+  quizzes                        Quiz[]
+  quizAttempts                   QuizAttempt[]
 }
 
 /// Recurso submetido pelo próprio utilizador contra a sua suspensão/ban
@@ -2796,6 +2798,56 @@ model TurmaDeadlineTask {
   task     Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@unique([deadlineId, userId])
+  @@index([userId])
+}
+
+enum QuizAttemptMode {
+  EXAM
+  PRACTICE
+  WRONG
+}
+
+/// Quiz carregado pelo utilizador (JSON gerado fora da app com o prompt do
+/// pmaxing). O servidor volta a verificar e limpar tudo antes de gravar (ver
+/// quizzes/quiz-check.ts); as perguntas ficam em JSON ja normalizado.
+model Quiz {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title              String
+  language           String
+  secondsPerQuestion Int
+  topics             String[] @default([])
+  questions          Json
+  // Diagramas canonicos (so dados, ver quiz-diagram.ts): { [id]: diagrama }, partilhados entre perguntas.
+  figures            Json     @default("{}")
+  questionCount      Int
+  // Por pergunta: { [id]: { seen, correct, last } } (modo erradas e dominio).
+  stats              Json     @default("{}")
+  lastScorePct       Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  attempts QuizAttempt[]
+
+  @@index([userId, createdAt])
+}
+
+model QuizAttempt {
+  id         String          @id @default(uuid())
+  quizId     String
+  quiz       Quiz            @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mode       QuizAttemptMode
+  total      Int
+  correct    Int
+  durationMs Int
+  /// Perguntas da tentativa; maior que total = tentativa parcial.
+  planned    Int             @default(0)
+  finishedAt DateTime        @default(now())
+
+  @@index([quizId, finishedAt])
   @@index([userId])
 }
 

@@ -11,6 +11,7 @@ import CaseTransformBar from './CaseTransformBar';
 import EntrySectionHeader from './entry/EntrySectionHeader';
 import NotesCounter from './entry/NotesCounter';
 import { MAX_TEXT_CONTENT_LENGTH } from './entry/notebookEntryConfig';
+import { openLinkOnModClick } from '../../lib/ctrlClickLink';
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_NOTE_LENGTH = 300;
@@ -90,6 +91,7 @@ export default function SharedEntryEditForm({
           <CaseTransformBar textareaRef={textareaRef} textContent={text} onTextChange={setText} />
         </div>
         <textarea
+          onClick={openLinkOnModClick}
           id="shared-edit-notes"
           ref={textareaRef}
           value={text}
