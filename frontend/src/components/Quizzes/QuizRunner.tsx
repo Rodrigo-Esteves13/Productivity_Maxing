@@ -201,7 +201,8 @@ export default function QuizRunner({ questions, session, onChange, onFinish }: Q
       <p className="mb-2 text-xs uppercase tracking-wide text-neutral-500">
         {stripQuizMarkdown(question.topic)} · {t(`quizzes.kind.${question.kind}`)}
       </p>
-      <QuestionView question={question} item={item} onChange={setResponse} reveal={instant && item.checked} />
+      {/* key: cada pergunta monta de novo (foco automatico na resposta escrita). */}
+      <QuestionView key={item.id} question={question} item={item} onChange={setResponse} reveal={instant && item.checked} />
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-2">
@@ -219,7 +220,7 @@ export default function QuizRunner({ questions, session, onChange, onFinish }: Q
           {canCheck ? t('quizzes.run.check') : isLast ? t('quizzes.run.finish') : t('quizzes.run.next')}
         </Button>
       </div>
-      <p className="mt-3 text-xs text-neutral-500">{t('quizzes.run.keys')}</p>
+      <p className="mt-3 text-xs text-neutral-400">{t('quizzes.run.keys')}</p>
     </Card>
   );
 }

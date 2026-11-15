@@ -14,6 +14,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useI18n } from '../i18n/useI18n';
 import type { Quiz } from '../lib/quizFormat';
 import { stripQuizMarkdown } from '../lib/quizMarkdown';
+import { quizPath } from '../lib/appLinks';
 
 type QuizDialog = null | 'prompt' | 'upload';
 
@@ -45,7 +46,7 @@ export default function Quizzes() {
     try {
       const saved = await importQuiz(quiz);
       notify(t('quizzes.upload.saved', { count: saved.questionCount }), 'success');
-      navigate(`/quizzes/${saved.id}`);
+      navigate(quizPath(saved.id));
       return true;
     } catch {
       notify(t('quizzes.upload.saveError'), 'error');
@@ -87,13 +88,16 @@ export default function Quizzes() {
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {quizzes.map((q) => (
             <li key={q.id}>
-              <Link to={`/quizzes/${q.id}`} className="press block rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 hover:border-neutral-600">
+              <Link to={quizPath(q.id)} className="press block rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 hover:border-neutral-600">
                 <p className="break-words font-semibold text-white">{stripQuizMarkdown(q.title)}</p>
                 <p className="mt-1 text-sm text-neutral-400">
                   {t('quizzes.card.questions', { count: q.questionCount })}
                   {q.lastScorePct !== null && ` · ${t('quizzes.card.lastScore', { percent: q.lastScorePct })}`}
                 </p>
-                <p className="mt-2 text-xs text-neutral-500">{t('quizzes.aiLabel')}</p>
+                <p className="mt-2 text-xs text-neutral-400">
+                  {q.sharedBy ? t('quizzes.shared.by', { name: q.sharedBy.name || t('quizzes.share.unnamed') }) : t('quizzes.aiLabel')}
+                  {q.isShared && <span className="ml-2 rounded-md border border-violet-500/50 px-1.5 py-0.5 text-violet-300">{t('quizzes.share.badge')}</span>}
+                </p>
               </Link>
             </li>
           ))}

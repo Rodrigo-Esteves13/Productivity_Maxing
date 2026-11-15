@@ -32,7 +32,7 @@ function reviewItem(q: QuizQuestion, answers: LastWrongAnswers): { item: Session
 // Area de erradas: o que falhaste, quantas vezes, a tua ultima resposta e o
 // treino por topico, como no quiz de exemplo.
 export default function QuizWrongArea({ quiz, wrong, lastWrongAnswers, onPractise, onDismiss, onClearAll }: QuizWrongAreaProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const byTopic = useMemo(() => {
     const map = new Map<string, QuizQuestion[]>();
     wrong.forEach((q) => map.set(q.topic, [...(map.get(q.topic) ?? []), q]));
@@ -75,13 +75,13 @@ export default function QuizWrongArea({ quiz, wrong, lastWrongAnswers, onPractis
                   <span className="uppercase tracking-wide text-neutral-500">
                     {stripQuizMarkdown(q.topic)} · {t(`quizzes.kind.${q.kind}`)}
                   </span>
-                  {s?.wrongAt ? <span className="text-neutral-500">{new Date(s.wrongAt).toLocaleDateString()}</span> : null}
+                  {s?.wrongAt ? <span className="text-neutral-500">{new Date(s.wrongAt).toLocaleDateString(lang)}</span> : null}
                   <span className="flex-1" />
                   <Button size="sm" variant="secondary" onClick={() => onDismiss(q.id)}>
                     {t('quizzes.wrongArea.remove')}
                   </Button>
                 </div>
-                {!hasAnswer && <p className="mb-2 text-xs text-neutral-500">{t('quizzes.wrongArea.noAnswer')}</p>}
+                {!hasAnswer && <p className="mb-2 text-xs text-neutral-400">{t('quizzes.wrongArea.noAnswer')}</p>}
                 <QuestionView question={q} item={item} reveal showVerdict={false} />
               </Card>
             </li>

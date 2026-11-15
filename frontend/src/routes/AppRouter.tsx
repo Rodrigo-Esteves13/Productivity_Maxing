@@ -31,6 +31,7 @@ import {
   Flashcards,
   Quizzes,
   QuizDetail,
+  SharedQuiz,
   Social,
   FriendNotes,
   FriendProfile,
@@ -166,6 +167,11 @@ export default function AppRouter() {
           <Route
             path="/quizzes"
             element={<PrivateRoute><Quizzes /></PrivateRoute>}
+          />
+          {/* Partilha so dentro da app: sem sessao, o login volta aqui. */}
+          <Route
+            path="/quizzes/shared/:token"
+            element={<PrivateRoute><SharedQuiz /></PrivateRoute>}
           />
           <Route
             path="/quizzes/:quizId"

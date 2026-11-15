@@ -280,4 +280,6 @@ export const integration: Record<string, string> = {
   "testGaps.emptyWork": "No hay trabajos con fecha por ahora.",
   "testGaps.showAll": "Mostrar {count} más",
   "testGaps.showLess": "Mostrar menos",
+  "related.quizzes.shared": "Cuestionarios que comparten tus amigos",
+  "related.social.quizzes": "Tus cuestionarios",
 };

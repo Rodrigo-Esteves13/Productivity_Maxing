@@ -126,6 +126,8 @@ export default function QuestionView({ question: q, item, onChange, reveal, show
           placeholder={t('quizzes.run.yourAnswer')}
           value={r.text}
           readOnly={readOnly}
+          // Quiz rapido: a resposta escrita recebe o foco sem ir ao rato.
+          autoFocus={!readOnly}
           onChange={(e) => set({ text: e.target.value })}
           className={reveal ? (gradeQuestion(q, r) ? 'border-violet-400' : 'border-red-500') : ''}
         />

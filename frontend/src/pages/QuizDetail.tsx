@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
+import Breadcrumbs from '../components/UI/Breadcrumbs';
 import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
 import CardGridSkeleton from '../components/UI/CardGridSkeleton';
@@ -18,11 +19,17 @@ import {
   resetQuizStats,
   submitQuizAttempt,
   updateQuizGenerators,
+  updateQuizLinks,
   type QuizDetail as QuizData,
 } from '../api/quizzesService';
 import { createFlashcards } from '../api/flashcardsService';
 import { useConfirmAction } from '../hooks/useConfirmAction';
-import { useQuizCardsSent, useQuizLastExam, useQuizLastWrong, useQuizSession } from '../hooks/useQuizSession';
+import { useQuizCardsSent, useQuizFocusPrefs, useQuizLastExam, useQuizLastWrong, useQuizSession } from '../hooks/useQuizSession';
+import { useActiveStudySession } from '../context/useActiveStudySession';
+import QuizFocusPrompt from '../components/Quizzes/QuizFocusPrompt';
+import QuizStudyLink from '../components/Quizzes/QuizStudyLink';
+import QuizShareModal from '../components/Quizzes/QuizShareModal';
+import type { QuizLinkValue } from '../components/Quizzes/QuizLinkPickers';
 import { useFeedback } from '../context/useFeedback';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useI18n } from '../i18n/useI18n';
@@ -73,12 +80,20 @@ function QuizDetailContent() {
   const { quizId = '' } = useParams<{ quizId: string }>();
   const navigate = useNavigate();
   const { notify } = useFeedback();
+  // ?share=1 (Social > As minhas partilhas) abre logo a partilha.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isShareOpen = searchParams.get('share') === '1';
+  const setShareOpen = (open: boolean) => setSearchParams(open ? { share: '1' } : {}, { replace: true });
   const [quiz, setQuiz] = useState<QuizData | null>(null);
   const [error, setError] = useState(false);
   const { session: storedSession, setSession, clear } = useQuizSession(quizId);
   const { sent, markSent } = useQuizCardsSent(quizId);
   const lastWrong = useQuizLastWrong(quizId);
   const lastExam = useQuizLastExam(quizId);
+  const focusPrefs = useQuizFocusPrefs(quizId);
+  const study = useActiveStudySession();
+  // Tentativa a espera da resposta do aviso de foco.
+  const [pendingStart, setPendingStart] = useState<{ mode: QuizMode; picked: QuizQuestion[] } | null>(null);
   const [view, setView] = useState<View>('home');
   const [finished, setFinished] = useState<FinishedAttempt | null>(null);
   const [isSendingCards, setIsSendingCards] = useState(false);
@@ -124,12 +139,29 @@ function QuizDetailContent() {
     return (score?.results ?? []).filter((r) => !r.right && !already.has(r.question.id)).map((r) => r.question);
   }, [score, sent]);
 
+  // Fazer um quiz e estudar: sem sessao de foco ativa, pergunta primeiro se
+  // quer contar o tempo para a cadeira/task (salvo "nao perguntar mais").
   const start = (mode: QuizMode, picked: QuizQuestion[]) => {
+    if (!quiz || picked.length === 0) return;
+    if (!study.activeSession && !focusPrefs.optedOut) {
+      setPendingStart({ mode, picked });
+      return;
+    }
+    beginAttempt(mode, picked);
+  };
+
+  const beginAttempt = (mode: QuizMode, picked: QuizQuestion[]) => {
     if (!quiz || picked.length === 0) return;
     if (mode === 'exam') lastExam.remember(picked.map((q) => q.id).filter((id) => !parseGeneratedId(id)));
     setSession(startSession(mode, picked, quiz.secondsPerQuestion));
     setView('run');
   };
+
+  // A sessao de foco que a tentativa abriu fecha com ela (pede a nota de foco).
+  const stopQuizFocus = useCallback(() => {
+    if (focusPrefs.sessionId && study.activeSession?.id === focusPrefs.sessionId) void study.stop();
+    focusPrefs.setSessionId(null);
+  }, [focusPrefs, study]);
 
   const finish = useCallback(async (countBlanks = false) => {
     if (!quiz || !playQuiz || !session) return;
@@ -138,12 +170,14 @@ function QuizDetailContent() {
     if (!judged) {
       // Sessao estragada: nao deixa uma promessa rejeitada nem a pagina presa.
       clear();
+      stopQuizFocus();
       setView('home');
       notify(t('common.error.title'), 'error');
       return;
     }
     const { verdict, done, counted, result } = judged;
     clear();
+    stopQuizFocus();
     if (verdict.outcome === 'discard') {
       setView('home');
       notify(t('quizzes.run.discarded', { seconds: QUIZ_MIN_ATTEMPT_MS / MS_PER_SECOND }), 'info');
@@ -167,7 +201,38 @@ function QuizDetailContent() {
     } catch {
       notify(t('quizzes.results.saveError'), 'error');
     }
-  }, [quiz, playQuiz, session, clear, notify, t, lastWrong]);
+  }, [quiz, playQuiz, session, clear, notify, t, lastWrong, stopQuizFocus]);
+
+  const startWithFocus = async (link: QuizLinkValue, neverAsk: boolean) => {
+    const pending = pendingStart;
+    if (!pending) return;
+    if (neverAsk) focusPrefs.setOptedOut(true);
+    const ok = await study.start({ areaId: link.areaId ?? undefined, taskId: link.taskId ?? undefined });
+    setPendingStart(null);
+    beginAttempt(pending.mode, pending.picked);
+    if (ok) focusPrefs.setSessionId('pending');
+  };
+
+  const quizOnly = (neverAsk: boolean) => {
+    const pending = pendingStart;
+    if (neverAsk) focusPrefs.setOptedOut(true);
+    setPendingStart(null);
+    if (pending) beginAttempt(pending.mode, pending.picked);
+  };
+
+  // O id da sessao so se sabe depois do start: liga a sessao nova a tentativa.
+  useEffect(() => {
+    if (focusPrefs.sessionId === 'pending' && study.activeSession) focusPrefs.setSessionId(study.activeSession.id);
+  }, [focusPrefs, study.activeSession]);
+
+  const saveLinks = async (link: QuizLinkValue) => {
+    try {
+      await updateQuizLinks(quizId, link);
+      setQuiz(await getQuiz(quizId));
+    } catch {
+      notify(t('quizzes.link.saveError'), 'error');
+    }
+  };
 
   const saveGenerators = async (next: GeneratorKind[]) => {
     try {
@@ -235,6 +300,7 @@ function QuizDetailContent() {
   if (error) {
     return (
       <PageLayout>
+        <Breadcrumbs items={[{ label: t('nav.quizzes'), to: '/quizzes' }, { label: t('quizzes.title') }]} />
         <ErrorState message={t('quizzes.loadError')} onRetry={load} />
       </PageLayout>
     );
@@ -242,17 +308,38 @@ function QuizDetailContent() {
 
   return (
     <PageLayout>
+      <Breadcrumbs items={[{ label: t('nav.quizzes'), to: '/quizzes' }, { label: quiz ? title : t('common.loading') }]} />
       <PageHeader
         title={title}
-        description={quiz ? `${t('quizzes.card.questions', { count: quiz.questionCount })} · ${t('quizzes.aiLabel')}` : undefined}
+        description={
+          quiz
+            ? `${t('quizzes.card.questions', { count: quiz.questionCount })} · ${quiz.sharedBy ? t('quizzes.shared.by', { name: quiz.sharedBy.name || t('quizzes.share.unnamed') }) : t('quizzes.aiLabel')}`
+            : undefined
+        }
         action={
           view === 'home' && quiz ? (
-            <Button variant="secondary" size="sm" onClick={requestDelete}>
-              {t('quizzes.delete')}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {/* So o autor partilha; uma copia recebida nao volta a sair. */}
+              {!quiz.sharedBy && (
+                <Button variant="secondary" size="sm" onClick={() => setShareOpen(true)}>
+                  {quiz.isShared ? t('quizzes.share.buttonActive') : t('quizzes.share.button')}
+                </Button>
+              )}
+              <Button variant="secondary" size="sm" onClick={requestDelete}>
+                {t('quizzes.delete')}
+              </Button>
+            </div>
           ) : null
         }
       />
+      {quiz && !quiz.sharedBy && (
+        <QuizShareModal
+          quizId={quizId}
+          isOpen={isShareOpen}
+          onClose={() => setShareOpen(false)}
+          onChanged={(isShared) => setQuiz((prev) => prev && { ...prev, isShared })}
+        />
+      )}
       <QuizFiguresContext.Provider value={figures}>
         {!quiz ? (
           <CardGridSkeleton cards={3} />
@@ -270,13 +357,25 @@ function QuizDetailContent() {
             onHome={() => setView('home')}
           />
         ) : (
+          <>
+          <div className="mb-4">
+            <QuizStudyLink
+              areaName={quiz.area?.name ?? null}
+              taskTitle={quiz.task?.title ?? null}
+              link={{ areaId: quiz.areaId ?? null, taskId: quiz.taskId ?? null }}
+              onSave={(link) => void saveLinks(link)}
+            />
+          </div>
           <QuizHome
             quiz={quiz}
             session={session}
             onStart={start}
             onResume={() => setView('run')}
             onFinishNow={() => void finish()}
-            onDiscard={clear}
+            onDiscard={() => {
+              clear();
+              stopQuizFocus();
+            }}
             lastWrongAnswers={lastWrong.answers}
             lastExamIds={lastExam.ids}
             onReset={requestReset}
@@ -284,10 +383,21 @@ function QuizDetailContent() {
             generators={kinds}
             onSaveGenerators={(next) => void saveGenerators(next)}
           />
+          </>
         )}
       </QuizFiguresContext.Provider>
       <ConfirmActionDialog state={confirm} />
       <ConfirmActionDialog state={resetConfirm} />
+      {pendingStart && quiz && (
+        <QuizFocusPrompt
+          isOpen
+          link={{ areaId: quiz.areaId ?? null, taskId: quiz.taskId ?? null }}
+          isStarting={study.isSubmitting}
+          onStartWithFocus={(link, neverAsk) => void startWithFocus(link, neverAsk)}
+          onQuizOnly={quizOnly}
+          onCancel={() => setPendingStart(null)}
+        />
+      )}
     </PageLayout>
   );
 }

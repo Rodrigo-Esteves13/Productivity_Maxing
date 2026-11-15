@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertAreaAccessible } from '../areas/area-access';
 import {
   canonicalQuizText,
   recheckCanonicalQuiz,
@@ -46,6 +47,26 @@ const SUMMARY = {
   createdAt: true,
 } satisfies Prisma.QuizSelect;
 
+// Quem partilhou a copia (so o nome, nunca o email) e se o quiz tem partilha ativa.
+const SHARE_INFO = {
+  sharedBy: { select: { name: true } },
+  share: { select: { id: true } },
+} satisfies Prisma.QuizSelect;
+
+function withShareInfo<
+  T extends {
+    sharedBy?: { name: string | null } | null;
+    share?: { id: string } | null;
+  },
+>(row: T) {
+  const { sharedBy, share, ...rest } = row;
+  return {
+    ...rest,
+    sharedBy: sharedBy ? { name: sharedBy.name ?? '' } : null,
+    isShared: Boolean(share),
+  };
+}
+
 const ATTEMPT = {
   id: true,
   mode: true,
@@ -57,6 +78,7 @@ const ATTEMPT = {
 } satisfies Prisma.QuizAttemptSelect;
 
 const NOT_FOUND = 'Quiz not found.';
+const TASK_NOT_FOUND = `Task not found or you don't have access.`;
 // Mensagem unica para qualquer recusa do import: nao diz o que falhou.
 const IMPORT_REFUSED = 'This quiz did not pass the checks.';
 // Chaves que nunca passam para um objeto devolvido (poluicao de prototipos),
@@ -156,13 +178,14 @@ function readCanonicalQuiz(quizJson: string): Quiz {
 export class QuizzesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  list(userId: string) {
-    return this.prisma.quiz.findMany({
+  async list(userId: string) {
+    const rows = await this.prisma.quiz.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       take: MAX_QUIZZES_PER_USER,
-      select: SUMMARY,
+      select: { ...SUMMARY, ...SHARE_INFO },
     });
+    return rows.map(withShareInfo);
   }
 
   async get(userId: string, id: string) {
@@ -176,6 +199,11 @@ export class QuizzesService {
         figures: true,
         generators: true,
         stats: true,
+        ...SHARE_INFO,
+        areaId: true,
+        taskId: true,
+        area: { select: { id: true, name: true } },
+        task: { select: { id: true, title: true } },
         attempts: {
           orderBy: { finishedAt: 'desc' },
           take: QUIZ_ATTEMPTS_KEPT,
@@ -185,10 +213,14 @@ export class QuizzesService {
     });
     if (!quiz) throw new NotFoundException(NOT_FOUND);
     return {
-      ...quiz,
+      ...withShareInfo(quiz),
       figures: readFigures(quiz.figures),
       generators: normalizeGenerators(quiz.generators),
       stats: readStats(quiz.stats),
+      areaId: quiz.areaId ?? null,
+      taskId: quiz.taskId ?? null,
+      area: quiz.area ?? null,
+      task: quiz.task ?? null,
     };
   }
 
@@ -231,7 +263,12 @@ export class QuizzesService {
   }
 
   async update(userId: string, id: string, dto: UpdateQuizDto) {
-    if (dto.title === undefined && dto.generators === undefined) {
+    if (
+      dto.title === undefined &&
+      dto.generators === undefined &&
+      dto.areaId === undefined &&
+      dto.taskId === undefined
+    ) {
       throw new BadRequestException('Nothing to update.');
     }
     const data: Prisma.QuizUpdateManyMutationInput = {};
@@ -248,12 +285,47 @@ export class QuizzesService {
     if (dto.generators !== undefined) {
       data.generators = normalizeGenerators(dto.generators);
     }
+    await this.applyLinks(userId, dto, data);
     const { count } = await this.prisma.quiz.updateMany({
       where: { id, userId },
       data,
     });
     if (count === 0) throw new NotFoundException(NOT_FOUND);
     return { id, ...data };
+  }
+
+  /**
+   * Valida e junta areaId/taskId ao update. Mesma regra das sessoes de estudo
+   * (StudySessionsService.start): Area oficial ou propria (assertAreaAccessible)
+   * e Task do proprio user; 404 se nao. Task sem areaId no pedido herda a Area
+   * da task; areaId null desliga tambem a task.
+   */
+  private async applyLinks(
+    userId: string,
+    dto: UpdateQuizDto,
+    data: Prisma.QuizUpdateManyMutationInput & {
+      areaId?: string | null;
+      taskId?: string | null;
+    },
+  ) {
+    if (dto.taskId) {
+      const task = await this.prisma.task.findFirst({
+        where: { id: dto.taskId, userId },
+        select: { id: true, areaId: true },
+      });
+      if (!task) throw new NotFoundException(TASK_NOT_FOUND);
+      data.taskId = task.id;
+      if (dto.areaId === undefined) data.areaId = task.areaId;
+    } else if (dto.taskId === null) {
+      data.taskId = null;
+    }
+    if (dto.areaId) {
+      await assertAreaAccessible(this.prisma, userId, dto.areaId);
+      data.areaId = dto.areaId;
+    } else if (dto.areaId === null) {
+      data.areaId = null;
+      data.taskId = null;
+    }
   }
 
   async remove(userId: string, id: string) {

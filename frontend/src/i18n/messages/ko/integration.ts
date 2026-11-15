@@ -280,4 +280,6 @@ export const integration: Record<string, string> = {
   "testGaps.emptyWork": "날짜가 정해진 과제가 아직 없어요.",
   "testGaps.showAll": "{count}개 더 보기",
   "testGaps.showLess": "접기",
+  "related.quizzes.shared": "친구가 공유한 퀴즈",
+  "related.social.quizzes": "내 퀴즈",
 };

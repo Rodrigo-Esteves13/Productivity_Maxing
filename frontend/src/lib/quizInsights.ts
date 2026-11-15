@@ -32,6 +32,13 @@ export const BAND_FILL: Record<ScoreBand, string> = {
   bad: 'bg-red-500',
 };
 
+// O mesmo para texto (percentagens no historico).
+export const BAND_TEXT: Record<ScoreBand, string> = {
+  good: 'text-violet-300',
+  mid: 'text-amber-300',
+  bad: 'text-red-400',
+};
+
 export const formatMs = (ms: number | null): string => (ms === null ? '-' : formatElapsed(Math.round(ms / MS_PER_SECOND)));
 
 // --- Uma tentativa -----------------------------------------------------------

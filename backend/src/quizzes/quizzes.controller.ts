@@ -18,7 +18,9 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { perMinute } from '../common/throttle.util';
 import { QuizzesService } from './quizzes.service';
+import { QuizShareService } from './quiz-share.service';
 import { ImportQuizDto, SubmitAttemptDto, UpdateQuizDto } from './dto/quiz.dto';
+import { ShareQuizFriendDto } from './dto/quiz-share.dto';
 import {
   QUIZ_IMPORTS_PER_MINUTE,
   QUIZ_WRITES_PER_MINUTE,
@@ -31,7 +33,10 @@ const WRITE = Throttle(perMinute(QUIZ_WRITES_PER_MINUTE));
 @UseGuards(JwtAuthGuard)
 @Controller('quizzes')
 export class QuizzesController {
-  constructor(private readonly quizzes: QuizzesService) {}
+  constructor(
+    private readonly quizzes: QuizzesService,
+    private readonly shares: QuizShareService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Your saved quizzes, newest first.' })
@@ -135,5 +140,61 @@ export class QuizzesController {
     @Param('questionId') questionId: string,
   ) {
     return this.quizzes.dismissWrongOne(user.id, id, questionId);
+  }
+
+  // Partilha (so o dono; copias recebidas nao se partilham).
+  @Get(':id/share')
+  @ApiOperation({
+    summary: 'Share link and recipients of one of your quizzes.',
+  })
+  shareStatus(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.shares.status(user.id, id);
+  }
+
+  @Post(':id/share')
+  @WRITE
+  @ApiOperation({ summary: 'Creates the share link of a quiz (idempotent).' })
+  enableShare(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.shares.enable(user.id, id);
+  }
+
+  @Delete(':id/share')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @WRITE
+  @ApiOperation({ summary: 'Stops sharing a quiz (copies already made stay).' })
+  revokeShare(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.shares.revoke(user.id, id);
+  }
+
+  @Post(':id/share/friends')
+  @WRITE
+  @ApiOperation({ summary: 'Sends a quiz to a friend (idempotent).' })
+  shareWithFriend(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ShareQuizFriendDto,
+  ) {
+    return this.shares.addFriend(user.id, id, dto.userId);
+  }
+
+  @Delete(':id/share/friends/:recipientId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @WRITE
+  @ApiOperation({ summary: 'Removes a friend from the share list of a quiz.' })
+  unshareWithFriend(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('recipientId', ParseUUIDPipe) recipientId: string,
+  ) {
+    return this.shares.removeFriend(user.id, id, recipientId);
   }
 }
