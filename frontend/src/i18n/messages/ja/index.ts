@@ -79,6 +79,7 @@ import { medFollowUp } from './medFollowUp';
 import { greeting } from './greeting';
 import { weightVsGrade } from './weightVsGrade';
 import { quizzes } from './quizzes';
+import { quizGenerators } from './quizGenerators';
 
 export const ja: Record<string, string> = {
   ...packs,
@@ -162,4 +163,5 @@ export const ja: Record<string, string> = {
   ...greeting,
   ...weightVsGrade,
   ...quizzes,
+  ...quizGenerators,
 };

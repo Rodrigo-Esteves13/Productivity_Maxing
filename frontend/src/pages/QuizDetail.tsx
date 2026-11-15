@@ -10,17 +10,28 @@ import QuizRunner from '../components/Quizzes/QuizRunner';
 import QuizResults from '../components/Quizzes/QuizResults';
 import QuizErrorBoundary from '../components/Quizzes/QuizErrorBoundary';
 import ConfirmActionDialog from '../components/Turma/ConfirmActionDialog';
-import { deleteQuiz, getQuiz, submitQuizAttempt, type QuizDetail as QuizData } from '../api/quizzesService';
+import {
+  clearQuizAttempts,
+  deleteQuiz,
+  dismissQuizWrong,
+  getQuiz,
+  resetQuizStats,
+  submitQuizAttempt,
+  updateQuizGenerators,
+  type QuizDetail as QuizData,
+} from '../api/quizzesService';
 import { createFlashcards } from '../api/flashcardsService';
 import { useConfirmAction } from '../hooks/useConfirmAction';
-import { useQuizCardsSent, useQuizSession } from '../hooks/useQuizSession';
+import { useQuizCardsSent, useQuizLastExam, useQuizLastWrong, useQuizSession } from '../hooks/useQuizSession';
 import { useFeedback } from '../context/useFeedback';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useI18n } from '../i18n/useI18n';
 import { chunkCards } from '../lib/flashcardImport';
 import { stripQuizMarkdown } from '../lib/quizMarkdown';
-import type { QuizQuestion } from '../lib/quizFormat';
+import type { Quiz, QuizQuestion } from '../lib/quizFormat';
 import { QuizFiguresContext } from '../lib/quizFigures';
+import { enabledKinds, withGenerated } from '../lib/quizPlay';
+import { parseGeneratedId, statKeyOf, type GeneratorKind } from '../lib/quizGenerators';
 import {
   answeredOnly,
   classifyAttempt,
@@ -30,6 +41,7 @@ import {
   scoreSession,
   sessionFitsQuiz,
   startSession,
+  touchSession,
   type QuizMode,
   type QuizSession,
 } from '../lib/quizSession';
@@ -43,10 +55,12 @@ interface FinishedAttempt {
 }
 
 // Corrige a tentativa; null se a sessao guardada rebentar a correcao.
-function judgeAttempt(quiz: QuizData, session: QuizSession, now: number) {
+function judgeAttempt(quiz: Quiz, session: QuizSession, now: number) {
   try {
-    const verdict = classifyAttempt(quiz, session, now);
-    const done = { ...session, finishedAt: now, activeMs: verdict.activeMs };
+    // O tempo ate agora vai para a pergunta aberta antes de corrigir.
+    const touched = touchSession(session, now);
+    const verdict = classifyAttempt(quiz, touched, now);
+    const done = { ...touched, finishedAt: now, activeMs: verdict.activeMs };
     const counted = verdict.outcome === 'partial' ? answeredOnly(done, verdict.answeredIds) : done;
     return { verdict, done, counted, result: scoreSession(quiz, counted) };
   } catch {
@@ -63,10 +77,13 @@ function QuizDetailContent() {
   const [error, setError] = useState(false);
   const { session: storedSession, setSession, clear } = useQuizSession(quizId);
   const { sent, markSent } = useQuizCardsSent(quizId);
+  const lastWrong = useQuizLastWrong(quizId);
+  const lastExam = useQuizLastExam(quizId);
   const [view, setView] = useState<View>('home');
   const [finished, setFinished] = useState<FinishedAttempt | null>(null);
   const [isSendingCards, setIsSendingCards] = useState(false);
   const confirm = useConfirmAction(t('quizzes.deleteError'));
+  const resetConfirm = useConfirmAction(t('quizzes.reset.error'));
   // Titulo de uma linha: o ficheiro pode trazer **marcas** (de <b>) que aqui nao se desenham.
   const title = quiz ? stripQuizMarkdown(quiz.title) : t('quizzes.title');
   useDocumentTitle(title);
@@ -79,16 +96,28 @@ function QuizDetailContent() {
   }, [quizId]);
   useEffect(load, [load]);
 
+  // Geradores ligados e o quiz "jogavel": o guardado mais as perguntas geradas
+  // da tentativa em curso ou acabada (refeitas a partir dos ids).
+  const kinds = useMemo(() => enabledKinds(quiz?.generators), [quiz]);
+  const playQuiz = useMemo(() => {
+    if (!quiz) return null;
+    const ids = [...(storedSession?.items ?? []), ...(finished?.session.items ?? [])].map((it) => it.id);
+    return withGenerated(quiz, ids, kinds, t);
+  }, [quiz, storedSession, finished, kinds, t]);
+
   // Sessao guardada que nao bate certo com este quiz (ids ou indices) e descartada.
-  const session = useMemo(() => (quiz && storedSession && sessionFitsQuiz(storedSession, quiz) ? storedSession : null), [quiz, storedSession]);
+  const session = useMemo(
+    () => (playQuiz && storedSession && sessionFitsQuiz(storedSession, playQuiz) ? storedSession : null),
+    [playQuiz, storedSession],
+  );
   useEffect(() => {
     if (quiz && storedSession && !session) clear();
   }, [quiz, storedSession, session, clear]);
 
-  const questions = useMemo(() => new Map((quiz?.questions ?? []).map((q) => [q.id, q])), [quiz]);
+  const questions = useMemo(() => new Map((playQuiz?.questions ?? []).map((q) => [q.id, q])), [playQuiz]);
   // Quizzes gravados antes das figuras nao trazem o campo.
-  const figures = useMemo(() => quiz?.figures ?? {}, [quiz]);
-  const score = useMemo(() => (quiz && finished ? scoreSession(quiz, finished.session) : null), [quiz, finished]);
+  const figures = useMemo(() => playQuiz?.figures ?? {}, [playQuiz]);
+  const score = useMemo(() => (playQuiz && finished ? scoreSession(playQuiz, finished.session) : null), [playQuiz, finished]);
   // So as erradas que ainda nao foram para as flashcards.
   const unsentWrong = useMemo(() => {
     const already = new Set(sent);
@@ -97,14 +126,15 @@ function QuizDetailContent() {
 
   const start = (mode: QuizMode, picked: QuizQuestion[]) => {
     if (!quiz || picked.length === 0) return;
+    if (mode === 'exam') lastExam.remember(picked.map((q) => q.id).filter((id) => !parseGeneratedId(id)));
     setSession(startSession(mode, picked, quiz.secondsPerQuestion));
     setView('run');
   };
 
   const finish = useCallback(async () => {
-    if (!quiz || !session) return;
+    if (!quiz || !playQuiz || !session) return;
     const now = Date.now();
-    const judged = judgeAttempt(quiz, session, now);
+    const judged = judgeAttempt(playQuiz, session, now);
     if (!judged) {
       // Sessao estragada: nao deixa uma promessa rejeitada nem a pagina presa.
       clear();
@@ -121,19 +151,58 @@ function QuizDetailContent() {
     }
     setFinished({ session: counted, planned: verdict.planned });
     setView('results');
+    // Geradas nao entram na area de erradas (cada uma e unica); contam por tipo nas estatisticas.
+    lastWrong.record(
+      result.results.filter((r) => !parseGeneratedId(r.question.id)).map((r) => ({ id: r.question.id, response: r.item.response, right: r.right })),
+    );
     try {
       const saved = await submitQuizAttempt(
         quiz.id,
         done.mode,
         verdict.activeMs,
-        result.results.map((r) => ({ questionId: r.question.id, correct: r.right })),
+        result.results.map((r) => ({ questionId: statKeyOf(r.question.id), correct: r.right, timeMs: Math.round(r.item.timeMs) })),
         verdict.planned,
       );
       setQuiz((prev) => prev && { ...prev, stats: saved.stats, lastScorePct: saved.lastScorePct, attempts: [saved.attempt, ...prev.attempts] });
     } catch {
       notify(t('quizzes.results.saveError'), 'error');
     }
-  }, [quiz, session, clear, notify, t]);
+  }, [quiz, playQuiz, session, clear, notify, t, lastWrong]);
+
+  const saveGenerators = async (next: GeneratorKind[]) => {
+    try {
+      await updateQuizGenerators(quizId, next);
+      setQuiz((prev) => prev && { ...prev, generators: next });
+    } catch {
+      notify(t('quizzes.calc.saveError'), 'error');
+    }
+  };
+
+  // Limpezas do historico e das estatisticas: confirmadas, depois recarrega o quiz.
+  const requestReset = (kind: 'history' | 'stats' | 'wrong') =>
+    resetConfirm.request({
+      title: t(`quizzes.reset.${kind}.title`),
+      message: t(`quizzes.reset.${kind}.message`),
+      confirmLabel: t(`quizzes.reset.${kind}.confirm`),
+      tone: 'danger',
+      run: async () => {
+        if (kind === 'history') await clearQuizAttempts(quizId);
+        else if (kind === 'stats') await resetQuizStats(quizId);
+        else await dismissQuizWrong(quizId);
+        if (kind !== 'history') lastWrong.forget('all');
+        setQuiz(await getQuiz(quizId));
+      },
+    });
+
+  const dismissWrong = async (questionId: string) => {
+    try {
+      await dismissQuizWrong(quizId, questionId);
+      lastWrong.forget([questionId]);
+      setQuiz(await getQuiz(quizId));
+    } catch {
+      notify(t('quizzes.wrongArea.removeError'), 'error');
+    }
+  };
 
   const sendToFlashcards = async () => {
     if (unsentWrong.length === 0) return;
@@ -208,10 +277,17 @@ function QuizDetailContent() {
             onResume={() => setView('run')}
             onFinishNow={() => void finish()}
             onDiscard={clear}
+            lastWrongAnswers={lastWrong.answers}
+            lastExamIds={lastExam.ids}
+            onReset={requestReset}
+            onDismissWrong={(id) => void dismissWrong(id)}
+            generators={kinds}
+            onSaveGenerators={(next) => void saveGenerators(next)}
           />
         )}
       </QuizFiguresContext.Provider>
       <ConfirmActionDialog state={confirm} />
+      <ConfirmActionDialog state={resetConfirm} />
     </PageLayout>
   );
 }

@@ -8,10 +8,12 @@ import {
   answerKeyItem,
   applyScore,
   classifyAttempt,
+  dropIndex,
   gradeQuestion,
   heartbeatSession,
   makeItem,
   mergeSentIds,
+  moveOrder,
   MS_PER_SECOND,
   parseStoredSession,
   pickPractice,
@@ -381,5 +383,24 @@ describe('prototype-named ids', () => {
     const result = applyScore({}, tricky);
     expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
     expect(Object.hasOwn(result, '__proto__')).toBe(true);
+  });
+});
+
+describe('order drag', () => {
+  it('moveOrder slides the others', () => {
+    expect(moveOrder([0, 1, 2, 3], 0, 2)).toEqual([1, 2, 0, 3]);
+    expect(moveOrder([0, 1, 2, 3], 3, 0)).toEqual([3, 0, 1, 2]);
+    expect(moveOrder([0, 1, 2], 1, 1)).toEqual([0, 1, 2]);
+  });
+
+  it('moveOrder ignores out-of-range moves', () => {
+    expect(moveOrder([0, 1, 2], -1, 0)).toEqual([0, 1, 2]);
+    expect(moveOrder([0, 1, 2], 0, 3)).toEqual([0, 1, 2]);
+  });
+
+  it('dropIndex counts rows above the pointer', () => {
+    expect(dropIndex([10, 30, 50], 0)).toBe(0);
+    expect(dropIndex([10, 30, 50], 31)).toBe(2);
+    expect(dropIndex([10, 30, 50], 99)).toBe(3);
   });
 });

@@ -34,16 +34,20 @@ interface QuizRunnerProps {
   onFinish: () => void;
 }
 
+// Respondida so depois de o aluno mexer: uma pergunta de ordenar ja vem
+// preenchida e nao pode parecer respondida (nem marcada) logo no inicio.
+const isTouchedAnswer = (q: QuizQuestion, item: SessionItem) => (item.touched ?? false) && isAnswered(q, item.response);
+
 function dotClass(q: QuizQuestion, item: SessionItem, isCurrent: boolean, instant: boolean): string {
   const state =
     instant && item.checked
       ? gradeQuestion(q, item.response)
         ? 'border-violet-400 bg-violet-900/50 text-white'
         : 'border-red-500 bg-red-950/50 text-white'
-      : isAnswered(q, item.response)
+      : isTouchedAnswer(q, item)
         ? 'border-neutral-500 bg-neutral-800 text-neutral-100'
         : 'border-neutral-800 text-neutral-500';
-  const flag = item.flagged ? ' ring-2 ring-purple-400' : '';
+  const flag = item.flagged ? ' ring-2 ring-amber-400' : '';
   const current = isCurrent ? ' outline outline-2 outline-offset-1 outline-violet-400' : '';
   return `${state}${flag}${current}`;
 }
@@ -59,7 +63,7 @@ export default function QuizRunner({ questions, session, onChange, onFinish }: Q
   const isLast = session.index === total - 1;
   const remainingMs = session.deadline ? Math.max(0, session.deadline - now) : null;
   const answeredCount = useMemo(
-    () => session.items.filter((it) => { const q = questions.get(it.id); return q ? isAnswered(q, it.response) : false; }).length,
+    () => session.items.filter((it) => { const q = questions.get(it.id); return q ? isTouchedAnswer(q, it) : false; }).length,
     [session.items, questions],
   );
 
@@ -82,7 +86,8 @@ export default function QuizRunner({ questions, session, onChange, onFinish }: Q
       touch({ ...session, items: session.items.map((it, i) => (i === session.index ? { ...it, ...patch } : it)) }),
     [touch, session],
   );
-  const go = useCallback((index: number) => touch({ ...session, index }), [touch, session]);
+  // O tempo ate aqui vai para a pergunta que se deixa, so depois muda o indice.
+  const go = useCallback((index: number) => onChange({ ...touchSession(session), index }), [onChange, session]);
   const setResponse = (response: QuizResponse) => patchItem({ response, touched: true });
 
   const canCheck = instant && !item.checked && question !== undefined && isAnswered(question, item.response);
@@ -172,7 +177,7 @@ export default function QuizRunner({ questions, session, onChange, onFinish }: Q
           </Button>
           <Button variant="secondary" size="sm" aria-pressed={item.flagged} onClick={() => patchItem({ flagged: !item.flagged })}>
             <span className="inline-flex items-center gap-1.5">
-              <FlagIcon className={`h-4 w-4 ${item.flagged ? 'text-purple-400' : ''}`} aria-hidden="true" />
+              <FlagIcon className={`h-4 w-4 ${item.flagged ? 'text-amber-400' : ''}`} aria-hidden="true" />
               {item.flagged ? t('quizzes.run.unflag') : t('quizzes.run.flag')}
             </span>
           </Button>

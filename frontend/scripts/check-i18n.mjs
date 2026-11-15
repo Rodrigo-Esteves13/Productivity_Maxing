@@ -32,6 +32,10 @@ const SAME_AS_EN_ALLOWED_KEY_PREFIXES = [
   'ui.holidayExam',
   // Termo tecnico (cabecalho HTTP), igual em todas as linguas.
   'ui.userAgent',
+  // Nomes de interfaces de rede (Ethernet, GigabitEthernet...) e o termo CCNA
+  // "longest prefix match": ficam em ingles nos equipamentos e nos cursos.
+  'quizGen.ospfCost.iface.',
+  'quizGen.longestMatch.name',
 ];
 
 const load = (lang) => {

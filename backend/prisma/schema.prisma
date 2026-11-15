@@ -2821,6 +2821,8 @@ model Quiz {
   questions          Json
   // Diagramas canonicos (so dados, ver quiz-diagram.ts): { [id]: diagrama }, partilhados entre perguntas.
   figures            Json     @default("{}")
+  // Tipos de geradores de calculo ligados (lista fechada, ver quiz-generators.ts).
+  generators         String[] @default([])
   questionCount      Int
   // Por pergunta: { [id]: { seen, correct, last } } (modo erradas e dominio).
   stats              Json     @default("{}")

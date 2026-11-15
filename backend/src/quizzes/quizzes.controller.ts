@@ -90,4 +90,50 @@ export class QuizzesController {
   ) {
     return this.quizzes.submitAttempt(user.id, id, dto);
   }
+
+  @Delete(':id/attempts')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @WRITE
+  @ApiOperation({ summary: 'Clears the attempt history of a quiz.' })
+  clearAttempts(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.quizzes.clearAttempts(user.id, id);
+  }
+
+  @Delete(':id/stats')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @WRITE
+  @ApiOperation({ summary: 'Resets the per-question stats of a quiz.' })
+  clearStats(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.quizzes.clearStats(user.id, id);
+  }
+
+  // Rota literal (:id/wrong) antes da de :questionId.
+  @Delete(':id/wrong')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @WRITE
+  @ApiOperation({ summary: 'Empties the wrong-answers list of a quiz.' })
+  dismissWrong(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.quizzes.dismissWrong(user.id, id);
+  }
+
+  @Delete(':id/wrong/:questionId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @WRITE
+  @ApiOperation({ summary: 'Removes one question from the wrong list.' })
+  dismissWrongOne(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('questionId') questionId: string,
+  ) {
+    return this.quizzes.dismissWrongOne(user.id, id, questionId);
+  }
 }

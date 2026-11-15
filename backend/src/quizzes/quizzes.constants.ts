@@ -6,6 +6,10 @@ export const QUIZ_IMPORTS_PER_MINUTE = 10;
 // Tentativas guardadas por quiz (as mais antigas saem).
 export const QUIZ_ATTEMPTS_KEPT = 100;
 export const QUIZ_ATTEMPT_MAX_DURATION_MS = 24 * 60 * 60 * 1000;
+// Tempo maximo contado numa unica resposta (o resto e pausa esquecida).
+export const QUIZ_QUESTION_MAX_TIME_MS = 30 * 60 * 1000;
+// Id de pergunta: letras, digitos, _ e -, ate 48 caracteres.
+export const QUIZ_QUESTION_ID = /^[\w-]{1,48}$/;
 // POST /quizzes/import: o corpo e { quizJson: texto canonico }, com o texto ate
 // QUIZ_MAX_FILE_BYTES. Dentro de uma string JSON cada byte do texto ocupa no
 // maximo 2 (\" e \\ sao os piores casos; o texto canonico nao tem caracteres de

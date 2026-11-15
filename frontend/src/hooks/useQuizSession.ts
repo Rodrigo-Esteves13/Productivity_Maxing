@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { mergeSentIds, parseStoredSession, QUIZ_CARDS_SENT_MAX_QUIZZES, type QuizSession } from '../lib/quizSession';
+import type { QuizResponse } from '../lib/quizFormat';
+import {
+  mergeSentIds,
+  parseStoredResponse,
+  parseStoredSession,
+  QUIZ_CARDS_SENT_MAX_QUIZZES,
+  SESSION_MAX_ITEMS,
+  type QuizSession,
+} from '../lib/quizSession';
 
 // Tentativa a meio, guardada neste dispositivo para um refresh nao a perder
 // (o quiz em si fica na conta). So uma de cada vez.
@@ -85,4 +93,100 @@ export function useQuizCardsSent(quizId: string) {
   );
 
   return { sent, markSent };
+}
+
+// Mapas por quiz neste dispositivo (quizId -> valor), com limite de quizzes.
+// O que vem do storage nunca e confiado: quem le valida cada valor.
+function readQuizMap(key: string): Map<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? new Map(Object.entries(parsed)) : new Map();
+  } catch {
+    return new Map();
+  }
+}
+
+function writeQuizMap(key: string, quizId: string, value: unknown): void {
+  try {
+    const all = readQuizMap(key);
+    all.delete(quizId);
+    if (value !== null) all.set(quizId, value);
+    const kept = [...all.entries()].slice(-QUIZ_CARDS_SENT_MAX_QUIZZES);
+    localStorage.setItem(key, JSON.stringify(Object.fromEntries(kept)));
+  } catch {
+    // Sem storage: so vale nesta sessao.
+  }
+}
+
+// Ultima resposta errada de cada pergunta (area de erradas), so neste dispositivo.
+const LAST_WRONG_KEY = 'pm-quiz-last-wrong';
+export type LastWrongAnswers = ReadonlyMap<string, QuizResponse>;
+
+function readLastWrong(quizId: string): Map<string, QuizResponse> {
+  const raw = readQuizMap(LAST_WRONG_KEY).get(quizId);
+  const out = new Map<string, QuizResponse>();
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  Object.entries(raw).slice(0, SESSION_MAX_ITEMS).forEach(([id, value]) => {
+    const response = parseStoredResponse(value);
+    if (response) out.set(id, response);
+  });
+  return out;
+}
+
+export function useQuizLastWrong(quizId: string) {
+  const [answers, setAnswers] = useState<Map<string, QuizResponse>>(() => readLastWrong(quizId));
+
+  const save = useCallback(
+    (next: Map<string, QuizResponse>) => {
+      setAnswers(next);
+      writeQuizMap(LAST_WRONG_KEY, quizId, next.size ? Object.fromEntries([...next].slice(-SESSION_MAX_ITEMS)) : null);
+    },
+    [quizId],
+  );
+
+  // Erradas guardam a resposta; certas saem da lista.
+  const record = useCallback(
+    (results: { id: string; response: QuizResponse; right: boolean }[]) => {
+      const next = new Map(answers);
+      results.forEach(({ id, response, right }) => {
+        next.delete(id);
+        if (!right) next.set(id, response);
+      });
+      save(next);
+    },
+    [answers, save],
+  );
+
+  const forget = useCallback(
+    (ids: readonly string[] | 'all') => {
+      if (ids === 'all') return save(new Map());
+      const next = new Map(answers);
+      ids.forEach((id) => next.delete(id));
+      save(next);
+    },
+    [answers, save],
+  );
+
+  return { answers: answers as LastWrongAnswers, record, forget };
+}
+
+// Perguntas do ultimo exame (o proximo evita repeti-las), so neste dispositivo.
+const LAST_EXAM_KEY = 'pm-quiz-last-exam';
+
+function readLastExam(quizId: string): string[] {
+  const raw = readQuizMap(LAST_EXAM_KEY).get(quizId);
+  return Array.isArray(raw) ? raw.filter((id): id is string => typeof id === 'string').slice(0, SESSION_MAX_ITEMS) : [];
+}
+
+export function useQuizLastExam(quizId: string) {
+  const [ids, setIds] = useState<string[]>(() => readLastExam(quizId));
+  const remember = useCallback(
+    (next: string[]) => {
+      const kept = next.slice(0, SESSION_MAX_ITEMS);
+      setIds(kept);
+      writeQuizMap(LAST_EXAM_KEY, quizId, kept);
+    },
+    [quizId],
+  );
+  return { ids, remember };
 }
