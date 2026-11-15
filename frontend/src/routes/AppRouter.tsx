@@ -29,6 +29,8 @@ import {
   Agent,
   Areas,
   Flashcards,
+  Quizzes,
+  QuizDetail,
   Social,
   FriendNotes,
   FriendProfile,
@@ -160,6 +162,14 @@ export default function AppRouter() {
           <Route
             path="/flashcards"
             element={<PrivateRoute><Flashcards /></PrivateRoute>}
+          />
+          <Route
+            path="/quizzes"
+            element={<PrivateRoute><Quizzes /></PrivateRoute>}
+          />
+          <Route
+            path="/quizzes/:quizId"
+            element={<PrivateRoute><QuizDetail /></PrivateRoute>}
           />
           <Route
             path="/social/add/:code"

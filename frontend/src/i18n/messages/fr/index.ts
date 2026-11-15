@@ -78,6 +78,7 @@ import { accentColor } from './accentColor';
 import { medFollowUp } from './medFollowUp';
 import { greeting } from './greeting';
 import { weightVsGrade } from './weightVsGrade';
+import { quizzes } from './quizzes';
 
 export const fr: Record<string, string> = {
   ...packs,
@@ -160,4 +161,5 @@ export const fr: Record<string, string> = {
   ...medFollowUp,
   ...greeting,
   ...weightVsGrade,
+  ...quizzes,
 };

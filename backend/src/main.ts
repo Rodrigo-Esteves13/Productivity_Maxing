@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import type { Express } from 'express';
+import { createQuizImportBodyParser } from './quizzes/quiz-import-body';
 import { getFrontendUrl } from './config/app.config';
 import { RESULT_TRUNCATED_HEADER } from './common/pagination.util';
 import { JsonLogger } from './common/logger/json-logger.service';
@@ -106,6 +107,15 @@ async function bootstrap() {
   // Necessário para o JwtStrategy e o CsrfGuard conseguirem ler
   // req.cookies - sem isto, req.cookies fica sempre undefined.
   app.use(cookieParser());
+  // So o POST exato do import de quizzes aceita um corpo maior (o texto do
+  // quiz ate 1 MB, escapado numa string JSON); o resto fica com o limite por
+  // defeito do Nest. Corre antes do parser global, que salta pedidos ja lidos.
+  // quizImportBodyOnly devolve uma funcao anonima de proposito: o Nest so
+  // regista o seu parser JSON se nao houver ja uma camada chamada
+  // "jsonParser", e o json() do express tem esse nome (sem o embrulho, todas
+  // as outras rotas ficavam sem corpo). O reviver deixa passar so
+  // { quizJson: texto } (ver quiz-import-body.ts).
+  app.use(createQuizImportBodyParser());
 
   app.enableCors({
     origin: getFrontendUrl(),

@@ -15,6 +15,8 @@ export const Devices = lazyWithPreload(() => import('../pages/Devices'));
 export const Agent = lazyWithPreload(() => import('../pages/Agent'));
 export const Areas = lazyWithPreload(() => import('../pages/Areas'));
 export const Flashcards = lazyWithPreload(() => import('../pages/Flashcards'));
+export const Quizzes = lazyWithPreload(() => import('../pages/Quizzes'));
+export const QuizDetail = lazyWithPreload(() => import('../pages/QuizDetail'));
 export const Social = lazyWithPreload(() => import('../pages/Social'));
 export const FriendNotes = lazyWithPreload(() => import('../pages/FriendNotes'));
 export const FriendProfile = lazyWithPreload(() => import('../pages/FriendProfile'));

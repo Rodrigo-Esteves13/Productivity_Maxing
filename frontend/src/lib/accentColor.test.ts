@@ -43,4 +43,10 @@ describe('accent unlocks', () => {
     expect(isAccentUnlocked('fuchsia', 499)).toBe(false);
     expect(isAccentUnlocked('fuchsia', 500)).toBe(true);
   });
+
+  it('unlocks every color for admins regardless of finished tasks', async () => {
+    const { isAccentUnlocked } = await import('./accentColor');
+    expect(isAccentUnlocked('fuchsia', 0, true)).toBe(true);
+    expect(isAccentUnlocked('amber', 0, false)).toBe(false);
+  });
 });

@@ -222,6 +222,15 @@ export default function PrivacyPolicy() {
           are never sent to me. When you sign in with Google, Discord or GitHub, or connect Google Calendar, the page you
           came from is kept there for up to 15 minutes so you land back on it, and is deleted once you do.
         </p>
+        <p className="mt-3">
+          Quizzes: when you upload a quiz file, the file itself is not kept. Its questions are checked and
+          cleaned in your browser and again on the server, and only the cleaned questions, your results per
+          question and your attempt history (mode, score, time) are saved to your account until you delete the
+          quiz or your account. The quiz prompt and any notes you type into it stay in your browser; the App
+          never sends them to an AI service. An attempt in progress is kept in your browser&apos;s local storage
+          so a refresh does not lose it, and is removed when you finish it. The list of wrong answers you already
+          sent to Flashcards is kept there too, so the same question is not offered twice.
+        </p>
       </LegalSection>
 
       <LegalSection number={3} title="Google Calendar data: specific disclosure">

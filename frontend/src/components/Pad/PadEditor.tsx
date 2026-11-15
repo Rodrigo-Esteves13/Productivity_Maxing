@@ -15,6 +15,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { usePad } from '../../hooks/usePad';
 import { PADS_ADMIN_PATH, loginPathReturningTo, padPath } from '../../lib/appLinks';
 import { PAD_MAX_CONTENT_LENGTH } from '../../lib/padSlug';
+import { openLinkOnModClick } from '../../lib/ctrlClickLink';
 
 // Um pad aberto: textarea que grava sozinha, como o dontpad. Sem conta da
 // para ler e escrever (com menos espaco); com conta da para trancar.
@@ -85,6 +86,7 @@ export default function PadEditor({ slug }: { slug: string }) {
       {lock.error && <FormError message={lock.error} />}
       {pad.status === 'conflict' && <VersionConflictBanner onTakeRemote={pad.takeRemote} onKeepMine={pad.keepMine} />}
       <textarea
+        onClick={openLinkOnModClick}
         value={text}
         onChange={(e) => pad.change(e.target.value)}
         readOnly={isReadOnly}

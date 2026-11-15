@@ -7,6 +7,7 @@ export const nav: Record<string, string> = {
   'nav.areas': "Fächer",
   'nav.areasSelect': "Fächer auswählen",
   'nav.flashcards': "Karteikarten",
+  'nav.quizzes': "Quizze",
   'nav.profile': "Profil",
   'nav.developer': "Entwickler",
   'nav.agent': "Agent",

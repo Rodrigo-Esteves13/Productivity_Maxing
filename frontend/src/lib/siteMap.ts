@@ -111,6 +111,16 @@ export const SITE_PAGES: SitePage[] = [
     related: [
       { to: '/notebook', labelKey: 'related.areas.notebook' },
       { to: '/areas', labelKey: 'nav.areas' },
+      { to: '/quizzes', labelKey: 'nav.quizzes' },
+    ],
+  },
+  {
+    path: '/quizzes',
+    labelKey: 'nav.quizzes',
+    section: 'study',
+    related: [
+      { to: '/flashcards', labelKey: 'nav.flashcards' },
+      { to: '/notebook', labelKey: 'related.areas.notebook' },
     ],
   },
   {

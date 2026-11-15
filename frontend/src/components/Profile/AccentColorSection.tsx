@@ -2,6 +2,7 @@ import { useAccentColor } from '../../hooks/useAccentColor';
 import { ACCENT_IDS, ACCENT_SWATCHES, ACCENT_UNLOCK_COMPLETED, isAccentUnlocked } from '../../lib/accentColor';
 import { useProfileStats } from '../../hooks/useProfileStats';
 import { useI18n } from '../../i18n/useI18n';
+import { useAuth } from '../../context/useAuth';
 import { CheckIcon, UndoIcon } from '../UI/Icons';
 
 // Seletor da cor de destaque (Profile > Appearance). Guardado neste browser.
@@ -9,6 +10,8 @@ export default function AccentColorSection() {
   const { t } = useI18n();
   const { accent, setAccent, resetAccent, isDefault } = useAccentColor();
   const { completed } = useProfileStats();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
 
   return (
     <fieldset className="mt-5">
@@ -17,7 +20,7 @@ export default function AccentColorSection() {
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {ACCENT_IDS.map((id) => {
           const selected = accent === id;
-          const unlocked = isAccentUnlocked(id, completed);
+          const unlocked = isAccentUnlocked(id, completed, isAdmin);
           const name = unlocked
             ? t(`accentColor.option.${id}`)
             : t('accentColor.locked', { name: t(`accentColor.option.${id}`), count: ACCENT_UNLOCK_COMPLETED[id] ?? 0 });
