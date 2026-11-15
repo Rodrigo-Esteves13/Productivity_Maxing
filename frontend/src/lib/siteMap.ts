@@ -121,6 +121,8 @@ export const SITE_PAGES: SitePage[] = [
     related: [
       { to: '/flashcards', labelKey: 'nav.flashcards' },
       { to: '/notebook', labelKey: 'related.areas.notebook' },
+      { to: '/areas', labelKey: 'nav.areas' },
+      { to: '/social?tab=shared', labelKey: 'related.quizzes.shared' },
     ],
   },
   {
@@ -202,6 +204,7 @@ export const SITE_PAGES: SitePage[] = [
       { to: '/classes', labelKey: 'related.social.classes' },
       { to: '/notebook', labelKey: 'related.social.notebook' },
       { to: '/task-packs', labelKey: 'related.social.packs' },
+      { to: '/quizzes', labelKey: 'related.social.quizzes' },
     ],
   },
   {

@@ -25,14 +25,14 @@ function PointDot({ cx, cy, payload }: DotProps) {
 }
 
 function PointTooltip({ active, payload }: { active?: boolean; payload?: { payload: EvolutionPoint }[] }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
   return (
     <div className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-xs shadow-2xl">
       <p className="font-semibold text-violet-300 tabular-nums">{point.percent}%</p>
       <p className="text-neutral-400">{point.exam ? t('quizzes.mode.exam') : t('quizzes.stats.evolutionOther')}</p>
-      <p className="text-neutral-500">{new Date(point.at).toLocaleString()}</p>
+      <p className="text-neutral-500">{new Date(point.at).toLocaleString(lang)}</p>
     </div>
   );
 }
@@ -41,7 +41,7 @@ function PointTooltip({ active, payload }: { active?: boolean; payload?: { paylo
 export default function QuizEvolutionChart({ points }: { points: EvolutionPoint[] }) {
   const { t } = useI18n();
   const chartRef = useRef<HTMLDivElement>(null);
-  if (points.length < MIN_POINTS) return <p className="text-sm text-neutral-500">{t('quizzes.stats.evolutionEmpty')}</p>;
+  if (points.length < MIN_POINTS) return <p className="text-sm text-neutral-400">{t('quizzes.stats.evolutionEmpty')}</p>;
   const data = points.map((p, i) => ({ ...p, n: i + 1 }));
   return (
     <div>

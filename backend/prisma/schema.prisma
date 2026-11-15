@@ -279,22 +279,22 @@ model User {
   // sempre com suspendedUntil definido; passada essa data, tratado como
   // ACTIVE automaticamente (sem cron - ver UsersService.isBlocked/
   // reactivateIfExpired). BANNED nunca tem suspendedUntil (indefinido).
-  status                UserStatus          @default(ACTIVE)
+  status                UserStatus           @default(ACTIVE)
   suspendedUntil        DateTime?
   statusReason          String?
   statusUpdatedAt       DateTime?
   statusUpdatedByUserId String?
-  statusUpdatedBy       User?               @relation("UserStatusChangedBy", fields: [statusUpdatedByUserId], references: [id], onDelete: SetNull)
-  statusChangesMade     User[]              @relation("UserStatusChangedBy")
+  statusUpdatedBy       User?                @relation("UserStatusChangedBy", fields: [statusUpdatedByUserId], references: [id], onDelete: SetNull)
+  statusChangesMade     User[]               @relation("UserStatusChangedBy")
   // Silenciado so no feedback (spam/insultos) sem banir a conta. Com valor,
   // POST /feedback recusa. null = pode enviar.
   feedbackMutedAt       DateTime?
-  turmaInvitesReceived  TurmaInvite[]       @relation("TurmaInvitesReceived")
-  turmaInvitesSent      TurmaInvite[]       @relation("TurmaInvitesSent")
+  turmaInvitesReceived  TurmaInvite[]        @relation("TurmaInvitesReceived")
+  turmaInvitesSent      TurmaInvite[]        @relation("TurmaInvitesSent")
   personalNotes         PersonalNote[]
   bloodDonations        BloodDonation[]
   sharedTurmaPrograms   TurmaProgram[]
-  turmaDeadlinesCreated TurmaDeadline[]     @relation("TurmaDeadlineCreatedBy")
+  turmaDeadlinesCreated TurmaDeadline[]      @relation("TurmaDeadlineCreatedBy")
   turmaDeadlineTasks    TurmaDeadlineTask[]
   financeSettings       FinanceSettings?
   financeEntries        FinanceEntry[]
@@ -322,7 +322,7 @@ model User {
   // Versao das sessoes do utilizador: o JWT leva este numero (claim `tv`) e
   // deixa de valer assim que for incrementado (terminar sessao em todos os
   // dispositivos, troca de password, merge OAuth). Ver SessionStateService.
-  tokenVersion Int @default(0)
+  tokenVersion Int           @default(0)
   // Uma por dispositivo/browser com sessao iniciada (refresh token rodado a
   // cada uso). Ver UserSession.
   sessions     UserSession[]
@@ -387,19 +387,19 @@ model User {
 
   // Preferências (Profile > Preferences). Ambas DESLIGADAS por omissão.
   // Email 24h antes do prazo das tasks pendentes (ver RemindersService).
-  deadlineEmailReminders Boolean @default(false)
+  deadlineEmailReminders Boolean  @default(false)
   // Push (nos dispositivos com notificacoes ligadas) com o mesmo calendario
   // do email acima. Desligado por omissao.
-  deadlinePushReminders  Boolean @default(false)
+  deadlinePushReminders  Boolean  @default(false)
   // Tipos de aviso push que o user desligou (chaves de MUTABLE_PUSH_KEYS em
   // push/push-messages.ts). Vazio = recebe todos.
   mutedPushKinds         String[] @default([])
   // Ao concluir uma task académica (não evento), cria 3 tasks leves de
   // revisão a +1/+3/+7 dias (ver TasksService.spawnFollowUps).
-  spacedReviewsEnabled   Boolean @default(false)
+  spacedReviewsEnabled   Boolean  @default(false)
   // Entradas novas do Notebook nascem escondidas dos amigos com acesso as
   // notas (NotebookEntry.privateFromFriends). Desligado = tudo visivel.
-  notesPrivateByDefault  Boolean @default(false)
+  notesPrivateByDefault  Boolean  @default(false)
 
   // 2FA (TOTP, RFC 6238). Só tem efeito com TWO_FACTOR_ENABLED=true no
   // backend; com a flag desligada nada disto é usado nem exposto.
@@ -471,8 +471,11 @@ model User {
   notebookChangeProposals        NotebookChangeProposal[]
   approvalRuleSets               ApprovalRuleSet[]
   flashcards                     Flashcard[]
-  quizzes                        Quiz[]
+  quizzes                        Quiz[]                       @relation("QuizOwner")
   quizAttempts                   QuizAttempt[]
+  // Copias de quizzes que outras pessoas receberam deste user (Quiz.sharedById).
+  quizzesSharedOut               Quiz[]                       @relation("QuizSharedBy")
+  quizShareRecipients            QuizShareRecipient[]
 }
 
 /// Recurso submetido pelo próprio utilizador contra a sua suspensão/ban
@@ -515,29 +518,29 @@ model UserAppeal {
 /// isso o scoping por período fica no Task (que já é per-user), e não na
 /// Area como uma primeira leitura do modelo "User -> Area -> Task" sugeria.
 model AcademicProgram {
-  id              String   @id @default(uuid())
-  userId          String
-  name            String
-  gradeScale      String   @default("0-20")
-  isActive        Boolean  @default(true)
-  order           Int      @default(0)
-  createdAt       DateTime @default(now())
+  id                 String   @id @default(uuid())
+  userId             String
+  name               String
+  gradeScale         String   @default("0-20")
+  isActive           Boolean  @default(true)
+  order              Int      @default(0)
+  createdAt          DateTime @default(now())
   // Default for whether the final (credit-weighted) average is rounded to
   // the nearest whole number, e.g. some unis round the semester/course
   // final grade even though individual test grades stay decimal.
   // AcademicPeriod.roundFinalGrade can override this per period; null
   // there means "inherit this default".
-  roundFinalGrade Boolean  @default(true)
+  roundFinalGrade    Boolean  @default(true)
   // true = cada nota intercalar (teste, componente) e arredondada ao inteiro
   // antes das medias (15.5 conta como 16). false = notas como foram dadas.
-  roundInterimGrades Boolean @default(false)
+  roundInterimGrades Boolean  @default(false)
 
-  user           User             @relation("UserPrograms", fields: [userId], references: [id], onDelete: Cascade)
-  periods        AcademicPeriod[]
+  user             User              @relation("UserPrograms", fields: [userId], references: [id], onDelete: Cascade)
+  periods          AcademicPeriod[]
   // Users que têm este programa como dashboard ativo agora - na prática
   // nunca mais do que 1 (o próprio dono), mas o Prisma exige o lado inverso
   // da relação declarado.
-  activeForUsers User[]           @relation("UserActiveProgram")
+  activeForUsers   User[]            @relation("UserActiveProgram")
   // Regras de aprovacao do programa (N46), no maximo uma por user.
   approvalRuleSets ApprovalRuleSet[]
 
@@ -759,19 +762,21 @@ model Area {
   hiddenBy AreaHidden[]
 
   // Relações
-  tasks           Task[]
-  studySessions   StudySession[]
+  tasks            Task[]
+  studySessions    StudySession[]
   // Ligação por user a um texto de disciplina do horário (ver
   // AreaScheduleLink) e as entradas do caderno desta cadeira.
-  scheduleLinks   AreaScheduleLink[]
-  interests       AreaInterest[]
-  teacherNotes    AreaTeacherNote[]
-  ratings         AreaRating[]
-  notebookEntries NotebookEntry[]
-  gradeComponents GradeComponent[]
+  scheduleLinks    AreaScheduleLink[]
+  interests        AreaInterest[]
+  teacherNotes     AreaTeacherNote[]
+  ratings          AreaRating[]
+  notebookEntries  NotebookEntry[]
+  gradeComponents  GradeComponent[]
   // Override das regras de aprovacao desta cadeira, por user (N46).
   approvalRuleSets ApprovalRuleSet[]
   flashcards       Flashcard[]
+  // Quizzes do user ligados a esta cadeira (Quiz.areaId, SetNull).
+  quizzes          Quiz[]
 
   @@index([ownerId])
   @@index([proposalStatus])
@@ -876,6 +881,8 @@ model Task {
   // Itens de pacotes criados a partir desta task (lado do dono).
   sourceOfPackItems TaskPackItem[]   @relation("PackItemSource")
   packUpdates       TaskPackUpdate[]
+  // Quizzes ligados a esta task, ex: um exame (Quiz.taskId, SetNull).
+  quizzes           Quiz[]
 
   // Duração esperada em minutos, escrita manualmente pelo user ao criar/
   // editar a task. Distinto de calendarDurationMinutes (esse só serve o
@@ -1330,15 +1337,15 @@ model AreaInterest {
 /// e nao em Area porque as Areas oficiais sao catalogo partilhado: o docente
 /// de um aluno nao pode aparecer a todos. Nunca exposta a outros users.
 model AreaTeacherNote {
-  id          String   @id @default(uuid())
-  userId      String
-  areaId      String
-  teacherName String
+  id               String   @id @default(uuid())
+  userId           String
+  areaId           String
+  teacherName      String
   // true = preenchido sozinho a partir do professor do horario (ClassOccurrence).
   // Editar ou gravar a mao poe a false e nunca mais e sobrescrito.
-  autoFromSchedule Boolean @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  autoFromSchedule Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   area Area @relation(fields: [areaId], references: [id], onDelete: Cascade)
@@ -2245,13 +2252,13 @@ model MedicationIntake {
 // (remindedAt) ou quando o utilizador marca como tomada (takenAt), o que
 // vier primeiro. O unique impede lembretes repetidos para a mesma toma.
 model MedicationDose {
-  id           String    @id @default(uuid())
-  userId       String
-  medicationId String
-  date         DateTime
-  slotMinutes  Int
-  takenAt      DateTime?
-  remindedAt   DateTime?
+  id                 String    @id @default(uuid())
+  userId             String
+  medicationId       String
+  date               DateTime
+  slotMinutes        Int
+  takenAt            DateTime?
+  remindedAt         DateTime?
   // Segundo aviso (MEDICATION_FOLLOW_UP_DELAY_MINUTES depois do primeiro),
   // reclamado antes de enviar como o remindedAt. No maximo um por toma.
   followUpRemindedAt DateTime?
@@ -2559,15 +2566,15 @@ enum FinanceInterestKind {
 /// `recurring` e legado: true sem `frequency` = MONTHLY no dia de `date`
 /// (resolvido no codigo, ver finance-schedule.util.ts).
 model FinanceEntry {
-  id                   String             @id @default(uuid())
+  id                   String               @id @default(uuid())
   userId               String
   kind                 FinanceEntryKind
   amountCents          Int
-  category             String             @db.VarChar(20)
-  note                 String?            @db.VarChar(120)
+  category             String               @db.VarChar(20)
+  note                 String?              @db.VarChar(120)
   // Meia-noite UTC do dia (hora de Lisboa). Primeira ocorrencia possivel.
   date                 DateTime
-  recurring            Boolean            @default(false)
+  recurring            Boolean              @default(false)
   frequency            FinanceFrequency?
   payDayRule           FinancePayDayRule?
   // So para FIXED_DAY (1-31, cortado ao fim do mes). null = dia de `date`.
@@ -2578,35 +2585,35 @@ model FinanceEntry {
   accountId            String?
   // As primeiras N ocorrencias da regra nao contam (ex.: o salario deste mes
   // ja foi recebido antes de usar a app). `date` continua a ser a ancora.
-  skipFirstOccurrences Int                @default(0)
+  skipFirstOccurrences Int                  @default(0)
   // So MONTHLY: o mes M (ancora) paga no mes M+N. endDate filtra a ancora.
-  paidInArrearsMonths  Int                @default(0)
+  paidInArrearsMonths  Int                  @default(0)
   // So INCOME que se repete: o empregador retem isto na primeira ocorrencia
   // e devolve-o numa ocorrencia extra em endDate. Sem endDate fica retido.
   withheldCents        Int?
   // Chave de idempotencia do cliente (uuid). O mesmo pedido repetido (duplo
   // clique, retry) devolve a linha ja criada em vez de uma nova.
-  clientRequestId      String?            @db.Uuid
+  clientRequestId      String?              @db.Uuid
   // "Devem-me dinheiro" (so INCOME de uma vez). Nao conta em nada ate
   // receivedAt; ao receber, `date` passa a ser receivedAt (entrada normal).
   // Enquanto em divida, `date` e o dia em que o dinheiro foi emprestado
   // (inicio dos juros) e expectedDate o prazo.
-  isOwed               Boolean            @default(false)
-  debtorName           String?            @db.VarChar(80)
+  isOwed               Boolean              @default(false)
+  debtorName           String?              @db.VarChar(80)
   expectedDate         DateTime?
   // Estimativa da propria pessoa (0-100) de NAO ser pago a tempo.
   latePaymentRiskPct   Int?
   // Taxa anual em percentagem (ex.: 4.500).
-  interestRatePct      Decimal?           @db.Decimal(6, 3)
+  interestRatePct      Decimal?             @db.Decimal(6, 3)
   interestKind         FinanceInterestKind?
   receivedAt           DateTime?
-  createdAt            DateTime           @default(now())
+  createdAt            DateTime             @default(now())
 
-  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  account FinanceAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
-  owedPayments FinanceOwedPayment[] @relation("OwedPaymentDebt")
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account           FinanceAccount?      @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  owedPayments      FinanceOwedPayment[] @relation("OwedPaymentDebt")
   // Pagamento parcial que criou esta entrada INCOME (se houver).
-  owedPaymentIncome FinanceOwedPayment? @relation("OwedPaymentIncome")
+  owedPaymentIncome FinanceOwedPayment?  @relation("OwedPaymentIncome")
 
   @@unique([userId, clientRequestId])
   @@index([userId, date])
@@ -2619,21 +2626,21 @@ model FinanceEntry {
 /// divida desce. Quando chega a 0 a divida e apagada e o historico fica aqui
 /// (entryId passa a null, debtorName guarda o nome).
 model FinanceOwedPayment {
-  id          String   @id @default(uuid())
-  userId      String
-  entryId     String?
-  debtorName  String?  @db.VarChar(80)
-  amountCents Int
-  paidAt      DateTime
+  id            String   @id @default(uuid())
+  userId        String
+  entryId       String?
+  debtorName    String?  @db.VarChar(80)
+  amountCents   Int
+  paidAt        DateTime
   // Entrada INCOME criada por este pagamento (desfazer apaga-a). null nos
   // pagamentos anteriores a esta coluna ou se a pessoa apagou a entrada
   // (SetNull: o pagamento fica, o desfazer diz que a entrada nao existe).
-  incomeEntryId String? @unique
+  incomeEntryId String?  @unique
   // So no pagamento que saldou a divida (a divida e apagada nesse momento):
   // copia dos campos da divida e dos pagamentos anteriores para a repor ao
   // desfazer. Formato em finance-owed-undo.util.ts.
-  settledDebt Json?
-  createdAt   DateTime @default(now())
+  settledDebt   Json?
+  createdAt     DateTime @default(now())
 
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   entry       FinanceEntry? @relation("OwedPaymentDebt", fields: [entryId], references: [id], onDelete: SetNull)
@@ -2813,7 +2820,7 @@ enum QuizAttemptMode {
 model Quiz {
   id                 String   @id @default(uuid())
   userId             String
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User     @relation("QuizOwner", fields: [userId], references: [id], onDelete: Cascade)
   title              String
   language           String
   secondsPerQuestion Int
@@ -2830,9 +2837,56 @@ model Quiz {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
+  // Ligacao opcional a cadeira e a task (ex: exame) para iniciar uma sessao de estudo.
+  areaId String?
+  area   Area?   @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
   attempts QuizAttempt[]
 
+  // Copia recebida por partilha: quem a partilhou (SetNull se a conta sair) e
+  // o quiz de origem. sourceQuizId sem FK de proposito: a copia continua a
+  // saber de onde veio mesmo depois de o original ser apagado.
+  sharedById   String?
+  sharedBy     User?      @relation("QuizSharedBy", fields: [sharedById], references: [id], onDelete: SetNull)
+  sourceQuizId String?
+  // Partilha ativa deste quiz (so o autor partilha; copias nunca).
+  share        QuizShare?
+
   @@index([userId, createdAt])
+  @@index([areaId])
+  @@index([taskId])
+  @@index([userId, sourceQuizId])
+  @@index([sharedById])
+}
+
+/// Partilha de um quiz dentro da app (nunca exporta perguntas). Quem abre o
+/// link com sessao recebe uma COPIA no proprio perfil (ver QuizShareService).
+model QuizShare {
+  id         String               @id @default(uuid())
+  quizId     String               @unique
+  quiz       Quiz                 @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  token      String               @unique @default(uuid())
+  // Quantas copias ja foram criadas a partir desta partilha.
+  copyCount  Int                  @default(0)
+  createdAt  DateTime             @default(now())
+  recipients QuizShareRecipient[]
+}
+
+/// Amigo a quem o dono mandou o quiz (aparece em "Partilhados comigo").
+model QuizShareRecipient {
+  id        String    @id @default(uuid())
+  shareId   String
+  share     QuizShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Quando o amigo criou a copia; null = ainda nao a adicionou.
+  addedAt   DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([shareId, userId])
+  @@index([userId])
 }
 
 model QuizAttempt {

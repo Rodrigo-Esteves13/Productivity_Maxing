@@ -190,3 +190,33 @@ export function useQuizLastExam(quizId: string) {
   );
   return { ids, remember };
 }
+
+// Foco ligado ao quiz, so neste dispositivo: "nao perguntar mais" por quiz e a
+// sessao de foco que a tentativa abriu (para a fechar no fim).
+const FOCUS_OPTOUT_KEY = 'pm-quiz-focus-optout';
+const FOCUS_SESSION_KEY = 'pm-quiz-focus-session';
+
+export function useQuizFocusPrefs(quizId: string) {
+  const [optedOut, setOptedOutState] = useState<boolean>(() => readQuizMap(FOCUS_OPTOUT_KEY).get(quizId) === true);
+  const [sessionId, setSessionIdState] = useState<string | null>(() => {
+    const raw = readQuizMap(FOCUS_SESSION_KEY).get(quizId);
+    return typeof raw === 'string' ? raw : null;
+  });
+
+  const setOptedOut = useCallback(
+    (value: boolean) => {
+      setOptedOutState(value);
+      writeQuizMap(FOCUS_OPTOUT_KEY, quizId, value ? true : null);
+    },
+    [quizId],
+  );
+  const setSessionId = useCallback(
+    (id: string | null) => {
+      setSessionIdState(id);
+      writeQuizMap(FOCUS_SESSION_KEY, quizId, id);
+    },
+    [quizId],
+  );
+
+  return { optedOut, setOptedOut, sessionId, setSessionId };
+}

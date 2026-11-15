@@ -19,6 +19,10 @@ export interface QuizSummary {
   questionCount: number;
   lastScorePct: number | null;
   createdAt: string;
+  // Copia de um quiz partilhado: quem o fez (so o autor volta a partilhar).
+  sharedBy?: { name: string } | null;
+  // O autor tem um link de partilha ativo.
+  isShared?: boolean;
 }
 
 export interface QuizAttemptRecord {
@@ -41,6 +45,11 @@ export interface QuizDetail extends QuizSummary {
   attempts: QuizAttemptRecord[];
   // Geradores de calculo ligados neste quiz (lib/quizGenerators); antigos nao trazem.
   generators?: string[];
+  // Cadeira e task para que se estuda com este quiz (sessao de foco).
+  areaId?: string | null;
+  taskId?: string | null;
+  area?: { id: string; name: string } | null;
+  task?: { id: string; title: string } | null;
 }
 
 export interface AttemptResult {
@@ -98,3 +107,80 @@ export const dismissQuizWrong = async (id: string, questionId?: string): Promise
 export const updateQuizGenerators = async (id: string, generators: string[]): Promise<void> => {
   await api.patch(url(id), { generators });
 };
+
+// Liga o quiz a uma cadeira e (opcional) a uma task; null desliga.
+export const updateQuizLinks = async (id: string, links: { areaId: string | null; taskId: string | null }): Promise<void> => {
+  await api.patch(url(id), links);
+};
+
+// Partilha so dentro da app: quem recebe entra e fica com uma copia na conta.
+// Nao ha exportacao de perguntas em lado nenhum.
+export interface QuizShareRecipient {
+  id: string;
+  userId: string;
+  name: string;
+  addedAt: string | null;
+  createdAt: string;
+}
+
+export interface QuizShareStatus {
+  token: string | null;
+  copyCount: number;
+  createdAt: string | null;
+  recipients: QuizShareRecipient[];
+}
+
+export interface QuizSharePreview {
+  title: string;
+  ownerName: string;
+  questionCount: number;
+  topics: string[];
+  language: string;
+  generatorCount: number;
+  isOwner: boolean;
+  addedQuizId: string | null;
+}
+
+export interface QuizSharedWithMe {
+  token: string;
+  title: string;
+  ownerName: string;
+  questionCount: number;
+  topics: string[];
+  sharedAt: string;
+  addedQuizId: string | null;
+}
+
+export interface MyQuizShare {
+  quizId: string;
+  title: string;
+  token: string;
+  copyCount: number;
+  recipientCount: number;
+  createdAt: string;
+}
+
+const sharedUrl = (token: string) => `/quizzes/shared/${encodeURIComponent(token)}`;
+
+export const getQuizShare = async (id: string): Promise<QuizShareStatus> => (await api.get<QuizShareStatus>(`${url(id)}/share`)).data;
+
+export const createQuizShare = async (id: string): Promise<QuizShareStatus> => (await api.post<QuizShareStatus>(`${url(id)}/share`)).data;
+
+export const revokeQuizShare = async (id: string): Promise<void> => {
+  await api.delete(`${url(id)}/share`);
+};
+
+export const shareQuizWithFriend = async (id: string, userId: string): Promise<QuizShareStatus> =>
+  (await api.post<QuizShareStatus>(`${url(id)}/share/friends`, { userId })).data;
+
+export const removeQuizShareRecipient = async (id: string, recipientId: string): Promise<void> => {
+  await api.delete(`${url(id)}/share/friends/${encodeURIComponent(recipientId)}`);
+};
+
+export const previewSharedQuiz = async (token: string): Promise<QuizSharePreview> => (await api.get<QuizSharePreview>(sharedUrl(token))).data;
+
+export const addSharedQuiz = async (token: string): Promise<{ id: string }> => (await api.post<{ id: string }>(`${sharedUrl(token)}/add`)).data;
+
+export const getQuizzesSharedWithMe = async (): Promise<QuizSharedWithMe[]> => (await api.get<QuizSharedWithMe[]>('/quizzes/shared/with-me')).data;
+
+export const getMyQuizShares = async (): Promise<MyQuizShare[]> => (await api.get<MyQuizShare[]>('/quizzes/shared/mine')).data;

@@ -11,10 +11,12 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   Max,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { QuizAttemptMode } from '@prisma/client';
@@ -56,6 +58,16 @@ export class UpdateQuizDto {
   @IsIn(GENERATOR_KINDS, { each: true })
   @ArrayUnique()
   generators?: GeneratorKind[];
+
+  // Cadeira (Area) ligada; null = desligar. Ausente = nao mexer.
+  @ValidateIf((o: UpdateQuizDto) => o.areaId !== undefined && o.areaId !== null)
+  @IsUUID()
+  areaId?: string | null;
+
+  // Task ligada (ex: exame); null = desligar. Ausente = nao mexer.
+  @ValidateIf((o: UpdateQuizDto) => o.taskId !== undefined && o.taskId !== null)
+  @IsUUID()
+  taskId?: string | null;
 }
 
 export class AttemptResultDto {

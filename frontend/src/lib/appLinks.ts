@@ -11,6 +11,11 @@ export const friendNotesPath = (userId: string): string => `/social/notes/${enco
 
 export const sharedNotePath = (token: string): string => `/shared/${encodeURIComponent(token)}`;
 
+export const quizPath = (quizId: string): string => `/quizzes/${encodeURIComponent(quizId)}`;
+
+/** Quiz partilhado: so abre com sessao iniciada e da uma copia na conta. */
+export const sharedQuizPath = (token: string): string => `/quizzes/shared/${encodeURIComponent(token)}`;
+
 /** Abre a nota no teu caderno; com share, abre tambem o painel de partilha. */
 export const notebookEntryPath = (entryId: string, { share = false } = {}): string =>
   `/notebook?entry=${encodeURIComponent(entryId)}${share ? '&share=1' : ''}`;

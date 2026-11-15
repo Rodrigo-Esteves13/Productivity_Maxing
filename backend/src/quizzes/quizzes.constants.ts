@@ -3,6 +3,12 @@ import { QUIZ_MAX_FILE_BYTES } from './quiz-format';
 export const MAX_QUIZZES_PER_USER = 50;
 export const QUIZ_WRITES_PER_MINUTE = 30;
 export const QUIZ_IMPORTS_PER_MINUTE = 10;
+// Partilha: abrir um link (preview) e criar a copia no proprio perfil.
+export const QUIZ_SHARE_PREVIEWS_PER_MINUTE = 30;
+export const QUIZ_SHARE_ADDS_PER_MINUTE = 10;
+export const QUIZ_SHARE_LISTS_PER_MINUTE = 30;
+// Linhas devolvidas nas listas de partilhas e destinatarios.
+export const QUIZ_SHARE_LIST_MAX = 100;
 // Tentativas guardadas por quiz (as mais antigas saem).
 export const QUIZ_ATTEMPTS_KEPT = 100;
 export const QUIZ_ATTEMPT_MAX_DURATION_MS = 24 * 60 * 60 * 1000;

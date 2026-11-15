@@ -12,6 +12,7 @@ import NotesAccessPanel from '../components/Social/NotesAccessPanel';
 import SocialLists, { type SocialListSection } from '../components/Social/SocialLists';
 import MySharesList from '../components/Social/MySharesList';
 import SharedWithMeList from '../components/SharedWithMe/SharedWithMeList';
+import { MyQuizShares, QuizzesSharedWithMe } from '../components/Quizzes/QuizShareLists';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useSocial } from '../hooks/useSocial';
 import { useNotesAccess } from '../hooks/useNotesAccess';
@@ -196,6 +197,9 @@ export default function Social() {
               {sharedItems.length >= SOCIAL_LIST_LIMIT && <ListLimitNote />}
             </>
           )}
+          <div className="pt-3">
+            <QuizzesSharedWithMe />
+          </div>
         </section>
       )}
 
@@ -219,6 +223,7 @@ export default function Social() {
               </>
             )}
           </section>
+          <MyQuizShares />
           <NotesAccessPanel
             view={notes.incoming}
             status="APPROVED"

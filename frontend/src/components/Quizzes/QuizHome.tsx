@@ -13,7 +13,7 @@ import QuizStatsPanel from './QuizStatsPanel';
 import QuizWrongArea from './QuizWrongArea';
 import QuizEvolutionChart from './QuizEvolutionChart';
 import type { LastWrongAnswers } from '../../hooks/useQuizSession';
-import { evolution } from '../../lib/quizInsights';
+import { BAND_FILL, BAND_TEXT, evolution, scoreBand } from '../../lib/quizInsights';
 import { CALC_SIZES, generatedShare, makeGenerated } from '../../lib/quizPlay';
 import { GENERATOR_KINDS, type GeneratorKind } from '../../lib/quizGenerators';
 import { useI18n } from '../../i18n/useI18n';
@@ -69,6 +69,11 @@ interface QuizHomeProps {
 
 // Inicio de um quiz: modos (exame, pratica, erradas), dominio por topico,
 // banco de perguntas e historico, como no quiz de exemplo.
+// Historico: modo | nota com barra | tempo | data (no telemovel, 2 por linha).
+const HISTORY_ROW =
+  'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 rounded-xl border border-neutral-800 bg-neutral-900/50 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_4.5rem_minmax(0,11rem)]';
+const DATE_FORMAT: Intl.DateTimeFormatOptions = { dateStyle: 'medium', timeStyle: 'short' };
+
 export default function QuizHome({
   quiz,
   session,
@@ -311,7 +316,7 @@ export default function QuizHome({
             )}
             <details className="mt-4">
               <summary className="cursor-pointer text-sm text-violet-300">{t('quizzes.calc.manage')}</summary>
-              <p className="mt-2 text-xs text-neutral-500">{t('quizzes.calc.manageHelp')}</p>
+              <p className="mt-2 text-xs text-neutral-400">{t('quizzes.calc.manageHelp')}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {GENERATOR_KINDS.map((kind) => (
                   <ToggleChip key={kind} size="sm" pressed={generators.includes(kind)} title={t(`quizGen.${kind}.desc`)} onClick={() => toggleGenerator(kind)}>
@@ -417,21 +422,29 @@ export default function QuizHome({
           <EmptyState message={t('quizzes.history.empty')} />
         ) : (
           <ul className="space-y-2">
-            {quiz.attempts.map((a) => (
-              <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-neutral-800 bg-neutral-900/50 px-4 py-3 text-sm">
-                <span className="text-neutral-200">
-                  {t(`quizzes.mode.${a.mode.toLowerCase()}`)}
-                  {(a.planned ?? 0) > a.total && (
-                    <span className="ml-2 text-xs text-amber-300">{t('quizzes.history.partial', { answered: a.total, planned: a.planned ?? 0 })}</span>
-                  )}
-                </span>
-                <span className="tabular-nums text-neutral-300">
-                  {t('quizzes.results.score', { correct: a.correct, total: a.total, percent: Math.round((a.correct / a.total) * PERCENT) })}
-                </span>
-                <span className="tabular-nums text-neutral-500">{formatElapsed(Math.round(a.durationMs / MS_PER_SECOND))}</span>
-                <span className="text-neutral-500">{new Date(a.finishedAt).toLocaleString()}</span>
-              </li>
-            ))}
+            {quiz.attempts.map((a) => {
+              const percent = Math.round((a.correct / a.total) * PERCENT);
+              const isPartial = (a.planned ?? 0) > a.total;
+              return (
+                // Grelha com colunas fixas: tudo alinhado de linha para linha.
+                <li key={a.id} className={HISTORY_ROW}>
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="font-medium text-neutral-100">{t(`quizzes.mode.${a.mode.toLowerCase()}`)}</span>
+                    {isPartial && (
+                      <span className="rounded-md border border-amber-400/40 bg-amber-950/30 px-1.5 py-0.5 text-xs text-amber-300">
+                        {t('quizzes.history.partial', { answered: a.total, planned: a.planned ?? 0 })}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0 justify-self-end sm:justify-self-stretch">
+                    <p className={`tabular-nums ${BAND_TEXT[scoreBand(percent)]}`}>{t('quizzes.results.score', { correct: a.correct, total: a.total, percent })}</p>
+                    <ProgressBar percent={percent} thickness="sm" fillClassName={BAND_FILL[scoreBand(percent)]} label={t('quizzes.history.scoreBar', { percent })} className="mt-1 hidden sm:block" />
+                  </div>
+                  <span className="tabular-nums text-neutral-400 sm:text-right">{formatElapsed(Math.round(a.durationMs / MS_PER_SECOND))}</span>
+                  <span className="justify-self-end tabular-nums text-neutral-400">{new Date(a.finishedAt).toLocaleString(lang, DATE_FORMAT)}</span>
+                </li>
+              );
+            })}
           </ul>
         ))}
     </div>

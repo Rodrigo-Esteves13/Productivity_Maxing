@@ -63,7 +63,14 @@ const rawCall = (fn: jest.Mock, n = 0) => {
   return { sql: strings.join('?').replace(/\s+/g, ' ').trim(), values };
 };
 
-function setup(opts: { count?: number; quiz?: unknown } = {}) {
+function setup(
+  opts: {
+    count?: number;
+    quiz?: unknown;
+    task?: unknown;
+    area?: unknown;
+  } = {},
+) {
   const prisma = {
     quiz: {
       count: jest.fn().mockResolvedValue(opts.count ?? 0),
@@ -75,6 +82,8 @@ function setup(opts: { count?: number; quiz?: unknown } = {}) {
       deleteMany: jest.fn().mockResolvedValue({ count: opts.quiz ? 1 : 0 }),
       update: jest.fn().mockResolvedValue({}),
     },
+    task: { findFirst: jest.fn().mockResolvedValue(opts.task ?? null) },
+    area: { findFirst: jest.fn().mockResolvedValue(opts.area ?? null) },
     quizAttempt: {
       findMany: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockResolvedValue({ id: 'a1' }),
@@ -990,5 +999,133 @@ describe('QuizzesService generators', () => {
         results: [{ questionId: 'gen-wildcard', correct: true }],
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+describe('QuizzesService links (area and task)', () => {
+  const AREA_ID = '11111111-1111-4111-8111-111111111111';
+  const TASK_ID = '22222222-2222-4222-8222-222222222222';
+
+  it('get returns the links with only id and name/title', async () => {
+    const { service, prisma } = setup({
+      quiz: {
+        figures: {},
+        stats: {},
+        areaId: AREA_ID,
+        taskId: TASK_ID,
+        area: { id: AREA_ID, name: 'Redes' },
+        task: { id: TASK_ID, title: 'Frequencia 2' },
+      },
+    });
+    const out = await service.get('u1', 'quiz');
+    expect(out.areaId).toBe(AREA_ID);
+    expect(out.taskId).toBe(TASK_ID);
+    expect(out.area).toEqual({ id: AREA_ID, name: 'Redes' });
+    expect(out.task).toEqual({ id: TASK_ID, title: 'Frequencia 2' });
+    const select = (
+      firstArg(prisma.quiz.findFirst) as unknown as {
+        select: Record<string, unknown>;
+      }
+    ).select;
+    expect(select.area).toEqual({ select: { id: true, name: true } });
+    expect(select.task).toEqual({ select: { id: true, title: true } });
+  });
+
+  it('get returns nulls for an unlinked quiz', async () => {
+    const { service } = setup({ quiz: { figures: {}, stats: {} } });
+    const out = await service.get('u1', 'quiz');
+    expect(out).toMatchObject({
+      areaId: null,
+      taskId: null,
+      area: null,
+      task: null,
+    });
+  });
+
+  it('update links an accessible area', async () => {
+    const { service, prisma } = setup({ quiz: {}, area: { id: AREA_ID } });
+    await service.update('u1', 'quiz', { areaId: AREA_ID });
+    expect(firstArg(prisma.area.findFirst).where).toMatchObject({
+      id: AREA_ID,
+      OR: [{ ownerId: null }, { ownerId: 'u1' }],
+    });
+    expect(firstArg(prisma.quiz.updateMany)).toMatchObject({
+      where: { id: 'quiz', userId: 'u1' },
+      data: { areaId: AREA_ID },
+    });
+  });
+
+  it('update links a task and derives the area from it', async () => {
+    const { service, prisma } = setup({
+      quiz: {},
+      task: { id: TASK_ID, areaId: AREA_ID },
+    });
+    await service.update('u1', 'quiz', { taskId: TASK_ID });
+    expect(firstArg(prisma.task.findFirst).where).toEqual({
+      id: TASK_ID,
+      userId: 'u1',
+    });
+    expect(firstArg(prisma.quiz.updateMany).data).toEqual({
+      taskId: TASK_ID,
+      areaId: AREA_ID,
+    });
+  });
+
+  it('update keeps an explicit area when linking a task', async () => {
+    const other = '33333333-3333-4333-8333-333333333333';
+    const { service, prisma } = setup({
+      quiz: {},
+      task: { id: TASK_ID, areaId: AREA_ID },
+      area: { id: other },
+    });
+    await service.update('u1', 'quiz', { taskId: TASK_ID, areaId: other });
+    expect(firstArg(prisma.quiz.updateMany).data).toEqual({
+      taskId: TASK_ID,
+      areaId: other,
+    });
+  });
+
+  it('update with null unlinks (area null also clears the task)', async () => {
+    const { service, prisma } = setup({ quiz: {} });
+    await service.update('u1', 'quiz', { taskId: null });
+    expect(firstArg(prisma.quiz.updateMany).data).toEqual({ taskId: null });
+    prisma.quiz.updateMany.mockClear();
+    await service.update('u1', 'quiz', { areaId: null });
+    expect(firstArg(prisma.quiz.updateMany).data).toEqual({
+      areaId: null,
+      taskId: null,
+    });
+    expect(prisma.area.findFirst).not.toHaveBeenCalled();
+    expect(prisma.task.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("update refuses another user's or unknown area/task with 404", async () => {
+    const { service, prisma } = setup({ quiz: {} });
+    await expect(
+      service.update('u1', 'quiz', { areaId: AREA_ID }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      service.update('u1', 'quiz', { taskId: TASK_ID }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.quiz.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('the links alone count as something to update', async () => {
+    const { service } = setup({ quiz: {} });
+    await expect(
+      service.update('u1', 'quiz', { areaId: null }),
+    ).resolves.toBeDefined();
+  });
+
+  it('validates the link fields through the DTO', async () => {
+    const errorsOf = async (body: Record<string, unknown>) =>
+      (await validate(plainToInstance(UpdateQuizDto, body))).map(
+        (e) => e.property,
+      );
+    expect(await errorsOf({ areaId: AREA_ID, taskId: TASK_ID })).toEqual([]);
+    expect(await errorsOf({ areaId: null, taskId: null })).toEqual([]);
+    expect(await errorsOf({ areaId: 'nope' })).toEqual(['areaId']);
+    expect(await errorsOf({ taskId: 'nope' })).toEqual(['taskId']);
+    expect(await errorsOf({ taskId: 5 })).toEqual(['taskId']);
   });
 });

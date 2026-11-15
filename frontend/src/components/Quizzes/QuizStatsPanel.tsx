@@ -47,7 +47,7 @@ function QuestionList({ title, items, render }: { title: string; items: Question
     <Card>
       <h2 className="font-semibold text-white">{title}</h2>
       {items.length === 0 ? (
-        <p className="mt-2 text-sm text-neutral-500">{t('quizzes.stats.notEnough')}</p>
+        <p className="mt-2 text-sm text-neutral-400">{t('quizzes.stats.notEnough')}</p>
       ) : (
         <ol className="mt-3 space-y-2">
           {items.map((item) => (
@@ -94,7 +94,7 @@ export default function QuizStatsPanel({ quiz, wrongNow, onPractise, generators,
         <h2 className="font-semibold text-white">{t('quizzes.stats.improve')}</h2>
         <p className="mt-1 text-sm text-neutral-400">{t('quizzes.stats.improveHelp')}</p>
         {weakest.length === 0 ? (
-          <p className="mt-3 text-sm text-neutral-500">{t('quizzes.stats.notEnough')}</p>
+          <p className="mt-3 text-sm text-neutral-400">{t('quizzes.stats.notEnough')}</p>
         ) : (
           <ol className="mt-3 space-y-3">
             {weakest.map((topic, i) => (

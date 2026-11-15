@@ -280,4 +280,6 @@ export const integration: Record<string, string> = {
   "testGaps.emptyWork": "暂时没有已定日期的作业。",
   "testGaps.showAll": "再显示 {count} 项",
   "testGaps.showLess": "收起",
+  "related.quizzes.shared": "好友分享的测验",
+  "related.social.quizzes": "你的测验",
 };
