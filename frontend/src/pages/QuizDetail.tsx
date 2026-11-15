@@ -55,11 +55,11 @@ interface FinishedAttempt {
 }
 
 // Corrige a tentativa; null se a sessao guardada rebentar a correcao.
-function judgeAttempt(quiz: Quiz, session: QuizSession, now: number) {
+function judgeAttempt(quiz: Quiz, session: QuizSession, now: number, countBlanks = false) {
   try {
     // O tempo ate agora vai para a pergunta aberta antes de corrigir.
     const touched = touchSession(session, now);
-    const verdict = classifyAttempt(quiz, touched, now);
+    const verdict = classifyAttempt(quiz, touched, now, countBlanks);
     const done = { ...touched, finishedAt: now, activeMs: verdict.activeMs };
     const counted = verdict.outcome === 'partial' ? answeredOnly(done, verdict.answeredIds) : done;
     return { verdict, done, counted, result: scoreSession(quiz, counted) };
@@ -131,10 +131,10 @@ function QuizDetailContent() {
     setView('run');
   };
 
-  const finish = useCallback(async () => {
+  const finish = useCallback(async (countBlanks = false) => {
     if (!quiz || !playQuiz || !session) return;
     const now = Date.now();
-    const judged = judgeAttempt(playQuiz, session, now);
+    const judged = judgeAttempt(playQuiz, session, now, countBlanks);
     if (!judged) {
       // Sessao estragada: nao deixa uma promessa rejeitada nem a pagina presa.
       clear();
@@ -257,7 +257,7 @@ function QuizDetailContent() {
         {!quiz ? (
           <CardGridSkeleton cards={3} />
         ) : view === 'run' && session ? (
-          <QuizRunner questions={questions} session={session} onChange={setSession} onFinish={() => void finish()} />
+          <QuizRunner questions={questions} session={session} onChange={setSession} onFinish={(countBlanks) => void finish(countBlanks)} />
         ) : view === 'results' && finished && score ? (
           <QuizResults
             session={finished.session}

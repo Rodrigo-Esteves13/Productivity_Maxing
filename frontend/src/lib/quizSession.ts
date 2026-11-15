@@ -207,7 +207,9 @@ export interface AttemptClassification {
   planned: number;
 }
 
-export function classifyAttempt(quiz: Quiz, session: QuizSession, now: number = Date.now()): AttemptClassification {
+// countBlanks: o aluno escolheu terminar com as em branco a contar como erradas
+// (senao uma tentativa a meio so conta as respondidas, com o tempo usado).
+export function classifyAttempt(quiz: Quiz, session: QuizSession, now: number = Date.now(), countBlanks = false): AttemptClassification {
   const byId = new Map(quiz.questions.map((q) => [q.id, q]));
   const answeredIds = session.items.flatMap((item) => {
     const q = byId.get(item.id);
@@ -219,7 +221,7 @@ export function classifyAttempt(quiz: Quiz, session: QuizSession, now: number = 
   // Exame que acabou o tempo com o aluno presente: tudo conta (em branco = errada).
   const lastActive = session.lastActiveAt ?? session.startedAt;
   const timedOutWhileActive = session.deadline !== null && now >= session.deadline && session.deadline - lastActive <= QUIZ_IDLE_GAP_MS;
-  const outcome = answeredIds.length === planned || timedOutWhileActive ? 'complete' : 'partial';
+  const outcome = answeredIds.length === planned || timedOutWhileActive || countBlanks ? 'complete' : 'partial';
   return { outcome, answeredIds, activeMs, planned };
 }
 

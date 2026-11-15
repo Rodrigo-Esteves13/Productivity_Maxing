@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_RESPONSE, QUIZ_FORMAT_ID, type Quiz, type QuizQuestion } from './quizFormat';
-import { makeItem, pickExam, poolQuestions, scoreSession, startSession, touchSession, wrongQuestions, QUIZ_IDLE_GAP_MS, type QuizStats } from './quizSession';
+import { classifyAttempt, makeItem, pickExam, poolQuestions, scoreSession, startSession, touchSession, wrongQuestions, QUIZ_IDLE_GAP_MS, type QuizStats } from './quizSession';
 import {
   attemptTiming,
   evolution,
@@ -163,5 +163,17 @@ describe('question pool', () => {
     expect(ids('unseen')).toEqual(['b2']);
     expect(ids('wrong')).toEqual(['a1']);
     expect(ids('unseenWrong')).toEqual(['a1', 'b2']);
+  });
+});
+
+describe('end early', () => {
+  it('counts only answered by default, all with countBlanks', () => {
+    const s = startSession('exam', quiz.questions, 60, 0, fixed);
+    s.items[0] = { ...s.items[0], touched: true, response: { ...EMPTY_RESPONSE, selected: [0] } };
+    s.items[1] = { ...s.items[1], touched: true, response: { ...EMPTY_RESPONSE, selected: [1] } };
+    const now = 60_000;
+    const active = touchSession({ ...s, lastActiveAt: now - 1000 }, now);
+    expect(classifyAttempt(quiz, { ...active, activeMs: 30_000 }, now).outcome).toBe('partial');
+    expect(classifyAttempt(quiz, { ...active, activeMs: 30_000 }, now, true).outcome).toBe('complete');
   });
 });

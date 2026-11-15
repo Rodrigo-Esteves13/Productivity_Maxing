@@ -228,4 +228,9 @@ export const quizzes: Record<string, string> = {
   'quizzes.pool.unseen': "未出題 ({count})",
   'quizzes.pool.wrong': "不正解 ({count})",
   'quizzes.pool.unseenWrong': "未出題 + 不正解 ({count})",
+  'quizzes.run.endEarly.title': "{total}問中{answered}問に回答しました。",
+  'quizzes.run.endEarly.help': "今すぐ終了: 回答した問題だけを、実際に使った時間で採点します。未回答の問題は不正解になりません。",
+  'quizzes.run.endEarly.early': "今すぐ終了",
+  'quizzes.run.endEarly.keepGoing': "続ける",
+  'quizzes.run.endEarly.countBlanks': "終了して未回答を不正解にする",
 };

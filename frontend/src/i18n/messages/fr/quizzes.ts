@@ -228,4 +228,9 @@ export const quizzes: Record<string, string> = {
   'quizzes.pool.unseen': "Jamais vues ({count})",
   'quizzes.pool.wrong': "Ratées ({count})",
   'quizzes.pool.unseenWrong': "Jamais vues + ratées ({count})",
+  'quizzes.run.endEarly.title': "Tu as répondu à {answered} sur {total}.",
+  'quizzes.run.endEarly.help': "Terminer maintenant : seules les questions auxquelles tu as répondu comptent, avec le temps réellement utilisé. Les autres ne comptent pas comme fausses.",
+  'quizzes.run.endEarly.early': "Terminer maintenant",
+  'quizzes.run.endEarly.keepGoing': "Continuer",
+  'quizzes.run.endEarly.countBlanks': "Terminer, les vides comptent comme fausses",
 };
