@@ -58,15 +58,10 @@ describe('FlashcardsService.forecast', () => {
     const { service, prisma } = setup();
     const result = await service.forecast('u1');
     expect(result.days).toHaveLength(FLASHCARD_FORECAST_DAYS);
-    expect(prisma.flashcard.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ userId: 'u1' }),
-      }),
-    );
-    expect(prisma.task.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ userId: 'u1' }),
-      }),
-    );
+    const scopedToUser = expect.objectContaining({
+      where: expect.objectContaining({ userId: 'u1' }) as unknown,
+    }) as unknown;
+    expect(prisma.flashcard.findMany).toHaveBeenCalledWith(scopedToUser);
+    expect(prisma.task.findMany).toHaveBeenCalledWith(scopedToUser);
   });
 });

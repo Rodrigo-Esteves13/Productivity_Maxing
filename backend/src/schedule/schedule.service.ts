@@ -19,11 +19,7 @@ import {
   keepFinishedClasses,
   type EctsWorkloadResult,
 } from './ects-workload.util';
-import {
-  getLisbonNow,
-  parseDateKey,
-  toDateKey,
-} from '../common/date-key.util';
+import { getLisbonNow, parseDateKey, toDateKey } from '../common/date-key.util';
 import { ImportScheduleDto } from './dto/import-schedule.dto';
 import { EstimateCommuteDto } from './dto/estimate-commute.dto';
 import { runWithConcurrencyLimit } from '../common/concurrency.util';
@@ -338,7 +334,8 @@ export class ScheduleService {
         where: { id: periodId, program: { userId } },
         select: { id: true },
       });
-      if (!period) throw new NotFoundException('Period not found or no access.');
+      if (!period)
+        throw new NotFoundException('Period not found or no access.');
     }
 
     const window = ectsStudyWindow(fromKey, effectiveToKey);

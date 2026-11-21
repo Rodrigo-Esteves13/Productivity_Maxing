@@ -50,8 +50,20 @@ describe('buildEctsWorkload', () => {
       window,
     );
     expect(result.courses).toEqual([
-      { areaId: 'a', name: 'Algebra', credits: 6, classMinutes: 120, studyMinutes: 90 },
-      { areaId: 'b', name: 'Biology', credits: 3, classMinutes: 90, studyMinutes: 0 },
+      {
+        areaId: 'a',
+        name: 'Algebra',
+        credits: 6,
+        classMinutes: 120,
+        studyMinutes: 90,
+      },
+      {
+        areaId: 'b',
+        name: 'Biology',
+        credits: 3,
+        classMinutes: 90,
+        studyMinutes: 0,
+      },
     ]);
   });
 

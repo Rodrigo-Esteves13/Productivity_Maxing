@@ -117,7 +117,10 @@ export function buildEctsWorkload(
     if (startMs < window.start.getTime() || startMs >= window.end.getTime()) {
       continue;
     }
-    const minutes = Math.max(0, (s.endedAt.getTime() - startMs) / MS_PER_MINUTE);
+    const minutes = Math.max(
+      0,
+      (s.endedAt.getTime() - startMs) / MS_PER_MINUTE,
+    );
     studyByArea.set(s.areaId, (studyByArea.get(s.areaId) ?? 0) + minutes);
   }
 

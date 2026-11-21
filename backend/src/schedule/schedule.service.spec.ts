@@ -14,6 +14,14 @@ const NOW = new Date('2026-07-15T11:00:00Z');
 const NOW_MINUTES = 720;
 const TODAY_DATE = new Date('2026-07-15T00:00:00.000Z');
 
+interface FindArgs {
+  where: Record<string, unknown> & { date: { lte: Date; gte: Date } };
+}
+
+/** `where` da primeira chamada de um mock do Prisma, sem `any`. */
+const firstWhere = (fn: jest.Mock): FindArgs['where'] =>
+  (fn.mock.calls as FindArgs[][])[0][0].where;
+
 const area = (id: string, name: string, credits = 6) => ({
   id,
   name,
@@ -48,21 +56,19 @@ describe('ScheduleService.ectsWorkload', () => {
   it('scopes every query by userId and requires credits', async () => {
     await service.ectsWorkload(USER_ID, PAST_FROM, PAST_TO);
 
-    expect(prisma.classOccurrence.findMany.mock.calls[0][0].where).toEqual(
+    expect(firstWhere(prisma.classOccurrence.findMany)).toEqual(
       expect.objectContaining({ userId: USER_ID, cancelled: false }),
     );
-    expect(prisma.studySession.findMany.mock.calls[0][0].where).toEqual(
+    expect(firstWhere(prisma.studySession.findMany)).toEqual(
       expect.objectContaining({ userId: USER_ID }),
     );
-    expect(prisma.areaScheduleLink.findMany.mock.calls[0][0].where).toEqual({
+    expect(firstWhere(prisma.areaScheduleLink.findMany)).toEqual({
       userId: USER_ID,
     });
-    expect(prisma.areaHidden.findMany.mock.calls[0][0].where).toEqual({
+    expect(firstWhere(prisma.areaHidden.findMany)).toEqual({
       userId: USER_ID,
     });
-    const areaWhere = JSON.stringify(
-      prisma.area.findMany.mock.calls[0][0].where,
-    );
+    const areaWhere = JSON.stringify(firstWhere(prisma.area.findMany));
     expect(areaWhere).toContain(USER_ID);
     expect(areaWhere).toContain('"credits":{"gt":0}');
     expect(prisma.task.findMany).not.toHaveBeenCalled();
@@ -82,7 +88,7 @@ describe('ScheduleService.ectsWorkload', () => {
     jest.useFakeTimers().setSystemTime(NOW);
     await service.ectsWorkload(USER_ID, '2026-07-01', '2026-12-31');
 
-    const where = prisma.classOccurrence.findMany.mock.calls[0][0].where;
+    const where = firstWhere(prisma.classOccurrence.findMany);
     expect(where.date.lte).toEqual(TODAY_DATE);
     expect(where.date.gte).toEqual(new Date('2026-07-01T00:00:00.000Z'));
   });
@@ -192,7 +198,7 @@ describe('ScheduleService.ectsWorkload', () => {
         PERIOD_ID,
       );
       expect(result.courses.map((c) => c.areaId)).toEqual(['b']);
-      expect(prisma.task.findMany.mock.calls[0][0].where).toEqual({
+      expect(firstWhere(prisma.task.findMany)).toEqual({
         userId: USER_ID,
         periodId: PERIOD_ID,
       });
@@ -218,7 +224,7 @@ describe('ScheduleService.ectsWorkload', () => {
       await expect(
         service.ectsWorkload(USER_ID, PAST_FROM, PAST_TO, PERIOD_ID),
       ).rejects.toBeInstanceOf(NotFoundException);
-      expect(prisma.academicPeriod.findFirst.mock.calls[0][0].where).toEqual({
+      expect(firstWhere(prisma.academicPeriod.findFirst)).toEqual({
         id: PERIOD_ID,
         program: { userId: USER_ID },
       });
@@ -247,7 +253,11 @@ describe('EctsWorkloadQueryDto', () => {
       0,
     );
     expect(
-      await check({ from: '2028-02-29', to: '2028-03-01', periodId: PERIOD_ID }),
+      await check({
+        from: '2028-02-29',
+        to: '2028-03-01',
+        periodId: PERIOD_ID,
+      }),
     ).toHaveLength(0);
   });
 
