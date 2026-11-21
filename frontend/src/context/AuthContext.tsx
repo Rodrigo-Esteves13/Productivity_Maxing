@@ -4,6 +4,7 @@ import { setCsrfToken, setSessionUserId } from '../api/csrfStore';
 import { unsubscribeThisDevice } from '../hooks/usePushNotifications';
 import { clearPushPromptAnswered } from '../pwa/pushPromptStorage';
 import { resetCalendarStatus } from '../hooks/useCalendarStatus';
+import { clearRecents } from '../lib/paletteRecents';
 import type { User } from '../types/models';
 import { AuthContext } from './auth-context';
 
@@ -184,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       invalidateChecks();
       setCsrfToken(null);
       resetCalendarStatus();
+      clearRecents(userIdRef.current);
       isAuthenticatedRef.current = false;
       setIsAuthenticated(false);
       setUser(null);

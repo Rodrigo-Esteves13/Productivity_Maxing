@@ -2,6 +2,7 @@ import ColorDot from '../UI/ColorDot';
 import IconButton from '../UI/IconButton';
 import { PencilIcon, TrashIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
+import { isLeech, leechAdviceKey } from '../../lib/flashcardLeech';
 import { groupDecks, isDue } from './decks';
 import type { Area, Flashcard } from '../../types/models';
 
@@ -40,6 +41,14 @@ export default function DeckList({ cards, areaById, onEdit, onRemove }: DeckList
                     <p className="mt-1 line-clamp-2 whitespace-pre-wrap break-words text-sm text-neutral-400">
                       {card.back}
                     </p>
+                    {isLeech(card) && (
+                      <p className="mt-1 text-xs text-amber-300">
+                        <span className="mr-1 rounded-full border border-amber-700 px-2 py-0.5 font-medium">
+                          {t('flashcards.leech')}
+                        </span>
+                        {t(`flashcards.leechAdvice.${leechAdviceKey(card)}`, { count: card.lapses })}
+                      </p>
+                    )}
                   </div>
                   {isDue(card, now) && (
                     <span className="shrink-0 rounded-full border border-violet-700 px-2 py-0.5 text-xs text-violet-300">

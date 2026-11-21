@@ -10,4 +10,6 @@ export const flashcardImport: Record<string, string> = {
   'flashcardImport.skip.tooLong': "{line} 行目: テキストが長すぎます。",
   'flashcardImport.skip.duplicate': "{line} 行目: このカードはすでにあります。",
   'flashcardImport.button': "テキストからカードをインポート",
+  'flashcardImport.reverseSummary': "逆向きカード: {added}枚追加、{skipped}枚スキップ。",
+  'flashcardImport.reverseTooLong': "逆向きカード{count}枚をスキップ: 裏面が300文字を超えています。",
 };

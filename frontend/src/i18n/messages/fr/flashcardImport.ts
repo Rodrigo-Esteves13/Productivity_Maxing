@@ -10,4 +10,6 @@ export const flashcardImport: Record<string, string> = {
   'flashcardImport.skip.tooLong': "Ligne {line} : texte trop long.",
   'flashcardImport.skip.duplicate': "Ligne {line} : tu as déjà cette carte.",
   'flashcardImport.button': "Importer des cartes depuis un texte",
+  'flashcardImport.reverseSummary': "Cartes inverses : {added} ajoutées, {skipped} ignorées.",
+  'flashcardImport.reverseTooLong': "{count} cartes inverses ignorées : le verso dépasse 300 caracteres.",
 };

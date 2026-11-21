@@ -20,6 +20,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { ScheduleService } from './schedule.service';
 import { ImportScheduleDto } from './dto/import-schedule.dto';
+import { EctsWorkloadQueryDto } from './dto/ects-workload-query.dto';
 import { EstimateCommuteDto } from './dto/estimate-commute.dto';
 import {
   SetAttendanceDto,
@@ -128,6 +129,25 @@ export class ScheduleController {
       user.id,
       new Date(`${from}T00:00:00.000Z`),
       toDate.getTime() > today.getTime() ? today : toDate,
+    );
+  }
+
+  // Literal antes de qualquer rota com :id. `to` e cortado em hoje (Lisboa)
+  // no service.
+  @Get('ects-workload')
+  @ApiOperation({
+    summary:
+      'Class and study minutes per course with ECTS credits between from and to (never past today), plus timetable subjects not linked to a course.',
+  })
+  ectsWorkload(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: EctsWorkloadQueryDto,
+  ) {
+    return this.scheduleService.ectsWorkload(
+      user.id,
+      query.from,
+      query.to,
+      query.periodId,
     );
   }
 

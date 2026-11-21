@@ -10,4 +10,6 @@ export const flashcardImport: Record<string, string> = {
   'flashcardImport.skip.tooLong': "第 {line} 行：文本过长。",
   'flashcardImport.skip.duplicate': "第 {line} 行：你已经有这张卡片了。",
   'flashcardImport.button': "从文本导入卡片",
+  'flashcardImport.reverseSummary': "反向卡片:新增{added}张,跳过{skipped}张。",
+  'flashcardImport.reverseTooLong': "已跳过{count}张反向卡片:背面超过300个字符。",
 };

@@ -10,4 +10,6 @@ export const flashcardImport: Record<string, string> = {
   'flashcardImport.skip.tooLong': "{line}번째 줄: 텍스트가 너무 길어요.",
   'flashcardImport.skip.duplicate': "{line}번째 줄: 이미 있는 카드예요.",
   'flashcardImport.button': "텍스트에서 카드 가져오기",
+  'flashcardImport.reverseSummary': "반대 카드: {added}장 추가, {skipped}장 건너뜀.",
+  'flashcardImport.reverseTooLong': "반대 카드 {count}장 건너뜀: 뒷면이 300자를 넘습니다.",
 };

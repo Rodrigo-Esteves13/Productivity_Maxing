@@ -4,6 +4,7 @@ import type {
   ClassOccurrence,
   SubjectAttendance,
   StudyVsClass,
+  EctsWorkload,
   CommuteMode,
   ImportScheduleRow,
   ImportScheduleResult,
@@ -101,6 +102,19 @@ export const estimateCommute = async (
     homeAddress,
     campusAddress,
     mode,
+  });
+  return response.data;
+};
+
+export const getEctsWorkload = async (
+  from: string,
+  to: string,
+  periodId?: string,
+  signal?: AbortSignal,
+): Promise<EctsWorkload> => {
+  const response = await api.get<EctsWorkload>('/schedule/ects-workload', {
+    params: { from, to, ...(periodId ? { periodId } : {}) },
+    signal,
   });
   return response.data;
 };

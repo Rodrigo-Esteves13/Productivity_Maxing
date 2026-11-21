@@ -66,3 +66,58 @@ export function chunkCards<T>(cards: readonly T[], size: number = IMPORT_BATCH_M
   for (let i = 0; i < cards.length; i += size) chunks.push(cards.slice(i, i + size));
   return chunks;
 }
+
+// Espelha MAX_FLASHCARDS_PER_USER do backend.
+export const FLASHCARD_USER_MAX = 2000;
+
+export interface ReverseResult {
+  // Cartoes finais: originais seguidos dos inversos aceites.
+  cards: ImportedCard[];
+  reverseCount: number;
+  // Inversos nao criados: verso maior que a frente aceita / frente repetida /
+  // limite de cartoes por utilizador.
+  skippedTooLong: number;
+  skippedDuplicate: number;
+  skippedOverCap: number;
+}
+
+/**
+ * Junta o cartao inverso (verso vira frente) a cada cartao. `existingFronts`
+ * sao as frentes que o user ja tem; `existingCount` entra no limite global.
+ * Um inverso e ignorado se o verso nao cabe numa frente, se a frente ja existe
+ * (ou e de outro cartao do lote) ou se passaria o limite de cartoes.
+ */
+export function withReverseCards(
+  cards: readonly ImportedCard[],
+  existingFronts: readonly string[] = [],
+  existingCount: number = existingFronts.length,
+): ReverseResult {
+  const seen = new Set(existingFronts.map((front) => front.trim().toLowerCase()));
+  for (const card of cards) seen.add(card.front.trim().toLowerCase());
+  const result: ReverseResult = {
+    cards: [...cards],
+    reverseCount: 0,
+    skippedTooLong: 0,
+    skippedDuplicate: 0,
+    skippedOverCap: 0,
+  };
+  for (const card of cards) {
+    if (card.back.length > IMPORT_FRONT_MAX) {
+      result.skippedTooLong += 1;
+      continue;
+    }
+    const key = card.back.trim().toLowerCase();
+    if (seen.has(key)) {
+      result.skippedDuplicate += 1;
+      continue;
+    }
+    if (existingCount + result.cards.length >= FLASHCARD_USER_MAX) {
+      result.skippedOverCap += 1;
+      continue;
+    }
+    seen.add(key);
+    result.cards.push({ front: card.back, back: card.front });
+    result.reverseCount += 1;
+  }
+  return result;
+}

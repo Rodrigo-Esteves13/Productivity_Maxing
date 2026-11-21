@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chunkCards, parseFlashcardText } from './flashcardImport';
+import { FLASHCARD_USER_MAX, IMPORT_FRONT_MAX, chunkCards, parseFlashcardText, withReverseCards } from './flashcardImport';
 
 describe('parseFlashcardText', () => {
   it('reads tab, semicolon and comma separated lines', () => {
@@ -39,5 +39,44 @@ describe('parseFlashcardText', () => {
 describe('chunkCards', () => {
   it('splits into batches', () => {
     expect(chunkCards([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+  });
+});
+
+describe('withReverseCards', () => {
+  it('appends swapped cards after the originals', () => {
+    const r = withReverseCards([{ front: 'cat', back: 'gato' }]);
+    expect(r.cards).toEqual([
+      { front: 'cat', back: 'gato' },
+      { front: 'gato', back: 'cat' },
+    ]);
+    expect(r.reverseCount).toBe(1);
+  });
+
+  it('skips reverses whose back is too long for a front', () => {
+    const r = withReverseCards([{ front: 'a', back: 'x'.repeat(IMPORT_FRONT_MAX + 1) }]);
+    expect(r.cards).toHaveLength(1);
+    expect(r.skippedTooLong).toBe(1);
+  });
+
+  it('does not duplicate existing fronts or fronts in the batch', () => {
+    const r = withReverseCards(
+      [
+        { front: 'cat', back: 'gato' },
+        { front: 'gato', back: 'cat' },
+        { front: 'dog', back: 'Cao' },
+        { front: 'other', back: 'cao' },
+      ],
+      ['GATO'],
+    );
+    // gato (existing) and cat (in batch) are skipped; first cao accepted, second is a dup.
+    expect(r.cards.map((c) => c.front)).toEqual(['cat', 'gato', 'dog', 'other', 'Cao']);
+    expect(r.skippedDuplicate).toBe(3);
+    expect(r.reverseCount).toBe(1);
+  });
+
+  it('respects the per-user cap', () => {
+    const r = withReverseCards([{ front: 'a', back: 'b' }], [], FLASHCARD_USER_MAX - 1);
+    expect(r.cards).toHaveLength(1);
+    expect(r.skippedOverCap).toBe(1);
   });
 });

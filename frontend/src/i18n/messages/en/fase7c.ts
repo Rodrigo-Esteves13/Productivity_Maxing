@@ -1,5 +1,6 @@
 export const fase7c: Record<string, string> = {
   'widget.failingRisk': "Risk of failing",
+  'widget.ectsWorkload': "ECTS workload",
   'taskTemplates.label': "Template",
   'taskTemplates.none': "No template",
   'taskTemplates.saveCurrent': "Save as template",

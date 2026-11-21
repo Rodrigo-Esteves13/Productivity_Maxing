@@ -7,9 +7,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-11-17',
+    title: 'Flashcards: hard cards, review forecast and reverse cards',
+    items: [
+      'Command palette: with an empty search, Ctrl+K now shows your 5 most recent choices first. Press ? anywhere (outside a text box) for a list of keyboard shortcuts, and press g then d, t, f, s, n or a to jump to Dashboard, Tasks, Focus, Schedule, Notebook or Courses. You can turn the ? and g shortcuts and the recent items off in Profile, Accessibility, and clear the recent items there. Ctrl+K itself always works.',
+      'Money: a new No leisure spending days card shows, for the month you are viewing, how many days had no Leisure expense, your current and best streak of such days, a row of dots for the month and a goal you can adjust (default 10 days). It hides the numbers in privacy mode.',
+      'Dashboard: a new ECTS workload card compares, for each course, the hours you have really put in (classes you attended plus focus sessions) with the hours expected so far, which is its credits times 27 hours (adjustable from 25 to 30) scaled by how much of the period has passed. Courses are sorted from furthest behind, and early in the period it only says Early in the period. It needs credits set on your courses and subjects linked to them. You can hide it in the widget settings.',
+      'Flashcards: cards you have forgotten 8 or more times are now marked Leech, with a hint on what to do (rewrite it, split it, or turn it into a cloze). A new Hard cards filter next to the course filter shows only those.',
+      'Flashcards: a new Review forecast card shows how many cards fall due each day over the next 30 days, for all courses or one. Days with exams are marked, and you get a warning when a very heavy day lands just before an exam.',
+      'Flashcards: when you create a card or import cards from text, a new option also creates the reverse card (back as front). Cards whose answer is too long, duplicates and anything over the card limit are skipped, and you are told how many.',
+    ],
+  },
+  {
     date: '2026-11-08',
     title: 'Money export, streak alert and sturdier integrations',
     items: [
+      'Money: when you edit an account balance to match your real bank, a checkbox now offers to log the difference as an Other expense (or Other income if it went up), so you do not have to enter every small coffee. The balance is still exactly what you typed.',
       'Quizzes: the History list now lines up in columns (mode, score with a bar, time, date), with the score coloured by result and partial attempts marked with a tag. On a phone each attempt fits in two lines.',
       'Quizzes: share a quiz from its page (Share). Create a link or send it to a friend. Whoever opens it signs in and adds their own copy to their quizzes, with their own stats and wrong answers. The questions stay inside Productivity Maxing: there is no file to download. Quizzes friends send you show in Social, Shared with me; the ones you share show in My shares, with how many copies were added. Stopping the share turns the link off; copies already added stay.',
       'Quizzes: link a quiz to a subject and, if you want, a task such as an exam (Studying for, at the top of the quiz). Starting an attempt without a focus session running now asks whether to start one for that subject or task, so quiz time counts as study time; it stops by itself when you finish or discard the attempt and asks how focused you were. You can turn the question off per quiz.',

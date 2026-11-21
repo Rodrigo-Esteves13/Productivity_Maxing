@@ -2,8 +2,8 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type Dispa
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { createTask, getTaskMetadata, getUserAreas, getUserTasks } from '../../api/userService';
-import { searchNotebook } from '../../api/notebookService';
-import { searchTurmaNotes } from '../../api/turmasService';
+import { getNotebookEntry, searchNotebook } from '../../api/notebookService';
+import { getTurmaNote, searchTurmaNotes } from '../../api/turmasService';
 import { SECTION_LABEL_KEY, owningPage } from '../../lib/siteMap';
 import { notebookEntryPath, turmaNotePath } from '../../lib/appLinks';
 import {
@@ -13,6 +13,9 @@ import {
   type QuickAddPriority,
 } from '../../lib/parseQuickAddTask';
 import { getLastUsedAreaId, setLastUsedAreaId } from '../../lib/lastUsedArea';
+import { isGoneError, loadRecents, recentPath, recordRecent, removeRecent, type RecentEntry } from '../../lib/paletteRecents';
+import { OPEN_SHORTCUTS_HELP_EVENT } from '../../lib/shortcutSequence';
+import { usePaletteShortcutsPref } from '../../hooks/usePaletteShortcutsPref';
 import { foldText, snippetAround, type TextSnippet } from '../../lib/textSearch';
 import type { Area, Task, NotebookSearchResult, TurmaNoteSearchResult } from '../../types/models';
 import { PlusIcon, SearchIcon } from '../UI/Icons';
@@ -49,6 +52,9 @@ interface NavCommand {
   // vivem dentro da pagina, em EN e PT). Minusculas.
   keywords?: string[];
 }
+
+// Entrada sem rota: abre a ajuda de atalhos (ShortcutsHelpModal, no Host).
+const SHORTCUTS_COMMAND_ID = 'nav-shortcuts';
 
 const NAV_COMMANDS: NavCommand[] = [
   {
@@ -233,6 +239,12 @@ const NAV_COMMANDS: NavCommand[] = [
     path: '/dashboard?approvalRules=on',
     keywords: ['approval', 'aprovacao', 'aprovação', 'pass mark', 'nota minima', 'nota mínima', 'rounding', 'arredondamento', 'scale', 'escala', 'exam track', 'recurso', 'regras', 'rules', 'ismai', 'chumbo', 'fail'],
   },
+  {
+    id: SHORTCUTS_COMMAND_ID,
+    labelKey: 'paletteShortcuts.title',
+    path: '',
+    keywords: ['shortcuts', 'keyboard', 'atalhos', 'teclas', 'teclado', 'hotkeys'],
+  },
   { id: 'nav-status', labelKey: 'status.palette', path: '/status', keywords: ['status', 'health', 'uptime', 'down', 'outage', 'estado', 'servidor', 'server', 'online'] },
   { id: 'nav-changelog', labelKey: 'nav.changelog', path: '/changelog' },
   { id: 'nav-class-invites', labelKey: 'turma.invites.title', path: '/classes', keywords: ['invite', 'convite', 'turma', 'class', 'join', 'entrar'] },
@@ -262,7 +274,7 @@ const NAV_COMMANDS: NavCommand[] = [
   { id: 'nav-areas', labelKey: 'nav.areas', path: '/areas', keywords: ['courses', 'subjects', 'propose', 'select courses', 'selecionar disciplinas', 'select', 'selecionar', 'bulk', 'em massa', 'approval rules', 'regras de aprovacao', 'custom rules', 'regras personalizadas', 'teacher', 'professor', 'docente'] },
   { id: 'nav-areas-select', labelKey: 'nav.areasSelect', path: '/areas?select=1', keywords: ['bulk', 'em massa', 'approval rules', 'regras de aprovacao', 'select all', 'selecionar tudo', 'multiple', 'varias'] },
   { id: 'nav-flashcards-test', labelKey: 'flashcardTest.paletteLabel', path: '/flashcards?test=1', keywords: ['practice test', 'teste', 'multiple choice', 'escolha multipla', 'flashcards'] },
-  { id: 'nav-flashcards', labelKey: 'nav.flashcards', path: '/flashcards', keywords: ['flashcards', 'cards', 'cartoes', 'revisao', 'review', 'spaced repetition', 'repeticao espacada', 'study', 'estudar', 'anki'] },
+  { id: 'nav-flashcards', labelKey: 'nav.flashcards', path: '/flashcards', keywords: ['flashcards', 'cards', 'cartoes', 'revisao', 'review', 'spaced repetition', 'repeticao espacada', 'study', 'estudar', 'anki', 'leech', 'hard cards', 'dificeis', 'forecast', 'previsao', 'reverse card', 'inversa'] },
   { id: 'nav-quizzes', labelKey: 'nav.quizzes', path: '/quizzes', keywords: ['quiz', 'quizzes', 'teste', 'exame', 'exam', 'practice', 'pratica', 'perguntas', 'questions', 'multiple choice', 'escolha multipla', 'study', 'estudar', 'calculo', 'calculation'] },
   { id: 'quizzes-prompt', labelKey: 'quizzes.palette.prompt', path: '/quizzes?open=prompt', keywords: ['prompt', 'ai', 'ia', 'chatgpt', 'claude', 'gemini', 'generate quiz', 'gerar quiz', 'criar quiz', 'copy prompt', 'copiar prompt'] },
   { id: 'quizzes-upload', labelKey: 'quizzes.palette.upload', path: '/quizzes?open=upload', keywords: ['upload', 'carregar', 'import', 'importar', 'json', 'quiz file', 'ficheiro'] },
@@ -275,6 +287,7 @@ const NAV_COMMANDS: NavCommand[] = [
 ];
 
 const MAX_TASK_RESULTS = 6;
+const RECENT_ID_PREFIX = 'recent';
 const MAX_NOTEBOOK_RESULTS = 6;
 const MAX_TURMA_NOTE_RESULTS = 4;
 // Ao contrário das tasks (pré-carregadas de uma vez e filtradas
@@ -303,6 +316,9 @@ const PRIORITY_MATCH: Record<QuickAddPriority, string[]> = {
 
 type PaletteItem =
   | { kind: 'nav'; id: string; label: string; path: string }
+  // Escolhido recentemente (so com a pesquisa vazia). path: reconstruido de
+  // kind + id (nunca lido do armazenamento).
+  | { kind: 'recent'; id: string; label: string; recent: RecentEntry; path: string }
   // detail: onde apareceu o texto quando nao foi no titulo (notas ou passo).
   | { kind: 'task'; id: string; label: string; task: Task; detail?: { prefix: string; snippet: TextSnippet } }
   | { kind: 'notebook'; id: string; label: string; entry: NotebookSearchResult }
@@ -332,6 +348,8 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
   const { t } = useI18n();
   const { catalogLabel } = useCatalogLabel();
   const enumLabel = useEnumLabel();
+  const { enabled: shortcutsEnabled } = usePaletteShortcutsPref();
+  const [recents, setRecents] = useState<RecentEntry[]>([]);
   const navigate = useNavigate();
   const { notify } = useFeedback();
   const { activeSession, start: startStudySession } = useActiveStudySession();
@@ -341,6 +359,9 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [tasks, setTasks] = useState<Task[] | null>(null);
+  // Lista de tasks carregada com sucesso (uma falha deixa [] e nao prova que
+  // uma task recente deixou de existir).
+  const [tasksLoaded, setTasksLoaded] = useState(false);
   const [notebookResults, setNotebookResults] = useState<NotebookSearchResult[]>([]);
   const [turmaNoteResults, setTurmaNoteResults] = useState<TurmaNoteSearchResult[]>([]);
   // null = not fetched yet (lazy, same as tasks); [] = fetched, none exist.
@@ -382,6 +403,7 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
     setQuery('');
     setActiveIndex(0);
     setCreateError('');
+    setRecents(shortcutsEnabled ? loadRecents(user?.id) : []);
     // Autofocus needs a tick - the input isn't in the DOM yet on the same
     // render that flips isOpen to true.
     const id = window.setTimeout(() => inputRef.current?.focus(), 0);
@@ -397,16 +419,21 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
     listsUserIdRef.current = currentUserId;
     if (otherUser) {
       setTasks(null);
+      setTasksLoaded(false);
       setAreas(null);
     }
 
     if (tasks === null || otherUser || tasksFailedRef.current) {
       tasksFailedRef.current = false;
       getUserTasks()
-        .then(setTasks)
+        .then((list) => {
+          setTasks(list);
+          setTasksLoaded(true);
+        })
         .catch(() => {
           tasksFailedRef.current = true;
           setTasks([]);
+          setTasksLoaded(false);
         });
     }
 
@@ -486,6 +513,16 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
     [tasks],
   );
 
+  // Recentes de tasks que ja nao existem saem do armazenamento (so grava).
+  useEffect(() => {
+    const userId = user?.id;
+    if (!tasksLoaded || !userId) return;
+    const ids = new Set(taskIndex.map((entry) => entry.task.id));
+    for (const recent of loadRecents(userId)) {
+      if (recent.kind === 'task' && !ids.has(recent.id)) removeRecent(userId, 'task', recent.id);
+    }
+  }, [tasksLoaded, taskIndex, user?.id]);
+
   const items = useMemo<PaletteItem[]>(() => {
     const trimmed = query.trim();
     const isQuickAddMode = trimmed.startsWith(QUICK_ADD_PREFIX);
@@ -525,6 +562,34 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
       .map((c) => ({ command: c, label: t(c.labelKey) }))
       .filter(({ command, label }) => q === '' || label.toLowerCase().includes(q) || command.keywords?.some((k) => k.includes(q)))
       .map(({ command, label }) => ({ kind: 'nav', id: command.id, label, path: command.path }));
+
+    // Recentes primeiro, so sem pesquisa. Nav re-resolvido pelo id (rotulo
+    // sempre traduzido; sai se ja nao existe ou e so de admin); os outros
+    // reconstroem o caminho de kind + id e trazem o rotulo guardado (tasks:
+    // o titulo atual, e saem se a lista carregada ja nao as tem). As linhas
+    // de nav ja mostradas aqui saem da lista normal para nao repetir.
+    const recentMatches: PaletteItem[] = [];
+    if (q === '' && shortcutsEnabled) {
+      const navById = new Map(navMatches.map((m) => [m.id, m]));
+      const taskTitleById = tasksLoaded ? new Map(taskIndex.map((entry) => [entry.task.id, entry.task.title])) : null;
+      for (const recent of recents) {
+        if (recent.kind === 'nav') {
+          const nav = navById.get(recent.id);
+          if (nav && nav.kind === 'nav') {
+            recentMatches.push({ kind: 'recent', id: `${RECENT_ID_PREFIX}-nav-${recent.id}`, label: nav.label, recent, path: nav.path });
+          }
+          continue;
+        }
+        const path = recentPath(recent);
+        let label = recent.label;
+        if (recent.kind === 'task' && taskTitleById) label = taskTitleById.get(recent.id);
+        if (path && label) {
+          recentMatches.push({ kind: 'recent', id: `${RECENT_ID_PREFIX}-${recent.kind}-${recent.id}`, label, recent, path });
+        }
+      }
+    }
+    const recentNavIds = new Set(recentMatches.flatMap((m) => (m.kind === 'recent' && m.recent.kind === 'nav' ? [m.recent.id] : [])));
+    const restNavMatches = navMatches.filter((m) => !recentNavIds.has(m.id));
 
     // Tasks only searched once there's a query - with no query, showing 6
     // arbitrary tasks above the fold isn't useful; the nav commands are.
@@ -575,8 +640,8 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
 
     // Quick-add goes LAST, never first: Enter on a normal search must keep
     // opening the top match, not creating a task named after the query.
-    return [...navMatches, ...taskMatches, ...notebookMatches, ...turmaNoteMatches, ...quickAddItems];
-  }, [query, taskIndex, notebookResults, turmaNoteResults, user, areas, t]);
+    return [...recentMatches, ...restNavMatches, ...taskMatches, ...notebookMatches, ...turmaNoteMatches, ...quickAddItems];
+  }, [query, taskIndex, notebookResults, turmaNoteResults, user, areas, t, recents, shortcutsEnabled, tasksLoaded]);
 
   // Clamp instead of reset-on-every-keystroke - keeps the highlighted row
   // stable when it's still a valid index after the result list shrinks.
@@ -636,23 +701,75 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
     return section ? t(SECTION_LABEL_KEY[section]) : t('palette.kind.nav');
   };
 
+  // O item recente ja nao existe: sai da lista e do armazenamento, com aviso.
+  const dropRecent = (recent: RecentEntry) => {
+    removeRecent(user?.id, recent.kind, recent.id);
+    setRecents((prev) => prev.filter((r) => !(r.kind === recent.kind && r.id === recent.id)));
+    notify(t('paletteShortcuts.recentGone'), 'info');
+  };
+
+  // Notas (caderno/turma) so se sabe se ainda existem ao pedir ao servidor;
+  // 404/403 = apagada ou sem acesso. Outra falha (rede) segue para a pagina,
+  // que mostra o seu proprio erro.
+  const openRemoteRecent = async (recent: RecentEntry, path: string) => {
+    try {
+      if (recent.kind === 'notebook') await getNotebookEntry(recent.id);
+      else if (recent.parentId) await getTurmaNote(recent.parentId, recent.id);
+    } catch (err) {
+      if (isGoneError(err)) {
+        dropRecent(recent);
+        return;
+      }
+    }
+    setIsOpen(false);
+    recordRecent(user?.id, recent);
+    navigate(path);
+  };
+
   const selectItem = (item: PaletteItem) => {
     if (item.kind === 'quick-add') {
       void createQuickTask(item);
       return;
     }
+    const remember = (entry: RecentEntry) => {
+      if (shortcutsEnabled) recordRecent(user?.id, entry);
+    };
+    if (item.kind === 'recent') {
+      const { recent, path } = item;
+      if (recent.kind === 'task' && tasksLoaded && !taskIndex.some((entry) => entry.task.id === recent.id)) {
+        dropRecent(recent);
+        return;
+      }
+      if (recent.kind === 'notebook' || recent.kind === 'turmaNote') {
+        void openRemoteRecent(recent, path);
+        return;
+      }
+      setIsOpen(false);
+      remember(recent);
+      if (recent.id === SHORTCUTS_COMMAND_ID) window.dispatchEvent(new Event(OPEN_SHORTCUTS_HELP_EVENT));
+      else navigate(path);
+      return;
+    }
     setIsOpen(false);
     if (item.kind === 'nav') {
-      navigate(item.path);
+      if (item.id === SHORTCUTS_COMMAND_ID) {
+        window.dispatchEvent(new Event(OPEN_SHORTCUTS_HELP_EVENT));
+      } else {
+        remember({ kind: 'nav', id: item.id });
+        navigate(item.path);
+      }
     } else if (item.kind === 'task') {
+      remember({ kind: 'task', id: item.task.id, label: item.label });
       navigate(`/tasks?open=${item.task.id}`);
     } else if (item.kind === 'turmaNote') {
+      remember({ kind: 'turmaNote', id: item.note.id, parentId: item.note.turmaId, label: item.label });
       navigate(turmaNotePath(item.note.turmaId, item.note.id));
     } else {
       // ?entry=<id>: o Notebook reage ao parametro mesmo quando ja esta
       // aberto (antes ia por sessionStorage, lido so no mount: ja em
       // /notebook nada acontecia e um snapshot antigo abria mais tarde) e
       // pede a versao atual da entrada ao servidor.
+      remember({ kind: 'notebook', id: item.entry.id, label: item.label });
       navigate(notebookEntryPath(item.entry.id));
     }
   };
@@ -712,6 +829,7 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
     >
       <div
         data-state={state}
+        data-command-palette=""
         role="dialog"
         aria-modal="true"
         aria-label={t('paletteActions.dialog')}
@@ -808,7 +926,9 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
                   )}
                 </span>
                 <span className="text-[10px] uppercase tracking-wide text-neutral-500 shrink-0">
-                  {item.kind === 'nav' ? navSectionLabel(item.path) : t(`palette.kind.${item.kind}`)}
+                  {item.kind === 'nav' || (item.kind === 'recent' && item.recent.kind === 'nav')
+                    ? navSectionLabel(item.path)
+                    : t(`palette.kind.${item.kind === 'recent' ? item.recent.kind : item.kind}`)}
                 </span>
               </button>
               {item.kind === 'task' && index === clampedIndex && activeTaskActions.length > 0 && (
@@ -834,6 +954,12 @@ export default function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProp
             );
           })}
         </div>
+
+        {shortcutsEnabled && (
+          <p className="hidden border-t border-neutral-800 px-4 py-2 text-[10px] text-neutral-500 sm:block">
+            {t('paletteShortcuts.footerHint')}
+          </p>
+        )}
 
         {activeTaskActions.length > 0 && (
           <p className="hidden border-t border-neutral-800 px-4 py-2 text-[10px] text-neutral-500 sm:block">

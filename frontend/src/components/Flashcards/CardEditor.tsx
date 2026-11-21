@@ -4,6 +4,7 @@ import Button from '../UI/Button';
 import Input from '../UI/Input';
 import Select from '../UI/Select';
 import Textarea from '../UI/Textarea';
+import ToggleRow from '../UI/ToggleRow';
 import { useI18n } from '../../i18n/useI18n';
 import type { FlashcardInput } from '../../api/flashcardsService';
 import type { Area, Flashcard } from '../../types/models';
@@ -16,7 +17,7 @@ interface CardEditorProps {
   card?: Flashcard;
   defaultAreaId?: string | null;
   areas: Area[];
-  onSubmit: (input: FlashcardInput) => Promise<boolean>;
+  onSubmit: (input: FlashcardInput, reverse: boolean) => Promise<boolean>;
   onClose: () => void;
 }
 
@@ -26,13 +27,16 @@ export default function CardEditor({ card, defaultAreaId = null, areas, onSubmit
   const [back, setBack] = useState(card?.back ?? '');
   const [areaId, setAreaId] = useState(card ? card.areaId : defaultAreaId);
   const [isSaving, setIsSaving] = useState(false);
+  const [reverse, setReverse] = useState(false);
+  // O inverso usa o verso como frente, que tem limite menor.
+  const reverseTooLong = !card && reverse && back.trim().length > FLASHCARD_FRONT_MAX;
   const canSave = front.trim() !== '' && back.trim() !== '' && !isSaving;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!canSave) return;
     setIsSaving(true);
-    const ok = await onSubmit({ front: front.trim(), back: back.trim(), areaId });
+    const ok = await onSubmit({ front: front.trim(), back: back.trim(), areaId }, !card && reverse);
     setIsSaving(false);
     if (ok) onClose();
   };
@@ -62,6 +66,22 @@ export default function CardEditor({ card, defaultAreaId = null, areas, onSubmit
             </option>
           ))}
         </Select>
+        {!card && (
+          <>
+            <ToggleRow
+              variant="inline"
+              label={t('flashcards.reverse')}
+              description={t('flashcards.reverseHelp')}
+              checked={reverse}
+              onChange={setReverse}
+            />
+            {reverseTooLong && (
+              <p className="text-xs text-amber-300" role="status">
+                {t('flashcards.reverseSkippedOne')}
+              </p>
+            )}
+          </>
+        )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" size="sm" onClick={onClose}>
             {t('ui.cancel')}

@@ -17,6 +17,7 @@ import ModalHeaderActions from '../components/UI/ModalHeaderActions';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useTasksPage } from '../hooks/useTasksPage';
 import { useTaskShortcuts } from '../hooks/useTaskShortcuts';
+import { TASK_SHORTCUTS_SCOPE_PROPS } from '../lib/shortcutGuards';
 import { useShowArchivedTasks } from '../hooks/useShowArchivedTasks';
 import { useTaskSortMode } from '../hooks/useTaskSortMode';
 import TaskTimeline from '../components/Tasks/TaskTimeline';
@@ -275,31 +276,34 @@ export default function Tasks() {
           )
         }
       >
-        {selectedTask &&
-          (isEditing ? (
-            <TaskEditForm
-              task={selectedTask}
-              onSubmit={handleUpdateTask}
-              onCancel={stopEditing}
-              areas={areas}
-              taskTypes={taskTypes}
-              academicTaskTypes={academicTaskTypes}
-              difficulties={difficulties}
-              priorities={priorities}
-              progressStatuses={progressStatuses}
-              existingTasks={tasks}
-            />
-          ) : (
-            <TaskDetailView
-              task={selectedTask}
-              taskTypes={taskTypes}
-              academicTaskTypes={academicTaskTypes}
-              onSubtasksChange={handleSubtasksChange}
-              onSubtaskConverted={handleSubtaskConverted}
-              priorities={priorities}
-              onApplyPriority={applyPrioritySuggestion}
-            />
-          ))}
+        {selectedTask && (
+          <div {...TASK_SHORTCUTS_SCOPE_PROPS}>
+            {isEditing ? (
+              <TaskEditForm
+                task={selectedTask}
+                onSubmit={handleUpdateTask}
+                onCancel={stopEditing}
+                areas={areas}
+                taskTypes={taskTypes}
+                academicTaskTypes={academicTaskTypes}
+                difficulties={difficulties}
+                priorities={priorities}
+                progressStatuses={progressStatuses}
+                existingTasks={tasks}
+              />
+            ) : (
+              <TaskDetailView
+                task={selectedTask}
+                taskTypes={taskTypes}
+                academicTaskTypes={academicTaskTypes}
+                onSubtasksChange={handleSubtasksChange}
+                onSubtaskConverted={handleSubtaskConverted}
+                priorities={priorities}
+                onApplyPriority={applyPrioritySuggestion}
+              />
+            )}
+          </div>
+        )}
       </Modal>
     </PageLayout>
   );

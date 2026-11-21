@@ -1,5 +1,6 @@
 export const fase7c: Record<string, string> = {
   'widget.failingRisk': "Risco de chumbar",
+  'widget.ectsWorkload': "Carga ECTS",
   'taskTemplates.label': "Modelo",
   'taskTemplates.none': "Sem modelo",
   'taskTemplates.saveCurrent': "Guardar como modelo",

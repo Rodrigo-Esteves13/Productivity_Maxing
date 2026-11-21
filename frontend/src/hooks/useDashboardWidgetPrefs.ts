@@ -39,7 +39,8 @@ export type DashboardWidgetKey =
   | 'statusSummary'
   | 'areaConsistency'
   | 'xpLevel'
-  | 'typeBalance';
+  | 'typeBalance'
+  | 'ectsWorkload';
 
 // Chaves i18n (traduzidas com t() em DashboardWidgetToggles).
 export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
@@ -82,6 +83,7 @@ export const WIDGET_LABELS: Record<DashboardWidgetKey, string> = {
   areaConsistency: 'areaConsistency.title',
   xpLevel: 'xpLevel.title',
   typeBalance: 'typeBalance.title',
+  ectsWorkload: 'widget.ectsWorkload',
 };
 
 const STORAGE_KEY = 'dashboard-widget-prefs';
@@ -130,6 +132,7 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   areaConsistency: true,
   xpLevel: true,
   typeBalance: true,
+  ectsWorkload: true,
 };
 
 function loadPrefs(): Record<DashboardWidgetKey, boolean> {

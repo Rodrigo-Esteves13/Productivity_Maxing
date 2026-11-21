@@ -6,6 +6,7 @@ import ActionButton from '../UI/ActionButton';
 import ProgressBar from '../UI/ProgressBar';
 import { FINANCE_CURRENCIES, type FinanceSettings, type FinanceSummary } from '../../api/financeService';
 import Money, { PrivateText } from './Money';
+import NoLeisureDaysCard from './NoLeisureDaysCard';
 import { centsToInput, parseMoneyInput } from '../../lib/money';
 import { usePrivateInputClass } from '../../hooks/usePrivacyMode';
 import { useI18n } from '../../i18n/useI18n';
@@ -80,6 +81,7 @@ export default function FinanceOverview({ summary, onSaveSettings }: FinanceOver
   };
 
   return (
+    <>
     <Card className="mb-6">
       {isEditing ? (
         <form onSubmit={(e) => void handleSubmit(e)} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -139,5 +141,7 @@ export default function FinanceOverview({ summary, onSaveSettings }: FinanceOver
         </div>
       )}
     </Card>
+    <NoLeisureDaysCard summary={summary} />
+    </>
   );
 }

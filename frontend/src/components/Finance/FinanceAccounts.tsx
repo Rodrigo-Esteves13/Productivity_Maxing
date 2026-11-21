@@ -9,32 +9,48 @@ import { PencilIcon, TrashIcon } from '../UI/Icons';
 import {
   FINANCE_ACCOUNT_NAME_MAX_LENGTH,
   FINANCE_ACCOUNT_TYPES,
+  FINANCE_ADJUSTMENT_CATEGORY,
+  FINANCE_MAX_AMOUNT_CENTS,
   type FinanceAccount,
   type FinanceAccountInput,
   type FinanceAccountType,
+  type FinanceEntryInput,
 } from '../../api/financeService';
+import { PrivateText } from './Money';
 import { centsToInput, parseMoneyInput } from '../../lib/money';
-import type { SubmitOutcome } from '../../lib/idempotency';
+import { todayKey } from '../../lib/dateKey';
+import { newRequestId, type SubmitOutcome } from '../../lib/idempotency';
 import { useIdempotentSubmit } from '../../hooks/useIdempotentSubmit';
 import { usePrivateInputClass } from '../../hooks/usePrivacyMode';
 import { useI18n } from '../../i18n/useI18n';
 
 interface AccountFormProps {
   initial?: FinanceAccount;
+  currency: string;
   /** `key` e a Idempotency-Key da tentativa (ignorada ao editar). */
   onSubmit: (input: FinanceAccountInput, key: string) => Promise<SubmitOutcome>;
+  /** Regista a diferenca do saldo como entrada (so ao editar). */
+  onLogDifference?: (input: FinanceEntryInput, key: string) => Promise<SubmitOutcome>;
   onCancel?: () => void;
 }
 
-// Formulario unico para criar e editar uma conta.
-function AccountForm({ initial, onSubmit, onCancel }: AccountFormProps) {
+// Formulario unico para criar e editar uma conta. Ao editar o saldo, a
+// diferenca pode ficar registada como despesa/receita "Other" (so analitica:
+// o saldo continua a ser o que a pessoa escreveu).
+function AccountForm({ initial, currency, onSubmit, onLogDifference, onCancel }: AccountFormProps) {
   const { t } = useI18n();
+  const [logDiff, setLogDiff] = useState(true);
   const { submit, isSubmitting } = useIdempotentSubmit();
   const privateInput = usePrivateInputClass();
   const [name, setName] = useState(initial?.name ?? '');
   const [type, setType] = useState<FinanceAccountType>(initial?.type ?? 'BANK');
   const [balance, setBalance] = useState(initial ? centsToInput(initial.balanceCents) : '');
   const [formError, setFormError] = useState('');
+
+  // Diferenca face ao saldo guardado; so oferece registar na moeda das definicoes.
+  const diffCents = (next: number) => (initial && !initial.currency ? next - initial.balanceCents : 0);
+  const typed = parseMoneyInput(balance || '0');
+  const previewDiff = typed === null ? 0 : diffCents(typed);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -44,7 +60,25 @@ function AccountForm({ initial, onSubmit, onCancel }: AccountFormProps) {
       return;
     }
     setFormError('');
-    if (await submit((key) => onSubmit({ name: name.trim(), type, balanceCents }, key))) {
+    const diff = diffCents(balanceCents);
+    const ok = await submit(async (key) => {
+      const outcome = await onSubmit({ name: name.trim(), type, balanceCents }, key);
+      if (outcome === true && diff !== 0 && logDiff && onLogDifference && initial) {
+        await onLogDifference(
+          {
+            kind: diff < 0 ? 'EXPENSE' : 'INCOME',
+            amountCents: Math.abs(diff),
+            category: FINANCE_ADJUSTMENT_CATEGORY,
+            note: t('finance.adjustmentNote'),
+            date: todayKey(),
+            accountId: initial.id,
+          },
+          newRequestId(),
+        );
+      }
+      return outcome;
+    });
+    if (ok) {
       if (!initial) {
         setName('');
         setBalance('');
@@ -66,6 +100,18 @@ function AccountForm({ initial, onSubmit, onCancel }: AccountFormProps) {
         </Select>
         <Input className={privateInput} label={t('finance.accountBalance')} inputMode="decimal" placeholder="0.00" value={balance} onChange={(e) => setBalance(e.target.value)} />
       </div>
+      {onLogDifference && previewDiff !== 0 && Math.abs(previewDiff) <= FINANCE_MAX_AMOUNT_CENTS && (
+        <label className="flex items-center gap-2 text-sm text-neutral-300">
+          <input type="checkbox" checked={logDiff} onChange={(e) => setLogDiff(e.target.checked)} className="h-4 w-4 accent-violet-500" />
+          <PrivateText
+            render={(money) =>
+              t(previewDiff < 0 ? 'finance.logDifferenceExpense' : 'finance.logDifferenceIncome', {
+                amount: money(Math.abs(previewDiff), currency),
+              })
+            }
+          />
+        </label>
+      )}
       <div className="flex flex-wrap items-center gap-3">
         <FinanceSubmitButton isSubmitting={isSubmitting}>{initial ? t('finance.save') : t('finance.addAccount')}</FinanceSubmitButton>
         {onCancel && (
@@ -84,12 +130,13 @@ interface FinanceAccountsProps {
   currency: string;
   onAdd: (input: FinanceAccountInput, key: string) => Promise<SubmitOutcome>;
   onUpdate: (id: string, changes: Partial<FinanceAccountInput>) => Promise<boolean>;
+  onLogDifference: (input: FinanceEntryInput, key: string) => Promise<SubmitOutcome>;
   onRemove: (account: FinanceAccount) => void;
 }
 
 // Contas escritas a mao (banco, dia a dia, corretora, cripto, dinheiro vivo).
 // O saldo de uma conta so muda quando a pessoa o edita aqui.
-export default function FinanceAccounts({ accounts, currency, onAdd, onUpdate, onRemove }: FinanceAccountsProps) {
+export default function FinanceAccounts({ accounts, currency, onAdd, onUpdate, onLogDifference, onRemove }: FinanceAccountsProps) {
   const { t } = useI18n();
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -104,7 +151,7 @@ export default function FinanceAccounts({ accounts, currency, onAdd, onUpdate, o
           {accounts.map((account) =>
             editingId === account.id ? (
               <li key={account.id} className="py-3">
-                <AccountForm initial={account} onSubmit={(input) => onUpdate(account.id, input)} onCancel={() => setEditingId(null)} />
+                <AccountForm initial={account} currency={currency} onSubmit={(input) => onUpdate(account.id, input)} onLogDifference={onLogDifference} onCancel={() => setEditingId(null)} />
               </li>
             ) : (
               <li key={account.id} className="flex items-center gap-3 py-2">
@@ -128,7 +175,7 @@ export default function FinanceAccounts({ accounts, currency, onAdd, onUpdate, o
           )}
         </ul>
       )}
-      <AccountForm onSubmit={onAdd} />
+      <AccountForm currency={currency} onSubmit={onAdd} />
     </Card>
   );
 }

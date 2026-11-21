@@ -55,6 +55,8 @@ export const FINANCE_MAX_PAY_DAY = 31;
 export const FINANCE_NOTE_MAX_LENGTH = 120;
 export const FINANCE_ACCOUNT_NAME_MAX_LENGTH = 60;
 export const FINANCE_MAX_AMOUNT_CENTS = 2_000_000_000;
+// Categoria das entradas criadas ao corrigir um saldo (diferenca = gastos pequenos nao registados).
+export const FINANCE_ADJUSTMENT_CATEGORY = 'OTHER';
 export const FINANCE_MAX_ENTRIES_PER_USER = 5000;
 // POST /finance/import: linhas por pedido (MAX_FINANCE_IMPORT_ROWS no backend).
 export const FINANCE_IMPORT_MAX_ROWS = 1000;

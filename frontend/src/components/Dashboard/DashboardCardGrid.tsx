@@ -34,6 +34,7 @@ import {
   AreaConsistencyCard,
   XpLevelCard,
   TypeBalanceCard,
+  EctsWorkloadCard,
 } from './lazyCards';
 import type { DashboardWidgetKey } from '../../hooks/useDashboardWidgetPrefs';
 import type { AcademicProgram, AcademicTaskTypeOption, Area, Task } from '../../types/models';
@@ -144,6 +145,7 @@ export default function DashboardCardGrid({
     ),
     xpLevel: visibility.xpLevel && academicTasks.length > 0 && <XpLevelCard tasks={academicTasks} />,
     typeBalance: visibility.typeBalance && allTasks.length > 0 && <TypeBalanceCard tasks={allTasks} />,
+    ectsWorkload: visibility.ectsWorkload && <EctsWorkloadCard />,
   };
 
   return (

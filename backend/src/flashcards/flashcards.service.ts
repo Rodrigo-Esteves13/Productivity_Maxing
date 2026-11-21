@@ -13,7 +13,10 @@ import {
   UpdateFlashcardDto,
 } from './dto/flashcard.dto';
 import { scheduleReview, type FlashcardGrade } from './flashcard-schedule';
+import { lisbonDayBounds, toLisbonDateKey } from '../common/date-key.util';
+import { bucketForecast, forecastDayKeys } from './flashcard-forecast.util';
 import {
+  FLASHCARD_FORECAST_DAYS,
   FLASHCARD_LIST_LIMIT,
   MAX_FLASHCARDS_PER_USER,
 } from './flashcards.constants';
@@ -56,6 +59,41 @@ export class FlashcardsService {
       }),
     ]);
     return { total, due };
+  }
+
+  async forecast(userId: string) {
+    const now = new Date();
+    const keys = forecastDayKeys(now, FLASHCARD_FORECAST_DAYS);
+    const first = keys[0];
+    const last = keys[keys.length - 1];
+    const [cards, tasks] = await Promise.all([
+      this.prisma.flashcard.findMany({
+        where: { userId, dueAt: { lt: lisbonDayBounds(last).end } },
+        select: { dueAt: true, areaId: true },
+      }),
+      this.prisma.task.findMany({
+        where: {
+          userId,
+          progressStatus: { not: 'COMPLETED' },
+          academicType: { isEvent: true },
+          date: {
+            gte: lisbonDayBounds(first).start,
+            lt: lisbonDayBounds(last).end,
+          },
+        },
+        orderBy: { date: 'asc' },
+        select: { id: true, title: true, date: true, areaId: true },
+      }),
+    ]);
+    return {
+      days: bucketForecast(cards, now, FLASHCARD_FORECAST_DAYS),
+      exams: tasks.map((t) => ({
+        taskId: t.id,
+        title: t.title,
+        date: toLisbonDateKey(t.date),
+        areaId: t.areaId,
+      })),
+    };
   }
 
   async create(userId: string, dto: CreateFlashcardDto) {
