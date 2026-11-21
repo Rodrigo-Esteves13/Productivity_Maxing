@@ -27,3 +27,26 @@ export const deleteFlashcard = async (id: string): Promise<void> => {
 
 export const reviewFlashcard = async (id: string, grade: FlashcardGrade): Promise<Flashcard> =>
   (await api.post<Flashcard>(`${url(id)}/review`, { grade })).data;
+
+export interface FlashcardForecastDay {
+  // 'YYYY-MM-DD', hoje primeiro; os atrasados entram no dia 0.
+  date: string;
+  total: number;
+  // Chave = areaId, ou 'none' para cartoes sem cadeira.
+  byArea: Record<string, number>;
+}
+
+export interface FlashcardForecastExam {
+  taskId: string;
+  title: string;
+  date: string;
+  areaId: string;
+}
+
+export interface FlashcardForecast {
+  days: FlashcardForecastDay[];
+  exams: FlashcardForecastExam[];
+}
+
+export const getFlashcardForecast = async (): Promise<FlashcardForecast> =>
+  (await api.get<FlashcardForecast>('/flashcards/forecast')).data;

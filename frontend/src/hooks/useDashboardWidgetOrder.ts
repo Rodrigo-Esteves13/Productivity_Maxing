@@ -40,6 +40,7 @@ export const GRID_WIDGET_DEFAULT_ORDER: readonly DashboardWidgetKey[] = [
   'areaConsistency',
   'xpLevel',
   'typeBalance',
+  'ectsWorkload',
 ];
 
 function loadOrder(): DashboardWidgetKey[] {

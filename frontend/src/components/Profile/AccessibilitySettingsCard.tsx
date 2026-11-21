@@ -4,6 +4,11 @@ import { useI18n } from '../../i18n/useI18n';
 import ToggleRow from '../UI/ToggleRow';
 import Card from '../UI/Card';
 import { useDailyDigestPref } from '../../hooks/useDailyDigestPref';
+import Button from '../UI/Button';
+import { usePaletteShortcutsPref } from '../../hooks/usePaletteShortcutsPref';
+import { clearRecents } from '../../lib/paletteRecents';
+import { useFeedback } from '../../context/useFeedback';
+import { useAuth } from '../../context/useAuth';
 import GreetingPrefsSection from './GreetingPrefsSection';
 import AccentColorSection from './AccentColorSection';
 
@@ -29,6 +34,9 @@ export default function AccessibilitySettingsCard() {
   } = useAccessibilityPrefs();
   const { t, lang, setLang } = useI18n();
   const digest = useDailyDigestPref();
+  const paletteShortcuts = usePaletteShortcutsPref();
+  const { notify } = useFeedback();
+  const { user } = useAuth();
 
   const themeChoices: { id: ThemeId; preview?: (typeof THEME_OPTIONS)[number]['preview'] }[] = [
     { id: 'system' },
@@ -154,6 +162,25 @@ export default function AccessibilitySettingsCard() {
         checked={digest.enabled}
         onChange={digest.setEnabled}
       />
+      <ToggleRow
+        variant="inline"
+        label={t('paletteShortcuts.pref.label')}
+        description={t('paletteShortcuts.pref.help')}
+        checked={paletteShortcuts.enabled}
+        onChange={paletteShortcuts.setEnabled}
+      />
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        className="mt-3"
+        onClick={() => {
+          clearRecents(user?.id);
+          notify(t('paletteShortcuts.pref.cleared'), 'success');
+        }}
+      >
+        {t('paletteShortcuts.pref.clear')}
+      </Button>
       <GreetingPrefsSection />
     </Card>
   );

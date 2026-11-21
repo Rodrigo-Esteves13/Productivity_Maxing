@@ -219,6 +219,7 @@ function FinanceContent() {
               currency={currency}
               onAdd={finance.addAccount}
               onUpdate={finance.updateAccount}
+              onLogDifference={finance.addEntry}
               onRemove={requestRemoveAccount}
             />
           </div>

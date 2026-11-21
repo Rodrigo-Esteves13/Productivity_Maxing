@@ -1,5 +1,6 @@
 export const fase7c: Record<string, string> = {
   'widget.failingRisk': "Riesgo de suspender",
+  'widget.ectsWorkload': "Carga de trabajo ECTS",
   'taskTemplates.label': "Plantilla",
   'taskTemplates.none': "Sin plantilla",
   'taskTemplates.saveCurrent': "Guardar como plantilla",

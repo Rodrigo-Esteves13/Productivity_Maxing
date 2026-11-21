@@ -6,16 +6,19 @@ import Button from '../components/UI/Button';
 import EmptyState from '../components/UI/EmptyState';
 import ErrorState from '../components/UI/ErrorState';
 import Select from '../components/UI/Select';
+import ToggleChip from '../components/UI/ToggleChip';
 import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import CardEditor from '../components/Flashcards/CardEditor';
 import DeckList from '../components/Flashcards/DeckList';
 import ImportCardsModal from '../components/Flashcards/ImportCardsModal';
+import FlashcardForecast from '../components/Flashcards/FlashcardForecast';
 import ReviewSession from '../components/Flashcards/ReviewSession';
 import PracticeTest from '../components/Flashcards/PracticeTest';
 import { TEST_MIN_CARDS } from '../lib/flashcardTest';
 import { isDue } from '../components/Flashcards/decks';
 import ConfirmActionDialog from '../components/Turma/ConfirmActionDialog';
 import { useConfirmAction } from '../hooks/useConfirmAction';
+import { LEECH_LAPSES, isLeech } from '../lib/flashcardLeech';
 import { useAreaLookup } from '../hooks/useAreaLookup';
 import { useFlashcards } from '../hooks/useFlashcards';
 import { useNotebookAreas } from '../hooks/useNotebookAreas';
@@ -37,6 +40,7 @@ export default function Flashcards() {
   const { areas } = useNotebookAreas();
   const areaById = useAreaLookup(areas);
   const [filter, setFilter] = useState(ALL);
+  const [onlyHard, setOnlyHard] = useState(false);
   const [editor, setEditor] = useState<EditorState>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [queue, setQueue] = useState<Flashcard[] | null>(null);
@@ -45,14 +49,22 @@ export default function Flashcards() {
   const [isTesting, setIsTesting] = useState(searchParams.get('test') === '1');
   const confirm = useConfirmAction(t('flashcards.saveError'));
 
-  const visible = useMemo(
+  const inArea = useMemo(
     () =>
       filter === ALL ? cards : cards.filter((c) => (filter === NO_AREA ? c.areaId === null : c.areaId === filter)),
     [cards, filter],
   );
+  // Previsao depende de quantidade, area e vencimento das cartas.
+  const forecastKey = useMemo(
+    () => cards.map((c) => `${c.id}:${c.areaId ?? ''}:${c.dueAt}`).join('|'),
+    [cards],
+  );
+  const hardCount = useMemo(() => inArea.filter(isLeech).length, [inArea]);
+  const visible = useMemo(() => (onlyHard ? inArea.filter(isLeech) : inArea), [inArea, onlyHard]);
   // So abre o teste quando ha cartas suficientes no filtro.
-  const showTest = isTesting && visible.length >= TEST_MIN_CARDS;
-  const due = useMemo(() => visible.filter((c) => isDue(c, Date.now())), [visible]);
+  const showTest = isTesting && inArea.length >= TEST_MIN_CARDS;
+  // Estudar e testar seguem o filtro de area; "Hard cards" so muda a lista.
+  const due = useMemo(() => inArea.filter((c) => isDue(c, Date.now())), [inArea]);
 
   const requestRemove = (card: Flashcard) =>
     confirm.request({
@@ -82,7 +94,7 @@ export default function Flashcards() {
               <Button variant="secondary" size="sm" onClick={() => setIsImporting(true)}>
                 {t('flashcardImport.button')}
               </Button>
-              <Button variant="secondary" size="sm" disabled={visible.length < TEST_MIN_CARDS} onClick={() => setIsTesting(true)}>
+              <Button variant="secondary" size="sm" disabled={inArea.length < TEST_MIN_CARDS} onClick={() => setIsTesting(true)}>
                 {t('flashcardTest.button')}
               </Button>
               <Button size="sm" disabled={due.length === 0} onClick={startSession}>
@@ -95,7 +107,7 @@ export default function Flashcards() {
       {queue ? (
         <ReviewSession queue={queue} onGrade={review} onExit={() => setQueue(null)} />
       ) : showTest ? (
-        <PracticeTest cards={visible} onExit={() => setIsTesting(false)} />
+        <PracticeTest cards={inArea} onExit={() => setIsTesting(false)} />
       ) : isLoading ? (
         <CardGridSkeleton cards={3} />
       ) : error ? (
@@ -104,7 +116,9 @@ export default function Flashcards() {
         <EmptyState message={t('flashcards.empty')} />
       ) : (
         <>
-          <div className="mb-4 max-w-xs">
+          <FlashcardForecast refreshKey={forecastKey} />
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <div className="w-full max-w-xs">
             <Select aria-label={t('flashcards.area')} value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value={ALL}>{t('flashcards.allAreas')}</option>
               <option value={NO_AREA}>{t('flashcards.noArea')}</option>
@@ -114,9 +128,17 @@ export default function Flashcards() {
                 </option>
               ))}
             </Select>
+            </div>
+            <ToggleChip
+              pressed={onlyHard}
+              onClick={() => setOnlyHard((v) => !v)}
+              title={t('flashcards.hardHelp', { count: LEECH_LAPSES })}
+            >
+              {t('flashcards.hard', { count: hardCount })}
+            </ToggleChip>
           </div>
           {visible.length === 0 ? (
-            <EmptyState message={t('flashcards.emptyFilter')} />
+            <EmptyState message={onlyHard ? t('flashcards.emptyHard') : t('flashcards.emptyFilter')} />
           ) : (
             <DeckList cards={visible} areaById={areaById} onEdit={setEditor} onRemove={requestRemove} />
           )}
@@ -127,7 +149,7 @@ export default function Flashcards() {
           card={editor === 'new' ? undefined : editor}
           defaultAreaId={filter && filter !== NO_AREA ? filter : null}
           areas={areas}
-          onSubmit={(input) => (editor === 'new' ? create(input) : update(editor.id, input))}
+          onSubmit={(input, reverse) => (editor === 'new' ? create(input, reverse) : update(editor.id, input))}
           onClose={() => setEditor(null)}
         />
       )}
@@ -135,6 +157,7 @@ export default function Flashcards() {
         <ImportCardsModal
           areas={areas}
           existingFronts={cards.map((c) => c.front)}
+          existingCount={cards.length}
           defaultAreaId={filter && filter !== NO_AREA ? filter : null}
           onImport={(imported, areaId) => importMany(imported.map((card) => ({ ...card, areaId })))}
           onClose={() => setIsImporting(false)}

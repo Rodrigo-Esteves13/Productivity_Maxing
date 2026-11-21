@@ -52,6 +52,14 @@ export class FlashcardsController {
     return this.cards.stats(user.id);
   }
 
+  @Get('forecast')
+  @ApiOperation({
+    summary: 'Reviews due per day for the next 30 days, plus exams.',
+  })
+  forecast(@CurrentUser() user: AuthenticatedUser) {
+    return this.cards.forecast(user.id);
+  }
+
   @Post()
   @WRITE
   @ApiOperation({ summary: 'Creates a flashcard.' })

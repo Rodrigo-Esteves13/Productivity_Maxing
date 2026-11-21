@@ -1,5 +1,6 @@
 export const fase7c: Record<string, string> = {
   'widget.failingRisk': "挂科风险",
+  'widget.ectsWorkload': "ECTS 学习时长",
   'taskTemplates.label': "模板",
   'taskTemplates.none': "不使用模板",
   'taskTemplates.saveCurrent': "保存为模板",

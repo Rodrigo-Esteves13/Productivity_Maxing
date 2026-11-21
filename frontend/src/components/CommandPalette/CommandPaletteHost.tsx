@@ -1,10 +1,22 @@
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/useAuth';
 import { canPrefetch, lazyWithPreload, whenIdle } from '../../lib/lazyWithPreload';
+import { OPEN_SHORTCUTS_HELP_EVENT } from '../../lib/shortcutSequence';
+import { usePaletteShortcuts } from '../../hooks/usePaletteShortcuts';
+import { usePaletteShortcutsPref } from '../../hooks/usePaletteShortcutsPref';
+import ShortcutsHelpModal from './ShortcutsHelpModal';
 
 const CommandPalette = lazyWithPreload(() => import('./CommandPalette'));
 
 export const OPEN_COMMAND_PALETTE_EVENT = 'pmaxing:open-command-palette';
+
+const PALETTE_ROOT_SELECTOR = '[data-command-palette]';
+
+function focusedOutsidePalette(): HTMLElement | null {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement) || active === document.body) return null;
+  return active.closest(PALETTE_ROOT_SELECTOR) ? null : active;
+}
 
 // Parte leve da paleta, montada sempre: so o atalho e o evento de abrir.
 // A paleta em si (pesquisa, quick add, notebook) vem num chunk proprio,
@@ -14,6 +26,33 @@ export default function CommandPaletteHost() {
   const { isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const { enabled: shortcutsEnabled } = usePaletteShortcutsPref();
+  // Elemento que tinha o foco antes de a paleta abrir: a ajuda aberta pelo
+  // comando da paleta devolve-lhe o foco ao fechar (a paleta ja nao existe).
+  const beforePaletteRef = useRef<HTMLElement | null>(null);
+  const helpReturnFocusRef = useRef<HTMLElement | null>(null);
+  const openHelp = useCallback(() => setIsHelpOpen(true), []);
+  const openHelpFromPalette = useCallback(() => {
+    helpReturnFocusRef.current = beforePaletteRef.current;
+    setIsHelpOpen(true);
+  }, []);
+  const closeHelp = useCallback(() => {
+    const target = helpReturnFocusRef.current;
+    helpReturnFocusRef.current = null;
+    setIsHelpOpen(false);
+    if (target?.isConnected) target.focus();
+  }, []);
+
+  // "?" e "g" + letra: so com sessao iniciada e a preferencia ligada.
+  usePaletteShortcuts(isAuthenticated && shortcutsEnabled, openHelp);
+
+  // A entrada "Keyboard shortcuts" da paleta abre a ajuda por evento.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    window.addEventListener(OPEN_SHORTCUTS_HELP_EVENT, openHelpFromPalette);
+    return () => window.removeEventListener(OPEN_SHORTCUTS_HELP_EVENT, openHelpFromPalette);
+  }, [isAuthenticated, openHelpFromPalette]);
 
   // Global Cmd/Ctrl+K to open, from anywhere in the app (not just when
   // something is already focused inside the palette). Escape to close is
@@ -24,6 +63,7 @@ export default function CommandPaletteHost() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
+        beforePaletteRef.current = focusedOutsidePalette();
         setIsMounted(true);
         setIsOpen((prev) => !prev);
       }
@@ -40,6 +80,7 @@ export default function CommandPaletteHost() {
   useEffect(() => {
     if (!isAuthenticated) return;
     const handleOpenEvent = () => {
+      beforePaletteRef.current = focusedOutsidePalette();
       setIsMounted(true);
       setIsOpen(true);
     };
@@ -52,10 +93,15 @@ export default function CommandPaletteHost() {
     return whenIdle(() => void CommandPalette.preload().catch(() => undefined));
   }, [isAuthenticated]);
 
-  if (!isAuthenticated || !isMounted) return null;
+  if (!isAuthenticated) return null;
   return (
-    <Suspense fallback={null}>
-      <CommandPalette isOpen={isOpen} setIsOpen={setIsOpen} />
-    </Suspense>
+    <>
+      <ShortcutsHelpModal isOpen={isHelpOpen} onClose={closeHelp} />
+      {isMounted && (
+        <Suspense fallback={null}>
+          <CommandPalette isOpen={isOpen} setIsOpen={setIsOpen} />
+        </Suspense>
+      )}
+    </>
   );
 }

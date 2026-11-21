@@ -9,7 +9,7 @@ import {
   type FlashcardInput,
 } from '../api/flashcardsService';
 import type { Flashcard, FlashcardGrade } from '../types/models';
-import { chunkCards } from '../lib/flashcardImport';
+import { chunkCards, withReverseCards } from '../lib/flashcardImport';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
 
@@ -47,10 +47,24 @@ export function useFlashcards() {
 
   const replace = (card: Flashcard) => setCards((prev) => prev.map((c) => (c.id === card.id ? card : c)));
 
-  const create = (input: FlashcardInput) =>
+  // `reverse`: cria tambem o cartao com frente e verso trocados (o que nao
+  // couber ou ja existir e ignorado e avisado). Os dois vao no mesmo pedido.
+  const create = (input: FlashcardInput, reverse = false) =>
     run(async () => {
-      const card = await createFlashcard(input);
-      setCards((prev) => [...prev, card]);
+      const plan = reverse
+        ? withReverseCards([input], cards.map((c) => c.front), cards.length)
+        : null;
+      if (!plan || plan.reverseCount === 0) {
+        const card = await createFlashcard(input);
+        setCards((prev) => [...prev, card]);
+        if (plan) notify(translateNow('flashcards.reverseSkippedOne'), 'info');
+        return;
+      }
+      try {
+        await createFlashcards(plan.cards.map((c) => ({ ...c, areaId: input.areaId })));
+      } finally {
+        load();
+      }
     });
 
   // Importacao em blocos (o backend aceita ate IMPORT_BATCH_MAX por pedido).

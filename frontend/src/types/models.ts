@@ -205,6 +205,22 @@ export interface StudyVsClass {
   unlinkedSubjects: string[];
 }
 
+// GET /schedule/ects-workload: horas reais por cadeira com creditos.
+// classMinutes = aulas dadas e nao faltadas ate hoje; studyMinutes = sessoes
+// de foco terminadas.
+export interface EctsWorkloadCourse {
+  areaId: string;
+  name: string;
+  credits: number;
+  classMinutes: number;
+  studyMinutes: number;
+}
+
+export interface EctsWorkload {
+  courses: EctsWorkloadCourse[];
+  unlinkedSubjects: string[];
+}
+
 export interface SubjectAttendance {
   subject: string;
   attended: number;

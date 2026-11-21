@@ -9,6 +9,7 @@ import { useVisibleInterval } from '../../hooks/useVisibleInterval';
 import { formatElapsed } from '../../lib/formatDuration';
 import type { QuizQuestion, QuizResponse } from '../../lib/quizFormat';
 import { stripQuizMarkdown } from '../../lib/quizMarkdown';
+import { SHORTCUTS_OFF_PROPS } from '../../lib/shortcutGuards';
 import {
   gradeQuestion,
   heartbeatSession,
@@ -145,82 +146,84 @@ export default function QuizRunner({ questions, session, onChange, onFinish }: Q
   if (!question) return null;
 
   return (
-    <Card>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm text-neutral-400">
-        <span className="tabular-nums">
-          {t('quizzes.run.progress', { current: session.index + 1, total })} · {t('quizzes.run.answered', { count: answeredCount })}
-        </span>
-        <div className="flex items-center gap-3">
-          {remainingMs !== null && (
-            <span className={`tabular-nums font-semibold ${remainingMs < LOW_TIME_MS ? 'text-red-400' : 'text-neutral-200'}`} role="timer">
-              {formatElapsed(Math.ceil(remainingMs / MS_PER_SECOND))}
-            </span>
-          )}
-          <Button variant="secondary" size="sm" onClick={requestFinish}>
-            {t('quizzes.run.finish')}
-          </Button>
-        </div>
-      </div>
-
-      {askEnd && (
-        <div role="alertdialog" aria-label={t('quizzes.run.endEarly.title', { answered: doneCount, total })} className="mb-4 rounded-lg border border-amber-400/50 bg-amber-950/20 p-3">
-          <p className="text-sm font-medium text-neutral-100">{t('quizzes.run.endEarly.title', { answered: doneCount, total })}</p>
-          <p className="mt-1 text-sm text-neutral-400">{t('quizzes.run.endEarly.help')}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => onFinish(false)}>
-              {t('quizzes.run.endEarly.early')}
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => setAskEnd(false)}>
-              {t('quizzes.run.endEarly.keepGoing')}
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => onFinish(true)}>
-              {t('quizzes.run.endEarly.countBlanks')}
+    <div {...SHORTCUTS_OFF_PROPS}>
+      <Card>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm text-neutral-400">
+          <span className="tabular-nums">
+            {t('quizzes.run.progress', { current: session.index + 1, total })} · {t('quizzes.run.answered', { count: answeredCount })}
+          </span>
+          <div className="flex items-center gap-3">
+            {remainingMs !== null && (
+              <span className={`tabular-nums font-semibold ${remainingMs < LOW_TIME_MS ? 'text-red-400' : 'text-neutral-200'}`} role="timer">
+                {formatElapsed(Math.ceil(remainingMs / MS_PER_SECOND))}
+              </span>
+            )}
+            <Button variant="secondary" size="sm" onClick={requestFinish}>
+              {t('quizzes.run.finish')}
             </Button>
           </div>
         </div>
-      )}
 
-      <div className="mb-4 flex flex-wrap gap-1.5" role="navigation" aria-label={t('quizzes.run.dots')}>
-        {session.items.map((it, i) => {
-          const q = questions.get(it.id);
-          return q ? (
-            <button
-              key={it.id}
-              type="button"
-              onClick={() => go(i)}
-              aria-current={i === session.index ? 'step' : undefined}
-              title={stripQuizMarkdown(q.topic)}
-              className={`press h-7 min-w-7 rounded-md border px-1 text-xs tabular-nums ${dotClass(q, it, i === session.index, instant)}`}
-            >
-              {i + 1}
-            </button>
-          ) : null;
-        })}
-      </div>
+        {askEnd && (
+          <div role="alertdialog" aria-label={t('quizzes.run.endEarly.title', { answered: doneCount, total })} className="mb-4 rounded-lg border border-amber-400/50 bg-amber-950/20 p-3">
+            <p className="text-sm font-medium text-neutral-100">{t('quizzes.run.endEarly.title', { answered: doneCount, total })}</p>
+            <p className="mt-1 text-sm text-neutral-400">{t('quizzes.run.endEarly.help')}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => onFinish(false)}>
+                {t('quizzes.run.endEarly.early')}
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setAskEnd(false)}>
+                {t('quizzes.run.endEarly.keepGoing')}
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => onFinish(true)}>
+                {t('quizzes.run.endEarly.countBlanks')}
+              </Button>
+            </div>
+          </div>
+        )}
 
-      <p className="mb-2 text-xs uppercase tracking-wide text-neutral-500">
-        {stripQuizMarkdown(question.topic)} · {t(`quizzes.kind.${question.kind}`)}
-      </p>
-      {/* key: cada pergunta monta de novo (foco automatico na resposta escrita). */}
-      <QuestionView key={item.id} question={question} item={item} onChange={setResponse} reveal={instant && item.checked} />
+        <div className="mb-4 flex flex-wrap gap-1.5" role="navigation" aria-label={t('quizzes.run.dots')}>
+          {session.items.map((it, i) => {
+            const q = questions.get(it.id);
+            return q ? (
+              <button
+                key={it.id}
+                type="button"
+                onClick={() => go(i)}
+                aria-current={i === session.index ? 'step' : undefined}
+                title={stripQuizMarkdown(q.topic)}
+                className={`press h-7 min-w-7 rounded-md border px-1 text-xs tabular-nums ${dotClass(q, it, i === session.index, instant)}`}
+              >
+                {i + 1}
+              </button>
+            ) : null;
+          })}
+        </div>
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-2">
-          <Button variant="secondary" size="sm" disabled={session.index === 0} onClick={() => go(session.index - 1)}>
-            {t('quizzes.run.prev')}
-          </Button>
-          <Button variant="secondary" size="sm" aria-pressed={item.flagged} onClick={() => patchItem({ flagged: !item.flagged })}>
-            <span className="inline-flex items-center gap-1.5">
-              <FlagIcon className={`h-4 w-4 ${item.flagged ? 'text-amber-400' : ''}`} aria-hidden="true" />
-              {item.flagged ? t('quizzes.run.unflag') : t('quizzes.run.flag')}
-            </span>
+        <p className="mb-2 text-xs uppercase tracking-wide text-neutral-500">
+          {stripQuizMarkdown(question.topic)} · {t(`quizzes.kind.${question.kind}`)}
+        </p>
+        {/* key: cada pergunta monta de novo (foco automatico na resposta escrita). */}
+        <QuestionView key={item.id} question={question} item={item} onChange={setResponse} reveal={instant && item.checked} />
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" disabled={session.index === 0} onClick={() => go(session.index - 1)}>
+              {t('quizzes.run.prev')}
+            </Button>
+            <Button variant="secondary" size="sm" aria-pressed={item.flagged} onClick={() => patchItem({ flagged: !item.flagged })}>
+              <span className="inline-flex items-center gap-1.5">
+                <FlagIcon className={`h-4 w-4 ${item.flagged ? 'text-amber-400' : ''}`} aria-hidden="true" />
+                {item.flagged ? t('quizzes.run.unflag') : t('quizzes.run.flag')}
+              </span>
+            </Button>
+          </div>
+          <Button size="sm" onClick={primary}>
+            {canCheck ? t('quizzes.run.check') : isLast ? t('quizzes.run.finish') : t('quizzes.run.next')}
           </Button>
         </div>
-        <Button size="sm" onClick={primary}>
-          {canCheck ? t('quizzes.run.check') : isLast ? t('quizzes.run.finish') : t('quizzes.run.next')}
-        </Button>
-      </div>
-      <p className="mt-3 text-xs text-neutral-400">{t('quizzes.run.keys')}</p>
-    </Card>
+        <p className="mt-3 text-xs text-neutral-400">{t('quizzes.run.keys')}</p>
+      </Card>
+    </div>
   );
 }

@@ -50,6 +50,10 @@ import { wakeLock } from './wakeLock';
 import { startFive } from './startFive';
 import { energyMatch } from './energyMatch';
 import { flashcardTest } from './flashcardTest';
+import { flashcardForecast } from './flashcardForecast';
+import { ectsWorkload } from './ectsWorkload';
+import { financeNoSpend } from './financeNoSpend';
+import { paletteShortcuts } from './paletteShortcuts';
 import { eisenhower } from './eisenhower';
 import { replan } from './replan';
 import { flashcardImport } from './flashcardImport';
@@ -134,6 +138,10 @@ export const pt: Record<string, string> = {
   ...startFive,
   ...energyMatch,
   ...flashcardTest,
+  ...flashcardForecast,
+  ...ectsWorkload,
+  ...financeNoSpend,
+  ...paletteShortcuts,
   ...eisenhower,
   ...replan,
   ...flashcardImport,

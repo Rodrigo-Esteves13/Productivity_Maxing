@@ -5,6 +5,9 @@ Pesquisa completa com fontes: docs/research/research-academic-2026-11.md e docs/
 ==================================================
 A. ESTADO DESDE A v7
 ==================================================
+- FEITO 17/11: N79 cartas sanguessuga (lib/flashcardLeech.ts, filtro Hard cards), N80 previsao de revisoes (GET /flashcards/forecast, Flashcards/FlashcardForecast.tsx), N81 cartas inversas (lib/flashcardImport.ts withReverseCards, CardEditor, ImportCardsModal). Testado no browser.
+- FEITO 21/11: N108 Ctrl+K com recentes, "?" ajuda de atalhos, "g"+letra, opcao para desligar (lib/paletteRecents.ts, lib/shortcutGuards.ts, hooks/usePaletteShortcuts.ts, ShortcutsHelpModal.tsx) e N118 dias sem gastos de lazer (lib/noLeisureDays.ts, Finance/NoLeisureDaysCard.tsx). Nao testados no browser.
+- FEITO 21/11: N74 carga ECTS real vs esperada (GET /schedule/ects-workload, Dashboard/EctsWorkloadCard.tsx, widget ectsWorkload). Nao testado no browser.
 - FEITO 14/11: N57 Modo teste de flashcards (escolha multipla, resposta escrita, V/F, nota e revisao das erradas; paleta /flashcards?test=1).
 
 ==================================================

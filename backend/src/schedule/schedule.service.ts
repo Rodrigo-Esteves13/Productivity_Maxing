@@ -1,10 +1,29 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { accessibleAreaWhere } from '../areas/area-access';
 import {
   buildStudyVsClass,
   type StudyVsClassResult,
 } from './study-vs-class.util';
+import {
+  buildEctsWorkload,
+  ECTS_MAX_RANGE_DAYS,
+  ectsRangeDays,
+  ectsStudyWindow,
+  isRealDateKey,
+  keepFinishedClasses,
+  type EctsWorkloadResult,
+} from './ects-workload.util';
+import {
+  getLisbonNow,
+  parseDateKey,
+  toDateKey,
+} from '../common/date-key.util';
 import { ImportScheduleDto } from './dto/import-schedule.dto';
 import { EstimateCommuteDto } from './dto/estimate-commute.dto';
 import { runWithConcurrencyLimit } from '../common/concurrency.util';
@@ -285,6 +304,123 @@ export class ScheduleService {
       sessions,
       new Map(links.map((l) => [l.scheduleSubject, l.areaId])),
       areas,
+    );
+  }
+
+  /**
+   * Carga de trabalho por cadeira com creditos (ECTS): minutos de aula dados
+   * (nao canceladas, presenca != false) e de estudo terminado entre duas
+   * datas. `to` e cortado em hoje (hora de Lisboa): aulas futuras ainda nao
+   * foram dadas. Tudo filtrado pelo dono.
+   */
+  async ectsWorkload(
+    userId: string,
+    fromKey: string,
+    toKey: string,
+    periodId?: string,
+  ): Promise<EctsWorkloadResult> {
+    if (!isRealDateKey(fromKey) || !isRealDateKey(toKey)) {
+      throw new BadRequestException('Send "from" and "to" as YYYY-MM-DD.');
+    }
+    const { today, nowMinutes } = getLisbonNow();
+    const todayKey = toDateKey(today);
+    const effectiveToKey = toKey > todayKey ? todayKey : toKey;
+    if (fromKey > effectiveToKey) return { courses: [], unlinkedSubjects: [] };
+    if (ectsRangeDays(fromKey, effectiveToKey) > ECTS_MAX_RANGE_DAYS) {
+      throw new BadRequestException(
+        `The range cannot exceed ${ECTS_MAX_RANGE_DAYS} days.`,
+      );
+    }
+
+    // Periodo tem de ser do user (AcademicPeriod nao tem userId: via program).
+    if (periodId) {
+      const period = await this.prisma.academicPeriod.findFirst({
+        where: { id: periodId, program: { userId } },
+        select: { id: true },
+      });
+      if (!period) throw new NotFoundException('Period not found or no access.');
+    }
+
+    const window = ectsStudyWindow(fromKey, effectiveToKey);
+    const [classRows, sessions, links, areas, hiddenRows, periodTasks] =
+      await Promise.all([
+        this.prisma.classOccurrence.findMany({
+          where: {
+            userId,
+            date: {
+              gte: parseDateKey(fromKey),
+              lte: parseDateKey(effectiveToKey),
+            },
+            cancelled: false,
+            OR: [{ attended: true }, { attended: null }],
+          },
+          select: {
+            date: true,
+            subject: true,
+            startMinutes: true,
+            endMinutes: true,
+            cancelled: true,
+            attended: true,
+          },
+        }),
+        this.prisma.studySession.findMany({
+          where: {
+            userId,
+            areaId: { not: null },
+            endedAt: { not: null },
+            startedAt: { gte: window.start, lt: window.end },
+          },
+          select: { areaId: true, startedAt: true, endedAt: true },
+        }),
+        this.prisma.areaScheduleLink.findMany({
+          where: { userId },
+          select: { scheduleSubject: true, areaId: true },
+        }),
+        this.prisma.area.findMany({
+          where: {
+            AND: [accessibleAreaWhere(userId), { credits: { gt: 0 } }],
+          },
+          select: { id: true, name: true, credits: true },
+        }),
+        this.prisma.areaHidden.findMany({
+          where: { userId },
+          select: { areaId: true },
+        }),
+        // Mesma regra de AreasService.findAll (usedInPeriod): a cadeira
+        // pertence ao periodo se o user tem uma task nele.
+        periodId
+          ? this.prisma.task.findMany({
+              where: { userId, periodId },
+              select: { areaId: true },
+              distinct: ['areaId'],
+            })
+          : Promise.resolve([] as Array<{ areaId: string }>),
+      ]);
+
+    const classes = keepFinishedClasses(
+      classRows.map((row) => ({ ...row, dateKey: toDateKey(row.date) })),
+      todayKey,
+      nowMinutes,
+    );
+    const hidden = new Set(hiddenRows.map((h) => h.areaId));
+    const periodAreaIds = new Set(periodTasks.map((t) => t.areaId));
+    // Sem periodo: so cadeiras ligadas ao horario ou com estudo na janela.
+    const activeAreaIds = new Set<string>([
+      ...links.map((l) => l.areaId),
+      ...sessions.flatMap((s) => (s.areaId ? [s.areaId] : [])),
+    ]);
+    const takenAreas = areas.filter(
+      (area) =>
+        !hidden.has(area.id) &&
+        (periodId ? periodAreaIds : activeAreaIds).has(area.id),
+    );
+
+    return buildEctsWorkload(
+      classes,
+      sessions,
+      new Map(links.map((l) => [l.scheduleSubject, l.areaId])),
+      takenAreas,
+      window,
     );
   }
 

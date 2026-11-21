@@ -1,16 +1,21 @@
 import { BadRequestException } from '@nestjs/common';
 import type { PrismaService } from '../prisma/prisma.service';
 import { FlashcardsService } from './flashcards.service';
-import { MAX_FLASHCARDS_PER_USER } from './flashcards.constants';
+import {
+  FLASHCARD_FORECAST_DAYS,
+  MAX_FLASHCARDS_PER_USER,
+} from './flashcards.constants';
 
 function setup(existing = 0) {
   const prisma = {
     flashcard: {
       count: jest.fn().mockResolvedValue(existing),
+      findMany: jest.fn().mockResolvedValue([]),
       createMany: jest.fn(({ data }: { data: unknown[] }) =>
         Promise.resolve({ count: data.length }),
       ),
     },
+    task: { findMany: jest.fn().mockResolvedValue([]) },
   };
   const service = new FlashcardsService(prisma as unknown as PrismaService);
   return { service, prisma };
@@ -45,5 +50,23 @@ describe('FlashcardsService.createMany', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.flashcard.createMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('FlashcardsService.forecast', () => {
+  it('scopes both queries by userId', async () => {
+    const { service, prisma } = setup();
+    const result = await service.forecast('u1');
+    expect(result.days).toHaveLength(FLASHCARD_FORECAST_DAYS);
+    expect(prisma.flashcard.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ userId: 'u1' }),
+      }),
+    );
+    expect(prisma.task.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ userId: 'u1' }),
+      }),
+    );
   });
 });
