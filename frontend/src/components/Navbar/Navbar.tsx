@@ -1,5 +1,5 @@
 import { useI18n } from '../../i18n/useI18n';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import NavLinks from './NavLinks';
 import UserMenu from './UserMenu';
@@ -12,12 +12,16 @@ import { useSocialPending } from '../../hooks/useSocialPending';
 import { OPEN_COMMAND_PALETTE_EVENT } from '../CommandPalette/CommandPaletteHost';
 import { MODAL_EXIT_MS, usePresence } from '../../hooks/usePresence';
 
+// Lazy: so carrega quando alguem abre o feedback.
+const FeedbackModal = lazy(() => import('../Feedback/FeedbackModal'));
+
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const mobileMenu = usePresence(isMobileMenuOpen, MODAL_EXIT_MS);
   // Pedidos/convites a espera de resposta: numero ao lado de Social, para
   // um convite para uma nota nao passar despercebido.
@@ -110,7 +114,16 @@ export default function Navbar() {
           isAdmin={role === 'ADMIN'}
           socialPending={socialPending}
           onNavigate={() => setIsMobileMenuOpen(false)}
+          onOpenFeedback={() => {
+            setIsMobileMenuOpen(false);
+            setIsFeedbackOpen(true);
+          }}
         />
+      )}
+      {isAuthenticated && isFeedbackOpen && (
+        <Suspense fallback={null}>
+          <FeedbackModal isOpen onClose={() => setIsFeedbackOpen(false)} />
+        </Suspense>
       )}
     </nav>
   );

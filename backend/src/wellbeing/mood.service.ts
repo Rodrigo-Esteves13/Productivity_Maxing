@@ -4,9 +4,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { diffUtcDays, parseDateKey, toDateKey } from '../common/date-key.util';
+import {
+  diffUtcDays,
+  parseDateKey,
+  toDateKey,
+  toLisbonDateKey,
+} from '../common/date-key.util';
 import { MoodRangeQueryDto, UpsertMoodDto } from './dto/mood.dto';
-import { MAX_MOOD_RANGE_DAYS } from './wellbeing.constants';
+import { MAX_MOOD_PAST_DAYS, MAX_MOOD_RANGE_DAYS } from './wellbeing.constants';
 
 export interface MoodLogView {
   date: string;
@@ -62,6 +67,19 @@ export class MoodService {
     dateKey: string,
     dto: UpsertMoodDto,
   ): Promise<MoodLogView> {
+    // Nao se regista humor de um dia que ainda nao aconteceu.
+    const todayKey = toLisbonDateKey(new Date());
+    if (dateKey > todayKey) {
+      throw new BadRequestException('Mood cannot be logged for a future day.');
+    }
+    if (
+      diffUtcDays(parseDateKey(dateKey), parseDateKey(todayKey)) >
+      MAX_MOOD_PAST_DAYS
+    ) {
+      throw new BadRequestException(
+        `Mood can only be logged for the last ${MAX_MOOD_PAST_DAYS} days.`,
+      );
+    }
     const date = parseDateKey(dateKey);
     const data = {
       mood: dto.mood,

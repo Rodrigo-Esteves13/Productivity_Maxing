@@ -111,7 +111,7 @@ export default function Modal({ isOpen, onClose, title, children, action, size =
         aria-labelledby={titleId}
         tabIndex={-1}
         data-state={state}
-        className={`motion-modal bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl w-full ${SIZE_CLASS[size]} overflow-hidden flex flex-col max-h-[90vh] outline-none`}
+        className={`motion-modal bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl w-full ${SIZE_CLASS[size]} overflow-hidden flex flex-col max-h-[90dvh] outline-none`}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >

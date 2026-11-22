@@ -91,4 +91,8 @@ export const fase7b: Record<string, string> = {
   'taskFiles.loadError': "Could not load the files.",
   'taskFiles.actionError': "Could not delete the file. Please try again.",
   'taskFiles.deleteConfirm': "Delete {name} from this task? This cannot be undone.",
+  'reportCard.improve.title': "Grade improvement",
+  'reportCard.improve.intro': "How much this period's average would go up if a passed course rose by 1 or 2 points. Biggest gain first.",
+  'reportCard.improve.raise': "If +{delta}",
+  'reportCard.improve.caveat': "Only a simulation. Whether you can improve a grade (usually once per course, never in a special exam season) depends on your school's rules, so confirm them before you plan.",
 };

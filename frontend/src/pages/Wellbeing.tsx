@@ -32,8 +32,8 @@ export default function Wellbeing() {
   useDocumentTitle(t('nav.wellbeing'));
   const mood = useMoodToday();
   const meds = useMedications();
-  // Recalcula as correlacoes depois de gravar o humor de hoje.
-  const { insights, isLoading, error } = useWellbeingInsights(mood.log ? JSON.stringify(mood.log) : null);
+  // Recalcula as correlacoes depois de gravar o humor de hoje ou a medicacao.
+  const { insights, isLoading, error } = useWellbeingInsights(`${mood.log ? JSON.stringify(mood.log) : ''}|${meds.version}`);
 
   return (
     <PageLayout>
@@ -43,7 +43,7 @@ export default function Wellbeing() {
       <MasonryGrid stretchLast={false}>
         <SectionAnchor id="mood"><MoodCheckInCard mood={mood} /></SectionAnchor>
         <SectionAnchor id="medication"><MedicationsCard meds={meds} /></SectionAnchor>
-        <SectionAnchor id="medication-history"><MedicationHistoryCard /></SectionAnchor>
+        <SectionAnchor id="medication-history"><MedicationHistoryCard refreshKey={meds.version} /></SectionAnchor>
         <SectionAnchor id="blood"><BloodDonationsCard /></SectionAnchor>
         <SectionAnchor id="insights"><WellbeingInsightsCard insights={insights} isLoading={isLoading} error={error} /></SectionAnchor>
         <SectionAnchor id="focus-grades"><FocusEffectCard /></SectionAnchor>

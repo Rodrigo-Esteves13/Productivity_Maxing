@@ -91,4 +91,8 @@ export const fase7b: Record<string, string> = {
   'areas.empty.createFirst': "Meinen ersten Bereich erstellen",
   'areas.section.count': "{count} Bereiche",
   'areas.overview.failed': "Aufgaben- und Risikodetails konnten nicht geladen werden. Deine Bereiche funktionieren weiterhin wie gewohnt.",
+  'reportCard.improve.title': "Notenverbesserung",
+  'reportCard.improve.intro': "Um wie viel der Schnitt dieses Zeitraums steigen würde, wenn ein bestandenes Fach um 1 oder 2 Punkte besser würde. Größter Gewinn zuerst.",
+  'reportCard.improve.raise': "Bei +{delta}",
+  'reportCard.improve.caveat': "Nur eine Simulation. Ob du eine Note verbessern darfst (meist einmal pro Fach, nie in einer Sonderprüfungszeit), hängt von den Regeln deiner Schule ab. Prüfe sie, bevor du planst.",
 };

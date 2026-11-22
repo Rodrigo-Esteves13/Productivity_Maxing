@@ -5,6 +5,7 @@ import Select from '../components/UI/Select';
 import EmptyState from '../components/UI/EmptyState';
 import ErrorState from '../components/UI/ErrorState';
 import TableSkeleton from '../components/UI/TableSkeleton';
+import GradeImprovementCard from '../components/Grades/GradeImprovementCard';
 import { PrinterIcon } from '../components/UI/Icons';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { usePeriodReportCard } from '../hooks/usePeriodReportCard';
@@ -118,7 +119,12 @@ export default function ReportCard() {
     if (academicLoading || (isLoading && periodId)) return <TableSkeleton />;
     if (!periodId) return <EmptyState message={t('reportCard.noPeriod')} />;
     if (error || !card) return <ErrorState message={t('reportCard.loadError')} />;
-    return <ReportCardTable card={card} />;
+    return (
+      <>
+        <ReportCardTable card={card} />
+        <GradeImprovementCard card={card} />
+      </>
+    );
   })();
 
   return (

@@ -3,7 +3,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MedicationSchedule } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MedicationDisclaimerService } from './medication-disclaimer.service';
 import {
@@ -60,7 +59,9 @@ const toView = (row: IntakeRow): MedicationIntakeView => ({
   note: row.note,
 });
 
-// Registo das tomas "se necessario". So guarda o que o utilizador registou:
+// Registo de tomas avulso: "se necessario" ou doses extra de qualquer
+// medicamento. Varias tomas do mesmo medicamento, ate na mesma hora exata,
+// sao validas (sem unique no modelo). So guarda o que o utilizador registou:
 // nao avalia doses, combinacoes nem dependencia (de proposito, para a app
 // nunca dizer se algo e seguro).
 @Injectable()
@@ -103,38 +104,37 @@ export class MedicationIntakesService {
 
     const medication = await this.prisma.medication.findFirst({
       where: { id: dto.medicationId, userId },
-      select: { schedule: true },
+      select: { id: true },
     });
     if (!medication) {
       throw new NotFoundException(
         `Medication not found or you don't have access.`,
       );
     }
-    if (medication.schedule !== MedicationSchedule.AS_NEEDED) {
-      throw new BadRequestException(
-        'Only "as needed" medication is logged per intake.',
-      );
-    }
 
     const { start, end } = lisbonDayBounds(toLisbonDateKey(takenAt));
-    const sameDay = await this.prisma.medicationIntake.count({
-      where: { userId, takenAt: { gte: start, lt: end } },
-    });
-    if (sameDay >= MAX_INTAKES_PER_DAY) {
-      throw new BadRequestException(
-        `You can log at most ${MAX_INTAKES_PER_DAY} entries per day.`,
-      );
-    }
-
-    const row = await this.prisma.medicationIntake.create({
-      data: {
-        userId,
-        medicationId: dto.medicationId,
-        takenAt,
-        dose: dto.dose?.trim() || null,
-        note: dto.note?.trim() || null,
-      },
-      select: INTAKE_SELECT,
+    // Contar e criar na mesma transacao, com um lock por utilizador: dois
+    // pedidos em simultaneo nao passam do limite diario.
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+      const sameDay = await tx.medicationIntake.count({
+        where: { userId, takenAt: { gte: start, lt: end } },
+      });
+      if (sameDay >= MAX_INTAKES_PER_DAY) {
+        throw new BadRequestException(
+          `You can log at most ${MAX_INTAKES_PER_DAY} entries per day.`,
+        );
+      }
+      return tx.medicationIntake.create({
+        data: {
+          userId,
+          medicationId: dto.medicationId,
+          takenAt,
+          dose: dto.dose?.trim() || null,
+          note: dto.note?.trim() || null,
+        },
+        select: INTAKE_SELECT,
+      });
     });
     return toView(row);
   }

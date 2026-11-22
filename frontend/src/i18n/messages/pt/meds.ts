@@ -55,4 +55,10 @@ export const meds: Record<string, string> = {
   'wellbeing.meds.push.unconfigured': "Os lembretes não podem ser enviados agora: as notificações não estão disponíveis neste servidor.",
   'wellbeing.meds.timesZone': "As horas são na hora de Lisboa (Portugal continental).",
   'wellbeing.meds.timesZoneDiffers': "O teu dispositivo está noutro fuso horário: os lembretes chegam à hora de Lisboa que definiste, não à tua hora local.",
+  'wellbeing.meds.intake.heading': "Doses extra e quando preciso",
+  'wellbeing.meds.intake.logAnother': "Guardar e adicionar outra",
+  'wellbeing.meds.intake.loggedCount': "Registadas nesta janela: {count}",
+  'wellbeing.mood.promptPast': "Como estavas neste dia? Só o humor é obrigatório.",
+  'wellbeing.mood.loggedPast': "Já registado para este dia. Ainda podes alterar.",
+  'wellbeing.mood.titlePast': "Check-in deste dia",
 };

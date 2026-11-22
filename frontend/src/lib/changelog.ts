@@ -7,6 +7,24 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-11-23',
+    title: 'Report card: grade improvement simulator',
+    items: [
+      'Report card: a new Grade improvement table shows, for the period you are viewing, how much your average would go up if a passed course rose by 1 or 2 points, with the biggest gain first (weighted by credits, never above the top of the scale). It is only a simulation: whether you can improve a grade depends on your school rules, so confirm them first.',
+    ],
+  },
+  {
+    date: '2026-11-22',
+    title: 'Wellbeing: live updates, extra doses and phone feedback',
+    items: [
+      'Wellbeing: the medication history, the correlations and the burnout alert now update on their own after you tick a dose, log a dose or save your mood. No page refresh needed.',
+      'Medication: you can now log an extra dose of any medication, not only the as-needed ones, and log several at the same time or on the same day at different hours. A new Save and add another button keeps the form open.',
+      'Medication: when you are looking at a past day in the dose list (for example yesterday), logging a dose now starts on that day instead of today.',
+      'Mood: the check-in card now has arrows to go back to a day you forgot (up to 90 days) and log mood, energy and stress for it.',
+      'Feedback: on a phone you can now open Send feedback from the menu, the form fits above the keyboard, and failures say whether you were offline or sent too many messages in a minute.',
+    ],
+  },
+  {
     date: '2026-11-17',
     title: 'Flashcards: hard cards, review forecast and reverse cards',
     items: [

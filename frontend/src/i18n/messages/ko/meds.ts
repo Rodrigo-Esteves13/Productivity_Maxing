@@ -55,4 +55,10 @@ export const meds: Record<string, string> = {
   'wellbeing.meds.push.unconfigured': "지금은 알림을 보낼 수 없습니다. 이 서버에서는 알림을 사용할 수 없습니다.",
   'wellbeing.meds.timesZone': "시간은 리스본 시간(포르투갈 본토) 기준입니다.",
   'wellbeing.meds.timesZoneDiffers': "기기가 다른 시간대에 있습니다. 알림은 현지 시간이 아니라 설정한 리스본 시간에 옵니다.",
+  'wellbeing.meds.intake.heading': "추가 복용 및 필요 시 복용",
+  'wellbeing.meds.intake.logAnother': "저장하고 하나 더 추가",
+  'wellbeing.meds.intake.loggedCount': "이 창에서 기록함: {count}",
+  'wellbeing.mood.promptPast': "이 날은 어땠나요? 기분만 필수입니다.",
+  'wellbeing.mood.loggedPast': "이 날은 이미 기록되었습니다. 아직 수정할 수 있습니다.",
+  'wellbeing.mood.titlePast': "이 날의 체크인",
 };

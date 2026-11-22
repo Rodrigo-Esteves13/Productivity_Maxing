@@ -46,6 +46,10 @@ export function useMedications() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // Sobe a cada alteracao gravada: os outros cartoes (historico, correlacoes)
+  // usam-no como chave para voltar a buscar sem refresh da pagina.
+  const [version, setVersion] = useState(0);
+  const bump = useCallback(() => setVersion((n) => n + 1), []);
 
   const load = useCallback(async () => {
     try {
@@ -78,6 +82,7 @@ export function useMedications() {
       try {
         await action();
         await load();
+        bump();
         return true;
       } catch {
         return false;
@@ -85,7 +90,7 @@ export function useMedications() {
         setIsSaving(false);
       }
     },
-    [load],
+    [load, bump],
   );
 
   // Otimista: o visto muda logo, volta atras se o pedido falhar.
@@ -100,16 +105,18 @@ export function useMedications() {
       flip(!slot.taken);
       try {
         await setMedicationDose(slot.medicationId, { date: dayKey, slotMinutes: slot.slotMinutes, taken: !slot.taken });
+        bump();
         return true;
       } catch {
         flip(slot.taken);
         return false;
       }
     },
-    [dayKey],
+    [dayKey, bump],
   );
 
   return {
+    version,
     dayOffset,
     dayKey,
     setDayOffset: (offset: number) => setDayOffset(Math.min(MAX_DOSE_PAST_DAYS, Math.max(0, offset))),

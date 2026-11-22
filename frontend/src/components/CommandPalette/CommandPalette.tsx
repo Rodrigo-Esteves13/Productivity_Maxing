@@ -189,7 +189,7 @@ const NAV_COMMANDS: NavCommand[] = [
     id: 'nav-report-card',
     labelKey: 'reportCard.title',
     path: '/report-card',
-    keywords: ['report card', 'transcript', 'boletim', 'pauta', 'grades', 'notas', 'semester', 'semestre', 'print', 'imprimir', 'pdf', 'credits', 'ects'],
+    keywords: ['report card', 'transcript', 'boletim', 'pauta', 'grades', 'notas', 'semester', 'semestre', 'print', 'imprimir', 'pdf', 'credits', 'ects', 'grade improvement', 'improve grade', 'melhoria de nota', 'melhorar nota'],
   },
   {
     id: 'nav-period-review',

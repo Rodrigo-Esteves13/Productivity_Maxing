@@ -8,6 +8,9 @@ export const RATING_MAX = 5;
 export const MAX_MOOD_NOTE_LENGTH = 500;
 // Janela maxima de GET /wellbeing/mood (um ano).
 export const MAX_MOOD_RANGE_DAYS = 366;
+// Ate quantos dias atras se aceita registar o humor de um dia em falta
+// (igual a MOOD_MAX_PAST_DAYS no frontend, useMoodToday.ts).
+export const MAX_MOOD_PAST_DAYS = 90;
 // Dias analisados pelas correlacoes.
 export const INSIGHTS_WINDOW_DAYS = 90;
 // Abaixo disto uma correlacao e ruido: devolve "not_enough_data".

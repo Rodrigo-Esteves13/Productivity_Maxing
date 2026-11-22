@@ -91,4 +91,8 @@ export const fase7b: Record<string, string> = {
   'areas.empty.createFirst': "创建我的第一个科目",
   'areas.section.count': "{count} 个科目",
   'areas.overview.failed': "无法加载任务和风险详情。你的科目仍可正常使用。",
+  'reportCard.improve.title': "成绩提升",
+  'reportCard.improve.intro': "如果一门已通过的课程提高1分或2分，本期平均分会上升多少。按提升幅度从大到小排列。",
+  'reportCard.improve.raise': "若 +{delta}",
+  'reportCard.improve.caveat': "仅为模拟。能否改善成绩（通常每门课一次，特殊考试季不可）取决于学校规定，请在计划前先确认。",
 };

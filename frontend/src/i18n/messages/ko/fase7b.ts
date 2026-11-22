@@ -91,4 +91,8 @@ export const fase7b: Record<string, string> = {
   'areas.empty.createFirst': "첫 과목 만들기",
   'areas.section.count': "{count}개 과목",
   'areas.overview.failed': "작업 및 위험 세부 정보를 불러올 수 없습니다. 과목은 평소처럼 사용할 수 있습니다.",
+  'reportCard.improve.title': "성적 향상",
+  'reportCard.improve.intro': "합격한 과목이 1점 또는 2점 오르면 이 학기 평균이 얼마나 오르는지 보여줍니다. 상승폭이 큰 순서입니다.",
+  'reportCard.improve.raise': "+{delta}일 때",
+  'reportCard.improve.caveat': "시뮬레이션일 뿐입니다. 성적 향상이 가능한지(보통 과목당 한 번, 특별 시험 기간은 불가)는 학교 규정에 따라 다르니 계획 전에 확인하세요.",
 };

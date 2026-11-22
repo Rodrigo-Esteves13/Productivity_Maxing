@@ -18,9 +18,9 @@ const percentOf = (taken: number, scheduled: number) =>
 
 // Resumo semanal/mensal da medicacao: tomas marcadas vs tomadas, por dia e
 // por medicamento, e quantas "se necessario". So conta, nao avalia.
-export default function MedicationHistoryCard() {
+export default function MedicationHistoryCard({ refreshKey = 0 }: { refreshKey?: number }) {
   const { t } = useI18n();
-  const { history, isLoading, error, range, setRange } = useMedicationHistory();
+  const { history, isLoading, error, range, setRange } = useMedicationHistory(refreshKey);
   const options = RANGES.map((r) => ({ value: r.value, label: t(r.labelKey) }));
   const overall = history ? percentOf(history.totals.taken, history.totals.scheduled) : null;
 

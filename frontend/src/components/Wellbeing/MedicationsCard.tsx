@@ -149,7 +149,9 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
   const hasReminders = meds.medications.some((m) => m.active && m.schedule === 'DAILY' && m.remindersEnabled);
   const accepted = meds.disclaimer?.accepted ?? false;
   const reminderStatus = useMedicationReminderStatus(accepted && hasReminders, meds.medications);
-  const asNeeded = meds.medications.filter((m) => m.active && m.schedule === 'AS_NEEDED');
+  // Qualquer medicamento ativo aceita uma toma avulso (dose extra, ou duas
+  // seguidas), nao so os "se necessario".
+  const loggable = meds.medications.filter((m) => m.active);
 
   return (
     <DashboardCard>
@@ -259,11 +261,11 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
             </>
           )}
 
-          {(asNeeded.length > 0 || meds.intakes.length > 0) && (
+          {(loggable.length > 0 || meds.intakes.length > 0) && (
             <>
-              <h3 className="mb-2 text-sm font-medium text-neutral-200">{t('wellbeing.meds.asNeeded')}</h3>
+              <h3 className="mb-2 text-sm font-medium text-neutral-200">{t('wellbeing.meds.intake.heading')}</h3>
               <div className="mb-3 flex flex-wrap gap-2">
-                {asNeeded.map((m) => (
+                {loggable.map((m) => (
                   <Button key={m.id} variant="secondary" size="sm" onClick={() => setLogging(m)}>
                     {t('wellbeing.meds.intake.logButton', { name: m.name })}
                   </Button>
@@ -356,9 +358,10 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
       <IntakeLogModal
         medication={logging}
         isSaving={meds.isSaving}
-        onSubmit={async (input) => {
+        defaultDayKey={meds.dayOffset > 0 ? meds.dayKey : null}
+        onSubmit={async (input, keepOpen) => {
           const ok = await meds.logIntake(input);
-          if (ok) setLogging(null);
+          if (ok && !keepOpen) setLogging(null);
           return ok;
         }}
         onClose={() => setLogging(null)}

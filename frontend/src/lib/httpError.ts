@@ -1,6 +1,7 @@
 export const HTTP_CONFLICT = 409;
 export const HTTP_UNAUTHORIZED = 401;
 export const HTTP_FORBIDDEN = 403;
+export const HTTP_TOO_MANY_REQUESTS = 429;
 
 /** Codigo HTTP de um erro do axios, ou undefined se nao for um erro de resposta. */
 export function getHttpStatus(error: unknown): number | undefined {

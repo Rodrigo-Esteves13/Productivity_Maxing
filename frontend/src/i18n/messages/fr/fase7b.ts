@@ -91,4 +91,8 @@ export const fase7b: Record<string, string> = {
   'areas.empty.createFirst': "Créer ma première matière",
   'areas.section.count': "{count} matières",
   'areas.overview.failed': "Les détails des tâches et des risques n'ont pas pu être chargés. Vos matières fonctionnent toujours normalement.",
+  'reportCard.improve.title': "Amélioration de note",
+  'reportCard.improve.intro': "De combien la moyenne de cette période monterait si un cours réussi gagnait 1 ou 2 points. Plus gros gain d'abord.",
+  'reportCard.improve.raise': "Si +{delta}",
+  'reportCard.improve.caveat': "Ce n'est qu'une simulation. Pouvoir améliorer une note (en général une fois par cours, jamais en session spéciale) dépend du règlement de ton école : vérifie-le avant de planifier.",
 };

@@ -32,13 +32,20 @@ describe('MedicationIntakesService', () => {
         findMany: jest.fn().mockResolvedValue([]),
       },
     };
+    const tx = { ...prisma, $executeRaw: jest.fn().mockResolvedValue(0) };
+    const prismaWithTx = {
+      ...prisma,
+      $transaction: jest.fn(<T>(run: (client: typeof tx) => Promise<T>) =>
+        run(tx),
+      ),
+    };
     const disclaimer = {
       assertAccepted: accepted
         ? jest.fn().mockResolvedValue(undefined)
         : jest.fn().mockRejectedValue(new ForbiddenException()),
     };
     const service = new MedicationIntakesService(
-      prisma as unknown as PrismaService,
+      prismaWithTx as unknown as PrismaService,
       disclaimer as unknown as MedicationDisclaimerService,
     );
     return { service, prisma };
@@ -77,11 +84,23 @@ describe('MedicationIntakesService', () => {
     });
   });
 
-  it('only "as needed" medication is logged per intake', async () => {
-    const { service } = setup({ schedule: MedicationSchedule.DAILY });
+  it('logs an extra dose of a scheduled medication, twice at the same time', async () => {
+    const { service, prisma } = setup({ schedule: MedicationSchedule.DAILY });
+    const takenAt = now();
+    await service.create('u1', { medicationId: 'm1', takenAt });
+    await service.create('u1', { medicationId: 'm1', takenAt });
+    expect(prisma.medicationIntake.create).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects the entry when the day is already full, under the lock', async () => {
+    const { service, prisma } = setup({
+      schedule: MedicationSchedule.AS_NEEDED,
+    });
+    prisma.medicationIntake.count.mockResolvedValue(30);
     await expect(
       service.create('u1', { medicationId: 'm1', takenAt: now() }),
     ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.medicationIntake.create).not.toHaveBeenCalled();
   });
 
   it('rejects times in the future or too far back', async () => {
