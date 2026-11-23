@@ -53,3 +53,8 @@ export async function rejectFeedback(id: string, reason?: string): Promise<Feedb
 export async function setFeedbackMuted(userId: string, muted: boolean): Promise<void> {
   await api.patch(`/feedback/users/${userId}/muted`, { muted });
 }
+
+// Apaga um feedback do proprio autor (o backend recusa os de outros).
+export async function deleteMyFeedback(id: string): Promise<void> {
+  await api.delete(`/feedback/mine/${id}`);
+}

@@ -15,6 +15,7 @@ import { MS_PER_DAY, MS_PER_MINUTE } from '../common/time.constants';
 import {
   CreateMedicationIntakeDto,
   MedicationIntakeRangeQueryDto,
+  UpdateMedicationIntakeDto,
 } from './dto/medication.dto';
 import {
   MAX_INTAKE_FUTURE_MINUTES,
@@ -132,6 +133,56 @@ export class MedicationIntakesService {
           takenAt,
           dose: dto.dose?.trim() || null,
           note: dto.note?.trim() || null,
+        },
+        select: INTAKE_SELECT,
+      });
+    });
+    return toView(row);
+  }
+
+  // Corrige hora, dose ou nota. Sempre com userId na query; se a toma muda de
+  // dia, o limite diario do dia novo aplica-se (a propria toma nao conta).
+  async update(
+    userId: string,
+    id: string,
+    dto: UpdateMedicationIntakeDto,
+  ): Promise<MedicationIntakeView> {
+    await this.disclaimer.assertAccepted(userId);
+    const takenAt =
+      dto.takenAt === undefined ? undefined : this.parseTakenAt(dto.takenAt);
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+      const current = await tx.medicationIntake.findFirst({
+        where: { id, userId },
+        select: { id: true },
+      });
+      if (!current) {
+        throw new NotFoundException(
+          `Entry not found or you don't have access.`,
+        );
+      }
+      if (takenAt) {
+        const { start, end } = lisbonDayBounds(toLisbonDateKey(takenAt));
+        const sameDay = await tx.medicationIntake.count({
+          where: {
+            userId,
+            id: { not: id },
+            takenAt: { gte: start, lt: end },
+          },
+        });
+        if (sameDay >= MAX_INTAKES_PER_DAY) {
+          throw new BadRequestException(
+            `You can log at most ${MAX_INTAKES_PER_DAY} entries per day.`,
+          );
+        }
+      }
+      return tx.medicationIntake.update({
+        where: { id },
+        data: {
+          ...(takenAt ? { takenAt } : {}),
+          ...(dto.dose !== undefined ? { dose: dto.dose.trim() || null } : {}),
+          ...(dto.note !== undefined ? { note: dto.note.trim() || null } : {}),
         },
         select: INTAKE_SELECT,
       });

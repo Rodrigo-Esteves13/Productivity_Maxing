@@ -25,7 +25,9 @@ const valueOr = <T,>(result: PromiseSettledResult<T>, fallback: T): T =>
 // turnos de hoje e os blocos de estudo do plano. Cada parte e best-effort:
 // se uma falhar o cartao mostra as outras; se falharem todas fica null e o
 // cartao nao aparece (como o StudyCapacityCard).
-export function useTodayOverview() {
+// `refreshKey` (opcional): quando muda, volta a pedir em silencio (o cartao
+// mantem o que tinha). O digest diario nao o passa: so le uma vez.
+export function useTodayOverview(refreshKey?: string | null) {
   const [overview, setOverview] = useState<TodayOverview | null>(null);
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export function useTodayOverview() {
       });
     });
     return () => controller.abort();
-  }, []);
+  }, [refreshKey]);
 
   return overview;
 }

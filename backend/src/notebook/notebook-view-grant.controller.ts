@@ -29,6 +29,11 @@ import {
   UpdateViewGrantAreasDto,
 } from './dto/view-grant.dto';
 import { perMinute } from '../common/throttle.util';
+import {
+  NOTEBOOK_GRANT_DECISIONS_PER_MINUTE,
+  NOTEBOOK_GRANT_READS_PER_MINUTE,
+  NOTEBOOK_GRANT_REQUESTS_PER_MINUTE,
+} from './notebook.constants';
 
 @ApiTags('Social notes')
 @ApiBearerAuth()
@@ -39,7 +44,7 @@ export class NotebookViewGrantController {
 
   @Post('requests')
   @HttpCode(HttpStatus.OK)
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(NOTEBOOK_GRANT_REQUESTS_PER_MINUTE))
   @ApiOperation({
     summary: 'Ask a friend for read-only access to their notes.',
   })
@@ -68,7 +73,7 @@ export class NotebookViewGrantController {
 
   @Post('grants/:id/decide')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(NOTEBOOK_GRANT_DECISIONS_PER_MINUTE))
   decide(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
@@ -97,7 +102,7 @@ export class NotebookViewGrantController {
   }
 
   @Get('from/:ownerId')
-  @Throttle(perMinute(60))
+  @Throttle(perMinute(NOTEBOOK_GRANT_READS_PER_MINUTE))
   list(
     @CurrentUser() user: AuthenticatedUser,
     @Param('ownerId', ParseUUIDPipe) ownerId: string,
@@ -106,7 +111,7 @@ export class NotebookViewGrantController {
   }
 
   @Get('from/:ownerId/entries/:entryId')
-  @Throttle(perMinute(60))
+  @Throttle(perMinute(NOTEBOOK_GRANT_READS_PER_MINUTE))
   entry(
     @CurrentUser() user: AuthenticatedUser,
     @Param('ownerId', ParseUUIDPipe) ownerId: string,

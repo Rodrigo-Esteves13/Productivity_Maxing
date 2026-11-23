@@ -6,6 +6,7 @@ import ShiftForm from './ShiftForm';
 import type { ShiftFormValues } from './ShiftForm';
 import ShiftList from './ShiftList';
 import { describeDaysOff } from './shiftText';
+import { formatTaskDate } from '../../../lib/timeFormat';
 import type { CommitmentInput } from '../../../api/commitmentsService';
 import type {
   CommitmentWithShifts,
@@ -42,7 +43,7 @@ export default function CommitmentSection({
   onEditShift,
   onDeleteShift,
 }: CommitmentSectionProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [mode, setMode] = useState<Mode>('view');
 
   const handleAddShift = async (values: ShiftFormValues): Promise<boolean> => {
@@ -77,7 +78,7 @@ export default function CommitmentSection({
       ) : (
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-base font-semibold text-white truncate">{commitment.name}</h3>
+            <h3 title={commitment.name} className="text-base font-semibold text-white truncate">{commitment.name}</h3>
             <p className="text-xs text-neutral-500">
               {commitment.commuteMinutes > 0
                 ? t('commitment.travelLine', { minutes: commitment.commuteMinutes })
@@ -90,7 +91,7 @@ export default function CommitmentSection({
                 {t(CONTRACT_LINE_KEYS[commitment.contractType])}
                 {commitment.endsOn &&
                   ` · ${t('commitment.contract.until', {
-                    date: new Date(commitment.endsOn).toLocaleDateString(undefined, { timeZone: 'UTC' }),
+                    date: formatTaskDate(commitment.endsOn, lang),
                   })}`}
               </p>
             )}

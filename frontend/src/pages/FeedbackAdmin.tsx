@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ErrorState from '../components/UI/ErrorState';
@@ -6,9 +6,14 @@ import EmptyState from '../components/UI/EmptyState';
 import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import Modal from '../components/UI/Modal';
 import SegmentedControl from '../components/UI/SegmentedControl';
+import SearchField from '../components/UI/SearchField';
+import Select from '../components/UI/Select';
 import UserStatusModal from '../components/Users/UserStatusModal';
 import FeedbackAdminItem from '../components/Feedback/FeedbackAdminItem';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { useListSearch } from '../hooks/useListSearch';
+import { ALL_FILTER, filterByCategory } from '../lib/adminLists';
+import { FEEDBACK_CATEGORIES, FEEDBACK_CATEGORY_KEY } from '../components/Feedback/feedbackStatus';
 import { useFeedbackAdmin, type AccountAction, type FeedbackFilter } from '../hooks/useFeedbackAdmin';
 import { FEEDBACK_LIST_LIMIT } from '../api/feedbackService';
 import type { FeedbackAuthor } from '../types/models';
@@ -30,7 +35,7 @@ const ACCOUNT_ACTION_TITLE: Record<AccountAction, string> = {
 // responde-se ao autor, recusa-se, resolve-se e modera-se o autor.
 export default function FeedbackAdmin() {
   const { t } = useI18n();
-  useDocumentTitle('Feedback');
+  useDocumentTitle(t('nav.admin.feedback'));
   const {
     items,
     visible,
@@ -39,6 +44,7 @@ export default function FeedbackAdmin() {
     setFilter,
     isLoading,
     error,
+    reload,
     toggleResolved,
     reply,
     reject,
@@ -48,6 +54,17 @@ export default function FeedbackAdmin() {
   } = useFeedbackAdmin();
   const [accountTarget, setAccountTarget] = useState<{ author: FeedbackAuthor; action: AccountAction } | null>(null);
   const [isApplying, setIsApplying] = useState(false);
+  const [category, setCategory] = useState<string>(ALL_FILTER);
+
+  // Mensagem, resposta, pagina e autor; depois a categoria.
+  const { query, setQuery, filtered: searched, isFiltering } = useListSearch(visible, (item) => [
+    item.message,
+    item.adminReply,
+    item.page,
+    item.user?.name,
+    item.user?.email,
+  ]);
+  const shown = useMemo(() => filterByCategory(searched, category), [searched, category]);
 
   const openAccountAction = useCallback((author: FeedbackAuthor, action: AccountAction) => {
     setAccountTarget({ author, action });
@@ -69,7 +86,7 @@ export default function FeedbackAdmin() {
       {isLoading ? (
         <CardGridSkeleton cards={4} />
       ) : error ? (
-        <ErrorState message={error} />
+        <ErrorState message={error} onRetry={reload} />
       ) : items.length === 0 ? (
         <EmptyState message={t('ui.noFeedbackYet')} />
       ) : (
@@ -79,12 +96,34 @@ export default function FeedbackAdmin() {
               {t('ui.adminListCapped', { count: FEEDBACK_LIST_LIMIT })}
             </p>
           )}
-          <SegmentedControl options={filterOptions} value={filter} onChange={setFilter} size="sm" className="mb-4" />
+          <div className="mb-4 flex flex-wrap items-end gap-3">
+            <SegmentedControl options={filterOptions} value={filter} onChange={setFilter} size="sm" />
+            <SearchField value={query} onChange={setQuery} label={t('ux4adm2.feedback.search')} />
+            <Select
+              label={t('ux4adm2.feedback.categoryLabel')}
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value={ALL_FILTER}>{t('ux4adm2.feedback.allCategories')}</option>
+              {FEEDBACK_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {t(FEEDBACK_CATEGORY_KEY[c])}
+                </option>
+              ))}
+            </Select>
+            {(isFiltering || category !== ALL_FILTER) && (
+              <span className="text-xs text-neutral-500" aria-live="polite">
+                {t('search.count', { shown: shown.length, total: visible.length })}
+              </span>
+            )}
+          </div>
           {visible.length === 0 ? (
             <EmptyState message={t('feedback.admin.emptyFilter')} />
+          ) : shown.length === 0 ? (
+            <EmptyState message={isFiltering ? t('search.noResultsFor', { query: query.trim() }) : t('search.noResults')} />
           ) : (
             <ul className="space-y-3">
-              {visible.map((item) => (
+              {shown.map((item) => (
                 <FeedbackAdminItem
                   key={item.id}
                   item={item}

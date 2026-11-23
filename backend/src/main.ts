@@ -10,6 +10,7 @@ import { createQuizImportBodyParser } from './quizzes/quiz-import-body';
 import { getFrontendUrl } from './config/app.config';
 import { RESULT_TRUNCATED_HEADER } from './common/pagination.util';
 import { JsonLogger } from './common/logger/json-logger.service';
+import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { isMaintenanceMode } from './common/guards/maintenance.guard';
 import {
   REQUEST_ID_HEADER,
@@ -134,6 +135,9 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // Erros do Prisma que nenhum service tratou: 404/409/400 em vez de 500.
+  app.useGlobalFilters(new PrismaExceptionFilter());
 
   const isProd = process.env.NODE_ENV === 'production';
 

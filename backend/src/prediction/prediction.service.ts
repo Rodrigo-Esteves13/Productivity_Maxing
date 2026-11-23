@@ -28,6 +28,10 @@ import {
   keepIndicesWithoutUpperOutliers,
 } from './prediction-stats.util';
 import type { RatioInterval } from './prediction-stats.util';
+import {
+  loadAggregatedTaskSessions,
+  recentHistoryWhere,
+} from './task-study-time.loader';
 import type {
   DurationPrediction,
   PredictionMethod,
@@ -44,9 +48,8 @@ const MIN_SAMPLES_FOR_REGRESSION = 10;
 const MIN_SAMPLES_FOR_MLP = 50;
 // O modelo em cache só é re-treinado quando o nº de amostras de treino
 // cresceu pelo menos isto desde o último treino (ou quando o método ideal
-// mudou - ver getOrTrainModel) - mesmo espírito de cache do
-// StudySessionsService.heatmapCache, só que invalidado por contagem de
-// amostras novas em vez de tempo, como combinado com o Rodrigo.
+// mudou - ver getOrTrainModel) - invalidado por contagem de amostras novas
+// em vez de tempo, como combinado com o Rodrigo.
 const RETRAIN_SAMPLE_DELTA = 5;
 // Suaviza a média de duração real por TaskType (target encoding) em
 // direção à média global, ponderada por quantas tasks desse tipo já
@@ -77,6 +80,8 @@ const CALIBRATION_FACTOR_MIN = 0.5;
 const CALIBRATION_FACTOR_MAX = 2.5;
 const CALIBRATION_DECIMALS = 100;
 
+// So escalares: o tempo de estudo de cada task vem somado do Postgres
+// (loadAggregatedTaskSessions), nao das sessoes aninhadas.
 const TRAINING_SELECT = {
   id: true,
   taskTypeId: true,
@@ -85,10 +90,6 @@ const TRAINING_SELECT = {
   weightPercentage: true,
   estimatedMinutes: true,
   recalledStudyMinutes: true,
-  studySessions: {
-    where: { endedAt: { not: null } },
-    select: { startedAt: true, endedAt: true, focusRating: true },
-  },
 } satisfies Prisma.TaskSelect;
 
 type TrainingTask = Prisma.TaskGetPayload<{ select: typeof TRAINING_SELECT }>;
@@ -131,9 +132,8 @@ export class PredictionService {
   private readonly logger = new Logger(PredictionService.name);
 
   // chave = userId. Ver RETRAIN_SAMPLE_DELTA acima para quando é
-  // invalidado - perde-se com o restart do processo, o que é aceitável
-  // pela mesma razão que o heatmapCache do StudySessionsService: não é a
-  // fonte de verdade, só poupa retreinar o modelo em cada pedido.
+  // invalidado - perde-se com o restart do processo, o que é aceitável:
+  // não é a fonte de verdade, só poupa retreinar o modelo em cada pedido.
   private readonly modelCache = new Map<string, CachedModel>();
 
   constructor(private readonly prisma: PrismaService) {}
@@ -206,6 +206,7 @@ export class PredictionService {
    * tasks concluídas. 1.3 = costuma demorar 30% mais do que estima.
    * null quando ainda não há amostra suficiente. Somas em vez de média
    * de rácios: uma task minúscula com rácio absurdo não domina o fator.
+   * Só tasks da janela PREDICTION_HISTORY_WINDOW_DAYS (B-34).
    */
   async getCalibrationFactor(userId: string): Promise<number | null> {
     const tasks = await this.prisma.task.findMany({
@@ -213,24 +214,26 @@ export class PredictionService {
         userId,
         progressStatus: 'COMPLETED',
         estimatedMinutes: { gt: 0 },
-        AND: [hasStudyTimeWhere()],
+        AND: [hasStudyTimeWhere(), recentHistoryWhere()],
       },
       select: {
+        id: true,
         estimatedMinutes: true,
         recalledStudyMinutes: true,
-        studySessions: {
-          where: { endedAt: { not: null } },
-          select: { startedAt: true, endedAt: true, focusRating: true },
-        },
       },
     });
+    const sessionsByTask = await loadAggregatedTaskSessions(
+      this.prisma,
+      userId,
+      tasks.map((task) => task.id),
+    );
 
     let sumEstimated = 0;
     let sumActual = 0;
     let samples = 0;
     for (const task of tasks) {
       const actual = resolveStudyMinutes(
-        task.studySessions,
+        sessionsByTask.get(task.id) ?? [],
         task.recalledStudyMinutes,
       );
       if (actual <= 0 || !task.estimatedMinutes) continue;
@@ -561,15 +564,22 @@ export class PredictionService {
    * Tasks do user com tempo de estudo conhecido (sessões terminadas, ou o
    * tempo aproximado recordado quando não há sessões), convertidas em
    * linhas de treino. Tasks sem nenhum tempo nunca entram no treino - não
-   * há label real para elas.
+   * há label real para elas. Só tasks da janela
+   * PREDICTION_HISTORY_WINDOW_DAYS (B-34): amostra mais recente e custo
+   * que não cresce com anos de uso.
    */
   private async loadTrainingRows(
     userId: string,
   ): Promise<{ rows: TrainingRow[]; trimmedSamples: number }> {
     const tasks: TrainingTask[] = await this.prisma.task.findMany({
-      where: { userId, AND: [hasStudyTimeWhere()] },
+      where: { userId, AND: [hasStudyTimeWhere(), recentHistoryWhere()] },
       select: TRAINING_SELECT,
     });
+    const sessionsByTask = await loadAggregatedTaskSessions(
+      this.prisma,
+      userId,
+      tasks.map((task) => task.id),
+    );
 
     const rows: TrainingRow[] = [];
     for (const task of tasks) {
@@ -577,7 +587,7 @@ export class PredictionService {
       // FOCUS_WEIGHT_BY_RATING). A calibracao e a precisao das estimativas
       // continuam em tempo de relogio, mais abaixo.
       const actualMinutes = resolveFocusedStudyMinutes(
-        task.studySessions,
+        sessionsByTask.get(task.id) ?? [],
         task.recalledStudyMinutes,
       );
       if (actualMinutes <= 0) continue;
@@ -607,19 +617,30 @@ export class PredictionService {
    * has been. Only tasks with both a manual estimate AND at least one
    * finished session qualify - a task with no session yet has nothing to
    * compare against.
+   *
+   * S-17: the session time per task is summed in Postgres
+   * (loadAggregatedTaskSessions) instead of loading every nested session,
+   * and only tasks with known study time are read (the others were skipped
+   * below anyway). No history window here: same result as before.
    */
   async getEstimationAccuracy(userId: string): Promise<EstimationAccuracy> {
     const tasks = await this.prisma.task.findMany({
-      where: { userId, estimatedMinutes: { not: null } },
+      where: {
+        userId,
+        estimatedMinutes: { gt: 0 },
+        AND: [hasStudyTimeWhere()],
+      },
       select: {
+        id: true,
         estimatedMinutes: true,
         recalledStudyMinutes: true,
-        studySessions: {
-          where: { endedAt: { not: null } },
-          select: { startedAt: true, endedAt: true, focusRating: true },
-        },
       },
     });
+    const sessionsByTask = await loadAggregatedTaskSessions(
+      this.prisma,
+      userId,
+      tasks.map((task) => task.id),
+    );
 
     let sampleSize = 0;
     let sumAbsPercentError = 0;
@@ -634,7 +655,7 @@ export class PredictionService {
       if (estimated <= 0) continue; // evita divisão por zero abaixo, sem sentido de qualquer forma
 
       const actual = resolveStudyMinutes(
-        task.studySessions,
+        sessionsByTask.get(task.id) ?? [],
         task.recalledStudyMinutes,
       );
       if (actual <= 0) continue; // sem tempo conhecido não há com que comparar

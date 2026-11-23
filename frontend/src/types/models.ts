@@ -1207,7 +1207,9 @@ export interface NotebookEntrySummary {
   attachmentCount: number;
 }
 
-export interface NotebookSearchResult extends NotebookEntry {
+// GET /notebook/search devolve so o resumo (sem conteudo nem URLs assinados);
+// a entrada completa vem de GET /notebook/entries/:id ao abrir.
+export interface NotebookSearchResult extends NotebookEntrySummary {
   area: { id: string; name: string; colorHex: string };
 }
 

@@ -15,6 +15,7 @@ import {
   PAD_ANON_MAX_CONTENT_LENGTH,
   PAD_EXPIRY_MS,
 } from './pads.constants';
+import { isUniqueViolation } from '../common/prisma-errors';
 
 // Quem fez o pedido de moderacao, para o security log.
 export interface AdminRequestInfo {
@@ -54,8 +55,6 @@ const PAD_SELECT = {
 } satisfies Prisma.PadSelect;
 
 type PadRow = Prisma.PadGetPayload<{ select: typeof PAD_SELECT }>;
-
-const UNIQUE_VIOLATION = 'P2002';
 
 function toView(slug: string, pad: PadRow | null, viewer: PadViewer): PadView {
   const maxLength = viewer.userId ? null : PAD_ANON_MAX_CONTENT_LENGTH;
@@ -153,7 +152,7 @@ export class PadsService {
             },
           });
         } catch (err) {
-          if (!this.isUniqueViolation(err)) throw err;
+          if (!isUniqueViolation(err)) throw err;
           // Alguem criou-o entretanto: tenta trancar outra vez.
           return this.lock(userId, slug);
         }
@@ -196,7 +195,7 @@ export class PadsService {
       });
       return toView(slug, pad, viewer);
     } catch (err) {
-      if (this.isUniqueViolation(err)) return null;
+      if (isUniqueViolation(err)) return null;
       throw err;
     }
   }
@@ -227,13 +226,6 @@ export class PadsService {
     return viewer.userId
       ? { updatedById: viewer.userId, updatedByIpHash: null }
       : { updatedById: null, updatedByIpHash: viewer.ipHash };
-  }
-
-  private isUniqueViolation(err: unknown): boolean {
-    return (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === UNIQUE_VIOLATION
-    );
   }
 
   // Moderacao: pads alterados mais recentemente, com quem gravou por ultimo

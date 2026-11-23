@@ -28,6 +28,11 @@ import {
   UpdateGradeEntryDto,
 } from './dto/grade-entry.dto';
 import { perMinute } from '../common/throttle.util';
+import {
+  GRADE_COMPONENT_CREATE_PER_MINUTE,
+  GRADE_COMPONENT_UPDATE_PER_MINUTE,
+  GRADE_ENTRY_WRITES_PER_MINUTE,
+} from './grade-components.constants';
 
 class ListGradeComponentsQuery {
   @IsOptional()
@@ -100,7 +105,7 @@ export class GradeComponentsController {
   }
 
   @Post()
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(GRADE_COMPONENT_CREATE_PER_MINUTE))
   @ApiOperation({
     summary: 'Creates a grade component for a course and period.',
   })
@@ -112,7 +117,7 @@ export class GradeComponentsController {
   }
 
   @Patch(':id')
-  @Throttle(perMinute(60))
+  @Throttle(perMinute(GRADE_COMPONENT_UPDATE_PER_MINUTE))
   @ApiOperation({ summary: 'Edits name, weight or rule of a component.' })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -133,7 +138,7 @@ export class GradeComponentsController {
   }
 
   @Post(':id/entries')
-  @Throttle(perMinute(120))
+  @Throttle(perMinute(GRADE_ENTRY_WRITES_PER_MINUTE))
   @ApiOperation({ summary: 'Adds a grade (e.g. one seminar) to a component.' })
   addEntry(
     @CurrentUser() user: AuthenticatedUser,
@@ -144,7 +149,7 @@ export class GradeComponentsController {
   }
 
   @Patch(':id/entries/:entryId')
-  @Throttle(perMinute(120))
+  @Throttle(perMinute(GRADE_ENTRY_WRITES_PER_MINUTE))
   @ApiOperation({ summary: 'Edits one grade of a component.' })
   updateEntry(
     @CurrentUser() user: AuthenticatedUser,
@@ -156,7 +161,7 @@ export class GradeComponentsController {
   }
 
   @Delete(':id/entries/:entryId')
-  @Throttle(perMinute(120))
+  @Throttle(perMinute(GRADE_ENTRY_WRITES_PER_MINUTE))
   @ApiOperation({ summary: 'Removes one grade from a component.' })
   removeEntry(
     @CurrentUser() user: AuthenticatedUser,

@@ -13,11 +13,20 @@ import PriorityForm from '../components/Priorities/PriorityForm';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useTaskTypesPage } from '../hooks/useTaskTypesPage';
 import { usePrioritiesPage } from '../hooks/usePrioritiesPage';
+import { useListSearch } from '../hooks/useListSearch';
+import SearchField from '../components/UI/SearchField';
+import { DEFAULT_PRIORITY_COLOR, DEFAULT_TASK_TYPE_COLOR } from '../lib/taskTypeColors';
 import { useI18n } from '../i18n/useI18n';
+import { useConfirmAction } from '../hooks/useConfirmAction';
+import ConfirmActionDialog from '../components/Turma/ConfirmActionDialog';
+
+// Abaixo disto a pesquisa so atrapalha.
+const TYPE_SEARCH_MIN = 8;
 
 export default function TaskTypes() {
   const { t } = useI18n();
   useDocumentTitle(t('ui.taskTypeManagementTitle'));
+  const deactivateConfirm = useConfirmAction(t('confirmGuard.error'));
   const {
     taskTypes,
     academicTaskTypes,
@@ -32,6 +41,9 @@ export default function TaskTypes() {
     handleCreateTaskType,
     handleEditTaskType,
     handleToggleTaskTypeActive,
+    canMoveTaskType,
+    handleMoveTaskType,
+    retry,
 
     isCreateAcademicOpen,
     setIsCreateAcademicOpen,
@@ -41,6 +53,7 @@ export default function TaskTypes() {
     handleEditAcademic,
     handleToggleAcademicActive,
   } = useTaskTypesPage();
+  const typeSearch = useListSearch(taskTypes, (type) => [type.label]);
 
   // Módulo próprio (usePrioritiesPage/prioritiesAdminService/PrioritiesModule
   // no backend) - não faz parte do catálogo de TaskType, mas mora na mesma
@@ -74,7 +87,7 @@ export default function TaskTypes() {
           <TableSkeleton rows={4} columns={3} />
         </div>
       ) : error ? (
-        <ErrorState message={error} />
+        <ErrorState message={error} onRetry={() => void retry()} />
       ) : (
         <div className="space-y-10">
           <section>
@@ -84,10 +97,30 @@ export default function TaskTypes() {
                 {t('ui.newTaskType')}
               </ActionButton>
             </div>
+            {taskTypes.length >= TYPE_SEARCH_MIN && (
+              <SearchField className="mb-3" value={typeSearch.query} onChange={typeSearch.setQuery} label={t('ux4packs.types.search')} />
+            )}
             <TaskTypesTable
-              taskTypes={taskTypes}
+              taskTypes={typeSearch.filtered}
+              isFiltering={typeSearch.isFiltering}
+              noResultsMessage={typeSearch.isFiltering ? t('search.noResultsFor', { query: typeSearch.query.trim() }) : undefined}
+              canMove={canMoveTaskType}
+              onMove={(type, direction) => void handleMoveTaskType(type, direction)}
               onEdit={setEditingTaskType}
-              onToggleActive={handleToggleTaskTypeActive}
+              onToggleActive={(type) => {
+                // Reativar e inofensivo; desativar some dos formularios de todos.
+                if (!type.isActive) {
+                  void handleToggleTaskTypeActive(type);
+                  return;
+                }
+                deactivateConfirm.request({
+                  title: t('confirmGuard.deactivateType.title'),
+                  message: t('confirmGuard.deactivateType.message', { name: type.label }),
+                  confirmLabel: t('confirmGuard.deactivateType.confirm'),
+                  tone: 'danger',
+                  run: () => handleToggleTaskTypeActive(type),
+                });
+              }}
             />
           </section>
 
@@ -154,7 +187,7 @@ export default function TaskTypes() {
             idPrefix="edit-task-type"
             initialValues={{
               label: editingTaskType.label,
-              colorHex: editingTaskType.colorHex ?? '#8b5cf6',
+              colorHex: editingTaskType.colorHex ?? DEFAULT_TASK_TYPE_COLOR,
               order: editingTaskType.order,
             }}
             onSubmit={handleEditTaskType}
@@ -235,7 +268,7 @@ export default function TaskTypes() {
             idPrefix="edit-priority"
             initialValues={{
               label: editingPriority.label,
-              colorHex: editingPriority.colorHex ?? '#a3a3a3',
+              colorHex: editingPriority.colorHex ?? DEFAULT_PRIORITY_COLOR,
               order: editingPriority.order,
             }}
             onSubmit={handleEditPriority}
@@ -246,6 +279,7 @@ export default function TaskTypes() {
           />
         )}
       </Modal>
+      <ConfirmActionDialog state={deactivateConfirm} />
     </PageLayout>
   );
 }

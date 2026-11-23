@@ -2,38 +2,20 @@ import { Link } from 'react-router-dom';
 import Avatar from '../Profile/Avatar';
 import RoleBadge from './RoleBadge';
 import UserStatusBadge from './UserStatusBadge';
-import { PencilIcon, TrashIcon, DownloadIcon, ClockIcon, ShieldIcon, CheckIcon, NetworkIcon } from '../UI/Icons';
+import UserRowActions, { type UserRowHandlers } from './UserRowActions';
 import { adminUserPath } from '../../lib/appLinks';
 import type { User } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
-import IconButton from '../UI/IconButton';
 
-interface UserTableRowProps {
+interface UserTableRowProps extends UserRowHandlers {
   user: User;
   isSelf: boolean;
-  onEdit: (user: User) => void;
-  onDelete: (user: User) => void;
-  onExport: (user: User) => void;
-  onSuspend: (user: User) => void;
-  onBan: (user: User) => void;
-  onReactivate: (user: User) => void;
   isReactivating: boolean;
 }
 
-export default function UserTableRow({
-  user,
-  isSelf,
-  onEdit,
-  onDelete,
-  onExport,
-  onSuspend,
-  onBan,
-  onReactivate,
-  isReactivating,
-}: UserTableRowProps) {
-  const { t } = useI18n();
+export default function UserTableRow({ user, isSelf, isReactivating, ...handlers }: UserTableRowProps) {
+  const { t, lang } = useI18n();
   const initials = (user.name?.trim()?.[0] ?? user.email[0] ?? '?').toUpperCase();
-  const status = user.status ?? 'ACTIVE';
 
   return (
     <tr className="border-b border-neutral-800 hover:bg-neutral-800/30 transition-colors">
@@ -63,69 +45,9 @@ export default function UserTableRow({
       <td className="px-4 py-3 text-center">
         <UserStatusBadge status={user.status} suspendedUntil={user.suspendedUntil} />
       </td>
-      <td className="px-4 py-3">{new Date(user.createdAt).toLocaleDateString()}</td>
+      <td className="px-4 py-3">{new Date(user.createdAt).toLocaleDateString(lang)}</td>
       <td className="px-4 py-3">
-        <div className="flex items-center justify-end gap-1">
-          {status === 'ACTIVE' ? (
-            <>
-              <IconButton
-                label={isSelf ? t('ui.youCantSuspendYourOwn') : t('ui.suspendUser')}
-                onClick={() => onSuspend(user)}
-                disabled={isSelf}
-                className="text-neutral-400 hover:text-amber-400 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-neutral-400"
-              >
-                <ClockIcon className="h-4 w-4" />
-              </IconButton>
-              <IconButton
-                label={isSelf ? t('ui.youCantBanYourOwn') : t('ui.banUser')}
-                onClick={() => onBan(user)}
-                disabled={isSelf}
-                className="text-neutral-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-neutral-400"
-              >
-                <ShieldIcon className="h-4 w-4" />
-              </IconButton>
-            </>
-          ) : (
-            <IconButton
-              label={t('ui.restoreToActive')}
-              onClick={() => onReactivate(user)}
-              disabled={isReactivating}
-              className="text-neutral-400 hover:text-violet-400 disabled:opacity-30"
-            >
-              <CheckIcon className="h-4 w-4" />
-            </IconButton>
-          )}
-          <Link
-            to={adminUserPath(user.id)}
-            title={t('adminSocial.open')}
-            aria-label={t('adminSocial.open')}
-            className="press rounded-md p-2 text-neutral-400 hover:bg-neutral-800/60 hover:text-violet-300"
-          >
-            <NetworkIcon className="h-4 w-4" />
-          </Link>
-          <IconButton
-            label={t('ui.exportData')}
-            onClick={() => onExport(user)}
-            className="text-neutral-400 hover:text-white"
-          >
-            <DownloadIcon />
-          </IconButton>
-          <IconButton
-            label={t('ui.editUser')}
-            onClick={() => onEdit(user)}
-            className="text-neutral-400 hover:text-white"
-          >
-            <PencilIcon />
-          </IconButton>
-          <IconButton
-            label={isSelf ? t('ui.youCantDeleteYourOwn') : t('ui.deleteUser')}
-            onClick={() => onDelete(user)}
-            disabled={isSelf}
-            className="text-neutral-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-neutral-400"
-          >
-            <TrashIcon />
-          </IconButton>
-        </div>
+        <UserRowActions user={user} isSelf={isSelf} isReactivating={isReactivating} {...handlers} />
       </td>
     </tr>
   );

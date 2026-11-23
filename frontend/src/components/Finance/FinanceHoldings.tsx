@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import Card from '../UI/Card';
+import Button from '../UI/Button';
 import Input from '../UI/Input';
 import Select from '../UI/Select';
+import EmptyState from '../UI/EmptyState';
 import Modal from '../UI/Modal';
 import FinanceSubmitButton from './FinanceSubmitButton';
 import Money from './Money';
@@ -141,20 +143,23 @@ export default function FinanceHoldings({ holdings, accounts, currency, isRefres
     <Card className="mb-6">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-neutral-200">{t('finance.holdings')}</h3>
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           onClick={onRefresh}
           disabled={isRefreshing || holdings.length === 0}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-500 disabled:cursor-not-allowed disabled:opacity-50"
+          aria-busy={isRefreshing}
+          className="inline-flex items-center gap-1.5"
         >
           <RefreshIcon className={`h-4 w-4 ${isRefreshing ? 'animate-spin motion-reduce:animate-none' : ''}`} />
           {isRefreshing ? t('finance.refreshing') : t('finance.refreshPrices')}
-        </button>
+        </Button>
       </div>
       <p className="mb-3 text-xs text-neutral-500">{t('finance.holdingsHelp')}</p>
 
       {holdings.length === 0 ? (
-        <p className="mb-4 text-sm text-neutral-500">{t('finance.noHoldings')}</p>
+        <EmptyState variant="inline" message={t('finance.noHoldings')} />
       ) : (
         <>
           <div className="hidden grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))_auto] gap-x-4 border-b border-neutral-800 pb-2 text-xs text-neutral-500 md:grid" aria-hidden="true">
@@ -289,7 +294,7 @@ function HoldingEditForm({ holding, accounts, onSubmit, onDone }: HoldingEditFor
       </Select>
       <div className="flex flex-wrap items-center gap-3">
         <FinanceSubmitButton isSubmitting={isSubmitting}>{t('finance.save')}</FinanceSubmitButton>
-        <button type="button" onClick={onDone} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+        <button type="button" onClick={onDone} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
           {t('common.cancel')}
         </button>
         {formError && <p className="text-sm text-red-400">{formError}</p>}

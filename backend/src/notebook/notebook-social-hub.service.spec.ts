@@ -74,7 +74,7 @@ describe('NotebookSocialHubService.friendHub', () => {
         },
       ]);
     db.notebookViewGrant.findUnique
-      .mockResolvedValueOnce({ status: 'DENIED', areaIds: ['a1'] })
+      .mockResolvedValueOnce({ id: 'g0', status: 'DENIED', areaIds: ['a1'] })
       .mockResolvedValueOnce({ id: 'g1', status: 'APPROVED', areaIds: ['a1'] });
 
     const hub = await service.friendHub('me', 'friend');
@@ -98,7 +98,11 @@ describe('NotebookSocialHubService.friendHub', () => {
         pending: false,
       }),
     ]);
-    expect(hub.theirNotebook).toEqual({ status: 'PENDING', areaCount: 0 });
+    expect(hub.theirNotebook).toEqual({
+      status: 'PENDING',
+      areaCount: 0,
+      grantId: null,
+    });
     expect(hub.myNotebook).toEqual({
       status: 'APPROVED',
       areaCount: 1,

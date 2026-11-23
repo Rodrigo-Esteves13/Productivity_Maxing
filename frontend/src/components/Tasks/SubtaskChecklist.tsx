@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import type { Subtask, Task } from '../../types/models';
 import {
   addSubtask,
@@ -8,8 +8,15 @@ import {
   updateSubtask,
 } from '../../api/subtasksService';
 import { useFeedback } from '../../context/useFeedback';
-import { TrashIcon } from '../UI/Icons';
+import { ArrowDownIcon, ArrowUpIcon, TrashIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
+
+// Botoes de linha: escondidos ate hover/foco no rato, sempre visiveis em ecras
+// de toque, onde o alvo sobe para 44px.
+const ROW_BUTTON_BASE =
+  'inline-flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 pointer-coarse:opacity-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-neutral-500 transition-opacity disabled:cursor-not-allowed disabled:text-neutral-700 disabled:hover:text-neutral-700';
+const ROW_BUTTON_LINK = `${ROW_BUTTON_BASE} text-[11px] hover:text-violet-300`;
+const ROW_BUTTON_ICON = `${ROW_BUTTON_BASE} hover:text-violet-300`;
 
 interface SubtaskChecklistProps {
   taskId: string;
@@ -30,6 +37,10 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
   const [isAdding, setIsAdding] = useState(false);
   // Arrastar para reordenar (HTML5 drag and drop, sem dependencias).
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  // Edicao do titulo de um passo (duplo clique ou botao de editar).
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState('');
+  const editingRef = useRef<string | null>(null);
 
   const done = subtasks.filter((s) => s.isDone).length;
   const percent = subtasks.length === 0 ? 0 : Math.round((done / subtasks.length) * 100);
@@ -60,6 +71,43 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
     }
   };
 
+  const startEdit = (subtask: Subtask) => {
+    editingRef.current = subtask.id;
+    setEditingId(subtask.id);
+    setEditDraft(subtask.title);
+  };
+
+  const commitEdit = async (subtask: Subtask) => {
+    // Enter e o blur seguinte (desmontar o campo) nao gravam duas vezes.
+    if (editingRef.current !== subtask.id) return;
+    editingRef.current = null;
+    const title = editDraft.trim();
+    setEditingId(null);
+    if (!title || title === subtask.title) return;
+    const previous = subtasks;
+    onChange(subtasks.map((s) => (s.id === subtask.id ? { ...s, title } : s)));
+    try {
+      await updateSubtask(taskId, subtask.id, { title });
+    } catch {
+      onChange(previous);
+      notify(t('ui.couldNotUpdateTheSubtask'), 'error');
+    }
+  };
+
+  const handleEditKeyDown = (e: KeyboardEvent<HTMLInputElement>, subtask: Subtask) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      void commitEdit(subtask);
+    } else if (e.key === 'Escape') {
+      // Cancela so a edicao: nao deixa o Escape fechar o modal por baixo.
+      e.preventDefault();
+      e.nativeEvent.stopImmediatePropagation();
+      editingRef.current = null;
+      setEditingId(null);
+    }
+    e.stopPropagation();
+  };
+
   const handleDelete = async (subtask: Subtask) => {
     const previous = subtasks;
     onChange(subtasks.filter((s) => s.id !== subtask.id));
@@ -84,14 +132,8 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
     }
   };
 
-  const handleDrop = async (targetId: string) => {
-    const sourceId = draggedId;
-    setDraggedId(null);
-    if (!sourceId || sourceId === targetId) return;
-    const from = subtasks.findIndex((s) => s.id === sourceId);
-    const to = subtasks.findIndex((s) => s.id === targetId);
-    if (from === -1 || to === -1) return;
-
+  const moveSubtask = async (from: number, to: number) => {
+    if (from === -1 || to === -1 || from === to) return;
     const previous = subtasks;
     const next = [...subtasks];
     const [moved] = next.splice(from, 1);
@@ -103,6 +145,16 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
       onChange(previous);
       notify(t('ui.couldNotSaveTheNew'), 'error');
     }
+  };
+
+  const handleDrop = async (targetId: string) => {
+    const sourceId = draggedId;
+    setDraggedId(null);
+    if (!sourceId || sourceId === targetId) return;
+    await moveSubtask(
+      subtasks.findIndex((s) => s.id === sourceId),
+      subtasks.findIndex((s) => s.id === targetId),
+    );
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -128,7 +180,7 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
       )}
 
       <ul className="space-y-1">
-        {subtasks.map((subtask) => (
+        {subtasks.map((subtask, index) => (
           <li
             key={subtask.id}
             draggable
@@ -141,25 +193,53 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
             <span className="cursor-grab text-neutral-600 select-none" aria-hidden="true" title={t('ui.dragToReorder')}>
               ::
             </span>
-            <input
-              type="checkbox"
-              checked={subtask.isDone}
-              onChange={() => void handleToggle(subtask)}
-              className="accent-violet-500"
-              aria-label={t(subtask.isDone ? 'ui.markStepNotDone' : 'ui.markStepDone', { title: subtask.title })}
-            />
-            <span
-              className={`flex-1 text-sm break-words ${
-                subtask.isDone ? 'line-through text-neutral-500' : 'text-neutral-200'
-              }`}
-            >
-              {subtask.title}
+            <span className="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+              <input
+                type="checkbox"
+                checked={subtask.isDone}
+                onChange={() => void handleToggle(subtask)}
+                className="accent-violet-500 pointer-coarse:h-6 pointer-coarse:w-6"
+                aria-label={t(subtask.isDone ? 'ui.markStepNotDone' : 'ui.markStepDone', { title: subtask.title })}
+              />
             </span>
+            {editingId === subtask.id ? (
+              <input
+                type="text"
+                autoFocus
+                value={editDraft}
+                maxLength={200}
+                onChange={(e) => setEditDraft(e.target.value)}
+                onKeyDown={(e) => handleEditKeyDown(e, subtask)}
+                onBlur={() => void commitEdit(subtask)}
+                aria-label={t('quickWins.subtaskEditLabel')}
+                className="flex-1 min-w-0 rounded-md bg-neutral-900 border border-violet-600 px-2 py-0.5 text-sm text-neutral-200 focus:outline-none"
+              />
+            ) : (
+              <>
+                <span
+                  onDoubleClick={() => startEdit(subtask)}
+                  className={`flex-1 text-sm break-words ${
+                    subtask.isDone ? 'line-through text-neutral-500' : 'text-neutral-200'
+                  }`}
+                >
+                  {subtask.title}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => startEdit(subtask)}
+                  className={ROW_BUTTON_LINK}
+                  aria-label={t('quickWins.subtaskEditNamed', { title: subtask.title })}
+                  title={t('quickWins.subtaskEdit')}
+                >
+                  {t('quickWins.subtaskEdit')}
+                </button>
+              </>
+            )}
             {onConverted && (
               <button
                 type="button"
                 onClick={() => void handleConvert(subtask)}
-                className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-[11px] text-neutral-500 hover:text-violet-300 transition-opacity"
+                className={ROW_BUTTON_LINK}
                 title={t('ui.turnThisStepIntoIts')}
               >
                 {t('ui.toTask')}
@@ -167,8 +247,28 @@ export default function SubtaskChecklist({ taskId, subtasks, onChange, onConvert
             )}
             <button
               type="button"
+              onClick={() => void moveSubtask(index, index - 1)}
+              disabled={index === 0}
+              className={ROW_BUTTON_ICON}
+              aria-label={t('ux4tasks.moveStepUp', { title: subtask.title })}
+              title={t('ux4tasks.moveUp')}
+            >
+              <ArrowUpIcon width={14} height={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => void moveSubtask(index, index + 1)}
+              disabled={index === subtasks.length - 1}
+              className={ROW_BUTTON_ICON}
+              aria-label={t('ux4tasks.moveStepDown', { title: subtask.title })}
+              title={t('ux4tasks.moveDown')}
+            >
+              <ArrowDownIcon width={14} height={14} />
+            </button>
+            <button
+              type="button"
               onClick={() => void handleDelete(subtask)}
-              className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-neutral-500 hover:text-red-400 transition-opacity"
+              className={`${ROW_BUTTON_BASE} hover:text-red-400`}
               aria-label={t('ui.deleteSubtaskNamed', { title: subtask.title })}
               title={t('ui.deleteSubtask')}
             >

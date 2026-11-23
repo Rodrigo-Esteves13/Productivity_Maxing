@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { gradeImprovements, IMPROVEMENT_DELTAS } from '../../lib/gradeImprovement';
 import { scaleMax } from '../../lib/gradeScale';
 import { useI18n } from '../../i18n/useI18n';
+import { formatNumber } from '../../lib/ratings';
 import type { PeriodReportCard } from '../../types/models';
 
 const GAIN_DECIMALS = 2;
@@ -10,7 +11,7 @@ const GAIN_DECIMALS = 2;
 // subir +1 ou +2. So simula; se a melhoria e permitida (uma vez por UC, nunca
 // em epoca especial) depende do regulamento da tua escola.
 export default function GradeImprovementCard({ card }: { card: PeriodReportCard }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const rows = useMemo(() => gradeImprovements(card.areas, scaleMax(card.gradeScale)), [card]);
   if (rows.length === 0) return null;
 
@@ -35,10 +36,10 @@ export default function GradeImprovementCard({ card }: { card: PeriodReportCard 
             {rows.map((row) => (
               <tr key={row.areaId} className="border-b border-neutral-800/60">
                 <td className="py-2 pr-3 text-neutral-200">{row.areaName}</td>
-                <td className="py-2 pr-3 text-right text-neutral-300">{row.grade}</td>
+                <td className="py-2 pr-3 text-right text-neutral-300">{formatNumber(row.grade, lang, GAIN_DECIMALS)}</td>
                 {row.gains.map((gain, index) => (
                   <td key={IMPROVEMENT_DELTAS[index]} className="py-2 pr-3 text-right font-medium text-violet-300">
-                    +{gain.toFixed(GAIN_DECIMALS)}
+                    +{formatNumber(gain, lang, GAIN_DECIMALS)}
                   </td>
                 ))}
               </tr>

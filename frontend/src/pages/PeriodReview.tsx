@@ -19,6 +19,8 @@ import { usePeriodReview } from '../hooks/usePeriodReview';
 import { useAcademic } from '../context/useAcademic';
 import { formatDayLabel, formatDuration, weekdayLabel } from '../lib/timeFormat';
 import type { PeriodReviewCard } from '../lib/periodReview';
+import { formatNumber } from '../lib/ratings';
+import { periodOptionLabel, sortPeriodsForSelect } from '../lib/periodOptions';
 import { useI18n } from '../i18n/useI18n';
 
 interface CardView {
@@ -28,6 +30,7 @@ interface CardView {
   detail: string;
 }
 
+const BEST_AREA_FRACTION_DIGITS = 2;
 const ICON_CLASS = 'h-5 w-5 text-violet-400';
 
 function useCardView() {
@@ -53,7 +56,7 @@ function useCardView() {
       case 'bestArea':
         return {
           Icon: GraduationCapIcon,
-          value: String(card.average),
+          value: formatNumber(card.average, lang, BEST_AREA_FRACTION_DIGITS),
           label: t('periodReview.bestArea.label'),
           detail: card.areaName,
         };
@@ -95,7 +98,8 @@ export default function PeriodReview() {
   const { periods, activePeriod, isLoading: academicLoading } = useAcademic();
   const [chosenId, setChosenId] = useState<string | null>(null);
   const periodId = chosenId ?? activePeriod?.id ?? periods[0]?.id ?? null;
-  const { card, isLoading: cardLoading, error: cardError } = usePeriodReportCard(periodId);
+  const { card, isLoading: cardLoading, error: cardError, reload } = usePeriodReportCard(periodId);
+  const sortedPeriods = useMemo(() => sortPeriodsForSelect(periods), [periods]);
   const { cards, isLoading, error } = usePeriodReview(periodId, card);
   const toView = useCardView();
   const views = useMemo(() => cards.map((c) => ({ key: c.kind, view: toView(c) })), [cards, toView]);
@@ -108,9 +112,9 @@ export default function PeriodReview() {
         value={periodId ?? ''}
         onChange={(e) => setChosenId(e.target.value)}
       >
-        {periods.map((p) => (
+        {sortedPeriods.map((p) => (
           <option key={p.id} value={p.id}>
-            {p.name}
+            {periodOptionLabel(p, t('period.archivedTag'))}
           </option>
         ))}
       </Select>
@@ -119,7 +123,7 @@ export default function PeriodReview() {
   const body = (() => {
     if (academicLoading || ((isLoading || cardLoading) && periodId)) return <CardGridSkeleton cards={3} />;
     if (!periodId) return <EmptyState message={t('periodReview.noPeriod')} />;
-    if (error || cardError) return <ErrorState message={t('periodReview.loadError')} />;
+    if (error || cardError) return <ErrorState message={t('periodReview.loadError')} onRetry={reload} />;
     if (views.length === 0) return <EmptyState message={t('periodReview.empty')} />;
     return (
       <div className="mx-auto flex max-w-2xl flex-col gap-6">

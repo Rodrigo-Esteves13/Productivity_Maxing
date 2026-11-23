@@ -1,5 +1,6 @@
 import { useBestTimesHeatmap } from '../../../hooks/useBestTimesHeatmap';
 import { useNow } from '../../../hooks/useNow';
+import { useStudyDataKey } from '../../../hooks/useSessionEndKey';
 import { suggestStudyWindow } from '../../../lib/studyWindow';
 import { computeFocusHours, FOCUS_HOURS_RATE_DECIMALS, formatFocusHour } from '../../../lib/focusHours';
 import type { DistractionStats } from '../../../api/studySessionsService';
@@ -20,7 +21,8 @@ interface Props {
 
 export default function StudyNowHint({ distractionStats = null }: Props) {
   const { t, lang } = useI18n();
-  const { cells } = useBestTimesHeatmap();
+  const studyKey = useStudyDataKey();
+  const { cells } = useBestTimesHeatmap(studyKey);
   const now = useNow();
   const hint = suggestStudyWindow(cells, now);
   const focus = distractionStats ? computeFocusHours(distractionStats.byHour, now) : null;

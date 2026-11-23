@@ -123,22 +123,31 @@ export class PersonalNotesService {
       select: { id: true, userId: true, title: true },
     });
 
-    let sent = 0;
+    // Agrupa por user: as notas de cada um saem em sequencia e ficam
+    // marcadas com um unico UPDATE por user (em vez de um por nota).
+    const byUser = new Map<string, typeof due>();
     for (const note of due) {
-      const delivered = await this.push.notifyUser(
-        note.userId,
-        'selfReminder',
-        {
+      const list = byUser.get(note.userId) ?? [];
+      list.push(note);
+      byUser.set(note.userId, list);
+    }
+
+    let sent = 0;
+    for (const [userId, notes] of byUser) {
+      const deliveredIds: string[] = [];
+      for (const note of notes) {
+        const delivered = await this.push.notifyUser(userId, 'selfReminder', {
           title: note.title,
           url: PERSONAL_NOTES_PATH,
-        },
-      );
-      if (delivered === 0) continue;
+        });
+        if (delivered > 0) deliveredIds.push(note.id);
+      }
+      if (deliveredIds.length === 0) continue;
       await this.prisma.personalNote.updateMany({
-        where: { id: note.id, remindedAt: null },
+        where: { id: { in: deliveredIds }, userId, remindedAt: null },
         data: { remindedAt: now },
       });
-      sent += 1;
+      sent += deliveredIds.length;
     }
     if (sent > 0) this.logger.log(`Lembretes pessoais enviados: ${sent}`);
     return sent;

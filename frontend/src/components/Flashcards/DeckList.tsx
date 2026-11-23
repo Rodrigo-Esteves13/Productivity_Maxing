@@ -2,6 +2,7 @@ import ColorDot from '../UI/ColorDot';
 import IconButton from '../UI/IconButton';
 import { PencilIcon, TrashIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
+import { DEFAULT_CARD_SORT, cardComparator, type CardSort } from '../../lib/flashcardList';
 import { isLeech, leechAdviceKey } from '../../lib/flashcardLeech';
 import { groupDecks, isDue } from './decks';
 import type { Area, Flashcard } from '../../types/models';
@@ -11,15 +12,16 @@ interface DeckListProps {
   areaById: Map<string, Area>;
   onEdit: (card: Flashcard) => void;
   onRemove: (card: Flashcard) => void;
+  sort?: CardSort;
 }
 
-export default function DeckList({ cards, areaById, onEdit, onRemove }: DeckListProps) {
+export default function DeckList({ cards, areaById, onEdit, onRemove, sort = DEFAULT_CARD_SORT }: DeckListProps) {
   const { t } = useI18n();
   const now = Date.now();
 
   return (
     <div className="space-y-6">
-      {groupDecks(cards, now).map((deck) => {
+      {groupDecks(cards, now, cardComparator(sort)).map((deck) => {
         const area = deck.areaId ? areaById.get(deck.areaId) : undefined;
         return (
           <section key={deck.areaId ?? 'none'} aria-label={area?.name ?? t('flashcards.noArea')}>

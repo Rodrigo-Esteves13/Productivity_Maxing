@@ -26,7 +26,8 @@ const ATTACHMENT_BINARY_MIME_TO_EXT: Record<string, string> = {
 // servidor, só guardados e devolvidos como download.
 const ATTACHMENT_TEXT_EXTENSIONS = new Set(['py', 'txt', 'md', 'json', 'csv']);
 
-export const ATTACHMENT_MAX_SIZE_BYTES = 20 * 1024 * 1024;
+// Reexport: a constante vive agora em common/upload-limits.ts.
+export { ATTACHMENT_MAX_SIZE_BYTES } from '../common/upload-limits';
 
 // Só para o nome mostrado/descarregado depois - tira barras e
 // caracteres de controlo/aspas (evita confundir o cabeçalho

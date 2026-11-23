@@ -1,0 +1,94 @@
+import 'reflect-metadata';
+import { BadRequestException } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { ProgramsService } from './programs.service';
+import { PeriodsService } from './periods.service';
+import { CreateProgramDto } from './dto/create-program.dto';
+import {
+  MAX_PERIODS_PER_PROGRAM,
+  MAX_PROGRAMS_PER_USER,
+  MAX_PROGRAM_ORDER,
+} from './academic-programs.constants';
+
+const USER = 'user-1';
+const PROGRAM = 'program-1';
+
+describe('ProgramsService.create limit', () => {
+  it('refuses a new program at the per-user cap', async () => {
+    const prisma = {
+      academicProgram: {
+        count: jest.fn().mockResolvedValue(MAX_PROGRAMS_PER_USER),
+        create: jest.fn(),
+      },
+    };
+    const service = new ProgramsService(prisma as never);
+    await expect(service.create(USER, { name: 'X' })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.academicProgram.count).toHaveBeenCalledWith({
+      where: { userId: USER },
+    });
+    expect(prisma.academicProgram.create).not.toHaveBeenCalled();
+  });
+
+  it('creates below the cap', async () => {
+    const prisma = {
+      academicProgram: {
+        count: jest.fn().mockResolvedValue(MAX_PROGRAMS_PER_USER - 1),
+        create: jest.fn().mockResolvedValue({ id: PROGRAM }),
+      },
+    };
+    const service = new ProgramsService(prisma as never);
+    await service.create(USER, { name: 'X' });
+    expect(prisma.academicProgram.create).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('PeriodsService.create limit', () => {
+  function build(count: number) {
+    const prisma = {
+      academicPeriod: {
+        count: jest.fn().mockResolvedValue(count),
+        create: jest.fn().mockResolvedValue({ id: 'p' }),
+      },
+    };
+    const programs = { findOwnedOrThrow: jest.fn().mockResolvedValue({}) };
+    return {
+      prisma,
+      service: new PeriodsService(prisma as never, programs as never),
+    };
+  }
+  const dto = {
+    programId: PROGRAM,
+    name: 'S1',
+    startDate: '2026-09-01T00:00:00Z',
+  };
+
+  it('refuses a new period at the per-program cap', async () => {
+    const { service, prisma } = build(MAX_PERIODS_PER_PROGRAM);
+    await expect(service.create(USER, dto)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.academicPeriod.count).toHaveBeenCalledWith({
+      where: { programId: PROGRAM },
+    });
+    expect(prisma.academicPeriod.create).not.toHaveBeenCalled();
+  });
+
+  it('creates below the cap', async () => {
+    const { service, prisma } = build(MAX_PERIODS_PER_PROGRAM - 1);
+    await service.create(USER, dto);
+    expect(prisma.academicPeriod.create).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('CreateProgramDto order cap', () => {
+  const check = (order: number) =>
+    validate(plainToInstance(CreateProgramDto, { name: 'X', order }));
+
+  it('accepts the cap and rejects above it', async () => {
+    expect(await check(MAX_PROGRAM_ORDER)).toHaveLength(0);
+    expect(await check(MAX_PROGRAM_ORDER + 1)).toHaveLength(1);
+  });
+});

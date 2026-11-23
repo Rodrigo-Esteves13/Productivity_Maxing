@@ -3,16 +3,18 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac } from 'crypto';
+import { safeEqual } from '../common/safe-equal.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { PushService } from '../push/push.service';
 import { pushDisplayName } from '../common/display-name.util';
 import { SocialService, type SendRequestResult } from './social.service';
 import { MAX_FRIENDS } from './social.constants';
+import { MS_PER_DAY } from '../common/time.constants';
 
 // Validade do link de amizade assinado. Passado isto o link continua a
 // servir, mas como um pedido normal (a outra pessoa aceita).
-export const FRIEND_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+export const FRIEND_LINK_TTL_MS = 7 * MS_PER_DAY;
 const FRIENDS_PATH = '/social?tab=friends';
 
 export interface FriendLink {
@@ -231,9 +233,7 @@ export class FriendLinksService {
     if (expires < Date.now() || expires > Date.now() + FRIEND_LINK_TTL_MS) {
       return false;
     }
-    const expected = Buffer.from(this.sign(code, expires));
-    const given = Buffer.from(token);
-    return expected.length === given.length && timingSafeEqual(expected, given);
+    return safeEqual(this.sign(code, expires), token);
   }
 
   private sign(code: string, expires: number): string {

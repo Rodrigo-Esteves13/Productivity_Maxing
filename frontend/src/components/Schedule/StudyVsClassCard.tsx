@@ -46,7 +46,7 @@ export default function StudyVsClassCard({ refreshKey }: StudyVsClassCardProps) 
                 >
                   <span className="flex min-w-0 items-center gap-2 text-neutral-200">
                     <ColorDot size="xs" color={row.colorHex} />
-                    <span className="truncate">{row.areaName}</span>
+                    <span title={row.areaName} className="truncate">{row.areaName}</span>
                   </span>
                   <span className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums text-neutral-400">
                     <span>{t('studyVsClass.classTime', { time: formatDuration(row.classMinutes) })}</span>

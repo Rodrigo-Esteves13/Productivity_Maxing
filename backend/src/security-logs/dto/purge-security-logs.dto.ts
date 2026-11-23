@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Min } from 'class-validator';
+import { IsInt, IsOptional, Max, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { SECURITY_LOGS_PURGE_MAX_DAYS } from '../security-logs.constants';
 
 export class PurgeSecurityLogsDto {
   @ApiPropertyOptional({
@@ -12,5 +13,6 @@ export class PurgeSecurityLogsDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(SECURITY_LOGS_PURGE_MAX_DAYS)
   olderThanDays?: number;
 }

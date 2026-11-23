@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getRatingStats } from '../api/areaRatingsService';
 import { isRequestCanceled } from '../lib/abortable';
 import { useAcademic } from '../context/useAcademic';
 import type { RatingStats } from '../types/models';
+import { RATING_DOMAINS } from '../lib/domainEvents';
+import { useDomainKey } from './useDomainVersion';
 
 // Estatisticas das avaliacoes do periodo ativo (todos na vista agregada),
 // como o useCourseRiskOverview. Erro devolve hasError e retry.
@@ -16,9 +18,15 @@ export function useRatingStats() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // Uma avaliacao gravada noutro cartao refaz as medias em silencio.
+  const ratingsKey = useDomainKey(RATING_DOMAINS);
+  // Periodo das estatisticas mostradas: so mostra "a carregar" ao mudar de
+  // periodo, nao num refetch por avaliacao nova.
+  const loadedForRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (hasNoPeriod) {
+      loadedForRef.current = null;
       setStats(null);
       setHasError(false);
       setIsLoading(false);
@@ -26,9 +34,11 @@ export function useRatingStats() {
     }
     if (isWaitingForPeriod) return;
     const controller = new AbortController();
-    setIsLoading(true);
+    const loadKey = periodId ?? '';
+    if (loadedForRef.current !== loadKey) setIsLoading(true);
     getRatingStats(periodId, controller.signal)
       .then((result) => {
+        loadedForRef.current = loadKey;
         setStats(result);
         setHasError(false);
         setIsLoading(false);
@@ -39,7 +49,7 @@ export function useRatingStats() {
         setIsLoading(false);
       });
     return () => controller.abort();
-  }, [periodId, isWaitingForPeriod, hasNoPeriod, attempt]);
+  }, [periodId, isWaitingForPeriod, hasNoPeriod, attempt, ratingsKey]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
   return { stats, isLoading, hasError, retry };

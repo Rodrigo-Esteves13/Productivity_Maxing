@@ -11,11 +11,15 @@ import {
 } from '../../config/app.config';
 import { SupabaseClientsService } from './supabase-clients.service';
 import { runInBackground } from '../../common/background.util';
+import { MS_PER_MINUTE } from '../../common/time.constants';
 
 const VERIFY_TOKEN_TTL = '24h';
 // Não reenvia para o mesmo utilizador mais do que 1x por minuto (evita usar
-// o endpoint para encher a caixa de correio de alguém).
-const RESEND_COOLDOWN_MS = 60_000;
+// o endpoint para encher a caixa de correio de alguém). Também usado pelo
+// cooldown do forgot-password (PasswordAuthService).
+export const RESEND_COOLDOWN_MS = MS_PER_MINUTE;
+// A partir deste tamanho, cada envio limpa as entradas já fora do cooldown.
+export const COOLDOWN_PRUNE_THRESHOLD = 500;
 
 interface VerifyEmailPayload {
   sub: string;
@@ -41,6 +45,12 @@ export const EMAIL_NOT_VERIFIED_CODE = 'EMAIL_NOT_VERIFIED' as const;
 @Injectable()
 export class EmailVerificationService {
   private readonly logger = new Logger(EmailVerificationService.name);
+  // Pressuposto de instância única (S-34): este Map vive só na memória do
+  // processo. Com uma instância no Render chega. Com várias, cada uma tem o
+  // seu cooldown (o limite multiplica-se pelo número de instâncias) e um
+  // restart esquece tudo. Se a app escalar, mover para Redis (SET com NX e
+  // PX) ou para uma coluna lastVerificationSentAt no User. O mesmo vale para
+  // o cooldown do forgot-password, as falhas de API key e o 2FA.
   private readonly lastSentAt = new Map<string, number>();
 
   constructor(
@@ -184,7 +194,7 @@ export class EmailVerificationService {
   }
 
   private pruneCooldowns(): void {
-    if (this.lastSentAt.size < 500) return;
+    if (this.lastSentAt.size < COOLDOWN_PRUNE_THRESHOLD) return;
     const cutoff = Date.now() - RESEND_COOLDOWN_MS;
     for (const [userId, at] of this.lastSentAt) {
       if (at < cutoff) this.lastSentAt.delete(userId);

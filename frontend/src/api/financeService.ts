@@ -373,8 +373,8 @@ const enc = encodeURIComponent;
 // Um uuid por intencao de criar; o backend devolve a mesma linha se repetir.
 const idempotent = (key: string) => ({ headers: { [IDEMPOTENCY_HEADER]: key } });
 
-export const getFinance = async (month: string): Promise<FinanceSummary> =>
-  (await api.get<FinanceSummary>('/finance', { params: { month } })).data;
+export const getFinance = async (month: string, signal?: AbortSignal): Promise<FinanceSummary> =>
+  (await api.get<FinanceSummary>('/finance', { params: { month }, signal })).data;
 
 export const getFinanceAnalytics = async (query: AnalyticsQuery): Promise<FinanceAnalytics> =>
   (await api.get<FinanceAnalytics>('/finance/analytics', { params: query })).data;

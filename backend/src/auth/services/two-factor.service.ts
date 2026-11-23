@@ -8,26 +8,54 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { createHash, createHmac, randomBytes } from 'crypto';
-import type { User } from '@prisma/client';
+import { createHash, createHmac, randomBytes, randomUUID } from 'crypto';
+import { SecurityEventType, type User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { decryptToken, encryptToken } from '../../crypto/token-cipher';
 import { isTwoFactorEnabled } from '../../config/app.config';
+import { MS_PER_MINUTE, MS_PER_SECOND } from '../../common/time.constants';
+import { SecurityLogsService } from '../../security-logs/security-logs.service';
 import { AccountGuardService } from './account-guard.service';
 import { buildOtpauthUri, generateTotpSecret, verifyTotp } from './totp.util';
 
 const ISSUER = 'Productivity Maxing';
-const CHALLENGE_TTL = '5m';
+const CHALLENGE_TTL_MS = 5 * MS_PER_MINUTE;
 const RECOVERY_CODE_COUNT = 10;
 // Falhas seguidas permitidas antes de bloquear o utilizador uns minutos
 // (além do @Throttle por IP): 6 dígitos = 1M combinações, 5 tentativas por
 // janela de 5 min torna adivinhar inviável.
 const MAX_FAILED_ATTEMPTS = 5;
-const LOCK_MS = 5 * 60_000;
+const LOCK_MS = 5 * MS_PER_MINUTE;
+// Tentativas por desafio de login (S-10). Esgotadas, o desafio morre e e
+// preciso a password outra vez: sem isto, o bloqueio por conta so travava
+// 5 minutos e o mesmo desafio voltava a valer.
+export const MAX_CHALLENGE_ATTEMPTS = 5;
+// Teto de desafios seguidos em memoria (cada um vive no maximo
+// CHALLENGE_TTL_MS). Cheio, esquece os mais antigos.
+const MAX_TRACKED_CHALLENGES = 10_000;
+// Linha do SecurityLog quando um desafio e queimado. O service nao ve o
+// pedido; o controller pode passar ip/userAgent em completeLogin.
+const CHALLENGE_LOG_METHOD = 'POST';
+const CHALLENGE_LOG_PATH = '/auth/2fa/login';
+const CHALLENGE_EXPIRED_MESSAGE = 'Login expired. Please sign in again.';
 
 interface ChallengePayload {
   sub: string;
   purpose: '2fa-login';
+  // Id do desafio (claim jti). Tokens antigos sem jti contam pelo userId.
+  jti?: string;
+  exp?: number;
+}
+
+interface ChallengeAttempts {
+  count: number;
+  expiresAt: number;
+}
+
+// Dados do pedido para o SecurityLog (opcionais: o service funciona sem).
+export interface TwoFactorClientInfo {
+  ip?: string | null;
+  userAgent?: string | null;
 }
 
 export interface TwoFactorStatus {
@@ -46,11 +74,14 @@ export class TwoFactorService {
     string,
     { count: number; lockedUntil: number }
   >();
+  // Tentativas por desafio (jti), em memoria desta instancia (ver S-34).
+  private readonly challengeAttempts = new Map<string, ChallengeAttempts>();
 
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
     private accountGuard: AccountGuardService,
+    private securityLogs: SecurityLogsService,
   ) {}
 
   isFeatureOn(): boolean {
@@ -81,14 +112,19 @@ export class TwoFactorService {
     const payload: ChallengePayload = { sub: user.id, purpose: '2fa-login' };
     return this.jwtService.sign(payload, {
       secret: this.challengeSecret(),
-      expiresIn: CHALLENGE_TTL,
+      expiresIn: CHALLENGE_TTL_MS / MS_PER_SECOND,
+      jwtid: randomUUID(),
     });
   }
 
   // ------------------------------------------------------------- login
 
   /** Segundo passo do login: token do desafio + código -> o User. */
-  async completeLogin(token: string, code: string): Promise<User> {
+  async completeLogin(
+    token: string,
+    code: string,
+    client: TwoFactorClientInfo = {},
+  ): Promise<User> {
     this.assertFeatureOn();
     let payload: ChallengePayload;
     try {
@@ -96,9 +132,16 @@ export class TwoFactorService {
         secret: this.challengeSecret(),
       });
     } catch {
-      throw new UnauthorizedException('Login expired. Please sign in again.');
+      throw new UnauthorizedException(CHALLENGE_EXPIRED_MESSAGE);
     }
     if (payload.purpose !== '2fa-login') throw new UnauthorizedException();
+
+    // Conta a tentativa ANTES de qualquer await: pedidos em paralelo com o
+    // mesmo desafio nao passam todos pelo teto antes da primeira falha.
+    const challengeKey = payload.jti ?? `user:${payload.sub}`;
+    if (!this.reserveChallengeAttempt(challengeKey, payload.exp)) {
+      throw new UnauthorizedException(CHALLENGE_EXPIRED_MESSAGE);
+    }
 
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
@@ -109,8 +152,68 @@ export class TwoFactorService {
     this.accountGuard.assertAccountIsUsable(user);
 
     const ok = await this.checkCode(user, code);
-    if (!ok) throw new UnauthorizedException('Invalid code.');
-    return user;
+    if (ok) {
+      this.challengeAttempts.delete(challengeKey);
+      return user;
+    }
+    if (this.isChallengeExhausted(challengeKey)) {
+      await this.recordChallengeBurned(user.id, client);
+      throw new UnauthorizedException(CHALLENGE_EXPIRED_MESSAGE);
+    }
+    throw new UnauthorizedException('Invalid code.');
+  }
+
+  /**
+   * Gasta uma tentativa do desafio. false = ja nao ha tentativas (o desafio
+   * esta queimado ate expirar).
+   */
+  private reserveChallengeAttempt(key: string, exp?: number): boolean {
+    const now = Date.now();
+    const existing = this.challengeAttempts.get(key);
+    const entry =
+      existing && existing.expiresAt > now
+        ? existing
+        : {
+            count: 0,
+            expiresAt: exp ? exp * MS_PER_SECOND : now + CHALLENGE_TTL_MS,
+          };
+    if (entry.count >= MAX_CHALLENGE_ATTEMPTS) return false;
+    entry.count += 1;
+    this.challengeAttempts.set(key, entry);
+    this.pruneChallenges(now);
+    return true;
+  }
+
+  private isChallengeExhausted(key: string): boolean {
+    const entry = this.challengeAttempts.get(key);
+    return entry !== undefined && entry.count >= MAX_CHALLENGE_ATTEMPTS;
+  }
+
+  // Mesmo registo que o throttler (RATE_LIMIT_EXCEEDED): sem enum novo no
+  // schema. Aparece no export de atividade de seguranca do proprio user.
+  private recordChallengeBurned(
+    userId: string,
+    client: TwoFactorClientInfo,
+  ): Promise<void> {
+    return this.securityLogs.recordEvent({
+      type: SecurityEventType.RATE_LIMIT_EXCEEDED,
+      ip: client.ip ?? '',
+      method: CHALLENGE_LOG_METHOD,
+      path: CHALLENGE_LOG_PATH,
+      userAgent: client.userAgent ?? null,
+      userId,
+    });
+  }
+
+  private pruneChallenges(now: number): void {
+    if (this.challengeAttempts.size <= MAX_TRACKED_CHALLENGES) return;
+    for (const [key, entry] of this.challengeAttempts) {
+      if (entry.expiresAt <= now) this.challengeAttempts.delete(key);
+    }
+    for (const key of this.challengeAttempts.keys()) {
+      if (this.challengeAttempts.size <= MAX_TRACKED_CHALLENGES) return;
+      this.challengeAttempts.delete(key);
+    }
   }
 
   // ------------------------------------------------------------ gestão

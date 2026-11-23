@@ -3,6 +3,8 @@ import { getBannedIps, banIp, unbanIp } from '../api/bannedIpsService';
 import type { BannedIp } from '../types/models';
 import { translateNow } from '../i18n/translate';
 
+export type BannedIpsState = ReturnType<typeof useBannedIps>;
+
 export function useBannedIps() {
   const [bannedIps, setBannedIps] = useState<BannedIp[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,8 +53,10 @@ export function useBannedIps() {
     try {
       await unbanIp(id);
       setBannedIps((prev) => prev.filter((b) => b.id !== id));
+      return true;
     } catch {
       setError(translateNow('hook.couldNotUnbanThisIp'));
+      return false;
     }
   }, []);
 

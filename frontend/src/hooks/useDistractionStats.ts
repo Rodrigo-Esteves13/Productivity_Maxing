@@ -11,7 +11,7 @@ export function useDistractionStats(refreshKey?: string | null) {
 
   useEffect(() => {
     const controller = new AbortController();
-    setIsLoading(true);
+    // Sem setIsLoading(true): refetch silencioso, o cartao mantem os dados.
     setError('');
     getDistractionStats(undefined, controller.signal)
       .then((data) => setStats(data))

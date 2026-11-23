@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { loadComponentGradedItems } from '../grade-components/grade-component-items';
 import { ProgramsService } from './programs.service';
+import { MAX_PERIODS_PER_PROGRAM } from './academic-programs.constants';
 import { CreatePeriodDto } from './dto/create-period.dto';
 import { UpdatePeriodDto } from './dto/update-period.dto';
 import {
@@ -38,6 +39,14 @@ export class PeriodsService {
 
   async create(userId: string, dto: CreatePeriodDto) {
     await this.programsService.findOwnedOrThrow(userId, dto.programId);
+    const count = await this.prisma.academicPeriod.count({
+      where: { programId: dto.programId },
+    });
+    if (count >= MAX_PERIODS_PER_PROGRAM) {
+      throw new BadRequestException(
+        `A program can have at most ${MAX_PERIODS_PER_PROGRAM} periods.`,
+      );
+    }
     return this.prisma.academicPeriod.create({
       data: {
         programId: dto.programId,

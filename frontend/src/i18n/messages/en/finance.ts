@@ -25,7 +25,7 @@ export const finance: Record<string, string> = {
   "finance.entries": "This month",
   "finance.noEntries": "Nothing recorded this month.",
   "finance.deleteEntry": "Delete entry",
-  "finance.deleteEntryConfirm": "Delete this entry of {amount}? This cannot be undone.",
+  "finance.deleteEntryConfirm": "Delete this entry of {amount}? You can undo it right after.",
   "finance.byCategory": "Spending by category",
   "finance.cat.SALARY": "Salary",
   "finance.cat.ALLOWANCE": "Allowance",

@@ -125,7 +125,7 @@ export default function AreaCard({
               type="button"
               role="switch"
               aria-checked={!area.isHidden}
-              aria-label={`${area.name} ${area.isHidden ? 'off' : 'on'}`}
+              aria-label={t(area.isHidden ? 'areas.card.switchOff' : 'areas.card.switchOn', { name: area.name })}
               title={area.isHidden ? t('ui.offHiddenFromYourLists') : t('ui.onClickToHideFrom')}
               onClick={(e) => {
                 stop(e);

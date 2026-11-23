@@ -14,6 +14,8 @@ import {
 import type { AdminTaskType, AdminAcademicTaskType } from '../types/models';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
+import { getApiMessage } from '../lib/httpError';
+import { canMove, moveUpdates, type MoveDirection } from '../lib/taskTypeOrder';
 
 export function useTaskTypesPage() {
   const { notify } = useFeedback();
@@ -60,8 +62,9 @@ export function useTaskTypesPage() {
       const created = await createAdminTaskType(values);
       setTaskTypes((prev) => [...prev, created].sort((a, b) => a.order - b.order));
       setIsCreateTaskTypeOpen(false);
-    } catch {
-      notify(translateNow('hook.errorCreatingTaskTypeCheckThe'), 'error');
+      notify(translateNow('ux4packs.types.created', { name: created.label }), 'success');
+    } catch (err) {
+      notify(getApiMessage(err, translateNow('hook.errorCreatingTaskTypeCheckThe')), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -74,8 +77,9 @@ export function useTaskTypesPage() {
       const updated = await updateAdminTaskType(editingTaskType.id, values);
       setTaskTypes((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
       setEditingTaskType(null);
-    } catch {
-      notify(translateNow('hook.errorSavingChangesCheckTheBackend'), 'error');
+      notify(translateNow('ux4packs.types.saved', { name: updated.label }), 'success');
+    } catch (err) {
+      notify(getApiMessage(err, translateNow('hook.errorSavingChangesCheckTheBackend')), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -90,8 +94,32 @@ export function useTaskTypesPage() {
         ? await deactivateAdminTaskType(taskType.id)
         : await updateAdminTaskType(taskType.id, { isActive: true });
       setTaskTypes((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
-    } catch {
-      notify(translateNow('hook.errorUpdatingTaskTypeStatusCheck'), 'error');
+      notify(
+        translateNow(taskType.isActive ? 'ux4packs.types.deactivated' : 'ux4packs.types.reactivated', {
+          name: taskType.label,
+        }),
+        'success',
+      );
+    } catch (err) {
+      notify(getApiMessage(err, translateNow('hook.errorUpdatingTaskTypeStatusCheck')), 'error');
+    }
+  };
+
+  const canMoveTaskType = (id: string, direction: MoveDirection) => canMove(taskTypes, id, direction);
+
+  // Sobe/desce um lugar: grava so os `order` que mudam e atualiza a lista.
+  const handleMoveTaskType = async (taskType: AdminTaskType, direction: MoveDirection) => {
+    const updates = moveUpdates(taskTypes, taskType.id, direction);
+    if (updates.length === 0) return;
+    try {
+      const saved = await Promise.all(updates.map((u) => updateAdminTaskType(u.id, { order: u.order })));
+      const byId = new Map(saved.map((s) => [s.id, s]));
+      setTaskTypes((prev) =>
+        prev.map((t) => (byId.has(t.id) ? { ...t, ...byId.get(t.id) } : t)).sort((a, b) => a.order - b.order),
+      );
+    } catch (err) {
+      notify(getApiMessage(err, translateNow('ux4packs.types.moveError')), 'error');
+      void fetchAll();
     }
   };
 
@@ -153,6 +181,9 @@ export function useTaskTypesPage() {
     handleCreateTaskType,
     handleEditTaskType,
     handleToggleTaskTypeActive,
+    canMoveTaskType,
+    handleMoveTaskType,
+    retry: fetchAll,
 
     isCreateAcademicOpen,
     setIsCreateAcademicOpen,

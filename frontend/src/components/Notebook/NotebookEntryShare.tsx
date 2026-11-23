@@ -80,7 +80,7 @@ function ProposalRow({
     <li className="space-y-1.5 rounded-md border border-neutral-800 bg-neutral-950/60 p-2 text-xs">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-neutral-200">{proposal.proposedBy.name ?? proposal.proposedBy.email}</p>
+          <p className="truncate text-neutral-200" title={proposal.proposedBy.name ?? proposal.proposedBy.email}>{proposal.proposedBy.name ?? proposal.proposedBy.email}</p>
           {proposal.note && <p className="text-neutral-500">“{proposal.note}”</p>}
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -231,7 +231,7 @@ export default function NotebookEntryShare({ share, currentTitle, currentText }:
               <ul className="max-h-40 space-y-1 overflow-y-auto">
                 {visits.viewers.map((viewer, i) => (
                   <li key={i} className="flex items-center justify-between gap-2 text-xs">
-                    <span className="min-w-0 truncate text-neutral-200">
+                    <span className="min-w-0 truncate text-neutral-200" title={viewer.name ?? undefined}>
                       {viewer.name ?? t('share.visits.anonymous')}
                     </span>
                     <span className="shrink-0 text-neutral-500">
@@ -313,16 +313,20 @@ export default function NotebookEntryShare({ share, currentTitle, currentText }:
                       <Link
                         to={friendPath(req.requestingUser.id)}
                         className="block truncate text-neutral-200 hover:text-violet-300 hover:underline"
+                        title={req.requestingUser.name ?? t('social.anonymous')}
                       >
                         {req.requestingUser.name ?? t('social.anonymous')}
                       </Link>
                     ) : (
-                      <p className="truncate text-neutral-200">
+                      <p
+                        className="truncate text-neutral-200"
+                        title={req.requestingUser.name ?? (req.requestingUser.email || t('social.anonymous'))}
+                      >
                         {req.requestingUser.name ?? (req.requestingUser.email || t('social.anonymous'))}
                       </p>
                     )}
                     {req.requestingUser.email && (
-                      <p className="truncate text-neutral-500">{req.requestingUser.email}</p>
+                      <p className="truncate text-neutral-500" title={req.requestingUser.email}>{req.requestingUser.email}</p>
                     )}
                   </div>
                   {req.status === 'PENDING' && req.invitedByOwner ? (

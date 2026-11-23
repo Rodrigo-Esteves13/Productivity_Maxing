@@ -6,7 +6,10 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { getLisbonNow, parseDateKey, toDateKey } from '../common/date-key.util';
-import { CreateBloodDonationDto } from './dto/blood-donation.dto';
+import {
+  CreateBloodDonationDto,
+  UpdateBloodDonationDto,
+} from './dto/blood-donation.dto';
 import { MAX_BLOOD_DONATIONS_PER_USER } from './wellbeing.constants';
 
 const DONATION_SELECT = {
@@ -58,6 +61,36 @@ export class BloodDonationsService {
         location: dto.location ?? null,
         note: dto.note ?? null,
       },
+      select: DONATION_SELECT,
+    });
+    return toView(row);
+  }
+
+  async update(userId: string, id: string, dto: UpdateBloodDonationDto) {
+    let date: Date | undefined;
+    if (dto.date !== undefined) {
+      date = parseDateKey(dto.date);
+      if (date > getLisbonNow().today) {
+        throw new BadRequestException(
+          'The donation date cannot be in the future.',
+        );
+      }
+    }
+    // updateMany com userId: nunca toca numa dadiva de outro utilizador.
+    const { count } = await this.prisma.bloodDonation.updateMany({
+      where: { id, userId },
+      data: {
+        ...(date ? { date } : {}),
+        ...(dto.type !== undefined ? { type: dto.type } : {}),
+        ...(dto.location !== undefined
+          ? { location: dto.location.trim() || null }
+          : {}),
+        ...(dto.note !== undefined ? { note: dto.note.trim() || null } : {}),
+      },
+    });
+    if (count === 0) throw new NotFoundException('Donation not found.');
+    const row = await this.prisma.bloodDonation.findFirstOrThrow({
+      where: { id, userId },
       select: DONATION_SELECT,
     });
     return toView(row);

@@ -6,6 +6,7 @@ import {
   ALMOST_THERE_FROM_PCT,
   almostThereRows,
   GradeAlmostThereRemindersService,
+  HAS_WEIGHTED_WORK_WHERE,
 } from './grade-almost-there-reminders.service';
 import { FakeSentNotificationService } from './sent-notification.fake';
 
@@ -135,5 +136,24 @@ describe('GradeAlmostThereRemindersService', () => {
     const { service, courseRisk } = setup([row('a', 90)]);
     courseRisk.overview.mockRejectedValue(new Error('db down'));
     expect(await service.sendReminders()).toBe(0);
+  });
+});
+
+describe('GradeAlmostThereRemindersService pre-filter', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(MORNING);
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it('only loads users with weighted work in a non-archived period', async () => {
+    const { service, prisma } = setup([]);
+    await service.sendReminders();
+    const [args] = prisma.user.findMany.mock.calls[0] as [
+      { where: Record<string, unknown> },
+    ];
+    expect(args.where.OR).toEqual(HAS_WEIGHTED_WORK_WHERE.OR);
+    expect(args.where.pushSubscriptions).toEqual({ some: {} });
+    expect(JSON.stringify(HAS_WEIGHTED_WORK_WHERE)).toContain('isArchived');
   });
 });

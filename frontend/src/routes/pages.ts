@@ -4,6 +4,11 @@ import { lazyWithPreload } from '../lib/lazyWithPreload';
 // links (PrefetchLink) e o RoutePrefetcher descarregar o chunk antes do
 // clique, por isso mudar de pagina nao passa pelo esqueleto de carregamento.
 
+export const Register = lazyWithPreload(() => import('../pages/Register'));
+export const ForgotPassword = lazyWithPreload(() => import('../pages/ForgotPassword'));
+// Casos pontuais (resumo diario, revisao do Google Calendar): fora do chunk de entrada.
+export const DailyDigestHost = lazyWithPreload(() => import('../components/Digest/DailyDigestHost'));
+export const CalendarSyncReviewModal = lazyWithPreload(() => import('../components/Schedule/CalendarSyncReviewModal'));
 export const Dashboard = lazyWithPreload(() => import('../pages/Dashboard'));
 export const Tasks = lazyWithPreload(() => import('../pages/Tasks'));
 export const Focus = lazyWithPreload(() => import('../pages/Focus'));

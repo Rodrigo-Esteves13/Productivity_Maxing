@@ -78,6 +78,7 @@ export default function Social() {
         onUnblock={unblock}
         outgoingGrants={notes.outgoing}
         onRequestNotes={notes.request}
+        onRemoveGrant={notes.remove}
       />
     );
 

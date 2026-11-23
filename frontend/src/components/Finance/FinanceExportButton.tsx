@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getFinanceExport } from '../../api/financeService';
+import Button from '../UI/Button';
 import { DownloadIcon } from '../UI/Icons';
 import { FINANCE_CSV_COLUMNS, financeToCsv } from '../../utils/financeCsv';
 import { downloadTextFile } from '../../utils/downloadTextFile';
@@ -31,7 +32,7 @@ export default function FinanceExportButton() {
       });
       downloadTextFile(csv, `pmaxing_money_${todayKey()}.csv`, 'text/csv;charset=utf-8');
       // The server caps each list; say so instead of handing over a partial file silently.
-      if (data.truncated) notify(t('financeFixes.export.truncated'), 'info');
+      notify(t(data.truncated ? 'financeFixes.export.truncated' : 'ux4fin.exportDone'), data.truncated ? 'info' : 'success');
     } catch {
       notify(t('financeExport.error'), 'error');
     } finally {
@@ -56,15 +57,18 @@ export default function FinanceExportButton() {
   }, [requested, run, setSearchParams]);
 
   return (
-    <button
+    <Button
       type="button"
+      variant="secondary"
+      size="sm"
       onClick={() => void run()}
       disabled={busy}
+      aria-busy={busy}
       title={t('financeExport.hint')}
-      className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 disabled:opacity-50"
+      className="inline-flex items-center gap-2"
     >
       <DownloadIcon className="h-4 w-4" />
       {t('financeExport.button')}
-    </button>
+    </Button>
   );
 }

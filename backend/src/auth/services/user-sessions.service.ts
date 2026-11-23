@@ -4,7 +4,7 @@ import {
   Optional,
   UnauthorizedException,
 } from '@nestjs/common';
-import { randomUUID, timingSafeEqual } from 'crypto';
+import { randomUUID } from 'crypto';
 import {
   Prisma,
   SecurityEventType,
@@ -17,6 +17,7 @@ import { SecurityLogsService } from '../../security-logs/security-logs.service';
 import { RefreshTokenCodec } from '../refresh-token.codec';
 import { maskIp, truncateUserAgent } from '../session-client.util';
 import { runInBackground } from '../../common/background.util';
+import { safeEqual } from '../../common/safe-equal.util';
 import { NewDeviceAlertService } from './new-device-alert.service';
 import {
   GRACE_WINDOW_MS,
@@ -76,12 +77,6 @@ const MAX_LISTED_SESSIONS = 100;
 const DEFAULT_REFRESH_METHOD = 'POST';
 const DEFAULT_REFRESH_PATH = '/auth/refresh';
 const INVALID_REFRESH_MESSAGE = 'Session expired. Please log in again.';
-
-function hashesMatch(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
-}
 
 // Ultima rotacao de uma sessao, para a tolerancia a resposta perdida.
 // graceSpent: esta entrada ja nasceu de uma rotacao por tolerancia e nao
@@ -318,7 +313,7 @@ export class UserSessionsService {
 
     // Token com mac valido mas que ja nao e o atual: reutilizacao, salvo se
     // for o retry de uma resposta perdida (tolerancia, ver a classe).
-    const viaGrace = !hashesMatch(session.refreshTokenHash, presentedHash);
+    const viaGrace = !safeEqual(session.refreshTokenHash, presentedHash);
     if (viaGrace && !this.isGraceRetry(sessionId, presentedHash, now)) {
       await tx.userSession.updateMany({
         where: { id: sessionId, revokedAt: null },
@@ -407,7 +402,7 @@ export class UserSessionsService {
       !memory.graceSpent &&
       elapsed >= 0 &&
       elapsed <= GRACE_WINDOW_MS &&
-      hashesMatch(memory.previousHash, presentedHash)
+      safeEqual(memory.previousHash, presentedHash)
     );
   }
 

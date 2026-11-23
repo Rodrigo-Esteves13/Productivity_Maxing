@@ -25,7 +25,7 @@ export const finance: Record<string, string> = {
   "finance.entries": "本月",
   "finance.noEntries": "本月还没有记录。",
   "finance.deleteEntry": "删除记录",
-  "finance.deleteEntryConfirm": "删除这条 {amount} 的记录？此操作无法撤销。",
+  "finance.deleteEntryConfirm": "删除这条 {amount} 的记录？删除后可立即撤销。",
   "finance.byCategory": "按类别支出",
   "finance.cat.SALARY": "工资",
   "finance.cat.ALLOWANCE": "零用钱",

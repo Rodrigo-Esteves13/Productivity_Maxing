@@ -21,7 +21,7 @@ export default function PersonRow({ person, subtitle, to, children }: Props) {
         <Link to={to} className="group flex min-w-0 items-center gap-3">
           <PersonAvatar name={name} avatarUrl={person.avatarUrl} />
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-white group-hover:text-violet-300">{name}</p>
+            <p title={name} className="truncate text-sm font-medium text-white group-hover:text-violet-300">{name}</p>
             {subtitle && <div className="text-xs text-neutral-500">{subtitle}</div>}
           </div>
         </Link>
@@ -29,7 +29,7 @@ export default function PersonRow({ person, subtitle, to, children }: Props) {
         <div className="flex min-w-0 items-center gap-3">
           <PersonAvatar name={name} avatarUrl={person.avatarUrl} />
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-white">{name}</p>
+            <p title={name} className="truncate text-sm font-medium text-white">{name}</p>
             {subtitle && <div className="text-xs text-neutral-500">{subtitle}</div>}
           </div>
         </div>

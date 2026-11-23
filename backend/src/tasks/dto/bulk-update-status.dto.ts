@@ -7,6 +7,7 @@ import {
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { ProgressStatus } from '@prisma/client';
+import { TASK_BULK_MAX } from '../tasks.constants';
 
 // Bulk equivalent of PATCH /tasks/:id with just { progressStatus }. Kept
 // deliberately narrow (only this one field) instead of a generic bulk
@@ -18,11 +19,11 @@ export class BulkUpdateStatusDto {
   @ApiProperty({
     type: [String],
     example: ['b3f1c2d4-...', 'a9e8d7c6-...'],
-    description: 'IDs of the tasks to update (max 200 per request).',
+    description: `IDs of the tasks to update (max ${TASK_BULK_MAX} per request).`,
   })
   @IsArray()
   @ArrayNotEmpty()
-  @ArrayMaxSize(200)
+  @ArrayMaxSize(TASK_BULK_MAX)
   @IsUUID('4', { each: true })
   ids!: string[];
 

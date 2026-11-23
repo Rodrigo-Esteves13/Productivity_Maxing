@@ -262,6 +262,6 @@ export const fase7: Record<string, string> = {
   'canvas.paste': "Coller",
   'canvas.duplicate': "Dupliquer",
   'canvas.deleteSelection': "Supprimer la sélection",
-  'notes.deleteConfirm': "Supprimer « {title} » ? C'est définitif.",
+  'notes.deleteConfirm': "Supprimer « {title} » ? Tu peux annuler juste après.",
   'wellbeing.blood.deleteConfirm': "Supprimer le don du {date} ? C'est définitif.",
 };

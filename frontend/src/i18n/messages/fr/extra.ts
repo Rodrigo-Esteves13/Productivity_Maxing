@@ -69,7 +69,7 @@ export const extra: Record<string, string> = {
   "hook.couldNotLoadTheData": "Impossible de charger les données.",
   "hook.taskCreatedButTheChecklistCould": "Tâche créée, mais la liste de contrôle n’a pas pu être enregistrée.",
   "hook.deleteTask": "Supprimer la tâche",
-  "hook.areYouSureYouWantTo": "Tu es sûr de vouloir supprimer cette tâche ? Cette action est irréversible.",
+  "hook.areYouSureYouWantTo": "Tu es sûr de vouloir supprimer cette tâche ? Tu peux annuler juste après.",
   "hook.googleCalendar": "Google Agenda",
   "hook.alsoRemoveTheLinkedEventFrom": "Supprimer aussi l’événement lié dans Google Agenda ?",
   "hook.removeEvent": "Supprimer l’événement",

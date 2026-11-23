@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { getUserAreas, getTaskMetadata, importTasks } from '../api/userService';
 import { getPrograms, getProgramPeriods } from '../api/academicService';
 import { parseSpreadsheetFile, mapImportRows, toSheetRowNumbers } from '../utils/parseTaskImportFile';
-import type { AcademicPeriod, ImportTasksResult } from '../types/models';
+import type { AcademicPeriod, ImportTaskRow, ImportTasksResult } from '../types/models';
 import { translateNow } from '../i18n/translate';
 
-export type ImportStage = 'idle' | 'reading' | 'importing' | 'done' | 'error';
+// 'preview': ficheiro lido e validado, a espera de o utilizador confirmar.
+export type ImportStage = 'idle' | 'reading' | 'preview' | 'importing' | 'done' | 'error';
 
 // Must match the backend's @ArrayMaxSize(500) on ImportTasksDto.rows (see
 // backend/src/tasks/dto/import-tasks.dto.ts). Checked here too so an
@@ -23,6 +24,15 @@ export interface ImportOutcome {
   backendResult: ImportTasksResult | null;
 }
 
+// Linhas prontas a enviar (e a sua posicao na folha) depois de lido o ficheiro.
+interface ImportPreview {
+  rows: ImportTaskRow[];
+  sheetRows: number[];
+  parseErrors: ParseError[];
+}
+
+// Two steps: prepare(file) reads and validates (stage 'preview'), then
+// confirmImport() sends the valid rows.
 // Orchestrates: fetch the user's Areas + task-type catalog -> parse the
 // uploaded spreadsheet -> map its human-readable columns to backend IDs/keys
 // -> POST the well-formed rows -> surface both parse-time and backend
@@ -31,14 +41,17 @@ export function useTaskImport() {
   const [stage, setStage] = useState<ImportStage>('idle');
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [preview, setPreview] = useState<ImportPreview | null>(null);
 
   const reset = () => {
     setStage('idle');
     setOutcome(null);
     setErrorMessage(null);
+    setPreview(null);
   };
 
-  const runImport = async (file: File) => {
+  const prepare = async (file: File) => {
+    setPreview(null);
     setStage('reading');
     setErrorMessage(null);
     setOutcome(null);
@@ -80,21 +93,33 @@ export function useTaskImport() {
         return;
       }
 
-      setStage('importing');
+      setPreview({ rows, sheetRows, parseErrors });
+      setStage('preview');
+    } catch (err) {
+      console.error('Task import failed:', err);
+      setErrorMessage(translateNow('hook.taskImportFailed'));
+      setStage('error');
+    }
+  };
+
+  const confirmImport = async () => {
+    if (!preview) return;
+    const { rows, sheetRows, parseErrors } = preview;
+    setStage('importing');
+    try {
       const sent = await importTasks(rows);
       // Numeros de linha do backend = posicao no array enviado; converte
       // para a linha da folha (as linhas com erro de parse nao foram enviadas).
       const backendResult = { ...sent, results: toSheetRowNumbers(sent.results, sheetRows) };
       setOutcome({ parseErrors, backendResult });
+      setPreview(null);
       setStage('done');
     } catch (err) {
       console.error('Task import failed:', err);
-      setErrorMessage(
-        translateNow('hook.taskImportFailed'),
-      );
+      setErrorMessage(translateNow('hook.taskImportFailed'));
       setStage('error');
     }
   };
 
-  return { stage, outcome, errorMessage, runImport, reset };
+  return { stage, outcome, errorMessage, preview, prepare, confirmImport, reset };
 }

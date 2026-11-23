@@ -4,6 +4,8 @@ import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import Breadcrumbs from '../components/UI/Breadcrumbs';
 import Button from '../components/UI/Button';
+import Input from '../components/UI/Input';
+import Modal from '../components/UI/Modal';
 import ErrorState from '../components/UI/ErrorState';
 import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import QuizHome from '../components/Quizzes/QuizHome';
@@ -16,6 +18,7 @@ import {
   deleteQuiz,
   dismissQuizWrong,
   getQuiz,
+  renameQuiz,
   resetQuizStats,
   submitQuizAttempt,
   updateQuizGenerators,
@@ -36,6 +39,7 @@ import { useI18n } from '../i18n/useI18n';
 import { chunkCards } from '../lib/flashcardImport';
 import { stripQuizMarkdown } from '../lib/quizMarkdown';
 import type { Quiz, QuizQuestion } from '../lib/quizFormat';
+import { QUIZ_TITLE_MAX } from '../lib/quizFormat';
 import { QuizFiguresContext } from '../lib/quizFigures';
 import { enabledKinds, withGenerated } from '../lib/quizPlay';
 import { parseGeneratedId, statKeyOf, type GeneratorKind } from '../lib/quizGenerators';
@@ -97,6 +101,8 @@ function QuizDetailContent() {
   const [view, setView] = useState<View>('home');
   const [finished, setFinished] = useState<FinishedAttempt | null>(null);
   const [isSendingCards, setIsSendingCards] = useState(false);
+  const [renameDraft, setRenameDraft] = useState<string | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
   const confirm = useConfirmAction(t('quizzes.deleteError'));
   const resetConfirm = useConfirmAction(t('quizzes.reset.error'));
   // Titulo de uma linha: o ficheiro pode trazer **marcas** (de <b>) que aqui nao se desenham.
@@ -284,6 +290,26 @@ function QuizDetailContent() {
     }
   };
 
+  const submitRename = async () => {
+    const next = (renameDraft ?? '').trim();
+    if (!next || isRenaming) return;
+    if (quiz && next === quiz.title) {
+      setRenameDraft(null);
+      return;
+    }
+    setIsRenaming(true);
+    try {
+      await renameQuiz(quizId, next);
+      setQuiz((prev) => prev && { ...prev, title: next });
+      setRenameDraft(null);
+      notify(t('quickWins.quizRenamed'), 'success');
+    } catch {
+      notify(t('quickWins.quizRenameError'), 'error');
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
   const requestDelete = () =>
     confirm.request({
       title: t('quizzes.delete'),
@@ -325,6 +351,9 @@ function QuizDetailContent() {
                   {quiz.isShared ? t('quizzes.share.buttonActive') : t('quizzes.share.button')}
                 </Button>
               )}
+              <Button variant="secondary" size="sm" onClick={() => setRenameDraft(quiz.title)}>
+                {t('quickWins.quizRename')}
+              </Button>
               <Button variant="secondary" size="sm" onClick={requestDelete}>
                 {t('quizzes.delete')}
               </Button>
@@ -332,6 +361,31 @@ function QuizDetailContent() {
           ) : null
         }
       />
+      <Modal isOpen={renameDraft !== null} onClose={() => setRenameDraft(null)} title={t('quickWins.quizRenameTitle')}>
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submitRename();
+          }}
+        >
+          <Input
+            label={t('quickWins.quizRenameLabel')}
+            value={renameDraft ?? ''}
+            maxLength={QUIZ_TITLE_MAX}
+            onChange={(e) => setRenameDraft(e.target.value)}
+            autoFocus
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setRenameDraft(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" disabled={isRenaming || !(renameDraft ?? '').trim()}>
+              {t('common.save')}
+            </Button>
+          </div>
+        </form>
+      </Modal>
       {quiz && !quiz.sharedBy && (
         <QuizShareModal
           quizId={quizId}
@@ -372,10 +426,18 @@ function QuizDetailContent() {
             onStart={start}
             onResume={() => setView('run')}
             onFinishNow={() => void finish()}
-            onDiscard={() => {
-              clear();
-              stopQuizFocus();
-            }}
+            onDiscard={() =>
+              resetConfirm.request({
+                title: t('confirmGuard.discardAttempt.title'),
+                message: t('confirmGuard.discardAttempt.message'),
+                confirmLabel: t('confirmGuard.discardAttempt.confirm'),
+                tone: 'danger',
+                run: async () => {
+                  clear();
+                  stopQuizFocus();
+                },
+              })
+            }
             lastWrongAnswers={lastWrong.answers}
             lastExamIds={lastExam.ids}
             onReset={requestReset}

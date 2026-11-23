@@ -31,6 +31,8 @@ const PERIOD = {
 };
 const ROUNDING_PERIOD = { ...PERIOD, program: { roundInterimGrades: true } };
 
+const CLASS_DAY = new Date('2026-09-10T00:00:00.000Z');
+
 const RULES = { presetKey: 'test' } as unknown as CourseRiskInput['rules'];
 
 interface TaskRow {
@@ -77,6 +79,7 @@ interface Db {
   occurrences: {
     subject: string;
     attended: boolean | null;
+    date: Date;
     _count: { _all: number };
   }[];
 }
@@ -449,8 +452,13 @@ describe('CourseRiskService', () => {
     ];
     db.links = [{ userId: USER_A, areaId: 'area-1', scheduleSubject: 'MAT' }];
     db.occurrences = [
-      { subject: 'MAT', attended: true, _count: { _all: 6 } },
-      { subject: 'MAT', attended: false, _count: { _all: 2 } },
+      { subject: 'MAT', attended: true, date: CLASS_DAY, _count: { _all: 6 } },
+      {
+        subject: 'MAT',
+        attended: false,
+        date: CLASS_DAY,
+        _count: { _all: 2 },
+      },
     ];
     const { service } = build(db);
 
@@ -463,6 +471,52 @@ describe('CourseRiskService', () => {
     expect(input.absenceSharePct).toBe(25);
     expect(input.absenceLimitPct).toBe(40);
     expect(input.teacher).toBeNull();
+  });
+
+  it('loads attendance with one groupBy and splits it per period window', async () => {
+    const db = emptyDb();
+    const LATER = {
+      ...PERIOD,
+      startDate: new Date('2026-09-20T00:00:00.000Z'),
+    };
+    db.areas.push({ id: 'area-2', name: 'Physics', colorHex: '#222222' });
+    db.tasks = [
+      task({}),
+      task({ areaId: 'area-2', periodId: 'p2', period: LATER }),
+    ];
+    db.links = [
+      { userId: USER_A, areaId: 'area-1', scheduleSubject: 'MAT' },
+      { userId: USER_A, areaId: 'area-2', scheduleSubject: 'FIS' },
+    ];
+    db.occurrences = [
+      { subject: 'MAT', attended: false, date: CLASS_DAY, _count: { _all: 1 } },
+      { subject: 'MAT', attended: true, date: CLASS_DAY, _count: { _all: 3 } },
+      // antes do inicio do periodo da FIS: tem de ser ignorada
+      { subject: 'FIS', attended: false, date: CLASS_DAY, _count: { _all: 9 } },
+      {
+        subject: 'FIS',
+        attended: true,
+        date: new Date('2026-09-25T00:00:00.000Z'),
+        _count: { _all: 4 },
+      },
+    ];
+    const { service, prisma } = build(db);
+
+    await service.list(USER_A);
+
+    expect(prisma.classOccurrence.groupBy).toHaveBeenCalledTimes(1);
+    const args = (
+      prisma.classOccurrence.groupBy.mock.calls[0] as unknown as [
+        { by: string[]; where: { subject: { in: string[] } } },
+      ]
+    )[0];
+    expect(args.by).toEqual(['subject', 'attended', 'date']);
+    expect([...args.where.subject.in].sort()).toEqual(['FIS', 'MAT']);
+    const shares = Object.fromEntries(
+      engine.mock.calls.map(([input]) => [input.areaId, input.absenceSharePct]),
+    );
+    expect(shares['area-1']).toBe(25);
+    expect(shares['area-2']).toBe(0);
   });
 
   it('uses the default absence limit and null absence without linked classes', async () => {

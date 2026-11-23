@@ -67,6 +67,7 @@ export function useAreasPage() {
   const fetchAll = useCallback(async () => {
     try {
       setIsLoading(true);
+      setError('');
       const [areasData, meta, proposalsData] = await Promise.all([
         getUserAreas(undefined, true),
         getTaskMetadata(),
@@ -121,6 +122,7 @@ export function useAreasPage() {
         createMode === 'official' ? await createOfficialArea(values) : await createArea(values);
       setAreas((prev) => [...prev, created]);
       setCreateMode(null);
+      notify(translateNow('quickWins.areaCreated', { name: created.name }), 'success');
     } catch (err) {
       notify(errorMessage(err, translateNow('hook.errorCreatingArea')), 'error');
     } finally {
@@ -134,6 +136,7 @@ export function useAreasPage() {
     try {
       replaceArea(await updateArea(selectedArea.id, values));
       setIsEditing(false);
+      notify(translateNow('quickWins.areaSaved'), 'success');
     } catch (err) {
       notify(errorMessage(err, translateNow('hook.errorSavingChanges')), 'error');
     } finally {
@@ -174,11 +177,43 @@ export function useAreasPage() {
     }
   };
 
+  const undoHideAllOfficial = async (previous: Area[], alreadyHidden: string[]) => {
+    try {
+      await setAllOfficialAreasHidden(false);
+      await Promise.all(alreadyHidden.map((id) => setAreaHidden(id, true)));
+      setAreas(previous);
+    } catch (err) {
+      notify(errorMessage(err, translateNow('undo.failed')), 'error');
+    }
+  };
+
   const handleToggleAllOfficial = async (hidden: boolean) => {
+    if (hidden) {
+      const confirmed = await confirm({
+        title: translateNow('safeActions.hideAllOfficial.title'),
+        message: translateNow('safeActions.hideAllOfficial.message', {
+          count: areas.filter((a) => a.isOfficial && !a.isHidden).length,
+        }),
+        confirmLabel: translateNow('safeActions.hideAllOfficial.confirm'),
+        tone: 'danger',
+      });
+      if (!confirmed) return;
+    }
     const previous = areas;
     setAreas((prev) => prev.map((a) => (a.isOfficial ? { ...a, isHidden: hidden } : a)));
     try {
       await setAllOfficialAreasHidden(hidden);
+      const message = translateNow(hidden ? 'quickWins.officialAreasHidden' : 'quickWins.officialAreasShown');
+      // Anular so ao esconder: repoe as oficiais que ja estavam escondidas antes.
+      if (hidden) {
+        const alreadyHidden = previous.filter((a) => a.isOfficial && a.isHidden).map((a) => a.id);
+        notify(message, 'success', {
+          label: translateNow('undo.action'),
+          onAction: () => void undoHideAllOfficial(previous, alreadyHidden),
+        });
+      } else {
+        notify(message, 'success');
+      }
     } catch (err) {
       setAreas(previous);
       notify(errorMessage(err, translateNow('hook.couldNotChangeTheOfficialAreas')), 'error');
@@ -203,6 +238,7 @@ export function useAreasPage() {
   const handleWithdraw = async (area: Area) => {
     try {
       replaceArea(await withdrawAreaProposal(area.id));
+      notify(translateNow('quickWins.proposalWithdrawn'), 'success');
     } catch (err) {
       notify(errorMessage(err, translateNow('hook.couldNotWithdrawTheProposal')), 'error');
     }
@@ -222,6 +258,7 @@ export function useAreasPage() {
     try {
       await rejectAreaProposal(proposal.id, note);
       setProposals((prev) => prev.filter((p) => p.id !== proposal.id));
+      notify(translateNow('quickWins.proposalRejected'), 'success');
     } catch (err) {
       notify(errorMessage(err, translateNow('hook.couldNotReject')), 'error');
     }
@@ -284,6 +321,7 @@ export function useAreasPage() {
     taskTypes,
     isLoading,
     error,
+    reload: fetchAll,
     createMode,
     selectedArea,
     isEditing,

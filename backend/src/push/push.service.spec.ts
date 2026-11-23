@@ -177,12 +177,11 @@ describe('PushService muted kinds', () => {
             p256dh: 'a',
             auth: 'b',
             lang: 'en',
+            user: { mutedPushKinds: muted },
           },
         ]),
       },
-      user: {
-        findUnique: jest.fn().mockResolvedValue({ mutedPushKinds: muted }),
-      },
+      user: { findUnique: jest.fn() },
     };
     const service = new PushService(prisma as never);
     (service as unknown as { enabled: boolean }).enabled = true;
@@ -195,7 +194,15 @@ describe('PushService muted kinds', () => {
       url: '/',
     });
     expect(delivered).toBe(1);
-    expect(prisma.user.findUnique).toHaveBeenCalledTimes(1);
+    // Subscricoes e silenciados vem na mesma query: nenhuma leitura extra.
+    expect(prisma.pushSubscription.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.pushSubscription.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'u1' },
+        include: { user: { select: { mutedPushKinds: true } } },
+      }),
+    );
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
 
   it('never looks up mutes for kinds that cannot be muted', async () => {

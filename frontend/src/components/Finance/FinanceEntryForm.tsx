@@ -298,7 +298,7 @@ export default function FinanceEntryForm({ accounts, defaultDate, entry, initial
       <div className="flex flex-wrap items-center gap-3">
         <FinanceSubmitButton isSubmitting={isSubmitting}>{entry ? t('finance.save') : t('finance.addEntry')}</FinanceSubmitButton>
         {onDone && entry && (
-          <button type="button" onClick={onDone} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+          <button type="button" onClick={onDone} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
             {t('common.cancel')}
           </button>
         )}

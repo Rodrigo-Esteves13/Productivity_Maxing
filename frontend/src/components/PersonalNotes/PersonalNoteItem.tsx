@@ -27,7 +27,9 @@ function reminderState(note: PersonalNote, now: number): ReminderState | null {
   return Date.parse(note.remindAt) <= now ? 'due' : 'upcoming';
 }
 
-const LINK_BUTTON = 'text-xs text-violet-300 hover:text-violet-200';
+// Alvo de toque de 44px em ecras de toque.
+const LINK_BUTTON =
+  'inline-flex items-center text-xs text-violet-300 hover:text-violet-200 pointer-coarse:min-h-11 pointer-coarse:px-2';
 
 interface PersonalNoteItemProps {
   note: PersonalNote;
@@ -66,7 +68,7 @@ function PersonalNoteItem({ note, onUpdate, onRemove }: PersonalNoteItemProps) {
           checked={isDone}
           onChange={() => void onUpdate(note.id, { done: !isDone })}
           aria-label={isDone ? t('notes.markUndone') : t('notes.markDone')}
-          className="mt-1 h-4 w-4 accent-violet-500"
+          className="mt-1 h-4 w-4 accent-violet-500 pointer-coarse:h-6 pointer-coarse:w-6"
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -84,7 +86,7 @@ function PersonalNoteItem({ note, onUpdate, onRemove }: PersonalNoteItemProps) {
           </div>
           {/* Texto do utilizador: nunca como HTML. */}
           {note.body && <p className="mt-1 whitespace-pre-wrap break-words text-sm text-neutral-300">{note.body}</p>}
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 pointer-coarse:gap-x-2">
             <button type="button" className={LINK_BUTTON} onClick={() => setIsEditing(true)}>
               {t('notes.edit')}
             </button>

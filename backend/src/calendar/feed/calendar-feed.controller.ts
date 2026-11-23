@@ -9,22 +9,18 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiQuery,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../auth/interfaces/authenticated-user.interface';
+import { CalendarFeedService, parseFeedScope } from './calendar-feed.service';
+import { CalendarFeedQueryDto } from '../dto/calendar-feed-query.dto';
 import {
-  CalendarFeedService,
-  FEED_SCOPES,
-  parseFeedScope,
-} from './calendar-feed.service';
+  CALENDAR_FEED_READ_PER_MINUTE,
+  CALENDAR_FEED_ROTATE_PER_MINUTE,
+} from '../schedule-sync.constants';
 import { perMinute } from '../../common/throttle.util';
 
 // Gestão do link (precisa de sessão). O feed em si é o controller abaixo.
@@ -45,7 +41,7 @@ export class CalendarFeedManageController {
 
   @Post()
   @HttpCode(200)
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(CALENDAR_FEED_ROTATE_PER_MINUTE))
   @ApiOperation({
     summary:
       'Turns the feed on, or rotates the secret (the old link stops working).',
@@ -70,26 +66,20 @@ export class CalendarFeedPublicController {
   constructor(private readonly feedService: CalendarFeedService) {}
 
   @Get(':file')
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(CALENDAR_FEED_READ_PER_MINUTE))
   @ApiOperation({
     summary:
       'Read-only .ics feed for calendar subscriptions. :file = <token>.ics',
   })
-  @ApiQuery({
-    name: 'only',
-    required: false,
-    enum: FEED_SCOPES,
-    description: 'tasks = only task deadlines (no classes, shifts or study).',
-  })
   async getFeed(
     @Param('file') file: string,
-    @Query('only') only: string | undefined,
+    @Query() query: CalendarFeedQueryDto,
     @Res() res: Response,
   ) {
     const token = file.endsWith('.ics') ? file.slice(0, -4) : file;
     const body = await this.feedService.buildFeedForToken(
       token,
-      parseFeedScope(only),
+      parseFeedScope(query.only),
     );
     res
       .status(200)

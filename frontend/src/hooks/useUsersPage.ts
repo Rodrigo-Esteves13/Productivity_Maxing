@@ -151,6 +151,7 @@ export function useUsersPage(currentUserId: string | undefined) {
 
   return {
     users,
+    reload: fetchUsers,
     isLoading,
     error,
     editingUser,

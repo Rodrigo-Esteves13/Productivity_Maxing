@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getMoodLogs, saveMoodLog } from '../api/wellbeingService';
+import { deleteMoodLog, getMoodLogs, saveMoodLog } from '../api/wellbeingService';
 import { toDateKey } from '../lib/dateKey';
 import { MS_PER_DAY } from '../lib/timeConstants';
 import { useLisbonToday } from './useLisbonToday';
@@ -24,6 +24,8 @@ export function useMoodToday() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // Sobe para voltar a carregar o dia atual (botao "Tentar de novo").
+  const [reloadCount, setReloadCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +45,7 @@ export function useMoodToday() {
     return () => {
       cancelled = true;
     };
-  }, [day]);
+  }, [day, reloadCount]);
 
   const save = useCallback(
     async (input: UpsertMoodInput): Promise<boolean> => {
@@ -61,12 +63,28 @@ export function useMoodToday() {
     [day],
   );
 
+  // Apaga o registo do dia (um registo errado deixa de ficar para sempre).
+  const clear = useCallback(async (): Promise<boolean> => {
+    setIsSaving(true);
+    try {
+      await deleteMoodLog(day);
+      setEntry({ day, log: null });
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [day]);
+
   return {
     today,
     day,
     dayOffset,
     setDayOffset: (offset: number) => setDayOffset(Math.min(MOOD_MAX_PAST_DAYS, Math.max(0, offset))),
     log, isLoading, error, isSaving,
+    reload: () => setReloadCount((n) => n + 1),
     save,
+    clear,
   };
 }

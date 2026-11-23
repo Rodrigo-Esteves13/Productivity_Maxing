@@ -6,7 +6,7 @@ import type { HeatmapCell } from '../../types/models';
 import { weekdayLabel } from '../../lib/timeFormat';
 import { useI18n } from '../../i18n/useI18n';
 import Card from '../UI/Card';
-import { useActiveStudySession } from '../../context/useActiveStudySession';
+import { useStudyDataKey } from '../../hooks/useSessionEndKey';
 
 const DAYS_OF_WEEK = [0, 1, 2, 3, 4, 5, 6];
 const HOUR_BUCKET_LABELS = ['00-04', '04-08', '08-12', '12-16', '16-20', '20-24'];
@@ -25,8 +25,8 @@ function intensityClass(minutes: number, maxMinutes: number): string {
 
 export default function BestTimesHeatmap() {
   const { t } = useI18n();
-  const { activeSession } = useActiveStudySession();
-  const { cells, isLoading, error, hasAnyData } = useBestTimesHeatmap(activeSession?.id ?? null);
+  const studyKey = useStudyDataKey();
+  const { cells, isLoading, error, hasAnyData } = useBestTimesHeatmap(studyKey);
 
   const maxMinutes = Math.max(0, ...cells.map((c) => c.totalMinutes));
 

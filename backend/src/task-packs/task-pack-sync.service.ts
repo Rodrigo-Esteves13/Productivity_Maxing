@@ -113,6 +113,21 @@ const SHARED_TASK_SELECT = {
   submissionDate: true,
 } satisfies Prisma.TaskSelect;
 
+const IMPORTED_TASK_SELECT = {
+  id: true,
+  userId: true,
+  packItemId: true,
+  ...SHARED_TASK_SELECT,
+  packUpdates: {
+    where: { status: TaskPackUpdateStatus.PENDING },
+    select: { id: true, changes: true },
+  },
+} satisfies Prisma.TaskSelect;
+
+type ImportedTaskRow = Prisma.TaskGetPayload<{
+  select: typeof IMPORTED_TASK_SELECT;
+}>;
+
 @Injectable()
 export class TaskPackSyncService {
   constructor(
@@ -161,26 +176,20 @@ export class TaskPackSyncService {
     let proposalsCreated = 0;
     const notifyUserIds = new Set<string>();
 
-    for (const item of pack.items) {
-      if (!item.sourceTask) continue;
-      const prev = fromItem(item);
-      const next = fromTask(item.sourceTask);
-      const itemChanges = diffShared(prev, next);
-      if (Object.keys(itemChanges).length === 0) continue;
+    const changedItems = pack.items.flatMap((item) => {
+      if (!item.sourceTask) return [];
+      const itemChanges = diffShared(fromItem(item), fromTask(item.sourceTask));
+      if (Object.keys(itemChanges).length === 0) return [];
+      return [{ item, next: fromTask(item.sourceTask), itemChanges }];
+    });
+    // Um so pedido para as tasks importadas de todos os itens alterados.
+    const importedByItem = await this.loadImportedTasks(
+      changedItems.map((c) => c.item.id),
+    );
 
+    for (const { item, next, itemChanges } of changedItems) {
       const version = item.version + 1;
-      const importedTasks = await this.prisma.task.findMany({
-        where: { packItemId: item.id },
-        select: {
-          id: true,
-          userId: true,
-          ...SHARED_TASK_SELECT,
-          packUpdates: {
-            where: { status: TaskPackUpdateStatus.PENDING },
-            select: { id: true, changes: true },
-          },
-        },
-      });
+      const importedTasks = importedByItem.get(item.id) ?? [];
 
       const writes: Prisma.PrismaPromise<unknown>[] = [
         this.prisma.taskPackItem.update({
@@ -257,6 +266,22 @@ export class TaskPackSyncService {
     return { updatedItems, proposalsCreated };
   }
 
+  private async loadImportedTasks(packItemIds: string[]) {
+    const byItem = new Map<string, ImportedTaskRow[]>();
+    if (packItemIds.length === 0) return byItem;
+    const tasks = await this.prisma.task.findMany({
+      where: { packItemId: { in: packItemIds } },
+      select: IMPORTED_TASK_SELECT,
+    });
+    for (const task of tasks) {
+      if (!task.packItemId) continue;
+      const list = byItem.get(task.packItemId) ?? [];
+      list.push(task);
+      byItem.set(task.packItemId, list);
+    }
+    return byItem;
+  }
+
   /**
    * Pacotes criados antes de haver sync nao sabem de que task do dono veio
    * cada item, nem que tasks dos colegas vieram dele. Liga-os uma vez, antes
@@ -278,41 +303,70 @@ export class TaskPackSyncService {
         version: true,
       },
     });
-    for (const item of items) {
-      const candidates = await this.prisma.task.findMany({
+    if (items.length === 0) return;
+    const titles = [...new Set(items.map((i) => i.title))];
+    const dates = [...new Set(items.map((i) => i.dueDate))];
+    // Um findMany para as origens (tasks do dono) e outro para as tasks
+    // importadas ainda sem ligacao, em vez de dois por item.
+    const [ownerTasks, orphanTasks] = await Promise.all([
+      this.prisma.task.findMany({
+        where: { userId: ownerId, title: { in: titles } },
+        select: { id: true, title: true, date: true, areaId: true },
+      }),
+      this.prisma.task.findMany({
         where: {
-          userId: ownerId,
-          title: item.title,
-          ...(item.areaId ? { areaId: item.areaId } : {}),
+          userId: { not: ownerId },
+          packItemId: null,
+          title: { in: titles },
+          date: { in: dates },
         },
-        select: { id: true, date: true },
-      });
+        select: { id: true, title: true, date: true, areaId: true },
+      }),
+    ]);
+    const sameArea = (itemAreaId: string | null, taskAreaId: string | null) =>
+      !itemAreaId || taskAreaId === itemAreaId;
+    // Cada task importada so e ligada ao primeiro item que a reclama.
+    const claimed = new Set<string>();
+    const writes: Prisma.PrismaPromise<unknown>[] = [];
+    for (const item of items) {
       const distance = (d: Date) =>
         Math.abs(d.getTime() - item.dueDate.getTime());
-      const source = candidates.sort(
-        (a, b) => distance(a.date) - distance(b.date),
-      )[0];
-      await this.prisma.$transaction([
-        ...(source
-          ? [
-              this.prisma.taskPackItem.update({
-                where: { id: item.id },
-                data: { sourceTaskId: source.id },
-              }),
-            ]
-          : []),
+      const source = ownerTasks
+        .filter(
+          (t) => t.title === item.title && sameArea(item.areaId, t.areaId),
+        )
+        .sort((a, b) => distance(a.date) - distance(b.date))[0];
+      if (source) {
+        writes.push(
+          this.prisma.taskPackItem.update({
+            where: { id: item.id },
+            data: { sourceTaskId: source.id },
+          }),
+        );
+      }
+      const matchedIds = orphanTasks
+        .filter(
+          (t) =>
+            !claimed.has(t.id) &&
+            t.title === item.title &&
+            t.date.getTime() === item.dueDate.getTime() &&
+            sameArea(item.areaId, t.areaId),
+        )
+        .map((t) => t.id);
+      if (matchedIds.length === 0) continue;
+      matchedIds.forEach((id) => claimed.add(id));
+      writes.push(
         this.prisma.task.updateMany({
           where: {
+            id: { in: matchedIds },
             userId: { not: ownerId },
             packItemId: null,
-            title: item.title,
-            date: item.dueDate,
-            ...(item.areaId ? { areaId: item.areaId } : {}),
           },
           data: { packItemId: item.id, packItemVersion: item.version },
         }),
-      ]);
+      );
     }
+    if (writes.length > 0) await this.prisma.$transaction(writes);
   }
 
   async listPending(userId: string): Promise<PackUpdateView[]> {

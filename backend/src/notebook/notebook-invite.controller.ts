@@ -17,6 +17,11 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 import { NotebookInviteService } from './notebook-invite.service';
 import { InviteFriendDto, RespondInviteDto } from './dto/share-invite.dto';
 import { perMinute } from '../common/throttle.util';
+import {
+  NOTEBOOK_ACCESS_REMOVALS_PER_MINUTE,
+  NOTEBOOK_INVITES_PER_MINUTE,
+  NOTEBOOK_INVITE_RESPONSES_PER_MINUTE,
+} from './notebook.constants';
 
 // Convites de amigos para UMA nota (editor / co-owner / leitor). Controller
 // a parte: rotas com sessao obrigatoria, ao contrario de /notebook/shared/:token.
@@ -29,7 +34,7 @@ export class NotebookInviteController {
 
   @Post('entries/:id/share/invite')
   @HttpCode(HttpStatus.OK)
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(NOTEBOOK_INVITES_PER_MINUTE))
   @ApiOperation({ summary: 'Invite a friend to this note with a role.' })
   invite(
     @CurrentUser() user: AuthenticatedUser,
@@ -40,7 +45,7 @@ export class NotebookInviteController {
   }
 
   @Delete('entries/:id/share/access/:requestId')
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(NOTEBOOK_ACCESS_REMOVALS_PER_MINUTE))
   @ApiOperation({ summary: 'Remove someone’s access (or cancel an invite).' })
   removeAccess(
     @CurrentUser() user: AuthenticatedUser,
@@ -52,7 +57,7 @@ export class NotebookInviteController {
 
   @Post('invitations/:requestId/respond')
   @HttpCode(HttpStatus.OK)
-  @Throttle(perMinute(20))
+  @Throttle(perMinute(NOTEBOOK_INVITE_RESPONSES_PER_MINUTE))
   @ApiOperation({ summary: 'Accept or decline an invitation to a note.' })
   respond(
     @CurrentUser() user: AuthenticatedUser,

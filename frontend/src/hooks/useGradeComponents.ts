@@ -11,6 +11,7 @@ import {
   type GradeEntryInput,
 } from '../api/gradeComponentsService';
 import { useI18n } from '../i18n/useI18n';
+import { useUndoableDelete } from './useUndoableDelete';
 
 // Componentes de nota de UMA cadeira num periodo concreto. As funcoes de
 // escrita lancam o erro (o painel mostra a mensagem do servidor) e, quando
@@ -18,6 +19,7 @@ import { useI18n } from '../i18n/useI18n';
 // agregada recalculada).
 export function useGradeComponents(areaId: string, periodId: string | null) {
   const { t } = useI18n();
+  const offerUndoDelete = useUndoableDelete();
   const [components, setComponents] = useState<GradeComponent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -87,9 +89,21 @@ export function useGradeComponents(areaId: string, periodId: string | null) {
 
   const removeEntry = useCallback(
     async (componentId: string, entryId: string) => {
+      const entry = components.find((c) => c.id === componentId)?.entries?.find((e) => e.id === entryId);
       replace(await removeGradeEntry(componentId, entryId));
+      if (!entry) return;
+      offerUndoDelete({
+        message: t('undoDelete.gradeEntry'),
+        restore: () =>
+          addGradeEntry(componentId, {
+            grade: entry.grade,
+            ...(entry.label ? { label: entry.label } : {}),
+            ...(entry.date ? { date: entry.date.slice(0, 10) } : {}),
+          }),
+        onRestored: replace,
+      });
     },
-    [replace],
+    [components, replace, offerUndoDelete, t],
   );
 
   return { components, isLoading, error, create, update, remove, addEntry, editEntry, removeEntry };

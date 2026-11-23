@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getSharedWithMe, respondToInvitation, type SharedWithMeItem } from '../api/notebookService';
 import { useLiveRefresh } from './useLiveRefresh';
-import { notifySocialChanged } from '../lib/socialEvents';
+import { notifySocialChanged, onSocialChanged } from '../lib/socialEvents';
 
 /** ok=false se falhou; token da nota quando aceitou (para a abrir logo). */
 export interface InvitationAnswer {
@@ -43,6 +43,9 @@ export function useSharedWithMe({ intervalMs = DEFAULT_POLL_MS }: { intervalMs?:
 
   // Um pedido pendente passa a aprovado sem F5 (push + polling).
   useLiveRefresh(() => void load(true), { enabled: true, intervalMs });
+  // Acao noutro cartao do Social (ex: aceitar um pedido de notas): le de novo
+  // em silencio. O GET repetido pelo proprio emissor junta-se no dedupe.
+  useEffect(() => onSocialChanged(() => void load(true)), [load]);
 
   const respond = useCallback(
     async (requestId: string, accept: boolean): Promise<InvitationAnswer> => {

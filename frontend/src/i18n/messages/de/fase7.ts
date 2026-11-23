@@ -262,6 +262,6 @@ export const fase7: Record<string, string> = {
   'canvas.paste': "Einfügen",
   'canvas.duplicate': "Duplizieren",
   'canvas.deleteSelection': "Auswahl löschen",
-  'notes.deleteConfirm': "„{title}“ löschen? Das lässt sich nicht rückgängig machen.",
+  'notes.deleteConfirm': "„{title}“ löschen? Du kannst es direkt danach rückgängig machen.",
   'wellbeing.blood.deleteConfirm': "Spende vom {date} löschen? Das lässt sich nicht rückgängig machen.",
 };

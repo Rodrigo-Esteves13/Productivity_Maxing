@@ -12,6 +12,6 @@ export function usePeriodReportCard(periodId: string | null) {
     () => (periodId ? getPeriodReportCard(periodId) : NO_PERIOD()),
     [periodId],
   );
-  const { data, isLoading, error } = useLoadOnce(fetcher);
-  return { card: data, isLoading, error };
+  const { data, isLoading, error, reload } = useLoadOnce(fetcher);
+  return { card: data, isLoading, error, reload };
 }

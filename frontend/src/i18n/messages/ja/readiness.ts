@@ -109,4 +109,12 @@ export const readiness: Record<string, string> = {
   'bulkEffort.doneOne': "1件のタスクに負荷を設定しました。",
   'bulkEffort.doneMany': "{count}件のタスクに負荷を設定しました。",
   'bulkEffort.failed': "負荷を設定できませんでした。もう一度お試しください。",
+  'focus.distractions.noteTitle': "集中中のメモ",
+  'focus.distractions.thoughtLabel': "何で気が散りましたか？",
+  'focus.distractions.thoughtPlaceholder': "後で見るようにメモ（任意）",
+  'focus.distractions.thoughtSave': "保存",
+  'focus.distractions.thoughtSaved': "メモに保存しました。作業に戻りましょう。",
+  'focus.distractions.thoughtError': "メモを保存できませんでした。そのまま続けましょう。",
+  'focus.distractions.thoughtTrimmed': "保存しました。ノートに収めるため、古いメモを削除しました。",
+  'focus.distractions.thoughtFull': "ノートがいっぱいです（500件）。メモを保存するにはノートを1つ削除してください。",
 };

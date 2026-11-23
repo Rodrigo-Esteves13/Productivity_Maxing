@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, TurmaRole } from '@prisma/client';
+import { TurmaRole } from '@prisma/client';
 import { randomInt } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { TurmaAccessService } from './turma-access.service';
@@ -20,8 +20,8 @@ import {
   MAX_MEMBERS_PER_TURMA,
   MAX_TURMAS_PER_USER,
 } from './turmas.constants';
+import { isUniqueViolation } from '../common/prisma-errors';
 
-const UNIQUE_VIOLATION = 'P2002';
 const INVITE_CODE_ATTEMPTS = 5;
 
 function generateInviteCode(): string {
@@ -29,13 +29,6 @@ function generateInviteCode(): string {
     { length: INVITE_CODE_LENGTH },
     () => INVITE_CODE_ALPHABET[randomInt(INVITE_CODE_ALPHABET.length)],
   ).join('');
-}
-
-function isUniqueViolation(err: unknown): boolean {
-  return (
-    err instanceof Prisma.PrismaClientKnownRequestError &&
-    err.code === UNIQUE_VIOLATION
-  );
 }
 
 export type ClassmateFriendStatus =

@@ -52,11 +52,13 @@ import {
   MAX_SKIP_OCCURRENCES,
   MIN_PAY_DAY,
   QUANTITY_PATTERN,
+  FINANCE_MONTH_PATTERN,
   QUOTE_SYMBOL_MAX_LENGTH,
   QUOTE_SYMBOL_PATTERN,
   type AnalyticsGranularity,
 } from '../finance.constants';
 import { DATE_KEY_PATTERN } from '../../common/date-key.util';
+import { IsRealDateKey } from '../../common/validators/is-real-date-key.decorator';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -441,14 +443,22 @@ export class FinanceAnalyticsQueryDto {
 
   @ApiPropertyOptional({ example: '2026-05-01' })
   @IsOptional()
-  @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('from') })
+  @IsRealDateKey({ message: DATE_MESSAGE('from') })
   from?: string;
 
   // Inclusive.
   @ApiPropertyOptional({ example: '2026-10-31' })
   @IsOptional()
-  @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('to') })
+  @IsRealDateKey({ message: DATE_MESSAGE('to') })
   to?: string;
+}
+
+export class FinanceSummaryQueryDto {
+  @ApiProperty({ example: '2026-05', description: 'Month, YYYY-MM.' })
+  @Matches(FINANCE_MONTH_PATTERN, {
+    message: 'month must be formatted YYYY-MM.',
+  })
+  month!: string;
 }
 
 export class CreateFinanceGoalDto extends ClientRequestDto {

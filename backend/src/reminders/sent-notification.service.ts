@@ -1,12 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MS_PER_DAY } from '../common/time.constants';
 import {
-  PRISMA_FOREIGN_KEY_VIOLATION,
-  PRISMA_UNIQUE_VIOLATION,
-  type SentNotificationKind,
-} from './sent-notification.constants';
+  isForeignKeyViolation,
+  isUniqueViolation,
+} from '../common/prisma-errors';
+import { type SentNotificationKind } from './sent-notification.constants';
 
 /**
  * Dedupe duravel dos avisos periodicos (uma linha por [user, tipo, periodo]
@@ -36,11 +35,7 @@ export class SentNotificationService {
       });
       return true;
     } catch (err) {
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        (err.code === PRISMA_UNIQUE_VIOLATION ||
-          err.code === PRISMA_FOREIGN_KEY_VIOLATION)
-      ) {
+      if (isUniqueViolation(err) || isForeignKeyViolation(err)) {
         return false;
       }
       throw err;

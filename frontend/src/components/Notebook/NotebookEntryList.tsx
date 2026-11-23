@@ -6,6 +6,7 @@ import { entryPreview } from '../../lib/notebookOverview';
 import { ENTRY_TYPE_ICON, useEntryTypeOptions } from '../../hooks/useEntryTypeOptions';
 import SegmentedControl, { type SegmentedOption } from '../UI/SegmentedControl';
 import EmptyState from '../UI/EmptyState';
+import { matchesQuery } from '../../lib/listFilter';
 
 /** Estado de partilha de uma nota (de "As minhas partilhas"). */
 export interface EntryShareBadge {
@@ -24,10 +25,6 @@ interface NotebookEntryListProps {
 
 type TypeFilter = 'ALL' | NotebookEntryType;
 
-// Só mostra filtros/pesquisa a partir de alguns itens - com 3 entradas
-// seria ruído.
-const FILTER_MIN_ENTRIES = 6;
-
 export default function NotebookEntryList({ entries, selectedId, onSelect, onPrefetch, shareByEntry }: NotebookEntryListProps) {
   const { t, lang } = useI18n();
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
@@ -41,11 +38,9 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
 
   // Mantém a ordem vinda da API e agrupa por mês (secções contíguas).
   const groups = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
+    // Procura no titulo e no preview (como a pesquisa global procura no conteudo).
     const visible = entries.filter(
-      (e) =>
-        (typeFilter === 'ALL' || e.entryType === typeFilter) &&
-        (!normalized || (e.title ?? '').toLowerCase().includes(normalized)),
+      (e) => (typeFilter === 'ALL' || e.entryType === typeFilter) && matchesQuery(query, [e.title, e.preview]),
     );
     const result: { key: string; label: string; items: NotebookEntrySummary[] }[] = [];
     for (const entry of visible) {
@@ -85,25 +80,21 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
     return <EmptyState message={t('notebook.list.empty')} />;
   }
 
-  const showFilters = entries.length >= FILTER_MIN_ENTRIES;
-
   return (
     <div className="space-y-3">
-      {showFilters && (
-        <div className="space-y-2">
-          <SegmentedControl size="sm" options={filterOptions} value={typeFilter} onChange={setTypeFilter} />
-          <div className="relative">
-            <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('notebook.filter.search')}
-              aria-label={t('notebook.filter.search')}
-              className="w-full rounded-md border border-neutral-800 bg-neutral-900 py-1.5 pl-8 pr-2 text-xs text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none"
-            />
-          </div>
+      <div className="space-y-2">
+        <SegmentedControl size="sm" options={filterOptions} value={typeFilter} onChange={setTypeFilter} />
+        <div className="relative">
+          <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('notebook.filter.search')}
+            aria-label={t('notebook.filter.search')}
+            className="w-full rounded-md border border-neutral-800 bg-neutral-900 py-1.5 pl-8 pr-2 text-xs text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none pointer-coarse:min-h-11"
+          />
         </div>
-      )}
+      </div>
 
       <p id="notebook-list-keys" className="sr-only">
         {t('notebook.list.keysHint')}
@@ -140,7 +131,7 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
                     >
                       <span className="flex w-full items-center gap-2">
                       <Icon className="h-3.5 w-3.5 shrink-0 opacity-60" />
-                      <span className="flex-1 truncate">
+                      <span className="flex-1 truncate" title={entry.title || t('notebook.untitled')}>
                         {entry.entryType === 'CLASS' && entry.classNumber != null && (
                           <span className="mr-1 text-violet-400">#{entry.classNumber}</span>
                         )}
@@ -168,7 +159,7 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
                       </span>
                       {(preview || photoCount > 0 || fileCount > 0) && (
                         <span className="mt-0.5 flex items-center gap-2 pl-5.5 text-xs text-neutral-500">
-                          <span className="min-w-0 flex-1 truncate">{preview}</span>
+                          <span className="min-w-0 flex-1 truncate" title={preview}>{preview}</span>
                           {photoCount > 0 && (
                             <span className="flex shrink-0 items-center gap-0.5" title={t('notebook.list.photos', { count: photoCount })}>
                               <ImageIcon className="h-3 w-3" aria-hidden="true" />

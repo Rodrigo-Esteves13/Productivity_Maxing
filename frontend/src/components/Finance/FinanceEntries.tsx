@@ -1,12 +1,24 @@
-import { useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
+import { useDirtyForm } from '../../hooks/useDirtyForm';
 import Card from '../UI/Card';
 import IconButton from '../UI/IconButton';
 import Modal from '../UI/Modal';
+import SearchField from '../UI/SearchField';
+import Select from '../UI/Select';
+import EmptyState from '../UI/EmptyState';
+import Button from '../UI/Button';
 import { PencilIcon, TrashIcon } from '../UI/Icons';
 import FinanceEntryForm from './FinanceEntryForm';
 import type { FinanceEntry, FinanceEntryInput, FinanceEntryKind, FinanceSummary } from '../../api/financeService';
 import Money from './Money';
 import type { SubmitOutcome } from '../../lib/idempotency';
+import {
+  distinctCategories,
+  EMPTY_FINANCE_ENTRY_FILTER,
+  FINANCE_FILTER_ALL,
+  filterOccurrences,
+  isFilteringEntries,
+} from '../../lib/financeEntryFilter';
 import { useI18n } from '../../i18n/useI18n';
 
 interface FinanceEntriesProps {
@@ -26,8 +38,25 @@ export default function FinanceEntries({ summary, defaultDate, initialKind, onAd
   const { t, lang } = useI18n();
   const { currency } = summary.settings;
   const [editing, setEditing] = useState<FinanceEntry | null>(null);
+  const editDirty = useDirtyForm(editing !== null);
   const entriesById = new Map(summary.entries.map((e) => [e.id, e]));
   const accountNames = new Map(summary.accounts.map((a) => [a.id, a.name]));
+  const [filter, setFilter] = useState(EMPTY_FINANCE_ENTRY_FILTER);
+  const deferredQuery = useDeferredValue(filter.query);
+  const categories = useMemo(() => distinctCategories(summary.occurrences), [summary.occurrences]);
+  const filtering = isFilteringEntries(filter);
+  const visible = useMemo(
+    () =>
+      filterOccurrences(
+        summary.occurrences,
+        { ...filter, query: deferredQuery },
+        (category) => t(`finance.cat.${category}`),
+        (accountId) => (accountId ? accountNames.get(accountId) : undefined),
+      ),
+    // accountNames e t mudam com summary/lingua; o filtro e a lista decidem.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [summary.occurrences, summary.accounts, filter.category, filter.accountId, deferredQuery, t],
+  );
   const byCategory = Object.entries(summary.totals.expensesByCategory).sort((a, b) => b[1] - a[1]);
 
   return (
@@ -35,11 +64,58 @@ export default function FinanceEntries({ summary, defaultDate, initialKind, onAd
       <FinanceEntryForm key={initialKind ?? 'default'} accounts={summary.accounts} defaultDate={defaultDate} initialKind={initialKind} currency={currency} onSubmit={onAdd} />
 
       <h3 className="mt-6 mb-2 text-sm font-semibold text-neutral-200">{t('finance.entries')}</h3>
+      {summary.occurrences.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-end gap-3">
+          <SearchField value={filter.query} onChange={(query) => setFilter((f) => ({ ...f, query }))} label={t('ux4fin.search')} />
+          <div className="min-w-40 flex-1 sm:max-w-48">
+            <Select
+              label={t('ux4fin.filterCategory')}
+              value={filter.category}
+              onChange={(e) => setFilter((f) => ({ ...f, category: e.target.value }))}
+            >
+              <option value={FINANCE_FILTER_ALL}>{t('ux4fin.allCategories')}</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {t(`finance.cat.${category}`)}
+                </option>
+              ))}
+            </Select>
+          </div>
+          {summary.accounts.length > 0 && (
+            <div className="min-w-40 flex-1 sm:max-w-48">
+              <Select
+                label={t('ux4fin.filterAccount')}
+                value={filter.accountId}
+                onChange={(e) => setFilter((f) => ({ ...f, accountId: e.target.value }))}
+              >
+                <option value={FINANCE_FILTER_ALL}>{t('ux4fin.allAccounts')}</option>
+                {summary.accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+          {filtering && (
+            <>
+              <p className="text-xs text-neutral-500" aria-live="polite">
+                {t('search.count', { shown: visible.length, total: summary.occurrences.length })}
+              </p>
+              <Button type="button" variant="secondary" size="sm" onClick={() => setFilter(EMPTY_FINANCE_ENTRY_FILTER)}>
+                {t('ux4fin.clearFilters')}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
       {summary.occurrences.length === 0 ? (
-        <p className="text-sm text-neutral-500">{t('finance.noEntries')}</p>
+        <EmptyState variant="inline" message={t('finance.noEntries')} />
+      ) : visible.length === 0 ? (
+        <EmptyState variant="inline" message={filter.query.trim() ? t('search.noResultsFor', { query: filter.query.trim() }) : t('search.noResults')} />
       ) : (
         <ul className="divide-y divide-neutral-800">
-          {summary.occurrences.map((occ) => {
+          {visible.map((occ) => {
             const entry = entriesById.get(occ.entryId);
             const account = occ.accountId ? accountNames.get(occ.accountId) : undefined;
             return (
@@ -102,8 +178,9 @@ export default function FinanceEntries({ summary, defaultDate, initialKind, onAd
         </>
       )}
 
-      <Modal isOpen={editing !== null} onClose={() => setEditing(null)} title={t('finance.editEntry')} size="wide">
+      <Modal isOpen={editing !== null} onClose={() => setEditing(null)} title={t('finance.editEntry')} size="wide" isDirty={editDirty.isDirty}>
         {editing && (
+          <div onInput={editDirty.markDirty}>
           <FinanceEntryForm
             accounts={summary.accounts}
             defaultDate={defaultDate}
@@ -112,6 +189,7 @@ export default function FinanceEntries({ summary, defaultDate, initialKind, onAd
             onSubmit={(input) => onUpdate(editing.id, input)}
             onDone={() => setEditing(null)}
           />
+          </div>
         )}
       </Modal>
     </Card>

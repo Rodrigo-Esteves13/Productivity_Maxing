@@ -20,7 +20,10 @@ function setup(role: TurmaRole = TurmaRole.MEMBER) {
   const access = {
     requireMember: jest.fn().mockResolvedValue({ role, turma: TURMA }),
   };
-  const tasks = { create: jest.fn() };
+  const tasks = {
+    create: jest.fn(),
+    applyLinkedDeadlineChange: jest.fn().mockResolvedValue(undefined),
+  };
   const push = { notifyUser: jest.fn().mockResolvedValue(1) };
   const service = new TurmaDeadlinesService(
     prisma as never,
@@ -33,7 +36,7 @@ function setup(role: TurmaRole = TurmaRole.MEMBER) {
 
 describe('TurmaDeadlinesService', () => {
   it('moving the date updates every linked task and warns the others', async () => {
-    const { service, prisma, push } = setup();
+    const { service, prisma, push, tasks } = setup();
     prisma.turmaDeadline.findFirst.mockResolvedValue({ createdById: 'u1' });
     prisma.turmaDeadline.findUniqueOrThrow.mockResolvedValue({
       dueAt: new Date('2026-11-10T09:00:00Z'),
@@ -52,11 +55,12 @@ describe('TurmaDeadlinesService', () => {
 
     await service.update('u1', 't1', 'd1', { dueAt: dueAt.toISOString() });
 
-    const [args] = prisma.task.updateMany.mock.calls[0] as [
-      { where: { id: { in: string[] } }; data: Record<string, unknown> },
-    ];
-    expect(args.where.id.in).toEqual(['k1', 'k2']);
-    expect(args.data).toEqual({ title: 'Midterm', date: dueAt });
+    // Passa pelo TasksService (peso por cadeira, historico), nunca updateMany direto.
+    expect(prisma.task.updateMany).not.toHaveBeenCalled();
+    expect(tasks.applyLinkedDeadlineChange).toHaveBeenCalledWith(['k1', 'k2'], {
+      title: 'Midterm',
+      date: dueAt,
+    });
     expect(push.notifyUser).toHaveBeenCalledTimes(1);
     expect(push.notifyUser).toHaveBeenCalledWith(
       'u2',

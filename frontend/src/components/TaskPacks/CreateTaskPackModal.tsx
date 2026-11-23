@@ -7,6 +7,10 @@ import { useI18n } from '../../i18n/useI18n';
 import type { Area, Task } from '../../types/models';
 import SelectionToolbar from '../UI/SelectionToolbar';
 import { formatTaskDue } from '../../lib/taskReadiness';
+import SearchField from '../UI/SearchField';
+import Select from '../UI/Select';
+import EmptyState from '../UI/EmptyState';
+import { ALL_AREAS, filterPackTasks } from '../../lib/packTaskFilter';
 
 const MAX_PACK_ITEMS = 50;
 const MAX_NAME_LENGTH = 80;
@@ -17,7 +21,8 @@ interface Props {
   areas: Area[];
   isSaving: boolean;
   onClose: () => void;
-  onCreate: (name: string, taskIds: string[]) => Promise<boolean>;
+  // null = criado; texto = erro a mostrar.
+  onCreate: (name: string, taskIds: string[]) => Promise<string | null>;
 }
 
 export default function CreateTaskPackModal({ isOpen, tasks, areas, isSaving, onClose, onCreate }: Props) {
@@ -25,12 +30,24 @@ export default function CreateTaskPackModal({ isOpen, tasks, areas, isSaving, on
   const [name, setName] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [areaFilter, setAreaFilter] = useState(ALL_AREAS);
 
   const areaName = useMemo(() => new Map(areas.map((a) => [a.id, a.name])), [areas]);
   const sorted = useMemo(
     () => [...tasks].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
     [tasks],
   );
+
+  // A lista mostrada respeita pesquisa e Area; a selecao continua a ser por id.
+  const visible = useMemo(
+    () => filterPackTasks(sorted, query, areaFilter, (task) => areaName.get(task.areaId)),
+    [sorted, query, areaFilter, areaName],
+  );
+  const areaOptions = useMemo(() => {
+    const used = new Set(tasks.map((task) => task.areaId));
+    return areas.filter((a) => used.has(a.id));
+  }, [areas, tasks]);
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -41,13 +58,15 @@ export default function CreateTaskPackModal({ isOpen, tasks, areas, isSaving, on
     });
 
   // "Todas" respeita o limite do pacote: as primeiras por data.
-  const selectAll = () => setSelected(new Set(sorted.slice(0, MAX_PACK_ITEMS).map((task) => task.id)));
+  const selectAll = () => setSelected(new Set(visible.slice(0, MAX_PACK_ITEMS).map((task) => task.id)));
   const selectNone = () => setSelected(new Set());
 
   const reset = () => {
     setName('');
     setSelected(new Set());
     setError('');
+    setQuery('');
+    setAreaFilter(ALL_AREAS);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -55,12 +74,12 @@ export default function CreateTaskPackModal({ isOpen, tasks, areas, isSaving, on
     if (!name.trim()) return setError(t('packs.create.needName'));
     if (selected.size === 0) return setError(t('packs.create.needTasks'));
     setError('');
-    const ok = await onCreate(name.trim(), [...selected]);
-    if (ok) {
+    const failure = await onCreate(name.trim(), [...selected]);
+    if (failure === null) {
       reset();
       onClose();
     } else {
-      setError(t('packs.create.error'));
+      setError(failure);
     }
   };
 
@@ -83,16 +102,36 @@ export default function CreateTaskPackModal({ isOpen, tasks, areas, isSaving, on
             <SelectionToolbar
               className="mb-2"
               selectedCount={selected.size}
-              selectableCount={Math.min(sorted.length, MAX_PACK_ITEMS)}
+              selectableCount={Math.min(visible.length, MAX_PACK_ITEMS)}
               onSelectAll={selectAll}
               onSelectNone={selectNone}
             />
           )}
+          {sorted.length > 0 && (
+            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <SearchField value={query} onChange={setQuery} label={t('ux4packs.create.search')} />
+              <Select
+                aria-label={t('ux4packs.create.areaFilter')}
+                value={areaFilter}
+                onChange={(e) => setAreaFilter(e.target.value)}
+                className="sm:max-w-xs"
+              >
+                <option value={ALL_AREAS}>{t('ux4packs.create.allAreas')}</option>
+                {areaOptions.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
           {sorted.length === 0 ? (
             <p className="text-sm text-neutral-500">{t('packs.create.noTasks')}</p>
+          ) : visible.length === 0 ? (
+            <EmptyState variant="inline" message={t('search.noResults')} />
           ) : (
             <ul className="max-h-72 space-y-1 overflow-y-auto rounded-lg border border-neutral-800 p-2">
-              {sorted.map((task) => (
+              {visible.map((task) => (
                 <li key={task.id}>
                   <label className="flex cursor-pointer items-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-neutral-800/60">
                     <input

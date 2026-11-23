@@ -24,6 +24,8 @@ import { ApiKeyStrategy } from './strategies/api-key.strategy';
 import { GoogleCalendarLinkGuard } from './guards/google-calendar-link.guard';
 import { AccountStatusModule } from '../account-status/account-status.module';
 import { UserSessionsService } from './services/user-sessions.service';
+import { SessionCookieService } from './services/session-cookie.service';
+import { ProfileService } from './services/profile.service';
 import { NewDeviceAlertService } from './services/new-device-alert.service';
 import { SecurityActivityService } from './services/security-activity.service';
 import { SecurityActivityController } from './security-activity.controller';
@@ -51,6 +53,8 @@ import { ACCESS_TOKEN_TTL_SECONDS } from './session.constants';
   providers: [
     AuthService,
     UserSessionsService,
+    SessionCookieService,
+    ProfileService,
     NewDeviceAlertService,
     SecurityActivityService,
     SupabaseClientsService,

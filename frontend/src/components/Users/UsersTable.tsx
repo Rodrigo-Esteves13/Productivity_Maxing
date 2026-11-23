@@ -1,63 +1,48 @@
 import UsersTableHeader from './UsersTableHeader';
 import UserTableRow from './UserTableRow';
+import UserCard from './UserCard';
+import type { UserRowHandlers } from './UserRowActions';
 import type { User } from '../../types/models';
-import { useI18n } from '../../i18n/useI18n';
 
-interface UsersTableProps {
+interface UsersTableProps extends UserRowHandlers {
   users: User[];
   currentUserId?: string;
-  onEdit: (user: User) => void;
-  onDelete: (user: User) => void;
-  onExport: (user: User) => void;
-  onSuspend: (user: User) => void;
-  onBan: (user: User) => void;
-  onReactivate: (user: User) => void;
   reactivatingId: string | null;
 }
 
-export default function UsersTable({
-  users,
-  currentUserId,
-  onEdit,
-  onDelete,
-  onExport,
-  onSuspend,
-  onBan,
-  onReactivate,
-  reactivatingId,
-}: UsersTableProps) {
-  const { t } = useI18n();
+// Cartoes em ecras estreitos, tabela a partir de md. As acoes sao as mesmas.
+export default function UsersTable({ users, currentUserId, reactivatingId, ...handlers }: UsersTableProps) {
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left text-neutral-300 whitespace-nowrap">
-          <UsersTableHeader />
-          <tbody>
-            {users.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-neutral-500">
-                  {t('ui.noUsersFound')}
-                </td>
-              </tr>
-            ) : (
-              users.map((user) => (
+    <>
+      <ul className="space-y-2 md:hidden">
+        {users.map((user) => (
+          <UserCard
+            key={user.id}
+            user={user}
+            isSelf={user.id === currentUserId}
+            isReactivating={reactivatingId === user.id}
+            {...handlers}
+          />
+        ))}
+      </ul>
+      <div className="hidden overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/50 shadow-xl md:block">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left text-neutral-300 whitespace-nowrap">
+            <UsersTableHeader />
+            <tbody>
+              {users.map((user) => (
                 <UserTableRow
                   key={user.id}
                   user={user}
                   isSelf={user.id === currentUserId}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  onExport={onExport}
-                  onSuspend={onSuspend}
-                  onBan={onBan}
-                  onReactivate={onReactivate}
                   isReactivating={reactivatingId === user.id}
+                  {...handlers}
                 />
-              ))
-            )}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

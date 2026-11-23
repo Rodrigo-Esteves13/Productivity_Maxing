@@ -1,4 +1,6 @@
 import { assertAreaAccessible } from '../areas/area-access';
+import { assertTaskOwned } from '../tasks/task-access';
+import { isUniqueViolation } from '../common/prisma-errors';
 import {
   MS_PER_DAY,
   MS_PER_MINUTE,
@@ -10,7 +12,6 @@ import {
   lisbonDayBounds,
   toDateKey,
   toLisbonDateKey,
-  toLisbonWeekdayHour,
 } from '../common/date-key.util';
 import {
   BadRequestException,
@@ -21,6 +22,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { walkStreak } from './study-streak.util';
+import { DAYS_PER_WEEK } from './streak-freeze.constants';
 import { StartStudySessionDto } from './dto/start-study-session.dto';
 import { StopStudySessionDto } from './dto/stop-study-session.dto';
 import { CreateManualSessionDto } from './dto/create-manual-session.dto';
@@ -35,21 +37,28 @@ import {
   MAX_SESSION_MINUTES,
   validateSessionWindow,
 } from './session-window.util';
+import {
+  HISTORY_DEFAULT_DAYS,
+  HISTORY_MAX_DAYS,
+  HISTORY_MAX_ROWS,
+} from './study-sessions.constants';
+import {
+  activeLisbonDaysSql,
+  areaTotalsSql,
+  weekdayHourTotalsSql,
+  type ActiveDayRow,
+  type AreaTotalRow,
+  type WeekdayHourRow,
+} from './study-sessions.sql';
 
-// Meio-termo entre "recalcular tudo em memória a cada pedido" (o que
-// tínhamos antes - um findMany() à tabela toda do utilizador em CADA
-// abertura da página Focus) e "manter uma tabela pré-agregada sincronizada
-// à parte" (mais rápido, mas mais uma fonte de verdade para manter
-// consistente, e complexidade a mais para o volume atual da app).
-//
-// Em vez disso: cache em memória por utilizador, com expiração ao fim de
-// HEATMAP_CACHE_TTL_MS. Enquanto a cache for válida, devolvemos o
-// resultado guardado sem tocar na BD; passado esse tempo, a próxima
-// chamada recalcula e renova a entrada. Mesmo padrão já usado em
-// LoggingThrottlerGuard (cache em memória, perde-se com o restart do
-// processo - aceitável aqui pela mesma razão: é só para poupar trabalho
-// repetido, não é a fonte de verdade).
-const HEATMAP_CACHE_TTL_MS = 5 * 60 * 1000;
+// B-46: o heatmap tinha uma cache em memoria por utilizador (Map sem
+// limite de tamanho, uma copia por instancia no Render). Saiu: a agregacao
+// passou para SQL (GROUP BY no Postgres, no maximo 7x24 linhas devolvidas),
+// por isso ja nao ha trabalho repetido que valha a pena guardar, e deixa de
+// haver resultados diferentes entre instancias ou invalidacoes esquecidas.
+const ACTIVE_SESSION_MESSAGE =
+  'You already have an active study session. Stop it before starting another one.';
+const NO_AREA_NAME = 'No area';
 
 // Uma sessão "ativa" sem heartbeat há mais tempo do que isto é tratada
 // como esquecida, não como a decorrer de facto - ver autoCloseIfStale()
@@ -75,9 +84,6 @@ const AUTO_CLOSE_NOTE =
 // Teto do contador de distracoes de uma sessao (ninguem carrega 500 vezes
 // a serio; acima disto e um script).
 const MAX_DISTRACTIONS_PER_SESSION = 500;
-const HISTORY_DEFAULT_DAYS = 14;
-const HISTORY_MAX_DAYS = 90;
-const HISTORY_MAX_ROWS = 300;
 
 const SESSION_SELECT = {
   id: true,
@@ -152,13 +158,6 @@ export interface AreaTimeBreakdown {
 
 @Injectable()
 export class StudySessionsService {
-  // chave = userId. Guarda o grid já calculado + o instante em que foi
-  // calculado, para decidir se ainda é válido ou se é preciso recalcular.
-  private readonly heatmapCache = new Map<
-    string,
-    { computedAt: number; data: HeatmapCell[] }
-  >();
-
   constructor(private readonly prisma: PrismaService) {}
 
   async start(userId: string, dto: StartStudySessionDto) {
@@ -177,9 +176,7 @@ export class StudySessionsService {
       select: { id: true },
     });
     if (active) {
-      throw new ConflictException(
-        'You already have an active study session. Stop it before starting another one.',
-      );
+      throw new ConflictException(ACTIVE_SESSION_MESSAGE);
     }
 
     const task = dto.taskId
@@ -189,20 +186,33 @@ export class StudySessionsService {
       await this.assertAreaExists(userId, dto.areaId);
     }
 
-    const session = await this.prisma.studySession.create({
-      data: {
-        userId,
-        taskId: dto.taskId ?? null,
-        // Sem area escolhida, usa a da task (ex: "Comecar" num bloco do plano).
-        areaId: dto.areaId ?? task?.areaId ?? null,
-        note: dto.note ?? null,
-        // Começa já com um heartbeat "de origem" - evita que uma sessão
-        // parada nos primeiros segundos (antes do primeiro ping real do
-        // frontend) seja lida como "sem heartbeat" por autoCloseIfStale.
-        lastHeartbeatAt: new Date(),
-      },
-      select: SESSION_SELECT,
-    });
+    let session: Prisma.StudySessionGetPayload<{
+      select: typeof SESSION_SELECT;
+    }>;
+    try {
+      session = await this.prisma.studySession.create({
+        data: {
+          userId,
+          taskId: dto.taskId ?? null,
+          // Sem area escolhida, usa a da task (ex: "Comecar" num bloco do plano).
+          areaId: dto.areaId ?? task?.areaId ?? null,
+          note: dto.note ?? null,
+          // Começa já com um heartbeat "de origem" - evita que uma sessão
+          // parada nos primeiros segundos (antes do primeiro ping real do
+          // frontend) seja lida como "sem heartbeat" por autoCloseIfStale.
+          lastHeartbeatAt: new Date(),
+        },
+        select: SESSION_SELECT,
+      });
+    } catch (error) {
+      // B-23: dois start em paralelo passam ambos o findFirst acima. Com o
+      // indice unico parcial (userId WHERE endedAt IS NULL) o segundo falha
+      // com P2002; devolve o mesmo 409 do caminho normal. Sem o indice
+      // (antes da migracao) este ramo nunca corre.
+      if (isUniqueViolation(error))
+        throw new ConflictException(ACTIVE_SESSION_MESSAGE);
+      throw error;
+    }
 
     return this.toResponse(session);
   }
@@ -249,11 +259,6 @@ export class StudySessionsService {
       select: SESSION_SELECT,
     });
 
-    // Esta sessão passa a contar para o heatmap - invalida a cache deste
-    // utilizador em vez de esperar pelo TTL, para a próxima visita à
-    // página Focus já refletir a sessão que acabou de terminar.
-    this.heatmapCache.delete(userId);
-
     return this.toResponse(session);
   }
 
@@ -299,7 +304,6 @@ export class StudySessionsService {
       },
       select: SESSION_SELECT,
     });
-    this.heatmapCache.delete(userId);
     return this.toResponse(session);
   }
 
@@ -336,7 +340,6 @@ export class StudySessionsService {
       },
       select: SESSION_SELECT,
     });
-    this.heatmapCache.delete(userId);
     return this.toResponse(session);
   }
 
@@ -352,7 +355,6 @@ export class StudySessionsService {
         `Study session not found, not yours, or still running.`,
       );
     }
-    this.heatmapCache.delete(userId);
     return { ok: true };
   }
 
@@ -455,58 +457,32 @@ export class StudySessionsService {
 
   /**
    * Agrega TODAS as sessões terminadas do utilizador num grid 7 (dia da
-   * semana) x 6 (bloco de 4h). Feito em memória (não em SQL bruto) de
-   * propósito: para o volume esperado (uma pessoa, meses de uso) isto é
-   * perfeitamente rápido, e evita escrever SQL manual só para um dashboard.
-   *
-   * O resultado fica em cache por HEATMAP_CACHE_TTL_MS (ver constante no
-   * topo do ficheiro) - a página Focus pode voltar a pedir isto várias
-   * vezes seguidas (troca de separador, refresh, polling), e não faz
-   * sentido re-somar todas as sessões da pessoa em cada uma dessas
-   * chamadas. A cache é invalidada explicitamente em stop() assim que uma
-   * sessão nova termina, por isso o TTL aqui é só uma rede de segurança
-   * (ex: dois separadores abertos, um deles sem ver o stop do outro).
-   *
-   * Se um dia isto crescer muito (muitos utilizadores ativos em
-   * simultâneo, ou histórico de anos por pessoa), o próximo passo deixa
-   * de ser esta cache e passa a ser mover a agregação para SQL (groupBy
-   * por extract(dow)/extract(hour) direto no Postgres).
+   * semana) x 6 (bloco de 4h), em hora de Lisboa. A soma por dia da semana
+   * x hora de inicio corre no Postgres (weekdayHourTotalsSql, no maximo 168
+   * linhas); aqui so se juntam as horas em blocos de HOUR_BUCKET_SIZE e se
+   * preenche o grid completo (celulas vazias a 0).
    */
   async getHeatmap(userId: string): Promise<HeatmapCell[]> {
-    const cached = this.heatmapCache.get(userId);
-    if (cached && Date.now() - cached.computedAt < HEATMAP_CACHE_TTL_MS) {
-      return cached.data;
-    }
-
-    const sessions = await this.prisma.studySession.findMany({
-      where: { userId, endedAt: { not: null } },
-      select: { startedAt: true, endedAt: true },
-    });
+    const rows = await this.prisma.$queryRaw<WeekdayHourRow[]>(
+      weekdayHourTotalsSql(userId),
+    );
 
     const grid = new Map<
       string,
       { totalMinutes: number; sessionCount: number }
     >();
 
-    for (const session of sessions) {
-      if (!session.endedAt) continue; // já filtrado pelo where, é só para o TS
-      // Hora de Lisboa, como a streak e os totais diarios (getDay()/
-      // getHours() davam a hora UTC do servidor no Render).
-      const { dayOfWeek, hour } = toLisbonWeekdayHour(session.startedAt);
-      const hourBucket = Math.floor(hour / HOUR_BUCKET_SIZE);
-      const minutes =
-        (session.endedAt.getTime() - session.startedAt.getTime()) /
-        MS_PER_MINUTE;
-
-      const key = `${dayOfWeek}:${hourBucket}`;
+    for (const row of rows) {
+      const hourBucket = Math.floor(Number(row.hour) / HOUR_BUCKET_SIZE);
+      const key = `${Number(row.dayOfWeek)}:${hourBucket}`;
       const cell = grid.get(key) ?? { totalMinutes: 0, sessionCount: 0 };
-      cell.totalMinutes += Math.max(0, minutes);
-      cell.sessionCount += 1;
+      cell.totalMinutes += secondsToMinutes(row.totalSeconds);
+      cell.sessionCount += Number(row.sessionCount);
       grid.set(key, cell);
     }
 
     const result: HeatmapCell[] = [];
-    for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+    for (let dayOfWeek = 0; dayOfWeek < DAYS_PER_WEEK; dayOfWeek++) {
       for (let hourBucket = 0; hourBucket < HOUR_BUCKET_COUNT; hourBucket++) {
         const cell = grid.get(`${dayOfWeek}:${hourBucket}`);
         result.push({
@@ -518,7 +494,6 @@ export class StudySessionsService {
       }
     }
 
-    this.heatmapCache.set(userId, { computedAt: Date.now(), data: result });
     return result;
   }
 
@@ -528,9 +503,8 @@ export class StudySessionsService {
    * (day-of-week x hour-of-day, all-time), this is calendar-day x total
    * minutes, for a fixed recent window - a different shape for a
    * different question ("was I consistent lately" vs "when do I usually
-   * study"). Not cached: the window is small (default ~12 weeks) and this
-   * is only called once per Dashboard load, no need for the same
-   * cache/invalidate complexity as the heatmap.
+   * study"). Bounded by the `days` window (default ~12 weeks), so it still
+   * reads the window's sessions and sums them in JS.
    */
   async getDailyTotals(userId: string, days: number) {
     // Janela em dias de Lisboa (o servidor corre em UTC no Render).
@@ -617,58 +591,22 @@ export class StudySessionsService {
    * chosen still counts toward that Task's own course instead of being
    * silently dropped from the breakdown.
    *
-   * Same "aggregate in JS from raw sessions" approach as getHeatmap()/
-   * getDailyTotals() above, for the same reason: there's no stored
-   * duration column to SQL-side SUM(), only startedAt/endedAt to diff.
-   * Not cached (unlike getHeatmap) - only called once per Dashboard load,
-   * doesn't need the same repeated-call protection.
+   * The SUM/COUNT per Area runs in Postgres (areaTotalsSql, COALESCE of the
+   * session Area and the task Area), one row per Area instead of one row
+   * per session ever logged. Throttled in the controller.
    */
   async getTimeByArea(userId: string): Promise<AreaTimeBreakdown[]> {
-    const sessions = await this.prisma.studySession.findMany({
-      where: { userId, endedAt: { not: null } },
-      select: {
-        startedAt: true,
-        endedAt: true,
-        area: { select: { id: true, name: true, colorHex: true } },
-        task: {
-          select: {
-            area: { select: { id: true, name: true, colorHex: true } },
-          },
-        },
-      },
-    });
+    const rows = await this.prisma.$queryRaw<AreaTotalRow[]>(
+      areaTotalsSql(userId),
+    );
 
-    const totals = new Map<
-      string,
-      { name: string; colorHex: string | null; minutes: number; count: number }
-    >();
-
-    for (const session of sessions) {
-      if (!session.endedAt) continue; // já filtrado pelo where, é só para o TS
-      const resolvedArea = session.area ?? session.task?.area ?? null;
-      const key = resolvedArea?.id ?? 'none';
-      const minutes =
-        (session.endedAt.getTime() - session.startedAt.getTime()) /
-        MS_PER_MINUTE;
-
-      const entry = totals.get(key) ?? {
-        name: resolvedArea?.name ?? 'No area',
-        colorHex: resolvedArea?.colorHex ?? null,
-        minutes: 0,
-        count: 0,
-      };
-      entry.minutes += Math.max(0, minutes);
-      entry.count += 1;
-      totals.set(key, entry);
-    }
-
-    return Array.from(totals.entries())
-      .map(([key, entry]) => ({
-        areaId: key === 'none' ? null : key,
-        areaName: entry.name,
-        areaColorHex: entry.colorHex,
-        totalMinutes: Math.round(entry.minutes),
-        sessionCount: entry.count,
+    return rows
+      .map((row) => ({
+        areaId: row.areaId ?? null,
+        areaName: row.areaId ? (row.areaName ?? NO_AREA_NAME) : NO_AREA_NAME,
+        areaColorHex: row.areaId ? (row.areaColorHex ?? null) : null,
+        totalMinutes: Math.round(secondsToMinutes(row.totalSeconds)),
+        sessionCount: Number(row.sessionCount),
       }))
       .sort((a, b) => b.totalMinutes - a.totalMinutes);
   }
@@ -677,23 +615,19 @@ export class StudySessionsService {
    * Streak = consecutive calendar days (up to and including today) with at
    * least one finished study session, walked day by day from the first
    * ever session. Deliberately computed fresh from raw session data every
-   * call, same philosophy as getHeatmap()/getDailyTotals() above: no
-   * separate "streak" table to keep in sync, the session history is
-   * already the single source of truth and freezes are fully determined
-   * by it (see FREEZE_EARN_INTERVAL_DAYS/FREEZE_MAX_BANKED). Only needs
-   * `startedAt` per session, so this stays light even over a full history.
+   * call: no separate "streak" table to keep in sync, the session history
+   * is already the single source of truth and freezes are fully determined
+   * by it (see FREEZE_EARN_INTERVAL_DAYS/FREEZE_MAX_BANKED). Postgres only
+   * returns the distinct Lisbon days (activeLisbonDaysSql, sorted), one row
+   * per study day instead of one per session; walkStreak stays in JS.
    *
    * Today is never treated as a "miss" even with zero activity so far -
    * the day isn't over yet. That's what `atRisk` communicates to the
    * frontend instead: "no freeze needed yet, but nothing logged today".
    */
   async getStreak(userId: string): Promise<StudyStreak> {
-    const [sessions, freezes] = await Promise.all([
-      this.prisma.studySession.findMany({
-        where: { userId, endedAt: { not: null } },
-        select: { startedAt: true },
-        orderBy: { startedAt: 'asc' },
-      }),
+    const [dayRows, freezes] = await Promise.all([
+      this.prisma.$queryRaw<ActiveDayRow[]>(activeLisbonDaysSql(userId)),
       // Dias de descanso pedidos (StreakFreeze): fazem ponte na streak.
       this.prisma.streakFreeze.findMany({
         where: { userId },
@@ -705,10 +639,10 @@ export class StudySessionsService {
     const restDayToday = frozenDays.has(todayKey);
 
     // Dias de Lisboa, nao de UTC: uma sessao as 00:30 de Lisboa no verao
-    // contava para o dia anterior e podia partir a sequencia.
-    const activeDays = new Set(
-      sessions.map((s) => toLisbonDateKey(s.startedAt)),
-    );
+    // contava para o dia anterior e podia partir a sequencia. YYYY-MM-DD
+    // ordena como texto, por isso o primeiro e o dia da primeira sessao.
+    const dayKeys = dayRows.map((row) => row.dayKey).sort();
+    const activeDays = new Set(dayKeys);
 
     if (activeDays.size === 0) {
       return {
@@ -723,12 +657,7 @@ export class StudySessionsService {
     }
 
     const { currentStreak, longestStreak, freezesAvailable, freezesUsedTotal } =
-      walkStreak(
-        activeDays,
-        toLisbonDateKey(sessions[0].startedAt),
-        todayKey,
-        frozenDays,
-      );
+      walkStreak(activeDays, dayKeys[0], todayKey, frozenDays);
 
     return {
       currentStreak,
@@ -752,9 +681,9 @@ export class StudySessionsService {
    * before he happened to reopen the app.
    *
    * Deliberately a plain lazy check on the two call sites that matter
-   * (start, getActive) instead of a cron/scheduled job - same philosophy
-   * as the heatmap cache above: no extra infrastructure for a single-user
-   * volume where "next time the app is opened" is soon enough.
+   * (start, getActive) instead of a cron/scheduled job: no extra
+   * infrastructure for a single-user volume where "next time the app is
+   * opened" is soon enough.
    */
   private async autoCloseIfStale(userId: string): Promise<void> {
     const active = await this.prisma.studySession.findFirst({
@@ -794,13 +723,12 @@ export class StudySessionsService {
   ): Promise<void> {
     const lastSeenAt = active.lastHeartbeatAt ?? active.startedAt;
     await this.prisma.studySession.update({
-      where: { id: active.id },
+      where: { id: active.id, userId },
       data: {
         endedAt: clampToMaxSession(active.startedAt, lastSeenAt),
         note: active.note ?? AUTO_CLOSE_NOTE,
       },
     });
-    this.heatmapCache.delete(userId);
   }
 
   // Duas sessoes do mesmo utilizador nao se podem sobrepor (corromperia o
@@ -827,15 +755,10 @@ export class StudySessionsService {
     }
   }
 
-  private async assertTaskOwnership(userId: string, taskId: string) {
-    const task = await this.prisma.task.findFirst({
-      where: { id: taskId, userId },
+  private assertTaskOwnership(userId: string, taskId: string) {
+    return assertTaskOwned(this.prisma, userId, taskId, {
       select: { id: true, areaId: true },
     });
-    if (!task) {
-      throw new NotFoundException(`Task not found or you don't have access.`);
-    }
-    return task;
   }
 
   // Area oficial OU privada deste user (ver areas/area-access.ts).
@@ -856,6 +779,12 @@ export class StudySessionsService {
 
     return { ...session, durationSeconds };
   }
+}
+
+// Segundos vindos do $queryRaw (float8, ou BigInt/Decimal se o cast faltar)
+// para minutos em JS.
+function secondsToMinutes(seconds: unknown): number {
+  return (Number(seconds ?? 0) * MS_PER_SECOND) / MS_PER_MINUTE;
 }
 
 function clampToMaxSession(startedAt: Date, endedAt: Date): Date {

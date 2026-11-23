@@ -43,7 +43,9 @@ function setup() {
             }),
         ),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn(),
     },
     task: {
       findMany: jest.fn(),
@@ -147,7 +149,13 @@ describe('TaskPacksService', () => {
           type: 'ACADEMICO',
           academicType: 'TESTE',
         }),
+        expect.objectContaining({
+          packItem: expect.objectContaining({ id: 'i1' }) as unknown,
+          weightExcludeTaskIds: [],
+        }),
       );
+      // packItemId vai no proprio create: sem update extra.
+      expect(prisma.task.update).not.toHaveBeenCalled();
       expect(prisma.taskPack.update).toHaveBeenCalledTimes(1);
     });
 
@@ -220,6 +228,54 @@ describe('TaskPacksService', () => {
       });
     });
 
+    it('substituir: se todos os creates falham, as tasks antigas nao sao apagadas', async () => {
+      const { service, prisma, tasks } = setup();
+      prisma.taskPack.findUnique.mockResolvedValue(pack);
+      prisma.task.findMany.mockResolvedValue([
+        {
+          id: 'velha',
+          title: 'Outro',
+          areaId: 'official',
+          realGrade: null,
+          progressStatus: 'ON_TRACK',
+        },
+      ]);
+      tasks.create.mockRejectedValue(new BadRequestException('Boom'));
+      const res = await service.import('u2', 'code', {
+        replaceExisting: true,
+        items: [{ itemId: 'i1' }],
+      });
+      expect(tasks.bulkRemove).not.toHaveBeenCalled();
+      expect(res).toMatchObject({ created: 0, failed: 1, replaced: 0 });
+    });
+
+    it('substituir: apaga as antigas so depois dos creates e exclui-as do limite de peso', async () => {
+      const { service, prisma, tasks } = setup();
+      prisma.taskPack.findUnique.mockResolvedValue(pack);
+      prisma.task.findMany.mockResolvedValue([
+        {
+          id: 'velha',
+          title: 'Outro',
+          areaId: 'official',
+          realGrade: null,
+          progressStatus: 'ON_TRACK',
+        },
+      ]);
+      await service.import('u2', 'code', {
+        replaceExisting: true,
+        items: [{ itemId: 'i1' }],
+      });
+      expect(tasks.create).toHaveBeenCalledWith(
+        'u2',
+        expect.anything(),
+        expect.objectContaining({ weightExcludeTaskIds: ['velha'] }),
+      );
+      expect(tasks.bulkRemove).toHaveBeenCalledWith('u2', ['velha']);
+      expect(tasks.create.mock.invocationCallOrder[0]).toBeLessThan(
+        tasks.bulkRemove.mock.invocationCallOrder[0],
+      );
+    });
+
     it('substituir: cadeira sem acesso nao apaga nada', async () => {
       const { service, prisma, tasks } = setup();
       prisma.taskPack.findUnique.mockResolvedValue(pack);
@@ -245,6 +301,37 @@ describe('TaskPacksService', () => {
       await expect(service.preview('u2', 'x')).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('rename', () => {
+    it('renomeia so do dono (where inclui ownerId) e devolve o resumo', async () => {
+      const { service, prisma } = setup();
+      prisma.taskPack.updateMany.mockResolvedValue({ count: 1 });
+      prisma.taskPack.findFirst.mockResolvedValue({
+        id: 'p1',
+        name: 'Novo',
+        code: 'c',
+        importCount: 0,
+        createdAt: D,
+        _count: { items: 3 },
+      });
+      const out = await service.rename('me', 'p1', { name: 'Novo' });
+      expect(prisma.taskPack.updateMany).toHaveBeenCalledWith({
+        where: { id: 'p1', ownerId: 'me' },
+        data: { name: 'Novo' },
+      });
+      expect(out.name).toBe('Novo');
+      expect(out.itemCount).toBe(3);
+    });
+
+    it('pack de outro utilizador => 404 e nada lido', async () => {
+      const { service, prisma } = setup();
+      prisma.taskPack.updateMany.mockResolvedValue({ count: 0 });
+      await expect(
+        service.rename('intruso', 'p1', { name: 'X' }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.taskPack.findFirst).not.toHaveBeenCalled();
     });
   });
 });

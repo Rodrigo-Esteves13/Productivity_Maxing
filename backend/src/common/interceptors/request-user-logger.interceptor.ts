@@ -21,6 +21,8 @@ import { redactSecretPath } from '../redact-secret-path.util';
  * registado como "anónimo", o que também é útil para ver tentativas de
  * acesso sem sessão.
  *
+ * O log leva só id e role (nunca o email) e o caminho sem query string.
+ *
  * Isto é só visibilidade em dev/terminal, não é um sistema de auditoria
  * persistente - não temos aqui garantias de armazenamento nem de rotação
  * de logs.
@@ -30,6 +32,12 @@ import { redactSecretPath } from '../redact-secret-path.util';
  * loggar isto só inundava o terminal a cada poucos segundos sem dizer nada
  * de útil.
  */
+// Sem query string: pode trazer conteudo pesquisado (q=...) ou tokens.
+function pathWithoutQuery(url: string): string {
+  const queryStart = url.indexOf('?');
+  return queryStart === -1 ? url : url.slice(0, queryStart);
+}
+
 @Injectable()
 export class RequestUserLoggerInterceptor implements NestInterceptor {
   private readonly logger = new Logger('RequestLog');
@@ -43,12 +51,10 @@ export class RequestUserLoggerInterceptor implements NestInterceptor {
 
     const user = req.user as AuthenticatedUser | undefined;
 
-    const who = user
-      ? `${user.email} (id=${user.id}, role=${user.role})`
-      : 'anonymous';
+    const who = user ? `id=${user.id}, role=${user.role}` : 'anonymous';
 
     this.logger.log(
-      `${req.method} ${redactSecretPath(req.originalUrl)} - user: ${who}`,
+      `${req.method} ${redactSecretPath(pathWithoutQuery(req.originalUrl))} - user: ${who}`,
     );
 
     return next.handle();

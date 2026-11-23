@@ -8,6 +8,7 @@ import TaskSortControl from '../components/Tasks/TaskSortControl';
 import TaskDetailView from '../components/Tasks/TaskDetailView';
 import TaskEditForm from '../components/Tasks/TaskEditForm';
 import Modal from '../components/UI/Modal';
+import { useDirtyForm } from '../hooks/useDirtyForm';
 import TaskForm from '../components/Tasks/TaskForm';
 import ActionButton from '../components/UI/ActionButton';
 import ErrorState from '../components/UI/ErrorState';
@@ -30,6 +31,24 @@ import { sortTasks } from '../utils/taskSorting';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../i18n/useI18n';
 import PackUpdatesBanner from '../components/TaskPacks/PackUpdatesBanner';
+import SearchField from '../components/UI/SearchField';
+import Select from '../components/UI/Select';
+import { useListSearch } from '../hooks/useListSearch';
+import {
+  ALL_AREAS,
+  TASK_STATE_FILTERS,
+  filterTasksByAreaAndState,
+  isTaskStateFilter,
+  taskSearchFields,
+  type TaskStateFilter,
+} from '../lib/taskListFilter';
+
+const STATE_FILTER_LABEL_KEY: Record<TaskStateFilter, string> = {
+  all: 'ux4tasks.stateAll',
+  pending: 'ux4tasks.statePending',
+  completed: 'ux4tasks.stateCompleted',
+  overdue: 'ux4tasks.stateOverdue',
+};
 
 // ?view=board (ou grid) vem da paleta Ctrl+K.
 const VIEW_PARAM = 'view';
@@ -42,7 +61,7 @@ const VIEW_LABEL_KEY: Record<TasksView, string> = {
 
 export default function Tasks() {
   const { t } = useI18n();
-  useDocumentTitle('Tasks');
+  useDocumentTitle(t('nav.tasks'));
   const {
     tasks,
     replanTasks,
@@ -54,6 +73,7 @@ export default function Tasks() {
     progressStatuses,
     isLoading,
     error,
+    reload,
     isCreateModalOpen,
     selectedTask,
     isEditing,
@@ -80,6 +100,8 @@ export default function Tasks() {
     reschedulingId
   } = useTasksPage();
   const { view, setView } = useTasksView();
+  const createDirty = useDirtyForm(isCreateModalOpen);
+  const editDirty = useDirtyForm(selectedTask !== null && isEditing);
   const [searchParams, setSearchParams] = useSearchParams();
   const viewParam = searchParams.get(VIEW_PARAM);
 
@@ -122,12 +144,27 @@ export default function Tasks() {
   // backend (sortOrder, ver reorderTasksInState); 'date' e 'priority'
   // ordenam por esse campo na direção escolhida (asc: data mais próxima /
   // prioridade mais alta primeiro). Sem prioridade fica sempre no fim.
+  const [areaFilter, setAreaFilter] = useState(ALL_AREAS);
+  const [stateFilter, setStateFilter] = useState<TaskStateFilter>('all');
+  const areaStateTasks = useMemo(
+    () => filterTasksByAreaAndState(visibleTasks, areaFilter, stateFilter),
+    [visibleTasks, areaFilter, stateFilter],
+  );
+  const search = useListSearch(areaStateTasks, taskSearchFields);
+  const filteredTasks = search.filtered;
+  const isFilterActive = search.isFiltering || areaFilter !== ALL_AREAS || stateFilter !== 'all';
+  const clearFilters = () => {
+    search.clear();
+    setAreaFilter(ALL_AREAS);
+    setStateFilter('all');
+  };
+
   const sortedTasks = useMemo(() => {
-    const pinned = visibleTasks.filter((task) => task.isPinned);
-    const rest = visibleTasks.filter((task) => !task.isPinned);
+    const pinned = filteredTasks.filter((task) => task.isPinned);
+    const rest = filteredTasks.filter((task) => !task.isPinned);
     if (sortMode === 'manual') return [...pinned, ...rest];
     return [...sortTasks(pinned, sortMode, direction), ...sortTasks(rest, sortMode, direction)];
-  }, [visibleTasks, sortMode, direction]);
+  }, [filteredTasks, sortMode, direction]);
 
   // 'n' anywhere on the page (unless a detail view is already open, to
   // avoid stacking a second modal on top of it); 'c'/'e'/Delete only while
@@ -194,13 +231,53 @@ export default function Tasks() {
 
       <PackUpdatesBanner />
 
+      {!isLoading && !error && tasks.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-end gap-3">
+          <SearchField value={search.query} onChange={search.setQuery} label={t('ux4tasks.searchLabel')} />
+          <div className="w-full sm:w-48">
+            <Select
+              label={t('ux4tasks.areaFilter')}
+              value={areaFilter}
+              onChange={(e) => setAreaFilter(e.target.value)}
+            >
+              <option value={ALL_AREAS}>{t('ux4tasks.allAreas')}</option>
+              {areas.map((area) => (
+                <option key={area.id} value={area.id}>
+                  {area.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="w-full sm:w-48">
+            <Select
+              label={t('ux4tasks.stateFilter')}
+              value={stateFilter}
+              onChange={(e) => {
+                if (isTaskStateFilter(e.target.value)) setStateFilter(e.target.value);
+              }}
+            >
+              {TASK_STATE_FILTERS.map((value) => (
+                <option key={value} value={value}>
+                  {t(STATE_FILTER_LABEL_KEY[value])}
+                </option>
+              ))}
+            </Select>
+          </div>
+          {isFilterActive && (
+            <p className="pb-2.5 text-sm text-neutral-400" role="status">
+              {t('search.count', { shown: filteredTasks.length, total: visibleTasks.length })}
+            </p>
+          )}
+        </div>
+      )}
+
       {isLoading ? (
         <CardGridSkeleton cards={6} />
       ) : (
         // motion-page: do esqueleto para o conteudo ha um fade curto, sem corte seco.
         <div className="motion-page">
           {error ? (
-            <ErrorState message={error} />
+            <ErrorState message={error} onRetry={reload} />
           ) : tasks.length === 0 ? (
             <EmptyState message={t('ui.youHaveNoTasksRegistered')} />
           ) : visibleTasks.length === 0 ? (
@@ -208,6 +285,15 @@ export default function Tasks() {
             // be archived, and the toggle above is off - "no tasks" would be
             // actively misleading here (the user very much has tasks).
             <EmptyState message={t('ui.allTasksArchived', { count: archivedCount })} />
+          ) : filteredTasks.length === 0 ? (
+            <EmptyState
+              message={
+                search.isFiltering
+                  ? t('search.noResultsFor', { query: search.query.trim() })
+                  : t('search.noResults')
+              }
+              action={<ActionButton onClick={clearFilters}>{t('ux4tasks.clearFilters')}</ActionButton>}
+            />
           ) : view === 'board' ? (
             <TaskBoard
               tasks={sortedTasks}
@@ -238,7 +324,8 @@ export default function Tasks() {
       {isReplanOpen && <ReplanOverdueModal tasks={tasks} onApply={replanTasks} onClose={() => setIsReplanOpen(false)} />}
 
       {/* Modal de criação */}
-      <Modal isOpen={isCreateModalOpen} onClose={closeCreateModal} title={t('ui.createNewTask')}>
+      <Modal isOpen={isCreateModalOpen} onClose={closeCreateModal} title={t('ui.createNewTask')} isDirty={createDirty.isDirty}>
+        <div onInput={createDirty.markDirty}>
         <TaskForm
           onSubmit={handleCreateTask}
           onCancel={closeCreateModal}
@@ -250,6 +337,7 @@ export default function Tasks() {
           progressStatuses={progressStatuses}
           existingTasks={tasks}
         />
+        </div>
       </Modal>
 
       {/* Modal de detalhe / edição */}
@@ -257,6 +345,7 @@ export default function Tasks() {
         isOpen={selectedTask !== null}
         onClose={closeDetailModal}
         title={isEditing ? t('ui.editTask') : t('ui.taskDetails')}
+        isDirty={editDirty.isDirty}
         action={
           selectedTask && (
             <ModalHeaderActions
@@ -279,6 +368,7 @@ export default function Tasks() {
         {selectedTask && (
           <div {...TASK_SHORTCUTS_SCOPE_PROPS}>
             {isEditing ? (
+              <div onInput={editDirty.markDirty}>
               <TaskEditForm
                 task={selectedTask}
                 onSubmit={handleUpdateTask}
@@ -291,6 +381,7 @@ export default function Tasks() {
                 progressStatuses={progressStatuses}
                 existingTasks={tasks}
               />
+              </div>
             ) : (
               <TaskDetailView
                 task={selectedTask}

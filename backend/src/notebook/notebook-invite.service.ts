@@ -8,11 +8,12 @@ import { PushService } from '../push/push.service';
 import { areFriends } from '../social/friendship.util';
 import type { ShareAccessRoleKind } from './dto/decide-access-request.dto';
 import { notebookEntrySharePath } from '../common/app-links.util';
+import { MS_PER_DAY } from '../common/time.constants';
 
 /** Maximo de pessoas com acesso (convites + pedidos) por nota. */
 const MAX_PEOPLE_PER_ENTRY = 30;
 /** Depois de recusar um convite, o dono so pode voltar a convidar passado isto. */
-const REINVITE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const REINVITE_COOLDOWN_MS = MS_PER_DAY;
 
 // Qualquer falha de "esta pessoa nao pode ser convidada" da o mesmo 404, para
 // nao revelar quem e (ou deixou de ser) amigo, nem se bloqueou.

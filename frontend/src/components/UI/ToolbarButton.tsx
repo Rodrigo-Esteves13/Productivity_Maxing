@@ -20,8 +20,8 @@ const TONE_CLASS: Record<ToolbarButtonTone, string> = {
 };
 
 const SIZE_CLASS: Record<ToolbarButtonSize, string> = {
-  sm: 'gap-1 px-2 py-1 text-xs',
-  md: 'gap-1.5 px-2.5 py-1.5 text-sm',
+  sm: 'gap-1 px-2 py-1 text-xs pointer-coarse:min-h-11',
+  md: 'gap-1.5 px-2.5 py-1.5 text-sm pointer-coarse:min-h-11',
 };
 
 // Ligado: solido nas barras compactas, discreto nas acoes de pagina.

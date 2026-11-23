@@ -4,6 +4,7 @@ import { useWorkShiftRange } from '../../hooks/useWorkShiftRange';
 import { useScheduleTasks } from '../../hooks/useScheduleTasks';
 import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
+import EmptyState from '../UI/EmptyState';
 import type { ClassOccurrence, WorkShiftOccurrence } from '../../types/models';
 import { toDateKey } from '../../lib/dateKey';
 import { mergeAgenda } from '../../lib/agenda';
@@ -43,6 +44,8 @@ interface WeekGridProps {
   // Aula desmarcada ou turno mudado: a pagina refaz o plano e pergunta se
   // o Google Calendar deve ser atualizado.
   onScheduleChanged?: () => void;
+  // Abre o formulario de editar uma aula.
+  onEditClass?: (occurrence: ClassOccurrence) => void;
 }
 
 export default function WeekGrid({
@@ -51,6 +54,7 @@ export default function WeekGrid({
   viewToggle,
   onAttendanceChanged,
   onScheduleChanged,
+  onEditClass,
 }: WeekGridProps) {
   const { t, lang } = useI18n();
   const { notify } = useFeedback();
@@ -159,7 +163,7 @@ export default function WeekGrid({
       </div>
 
       {isLoading && <LinesSkeleton lines={6} />}
-      {!isLoading && error && <ErrorState message={error} />}
+      {!isLoading && error && <ErrorState message={error} onRetry={() => void refetch()} />}
 
       {!isLoading && !error && (
         // 1 coluna no telemovel, 2 em ecras medios e 7 so em ecras largos:
@@ -178,12 +182,17 @@ export default function WeekGrid({
                 markableUntilMinutes={markableUntil(key)}
                 onAttendanceChange={handleAttendance}
                 onCancelChange={handleCancelled}
+                onEditClass={onEditClass}
                 onShiftClick={setChangingShift}
                 holidayName={holidayName(key)}
               />
             );
           })}
         </div>
+      )}
+
+      {!isLoading && !error && occurrences.length === 0 && shiftOccurrences.length === 0 && (
+        <EmptyState variant="inline" message={t('ux4sched.week.empty')} />
       )}
 
       {!isLoading && !error && <AgendaLegend />}

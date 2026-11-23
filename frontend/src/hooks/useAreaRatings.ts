@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getAreaRatings, setAreaRating } from '../api/areaRatingsService';
 import { createLatestWinsQueue } from '../lib/latestWinsQueue';
+import { RATING_DOMAINS } from '../lib/domainEvents';
+import { useDomainKey } from './useDomainVersion';
 import type { AreaRatingField } from '../types/models';
 
 type Values = Record<AreaRatingField, number | null>;
@@ -130,6 +132,8 @@ export function useAreaRatings(areaId: string) {
 // avaliacao, para o Dashboard so pedir as estatisticas quando fazem sentido.
 export function useHasAnyRating() {
   const [state, setState] = useState<{ isLoading: boolean; hasAny: boolean }>({ isLoading: true, hasAny: false });
+  // A primeira avaliacao dada noutro cartao faz o resumo aparecer sem F5.
+  const ratingsKey = useDomainKey(RATING_DOMAINS);
   useEffect(() => {
     let cancelled = false;
     getAreaRatings()
@@ -142,6 +146,6 @@ export function useHasAnyRating() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [ratingsKey]);
   return state;
 }

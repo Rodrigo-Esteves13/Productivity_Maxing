@@ -11,7 +11,7 @@ interface TaskHistorySectionProps {
 }
 
 function HistoryList({ taskId }: TaskHistorySectionProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const enumLabel = useEnumLabel();
   const fetcher = useCallback(
     async () => (await api.get<TaskChange[]>(`/tasks/${encodeURIComponent(taskId)}/changes`)).data,
@@ -26,13 +26,13 @@ function HistoryList({ taskId }: TaskHistorySectionProps) {
   const deps = {
     t,
     enumLabel,
-    formatDate: (iso: string) => new Date(iso).toLocaleDateString(),
+    formatDate: (iso: string) => new Date(iso).toLocaleDateString(lang),
   };
   return (
     <ul className="space-y-1.5">
       {data.map((change) => (
         <li key={change.id} className="text-sm text-neutral-300">
-          <span className="text-neutral-500 tabular-nums">{new Date(change.createdAt).toLocaleString()}</span>{' '}
+          <span className="text-neutral-500 tabular-nums">{new Date(change.createdAt).toLocaleString(lang)}</span>{' '}
           <span className="font-medium text-white">{t(`taskHistory.field.${change.field}`)}</span>
           {isOpaqueField(change.field)
             ? ''

@@ -13,6 +13,8 @@ import type { CalendarFeedStatus } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
 import Card from '../UI/Card';
 import ToggleRow from '../UI/ToggleRow';
+import ErrorState from '../UI/ErrorState';
+import LinesSkeleton from '../UI/LinesSkeleton';
 
 // Feed .ics subscrivivel: classes, turnos, viagens, blocos de estudo e tasks
 // no Google/Apple/Outlook Calendar sem OAuth. So leitura.
@@ -28,6 +30,7 @@ export default function CalendarFeedCard() {
   const load = useCallback(async () => {
     try {
       setStatus(await getCalendarFeed());
+      setLoadFailed(false);
     } catch {
       setLoadFailed(true);
     }
@@ -69,8 +72,24 @@ export default function CalendarFeedCard() {
     if (ok) await run(disableCalendarFeed, t('ui.couldNotTurnOffThe'));
   };
 
-  if (loadFailed) return null;
-  if (status === null) return null;
+  if (loadFailed || status === null) {
+    return (
+      <Card>
+        <h2 className="mb-3 text-lg font-semibold text-white">{t('ui.calendarFeedIcs')}</h2>
+        {loadFailed ? (
+          <ErrorState
+            message={t('ux4sched.feed.loadFailed')}
+            onRetry={() => {
+              setLoadFailed(false);
+              void load();
+            }}
+          />
+        ) : (
+          <LinesSkeleton lines={2} />
+        )}
+      </Card>
+    );
+  }
 
   const url = status.token ? feedUrl(status.token, tasksOnly) : null;
 

@@ -1,3 +1,4 @@
+import { POLL_MS } from '../lib/pollIntervals';
 import { useEffect, useRef, useState } from 'react';
 import { useLiveRefresh } from '../hooks/useLiveRefresh';
 import { usePushNotifications } from '../hooks/usePushNotifications';
@@ -102,7 +103,7 @@ export default function SharedNotebookEntry() {
 
   // Pedido pendente/negado: atualiza sozinho quando o dono decide (antes era
   // preciso F5 para ver a aprovacao).
-  useLiveRefresh(() => load(true), { enabled: gateStatus === 'pending', intervalMs: 8000 });
+  useLiveRefresh(() => load(true), { enabled: gateStatus === 'pending', intervalMs: POLL_MS.sharedEntryGate });
   useLiveRefresh(
     () => {
       if (Date.now() - loadedAtRef.current > SIGNED_URL_REFRESH_MS) load(true);
@@ -189,7 +190,7 @@ export default function SharedNotebookEntry() {
   if (error || !entry) {
     return (
       <PageLayout>
-        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-2 px-4 text-center">
+        <div className="flex min-h-[50dvh] flex-col items-center justify-center gap-2 px-4 text-center">
           <BookOpenIcon className="h-8 w-8 text-neutral-700" />
           <p className="text-sm text-neutral-400">{error || t('ui.shareLinkInvalid')}</p>
         </div>
@@ -302,7 +303,7 @@ function ShareAccessGate({
   };
 
   return (
-    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 text-center">
+    <div className="flex min-h-[50dvh] flex-col items-center justify-center gap-3 px-4 text-center">
       <ShieldIcon className="h-8 w-8 text-neutral-700" />
       <h1 className="text-base font-semibold text-white">{copy[status].title}</h1>
       <p className="max-w-sm text-sm text-neutral-400">{copy[status].body}</p>
@@ -396,7 +397,7 @@ export function SharedNotebookEntryView({
   hasPendingProposal: boolean;
   onChanged: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
   const [justProposed, setJustProposed] = useState(false);
   const [previewing, setPreviewing] = useState<PreviewableFile | null>(null);
@@ -470,7 +471,7 @@ export function SharedNotebookEntryView({
             {entry.area.name}
           </span>
           <h1 className="break-words font-serif text-2xl font-semibold leading-tight text-white sm:text-3xl">{entry.title}</h1>
-          <p className="text-xs text-neutral-500">{new Date(entry.date).toLocaleDateString()}</p>
+          <p className="text-xs text-neutral-500">{new Date(entry.date).toLocaleDateString(lang)}</p>
         </div>
 
         {entry.textContent && (

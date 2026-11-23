@@ -262,6 +262,6 @@ export const fase7: Record<string, string> = {
   'canvas.paste': "붙여넣기",
   'canvas.duplicate': "복제",
   'canvas.deleteSelection': "선택 삭제",
-  'notes.deleteConfirm': "\"{title}\"을(를) 삭제할까요? 되돌릴 수 없습니다.",
+  'notes.deleteConfirm': "\"{title}\"을(를) 삭제할까요? 삭제 직후에는 되돌릴 수 있어요.",
   'wellbeing.blood.deleteConfirm': "{date} 헌혈 기록을 삭제할까요? 되돌릴 수 없습니다.",
 };

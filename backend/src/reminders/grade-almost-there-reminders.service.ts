@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { UserStatus } from '@prisma/client';
+import { Prisma, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PushService } from '../push/push.service';
 import { getLisbonNow, toDateKey } from '../common/date-key.util';
@@ -21,6 +21,26 @@ const SEND_WINDOW_START_MINUTES = 9 * MINUTES_PER_HOUR;
 const SEND_WINDOW_END_MINUTES = 21 * MINUTES_PER_HOUR;
 // Utilizadores processados por pagina (cursor por id, ordem estavel).
 export const USER_BATCH_SIZE = 200;
+
+/**
+ * Pre-filtro em SQL antes do calculo pesado de risco: so users com peso a
+ * contar num periodo nao arquivado (componente de nota, ou task com peso).
+ * Sem nenhum dos dois nao ha cadeira "quase la", por isso nao vale a pena
+ * chamar courseRisk.overview. Mesmo criterio de periodo que o overview.
+ */
+export const HAS_WEIGHTED_WORK_WHERE: Prisma.UserWhereInput = {
+  OR: [
+    { gradeComponents: { some: { period: { isArchived: false } } } },
+    {
+      tasks: {
+        some: {
+          weightPercentage: { not: null },
+          period: { isArchived: false },
+        },
+      },
+    },
+  ],
+};
 
 /** Cadeiras avaliadas com 85% a menos de 100% do peso ja avaliado. */
 export function almostThereRows(
@@ -76,6 +96,7 @@ export class GradeAlmostThereRemindersService {
         where: {
           status: { not: UserStatus.BANNED },
           pushSubscriptions: { some: {} },
+          ...HAS_WEIGHTED_WORK_WHERE,
           ...(cursor ? { id: { gt: cursor } } : {}),
         },
         select: { id: true, quietHoursStart: true, quietHoursEnd: true },

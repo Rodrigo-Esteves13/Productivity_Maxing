@@ -13,7 +13,11 @@ import {
   assertAreaAccessible,
 } from '../areas/area-access';
 import type { CreateTaskDto } from '../tasks/dto/create-task.dto';
-import { CreateTaskPackDto, ImportTaskPackDto } from './dto/task-pack.dto';
+import {
+  CreateTaskPackDto,
+  ImportTaskPackDto,
+  RenameTaskPackDto,
+} from './dto/task-pack.dto';
 import { MAX_PACKS_PER_USER } from './task-packs.constants';
 
 export interface TaskPackSummary {
@@ -172,6 +176,25 @@ export class TaskPacksService {
     return packs.map((p) => this.toSummary(p));
   }
 
+  // So o nome: o codigo partilhado e os itens ficam iguais.
+  async rename(
+    ownerId: string,
+    id: string,
+    dto: RenameTaskPackDto,
+  ): Promise<TaskPackSummary> {
+    const { count } = await this.prisma.taskPack.updateMany({
+      where: { id, ownerId },
+      data: { name: dto.name },
+    });
+    if (count === 0) throw new NotFoundException('Task pack not found.');
+    const pack = await this.prisma.taskPack.findFirst({
+      where: { id, ownerId },
+      include: { _count: { select: { items: true } } },
+    });
+    if (!pack) throw new NotFoundException('Task pack not found.');
+    return this.toSummary(pack);
+  }
+
   async remove(ownerId: string, id: string): Promise<void> {
     const { count } = await this.prisma.taskPack.deleteMany({
       where: { id, ownerId },
@@ -267,9 +290,16 @@ export class TaskPacksService {
       userId,
       dto.periodId,
     );
+    // Modo substituir: so se planeia; as tasks antigas so sao apagadas depois
+    // dos creates (B-27), para uma falha nao as perder sem nada em troca.
     const replace = dto.replaceExisting
-      ? await this.clearForReplace(userId, periodId, resolved)
-      : { deleted: 0, keptByItem: new Map<string, string>() };
+      ? await this.planReplace(userId, periodId, resolved)
+      : {
+          toDelete: [] as string[],
+          keptByItem: new Map<string, string>(),
+        };
+    let attemptedCreates = 0;
+    let createdCount = 0;
 
     for (const { item, areaId } of resolved) {
       const keptTaskId = replace.keptByItem.get(item.id);
@@ -297,14 +327,15 @@ export class TaskPacksService {
         isBlocked: item.isBlocked,
         submissionDate: item.submissionDate?.toISOString() ?? null,
       };
+      attemptedCreates += 1;
       try {
-        const created = await this.tasksService.create(userId, taskDto);
-        // Liga a task ao item para receber as atualizacoes do dono (sempre
-        // com pedido de autorizacao, ver TaskPackSyncService).
-        await this.prisma.task.update({
-          where: { id: created.id, userId },
-          data: { packItemId: item.id, packItemVersion: item.version },
+        // packItem liga a task ao item para receber as atualizacoes do dono
+        // (sempre com pedido de autorizacao, ver TaskPackSyncService).
+        await this.tasksService.create(userId, taskDto, {
+          packItem: { id: item.id, version: item.version },
+          weightExcludeTaskIds: replace.toDelete,
         });
+        createdCount += 1;
         results.push({ itemId: item.id, ok: true });
       } catch (error) {
         results.push({
@@ -320,6 +351,14 @@ export class TaskPacksService {
       }
     }
 
+    // Apaga as antigas so se pelo menos um create deu certo (ou nao havia
+    // nada a criar); se tudo falhou o user fica com o que tinha.
+    const deleted =
+      (createdCount > 0 || attemptedCreates === 0) &&
+      replace.toDelete.length > 0
+        ? (await this.tasksService.bulkRemove(userId, replace.toDelete)).count
+        : 0;
+
     const ok = results.filter((r) => r.ok).length;
     if (ok > 0) {
       await this.prisma.taskPack.update({
@@ -331,27 +370,27 @@ export class TaskPacksService {
     return {
       created: ok - kept,
       failed: results.length - ok,
-      replaced: replace.deleted,
+      replaced: deleted,
       kept,
       results,
     };
   }
 
   /**
-   * Modo substituir: apaga as tasks do user no periodo e nas cadeiras que o
-   * import vai preencher, para o pacote ficar no lugar delas (e o limite de
-   * 100% de peso nao travar o import). Tasks com nota ou concluidas sao
+   * Modo substituir: decide que tasks do user, no periodo e nas cadeiras que
+   * o import vai preencher, saem para o pacote ficar no lugar delas (o limite
+   * de 100% de peso ignora-as). NAO apaga: quem chama apaga depois dos creates. Tasks com nota ou concluidas sao
    * historia e ficam; se o titulo bater com um item, passam a ser essa task
    * do pacote em vez de se criar uma copia.
    *
    * Cadeiras a que o user nao tem acesso saem antes de apagar: esses itens
    * iam falhar no create e nao se apaga nada que nao vai ser substituido.
    */
-  private async clearForReplace(
+  private async planReplace(
     userId: string,
     periodId: string,
     resolved: ResolvedItem[],
-  ): Promise<{ deleted: number; keptByItem: Map<string, string> }> {
+  ): Promise<{ toDelete: string[]; keptByItem: Map<string, string> }> {
     const areaIds: string[] = [];
     for (const areaId of new Set(resolved.map((r) => r.areaId))) {
       try {
@@ -361,7 +400,7 @@ export class TaskPacksService {
         // fica de fora: o item correspondente falha no create com a mensagem certa
       }
     }
-    if (areaIds.length === 0) return { deleted: 0, keptByItem: new Map() };
+    if (areaIds.length === 0) return { toDelete: [], keptByItem: new Map() };
 
     const existing = await this.prisma.task.findMany({
       where: { userId, periodId, areaId: { in: areaIds } },
@@ -391,9 +430,7 @@ export class TaskPacksService {
     }
 
     const toDelete = existing.filter((t) => !isHistory(t)).map((t) => t.id);
-    if (toDelete.length === 0) return { deleted: 0, keptByItem };
-    const { count } = await this.tasksService.bulkRemove(userId, toDelete);
-    return { deleted: count, keptByItem };
+    return { toDelete, keptByItem };
   }
 
   private async findByCodeOrThrow(code: string) {

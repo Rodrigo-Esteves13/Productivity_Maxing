@@ -17,6 +17,12 @@ import { CreateBannedIpDto } from './dto/create-banned-ip.dto';
  * em memória antes de gravar. O Set é a fonte da verdade para o Guard; a
  * BD é a fonte da verdade para sobreviver a um restart (recarregado em
  * onModuleInit) e para a página de admin listar/gerir.
+ *
+ * Pressuposto de instância única (S-34): o Set vive na memória deste
+ * processo. Com 2 ou mais instâncias, um ban feito numa não chega às outras
+ * até reiniciarem. Se escalar horizontalmente: propagar ban/unban por
+ * pub/sub (Redis) ou ler a BD em cada pedido com uma cache curta (alguns
+ * segundos), aceitando esse atraso máximo na propagação.
  */
 @Injectable()
 export class BannedIpsService implements OnModuleInit {

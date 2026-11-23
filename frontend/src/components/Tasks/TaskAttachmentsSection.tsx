@@ -16,6 +16,7 @@ import { deleteTaskAttachment, getTaskAttachments, uploadTaskAttachment } from '
 import { useLoadOnce } from '../../hooks/useLoadOnce';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useConfirmAction } from '../../hooks/useConfirmAction';
+import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
 
 interface TaskAttachmentsSectionProps {
@@ -26,6 +27,8 @@ interface TaskAttachmentsSectionProps {
 // preview dos anexos do caderno; o backend valida tudo de novo.
 export default function TaskAttachmentsSection({ taskId }: TaskAttachmentsSectionProps) {
   const { t } = useI18n();
+  const { notify } = useFeedback();
+  const [isUploading, setIsUploading] = useState(false);
   const fetcher = useCallback(() => getTaskAttachments(taskId), [taskId]);
   const { data, isLoading, error, reload } = useLoadOnce(fetcher);
   const [previewing, setPreviewing] = useState<PreviewableFile | null>(null);
@@ -34,8 +37,14 @@ export default function TaskAttachmentsSection({ taskId }: TaskAttachmentsSectio
   const upload = useFileUpload({
     validate: (file) => validateAttachment(file, files.length),
     onUpload: async (file) => {
-      await uploadTaskAttachment(taskId, file);
-      reload();
+      setIsUploading(true);
+      try {
+        await uploadTaskAttachment(taskId, file);
+        reload();
+        notify(t('quickWins.fileAdded'), 'success');
+      } finally {
+        setIsUploading(false);
+      }
     },
     failureMessage: t('ui.couldNotUploadFile'),
   });
@@ -75,6 +84,7 @@ export default function TaskAttachmentsSection({ taskId }: TaskAttachmentsSectio
                     run: async () => {
                       await deleteTaskAttachment(taskId, file.id);
                       reload();
+                      notify(t('quickWins.fileRemoved'), 'success');
                     },
                   })
                 }
@@ -87,10 +97,11 @@ export default function TaskAttachmentsSection({ taskId }: TaskAttachmentsSectio
       )}
       <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 transition-colors hover:border-violet-600 hover:text-white focus-within:outline focus-within:outline-2 focus-within:outline-violet-400">
         <UploadIcon className="h-4 w-4" />
-        {t('notebook.files.add')}
+        {isUploading ? t('quickWins.fileUploading') : t('notebook.files.add')}
         <input
           type="file"
           accept={ACCEPTED_ATTACHMENT_EXTENSIONS.join(',')}
+          disabled={isUploading}
           onChange={(e) => void upload.handleChange(e)}
           className="sr-only"
         />

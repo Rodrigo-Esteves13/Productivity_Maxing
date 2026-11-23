@@ -13,7 +13,7 @@ import { ROLE_KEY, areaColorOf } from '../components/SharedWithMe/sharedWithMeLa
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useFriendHub } from '../hooks/useFriendHub';
 import { respondToInvitation } from '../api/notebookService';
-import { requestNotesAccess } from '../api/socialNotesService';
+import { removeGrant, requestNotesAccess } from '../api/socialNotesService';
 import { blockUser, removeFriendship } from '../api/socialService';
 import type { FriendHub } from '../api/socialHubService';
 import { friendNotesPath, notebookEntryPath, sharedNotePath, socialTabPath, turmaPath, TURMAS_PATH } from '../lib/appLinks';
@@ -54,7 +54,7 @@ function NoteLink({
       >
         <span className="flex min-w-0 items-center gap-2 text-sm text-neutral-200">
           <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: areaColorOf(areaColor) }} />
-          <span className="truncate">{title}</span>
+          <span className="truncate" title={title}>{title}</span>
           <span className="hidden shrink-0 text-xs text-neutral-500 sm:inline">{areaName}</span>
         </span>
         <span className="shrink-0 text-xs text-neutral-400">{badge}</span>
@@ -68,11 +68,10 @@ function NoteLink({
 // abre-se cada nota, pede-se acesso e partilha-se uma nota nova.
 export default function FriendProfile() {
   const { t, lang } = useI18n();
-  const { notify } = useFeedback();
+  const { notify, confirm: confirmDialog } = useFeedback();
   const navigate = useNavigate();
   const { userId } = useParams<{ userId: string }>();
   const { hub, state, reload } = useFriendHub(userId);
-  const [confirm, setConfirm] = useState<'remove' | 'block' | null>(null);
   const [isAsking, setIsAsking] = useState(false);
   const name = hub?.friend.name?.trim() || t('social.anonymous');
   useDocumentTitle(hub ? name : t('social.friends'));
@@ -122,6 +121,27 @@ export default function FriendProfile() {
     }
   };
 
+  const dropNotebookGrant = async () => {
+    const grantId = hub.theirNotebook.grantId;
+    if (!grantId) return;
+    const approved = hub.theirNotebook.status === 'APPROVED';
+    const ok = await confirmDialog({
+      title: t(approved ? 'safeActions.stopViewing.title' : 'safeActions.cancelRequest.title'),
+      message: t(approved ? 'safeActions.stopViewing.message' : 'safeActions.cancelRequest.message', { name }),
+      confirmLabel: t(approved ? 'safeActions.stopViewing.confirm' : 'safeActions.cancelRequest.confirm'),
+      tone: approved ? 'danger' : 'default',
+    });
+    if (!ok) return;
+    try {
+      await removeGrant(grantId);
+      notifySocialChanged();
+      notify(t(approved ? 'safeActions.stopViewing.done' : 'safeActions.cancelRequest.done'), 'success');
+      void reload();
+    } catch {
+      notify(t('social.actionError'), 'error');
+    }
+  };
+
   const leave = async (action: 'remove' | 'block') => {
     try {
       if (action === 'remove') await removeFriendship(hub.friend.friendshipId);
@@ -134,6 +154,16 @@ export default function FriendProfile() {
     navigate(socialTabPath('friends'));
   };
 
+  const askLeave = async (action: 'remove' | 'block') => {
+    const ok = await confirmDialog({
+      title: t(action === 'remove' ? 'ux4social.remove.title' : 'ux4social.block.title', { name }),
+      message: t(action === 'remove' ? 'friend.confirmRemove' : 'friend.confirmBlock', { name }),
+      confirmLabel: t(action === 'remove' ? 'social.removeConfirm' : 'social.blockConfirm'),
+      tone: 'danger',
+    });
+    if (ok) await leave(action);
+  };
+
   const invitations = hub.sharedWithMe.filter((s) => s.invited);
   const theirNotes = hub.sharedWithMe.filter((s) => !s.invited);
 
@@ -144,7 +174,7 @@ export default function FriendProfile() {
         <div className="flex min-w-0 items-center gap-4">
           <PersonAvatar name={name} avatarUrl={hub.friend.avatarUrl} size="lg" />
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-semibold text-white">{name}</h1>
+            <h1 className="truncate text-2xl font-semibold text-white" title={name}>{name}</h1>
             <p className="text-sm text-neutral-500">
               {t('social.since', { date: new Date(hub.friend.since).toLocaleDateString(lang) })}
             </p>
@@ -214,7 +244,7 @@ export default function FriendProfile() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Section title={t('friend.theirs.title', { name })} hint={t('friend.theirs.hint')}>
-          <NotebookAccessRow hub={hub} name={name} isAsking={isAsking} onAsk={() => void askNotes()} />
+          <NotebookAccessRow hub={hub} name={name} isAsking={isAsking} onAsk={() => void askNotes()} onDrop={() => void dropNotebookGrant()} />
           {theirNotes.length === 0 ? (
             <EmptyState message={t('friend.theirs.empty', { name })} />
           ) : (
@@ -255,36 +285,27 @@ export default function FriendProfile() {
       </div>
 
       <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-neutral-800 pt-4 text-sm">
-        {confirm ? (
-          <>
-            <span className="text-neutral-400">
-              {confirm === 'remove' ? t('friend.confirmRemove', { name }) : t('friend.confirmBlock', { name })}
-            </span>
-            <button
-              type="button"
-              onClick={() => void leave(confirm)}
-              className="rounded-md bg-red-600/80 px-2.5 py-1 text-white hover:bg-red-600"
-            >
-              {confirm === 'remove' ? t('social.removeConfirm') : t('social.blockConfirm')}
-            </button>
-            <button type="button" onClick={() => setConfirm(null)} className="text-neutral-400 hover:text-white">
-              {t('common.cancel')}
-            </button>
-          </>
-        ) : (
-          <>
-            <button type="button" onClick={() => setConfirm('remove')} className="text-neutral-400 hover:text-red-400">
-              {t('social.remove')}
-            </button>
-            <button type="button" onClick={() => setConfirm('block')} className="text-neutral-400 hover:text-red-400">
-              {t('social.block')}
-            </button>
-          </>
-        )}
+        <button
+          type="button"
+          onClick={() => void askLeave('remove')}
+          className="text-neutral-400 hover:text-red-400 pointer-coarse:min-h-11"
+        >
+          {t('social.remove')}
+        </button>
+        <button
+          type="button"
+          onClick={() => void askLeave('block')}
+          className="text-neutral-400 hover:text-red-400 pointer-coarse:min-h-11"
+        >
+          {t('social.block')}
+        </button>
       </div>
     </PageLayout>
   );
 }
+
+const DROP_BUTTON_CLASS =
+  'min-h-9 rounded-md border border-neutral-700 px-2.5 py-1 text-neutral-200 hover:bg-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400';
 
 // O caderno inteiro do amigo (leitura por cadeiras): ler, pedido enviado ou pedir.
 function NotebookAccessRow({
@@ -292,14 +313,16 @@ function NotebookAccessRow({
   name,
   isAsking,
   onAsk,
+  onDrop,
 }: {
   hub: FriendHub;
   name: string;
   isAsking: boolean;
   onAsk: () => void;
+  onDrop: () => void;
 }) {
   const { t } = useI18n();
-  const { status, areaCount } = hub.theirNotebook;
+  const { status, areaCount, grantId } = hub.theirNotebook;
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-950/40 px-3 py-2 text-sm">
       <span className="text-neutral-300">
@@ -310,9 +333,22 @@ function NotebookAccessRow({
             : t('friend.theirs.notebookNone', { name })}
       </span>
       {status === 'APPROVED' ? (
-        <Link to={friendNotesPath(hub.friend.userId)} className="font-medium text-violet-400 hover:text-violet-300">
-          {t('social.notes.read')}
-        </Link>
+        <span className="flex items-center gap-3">
+          <Link to={friendNotesPath(hub.friend.userId)} className="font-medium text-violet-400 hover:text-violet-300">
+            {t('social.notes.read')}
+          </Link>
+          {grantId && (
+            <button type="button" onClick={onDrop} className={DROP_BUTTON_CLASS}>
+              {t('safeActions.stopViewing.button')}
+            </button>
+          )}
+        </span>
+      ) : status === 'PENDING' ? (
+        grantId ? (
+          <button type="button" onClick={onDrop} className={DROP_BUTTON_CLASS}>
+            {t('safeActions.cancelRequest.button')}
+          </button>
+        ) : null
       ) : status === 'NONE' ? (
         <button
           type="button"

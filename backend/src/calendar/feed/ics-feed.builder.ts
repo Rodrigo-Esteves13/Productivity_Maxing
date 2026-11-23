@@ -6,6 +6,7 @@ import {
   ISO_DATE_KEY_LENGTH,
   MS_PER_MINUTE,
   MS_PER_SECOND,
+  APP_TIME_ZONE,
 } from '../../common/time.constants';
 
 export interface FeedEvent {
@@ -26,7 +27,6 @@ export interface FeedEvent {
 
 const CRLF = '\r\n';
 const PRODUCT_ID = '-//Productivity Maxing//Calendar Feed//EN';
-const LISBON_TZ = 'Europe/Lisbon';
 
 /** Escapa texto de propriedade (RFC 5545 3.3.11). */
 export function escapeIcsText(value: string): string {
@@ -90,7 +90,7 @@ function nextDayKey(dateKey: string): string {
 // corre em UTC no Render, por isso nunca se usa getHours() local.
 function lisbonOffsetMinutes(at: Date): number {
   const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: LISBON_TZ,
+    timeZone: APP_TIME_ZONE,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -179,7 +179,7 @@ export function buildIcsFeed(
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${escapeIcsText(options.calendarName)}`,
-    `X-WR-TIMEZONE:${LISBON_TZ}`,
+    `X-WR-TIMEZONE:${APP_TIME_ZONE}`,
     // Dicas de refresh (Apple/Outlook respeitam; o Google decide sozinho).
     'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
     'X-PUBLISHED-TTL:PT1H',

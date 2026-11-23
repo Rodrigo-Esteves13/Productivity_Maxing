@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
 import { getWeightBudgets, type WeightBudgets } from '../api/gradeComponentsService';
+import { GRADE_DOMAINS } from '../lib/domainEvents';
+import { useDomainKey } from './useDomainVersion';
 
 // Orcamento de peso (usado / em falta) de todas as cadeiras do periodo.
-// `refreshKey` forca novo pedido quando as tasks mudam.
-export function useWeightBudgets(periodId: string | null | undefined, refreshKey = 0) {
+// Volta a pedir (em silencio) quando uma task ou componente de nota muda em
+// qualquer sitio: criar, apagar ou mudar o peso, mesmo que a soma fique igual.
+export function useWeightBudgets(periodId: string | null | undefined) {
   const [data, setData] = useState<WeightBudgets | null>(null);
+  const refreshKey = useDomainKey(GRADE_DOMAINS);
 
   useEffect(() => {
     if (!periodId) return;

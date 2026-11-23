@@ -1,4 +1,5 @@
 import api from './client';
+import { notifyDomainChanged } from '../lib/domainEvents';
 
 // Mirrors StreakFreezeRow / StreakFreezeStatus in the backend's
 // study-sessions/streak-freezes.service.ts.
@@ -25,10 +26,13 @@ export const getStreakFreezeStatus = async (): Promise<StreakFreezeStatus> => {
 // Sem dateKey o backend usa hoje (Lisboa); so aceita hoje ou ontem.
 export const createStreakFreeze = async (dateKey?: string): Promise<StreakFreezeRow> => {
   const response = await api.post<StreakFreezeRow>('/streak-freezes', dateKey ? { dateKey } : {});
+  // A streak mostrada noutros cartoes (Dashboard, Focus) muda com o descanso.
+  notifyDomainChanged('studySessions');
   return response.data;
 };
 
 // So o descanso de hoje pode ser desfeito.
 export const deleteStreakFreeze = async (id: string): Promise<void> => {
   await api.delete(`/streak-freezes/${id}`);
+  notifyDomainChanged('studySessions');
 };

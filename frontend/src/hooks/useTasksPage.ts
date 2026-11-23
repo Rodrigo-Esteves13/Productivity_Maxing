@@ -24,11 +24,12 @@ import type {
 } from '../types/models';
 import { useQuickReschedule } from './useQuickReschedule';
 import { useCompleteWithUndo } from './useCompleteWithUndo';
+import { useUndoableDelete } from './useUndoableDelete';
+import { restoreTask } from '../lib/restoreTask';
 import { isRequestCanceled } from '../lib/abortable';
 import { useAcademic } from '../context/useAcademic';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
-import { celebrateCompletion } from '../lib/completionFeedback';
 import { askIfFinishedOnTime, onOnTimeSaved } from '../lib/onTimeQuestion';
 
 // /tasks?new=1 (atalho do icone da app) abre o formulario de criar task.
@@ -54,6 +55,7 @@ export function useTasksPage() {
   // Hook do reagendamento (Feature anterior)
   // Swipe para a direita nos cartoes (Undo na mensagem).
   const { completeOne: completeTask } = useCompleteWithUndo(setTasks);
+  const offerUndoDelete = useUndoableDelete();
   const { rescheduleToTomorrow, reschedulingId } = useQuickReschedule((updatedTask) => {
     setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
   });
@@ -124,6 +126,13 @@ export function useTasksPage() {
     }
   };
 
+  // Tentar outra vez depois de um erro de carregamento.
+  const reload = () => {
+    setError(null);
+    void fetchMeta();
+    void fetchTasks(new AbortController().signal);
+  };
+
   useEffect(() => {
     fetchMeta();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -157,7 +166,8 @@ export function useTasksPage() {
         return { ...task, googleCalendarEventId: null };
       }
     } catch {
-      // falha silenciosa de propósito - ver comentário acima
+      // A task ficou gravada; avisa que so o Calendar falhou (U-A07).
+      notify(translateNow('ux4tasks.calendarSyncFailed', { title: task.title }), 'info');
     }
     return task;
   };
@@ -191,6 +201,7 @@ export function useTasksPage() {
       ),
     );
     setIsCreateModalOpen(false);
+    notify(translateNow('quickWins.taskCreated', { title: finalTask.title }), 'success');
     return finalTask;
   };
 
@@ -267,8 +278,8 @@ export function useTasksPage() {
         });
         notify(
           spawnedTasks.length === 1
-            ? '1 new task was created (next repeat or review).'
-            : `${spawnedTasks.length} new tasks were created (repeat or reviews).`,
+            ? translateNow('hook.tasksSpawnedOne')
+            : translateNow('hook.tasksSpawnedMany', { count: spawnedTasks.length }),
           'info',
         );
       }
@@ -291,9 +302,10 @@ export function useTasksPage() {
       setTasks((prev) => prev.map((t) => (t.id === finalTask.id ? finalTask : t)));
       setSelectedTask(finalTask);
       setIsEditing(false);
+      notify(translateNow('quickWins.taskUpdated', { title: finalTask.title }), 'success');
       return finalTask;
     },
-    [selectedTask, absorbSpawnedTasks]
+    [selectedTask, absorbSpawnedTasks, notify]
   );
 
   const handleDeleteTask = useCallback(async () => {
@@ -329,13 +341,22 @@ export function useTasksPage() {
           // fica um evento órfão na Google, mas apagável à mão.
         }
       }
-      await deleteTask(selectedTask.id);
-      setTasks((prev) => prev.filter((t) => t.id !== selectedTask.id));
+      const deleted = selectedTask;
+      await deleteTask(deleted.id);
+      setTasks((prev) => prev.filter((t) => t.id !== deleted.id));
       closeDetailModal();
+      offerUndoDelete({
+        message: translateNow('undoDelete.task', { title: deleted.title }),
+        restore: () => restoreTask(deleted),
+        onRestored: (restored) =>
+          setTasks((prev) =>
+            [...prev, restored].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+          ),
+      });
     } catch {
       notify(translateNow('hook.couldNotDeleteTheTaskPlease'), 'error');
     }
-  }, [selectedTask, closeDetailModal, confirm, notify]);
+  }, [selectedTask, closeDetailModal, confirm, notify, offerUndoDelete]);
 
   // Função de Duplicar corrigida!
   const handleDuplicateTask = useCallback(async () => {
@@ -351,7 +372,7 @@ export function useTasksPage() {
     try {
       // Usamos .type e .academicType para respeitar o model Task do frontend
       const newTaskData = {
-        title: `${selectedTask.title} (Copy)`,
+        title: translateNow('hook.copySuffix', { title: selectedTask.title }),
         areaId: selectedTask.areaId,
         date: selectedTask.date,
         type: selectedTask.type,
@@ -401,20 +422,24 @@ export function useTasksPage() {
   // reasoning bulkUpdateTaskStatus already relies on); this is what the
   // 'c' keyboard shortcut calls, so completing a task doesn't require
   // opening the edit form first.
+  // Passa por completeTask (completeOne): toast com Desfazer, tasks criadas
+  // ao concluir e a pergunta "acabaste a tempo?", como no swipe (U-A05).
   const markSelectedTaskComplete = useCallback(async () => {
     if (!selectedTask || selectedTask.progressStatus === 'COMPLETED') return;
-    try {
-      const updated = absorbSpawnedTasks(
-        await updateTask(selectedTask.id, { progressStatus: 'COMPLETED' }),
-      );
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-      setSelectedTask(updated);
-      celebrateCompletion();
-      askIfFinishedOnTime([updated]);
-    } catch {
-      notify(translateNow('hook.couldNotMarkTheTaskAs'), 'error');
-    }
-  }, [selectedTask, notify, absorbSpawnedTasks]);
+    await completeTask(selectedTask);
+  }, [selectedTask, completeTask]);
+
+  // Concluir/desfazer pela lista ou pelo toast: o detalhe aberto mostra o
+  // mesmo estado (so estes dois campos, para nao pisar uma edicao em curso).
+  useEffect(() => {
+    setSelectedTask((prev) => {
+      if (!prev) return prev;
+      const match = tasks.find((t) => t.id === prev.id);
+      if (!match) return prev;
+      if (match.progressStatus === prev.progressStatus && match.completedAt === prev.completedAt) return prev;
+      return { ...prev, progressStatus: match.progressStatus, completedAt: match.completedAt };
+    });
+  }, [tasks]);
 
   // Aplica a prioridade sugerida (decisao do user, so um PATCH da prioridade).
   const applyPrioritySuggestion = useCallback(
@@ -545,6 +570,7 @@ export function useTasksPage() {
     progressStatuses,
     isLoading,
     error,
+    reload,
     isCreateModalOpen,
     selectedTask,
     isEditing,

@@ -262,6 +262,6 @@ export const fase7: Record<string, string> = {
   'canvas.paste': "貼り付け",
   'canvas.duplicate': "複製",
   'canvas.deleteSelection': "選択を削除",
-  'notes.deleteConfirm': "「{title}」を削除しますか？元に戻せません。",
+  'notes.deleteConfirm': "「{title}」を削除しますか？直後なら取り消せます。",
   'wellbeing.blood.deleteConfirm': "{date} の献血記録を削除しますか？元に戻せません。",
 };

@@ -96,23 +96,24 @@ export class AreaRatingsService {
       },
       select: { areaId: true },
     });
-    await Promise.all(
-      sameTeacher.map((other) =>
+    // Tudo ou nada: sem escritas parciais se uma das cadeiras falhar.
+    await this.prisma.$transaction([
+      ...sameTeacher.map((other) =>
         this.prisma.areaRating.upsert({
           where: { userId_areaId: { userId, areaId: other.areaId } },
           create: { userId, areaId: other.areaId, teacherRating },
           update: { teacherRating },
         }),
       ),
-    );
-    await this.prisma.areaRating.deleteMany({
-      where: {
-        userId,
-        areaId: { in: sameTeacher.map((other) => other.areaId) },
-        teacherRating: null,
-        courseLiking: null,
-      },
-    });
+      this.prisma.areaRating.deleteMany({
+        where: {
+          userId,
+          areaId: { in: sameTeacher.map((other) => other.areaId) },
+          teacherRating: null,
+          courseLiking: null,
+        },
+      }),
+    ]);
   }
 
   /** Apagar uma avaliacao que nao existe nao e erro. */

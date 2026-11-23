@@ -69,7 +69,7 @@ export const extra: Record<string, string> = {
   "hook.couldNotLoadTheData": "Die Daten konnten nicht geladen werden.",
   "hook.taskCreatedButTheChecklistCould": "Aufgabe erstellt, aber die Checkliste konnte nicht gespeichert werden.",
   "hook.deleteTask": "Aufgabe löschen",
-  "hook.areYouSureYouWantTo": "Möchtest du diese Aufgabe wirklich löschen? Das kann nicht rückgängig gemacht werden.",
+  "hook.areYouSureYouWantTo": "Möchtest du diese Aufgabe wirklich löschen? Du kannst es direkt danach rückgängig machen.",
   "hook.googleCalendar": "Google Kalender",
   "hook.alsoRemoveTheLinkedEventFrom": "Auch den verknüpften Termin aus Google Kalender entfernen?",
   "hook.removeEvent": "Termin entfernen",

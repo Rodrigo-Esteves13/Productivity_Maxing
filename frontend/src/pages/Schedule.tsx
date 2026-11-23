@@ -14,7 +14,9 @@ import CommitmentsCard from '../components/Schedule/CommitmentsCard';
 import ScheduleChangesCard from '../components/Schedule/ScheduleChangesCard';
 import ScheduleSyncCard from '../components/Schedule/ScheduleSyncCard';
 import CalendarFeedCard from '../components/Schedule/CalendarFeedCard';
-import { UploadIcon } from '../components/UI/Icons';
+import ClassFormModal from '../components/Schedule/ClassFormModal';
+import type { ClassOccurrence } from '../types/models';
+import { PlusIcon, UploadIcon } from '../components/UI/Icons';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { SCHEDULE_VIEWS, isScheduleView, useScheduleView, type ScheduleView } from '../hooks/useScheduleView';
 import { todayUtcAnchored } from '../lib/weekDates';
@@ -30,8 +32,10 @@ const VIEW_LABEL_KEY: Record<ScheduleView, string> = {
 
 export default function Schedule() {
   const { t } = useI18n();
-  useDocumentTitle('Schedule');
+  useDocumentTitle(t('nav.schedule'));
   const [isImportOpen, setIsImportOpen] = useState(false);
+  // undefined = fechado, null = aula nova, objeto = editar essa aula.
+  const [classForm, setClassForm] = useState<ClassOccurrence | null | undefined>(undefined);
   const { view, setView } = useScheduleView();
   // Dia que a vista que abrir a seguir deve mostrar: hoje, ou o dia
   // clicado na vista mensal (abre essa semana).
@@ -89,13 +93,16 @@ export default function Schedule() {
         title={t('ui.schedule')}
         description={t('ui.yourClassTimetableImportedFrom')}
         action={
-          <ActionButton
-            onClick={() => setIsImportOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <UploadIcon />
-            {t('ui.importIcs')}
-          </ActionButton>
+          <div className="flex flex-wrap gap-2">
+            <ActionButton onClick={() => setClassForm(null)} className="flex items-center gap-2">
+              <PlusIcon aria-hidden="true" />
+              {t('ux4sched.class.add')}
+            </ActionButton>
+            <ActionButton onClick={() => setIsImportOpen(true)} className="flex items-center gap-2">
+              <UploadIcon />
+              {t('ui.importIcs')}
+            </ActionButton>
+          </div>
         }
       />
 
@@ -109,6 +116,7 @@ export default function Schedule() {
             viewToggle={viewToggle}
             onAttendanceChanged={handleAttendanceChanged}
             onScheduleChanged={handleScheduleChanged}
+            onEditClass={setClassForm}
           />
         ) : (
           <MonthGrid
@@ -139,6 +147,15 @@ export default function Schedule() {
           </div>
         </div>
       </div>
+
+      {classForm !== undefined && (
+        <ClassFormModal
+          key={classForm?.id ?? 'new'}
+          occurrence={classForm}
+          onClose={() => setClassForm(undefined)}
+          onChanged={handleScheduleChanged}
+        />
+      )}
 
       <ImportScheduleModal
         isOpen={isImportOpen}

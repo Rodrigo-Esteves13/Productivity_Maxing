@@ -6,19 +6,20 @@ import {
   IsUUID,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { TASK_BULK_MAX } from '../tasks.constants';
 
 // Bulk equivalent of PATCH /tasks/:id with just { date }: "move these
 // overdue tasks to today/tomorrow" from the Dashboard multi-select. Same
-// 200-id cap as the other bulk DTOs.
+// TASK_BULK_MAX id cap as the other bulk DTOs.
 export class BulkRescheduleDto {
   @ApiProperty({
     type: [String],
     example: ['b3f1c2d4-...', 'a9e8d7c6-...'],
-    description: 'IDs of the tasks to move (max 200 per request).',
+    description: `IDs of the tasks to move (max ${TASK_BULK_MAX} per request).`,
   })
   @IsArray()
   @ArrayNotEmpty()
-  @ArrayMaxSize(200)
+  @ArrayMaxSize(TASK_BULK_MAX)
   @IsUUID('4', { each: true })
   ids!: string[];
 

@@ -8,6 +8,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PushService } from '../push/push.service';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 import { ReplyFeedbackDto } from './dto/moderate-feedback.dto';
+import { isNotFound } from '../common/prisma-errors';
+import { SELF_MUTE_MESSAGE } from './feedback.constants';
 
 // Igual a FEEDBACK_LIST_LIMIT no frontend (feedbackService.ts, E-14).
 export const FEEDBACK_LIST_LIMIT = 300;
@@ -96,6 +98,15 @@ export class FeedbackService {
     });
   }
 
+  /** Apaga um feedback do proprio autor (nunca de outro). */
+  async deleteMine(userId: string, id: string) {
+    const { count } = await this.prisma.feedback.deleteMany({
+      where: { id, userId },
+    });
+    if (count === 0) throw new NotFoundException('Feedback not found.');
+    return { id };
+  }
+
   /** Admin: mais recentes primeiro; por resolver antes. */
   list() {
     // Limite fixo; o frontend avisa quando a lista chega a ele (E-14).
@@ -139,7 +150,8 @@ export class FeedbackService {
   }
 
   /** Impede (ou volta a permitir) um user de enviar feedback. */
-  async setMuted(userId: string, muted: boolean) {
+  async setMuted(adminId: string, userId: string, muted: boolean) {
+    if (adminId === userId) throw new ForbiddenException(SELF_MUTE_MESSAGE);
     const result = await this.prisma.user.updateMany({
       where: { id: userId },
       data: { feedbackMutedAt: muted ? new Date() : null },
@@ -156,10 +168,7 @@ export class FeedbackService {
         select: ADMIN_SELECT,
       });
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
-      ) {
+      if (isNotFound(error)) {
         throw new NotFoundException('Feedback not found.');
       }
       throw error;

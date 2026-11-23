@@ -19,6 +19,7 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ScheduleService } from './schedule.service';
+import { CreateClassDto, UpdateClassDto } from './dto/class-input.dto';
 import { ImportScheduleDto } from './dto/import-schedule.dto';
 import { EctsWorkloadQueryDto } from './dto/ects-workload-query.dto';
 import { EstimateCommuteDto } from './dto/estimate-commute.dto';
@@ -30,8 +31,12 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { perMinute } from '../common/throttle.util';
-
-const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
+import { DateRangeQueryDto } from '../common/dto/date-range-query.dto';
+import { isRealDateKey, parseDateKey } from '../common/date-key.util';
+import {
+  SCHEDULE_COMMUTE_PER_MINUTE,
+  SCHEDULE_IMPORT_PER_MINUTE,
+} from './schedule.constants';
 
 @ApiTags('Schedule')
 @ApiBearerAuth()
@@ -46,7 +51,7 @@ export class ScheduleController {
   // isto pode disparar até ~1000 upserts de uma vez (ver
   // ImportScheduleDto), o mesmo cuidado que já existe no import de tasks.
   @Post('import')
-  @Throttle(perMinute(5))
+  @Throttle(perMinute(SCHEDULE_IMPORT_PER_MINUTE))
   @ApiOperation({
     summary:
       'Bulk-upserts class occurrences parsed client-side from a .ics export. Upserted by [userId, externalUid] - safe to re-run with an overlapping or newer export.',
@@ -66,20 +71,19 @@ export class ScheduleController {
   @ApiQuery({ name: 'to', example: '2026-09-20' })
   findRange(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('from') from: string,
-    @Query('to') to: string,
+    @Query() query: DateRangeQueryDto,
   ) {
     // A grelha mostra tambem as aulas desmarcadas (riscadas).
     return this.scheduleService.findRange(
       user.id,
-      new Date(from),
-      new Date(to),
+      parseDateKey(query.from),
+      parseDateKey(query.to),
       { includeCancelled: true },
     );
   }
 
   // Literal antes de qualquer rota com :id (mesma regra do resto da app).
-  // `to` é cortado em hoje: aulas futuras ainda não têm presença.
+  // `to` é cortado em hoje (no service): aulas futuras ainda não têm presença.
   @Get('attendance')
   @ApiOperation({
     summary:
@@ -89,19 +93,12 @@ export class ScheduleController {
   @ApiQuery({ name: 'to', example: '2027-01-31' })
   attendanceSummary(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('from') from: string,
-    @Query('to') to: string,
+    @Query() query: DateRangeQueryDto,
   ) {
-    if (!DATE_KEY.test(from ?? '') || !DATE_KEY.test(to ?? '')) {
-      throw new BadRequestException('Send "from" and "to" as YYYY-MM-DD.');
-    }
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    const toDate = new Date(`${to}T00:00:00.000Z`);
     return this.scheduleService.attendanceSummary(
       user.id,
-      new Date(`${from}T00:00:00.000Z`),
-      toDate.getTime() > today.getTime() ? today : toDate,
+      parseDateKey(query.from),
+      parseDateKey(query.to),
     );
   }
 
@@ -116,19 +113,12 @@ export class ScheduleController {
   @ApiQuery({ name: 'to', example: '2027-01-31' })
   studyVsClass(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('from') from: string,
-    @Query('to') to: string,
+    @Query() query: DateRangeQueryDto,
   ) {
-    if (!DATE_KEY.test(from ?? '') || !DATE_KEY.test(to ?? '')) {
-      throw new BadRequestException('Send "from" and "to" as YYYY-MM-DD.');
-    }
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    const toDate = new Date(`${to}T00:00:00.000Z`);
     return this.scheduleService.studyVsClass(
       user.id,
-      new Date(`${from}T00:00:00.000Z`),
-      toDate.getTime() > today.getTime() ? today : toDate,
+      parseDateKey(query.from),
+      parseDateKey(query.to),
     );
   }
 
@@ -177,6 +167,35 @@ export class ScheduleController {
     return this.scheduleService.setCancelled(user.id, id, dto.cancelled);
   }
 
+  // Literal antes das rotas com :id.
+  @Post('class')
+  @ApiOperation({ summary: 'Creates one class by hand (no .ics needed).' })
+  createClass(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateClassDto,
+  ) {
+    return this.scheduleService.createClass(user.id, dto);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Edits one class (subject, day, time, room).' })
+  updateClass(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateClassDto,
+  ) {
+    return this.scheduleService.updateClass(user.id, id, dto);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Deletes one class.' })
+  deleteClass(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.scheduleService.deleteClass(user.id, id);
+  }
+
   // Sem `from`/`to` apaga TODO o horário importado; com os dois só esse
   // intervalo. Recomeçar de zero é o caso principal (importaste o .ics
   // errado) - ver botão "Delete imported classes" no ImportScheduleModal.
@@ -195,13 +214,13 @@ export class ScheduleController {
     if (!from && !to) {
       return this.scheduleService.deleteOccurrences(user.id);
     }
-    if (!from || !to || !DATE_KEY.test(from) || !DATE_KEY.test(to)) {
+    if (!isRealDateKey(from) || !isRealDateKey(to)) {
       throw new BadRequestException(
         'Send both "from" and "to" as YYYY-MM-DD, or neither to delete everything.',
       );
     }
-    const fromDate = new Date(`${from}T00:00:00.000Z`);
-    const toDate = new Date(`${to}T00:00:00.000Z`);
+    const fromDate = parseDateKey(from);
+    const toDate = parseDateKey(to);
     if (fromDate.getTime() > toDate.getTime()) {
       throw new BadRequestException('"from" must not be after "to".');
     }
@@ -216,7 +235,7 @@ export class ScheduleController {
   // uma quota gratuita - nada aqui devia permitir um utilizador esgotar
   // essa quota sozinho por engano (ex: duplo-clique).
   @Post('commute/estimate')
-  @Throttle(perMinute(5))
+  @Throttle(perMinute(SCHEDULE_COMMUTE_PER_MINUTE))
   @ApiOperation({
     summary:
       'Estimates driving time between two addresses via Google Maps and saves homeAddress/campusAddress/commuteMinutes on the user. Returns 503 if GOOGLE_MAPS_API_KEY is not configured on this server.',

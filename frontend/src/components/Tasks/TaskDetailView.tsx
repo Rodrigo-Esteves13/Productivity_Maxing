@@ -121,7 +121,7 @@ export default function TaskDetailView({ task, taskTypes = [], academicTaskTypes
       {recurrenceLabel(task) && (
         <DetailRow label={t('ui.repeat')}>
           {recurrenceLabel(task)}
-          {task.recurrenceUntil ? ` ${t('ui.recurrenceUntil', { date: new Date(task.recurrenceUntil).toLocaleDateString() })}` : ''}.{' '}
+          {task.recurrenceUntil ? ` ${t('ui.recurrenceUntil', { date: new Date(task.recurrenceUntil).toLocaleDateString(lang) })}` : ''}.{' '}
           {t('ui.nextOneCreatedOnComplete')}
         </DetailRow>
       )}

@@ -1,4 +1,5 @@
 import api from './client';
+import { notifyDomainChanged } from '../lib/domainEvents';
 import type { AreaRating, AreaRatingField, RatingStats } from '../types/models';
 
 export const getAreaRatings = async (): Promise<AreaRating[]> => {
@@ -19,5 +20,7 @@ export const setAreaRating = async (
   value: number | null,
 ): Promise<AreaRating> => {
   const response = await api.put<AreaRating>(`/area-ratings/${areaId}`, { [field]: value });
+  // Medias e "tens avaliacoes" (Dashboard, pagina Ratings) voltam a ler.
+  notifyDomainChanged('ratings');
   return response.data;
 };

@@ -12,7 +12,7 @@ export function useBestTimesHeatmap(refreshKey?: string | null) {
 
   const fetchHeatmap = useCallback(async () => {
     try {
-      setIsLoading(true);
+      // Sem setIsLoading(true): refetch silencioso, o cartao mantem os dados.
       setError('');
       const data = await getStudyHeatmap();
       setCells(data);

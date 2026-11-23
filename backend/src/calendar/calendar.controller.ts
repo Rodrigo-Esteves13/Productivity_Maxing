@@ -4,22 +4,21 @@ import {
   Post,
   Delete,
   Param,
+  ParseUUIDPipe,
   UseGuards,
-  NotFoundException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
-import { PrismaService } from '../prisma/prisma.service';
+import { Throttle } from '@nestjs/throttler';
+import { perMinute } from '../common/throttle.util';
 import { CalendarService } from './calendar.service';
+import { CALENDAR_TASK_SYNCS_PER_MINUTE } from './schedule-sync.constants';
 
 @Controller('calendar')
 @UseGuards(JwtAuthGuard)
 export class CalendarController {
-  constructor(
-    private calendarService: CalendarService,
-    private prisma: PrismaService,
-  ) {}
+  constructor(private calendarService: CalendarService) {}
 
   // Issue #34: consultado pelo frontend antes de mostrar qualquer botão de
   // sync (Dashboard) ou o CTA de connect (Profile).
@@ -31,54 +30,20 @@ export class CalendarController {
   // Issues #35/#36/#37: cria ou atualiza o evento e grava o
   // googleCalendarEventId de volta na Task.
   @Post('tasks/:taskId/sync')
-  async syncTask(
+  @Throttle(perMinute(CALENDAR_TASK_SYNCS_PER_MINUTE))
+  syncTask(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('taskId') taskId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
   ) {
-    const task = await this.prisma.task.findFirst({
-      where: { id: taskId, userId: user.id },
-      include: { area: true, taskType: true, academicType: true },
-    });
-    if (!task) {
-      throw new NotFoundException(`Task not found or you don't have access.`);
-    }
-
-    const googleCalendarEventId = await this.calendarService.upsertEventForTask(
-      user.id,
-      task,
-    );
-
-    await this.prisma.task.update({
-      where: { id: taskId, userId: user.id },
-      data: { googleCalendarEventId },
-    });
-
-    return { googleCalendarEventId };
+    return this.calendarService.syncTask(user.id, taskId);
   }
 
   @Delete('tasks/:taskId/sync')
-  async unsyncTask(
+  @Throttle(perMinute(CALENDAR_TASK_SYNCS_PER_MINUTE))
+  unsyncTask(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('taskId') taskId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
   ) {
-    const task = await this.prisma.task.findFirst({
-      where: { id: taskId, userId: user.id },
-    });
-    if (!task) {
-      throw new NotFoundException(`Task not found or you don't have access.`);
-    }
-
-    if (task.googleCalendarEventId) {
-      await this.calendarService.deleteEventForTask(
-        user.id,
-        task.googleCalendarEventId,
-      );
-      await this.prisma.task.update({
-        where: { id: taskId, userId: user.id },
-        data: { googleCalendarEventId: null },
-      });
-    }
-
-    return { googleCalendarEventId: null };
+    return this.calendarService.unsyncTask(user.id, taskId);
   }
 }

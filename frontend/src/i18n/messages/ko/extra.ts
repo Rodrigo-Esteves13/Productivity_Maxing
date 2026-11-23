@@ -69,7 +69,7 @@ export const extra: Record<string, string> = {
   "hook.couldNotLoadTheData": "데이터를 불러오지 못했어요.",
   "hook.taskCreatedButTheChecklistCould": "작업은 만들었지만 체크리스트를 저장하지 못했어요.",
   "hook.deleteTask": "작업 삭제",
-  "hook.areYouSureYouWantTo": "이 작업을 삭제할까요? 이 작업은 되돌릴 수 없어요.",
+  "hook.areYouSureYouWantTo": "이 작업을 삭제할까요? 삭제 직후에는 되돌릴 수 있어요.",
   "hook.googleCalendar": "Google 캘린더",
   "hook.alsoRemoveTheLinkedEventFrom": "Google 캘린더에 연결된 일정도 삭제할까요?",
   "hook.removeEvent": "일정 삭제",

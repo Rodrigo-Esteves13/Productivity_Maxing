@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserStatus } from '@prisma/client';
+import { MS_PER_DAY } from '../common/time.constants';
 
 interface BlockInfo {
   status: UserStatus;
@@ -12,7 +13,7 @@ interface BlockInfo {
 // e o 3º; o 1º->2º não tem espera além do normal "só depois do anterior
 // ser resolvido" (ver AppealsService.create).
 const MAX_APPEALS_PER_RESTRICTION = 3;
-const BAN_APPEAL_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 1 semana
+const BAN_APPEAL_COOLDOWN_MS = 7 * MS_PER_DAY; // 1 semana
 
 export interface AppealAvailability {
   appealsUsed: number;
@@ -200,5 +201,42 @@ export class AccountStatusService implements OnModuleInit {
       nextAppealAllowedAt,
       appealsExhausted,
     };
+  }
+
+  /**
+   * Estado da conta de quem pede (ecra de bloqueio). So le dados do proprio
+   * userId. O calculo de appealAvailability so corre para contas restringidas:
+   * a esmagadora maioria dos pedidos e de contas ACTIVE.
+   */
+  async getMyStatus(userId: string) {
+    const [account, latestAppeal] = await Promise.all([
+      this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: {
+          status: true,
+          suspendedUntil: true,
+          statusReason: true,
+          statusUpdatedAt: true,
+        },
+      }),
+      this.prisma.userAppeal.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          createdAt: true,
+          resolution: true,
+          resolutionNote: true,
+          resolvedAt: true,
+        },
+      }),
+    ]);
+
+    const appealAvailability =
+      account.status === UserStatus.ACTIVE
+        ? null
+        : await this.getAppealAvailability(userId, account);
+
+    return { ...account, appeal: latestAppeal, appealAvailability };
   }
 }

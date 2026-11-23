@@ -1,7 +1,7 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
+  Delete,
   Get,
   HttpCode,
   Param,
@@ -30,6 +30,10 @@ import {
   ResolveFeedbackDto,
 } from './dto/moderate-feedback.dto';
 import { perMinute } from '../common/throttle.util';
+import {
+  FEEDBACK_CREATE_PER_MINUTE,
+  FEEDBACK_MODERATE_PER_MINUTE,
+} from './feedback.constants';
 
 @ApiTags('Feedback')
 @ApiBearerAuth()
@@ -38,7 +42,7 @@ export class FeedbackController {
   constructor(private readonly feedback: FeedbackService) {}
 
   @UseGuards(JwtAuthGuard)
-  @Throttle(perMinute(5))
+  @Throttle(perMinute(FEEDBACK_CREATE_PER_MINUTE))
   @Post()
   @HttpCode(201)
   create(
@@ -54,6 +58,17 @@ export class FeedbackController {
   @ApiOperation({ summary: 'Feedback sent by the current user, with replies' })
   listMine(@CurrentUser() user: AuthenticatedUser) {
     return this.feedback.listMine(user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Throttle(perMinute(FEEDBACK_CREATE_PER_MINUTE))
+  @Delete('mine/:id')
+  @ApiOperation({ summary: 'Deletes one of the current user own feedbacks' })
+  deleteMine(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.feedback.deleteMine(user.id, id);
   }
 
   @UseGuards(JwtOrApiKeyAuthGuard, RolesGuard, ApiKeyScopeGuard)
@@ -74,10 +89,7 @@ export class FeedbackController {
     @Param('userId', ParseUUIDPipe) userId: string,
     @Body() dto: MuteFeedbackDto,
   ) {
-    if (me.id === userId) {
-      throw new ForbiddenException('You cannot mute your own account.');
-    }
-    return this.feedback.setMuted(userId, dto.muted);
+    return this.feedback.setMuted(me.id, userId, dto.muted);
   }
 
   @UseGuards(JwtOrApiKeyAuthGuard, RolesGuard, ApiKeyScopeGuard)
@@ -94,7 +106,7 @@ export class FeedbackController {
   @UseGuards(JwtOrApiKeyAuthGuard, RolesGuard, ApiKeyScopeGuard)
   @Roles(Role.ADMIN)
   @RequireApiKeyScope(ApiKeyScope.ADMIN)
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(FEEDBACK_MODERATE_PER_MINUTE))
   @Post(':id/reply')
   @ApiOperation({
     summary: 'Replies to the author, optionally resolving (Admin)',
@@ -106,7 +118,7 @@ export class FeedbackController {
   @UseGuards(JwtOrApiKeyAuthGuard, RolesGuard, ApiKeyScopeGuard)
   @Roles(Role.ADMIN)
   @RequireApiKeyScope(ApiKeyScope.ADMIN)
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(FEEDBACK_MODERATE_PER_MINUTE))
   @Post(':id/reject')
   @ApiOperation({
     summary: 'Declines the feedback with an optional reason (Admin)',

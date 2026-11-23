@@ -40,12 +40,14 @@ import {
   MAX_COURSE_WEIGHT_PERCENT,
   WEIGHT_EPSILON,
   assertWeightFits,
-  loadUsedWeight,
+  loadUsedWeightByArea,
 } from '../grade-components/weight-budget';
+import { nextTaskSortOrder, runWithUserTaskLock } from './user-lock.util';
 import type { CursorPaginationDto } from '../common/dto/cursor-pagination.dto';
 import { listOrPage, type ListMeta } from '../common/pagination.util';
 import { TaskAttachmentsService } from './task-attachments.service';
 import { assertBlockerValid, unblockDependents } from './task-blocker';
+import { assertTaskOwned } from './task-access';
 import { diffTaskFields, type TaskSnapshot } from './task-change-diff';
 import {
   ACTIONABLE_DEADLINE_WHERE,
@@ -136,6 +138,19 @@ function checkedSubmissionDate(submission: string, presentation: string): Date {
   return value;
 }
 
+/** Opcoes internas de create() (nao vem do cliente). */
+export interface CreateTaskExtra {
+  /** Liga a task ao item do pacote logo no insert (sem update extra). */
+  packItem?: { id: string; version: number };
+  /** Tasks que vao ser apagadas a seguir: nao contam para o limite de 100%. */
+  weightExcludeTaskIds?: string[];
+  /**
+   * Transacao do chamador (B-42): o lock, a validacao e o insert correm
+   * nela em vez de abrir uma transacao nova (nunca transacao aninhada).
+   */
+  tx?: Prisma.TransactionClient;
+}
+
 @Injectable()
 export class TasksService {
   private readonly logger = new Logger(TasksService.name);
@@ -154,7 +169,11 @@ export class TasksService {
       : this.periodsService.resolveActivePeriodId(userId);
   }
 
-  async create(userId: string, dto: CreateTaskDto) {
+  async create(
+    userId: string,
+    dto: CreateTaskDto,
+    extra: CreateTaskExtra = {},
+  ) {
     const {
       date,
       type,
@@ -181,59 +200,75 @@ export class TasksService {
     // mesmo padrão do resto do service).
     const resolvedPeriodId = await this.resolvePeriodId(userId, periodId);
 
-    // Cadeira nunca passa dos 100% (tasks + componentes de nota).
-    await assertWeightFits(
-      this.prisma,
-      { userId, areaId: dto.areaId, periodId: resolvedPeriodId },
-      dto.weightPercentage,
-    );
-
     // Se a task já nasce como COMPLETED (ex: registo retroativo), o streak
     // precisa de um completedAt real  não podemos depender só da "date"
     // (que é o prazo/alvo, não o dia em que foi de facto concluída).
     const completedAt = rest.progressStatus === 'COMPLETED' ? new Date() : null;
 
-    // Task nova entra sempre no fim da ordem manual, nunca a 0 (que
-    // saltaria para o topo da lista de alguém) - ver comentário em
-    // Task.sortOrder no schema.prisma.
-    const maxSortOrder = await this.prisma.task.aggregate({
-      where: { userId },
-      _max: { sortOrder: true },
-    });
-    const sortOrder = (maxSortOrder._max.sortOrder ?? 0) + 1;
+    const data = {
+      ...rest,
+      ...blockerPatch,
+      date: new Date(date),
+      userId, // Agora temos a certeza absoluta que o ID não está vazio!
+      periodId: resolvedPeriodId,
+      completedAt,
+      priorityId,
+      ...typeIds,
+      ...(extra.packItem
+        ? {
+            packItemId: extra.packItem.id,
+            packItemVersion: extra.packItem.version,
+          }
+        : {}),
+      ...(recurrenceUntil
+        ? { recurrenceUntil: new Date(recurrenceUntil) }
+        : {}),
+      ...(availableFrom ? { availableFrom: new Date(availableFrom) } : {}),
+      ...(submissionDate
+        ? { submissionDate: checkedSubmissionDate(submissionDate, date) }
+        : {}),
+    };
 
-    try {
-      const task = await this.prisma.task.create({
-        data: {
-          ...rest,
-          ...blockerPatch,
-          date: new Date(date),
-          userId, // Agora temos a certeza absoluta que o ID não está vazio!
-          periodId: resolvedPeriodId,
-          completedAt,
-          priorityId,
-          sortOrder,
-          ...typeIds,
-          ...(recurrenceUntil
-            ? { recurrenceUntil: new Date(recurrenceUntil) }
-            : {}),
-          ...(availableFrom ? { availableFrom: new Date(availableFrom) } : {}),
-          ...(submissionDate
-            ? { submissionDate: checkedSubmissionDate(submissionDate, date) }
-            : {}),
-        },
-        include: TASK_INCLUDE,
-      });
-      return this.toResponse(task);
-    } catch (error) {
-      // Fica só no terminal/log do backend, nunca no corpo da resposta -
-      // um erro do Prisma pode conter detalhes internos (nomes de coluna,
-      // constraints) que não devem ir para o cliente.
-      this.logger.error('Erro ao criar task', error as Error);
-      throw new InternalServerErrorException(
-        'Failed to create task. Please try again.',
-      );
-    }
+    // B-42: lock do user -> peso -> sortOrder -> insert, tudo na mesma
+    // transacao. Dois pedidos em paralelo nao passam os 100% da cadeira nem
+    // ficam com o mesmo sortOrder. Com extra.tx reutiliza a do chamador.
+    const task = await runWithUserTaskLock(
+      this.prisma,
+      userId,
+      async (tx) => {
+        // Cadeira nunca passa dos 100% (tasks + componentes de nota).
+        await assertWeightFits(
+          tx,
+          {
+            userId,
+            areaId: dto.areaId,
+            periodId: resolvedPeriodId,
+            excludeTaskIds: extra.weightExcludeTaskIds,
+          },
+          dto.weightPercentage,
+        );
+        // Task nova entra sempre no fim da ordem manual, nunca a 0 (que
+        // saltaria para o topo da lista de alguém) - ver comentário em
+        // Task.sortOrder no schema.prisma.
+        const sortOrder = await nextTaskSortOrder(tx, userId);
+        try {
+          return await tx.task.create({
+            data: { ...data, sortOrder },
+            include: TASK_INCLUDE,
+          });
+        } catch (error) {
+          // Fica só no terminal/log do backend, nunca no corpo da resposta -
+          // um erro do Prisma pode conter detalhes internos (nomes de coluna,
+          // constraints) que não devem ir para o cliente.
+          this.logger.error('Erro ao criar task', error as Error);
+          throw new InternalServerErrorException(
+            'Failed to create task. Please try again.',
+          );
+        }
+      },
+      extra.tx,
+    );
+    return this.toResponse(task);
   }
 
   async findAll(
@@ -320,18 +355,22 @@ export class TasksService {
     // das reordenadas, mantendo a ordem relativa entre elas - é o que o
     // frontend mostra. Sem isto, uma escondida com sortOrder 1 ficava
     // intercalada entre as reordenadas depois de recarregar.
-    await this.prisma.$transaction([
-      this.prisma.task.updateMany({
+    // Com o lock do user (B-42): um create em paralelo nao calcula o seu
+    // sortOrder a meio da renumeracao (empates).
+    await runWithUserTaskLock(this.prisma, userId, async (tx) => {
+      await tx.task.updateMany({
         where: { userId, id: { notIn: taskIds } },
         data: { sortOrder: { increment: taskIds.length } },
-      }),
-      ...taskIds.map((id, index) =>
-        this.prisma.task.update({
-          where: { id },
-          data: { sortOrder: index },
-        }),
-      ),
-    ]);
+      });
+      // Um so UPDATE com unnest em vez de N updates (ate 2000 ids). A posse
+      // fica na propria escrita (t."userId").
+      await tx.$executeRaw`
+        UPDATE "Task" AS t
+        SET "sortOrder" = v.ord
+        FROM unnest(${taskIds}::text[], ${taskIds.map((_, index) => index)}::int[]) AS v(id, ord)
+        WHERE t.id = v.id AND t."userId" = ${userId}
+      `;
+    });
   }
 
   /**
@@ -379,12 +418,9 @@ export class TasksService {
   }
 
   async findOne(userId: string, id: string) {
-    const task = await this.prisma.task.findFirst({
-      where: { id, userId },
+    const task = await assertTaskOwned(this.prisma, userId, id, {
       include: TASK_INCLUDE,
     });
-    if (!task)
-      throw new NotFoundException(`Task not found or you don't have access.`);
     return this.toResponse(task);
   }
 
@@ -396,12 +432,9 @@ export class TasksService {
     dto: UpdateTaskDto,
     { countPostpone = true }: { countPostpone?: boolean } = {},
   ) {
-    const existing = await this.prisma.task.findFirst({
-      where: { id, userId },
+    const existing = await assertTaskOwned(this.prisma, userId, id, {
       include: TASK_INCLUDE,
     });
-    if (!existing)
-      throw new NotFoundException(`Task not found or you don't have access.`);
 
     const {
       date,
@@ -501,18 +534,7 @@ export class TasksService {
       rest.weightPercentage !== undefined &&
       rest.weightPercentage !== null &&
       rest.weightPercentage > (existing.weightPercentage ?? 0);
-    if (weightIncreased || (movedScope && effectiveWeight)) {
-      await assertWeightFits(
-        this.prisma,
-        {
-          userId,
-          areaId: rest.areaId ?? existing.areaId,
-          periodId: newPeriodId ?? existing.periodId,
-          excludeTaskId: id,
-        },
-        effectiveWeight,
-      );
-    }
+    const checkWeight = weightIncreased || (movedScope && !!effectiveWeight);
 
     // Só mexemos em taskType/academicType se um dos dois vier no PATCH.
     // Se só vier um dos dois, usamos o valor atual da task para o outro,
@@ -583,53 +605,74 @@ export class TasksService {
     // profundidade sem custo: mesmo que um refactor futuro remova ou
     // contorne o findFirst() de cima, isto continua sozinho a impedir um
     // IDOR (um user a editar uma task de outro só por adivinhar o UUID).
-    const task = await this.prisma.task.update({
-      where: { id, userId },
-      data: {
-        ...rest,
-        ...blockerPatch,
-        ...(date ? { date: new Date(date) } : {}),
-        ...typeIds,
-        ...completedAtUpdate,
-        ...periodIdUpdate,
-        ...priorityIdUpdate,
-        ...postponedCountUpdate,
-        // undefined = não mexe; null = tira o fim da série.
-        ...(recurrenceUntil !== undefined
-          ? {
-              recurrenceUntil: recurrenceUntil
-                ? new Date(recurrenceUntil)
-                : null,
-            }
-          : {}),
-        // undefined = não mexe; null = já está disponível.
-        ...(availableFrom !== undefined
-          ? { availableFrom: availableFrom ? new Date(availableFrom) : null }
-          : {}),
-        // undefined = não mexe; null = volta a ser uma so fase.
-        ...(submissionDate !== undefined
-          ? {
-              submissionDate: submissionDate
-                ? checkedSubmissionDate(
-                    submissionDate,
-                    date ?? existing.date.toISOString(),
-                  )
-                : null,
-            }
-          : clampedSubmission(existing.submissionDate, date)),
-      },
-      include: TASK_INCLUDE,
-    });
+    const updateData = {
+      ...rest,
+      ...blockerPatch,
+      ...(date ? { date: new Date(date) } : {}),
+      ...typeIds,
+      ...completedAtUpdate,
+      ...periodIdUpdate,
+      ...priorityIdUpdate,
+      ...postponedCountUpdate,
+      // undefined = não mexe; null = tira o fim da série.
+      ...(recurrenceUntil !== undefined
+        ? {
+            recurrenceUntil: recurrenceUntil ? new Date(recurrenceUntil) : null,
+          }
+        : {}),
+      // undefined = não mexe; null = já está disponível.
+      ...(availableFrom !== undefined
+        ? { availableFrom: availableFrom ? new Date(availableFrom) : null }
+        : {}),
+      // undefined = não mexe; null = volta a ser uma so fase.
+      ...(submissionDate !== undefined
+        ? {
+            submissionDate: submissionDate
+              ? checkedSubmissionDate(
+                  submissionDate,
+                  date ?? existing.date.toISOString(),
+                )
+              : null,
+          }
+        : clampedSubmission(existing.submissionDate, date)),
+    };
+    const writeTask = (db: Prisma.TransactionClient) =>
+      db.task.update({
+        where: { id, userId },
+        data: updateData,
+        include: TASK_INCLUDE,
+      });
 
-    await this.recordChanges(id, existing, task);
+    // B-42: quando o peso conta, validar e gravar com o lock do user na
+    // mesma transacao (dois PATCH em paralelo nao passam os 100%).
+    const task = checkWeight
+      ? await runWithUserTaskLock(this.prisma, userId, async (tx) => {
+          await assertWeightFits(
+            tx,
+            {
+              userId,
+              areaId: rest.areaId ?? existing.areaId,
+              periodId: newPeriodId ?? existing.periodId,
+              excludeTaskId: id,
+            },
+            effectiveWeight,
+          );
+          return writeTask(tx);
+        })
+      : await writeTask(this.prisma);
 
-    // Acabou de passar a COMPLETED: próxima ocorrência (se repete) e
-    // revisões espaçadas (se o user ativou). As tasks novas vão na resposta
-    // para o frontend as mostrar sem recarregar.
-    const spawnedTasks = justCompleted
-      ? await this.spawnFollowUps(userId, task)
-      : [];
-    if (justCompleted) await unblockDependents(this.prisma, userId, id);
+    // Acabou de passar a COMPLETED: historico, próxima ocorrência (se
+    // repete), revisões espaçadas (se o user ativou) e desbloqueio dos
+    // dependentes. As tasks novas vão na resposta para o frontend as
+    // mostrar sem recarregar.
+    let spawnedTasks: ReturnType<TasksService['toResponse']>[] = [];
+    if (justCompleted) {
+      spawnedTasks = await this.applyCompletionSideEffects(userId, [
+        { before: existing, after: task },
+      ]);
+    } else {
+      await this.recordChanges(id, existing, task);
+    }
     return {
       ...this.toResponse(task),
       ...(spawnedTasks.length > 0 ? { spawnedTasks } : {}),
@@ -713,35 +756,43 @@ export class TasksService {
     });
     if (!subtask) throw new NotFoundException('Subtask not found.');
 
-    const maxSortOrder = await this.prisma.task.aggregate({
-      where: { userId },
-      _max: { sortOrder: true },
-    });
-
-    const [created] = await this.prisma.$transaction([
-      this.prisma.task.create({
-        data: {
-          userId,
-          areaId: parent.areaId,
-          title: subtask.title.slice(0, TASK_TITLE_MAX_LENGTH),
-          date: parent.date,
-          // A data vem da task-mae, por isso a certeza sobre ela tambem.
-          dateCertainty: parent.dateCertainty,
-          sortOrder: (maxSortOrder._max.sortOrder ?? 0) + 1,
-          taskTypeId: parent.taskTypeId,
-          academicTypeId: parent.academicTypeId,
-          periodId: parent.periodId,
-          difficulty: parent.difficulty,
-          priorityId: parent.priorityId,
-          // Se o passo já estava feito, a task nasce concluída.
-          ...(subtask.isDone
-            ? { progressStatus: 'COMPLETED' as const, completedAt: new Date() }
-            : {}),
-        },
-        include: TASK_INCLUDE,
-      }),
-      this.prisma.subtask.delete({ where: { id: subtask.id } }),
-    ]);
+    // sortOrder calculado e usado com o lock do user (B-42): sem empates.
+    const created = await runWithUserTaskLock(
+      this.prisma,
+      userId,
+      async (tx) => {
+        const sortOrder = await nextTaskSortOrder(tx, userId);
+        const task = await tx.task.create({
+          data: {
+            userId,
+            areaId: parent.areaId,
+            title: subtask.title.slice(0, TASK_TITLE_MAX_LENGTH),
+            date: parent.date,
+            // A data vem da task-mae, por isso a certeza sobre ela tambem.
+            dateCertainty: parent.dateCertainty,
+            sortOrder,
+            taskTypeId: parent.taskTypeId,
+            academicTypeId: parent.academicTypeId,
+            periodId: parent.periodId,
+            difficulty: parent.difficulty,
+            priorityId: parent.priorityId,
+            // Se o passo já estava feito, a task nasce concluída.
+            ...(subtask.isDone
+              ? {
+                  progressStatus: 'COMPLETED' as const,
+                  completedAt: new Date(),
+                }
+              : {}),
+          },
+          include: TASK_INCLUDE,
+        });
+        // Posse na propria escrita (B-43), nao so no findFirst de cima.
+        await tx.subtask.delete({
+          where: { id: subtask.id, taskId, task: { userId } },
+        });
+        return task;
+      },
+    );
     return this.toResponse(created);
   }
 
@@ -788,55 +839,53 @@ export class TasksService {
     });
     if (duplicate) return null;
 
-    const maxSortOrder = await this.prisma.task.aggregate({
-      where: { userId },
-      _max: { sortOrder: true },
-    });
-
-    const created = await this.prisma.task.create({
-      data: {
-        userId,
-        areaId: task.areaId,
-        title: task.title,
-        date: nextDate,
-        isPinned: task.isPinned,
-        sortOrder: (maxSortOrder._max.sortOrder ?? 0) + 1,
-        taskTypeId: task.taskTypeId,
-        academicTypeId: task.academicTypeId,
-        topics: task.topics,
-        periodId: task.periodId,
-        weightPercentage: task.weightPercentage,
-        difficulty: task.difficulty,
-        // O esforco repete-se; a certeza da data e o bloqueio nao (a proxima
-        // ocorrencia tem data calculada e comeca disponivel).
-        effort: task.effort,
-        priorityId: task.priorityId,
-        referenceLink: task.referenceLink,
-        estimatedMinutes: task.estimatedMinutes,
-        calendarDurationMinutes: task.calendarDurationMinutes,
-        recurrenceFrequency: task.recurrenceFrequency,
-        recurrenceInterval: task.recurrenceInterval,
-        recurrenceUntil: task.recurrenceUntil,
-        // Duas fases: a entrega anda o mesmo que a data (mesma antecedência).
-        ...(task.submissionDate
-          ? {
-              submissionDate: new Date(
-                task.submissionDate.getTime() +
-                  (nextDate.getTime() - task.date.getTime()),
-              ),
-            }
-          : {}),
-        // notas e notas finais são desta ocorrência; a checklist volta
-        // toda por fazer.
-        subtasks: {
-          create: task.subtasks.map((s, index) => ({
-            title: s.title,
-            sortOrder: index,
-          })),
+    // sortOrder e insert com o lock do user (B-42).
+    const created = await runWithUserTaskLock(this.prisma, userId, async (tx) =>
+      tx.task.create({
+        data: {
+          userId,
+          areaId: task.areaId,
+          title: task.title,
+          date: nextDate,
+          isPinned: task.isPinned,
+          sortOrder: await nextTaskSortOrder(tx, userId),
+          taskTypeId: task.taskTypeId,
+          academicTypeId: task.academicTypeId,
+          topics: task.topics,
+          periodId: task.periodId,
+          weightPercentage: task.weightPercentage,
+          difficulty: task.difficulty,
+          // O esforco repete-se; a certeza da data e o bloqueio nao (a proxima
+          // ocorrencia tem data calculada e comeca disponivel).
+          effort: task.effort,
+          priorityId: task.priorityId,
+          referenceLink: task.referenceLink,
+          estimatedMinutes: task.estimatedMinutes,
+          calendarDurationMinutes: task.calendarDurationMinutes,
+          recurrenceFrequency: task.recurrenceFrequency,
+          recurrenceInterval: task.recurrenceInterval,
+          recurrenceUntil: task.recurrenceUntil,
+          // Duas fases: a entrega anda o mesmo que a data (mesma antecedência).
+          ...(task.submissionDate
+            ? {
+                submissionDate: new Date(
+                  task.submissionDate.getTime() +
+                    (nextDate.getTime() - task.date.getTime()),
+                ),
+              }
+            : {}),
+          // notas e notas finais são desta ocorrência; a checklist volta
+          // toda por fazer.
+          subtasks: {
+            create: task.subtasks.map((s, index) => ({
+              title: s.title,
+              sortOrder: index,
+            })),
+          },
         },
-      },
-      include: TASK_INCLUDE,
-    });
+        include: TASK_INCLUDE,
+      }),
+    );
     return this.toResponse(created);
   }
 
@@ -857,36 +906,41 @@ export class TasksService {
     });
     if (already > 0) return [];
 
-    const maxSortOrder = await this.prisma.task.aggregate({
-      where: { userId },
-      _max: { sortOrder: true },
-    });
-    const baseOrder = (maxSortOrder._max.sortOrder ?? 0) + 1;
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
-    const created = await this.prisma.$transaction(
-      SPACED_REVIEW_OFFSETS_DAYS.map((offset, index) => {
-        const date = new Date(today);
-        date.setUTCDate(date.getUTCDate() + offset);
-        return this.prisma.task.create({
-          data: {
-            userId,
-            areaId: task.areaId,
-            title: `Review: ${task.title}`.slice(0, TASK_TITLE_MAX_LENGTH),
-            date,
-            sortOrder: baseOrder + index,
-            taskTypeId: task.taskTypeId,
-            academicTypeId: task.academicTypeId,
-            topics: task.topics,
-            periodId: task.periodId,
-            difficulty: Difficulty.VERY_EASY,
-            estimatedMinutes: SPACED_REVIEW_MINUTES,
-            spacedReviewOfTaskId: task.id,
-          },
-          include: TASK_INCLUDE,
-        });
-      }),
+    // sortOrder e inserts com o lock do user (B-42): as tres ou nenhuma.
+    const created = await runWithUserTaskLock(
+      this.prisma,
+      userId,
+      async (tx) => {
+        const baseOrder = await nextTaskSortOrder(tx, userId);
+        const rows: TaskWithIncludes[] = [];
+        for (const [index, offset] of SPACED_REVIEW_OFFSETS_DAYS.entries()) {
+          const date = new Date(today);
+          date.setUTCDate(date.getUTCDate() + offset);
+          rows.push(
+            await tx.task.create({
+              data: {
+                userId,
+                areaId: task.areaId,
+                title: `Review: ${task.title}`.slice(0, TASK_TITLE_MAX_LENGTH),
+                date,
+                sortOrder: baseOrder + index,
+                taskTypeId: task.taskTypeId,
+                academicTypeId: task.academicTypeId,
+                topics: task.topics,
+                periodId: task.periodId,
+                difficulty: Difficulty.VERY_EASY,
+                estimatedMinutes: SPACED_REVIEW_MINUTES,
+                spacedReviewOfTaskId: task.id,
+              },
+              include: TASK_INCLUDE,
+            }),
+          );
+        }
+        return rows;
+      },
     );
     return created.map((t) => this.toResponse(t));
   }
@@ -942,11 +996,7 @@ export class TasksService {
    * anterior ao início de hoje, por isso uma marca futura esconde-a até lá.
    */
   async confirmOverdue(userId: string, id: string, dto: ConfirmOverdueDto) {
-    const existing = await this.prisma.task.findFirst({
-      where: { id, userId },
-    });
-    if (!existing)
-      throw new NotFoundException(`Task not found or you don't have access.`);
+    const existing = await assertTaskOwned(this.prisma, userId, id);
 
     const now = new Date();
     const checkedAt = computeCheckedAt(
@@ -972,12 +1022,13 @@ export class TasksService {
     });
 
     // Concluir pelo check-in tem de fazer o mesmo que concluir pelo PATCH
-    // normal: próxima ocorrência (se repete) e revisões espaçadas. Sem isto
-    // a série acabava em silêncio (as recorrentes são as que mais atrasam).
+    // normal: proxima ocorrencia, revisoes espacadas e desbloquear dependentes.
     const justCompleted =
       dto.isCompleted && existing.progressStatus !== 'COMPLETED';
     const spawnedTasks = justCompleted
-      ? await this.spawnFollowUps(userId, task)
+      ? await this.applyCompletionSideEffects(userId, [
+          { before: existing, after: task },
+        ])
       : [];
     return {
       ...this.toResponse(task),
@@ -985,13 +1036,132 @@ export class TasksService {
     };
   }
 
+  /**
+   * Efeitos de uma task passar a COMPLETED, partilhados por update(),
+   * confirmOverdue() e bulkUpdateStatus() (S-01/B-29): historico, proximas
+   * ocorrencias/revisoes e desbloqueio das tasks que esperavam por ela.
+   * Nunca lanca (a conclusao ja esta gravada). Devolve as tasks criadas.
+   */
+  private async applyCompletionSideEffects(
+    userId: string,
+    completed: Array<{ before: TaskSnapshot; after: TaskWithIncludes }>,
+  ) {
+    const spawned: ReturnType<TasksService['toResponse']>[] = [];
+    for (const { before, after } of completed) {
+      await this.recordChanges(after.id, before, after);
+      spawned.push(...(await this.spawnFollowUps(userId, after)));
+    }
+    if (completed.length > 0) {
+      try {
+        await unblockDependents(
+          this.prisma,
+          userId,
+          completed.map(({ after }) => after.id),
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Dependentes nao desbloqueados: ${(error as Error).message}`,
+        );
+      }
+    }
+    return spawned;
+  }
+
+  /**
+   * Leva a mudanca de um prazo de turma para as tasks ligadas (de varios
+   * utilizadores), com as mesmas regras do update() (S-02): o peso so e
+   * aplicado se couber na cadeira de cada dono (senao a task mantem o peso
+   * antigo), adiar conta em postponedCount e fica historico. Cada escrita
+   * leva o userId do dono da task. Nunca lanca por causa de uma task.
+   */
+  async applyLinkedDeadlineChange(
+    taskIds: string[],
+    changes: {
+      title: string;
+      date: Date;
+      weightPercentage?: number | null;
+    },
+  ): Promise<void> {
+    if (taskIds.length === 0) return;
+    const existingTasks = await this.prisma.task.findMany({
+      where: { id: { in: taskIds } },
+      include: TASK_INCLUDE,
+    });
+    for (const existing of existingTasks) {
+      try {
+        const postponed =
+          hasFirmDate(existing.dateCertainty) &&
+          changes.date.getTime() > existing.date.getTime();
+        // Validar o peso e gravar com o lock do dono da task (B-42).
+        const task = await runWithUserTaskLock(
+          this.prisma,
+          existing.userId,
+          async (tx) => {
+            let applyWeight = changes.weightPercentage !== undefined;
+            if (
+              applyWeight &&
+              changes.weightPercentage &&
+              changes.weightPercentage > (existing.weightPercentage ?? 0)
+            ) {
+              try {
+                await assertWeightFits(
+                  tx,
+                  {
+                    userId: existing.userId,
+                    areaId: existing.areaId,
+                    periodId: existing.periodId,
+                    excludeTaskId: existing.id,
+                  },
+                  changes.weightPercentage,
+                );
+              } catch (error) {
+                if (!(error instanceof BadRequestException)) throw error;
+                applyWeight = false;
+              }
+            }
+            return tx.task.update({
+              where: { id: existing.id, userId: existing.userId },
+              data: {
+                title: changes.title,
+                date: changes.date,
+                ...(applyWeight
+                  ? { weightPercentage: changes.weightPercentage }
+                  : {}),
+                ...(postponed ? { postponedCount: { increment: 1 } } : {}),
+              },
+              include: TASK_INCLUDE,
+            });
+          },
+        );
+        await this.recordChanges(existing.id, existing, task);
+      } catch (error) {
+        this.logger.warn(
+          `Prazo da turma nao aplicado a task ${existing.id}: ${(error as Error).message}`,
+        );
+      }
+    }
+  }
+
   async remove(userId: string, id: string) {
-    await this.findOne(userId, id);
+    // Existencia/posse sem carregar o TASK_INCLUDE todo (B-41).
+    const owned = await this.prisma.task.findFirst({
+      where: { id, userId },
+      select: { id: true },
+    });
+    if (!owned) {
+      throw new NotFoundException(`Task not found or you don't have access.`);
+    }
     // O cascade apaga as linhas dos anexos, nao os ficheiros no bucket.
     await this.taskAttachments.removeFilesForTasks(userId, [id]);
-    // Mesma razão do update() acima: where: { id, userId } em vez de só
-    // { id }, para a condição de posse não depender só do findOne() prévio.
-    return this.prisma.task.delete({ where: { id, userId } });
+    // deleteMany com { id, userId }: a posse fica na propria escrita e uma
+    // corrida (apagada entretanto) da 404 em vez de P2025.
+    const { count } = await this.prisma.task.deleteMany({
+      where: { id, userId },
+    });
+    if (count === 0) {
+      throw new NotFoundException(`Task not found or you don't have access.`);
+    }
+    return owned;
   }
 
   /**
@@ -1016,30 +1186,61 @@ export class TasksService {
     progressStatus: ProgressStatus,
   ) {
     if (progressStatus === 'COMPLETED') {
-      const result = await this.prisma.task.updateMany({
+      const pending = await this.prisma.task.findMany({
         where: {
           id: { in: ids },
           userId,
           progressStatus: { not: 'COMPLETED' },
         },
-        data: { progressStatus, completedAt: new Date(), priorityId: null },
+        include: TASK_INCLUDE,
       });
+      if (pending.length === 0) return { count: 0 };
+      const completedAt = new Date();
+      const result = await this.prisma.task.updateMany({
+        where: {
+          id: { in: pending.map((task) => task.id) },
+          userId,
+          progressStatus: { not: 'COMPLETED' },
+        },
+        data: { progressStatus, completedAt, priorityId: null },
+      });
+      // Mesmos efeitos que concluir uma a uma (S-01/B-29).
+      await this.applyCompletionSideEffects(
+        userId,
+        pending.map((before) => ({
+          before,
+          after: {
+            ...before,
+            progressStatus,
+            completedAt,
+            priorityId: null,
+            priority: null,
+          },
+        })),
+      );
       return { count: result.count };
     }
 
-    const result = await this.prisma.task.updateMany({
-      where: { id: { in: ids }, userId, progressStatus: 'COMPLETED' },
-      data: {
-        progressStatus,
-        completedAt: null,
-        onTime: null,
-        submissionOnTime: null,
-      },
-    });
-    const untouched = await this.prisma.task.updateMany({
-      where: { id: { in: ids }, userId, progressStatus: { not: 'COMPLETED' } },
-      data: { progressStatus },
-    });
+    // Duas escritas: ou ficam as duas ou nenhuma.
+    const [result, untouched] = await this.prisma.$transaction([
+      this.prisma.task.updateMany({
+        where: { id: { in: ids }, userId, progressStatus: 'COMPLETED' },
+        data: {
+          progressStatus,
+          completedAt: null,
+          onTime: null,
+          submissionOnTime: null,
+        },
+      }),
+      this.prisma.task.updateMany({
+        where: {
+          id: { in: ids },
+          userId,
+          progressStatus: { not: 'COMPLETED' },
+        },
+        data: { progressStatus },
+      }),
+    ]);
     return { count: result.count + untouched.count };
   }
 
@@ -1151,108 +1352,24 @@ export class TasksService {
     const areaById = new Map(areas.map((a) => [a.id, a]));
     const ownedPeriodById = new Map(ownedPeriods.map((p) => [p.id, p]));
 
-    // Orcamento de peso (100% por cadeira+periodo) ja usado, carregado uma
-    // vez por par; cada linha aceite desconta do que sobra.
+    // Orcamento de peso (100% por cadeira+periodo): chave de cada par.
     const budgetKey = (areaId: string, periodId: string | null) =>
       `${areaId}|${periodId ?? ''}`;
-    const budgetPairs = new Map<
-      string,
-      { areaId: string; periodId: string | null }
-    >();
+    // Cadeiras da folha agrupadas por periodo: um loadUsedWeightByArea
+    // (3 groupBy) por periodo em vez de um loadUsedWeight por cadeira (B-36).
+    const areasByPeriod = new Map<string | null, Set<string>>();
     for (const row of rows) {
       const periodId = row.periodId ?? activePeriodId ?? null;
-      budgetPairs.set(budgetKey(row.areaId, periodId), {
-        areaId: row.areaId,
-        periodId,
-      });
+      const areaIds = areasByPeriod.get(periodId) ?? new Set<string>();
+      areaIds.add(row.areaId);
+      areasByPeriod.set(periodId, areaIds);
     }
-    const remainingWeight = new Map<string, number>();
-    await Promise.all(
-      [...budgetPairs.entries()].map(async ([key, pair]) => {
-        const used = await loadUsedWeight(this.prisma, { userId, ...pair });
-        remainingWeight.set(key, MAX_COURSE_WEIGHT_PERCENT - used);
-      }),
-    );
 
-    // --- Validate every row against the Maps above - no DB calls here. ---
     type PreparedRow = {
       rowNumber: number;
-      data: Prisma.TaskCreateArgs['data'];
+      data: Prisma.TaskCreateManyInput;
     };
     type FailedRow = { rowNumber: number; error: string };
-
-    const prepared: PreparedRow[] = [];
-    const failed: FailedRow[] = [];
-
-    rows.forEach((row, i) => {
-      const rowNumber = i + 1;
-      try {
-        const typeIds = this.resolveTypesFromCache(
-          taskTypeByKey,
-          academicTypeByKey,
-          row.type,
-          row.academicType,
-        );
-
-        const area = areaById.get(row.areaId);
-        if (!area) {
-          throw new BadRequestException(`Area "${row.areaId}" not found.`);
-        }
-
-        let resolvedPeriodId = activePeriodId;
-        if (row.periodId) {
-          if (!ownedPeriodById.has(row.periodId)) {
-            throw new BadRequestException(
-              `Period "${row.periodId}" not found or no access.`,
-            );
-          }
-          resolvedPeriodId = row.periodId;
-        }
-
-        if (row.weightPercentage) {
-          const key = budgetKey(area.id, resolvedPeriodId ?? null);
-          const left = remainingWeight.get(key) ?? MAX_COURSE_WEIGHT_PERCENT;
-          if (row.weightPercentage > left + WEIGHT_EPSILON) {
-            throw new BadRequestException(
-              `This course only has ${Math.max(0, roundTo(left))}% of the final grade left.`,
-            );
-          }
-          remainingWeight.set(key, left - row.weightPercentage);
-        }
-
-        const progressStatus = row.progressStatus ?? 'ON_TRACK';
-        const completedAt = progressStatus === 'COMPLETED' ? new Date() : null;
-
-        prepared.push({
-          rowNumber,
-          data: {
-            title: row.title,
-            date: new Date(row.date),
-            userId,
-            areaId: area.id,
-            periodId: resolvedPeriodId,
-            difficulty: row.difficulty ?? 'MEDIUM',
-            effort: row.effort ?? null,
-            progressStatus,
-            weightPercentage: row.weightPercentage ?? null,
-            targetGrade: row.targetGrade ?? null,
-            realGrade: row.realGrade ?? null,
-            topics: row.topics ?? null,
-            completedAt,
-            ...typeIds,
-          },
-        });
-      } catch (error) {
-        const message =
-          error instanceof BadRequestException
-            ? error.message
-            : 'Unexpected error validating this row.';
-        failed.push({ rowNumber, error: message });
-        this.logger.warn(`Task import row ${rowNumber} failed: ${message}`);
-      }
-    });
-
-    // --- Create only the rows that passed validation, bounded-concurrent. ---
     type RowOutcome = {
       row: number;
       success: boolean;
@@ -1260,27 +1377,171 @@ export class TasksService {
       error?: string;
     };
 
-    const createOutcomes = await runWithConcurrencyLimit(
-      prepared,
-      IMPORT_CREATE_CONCURRENCY,
-      async (item): Promise<RowOutcome> => {
-        try {
-          const task = await this.prisma.task.create({ data: item.data });
-          return { row: item.rowNumber, success: true, taskId: task.id };
-        } catch (error) {
-          // Same "never leak internals" rule as create() above - a raw
-          // Prisma/DB error could contain column/constraint names.
-          this.logger.warn(
-            `Task import row ${item.rowNumber} failed at insert: ${(error as Error).message}`,
+    const failed: FailedRow[] = [];
+    // Linhas validadas e ja com sortOrder, guardadas fora da transacao para o
+    // caminho linha a linha se o INSERT em lote falhar.
+    const plan: { ordered?: PreparedRow[] } = {};
+
+    let createOutcomes: RowOutcome[];
+    try {
+      // B-42: lock do user -> peso usado -> validacao -> sortOrder -> INSERT
+      // na mesma transacao. Dois imports (ou um import e um create) em
+      // paralelo nao passam os 100% da cadeira nem repetem sortOrder.
+      createOutcomes = await runWithUserTaskLock(
+        this.prisma,
+        userId,
+        async (tx) => {
+          const remainingWeight = new Map<string, number>();
+          await Promise.all(
+            [...areasByPeriod.entries()].map(async ([periodId, areaIds]) => {
+              const usedByArea = await loadUsedWeightByArea(tx, {
+                userId,
+                periodId,
+                areaIds: [...areaIds],
+              });
+              for (const areaId of areaIds) {
+                remainingWeight.set(
+                  budgetKey(areaId, periodId),
+                  MAX_COURSE_WEIGHT_PERCENT - (usedByArea.get(areaId) ?? 0),
+                );
+              }
+            }),
           );
-          return {
+
+          // --- Validate every row against the Maps above - no DB calls here. ---
+          const prepared: PreparedRow[] = [];
+          rows.forEach((row, i) => {
+            const rowNumber = i + 1;
+            try {
+              const typeIds = this.resolveTypesFromCache(
+                taskTypeByKey,
+                academicTypeByKey,
+                row.type,
+                row.academicType,
+              );
+
+              const area = areaById.get(row.areaId);
+              if (!area) {
+                throw new BadRequestException(
+                  `Area "${row.areaId}" not found.`,
+                );
+              }
+
+              let resolvedPeriodId = activePeriodId;
+              if (row.periodId) {
+                if (!ownedPeriodById.has(row.periodId)) {
+                  throw new BadRequestException(
+                    `Period "${row.periodId}" not found or no access.`,
+                  );
+                }
+                resolvedPeriodId = row.periodId;
+              }
+
+              if (row.weightPercentage) {
+                const key = budgetKey(area.id, resolvedPeriodId ?? null);
+                const left =
+                  remainingWeight.get(key) ?? MAX_COURSE_WEIGHT_PERCENT;
+                if (row.weightPercentage > left + WEIGHT_EPSILON) {
+                  throw new BadRequestException(
+                    `This course only has ${Math.max(0, roundTo(left))}% of the final grade left.`,
+                  );
+                }
+                remainingWeight.set(key, left - row.weightPercentage);
+              }
+
+              const progressStatus = row.progressStatus ?? 'ON_TRACK';
+              const completedAt =
+                progressStatus === 'COMPLETED' ? new Date() : null;
+
+              prepared.push({
+                rowNumber,
+                data: {
+                  title: row.title,
+                  date: new Date(row.date),
+                  userId,
+                  areaId: area.id,
+                  periodId: resolvedPeriodId,
+                  difficulty: row.difficulty ?? 'MEDIUM',
+                  effort: row.effort ?? null,
+                  progressStatus,
+                  weightPercentage: row.weightPercentage ?? null,
+                  targetGrade: row.targetGrade ?? null,
+                  realGrade: row.realGrade ?? null,
+                  topics: row.topics ?? null,
+                  completedAt,
+                  ...typeIds,
+                },
+              });
+            } catch (error) {
+              const message =
+                error instanceof BadRequestException
+                  ? error.message
+                  : 'Unexpected error validating this row.';
+              failed.push({ rowNumber, error: message });
+              this.logger.warn(
+                `Task import row ${rowNumber} failed: ${message}`,
+              );
+            }
+          });
+
+          // sortOrder (B-26): as importadas ficam no fim da ordem manual, como
+          // no create() (max atual + 1 + posicao na folha), em vez de todas a 0.
+          const baseOrder = await nextTaskSortOrder(tx, userId);
+          const ordered = prepared.map((item, index) => ({
+            ...item,
+            data: { ...item.data, sortOrder: baseOrder + index },
+          }));
+          plan.ordered = ordered;
+
+          // Um so INSERT para a folha toda (B-26). A validacao ja foi feita em
+          // memoria, por isso so falhas raras (FK, BD) chegam aqui; nesse caso
+          // cai para o caminho linha a linha, que mantem o sucesso parcial.
+          const createdRows =
+            ordered.length > 0
+              ? await tx.task.createManyAndReturn({
+                  data: ordered.map((item) => item.data),
+                  select: { id: true },
+                })
+              : [];
+          return ordered.map((item, index) => ({
             row: item.rowNumber,
-            success: false,
-            error: 'Unexpected error creating this task.',
-          };
-        }
-      },
-    );
+            success: true,
+            taskId: createdRows[index].id,
+          }));
+        },
+      );
+    } catch (error) {
+      // Falhou antes de haver linhas validadas (lock, leitura do peso): nao
+      // ha nada para tentar linha a linha.
+      const ordered = plan.ordered;
+      if (!ordered) throw error;
+      // A transacao foi anulada pelo erro, por isso o caminho linha a linha
+      // corre fora dela (caso raro: FK ou BD).
+      this.logger.warn(
+        `Task import bulk insert failed, retrying row by row: ${(error as Error).message}`,
+      );
+      createOutcomes = await runWithConcurrencyLimit(
+        ordered,
+        IMPORT_CREATE_CONCURRENCY,
+        async (item): Promise<RowOutcome> => {
+          try {
+            const task = await this.prisma.task.create({ data: item.data });
+            return { row: item.rowNumber, success: true, taskId: task.id };
+          } catch (rowError) {
+            // Same "never leak internals" rule as create() above - a raw
+            // Prisma/DB error could contain column/constraint names.
+            this.logger.warn(
+              `Task import row ${item.rowNumber} failed at insert: ${(rowError as Error).message}`,
+            );
+            return {
+              row: item.rowNumber,
+              success: false,
+              error: 'Unexpected error creating this task.',
+            };
+          }
+        },
+      );
+    }
 
     const results: RowOutcome[] = [
       ...failed.map((f) => ({

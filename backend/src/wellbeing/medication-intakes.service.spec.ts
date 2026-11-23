@@ -30,6 +30,15 @@ describe('MedicationIntakesService', () => {
         }),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+        update: jest.fn().mockResolvedValue({
+          id: 'i1',
+          medicationId: 'm1',
+          takenAt: new Date(),
+          dose: null,
+          note: null,
+          medication: { name: 'Ibuprofen' },
+        }),
       },
     };
     const tx = { ...prisma, $executeRaw: jest.fn().mockResolvedValue(0) };
@@ -82,6 +91,62 @@ describe('MedicationIntakesService', () => {
     expect(prisma.medicationIntake.deleteMany).toHaveBeenCalledWith({
       where: { id: 'i1', userId: 'u1' },
     });
+  });
+
+  it("editing another user's entry is a 404 and writes nothing", async () => {
+    const { service, prisma } = setup(null);
+    prisma.medicationIntake.findFirst.mockResolvedValue(null);
+    await expect(
+      service.update('u1', 'i1', { dose: '2' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.medicationIntake.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'i1', userId: 'u1' } }),
+    );
+    expect(prisma.medicationIntake.update).not.toHaveBeenCalled();
+  });
+
+  it('editing is blocked before the notice is accepted', async () => {
+    const { service, prisma } = setup(null, false);
+    await expect(
+      service.update('u1', 'i1', { dose: '2' }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.medicationIntake.update).not.toHaveBeenCalled();
+  });
+
+  it('edits dose and note of an owned entry, blank clears', async () => {
+    const { service, prisma } = setup(null);
+    prisma.medicationIntake.findFirst.mockResolvedValue({ id: 'i1' });
+    await service.update('u1', 'i1', { dose: ' 2 tabs ', note: '  ' });
+    const [[args]] = prisma.medicationIntake.update.mock.calls as [
+      [{ data: Record<string, unknown> }],
+    ];
+    expect(args.data).toEqual({ dose: '2 tabs', note: null });
+  });
+
+  it('moving an entry to a full day is rejected, excluding itself from the count', async () => {
+    const { service, prisma } = setup(null);
+    prisma.medicationIntake.findFirst.mockResolvedValue({ id: 'i1' });
+    prisma.medicationIntake.count.mockResolvedValue(30);
+    await expect(
+      service.update('u1', 'i1', { takenAt: now() }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.medicationIntake.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          userId: 'u1',
+          id: { not: 'i1' },
+        }) as unknown,
+      }),
+    );
+    expect(prisma.medicationIntake.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects an edited time in the future', async () => {
+    const { service } = setup(null);
+    const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    await expect(
+      service.update('u1', 'i1', { takenAt: future }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('logs an extra dose of a scheduled medication, twice at the same time', async () => {

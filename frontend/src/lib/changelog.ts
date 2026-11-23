@@ -7,7 +7,58 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    date: '2026-11-23',
+    date: '2026-11-22',
+    title: 'Cards stay in sync without reloading',
+    items: [
+      'Dashboard: completing, editing or deleting a task, entering a grade or changing a weight now updates the grade projection, course forecast, failing risk, plan scenario, missing weight, estimation accuracy and the Today card on their own, without a page reload and without the cards flashing.',
+      'Focus: adding, fixing or deleting a session in the history, or using a rest day, now updates the Today ring, the streak, the best times heatmap and the distraction stats right away. The study streak on the Dashboard follows too.',
+      'Areas: changing a teacher, a grade or a task refreshes the subject badges and filters. Ratings averages update when you rate a subject, and in Social accepting a request in one list refreshes the others.',
+    ],
+  },
+  {
+    date: '2026-11-22',
+    title: 'Undo after deleting',
+    items: [
+      'Deleting a task, finance entry, flashcard, personal note, work shift or grade now shows an Undo button in the toast, which recreates it with the same data (a restored task comes back as a new one without its history or files).',
+      'Hiding all official subjects, removing someone from a shared quiz, cancelling a notes request and no longer viewing a friend notebook now ask for confirmation first.',
+    ],
+  },
+  {
+    date: '2026-11-22',
+    title: 'Edit more, with clearer feedback',
+    items: [
+      'You can now rename a quiz, edit the title of a checklist step, edit the label and date of a grade (the label shows on the grade chip), clear a mood entry, and archive or restore a program from its settings (archived programs stay in the selector under Archived).',
+      'Admin appeals have a History tab with the decided ones, and in Social you can cancel a pending notes request or stop viewing a friend notebook.',
+      'Saving now shows a confirmation toast for tasks, areas, finance, schedule and shifts, task files, packs, personal notes and quiz sharing. Deleting a pack or a finance item no longer looks successful when it failed.',
+    ],
+  },
+  {
+    date: '2026-11-22',
+    title: 'Safer deletes and closing forms',
+    items: [
+      'Asks for confirmation before discarding a quiz attempt, deactivating a task type, banning an IP, revoking access to your notes, and deleting a shift or a schedule change.',
+      'Pressing Escape now closes only the top-most window, so cancelling a confirmation no longer also closes the form behind it.',
+      'Closing the new task, edit task, edit finance entry and flashcard import forms by clicking outside or pressing Escape now asks before throwing away what you typed.',
+      'Focus cards and the debts list refresh only when something changed, the medication reminder status updates right after you tick a dose, and the security log filters wait a moment while you type.',
+    ],
+  },
+  {
+    date: '2026-11-22',
+    title: 'Language fixes and faster loading',
+    items: [
+      'Page titles in the browser tab, a few placeholders and messages, and many dates and numbers (account blocked screen, task history, API keys, admin lists, grade calculators) now follow the language you picked in the app instead of staying in English or using the browser language.',
+      'The app loads a little lighter: sign-up, forgot password and the daily digest are fetched only when needed, and the main libraries are split into their own files so they stay cached between updates.',
+    ],
+  },
+  {
+    date: '2026-11-22',
+    title: 'Focus: jot down what distracted you',
+    items: [
+      'Focus: after you press Got distracted, a small box lets you write what pulled you away. It is saved as one line in a personal note called During focus, in your language (created the first time), so you can deal with it after the session. The box is optional: ignore it and the distraction is still counted.',
+    ],
+  },
+  {
+    date: '2026-11-22',
     title: 'Report card: grade improvement simulator',
     items: [
       'Report card: a new Grade improvement table shows, for the period you are viewing, how much your average would go up if a passed course rose by 1 or 2 points, with the biggest gain first (weighted by credits, never above the top of the scale). It is only a simulation: whether you can improve a grade depends on your school rules, so confirm them first.',

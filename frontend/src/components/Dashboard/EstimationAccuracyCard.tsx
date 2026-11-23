@@ -4,6 +4,8 @@ import { TargetIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import LegendItem from '../UI/LegendItem';
 import { useI18n } from '../../i18n/useI18n';
+import { PLAN_DOMAINS } from '../../lib/domainEvents';
+import { useStudyDataKey } from '../../hooks/useSessionEndKey';
 
 // How good Rodrigo's own manual `estimatedMinutes` guesses have actually
 // been, looking backward - the counterpart to the duration-prediction
@@ -15,6 +17,8 @@ export default function EstimationAccuracyCard() {
   const { t } = useI18n();
   const [data, setData] = useState<EstimationAccuracy | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Concluir uma task ou gravar sessoes (tempo real) muda a precisao.
+  const refreshKey = useStudyDataKey(PLAN_DOMAINS);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,7 +33,7 @@ export default function EstimationAccuracyCard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshKey]);
 
   if (isLoading) return null;
   // Needs a handful of real data points before this says anything

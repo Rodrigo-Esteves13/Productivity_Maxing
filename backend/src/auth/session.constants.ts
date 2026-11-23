@@ -2,9 +2,9 @@
 // SessionTokenService). Num so sitio para o cookie, o JWT e a BD nunca
 // discordarem.
 
-const MS_PER_SECOND = 1000;
+import { MS_PER_DAY, MS_PER_SECOND } from '../common/time.constants';
+
 const SECONDS_PER_MINUTE = 60;
-const MS_PER_DAY = 24 * 60 * 60 * MS_PER_SECOND;
 
 // JWT de acesso: curto, porque nao e consultado na BD a cada pedido (so a
 // cache de 30s do SessionStateService). Expirado, o frontend pede um novo em

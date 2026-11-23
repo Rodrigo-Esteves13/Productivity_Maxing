@@ -1,5 +1,6 @@
 import type { DateCertainty, Effort } from '../types/models';
 import api from './client';
+import { notifyDomainChanged } from '../lib/domainEvents';
 
 export interface TaskPackSummary {
   id: string;
@@ -58,6 +59,9 @@ export const listTaskPacks = async (): Promise<TaskPackSummary[]> =>
 export const createTaskPack = async (name: string, taskIds: string[]): Promise<TaskPackSummary> =>
   (await api.post<TaskPackSummary>('/task-packs', { name, taskIds })).data;
 
+export const renameTaskPack = async (id: string, name: string): Promise<TaskPackSummary> =>
+  (await api.patch<TaskPackSummary>(`/task-packs/${id}`, { name })).data;
+
 export const deleteTaskPack = async (id: string): Promise<void> => {
   await api.delete(`/task-packs/${id}`);
 };
@@ -69,13 +73,14 @@ export const importTaskPack = async (
   code: string,
   items: { itemId: string; areaId?: string }[],
   replaceExisting = false,
-): Promise<ImportTaskPackResult> =>
-  (
-    await api.post<ImportTaskPackResult>(`/task-packs/code/${encodeURIComponent(code)}/import`, {
-      items,
-      replaceExisting,
-    })
-  ).data;
+): Promise<ImportTaskPackResult> => {
+  const response = await api.post<ImportTaskPackResult>(`/task-packs/code/${encodeURIComponent(code)}/import`, {
+    items,
+    replaceExisting,
+  });
+  notifyDomainChanged('tasks');
+  return response.data;
+};
 
 export const packShareUrl = (code: string): string => `${window.location.origin}/packs/${code}`;
 
@@ -115,6 +120,7 @@ export const listPackUpdates = async (): Promise<PackUpdate[]> =>
 
 export const acceptPackUpdate = async (id: string): Promise<void> => {
   await api.post(`/task-packs/updates/${id}/accept`);
+  notifyDomainChanged('tasks');
 };
 
 export const rejectPackUpdate = async (id: string): Promise<void> => {

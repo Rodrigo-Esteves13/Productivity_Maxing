@@ -25,7 +25,7 @@ export const finance: Record<string, string> = {
   "finance.entries": "이번 달",
   "finance.noEntries": "이번 달 기록이 없습니다.",
   "finance.deleteEntry": "기록 삭제",
-  "finance.deleteEntryConfirm": "{amount} 기록을 삭제할까요? 되돌릴 수 없습니다.",
+  "finance.deleteEntryConfirm": "{amount} 기록을 삭제할까요? 삭제 직후에는 되돌릴 수 있어요.",
   "finance.byCategory": "분류별 지출",
   "finance.cat.SALARY": "급여",
   "finance.cat.ALLOWANCE": "용돈",

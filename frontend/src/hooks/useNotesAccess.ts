@@ -1,3 +1,4 @@
+import { POLL_MS } from '../lib/pollIntervals';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   decideGrant,
@@ -10,7 +11,7 @@ import {
   type OutgoingGrant,
 } from '../api/socialNotesService';
 import { useLiveRefresh } from './useLiveRefresh';
-import { notifySocialChanged } from '../lib/socialEvents';
+import { notifySocialChanged, onSocialChanged } from '../lib/socialEvents';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
 
@@ -39,7 +40,10 @@ export function useNotesAccess() {
   useEffect(() => {
     void load();
   }, [load]);
-  useLiveRefresh(() => void load(), { enabled: true, intervalMs: 20000 });
+  useLiveRefresh(() => void load(), { enabled: true, intervalMs: POLL_MS.notesAccess });
+  // Acao noutro cartao do Social (ex: aceitar um pedido de notas): le de novo
+  // em silencio. O GET repetido pelo proprio emissor junta-se no dedupe.
+  useEffect(() => onSocialChanged(() => void load()), [load]);
 
   const run = useCallback(
     async (action: () => Promise<unknown>): Promise<boolean> => {

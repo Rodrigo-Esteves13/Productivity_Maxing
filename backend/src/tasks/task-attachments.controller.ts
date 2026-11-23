@@ -10,26 +10,18 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import type { Options as MulterOptions } from 'multer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { perMinute } from '../common/throttle.util';
-import { ATTACHMENT_MAX_SIZE_BYTES } from '../notebook/attachment-validation.util';
+import {
+  ATTACHMENT_MAX_SIZE_BYTES,
+  UPLOADS_PER_MINUTE,
+  singleFileUpload,
+} from '../common/upload-limits';
 import { TaskAttachmentsService } from './task-attachments.service';
-
-// Ver o mesmo tipo em auth.controller.ts (fieldNestingDepth ainda nao esta
-// nos tipos do multer).
-type MulterLimitsWithFieldNestingDepth = NonNullable<
-  MulterOptions['limits']
-> & {
-  fieldNestingDepth?: number;
-};
-
-const UPLOADS_PER_MINUTE = 10;
 
 @ApiTags('Task')
 @ApiBearerAuth()
@@ -51,16 +43,7 @@ export class TaskAttachmentsController {
   // ficheiro, sem campos extra; o tipo real e validado pelo conteudo.
   @Post()
   @Throttle(perMinute(UPLOADS_PER_MINUTE))
-  @UseInterceptors(
-    FileInterceptor('file', {
-      limits: {
-        fileSize: ATTACHMENT_MAX_SIZE_BYTES,
-        files: 1,
-        fields: 0,
-        fieldNestingDepth: 1,
-      } as MulterLimitsWithFieldNestingDepth,
-    }),
-  )
+  @UseInterceptors(singleFileUpload('file', ATTACHMENT_MAX_SIZE_BYTES))
   @ApiOperation({
     summary:
       'Uploads a file to a task (same types and size as notebook files).',

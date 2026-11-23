@@ -12,6 +12,8 @@ import {
   MAX_LINKED_AREAS_PER_MEMBER,
 } from './turmas.constants';
 
+const entryCountKey = (userId: string, areaId: string) => `${userId}|${areaId}`;
+
 // Cadeiras do caderno que um membro publica na turma. Os outros membros leem
 // as entradas (nunca as privadas: privateFromFriends), sem editar.
 @Injectable()
@@ -35,26 +37,40 @@ export class TurmaLinkedAreasService {
         area: { select: { name: true, colorHex: true } },
       },
     });
-    const counts = await Promise.all(
-      links.map((link) =>
-        this.prisma.notebookEntry.count({
-          where: {
-            userId: link.userId,
-            areaId: link.areaId,
-            privateFromFriends: false,
-          },
-        }),
-      ),
-    );
-    return links.map((link, index) => ({
+    const counts = await this.countEntriesPerLink(links);
+    return links.map((link) => ({
       id: link.id,
       userId: link.userId,
       ownerName: link.user.name,
       areaId: link.areaId,
       areaName: link.area.name,
       areaColor: link.area.colorHex,
-      entryCount: counts[index],
+      entryCount: counts.get(entryCountKey(link.userId, link.areaId)) ?? 0,
     }));
+  }
+
+  /** Um so groupBy para todas as cadeiras partilhadas (so entradas nao privadas). */
+  private async countEntriesPerLink(
+    links: { userId: string; areaId: string }[],
+  ): Promise<Map<string, number>> {
+    if (links.length === 0) return new Map();
+    const rows = await this.prisma.notebookEntry.groupBy({
+      by: ['userId', 'areaId'],
+      where: {
+        privateFromFriends: false,
+        OR: links.map((link) => ({
+          userId: link.userId,
+          areaId: link.areaId,
+        })),
+      },
+      _count: { _all: true },
+    });
+    return new Map(
+      rows.map((row) => [
+        entryCountKey(row.userId, row.areaId),
+        row._count._all,
+      ]),
+    );
   }
 
   async link(userId: string, turmaId: string, areaId: string) {

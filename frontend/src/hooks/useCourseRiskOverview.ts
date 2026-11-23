@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getCourseRiskOverview } from '../api/courseRiskService';
 import { isRequestCanceled } from '../lib/abortable';
 import { useAcademic } from '../context/useAcademic';
 import type { CourseRiskOverview } from '../types/models';
+import { GRADE_DOMAINS } from '../lib/domainEvents';
+import { useDomainKey } from './useDomainVersion';
 
 // Carrega o resumo de risco do periodo ativo (todos na vista agregada) e
 // recarrega quando ele muda. Um erro devolve hasError e retry. Sem programa ou
@@ -17,9 +19,15 @@ export function useCourseRiskOverview(absenceLimitPct?: number) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // Concluir uma task, lancar uma nota ou mudar um peso noutro cartao refaz o
+  // risco em silencio (o cartao mantem o que tinha enquanto pede).
+  const dataKey = useDomainKey(GRADE_DOMAINS);
+  // Pedido cujos dados estao no ecra: so mostra "a carregar" se mudar.
+  const loadedForRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (needsPeriod) {
+      loadedForRef.current = null;
       setOverview(null);
       setHasError(false);
       setIsLoading(false);
@@ -27,9 +35,11 @@ export function useCourseRiskOverview(absenceLimitPct?: number) {
     }
     if (isWaitingForPeriod) return;
     const controller = new AbortController();
-    setIsLoading(true);
+    const loadKey = `${absenceLimitPct ?? ''}|${periodId ?? ''}`;
+    if (loadedForRef.current !== loadKey) setIsLoading(true);
     getCourseRiskOverview({ absenceLimitPct, periodId }, controller.signal)
       .then((result) => {
+        loadedForRef.current = loadKey;
         setOverview(result);
         setHasError(false);
         setIsLoading(false);
@@ -40,7 +50,7 @@ export function useCourseRiskOverview(absenceLimitPct?: number) {
         setIsLoading(false);
       });
     return () => controller.abort();
-  }, [absenceLimitPct, periodId, isWaitingForPeriod, needsPeriod, attempt]);
+  }, [absenceLimitPct, periodId, isWaitingForPeriod, needsPeriod, attempt, dataKey]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
   return { overview, isLoading, hasError, needsPeriod, retry };

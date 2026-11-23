@@ -3,6 +3,8 @@ import { XIcon } from './Icons';
 import IconButton from './IconButton';
 import { MODAL_EXIT_MS, usePresence } from '../../hooks/usePresence';
 import { useI18n } from '../../i18n/useI18n';
+import ConfirmDialog from './ConfirmDialog';
+import { useEscapeLayer } from './modalStack';
 
 interface ModalProps {
   isOpen: boolean;
@@ -12,6 +14,8 @@ interface ModalProps {
   action?: ReactNode;
   // Largura maxima do painel; 'lg' e o formulario normal, 'wide' para previews.
   size?: ModalSize;
+  // Formulario com texto por gravar: fundo/Escape/X pedem confirmacao antes de fechar.
+  isDirty?: boolean;
 }
 
 type ModalSize = 'lg' | 'wide';
@@ -28,12 +32,14 @@ function focusableIn(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.getClientRects().length > 0);
 }
 
-export default function Modal({ isOpen, onClose, title, children, action, size = 'lg' }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, action, size = 'lg', isDirty = false }: ModalProps) {
   const { t } = useI18n();
   const { mounted, state } = usePresence(isOpen, MODAL_EXIT_MS);
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const [isAskingDiscard, setIsAskingDiscard] = useState(false);
+  if (!isOpen && isAskingDiscard) setIsAskingDiscard(false);
 
   // Guarda o elemento que abriu o Modal (ainda em foco durante o render, antes
   // de qualquer autoFocus dos filhos) para lhe devolver o foco ao fechar.
@@ -44,16 +50,13 @@ export default function Modal({ isOpen, onClose, title, children, action, size =
     if (isOpen) setTrigger(document.activeElement);
   }
 
-  // Só ativa o listener se o Modal estiver aberto
-  useEffect(() => {
-    if (!isOpen) return;
+  const requestClose = () => {
+    if (isDirty) setIsAskingDiscard(true);
+    else onClose();
+  };
 
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [isOpen, onClose]);
+  // Escape: so a camada do topo reage (um ConfirmDialog por cima fica com ele).
+  useEscapeLayer(isOpen, requestClose);
 
   // Foco para dentro ao abrir (sem roubar o de um autoFocus dos filhos) e de
   // volta ao gatilho ao fechar.
@@ -97,11 +100,12 @@ export default function Modal({ isOpen, onClose, title, children, action, size =
   if (!mounted) return null;
 
   return (
-    // Clicar no fundo escuro fecha o Modal
+    <>
+    {/* Clicar no fundo escuro fecha o Modal */}
     <div
       data-state={state}
       className="motion-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={requestClose}
     >
       {/* Evitamos que o clique no formulário feche o Modal acidentalmente */}
       <div
@@ -121,7 +125,7 @@ export default function Modal({ isOpen, onClose, title, children, action, size =
           <h2 id={titleId} className="text-lg font-bold text-white">{title}</h2>
           <div className="flex items-center gap-2">
             {action}
-            <IconButton label={t('common.close')} onClick={onClose} className="text-neutral-400">
+            <IconButton label={t('common.close')} onClick={requestClose} className="text-neutral-400">
               <XIcon />
             </IconButton>
           </div>
@@ -133,5 +137,20 @@ export default function Modal({ isOpen, onClose, title, children, action, size =
         </div>
       </div>
     </div>
+    {isAskingDiscard && (
+      <ConfirmDialog
+        title={t('confirmGuard.discardChanges.title')}
+        message={t('confirmGuard.discardChanges.message')}
+        confirmLabel={t('confirmGuard.discardChanges.confirm')}
+        cancelLabel={t('confirmGuard.discardChanges.keep')}
+        tone="danger"
+        onConfirm={() => {
+          setIsAskingDiscard(false);
+          onClose();
+        }}
+        onCancel={() => setIsAskingDiscard(false)}
+      />
+    )}
+    </>
   );
 }

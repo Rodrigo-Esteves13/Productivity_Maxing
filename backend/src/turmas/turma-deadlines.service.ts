@@ -16,12 +16,12 @@ import {
   UpdateTurmaDeadlineDto,
 } from './dto/turma.dto';
 import { turmaPath } from './turmas.constants';
+import { MS_PER_DAY } from '../common/time.constants';
 
 export const MAX_TURMA_DEADLINES = 300;
 // Prazos que ja passaram continuam visiveis uns dias (para quem ainda nao
 // os marcou como feitos), depois saem da lista.
 const PAST_GRACE_DAYS = 3;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Prazos partilhados da turma: registados uma vez, cada membro junta-os as
@@ -42,7 +42,7 @@ export class TurmaDeadlinesService {
     const rows = await this.prisma.turmaDeadline.findMany({
       where: {
         turmaId,
-        dueAt: { gte: new Date(Date.now() - PAST_GRACE_DAYS * DAY_MS) },
+        dueAt: { gte: new Date(Date.now() - PAST_GRACE_DAYS * MS_PER_DAY) },
       },
       orderBy: { dueAt: 'asc' },
       take: MAX_TURMA_DEADLINES,
@@ -131,19 +131,18 @@ export class TurmaDeadlinesService {
         tasks: { select: { taskId: true, userId: true } },
       },
     });
-    // Leva as mudancas para as tasks de quem ja juntou o prazo.
-    if (updated.tasks.length > 0) {
-      await this.prisma.task.updateMany({
-        where: { id: { in: updated.tasks.map((t) => t.taskId) } },
-        data: {
-          title: updated.title,
-          date: updated.dueAt,
-          ...(dto.weightPercentage !== undefined && {
-            weightPercentage: updated.weightPercentage,
-          }),
-        },
-      });
-    }
+    // Leva as mudancas para as tasks de quem ja juntou o prazo, pelas regras
+    // do TasksService (peso por cadeira, historico, adiamentos).
+    await this.tasks.applyLinkedDeadlineChange(
+      updated.tasks.map((t) => t.taskId),
+      {
+        title: updated.title,
+        date: updated.dueAt,
+        ...(dto.weightPercentage !== undefined && {
+          weightPercentage: updated.weightPercentage,
+        }),
+      },
+    );
     if (updated.dueAt.getTime() !== before.dueAt.getTime()) {
       for (const link of updated.tasks) {
         if (link.userId === userId) continue;

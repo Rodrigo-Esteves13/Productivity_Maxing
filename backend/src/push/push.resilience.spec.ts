@@ -25,6 +25,7 @@ function makeService(endpoints: string[]) {
           p256dh: 'p',
           auth: 'a',
           lang: 'en',
+          user: { mutedPushKinds: [] },
         })),
       ),
       deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -69,7 +70,7 @@ describe('PushService circuit breaker', () => {
 
     // Mozilla tem o seu proprio circuito, ainda fechado.
     prisma.pushSubscription.findMany.mockResolvedValueOnce([
-      { id: 'm', endpoint: MOZILLA, p256dh: 'p', auth: 'a', lang: 'en' },
+      { id: 'm', endpoint: MOZILLA, p256dh: 'p', auth: 'a', lang: 'en', user: { mutedPushKinds: [] } },
     ]);
     send.mockResolvedValueOnce({});
     await expect(notify(service)).resolves.toBe(1);

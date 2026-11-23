@@ -18,6 +18,8 @@ import { getApiMessage } from '../../lib/httpError';
 import { formatClock, formatTaskDate, weekdayLabel } from '../../lib/timeFormat';
 import { lisbonTodayKey } from '../../lib/dateKey';
 import { useI18n } from '../../i18n/useI18n';
+import { useUndoableDelete } from '../../hooks/useUndoableDelete';
+import { useFeedback } from '../../context/useFeedback';
 import type { CommitmentsOverview, ScheduleException, WorkShift } from '../../types/models';
 
 interface ScheduleChangesCardProps {
@@ -40,10 +42,14 @@ export default function ScheduleChangesCard({ refreshKey, onChanged }: ScheduleC
   const [error, setError] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [target, setTarget] = useState(ALL_WORK);
-  const [from, setFrom] = useState(lisbonTodayKey());
-  const [to, setTo] = useState(lisbonTodayKey());
+  // Preenchidos ao abrir o formulario (nao na montagem): depois da meia-noite
+  // a pagina aberta ainda ia propor o dia anterior.
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [note, setNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const { notify } = useFeedback();
+  const offerUndoDelete = useUndoableDelete();
 
   const load = useCallback(async () => {
     try {
@@ -86,24 +92,56 @@ export default function ScheduleChangesCard({ refreshKey, onChanged }: ScheduleC
     return t('scheduleChanges.allWork');
   };
 
-  const remove = async (id: string) => {
+  const openForm = () => {
+    const today = lisbonTodayKey();
+    setFrom(today);
+    setTo(today);
+    setIsAdding(true);
+  };
+
+  // `to` acompanha `from`: o intervalo nunca fica ao contrario.
+  const changeFrom = (value: string) => {
+    setFrom(value);
+    if (to < value) setTo(value);
+  };
+
+  // Apagar e logo, com toast "Anular" que recria a mudanca.
+  const remove = async (exception: ScheduleException) => {
     try {
-      await deleteScheduleException(id);
-      setExceptions((prev) => prev.filter((e) => e.id !== id));
-      onChanged();
+      await deleteScheduleException(exception.id);
     } catch (caught) {
-      setError(getApiMessage(caught, t('shiftChange.failed')));
+      notify(getApiMessage(caught, t('shiftChange.failed')), 'error');
+      return;
     }
+    setExceptions((prev) => prev.filter((e) => e.id !== exception.id));
+    onChanged();
+    offerUndoDelete({
+      message: t('ux4sched.change.deleted'),
+      restore: () =>
+        createScheduleException({
+          kind: exception.kind,
+          ...(exception.shiftId && { shiftId: exception.shiftId }),
+          ...(exception.commitmentId && { commitmentId: exception.commitmentId }),
+          startsOn: exception.startsOn.slice(0, 10),
+          endsOn: exception.endsOn.slice(0, 10),
+          ...(exception.startMinutes !== null && { startMinutes: exception.startMinutes }),
+          ...(exception.endMinutes !== null && { endMinutes: exception.endMinutes }),
+          ...(exception.note && { note: exception.note }),
+        }),
+      onRestored: () => {
+        void load();
+        onChanged();
+      },
+    });
   };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (to < from) {
-      setError(t('shiftChange.endBeforeStart'));
+      notify(t('shiftChange.endBeforeStart'), 'error');
       return;
     }
     setIsSaving(true);
-    setError('');
     try {
       await createScheduleException({
         kind: 'OFF',
@@ -114,9 +152,10 @@ export default function ScheduleChangesCard({ refreshKey, onChanged }: ScheduleC
       });
       setIsAdding(false);
       setNote('');
+      notify(t('quickWins.shiftChangeSaved'), 'success');
       onChanged();
     } catch (caught) {
-      setError(getApiMessage(caught, t('shiftChange.failed')));
+      notify(getApiMessage(caught, t('shiftChange.failed')), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -132,7 +171,7 @@ export default function ScheduleChangesCard({ refreshKey, onChanged }: ScheduleC
           <p className="text-sm text-neutral-400">{t('scheduleChanges.description')}</p>
         </div>
         {!isAdding && hasWeekly && (
-          <ActionButton onClick={() => setIsAdding(true)} className="flex shrink-0 items-center gap-2">
+          <ActionButton onClick={openForm} className="flex shrink-0 items-center gap-2">
             <PlaneIcon aria-hidden="true" />
             {t('scheduleChanges.addTimeOff')}
           </ActionButton>
@@ -155,7 +194,7 @@ export default function ScheduleChangesCard({ refreshKey, onChanged }: ScheduleC
             </div>
           </fieldset>
           <div className="grid grid-cols-2 gap-3">
-            <Input label={t('ui.from')} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <Input label={t('ui.from')} type="date" value={from} onChange={(e) => changeFrom(e.target.value)} />
             <Input label={t('ui.to')} type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
           </div>
           <Input
@@ -173,7 +212,7 @@ export default function ScheduleChangesCard({ refreshKey, onChanged }: ScheduleC
             <button
               type="button"
               onClick={() => setIsAdding(false)}
-              className="px-3 py-2 text-sm text-neutral-400 hover:text-white"
+              className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11"
             >
               {t('common.cancel')}
             </button>
@@ -181,10 +220,10 @@ export default function ScheduleChangesCard({ refreshKey, onChanged }: ScheduleC
         </form>
       )}
 
-      {error && <ErrorState message={error} />}
+      {error && <ErrorState message={error} onRetry={() => void load()} />}
       {isLoading && <LinesSkeleton lines={2} />}
 
-      {!isLoading && exceptions.length === 0 && (
+      {!isLoading && !error && exceptions.length === 0 && (
         <EmptyState
           variant="inline"
           message={hasWeekly ? t('scheduleChanges.empty') : t('scheduleChanges.emptyNoWeekly')}
@@ -211,7 +250,7 @@ export default function ScheduleChangesCard({ refreshKey, onChanged }: ScheduleC
               </div>
               <IconButton
                 label={t('scheduleChanges.remove')}
-                onClick={() => void remove(e.id)}
+                onClick={() => void remove(e)}
                 className="-my-1 shrink-0 text-neutral-500 hover:text-red-400"
               >
                 <TrashIcon />

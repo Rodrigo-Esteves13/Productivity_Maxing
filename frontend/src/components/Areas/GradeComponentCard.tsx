@@ -15,7 +15,7 @@ interface GradeComponentCardProps {
   onUpdate: (changes: Partial<GradeComponentInput>) => Promise<void>;
   onRequestDelete: () => void;
   onAddEntry: (input: GradeEntryInput) => Promise<void>;
-  onEditEntry: (entryId: string, grade: number) => Promise<void>;
+  onEditEntry: (entryId: string, changes: Partial<GradeEntryInput>) => Promise<void>;
   onRemoveEntry: (entryId: string) => Promise<void>;
 }
 
@@ -121,7 +121,7 @@ export default function GradeComponentCard({
             <GradeEntryChip
               key={entry.id}
               entry={entry}
-              onChange={(grade) => guard(() => onEditEntry(entry.id, grade))}
+              onChange={(changes) => guard(() => onEditEntry(entry.id, changes))}
               onRemove={() => guard(() => onRemoveEntry(entry.id))}
             />
           ))}

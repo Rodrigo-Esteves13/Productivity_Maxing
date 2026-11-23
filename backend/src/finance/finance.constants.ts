@@ -25,6 +25,9 @@ export const FINANCE_GOAL_NAME_MAX_LENGTH = 80;
 export const FINANCE_ACCOUNT_NAME_MAX_LENGTH = 60;
 export const FINANCE_HOLDING_NAME_MAX_LENGTH = 80;
 
+// Mes "YYYY-MM" (01 a 12) do resumo mensal.
+export const FINANCE_MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
+
 // Categorias fixas (o frontend traduz). LEISURE conta para o limite de lazer.
 export const FINANCE_CATEGORIES = [
   'SALARY',

@@ -15,8 +15,10 @@ import { AccountGuardService } from './account-guard.service';
 import { SupabaseClientsService } from './supabase-clients.service';
 import { canPasswordCredentialOpenAccount } from '../password-link.policy';
 import {
+  COOLDOWN_PRUNE_THRESHOLD,
   EMAIL_NOT_VERIFIED_CODE,
   EmailVerificationService,
+  RESEND_COOLDOWN_MS,
 } from './email-verification.service';
 import { PasswordLinkService } from './password-link.service';
 import { runInBackground } from '../../common/background.util';
@@ -51,6 +53,9 @@ const CURRENT_PASSWORD_WRONG_MESSAGE = 'Your current password is incorrect.';
 const SIGNUP_FALLBACK_MESSAGE =
   'Could not create the account. Please try again.';
 const ACCOUNT_EXISTS_MESSAGE = 'An account with this email already exists.';
+// Teto de emails lembrados no cooldown do forgot-password (em memoria, so
+// esta instancia, ver S-34). Cheio, esquece os mais antigos.
+const FORGOT_PASSWORD_MAX_TRACKED_EMAILS = 10_000;
 
 // Registo com um email que ja tem conta sem password: nao ha conta nova nem
 // sessao, so o email com o link para a juntar (ver PasswordLinkService).
@@ -61,6 +66,8 @@ export type RegisterOutcome =
 @Injectable()
 export class PasswordAuthService {
   private readonly logger = new Logger(PasswordAuthService.name);
+  // Email normalizado -> ultimo pedido de forgot-password (S-11).
+  private readonly forgotPasswordSentAt = new Map<string, number>();
 
   constructor(
     private prisma: PrismaService,
@@ -332,7 +339,48 @@ export class PasswordAuthService {
    * têm nenhuma credencial no Supabase Auth (contas só-OAuth, ou emails
    * nunca registados) - esse caso é esperado e é ignorado silenciosamente.
    */
-  async forgotPassword(email: string): Promise<void> {
+  //
+  // S-11: tudo corre em background, por isso a resposta sai no mesmo tempo
+  // em todos os caminhos (conta so-OAuth, conta com password, email sem
+  // conta, cooldown). E um email normalizado so recebe 1 pedido por
+  // RESEND_COOLDOWN_MS, venha de que IP vier (o @Throttle e so por IP).
+  forgotPassword(email: string): Promise<void> {
+    const key = normalizeEmail(email);
+    const now = Date.now();
+    const last = this.forgotPasswordSentAt.get(key);
+    if (last !== undefined && now - last < RESEND_COOLDOWN_MS) {
+      return Promise.resolve();
+    }
+    this.forgotPasswordSentAt.delete(key);
+    this.forgotPasswordSentAt.set(key, now);
+    this.pruneForgotPasswordCooldowns(now);
+
+    runInBackground(
+      this.sendForgotPasswordEmail(email),
+      this.logger,
+      'Forgot password',
+    );
+    return Promise.resolve();
+  }
+
+  // Tira as entradas fora do cooldown; se ainda passar do teto, esquece as
+  // mais antigas (o Map guarda a ordem de insercao).
+  private pruneForgotPasswordCooldowns(now: number): void {
+    if (this.forgotPasswordSentAt.size < COOLDOWN_PRUNE_THRESHOLD) return;
+    for (const [key, at] of this.forgotPasswordSentAt) {
+      if (now - at >= RESEND_COOLDOWN_MS) this.forgotPasswordSentAt.delete(key);
+    }
+    for (const key of this.forgotPasswordSentAt.keys()) {
+      if (
+        this.forgotPasswordSentAt.size <= FORGOT_PASSWORD_MAX_TRACKED_EMAILS
+      ) {
+        return;
+      }
+      this.forgotPasswordSentAt.delete(key);
+    }
+  }
+
+  private async sendForgotPasswordEmail(email: string): Promise<void> {
     // Conta sem password (so-OAuth): o Supabase nao tem nada para recuperar,
     // ou tem uma credencial orfa que nao abre a conta (SCR-002). Manda o
     // nosso link para escolher a password.
@@ -340,12 +388,9 @@ export class PasswordAuthService {
       where: { email: emailEquals(email) },
       orderBy: { createdAt: 'asc' },
     });
+    // Ja corre em background (ver forgotPassword): aqui pode-se esperar.
     if (local && this.passwordLink.canLink(local)) {
-      runInBackground(
-        this.passwordLink.send(local),
-        this.logger,
-        'Password link email',
-      );
+      await this.passwordLink.send(local);
       return;
     }
 
@@ -362,13 +407,9 @@ export class PasswordAuthService {
       return;
     }
 
-    runInBackground(
-      this.mailService.sendPasswordResetEmail(
-        email,
-        data.properties.action_link,
-      ),
-      this.logger,
-      'Password reset email',
+    await this.mailService.sendPasswordResetEmail(
+      email,
+      data.properties.action_link,
     );
   }
 

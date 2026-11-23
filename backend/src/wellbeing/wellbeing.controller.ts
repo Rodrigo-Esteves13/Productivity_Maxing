@@ -26,7 +26,10 @@ import { MedicationIntakesService } from './medication-intakes.service';
 import { MedicationDisclaimerService } from './medication-disclaimer.service';
 import { MedicationHistoryService } from './medication-history.service';
 import { BloodDonationsService } from './blood-donations.service';
-import { CreateBloodDonationDto } from './dto/blood-donation.dto';
+import {
+  CreateBloodDonationDto,
+  UpdateBloodDonationDto,
+} from './dto/blood-donation.dto';
 import {
   DateKeyParamDto,
   MoodRangeQueryDto,
@@ -41,6 +44,7 @@ import {
   MedicationDoseDto,
   MedicationHistoryQueryDto,
   UpdateMedicationDto,
+  UpdateMedicationIntakeDto,
 } from './dto/medication.dto';
 
 const WRITES_PER_MINUTE = 30;
@@ -159,6 +163,17 @@ export class WellbeingController {
     return this.bloodDonations.create(user.id, dto);
   }
 
+  @Patch('blood-donations/:id')
+  @Throttle(perMinute(WRITES_PER_MINUTE))
+  @ApiOperation({ summary: 'Edits one recorded blood donation.' })
+  updateBloodDonation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateBloodDonationDto,
+  ) {
+    return this.bloodDonations.update(user.id, id, dto);
+  }
+
   @Delete('blood-donations/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @Throttle(perMinute(WRITES_PER_MINUTE))
@@ -213,6 +228,19 @@ export class WellbeingController {
     @Body() dto: CreateMedicationIntakeDto,
   ) {
     return this.intakes.create(user.id, dto);
+  }
+
+  @Patch('medications/intakes/:id')
+  @Throttle(perMinute(WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary: 'Edits the time, dose or note of one logged intake.',
+  })
+  updateIntake(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateMedicationIntakeDto,
+  ) {
+    return this.intakes.update(user.id, id, dto);
   }
 
   @Delete('medications/intakes/:id')

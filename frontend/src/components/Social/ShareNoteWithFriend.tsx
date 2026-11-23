@@ -167,7 +167,7 @@ export default function ShareNoteWithFriend({ friendId, friendName, alreadyShare
                   className="h-2 w-2 shrink-0 rounded-full"
                   style={{ backgroundColor: areaColorOf(entry.area.colorHex) }}
                 />
-                <span className="truncate">{entry.title}</span>
+                <span className="truncate" title={entry.title}>{entry.title}</span>
                 <span className="hidden shrink-0 text-xs text-neutral-500 sm:inline">{entry.area.name}</span>
               </span>
               <button

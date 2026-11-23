@@ -75,7 +75,7 @@ const SINGLE_TASK_PARAM = 'single';
 
 export default function Dashboard() {
   const { t } = useI18n();
-  useDocumentTitle('Dashboard');
+  useDocumentTitle(t('nav.dashboard'));
   const [filters, setFilters] = useState<DashboardFiltersState>(EMPTY_DASHBOARD_FILTERS);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const { sort, toggleKey, setKey, toggleDirection } = useTableSort<TasksTableColumnId>();
@@ -321,7 +321,7 @@ export default function Dashboard() {
       {!isExamMode && !isLoading && !error && <OnboardingChecklist taskCount={tasks.length} />}
 
       {cardVisibility.missingGrade && !isLoading && !error && academicAreas.length > 0 && (
-        <MissingGradeCard areas={academicAreas} refreshKey={tasks.reduce((sum, task) => sum + (task.weightPercentage ?? 0), tasks.length)} />
+        <MissingGradeCard areas={academicAreas} />
       )}
 
       {cardVisibility.overloadAlert && !isLoading && !error && academicTasks.length > 0 && (

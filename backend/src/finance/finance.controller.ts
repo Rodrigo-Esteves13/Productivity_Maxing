@@ -33,6 +33,7 @@ import {
   CreateFinanceHoldingDto,
   CreateOwedPaymentDto,
   FinanceAnalyticsQueryDto,
+  FinanceSummaryQueryDto,
   ImportFinanceEntriesDto,
   UpdateFinanceAccountDto,
   UpdateFinanceEntryDto,
@@ -72,9 +73,9 @@ export class FinanceController {
   })
   summary(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('month') month?: string,
+    @Query() query: FinanceSummaryQueryDto,
   ) {
-    return this.finance.summary(user.id, month ?? '');
+    return this.finance.summary(user.id, query.month);
   }
 
   // Literal antes de qualquer rota :id.

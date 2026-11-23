@@ -102,7 +102,7 @@ export default function FriendLink() {
           <div className="flex items-center gap-4">
             <PersonAvatar name={name} avatarUrl={preview.person.avatarUrl} size="lg" />
             <div className="min-w-0">
-              <p className="truncate text-lg font-semibold text-white">{name}</p>
+              <p className="truncate text-lg font-semibold text-white" title={name}>{name}</p>
               <p className="text-sm text-neutral-400">
                 {status === 'SELF'
                   ? t('friendLink.self')

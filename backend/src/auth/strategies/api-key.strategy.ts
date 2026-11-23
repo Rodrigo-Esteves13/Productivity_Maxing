@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { HeaderAPIKeyStrategy } from 'passport-headerapikey';
 import { AuthService } from '../auth.service';
 import { AccountStatusService } from '../../account-status/account-status.service';
+import { API_KEY_HEADER } from '../api-key-failure.tracker';
 
 @Injectable()
 export class ApiKeyStrategy extends PassportStrategy(
@@ -15,9 +16,11 @@ export class ApiKeyStrategy extends PassportStrategy(
   ) {
     // Passamos APENAS as opções de configuração. O 'false' diz que não precisamos do 'req'.
     // O NestJS vai automaticamente injetar o método validate() ali em baixo no Passport
-    super({ header: 'x-api-key', prefix: '' }, false);
+    super({ header: API_KEY_HEADER, prefix: '' }, false);
   }
   async validate(apiKey: string) {
+    // Pode vir da cache curta do ApiKeyService (ate API_KEY_CACHE_TTL_MS):
+    // o ban abaixo continua a ser verificado em cada pedido.
     const result = await this.authService.validateApiKey(apiKey);
 
     if (!result) {

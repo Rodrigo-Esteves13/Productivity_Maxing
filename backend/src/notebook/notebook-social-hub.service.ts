@@ -39,7 +39,12 @@ export interface FriendHub {
   sharedWithMe: HubSharedWithMe[];
   sharedByMe: HubSharedByMe[];
   /** Tu a ler o caderno dele. Recusado aparece como PENDING (igual a outgoing). */
-  theirNotebook: { status: HubGrantStatus; areaCount: number };
+  theirNotebook: {
+    status: HubGrantStatus;
+    areaCount: number;
+    /** Pedido/acesso do viewer (cancelar ou deixar de ver). null se nao ha ou foi recusado. */
+    grantId: string | null;
+  };
   /** Ele a ler o teu caderno. */
   myNotebook: {
     status: HubGrantStatus;
@@ -155,7 +160,7 @@ export class NotebookSocialHubService {
         }),
         this.prisma.notebookViewGrant.findUnique({
           where: { ownerId_viewerId: { ownerId: friendId, viewerId: userId } },
-          select: { status: true, areaIds: true },
+          select: { id: true, status: true, areaIds: true },
         }),
         this.prisma.notebookViewGrant.findUnique({
           where: { ownerId_viewerId: { ownerId: userId, viewerId: friendId } },
@@ -214,8 +219,10 @@ export class NotebookSocialHubService {
             status: theirGrant.status === 'APPROVED' ? 'APPROVED' : 'PENDING',
             areaCount:
               theirGrant.status === 'APPROVED' ? theirGrant.areaIds.length : 0,
+            // Um pedido recusado aparece como PENDING mas nao pode ser removido.
+            grantId: theirGrant.status === 'DENIED' ? null : theirGrant.id,
           }
-        : { status: 'NONE', areaCount: 0 },
+        : { status: 'NONE', areaCount: 0, grantId: null },
       myNotebook:
         myGrant && myGrant.status !== 'DENIED'
           ? {

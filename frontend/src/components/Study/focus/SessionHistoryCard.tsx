@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { createManualSession, deleteStudySession, updateStudySession } from '../../../api/studySessionsService';
-import { useActiveStudySession } from '../../../context/useActiveStudySession';
+import { useSessionEndKey } from '../../../hooks/useSessionEndKey';
 import { useSessionHistory } from '../../../hooks/useSessionHistory';
 import { useIncrementalReveal } from '../../../hooks/useIncrementalReveal';
 import { getApiMessage } from '../../../lib/httpError';
@@ -37,9 +37,9 @@ function groupByDay(sessions: StudySession[]): [string, StudySession[]][] {
 // esqueceste de ligar. Dados fiaveis aqui = previsoes melhores.
 export default function SessionHistoryCard() {
   const { t } = useI18n();
-  const { activeSession } = useActiveStudySession();
+  const sessionEndKey = useSessionEndKey();
   const [historyDays, setHistoryDays] = useState<number>(DEFAULT_HISTORY_DAYS);
-  const { sessions, isLoading, error, reload } = useSessionHistory(historyDays, activeSession?.id ?? null);
+  const { sessions, isLoading, error, reload } = useSessionHistory(historyDays, sessionEndKey);
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [serverError, setServerError] = useState('');

@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { randomBytes, randomUUID } from 'crypto';
-import { Prisma, Provider, User } from '@prisma/client';
+import { Provider, User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   decryptTokenNullable,
@@ -20,6 +20,7 @@ import { AccountGuardService } from './account-guard.service';
 import { emailEquals, normalizeEmail } from '../email.util';
 import type { OAuthProfileData } from './oauth-profile.interface';
 import { SupabaseClientsService } from './supabase-clients.service';
+import { isUniqueViolation } from '../../common/prisma-errors';
 
 // Login/registo e "ligar conta" via OAuth (Google, GitHub, Discord), e a
 // gestao dos tokens OAuth guardados (cifrados) em Identity.
@@ -154,10 +155,7 @@ export class OAuthIdentityService {
         // Corrida rara: dois logins simultâneos passam ambos o check acima
         // antes de qualquer um dos dois criar o User. Apanhamos o P2002
         // aqui também, em vez de deixar subir como erro genérico não tratado.
-        if (
-          err instanceof Prisma.PrismaClientKnownRequestError &&
-          err.code === 'P2002'
-        ) {
+        if (isUniqueViolation(err)) {
           throw new OAuthAccountConflictException(data.email);
         }
         throw err;

@@ -69,7 +69,7 @@ export const extra: Record<string, string> = {
   "hook.couldNotLoadTheData": "Could not load the data.",
   "hook.taskCreatedButTheChecklistCould": "Task created, but the checklist could not be saved.",
   "hook.deleteTask": "Delete task",
-  "hook.areYouSureYouWantTo": "Are you sure you want to delete this task? This action is irreversible.",
+  "hook.areYouSureYouWantTo": "Are you sure you want to delete this task? You can undo it right after.",
   "hook.googleCalendar": "Google Calendar",
   "hook.alsoRemoveTheLinkedEventFrom": "Also remove the linked event from Google Calendar?",
   "hook.removeEvent": "Remove event",

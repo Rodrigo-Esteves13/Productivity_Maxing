@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Modal from '../UI/Modal';
 import Button from '../UI/Button';
@@ -33,6 +33,7 @@ export default function FinanceImportButton({ onImported }: FinanceImportButtonP
   const { stage, preview, progress, result, errorKey, pickFile, confirm, reset } = useFinanceImport();
   const [open, setOpen] = useState(false);
   const [fileName, setFileName] = useState('');
+  const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const handled = useRef(false);
@@ -62,11 +63,22 @@ export default function FinanceImportButton({ onImported }: FinanceImportButtonP
     setOpen(true);
   }, [requested, setSearchParams]);
 
-  const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const startFile = (file: File) => {
     setFileName(file.name);
     void pickFile(file);
+  };
+
+  const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) startFile(file);
+  };
+
+  // Arrastar e largar um CSV para a zona (o mesmo caminho do seletor).
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && !busy) startFile(file);
   };
 
   const handleConfirm = async () => {
@@ -87,15 +99,10 @@ export default function FinanceImportButton({ onImported }: FinanceImportButtonP
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        title={t('financeImport.hint')}
-        className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
-      >
+      <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(true)} title={t('financeImport.hint')} className="inline-flex items-center gap-2">
         <UploadIcon className="h-4 w-4" />
         {t('financeImport.button')}
-      </button>
+      </Button>
       <Modal isOpen={open} onClose={close} title={t('financeImport.title')}>
         <div className="space-y-4 text-sm">
           <div className="space-y-1 text-neutral-400">
@@ -104,15 +111,26 @@ export default function FinanceImportButton({ onImported }: FinanceImportButtonP
             <p>{t('financeImport.accountNote')}</p>
           </div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={ACCEPTED_FILES}
-            onChange={handleFile}
-            disabled={busy}
-            aria-label={t('financeImport.chooseFile')}
-            className="block w-full text-sm text-neutral-400 file:mr-3 file:rounded-lg file:border-0 file:bg-violet-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-violet-500 disabled:opacity-50"
-          />
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (!busy) setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            className={`space-y-2 rounded-lg border border-dashed p-4 text-center ${dragging ? 'border-violet-400 bg-violet-900/20' : 'border-neutral-700'}`}
+          >
+            <p className="text-neutral-400">{t('ux4fin.dropHint')}</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ACCEPTED_FILES}
+              onChange={handleFile}
+              disabled={busy}
+              aria-label={t('financeImport.chooseFile')}
+              className="block w-full text-sm text-neutral-400 file:mr-3 file:rounded-lg file:border-0 file:bg-violet-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-violet-500 disabled:opacity-50 pointer-coarse:file:min-h-11"
+            />
+          </div>
 
           {stage === 'reading' && (
             <p role="status" className="text-neutral-400">{t('financeImport.reading', { name: fileName })}</p>

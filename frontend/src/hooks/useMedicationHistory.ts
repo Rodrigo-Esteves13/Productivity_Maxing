@@ -22,6 +22,6 @@ export function useMedicationHistory(refreshKey = 0) {
     const from = toDateKey(new Date(Date.parse(today) - (HISTORY_RANGE_DAYS[range] - 1) * MS_PER_DAY));
     return getMedicationHistory(from, today);
   }, [range, today]);
-  const { data, isLoading, error } = useLoadOnce(fetcher, `${range}:${today}:${refreshKey}`);
-  return { history: data, isLoading, error, range, setRange };
+  const { data, isLoading, error, reload } = useLoadOnce(fetcher, `${range}:${today}:${refreshKey}`);
+  return { history: data, isLoading, error, range, setRange, reload };
 }

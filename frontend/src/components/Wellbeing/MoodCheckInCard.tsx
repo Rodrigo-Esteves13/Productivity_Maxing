@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import RatingInput from '../UI/RatingInput';
 import Textarea from '../UI/Textarea';
@@ -15,6 +15,14 @@ const MAX_NOTE_LENGTH = 500;
 // Meio-dia UTC do dia (AAAA-MM-DD), para o rotulo mostrar sempre esse dia.
 const NOON_UTC_SUFFIX = 'T12:00:00Z';
 
+// Campos do formulario de um dia; o rascunho guarda-se por dia (U-B13).
+interface MoodForm {
+  value: number | null;
+  energy: number | null;
+  stress: number | null;
+  note: string;
+}
+
 interface MoodCheckInCardProps {
   mood: ReturnType<typeof useMoodToday>;
 }
@@ -22,30 +30,48 @@ interface MoodCheckInCardProps {
 // Check-in diario: humor (obrigatorio), energia e stress (opcionais), nota.
 export default function MoodCheckInCard({ mood }: MoodCheckInCardProps) {
   const { t, lang } = useI18n();
-  const { notify } = useFeedback();
-  const [value, setValue] = useState<number | null>(null);
-  const [energy, setEnergy] = useState<number | null>(null);
-  const [stress, setStress] = useState<number | null>(null);
-  const [note, setNote] = useState('');
-
-  // O registo de hoje chega depois do primeiro render.
-  // Num dia novo (mood.today mudou) sem registo, limpa os valores de ontem.
-  useEffect(() => {
-    setValue(mood.log?.mood ?? null);
-    setEnergy(mood.log?.energy ?? null);
-    setStress(mood.log?.stress ?? null);
-    setNote(mood.log?.note ?? '');
-  }, [mood.log, mood.day]);
+  const { notify, confirm } = useFeedback();
+  // Rascunhos por dia: trocar de dia com as setas nao descarta o que foi
+  // escrito. Sem rascunho, o formulario mostra o registo gravado desse dia.
+  const [drafts, setDrafts] = useState<Record<string, MoodForm>>({});
+  const saved: MoodForm = {
+    value: mood.log?.mood ?? null,
+    energy: mood.log?.energy ?? null,
+    stress: mood.log?.stress ?? null,
+    note: mood.log?.note ?? '',
+  };
+  const form = drafts[mood.day] ?? saved;
+  const hasDraft = mood.day in drafts;
+  const { value, energy, stress, note } = form;
+  const patch = (changes: Partial<MoodForm>) => setDrafts((prev) => ({ ...prev, [mood.day]: { ...form, ...changes } }));
+  const dropDraft = (day: string) =>
+    setDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => key !== day)));
 
   const handleSave = async () => {
     if (value === null) return;
+    const day = mood.day;
     const ok = await mood.save({
       mood: value,
       ...(energy !== null && { energy }),
       ...(stress !== null && { stress }),
       ...(note.trim() && { note: note.trim() }),
     });
+    if (ok) dropDraft(day);
     notify(ok ? t('wellbeing.mood.saved') : t('wellbeing.mood.saveError'), ok ? 'success' : 'error');
+  };
+
+  const handleClear = async () => {
+    const confirmed = await confirm({
+      title: t('ux4well.mood.clearTitle'),
+      message: t('ux4well.mood.clearMessage'),
+      confirmLabel: t('quickWins.moodClear'),
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+    const day = mood.day;
+    const ok = await mood.clear();
+    if (ok) dropDraft(day);
+    notify(ok ? t('quickWins.moodCleared') : t('quickWins.moodClearError'), ok ? 'success' : 'error');
   };
 
   return (
@@ -103,20 +129,20 @@ export default function MoodCheckInCard({ mood }: MoodCheckInCardProps) {
       {mood.isLoading ? (
         <LinesSkeleton lines={4} />
       ) : mood.error ? (
-        <ErrorState message={t('wellbeing.mood.loadError')} />
+        <ErrorState message={t('wellbeing.mood.loadError')} onRetry={mood.reload} />
       ) : (
         <div className="space-y-4">
           <div>
             <p className="mb-1.5 text-sm font-medium text-neutral-200">{t('wellbeing.mood.mood')}</p>
-            <RatingInput value={value} onChange={setValue} hint={t('wellbeing.mood.moodHint')} />
+            <RatingInput value={value} onChange={(next) => patch({ value: next })} hint={t('wellbeing.mood.moodHint')} />
           </div>
           <div>
             <p className="mb-1.5 text-sm font-medium text-neutral-200">{t('wellbeing.mood.energy')}</p>
-            <RatingInput value={energy} onChange={setEnergy} hint={t('wellbeing.mood.energyHint')} />
+            <RatingInput value={energy} onChange={(next) => patch({ energy: next })} hint={t('wellbeing.mood.energyHint')} />
           </div>
           <div>
             <p className="mb-1.5 text-sm font-medium text-neutral-200">{t('wellbeing.mood.stress')}</p>
-            <RatingInput value={stress} onChange={setStress} hint={t('wellbeing.mood.stressHint')} />
+            <RatingInput value={stress} onChange={(next) => patch({ stress: next })} hint={t('wellbeing.mood.stressHint')} />
           </div>
           <Textarea
             label={t('wellbeing.mood.note')}
@@ -124,11 +150,28 @@ export default function MoodCheckInCard({ mood }: MoodCheckInCardProps) {
             maxLength={MAX_NOTE_LENGTH}
             rows={2}
             placeholder={t('wellbeing.mood.notePlaceholder')}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(e) => patch({ note: e.target.value })}
           />
-          <ActionButton type="button" disabled={value === null || mood.isSaving} onClick={() => void handleSave()}>
-            {mood.isSaving ? t('common.saving') : t('wellbeing.mood.save')}
-          </ActionButton>
+          <div className="flex flex-wrap items-center gap-3">
+            <ActionButton type="button" disabled={value === null || mood.isSaving} onClick={() => void handleSave()}>
+              {mood.isSaving ? t('common.saving') : t('wellbeing.mood.save')}
+            </ActionButton>
+            {hasDraft && (
+              <span className="text-xs text-amber-300" role="status">
+                {t('ux4well.mood.draft')}
+              </span>
+            )}
+            {mood.log && (
+              <button
+                type="button"
+                disabled={mood.isSaving}
+                onClick={() => void handleClear()}
+                className="min-h-10 text-sm font-medium text-neutral-400 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {t('quickWins.moodClear')}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </DashboardCard>

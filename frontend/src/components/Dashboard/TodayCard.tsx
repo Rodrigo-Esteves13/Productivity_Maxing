@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTodayOverview } from '../../hooks/useTodayOverview';
 import { useNow } from '../../hooks/useNow';
+import { useStudyDataKey } from '../../hooks/useSessionEndKey';
+import { PLAN_DOMAINS } from '../../lib/domainEvents';
 import type { AgendaItem } from '../../lib/agenda';
 import { AGENDA_TONE_CLASSES, getAgendaTone } from '../../lib/agendaTone';
 import { MONTH_CHIP_FALLBACK_KEY } from '../../lib/monthAgenda';
@@ -50,7 +52,10 @@ function AgendaSlot({ item }: { item: AgendaItem }) {
 // minuto a minuto, so com o separador visivel.
 export default function TodayCard() {
   const { t } = useI18n();
-  const overview = useTodayOverview();
+  // Concluir, adiar ou apagar uma task (na tabela ou noutro sitio) tira-a de
+  // "vencem hoje"; sessoes mudadas mexem nos blocos do plano.
+  const refreshKey = useStudyDataKey(PLAN_DOMAINS);
+  const overview = useTodayOverview(refreshKey);
   const now = useNow();
 
   if (!overview) return null;

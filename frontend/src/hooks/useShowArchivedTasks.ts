@@ -1,6 +1,7 @@
+import { STORAGE_KEYS } from '../lib/storageKeys';
 import { useEffect, useState } from 'react';
 
-const STORAGE_KEY = 'pm-show-archived-tasks';
+const STORAGE_KEY = STORAGE_KEYS.showArchivedTasks;
 
 function loadPref(): boolean {
   try {

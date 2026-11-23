@@ -978,7 +978,6 @@ model Task {
   // - periodId: dashboard filtra tasks por período ativo constantemente
   //   (?periodId= nos endpoints existentes, fase 2) - mesma lógica dos
   //   índices acima, sem isto degrada para scan à medida que a tabela cresce.
-  @@index([userId])
   @@index([blockedByTaskId])
   @@index([packItemId])
   @@index([spacedReviewOfTaskId])
@@ -996,6 +995,8 @@ model Task {
   // O cron de lembretes (RemindersService) procura por intervalo de date em
   // todos os users.
   @@index([date])
+  // Cron de lembretes: OR [date, submissionDate] precisa de indice nos dois (BitmapOr).
+  @@index([submissionDate])
 }
 
 enum RecurrenceFrequency {
@@ -1208,7 +1209,6 @@ model StudySession {
   // sempre por dono - é a query mais frequente deste modelo.
   // [userId, startedAt]: o heatmap e o histórico ordenam/filtram sempre
   // por período dentro do próprio utilizador.
-  @@index([userId])
   @@index([userId, startedAt])
   @@index([taskId])
   @@index([areaId])
@@ -1280,7 +1280,6 @@ model ClassOccurrence {
   // [userId, externalUid]: chave de upsert do import - tem de ser única
   // para o upsert nunca duplicar uma ocorrência já importada antes.
   @@unique([userId, externalUid])
-  @@index([userId])
   @@index([userId, date])
 }
 
@@ -1468,6 +1467,9 @@ model NotebookEntry {
   changeProposals NotebookChangeProposal[]
 
   @@index([userId, areaId, date])
+  // FKs: apagar uma Area (Cascade) e reimportar o horario (SetNull em classOccurrenceId).
+  @@index([areaId])
+  @@index([classOccurrenceId])
 }
 
 // Link de partilha "só de leitura" para uma lesson (NotebookEntry) - uma
@@ -1630,7 +1632,6 @@ model WorkShift {
 
   // Toda a query filtra por dono; [userId, date] serve os turnos pontuais
   // dentro de um intervalo.
-  @@index([userId])
   @@index([userId, date])
   @@index([commitmentId])
 }
@@ -1702,7 +1703,6 @@ model Commitment {
   exceptions ScheduleException[]
 
   @@unique([userId, name])
-  @@index([userId])
 }
 
 /// Contrato de um trabalho (Commitment.contractType).
@@ -1984,6 +1984,8 @@ model Feedback {
 
   @@index([createdAt])
   @@index([isResolved, createdAt])
+  // FK SetNull + export RGPD (where userId).
+  @@index([userId])
 }
 
 /// Conjunto de tarefas pre-definidas que um aluno partilha com colegas de turma
@@ -2342,6 +2344,9 @@ model Pad {
   // Expiracao: pads sem edicoes ha 90 dias (ver PadsService.deleteExpired).
   @@index([updatedAt])
   @@index([updatedByIpHash])
+  // FKs SetNull ao apagar conta; updatedById tambem no export RGPD.
+  @@index([updatedById])
+  @@index([lockedById])
 }
 
 // Origem sem conta (hash do IP, ver Pad.updatedByIpHash) que um admin
@@ -2442,6 +2447,9 @@ model TurmaNote {
   updatedBy User? @relation("TurmaNoteUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@index([turmaId, updatedAt])
+  // FKs SetNull ao apagar conta; createdById tambem no export RGPD.
+  @@index([createdById])
+  @@index([updatedById])
 }
 
 // Ficheiro da turma. Mesmo bucket privado e mesma validacao dos anexos do
@@ -2461,6 +2469,7 @@ model TurmaFile {
   uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
 
   @@index([turmaId, createdAt])
+  @@index([uploadedById])
 }
 
 // Aviso do delegado (teste, prazo, mudanca de horario).
@@ -2477,6 +2486,7 @@ model TurmaAnnouncement {
   author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
   @@index([turmaId, createdAt])
+  @@index([authorId])
 }
 
 // Cadeira do caderno de um membro publicada na turma: os outros membros leem
@@ -2496,7 +2506,8 @@ model TurmaPack {
   sharedBy User     @relation(fields: [sharedById], references: [id], onDelete: Cascade)
 
   @@unique([turmaId, packId])
-  @@index([turmaId])
+  @@index([sharedById])
+  @@index([packId])
 }
 
 model TurmaLinkedArea {
@@ -2512,7 +2523,9 @@ model TurmaLinkedArea {
   area  Area  @relation(fields: [areaId], references: [id], onDelete: Cascade)
 
   @@unique([turmaId, userId, areaId])
-  @@index([turmaId])
+  // So havia indice a comecar por turmaId; apagar conta/Area e o export RGPD filtram por estas.
+  @@index([userId])
+  @@index([areaId])
 }
 
 /// Financas pessoais (separador Finance). Valores em centimos (Int) para
@@ -2681,7 +2694,6 @@ model FinanceAccount {
   holdings FinanceHolding[]
 
   @@unique([userId, clientRequestId])
-  @@index([userId])
 }
 
 /// Posicao num ativo cotado (ETF, acao, cripto). Aceita fracoes de unidade.
@@ -2710,7 +2722,6 @@ model FinanceHolding {
   account FinanceAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   @@unique([userId, clientRequestId])
-  @@index([userId])
   @@index([symbol])
 }
 
@@ -2742,7 +2753,6 @@ model FinanceGoal {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, clientRequestId])
-  @@index([userId])
 }
 
 /// Licenciatura partilhada com a turma: copia (snapshot) da estrutura no
@@ -2763,6 +2773,7 @@ model TurmaProgram {
   sharedBy User  @relation(fields: [sharedById], references: [id], onDelete: Cascade)
 
   @@index([turmaId])
+  @@index([sharedById])
 }
 
 // Prazo da turma (frequencia, trabalho): alguem da turma regista uma vez e

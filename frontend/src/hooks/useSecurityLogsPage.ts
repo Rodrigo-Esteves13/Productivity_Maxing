@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   getSecurityLogs,
   getSecurityLogsStats,
@@ -10,6 +10,8 @@ import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
 
 const PAGE_SIZE = 25;
+// Espera antes de pedir ao servidor depois de escrever num filtro.
+const FILTER_DEBOUNCE_MS = 300;
 
 export interface SecurityLogsFiltersState {
   ip: string;
@@ -27,6 +29,14 @@ export function useSecurityLogsPage() {
   const [stats, setStats] = useState<SecurityLogsStats | null>(null);
 
   const [filters, setFilters] = useState<SecurityLogsFiltersState>(emptyFilters);
+  // Os filtros que realmente vao ao servidor (os de cima seguem cada tecla).
+  const [appliedFilters, setAppliedFilters] = useState<SecurityLogsFiltersState>(emptyFilters);
+  const latestRequest = useRef(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setAppliedFilters(filters), FILTER_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [filters]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,26 +46,29 @@ export function useSecurityLogsPage() {
     (skipOverride: number): SecurityLogsQuery => ({
       skip: skipOverride,
       take: PAGE_SIZE,
-      ...(filters.ip.trim() ? { ip: filters.ip.trim() } : {}),
-      ...(filters.path.trim() ? { path: filters.path.trim() } : {}),
-      ...(filters.window ? { window: filters.window } : {}),
+      ...(appliedFilters.ip.trim() ? { ip: appliedFilters.ip.trim() } : {}),
+      ...(appliedFilters.path.trim() ? { path: appliedFilters.path.trim() } : {}),
+      ...(appliedFilters.window ? { window: appliedFilters.window } : {}),
     }),
-    [filters],
+    [appliedFilters],
   );
 
   const fetchLogs = useCallback(
     async (skipOverride = 0) => {
+      // Respostas fora de ordem: so a do pedido mais recente conta.
+      const requestId = ++latestRequest.current;
       try {
         setIsLoading(true);
         setError('');
         const data = await getSecurityLogs(buildQuery(skipOverride));
+        if (requestId !== latestRequest.current) return;
         setLogs(data.logs);
         setTotal(data.total);
         setSkip(data.skip);
       } catch {
-        setError(translateNow('hook.errorLoadingSecurityLogs'));
+        if (requestId === latestRequest.current) setError(translateNow('hook.errorLoadingSecurityLogs'));
       } finally {
-        setIsLoading(false);
+        if (requestId === latestRequest.current) setIsLoading(false);
       }
     },
     [buildQuery],
@@ -81,6 +94,11 @@ export function useSecurityLogsPage() {
   }, [fetchStats]);
 
   const clearFilters = () => setFilters(emptyFilters);
+
+  // Volta a pedir a pagina atual e os totais (sem saltar para a primeira).
+  const refresh = useCallback(() => {
+    void Promise.all([fetchLogs(skip), fetchStats()]);
+  }, [fetchLogs, fetchStats, skip]);
 
   const goToNextPage = () => {
     if (skip + PAGE_SIZE >= total) return;
@@ -130,5 +148,6 @@ export function useSecurityLogsPage() {
     goToNextPage,
     goToPrevPage,
     handlePurge,
+    refresh,
   };
 }

@@ -19,13 +19,9 @@ import { AreasService } from './areas.service';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
 import { RejectAreaProposalDto } from './dto/reject-area-proposal.dto';
+import { FindAreasQueryDto } from './dto/find-areas-query.dto';
 import { SetAreaHiddenDto } from './dto/set-area-hidden.dto';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RequireApiKeyScope } from '../auth/decorators/require-api-key-scope.decorator';
 import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
@@ -35,6 +31,13 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { ApiKeyScopeGuard } from '../auth/guards/api-key-scope.guard';
 import { perMinute } from '../common/throttle.util';
+import {
+  AREA_CREATE_PER_MINUTE,
+  AREA_EDIT_PER_MINUTE,
+  AREA_PROPOSAL_PER_MINUTE,
+  AREA_VISIBILITY_ALL_PER_MINUTE,
+  AREA_VISIBILITY_ONE_PER_MINUTE,
+} from './areas.constants';
 
 // Modelo de Areas:
 // - OFICIAIS (ownerId = null): catálogo global, geridas só por ADMIN.
@@ -58,7 +61,7 @@ export class AreasController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle(perMinute(20))
+  @Throttle(perMinute(AREA_CREATE_PER_MINUTE))
   @Post()
   @ApiOperation({ summary: 'Creates a PERSONAL (private) area for the caller' })
   create(
@@ -94,7 +97,7 @@ export class AreasController {
   // Estática: tem de vir antes de ':id/...'.
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle(perMinute(20))
+  @Throttle(perMinute(AREA_VISIBILITY_ALL_PER_MINUTE))
   @Put('visibility')
   @ApiOperation({ summary: 'Turns ALL official areas on/off for the caller' })
   setAllHidden(
@@ -106,7 +109,7 @@ export class AreasController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle(perMinute(60))
+  @Throttle(perMinute(AREA_VISIBILITY_ONE_PER_MINUTE))
   @Put(':id/visibility')
   @ApiOperation({ summary: 'Turns one official area on/off for the caller' })
   setHidden(
@@ -124,22 +127,14 @@ export class AreasController {
     summary:
       "Lists the official areas plus the caller's own personal areas. Optional periodId annotates each area with usedInPeriod (has a task of the caller in that period) - used by the Notebook to group 'this period' first without ever hiding a subject.",
   })
-  @ApiQuery({ name: 'periodId', required: false })
-  @ApiQuery({
-    name: 'includeHidden',
-    required: false,
-    description:
-      'true = also returns official areas the caller turned off (Areas page)',
-  })
   findAll(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('periodId') periodId?: string,
-    @Query('includeHidden') includeHidden?: string,
+    @Query() query: FindAreasQueryDto,
   ) {
     return this.areasService.findAll(
       user.id,
-      periodId,
-      includeHidden === 'true',
+      query.periodId,
+      query.includeHidden === true,
     );
   }
 
@@ -155,7 +150,7 @@ export class AreasController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(AREA_EDIT_PER_MINUTE))
   @Patch(':id')
   @ApiOperation({
     summary: 'Edits a personal area (owner) or an official one (Admin)',
@@ -170,7 +165,7 @@ export class AreasController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(AREA_EDIT_PER_MINUTE))
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
@@ -187,7 +182,7 @@ export class AreasController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(AREA_PROPOSAL_PER_MINUTE))
   @Post(':id/propose')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Proposes your personal area to become official' })
@@ -200,7 +195,7 @@ export class AreasController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(AREA_PROPOSAL_PER_MINUTE))
   @Post(':id/withdraw')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Withdraws a pending proposal' })

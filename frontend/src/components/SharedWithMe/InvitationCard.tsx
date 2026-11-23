@@ -41,7 +41,7 @@ export default function InvitationCard({ item, onRespond }: InvitationCardProps)
 
   return (
     <div className="rounded-xl border border-violet-800 bg-violet-950/20 p-4">
-      <p className="truncate font-medium text-white">{item.title ?? t('sharedWithMe.hiddenTitle')}</p>
+      <p className="truncate font-medium text-white" title={item.title ?? undefined}>{item.title ?? t('sharedWithMe.hiddenTitle')}</p>
       {item.areaName && (
         <p className="mt-0.5 flex items-center gap-1 text-xs text-neutral-500">
           <span
@@ -49,7 +49,7 @@ export default function InvitationCard({ item, onRespond }: InvitationCardProps)
             className="inline-block h-2 w-2 shrink-0 rounded-full"
             style={{ backgroundColor: areaColorOf(item.areaColor) }}
           />
-          <span className="truncate">{item.areaName}</span>
+          <span className="truncate" title={item.areaName}>{item.areaName}</span>
         </p>
       )}
       <p className="mt-2 text-xs text-neutral-300">

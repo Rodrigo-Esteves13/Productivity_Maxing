@@ -7,6 +7,8 @@ import ColorPickerField from './ColorPickerField';
 import type { TaskTypeOption } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
 import { useCatalogLabel } from '../../hooks/useCatalogLabel';
+import FormError from '../UI/FormError';
+import { DEFAULT_AREA_COLOR_HEX } from '../../lib/areaDefaults';
 
 export interface AreaFormValues {
   name: string;
@@ -26,7 +28,7 @@ interface AreaFormProps {
   submittingLabel: string;
 }
 
-const DEFAULT_VALUES: AreaFormValues = { name: '', colorHex: '#8b5cf6', defaultTaskType: null, credits: null };
+const DEFAULT_VALUES: AreaFormValues = { name: '', colorHex: DEFAULT_AREA_COLOR_HEX, defaultTaskType: null, credits: null };
 
 export default function AreaForm({
   idPrefix,
@@ -42,9 +44,15 @@ export default function AreaForm({
   const { catalogLabel } = useCatalogLabel();
   const [formData, setFormData] = useState<AreaFormValues>(initialValues);
 
+  const [nameError, setNameError] = useState(false);
+
   const handleSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) return;
+    if (!formData.name.trim()) {
+      setNameError(true);
+      return;
+    }
+    setNameError(false);
     onSubmit(formData);
   };
 
@@ -57,10 +65,14 @@ export default function AreaForm({
           type="text"
           placeholder={t('ui.eGMathWebDevelopment')}
           value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          onChange={(e) => {
+            setNameError(false);
+            setFormData({ ...formData, name: e.target.value });
+          }}
           className="w-full"
         />
       </FormField>
+      {nameError && <FormError message={t('ux4areas.nameRequired')} />}
 
       <ColorPickerField
         id={`${idPrefix}-color`}
@@ -94,7 +106,7 @@ export default function AreaForm({
           type="number"
           min={0}
           step={1}
-          placeholder="E.g: 6"
+          placeholder={t('areas.form.creditsPlaceholder')}
           value={formData.credits ?? ''}
           onChange={(e) =>
             setFormData({

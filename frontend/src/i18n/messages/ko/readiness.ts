@@ -109,4 +109,12 @@ export const readiness: Record<string, string> = {
   'bulkEffort.doneOne': "작업 1개의 작업량을 설정했습니다.",
   'bulkEffort.doneMany': "작업 {count}개의 작업량을 설정했습니다.",
   'bulkEffort.failed': "작업량을 설정하지 못했습니다. 다시 시도해 주세요.",
+  'focus.distractions.noteTitle': "집중하는 동안",
+  'focus.distractions.thoughtLabel': "무엇 때문에 산만해졌나요?",
+  'focus.distractions.thoughtPlaceholder': "나중을 위해 적어 두세요 (선택)",
+  'focus.distractions.thoughtSave': "저장",
+  'focus.distractions.thoughtSaved': "노트에 저장했습니다. 다시 집중하세요.",
+  'focus.distractions.thoughtError': "메모를 저장하지 못했습니다. 그래도 계속하세요.",
+  'focus.distractions.thoughtTrimmed': "저장했습니다. 노트에 맞추려고 가장 오래된 메모를 지웠습니다.",
+  'focus.distractions.thoughtFull': "노트가 가득 찼습니다(500개). 메모를 저장하려면 노트를 하나 삭제하세요.",
 };

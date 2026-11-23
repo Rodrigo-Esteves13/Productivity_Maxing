@@ -74,12 +74,7 @@ export default function Devices() {
       {isLoading ? (
         <TableSkeleton rows={3} columns={3} />
       ) : loadError ? (
-        <div className="space-y-3">
-          <ErrorState message={t('devices.loadFailed')} />
-          <button type="button" onClick={reload} className="text-sm text-violet-400 hover:text-violet-300 hover:underline">
-            {t('common.tryAgain')}
-          </button>
-        </div>
+        <ErrorState message={t('devices.loadFailed')} onRetry={() => void reload()} />
       ) : sessions.length === 0 ? (
         <EmptyState message={t('devices.empty')} />
       ) : (

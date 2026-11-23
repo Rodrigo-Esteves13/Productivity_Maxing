@@ -1,3 +1,4 @@
+import { POLL_MS } from '../../lib/pollIntervals';
 import { MINUTES_PER_DAY, MINUTES_PER_HOUR, MS_PER_MINUTE } from '../../lib/timeConstants';
 import { useCallback, useEffect, useState } from 'react';
 import Button from '../UI/Button';
@@ -32,11 +33,11 @@ type LoadState =
 // suspend/ban ser levantado diretamente) aparecer sozinha, sem precisar
 // de refresh manual. Também é o que faz a contagem decrescente abaixo
 // avançar sem precisar de um segundo timer só para isso.
-const STATUS_POLL_INTERVAL_MS = 30000;
+const STATUS_POLL_INTERVAL_MS = POLL_MS.accountBlockedStatus;
 
-function formatDate(value: string | null): string {
-  if (!value) return 'an unknown date';
-  return new Date(value).toLocaleString();
+function formatDate(value: string | null, lang: string, unknownLabel: string): string {
+  if (!value) return unknownLabel;
+  return new Date(value).toLocaleString(lang);
 }
 
 // Minimo de caracteres para um appeal ser enviado.
@@ -298,7 +299,7 @@ function AccountBlockedDetails({
   onSubmit,
   onLogout,
 }: DetailsProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const isBanned = data.status === 'BANNED';
   const accentText = isBanned ? 'text-red-400' : 'text-amber-400';
 
@@ -329,7 +330,7 @@ function AccountBlockedDetails({
         {!isBanned && (
           <div className="flex items-start gap-2 text-sm text-neutral-300">
             <ClockIcon className="h-4 w-4 shrink-0 mt-0.5 text-neutral-500" />
-            <span>{t('ui.suspendedUntil2', { suspendedUntil: formatDate(data.suspendedUntil) })}</span>
+            <span>{t('ui.suspendedUntil2', { suspendedUntil: formatDate(data.suspendedUntil, lang, t('ui.unknownDate')) })}</span>
           </div>
         )}
         <div className="flex items-start gap-2 text-sm text-neutral-300">
@@ -337,7 +338,7 @@ function AccountBlockedDetails({
           <span>{data.statusReason || t('ui.noReasonWasGiven')}</span>
         </div>
         <p className="text-xs text-neutral-500 pt-1">
-          {t('ui.lastUpdated', { statusUpdatedAt: formatDate(data.statusUpdatedAt) })}</p>
+          {t('ui.lastUpdated', { statusUpdatedAt: formatDate(data.statusUpdatedAt, lang, t('ui.unknownDate')) })}</p>
       </div>
 
       {availability && (
@@ -346,20 +347,20 @@ function AccountBlockedDetails({
 
       {pendingAppeal && (
         <p className="text-sm text-neutral-400 mb-6">
-          {t('ui.yourAppealWasSubmittedOn', { createdAt: formatDate(pendingAppeal.createdAt) })}</p>
+          {t('ui.yourAppealWasSubmittedOn', { createdAt: formatDate(pendingAppeal.createdAt, lang, t('ui.unknownDate')) })}</p>
       )}
 
       {resolvedAppeal && resolvedAppeal.resolution === 'DENIED' && (
         <p className="text-sm text-neutral-400 mb-4">
           {resolvedAppeal.resolutionNote
-            ? t('ui.appealDeniedOnNote', { date: formatDate(resolvedAppeal.resolvedAt), note: resolvedAppeal.resolutionNote })
-            : t('ui.appealDeniedOn', { date: formatDate(resolvedAppeal.resolvedAt) })}
+            ? t('ui.appealDeniedOnNote', { date: formatDate(resolvedAppeal.resolvedAt, lang, t('ui.unknownDate')), note: resolvedAppeal.resolutionNote })
+            : t('ui.appealDeniedOn', { date: formatDate(resolvedAppeal.resolvedAt, lang, t('ui.unknownDate')) })}
         </p>
       )}
 
       {resolvedAppeal && resolvedAppeal.resolution === 'APPROVED' && (
         <p className="text-sm text-neutral-400 mb-6">
-          {t('ui.yourAppealWasApprovedOn', { resolvedAt: formatDate(resolvedAppeal.resolvedAt) })}</p>
+          {t('ui.yourAppealWasApprovedOn', { resolvedAt: formatDate(resolvedAppeal.resolvedAt, lang, t('ui.unknownDate')) })}</p>
       )}
 
       {!pendingAppeal && availability?.appealsExhausted && (

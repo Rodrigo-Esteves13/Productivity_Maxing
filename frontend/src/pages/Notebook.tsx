@@ -16,6 +16,7 @@ import NotebookSearchResults from '../components/Notebook/NotebookSearchResults'
 import NotebookSharedPanel from '../components/Notebook/NotebookSharedPanel';
 import NotebookAreaOverview from '../components/Notebook/NotebookAreaOverview';
 import { useAcademic } from '../context/useAcademic';
+import { useFeedback } from '../context/useFeedback';
 import { useNotebookAreas } from '../hooks/useNotebookAreas';
 import { useNotebookEntries } from '../hooks/useNotebookEntries';
 import {
@@ -75,6 +76,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 export default function Notebook() {
   const { t, lang } = useI18n();
+  const { notify } = useFeedback();
   useDocumentTitle(t('notebook.title'));
   const { activePeriod, isViewingAllPeriods, isViewingAllPrograms } = useAcademic();
   // Mesma regra que useTasksPage.ts usa para as tasks: 'all' quando o
@@ -82,7 +84,7 @@ export default function Notebook() {
   const periodParam = isViewingAllPeriods || isViewingAllPrograms ? 'all' : activePeriod?.id;
   const groupByPeriod = Boolean(periodParam) && periodParam !== 'all';
 
-  const { areas, isLoading: areasLoading, error: areasError } = useNotebookAreas(periodParam);
+  const { areas, isLoading: areasLoading, error: areasError, reload: reloadAreas } = useNotebookAreas(periodParam);
   // ?area=<id> abre logo o caderno dessa cadeira (atalho do Focus).
   // Sem ?area, abre a ultima cadeira que o utilizador estava a ver.
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(
@@ -94,6 +96,8 @@ export default function Notebook() {
   const {
     entries,
     isLoading: entriesLoading,
+    error: entriesError,
+    reloadList,
     selectedId,
     selectedEntry,
     isLoadingEntry,
@@ -256,22 +260,29 @@ export default function Notebook() {
   }, []);
   const [searchResults, setSearchResults] = useState<NotebookSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchFailed, setSearchFailed] = useState(false);
+  // Sobe para repetir a pesquisa depois de um erro (botao "Tentar de novo").
+  const [searchAttempt, setSearchAttempt] = useState(0);
 
   useEffect(() => {
     const trimmed = searchQuery.trim();
     if (!trimmed) {
       setSearchResults([]);
+      setSearchFailed(false);
       return;
     }
     let cancelled = false;
     setIsSearching(true);
+    setSearchFailed(false);
     const timeout = setTimeout(() => {
       searchNotebook(trimmed)
         .then((results) => {
           if (!cancelled) setSearchResults(results);
         })
         .catch(() => {
-          if (!cancelled) setSearchResults([]);
+          if (cancelled) return;
+          setSearchResults([]);
+          setSearchFailed(true);
         })
         .finally(() => {
           if (!cancelled) setIsSearching(false);
@@ -281,7 +292,7 @@ export default function Notebook() {
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [searchQuery]);
+  }, [searchQuery, searchAttempt]);
 
   const handleSelectSearchResult = (result: NotebookSearchResult) => {
     setSearchQuery('');
@@ -315,7 +326,10 @@ export default function Notebook() {
         selectEntry(entry);
         setJustCreatedEntryId(null);
       })
-      .catch(() => undefined)
+      // Nota apagada (ou sem acesso): avisa em vez de ficar tudo calado.
+      .catch(() => {
+        if (!cancelled) notify(t('ux4notes.notebook.entryNotFound'), 'error');
+      })
       .finally(() => {
         if (!cancelled) setSearchParams({}, { replace: true });
       });
@@ -368,6 +382,8 @@ export default function Notebook() {
           results={searchResults}
           isLoading={isSearching}
           query={searchQuery}
+          hasError={searchFailed}
+          onRetry={() => setSearchAttempt((n) => n + 1)}
           onSelect={handleSelectSearchResult}
         />
       ) : (
@@ -375,7 +391,7 @@ export default function Notebook() {
           {areasLoading ? (
             <LinesSkeleton lines={5} />
           ) : areasError ? (
-            <ErrorState message={areasError} />
+            <ErrorState message={areasError} onRetry={reloadAreas} />
           ) : areas.length === 0 ? (
             <p className="text-sm text-neutral-500">{t('notebook.subjects.none')}</p>
           ) : (
@@ -400,7 +416,7 @@ export default function Notebook() {
                 <div className="min-w-0 space-y-1">
                   <h2 className="flex items-center gap-2.5 font-serif text-2xl font-semibold text-white">
                     <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: selectedArea.colorHex }} />
-                    <span className="truncate">{selectedArea.name}</span>
+                    <span className="truncate" title={selectedArea.name}>{selectedArea.name}</span>
                   </h2>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     {!entriesLoading && (
@@ -452,7 +468,9 @@ export default function Notebook() {
                 </div>
               </div>
 
-              {!entriesLoading && entries.length === 0 ? (
+              {entriesError && !entriesLoading ? (
+                <ErrorState message={entriesError} onRetry={reloadList} />
+              ) : !entriesLoading && entries.length === 0 ? (
                 // Caderno vazio: um so convite a comecar, sem lista vazia ao lado.
                 <NotebookAreaOverview
                   entries={entries}
@@ -462,7 +480,7 @@ export default function Notebook() {
                 />
               ) : (
               <div className="grid grid-cols-1 gap-6 md:grid-cols-[16rem_minmax(0,1fr)] lg:grid-cols-[18rem_minmax(0,1fr)]">
-                <div className="md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:self-start md:overflow-y-auto md:pr-1">
+                <div className="md:sticky md:top-20 md:max-h-[calc(100dvh-6rem)] md:self-start md:overflow-y-auto md:pr-1">
                   {entriesLoading ? (
                     <LinesSkeleton lines={4} />
                   ) : (

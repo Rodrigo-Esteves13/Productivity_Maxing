@@ -1,6 +1,7 @@
 // src/api/userService.ts
 import api, { refreshSession } from './client';
 import { fetchAllPages } from './fetchAllPages';
+import { notifyDomainChanged } from '../lib/domainEvents';
 import type { SecurityActivityExport } from '../utils/securityActivityCsv';
 import type {
   DeviceSession,
@@ -346,6 +347,8 @@ export async function rejectAreaProposal(id: string, note?: string): Promise<voi
 
 export async function deleteArea(id: string): Promise<void> {
   await api.delete(`/areas/${id}`);
+  // As tasks da Area apagada saem dos resumos (Areas, Dashboard).
+  notifyDomainChanged('tasks');
 }
 export async function updateArea(id: string, areaData: { name?: string; colorHex?: string; defaultTaskType?: string | null; credits?: number | null }): Promise<Area> {
   const response = await api.patch<Area>(`/areas/${id}`, areaData);
@@ -363,6 +366,8 @@ export const getUserTasks = async (periodId?: string, signal?: AbortSignal): Pro
 
 export async function createTask(taskData: TaskWriteInput): Promise<Task> {
   const response = await api.post<Task>('/tasks', taskData);
+  // Cartoes que buscam por conta propria (Dashboard, Focus) voltam a ler.
+  notifyDomainChanged('tasks');
   return response.data;
 }
 
@@ -378,11 +383,13 @@ export async function getTaskById(id: string): Promise<Task> {
 
 export async function updateTask(id: string, taskData: TaskWriteInput): Promise<Task> {
   const response = await api.patch<Task>(`/tasks/${id}`, taskData);
+  notifyDomainChanged('tasks');
   return response.data;
 }
 
 export async function deleteTask(id: string): Promise<void> {
   await api.delete(`/tasks/${id}`);
+  notifyDomainChanged('tasks');
 }
 
 // Drag-and-drop no TaskGrid - taskIds é a sequência completa tal como
@@ -409,8 +416,13 @@ async function inBatches(
   send: (batch: string[]) => Promise<{ count: number }>,
 ): Promise<{ count: number }> {
   let count = 0;
-  for (const batch of chunkIds(ids)) {
-    count += (await send(batch)).count;
+  try {
+    for (const batch of chunkIds(ids)) {
+      count += (await send(batch)).count;
+    }
+  } finally {
+    // Mesmo com um lote falhado, os anteriores ja gravaram.
+    if (count > 0) notifyDomainChanged('tasks');
   }
   return { count };
 }
@@ -459,6 +471,7 @@ export async function bulkDeleteTasks(ids: string[]): Promise<{ count: number }>
 // endpoint expects before calling it.
 export async function importTasks(rows: ImportTaskRow[]): Promise<ImportTasksResult> {
   const response = await api.post<ImportTasksResult>('/tasks/import', { tasks: rows });
+  notifyDomainChanged('tasks');
   return response.data;
 }
 
@@ -490,6 +503,7 @@ export const confirmOverdueTask = async (
   answer: OverdueAnswer,
 ): Promise<Task> => {
   const response = await api.patch<Task>(`/tasks/${id}/overdue-checkin`, answer);
+  notifyDomainChanged('tasks');
   return response.data;
 };
 

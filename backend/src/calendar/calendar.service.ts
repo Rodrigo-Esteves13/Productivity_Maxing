@@ -1,10 +1,15 @@
 import type { DateCertainty } from '@prisma/client';
 import { calendarTitle, hasFirmDate } from '../common/task-readiness.util';
-import { MS_PER_DAY, MS_PER_MINUTE } from '../common/time.constants';
+import {
+  APP_TIME_ZONE,
+  MS_PER_DAY,
+  MS_PER_MINUTE,
+} from '../common/time.constants';
 import { OAUTH_HTTP_TIMEOUT_MS } from '../common/http-resilience.constants';
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { Provider } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertTaskOwned } from '../tasks/task-access';
 import { AuthService } from '../auth/auth.service';
 import {
   GOOGLE_CALENDAR_API_URL,
@@ -277,8 +282,8 @@ export class CalendarService {
       return {
         summary: calendarTitle(task.title, task.dateCertainty),
         description,
-        start: { dateTime: date.toISOString(), timeZone: 'Europe/Lisbon' },
-        end: { dateTime: end.toISOString(), timeZone: 'Europe/Lisbon' },
+        start: { dateTime: date.toISOString(), timeZone: APP_TIME_ZONE },
+        end: { dateTime: end.toISOString(), timeZone: APP_TIME_ZONE },
       };
     }
 
@@ -304,6 +309,40 @@ export class CalendarService {
    * independentemente de onde o backend está a correr. */
   private toDateOnlyString(date: Date): string {
     return date.toISOString().split('T')[0];
+  }
+
+  /** Sincroniza a task do user com o Google Calendar e grava o eventId. */
+  async syncTask(
+    userId: string,
+    taskId: string,
+  ): Promise<{ googleCalendarEventId: string }> {
+    const task = await assertTaskOwned(this.prisma, userId, taskId, {
+      include: { area: true, taskType: true, academicType: true },
+    });
+    const googleCalendarEventId = await this.upsertEventForTask(userId, task);
+    await this.prisma.task.updateMany({
+      where: { id: taskId, userId },
+      data: { googleCalendarEventId },
+    });
+    return { googleCalendarEventId };
+  }
+
+  /** Apaga o evento da task no Google Calendar e limpa o eventId. */
+  async unsyncTask(
+    userId: string,
+    taskId: string,
+  ): Promise<{ googleCalendarEventId: null }> {
+    const task = await assertTaskOwned(this.prisma, userId, taskId, {
+      select: { googleCalendarEventId: true },
+    });
+    if (task.googleCalendarEventId) {
+      await this.deleteEventForTask(userId, task.googleCalendarEventId);
+      await this.prisma.task.updateMany({
+        where: { id: taskId, userId },
+        data: { googleCalendarEventId: null },
+      });
+    }
+    return { googleCalendarEventId: null };
   }
 
   /**

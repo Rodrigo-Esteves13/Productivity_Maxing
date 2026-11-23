@@ -262,6 +262,6 @@ export const fase7: Record<string, string> = {
   'canvas.paste': "粘贴",
   'canvas.duplicate': "创建副本",
   'canvas.deleteSelection': "删除所选",
-  'notes.deleteConfirm': "删除“{title}”？此操作无法撤销。",
+  'notes.deleteConfirm': "删除“{title}”？删除后可立即撤销。",
   'wellbeing.blood.deleteConfirm': "删除 {date} 的献血记录？此操作无法撤销。",
 };

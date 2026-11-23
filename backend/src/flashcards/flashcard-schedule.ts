@@ -1,9 +1,9 @@
+import { MS_PER_DAY } from '../common/time.constants';
 export type FlashcardGrade = 'AGAIN' | 'GOOD' | 'EASY';
 
 export const FLASHCARD_GRADES: FlashcardGrade[] = ['AGAIN', 'GOOD', 'EASY'];
 
 export const AGAIN_DELAY_MS = 10 * 60 * 1000;
-const DAY_MS = 24 * 60 * 60 * 1000;
 const EASE_MIN = 1.3;
 const EASE_AGAIN_STEP = 0.2;
 const EASE_EASY_STEP = 0.15;
@@ -50,6 +50,6 @@ export function scheduleReview(
     ease,
     reps: card.reps + 1,
     lapses: card.lapses,
-    dueAt: new Date(now.getTime() + intervalDays * DAY_MS),
+    dueAt: new Date(now.getTime() + intervalDays * MS_PER_DAY),
   };
 }

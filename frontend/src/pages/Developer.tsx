@@ -7,6 +7,7 @@ import PageHeader from '../components/Layout/PageHeader';
 import ActionButton from '../components/UI/ActionButton';
 import EmptyState from '../components/UI/EmptyState';
 import FormError from '../components/UI/FormError';
+import ErrorState from '../components/UI/ErrorState';
 import TableSkeleton from '../components/UI/TableSkeleton';
 import ApiKeysTable from '../components/Developer/ApiKeysTable';
 import NewApiKeyModal from '../components/Developer/NewApiKeyModal';
@@ -28,6 +29,7 @@ export default function Developer() {
     newlyCreatedKey,
     createKey,
     removeKey,
+    reload,
     clearNewKey,
   } = useApiKeys();
   const [name, setName] = useState('');
@@ -74,7 +76,7 @@ export default function Developer() {
           onChange={(e) => setName(e.target.value)}
           placeholder={t('ui.keyNameEGLeague')}
           aria-label={t('ui.keyNameEGLeague')}
-          className="flex-1 bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-violet-600"
+          className="flex-1 bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2.5 text-base sm:text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-violet-600"
         />
         {isAdmin && (
           <select
@@ -101,7 +103,7 @@ export default function Developer() {
       {isLoading ? (
         <TableSkeleton rows={3} columns={4} />
       ) : loadError ? (
-        <FormError message={t('ui.couldNotLoadApiKeys')} />
+        <ErrorState message={t('ui.couldNotLoadApiKeys')} onRetry={() => void reload()} />
       ) : keys.length === 0 ? (
         <EmptyState message={t('ui.youDonTHaveAny')} />
       ) : (

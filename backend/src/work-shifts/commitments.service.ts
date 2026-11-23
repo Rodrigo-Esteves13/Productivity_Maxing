@@ -19,6 +19,7 @@ import {
   UpdateCommitmentDto,
 } from './dto/commitment.dto';
 import { DistanceMatrixService } from '../maps/distance-matrix.service';
+import { isUniqueViolation } from '../common/prisma-errors';
 
 const COMMITMENT_SELECT = {
   id: true,
@@ -54,8 +55,6 @@ export interface CommitmentsOverview {
   // editáveis, e podem ser movidos para um local.
   ungroupedShifts: WorkShiftView[];
 }
-
-const PRISMA_UNIQUE_VIOLATION = 'P2002';
 
 function sortedDaysOff(daysOff: number[] | null): number[] {
   return [...(daysOff ?? [])].sort((a, b) => a - b);
@@ -235,10 +234,7 @@ export class CommitmentsService {
   }
 
   private mapWriteError(error: unknown): unknown {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === PRISMA_UNIQUE_VIOLATION
-    ) {
+    if (isUniqueViolation(error)) {
       return new ConflictException(
         'You already have a commitment with that name.',
       );

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getApiKeys, createApiKey, revokeApiKey } from '../api/userService';
 import type { ApiKeySummary, ApiKeyScope } from '../types/models';
+import { useFeedback } from '../context/useFeedback';
+import { translateNow } from '../i18n/translate';
 
 interface UseApiKeysReturn {
   keys: ApiKeySummary[];
@@ -17,10 +19,12 @@ interface UseApiKeysReturn {
   newlyCreatedKey: string | null;
   createKey: (name: string, scope?: ApiKeyScope) => Promise<boolean>;
   removeKey: (id: string) => Promise<void>;
+  reload: () => Promise<void>;
   clearNewKey: () => void;
 }
 
 export function useApiKeys(): UseApiKeysReturn {
+  const { notify } = useFeedback();
   const [keys, setKeys] = useState<ApiKeySummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -73,12 +77,14 @@ export function useApiKeys(): UseApiKeysReturn {
     setKeys((prev) => prev.filter((k) => k.id !== id));
     try {
       await revokeApiKey(id);
+      notify(translateNow('ux4admin.keys.revoked'), 'success');
     } catch (error: unknown) {
       console.error('Failed to revoke API key:', error);
+      notify(translateNow('ux4admin.keys.revokeFailed'), 'error');
       // Falhou de verdade - repõe a lista real do servidor.
       await refresh();
     }
-  }, [refresh]);
+  }, [refresh, notify]);
 
   const clearNewKey = useCallback(() => setNewlyCreatedKey(null), []);
 
@@ -91,6 +97,7 @@ export function useApiKeys(): UseApiKeysReturn {
     newlyCreatedKey,
     createKey,
     removeKey,
+    reload: refresh,
     clearNewKey,
   };
 }

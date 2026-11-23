@@ -1,16 +1,16 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useAgentConfig } from '../hooks/useAgentConfig';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ActionButton from '../components/UI/ActionButton';
 import FormSkeleton from '../components/UI/FormSkeleton';
-import FormError from '../components/UI/FormError';
+import ErrorState from '../components/UI/ErrorState';
+import Button from '../components/UI/Button';
 import SetupInstructions from '../components/Agent/SetupInstructions';
 import TriggerRulesForm from '../components/Agent/TriggerRulesForm';
 import BlockListEditor from '../components/Agent/BlockListEditor';
-import { COPY_FEEDBACK_MS } from '../lib/constants';
+import { useFeedback } from '../context/useFeedback';
 import { useI18n } from '../i18n/useI18n';
 
 // Secção genérica com título + descrição, para não repetir o mesmo
@@ -48,16 +48,22 @@ export default function Agent() {
   const { t } = useI18n();
   useDocumentTitle(t('ui.agent'));
 
-  const { config, isLoading: configLoading, loadError, isSaving, saveError, updateDraft, save } =
-    useAgentConfig();
-  const [justSaved, setJustSaved] = useState(false);
+  const { notify } = useFeedback();
+  const {
+    config,
+    isLoading: configLoading,
+    loadError,
+    isSaving,
+    saveError,
+    isDirty,
+    reset,
+    reload,
+    updateDraft,
+    save,
+  } = useAgentConfig();
 
   const handleSave = async () => {
-    const ok = await save();
-    if (ok) {
-      setJustSaved(true);
-      setTimeout(() => setJustSaved(false), COPY_FEEDBACK_MS);
-    }
+    if (await save()) notify(t('ux4admin.agent.saved'), 'success');
   };
 
   return (
@@ -89,7 +95,7 @@ export default function Agent() {
           description={t('ui.changesHereApplyOnThe')}
         >
           {loadError ? (
-            <FormError message={t('ui.couldNotLoadAgentConfig')} />
+            <ErrorState message={t('ui.couldNotLoadAgentConfig')} onRetry={reload} />
           ) : configLoading || !config ? (
             <FormSkeleton sections={1} />
           ) : (
@@ -118,11 +124,20 @@ export default function Agent() {
                 />
               </div>
 
-              <div className="flex items-center gap-3 mt-6 pt-6 border-t border-neutral-800">
-                <ActionButton type="button" onClick={handleSave} disabled={isSaving}>
+              <div className="flex flex-wrap items-center gap-3 mt-6 pt-6 border-t border-neutral-800">
+                <ActionButton type="button" onClick={handleSave} disabled={isSaving || (!isDirty && config.isConfigured)}>
                   {isSaving ? t('common.saving') : t('ui.saveConfiguration')}
                 </ActionButton>
-                {justSaved && <span className="text-sm text-violet-400">{t('ui.saved')}</span>}
+                {isDirty && (
+                  <Button type="button" variant="secondary" onClick={reset} disabled={isSaving}>
+                    {t('ux4admin.agent.reset')}
+                  </Button>
+                )}
+                {isDirty && (
+                  <span className="text-sm text-amber-400" role="status">
+                    {t('ux4admin.agent.unsaved')}
+                  </span>
+                )}
                 {saveError && <span className="text-sm text-red-400">{saveError}</span>}
               </div>
             </>

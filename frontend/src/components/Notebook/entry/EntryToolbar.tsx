@@ -117,6 +117,20 @@ export default function EntryToolbar({
     year: 'numeric',
   });
 
+  // Exportar e apagar existem nos dois modos (antes eram inversos).
+  const sharedActions = (
+    <>
+      {onExport && (
+        <IconButton label={t('notebook.export.entry')} className="hover:bg-neutral-800" onClick={onExport}>
+          <DownloadIcon className="h-4 w-4" />
+        </IconButton>
+      )}
+      <IconButton label={t('notebook.delete')} tone="danger" className="hover:bg-neutral-800" onClick={onRequestDelete}>
+        <TrashIcon className="h-4 w-4" />
+      </IconButton>
+    </>
+  );
+
   return (
     <div className="sticky top-16 z-20 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-t-xl border-b border-neutral-800 bg-neutral-900/95 px-4 py-2.5 backdrop-blur sm:px-6">
       {isEditing ? (
@@ -186,9 +200,7 @@ export default function EntryToolbar({
             <IconButton label={t('notebook.redo')} className="hover:bg-neutral-800" onClick={onRedo} disabled={!canRedo}>
               <RedoIcon className="h-4 w-4" />
             </IconButton>
-            <IconButton label={t('notebook.delete')} tone="danger" className="hover:bg-neutral-800" onClick={onRequestDelete}>
-              <TrashIcon className="h-4 w-4" />
-            </IconButton>
+            {sharedActions}
             <Button
               type="button"
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium disabled:opacity-50"
@@ -202,11 +214,7 @@ export default function EntryToolbar({
           </>
         ) : (
           <>
-            {onExport && (
-              <IconButton label={t('notebook.export.entry')} className="hover:bg-neutral-800" onClick={onExport}>
-                <DownloadIcon className="h-4 w-4" />
-              </IconButton>
-            )}
+            {sharedActions}
             <Button
               type="button"
               variant="secondary"

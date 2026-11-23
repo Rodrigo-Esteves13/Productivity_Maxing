@@ -1,6 +1,7 @@
+import { STORAGE_KEYS } from '../lib/storageKeys';
 import { useEffect, useState } from 'react';
 
-const STORAGE_KEY = 'pm-exam-mode';
+const STORAGE_KEY = STORAGE_KEYS.examMode;
 
 function loadExamMode(): boolean {
   try {

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import Card from '../UI/Card';
 import Input from '../UI/Input';
 import Select from '../UI/Select';
+import EmptyState from '../UI/EmptyState';
 import FinanceSubmitButton from './FinanceSubmitButton';
 import Money from './Money';
 import IconButton from '../UI/IconButton';
@@ -115,7 +116,7 @@ function AccountForm({ initial, currency, onSubmit, onLogDifference, onCancel }:
       <div className="flex flex-wrap items-center gap-3">
         <FinanceSubmitButton isSubmitting={isSubmitting}>{initial ? t('finance.save') : t('finance.addAccount')}</FinanceSubmitButton>
         {onCancel && (
-          <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+          <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
             {t('common.cancel')}
           </button>
         )}
@@ -145,7 +146,7 @@ export default function FinanceAccounts({ accounts, currency, onAdd, onUpdate, o
       <h3 className="mb-1 text-sm font-semibold text-neutral-200">{t('finance.accounts')}</h3>
       <p className="mb-3 text-xs text-neutral-500">{t('finance.accountsHelp')}</p>
       {accounts.length === 0 ? (
-        <p className="mb-3 text-sm text-neutral-500">{t('finance.noAccounts')}</p>
+        <EmptyState variant="inline" message={t('finance.noAccounts')} />
       ) : (
         <ul className="mb-4 divide-y divide-neutral-800">
           {accounts.map((account) =>

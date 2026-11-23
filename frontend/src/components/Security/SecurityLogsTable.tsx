@@ -1,8 +1,17 @@
+import { useMemo, useState } from 'react';
 import SecurityLogsTableHeader from './SecurityLogsTableHeader';
 import SecurityLogRow from './SecurityLogRow';
+import SecurityLogCard from './SecurityLogCard';
 import Pagination from '../UI/Pagination';
+import EmptyState from '../UI/EmptyState';
 import type { SecurityLog } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import {
+  DEFAULT_SECURITY_LOG_SORT,
+  nextSecurityLogSort,
+  sortSecurityLogs,
+  type SecurityLogSortKey,
+} from '../../lib/securityLogSort';
 
 interface SecurityLogsTableProps {
   logs: SecurityLog[];
@@ -26,28 +35,32 @@ export default function SecurityLogsTable({
   bannedIpSet,
 }: SecurityLogsTableProps) {
   const { t } = useI18n();
+  const [sort, setSort] = useState(DEFAULT_SECURITY_LOG_SORT);
+  const sorted = useMemo(() => sortSecurityLogs(logs, sort), [logs, sort]);
+  const handleSort = (key: SecurityLogSortKey) => setSort((prev) => nextSecurityLogSort(prev, key));
+
+  if (logs.length === 0) return <EmptyState message={t('ui.noBlockedRequestsFoundFor')} />;
+
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
-      <div className="overflow-x-auto">
+      <ul className="divide-y divide-neutral-800 md:hidden">
+        {sorted.map((log) => (
+          <SecurityLogCard key={log.id} log={log} onBanIp={onBanIp} isBanned={bannedIpSet.has(log.ip)} />
+        ))}
+      </ul>
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-sm text-left text-neutral-300 whitespace-nowrap">
-          <SecurityLogsTableHeader />
+          <SecurityLogsTableHeader sort={sort} onSort={handleSort} />
           <tbody>
-            {logs.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-neutral-500">
-                  {t('ui.noBlockedRequestsFoundFor')}
-                </td>
-              </tr>
-            ) : (
-              logs.map((log) => (
-                <SecurityLogRow
-                  key={log.id}
-                  log={log}
-                  onBanIp={onBanIp}
-                  isBanned={bannedIpSet.has(log.ip)}
-                />
-              ))
-            )}
+            {sorted.map((log) => (
+              <SecurityLogRow
+                key={log.id}
+                log={log}
+                onBanIp={onBanIp}
+                isBanned={bannedIpSet.has(log.ip)}
+              />
+            ))}
           </tbody>
         </table>
       </div>

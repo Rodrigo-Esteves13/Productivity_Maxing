@@ -30,12 +30,18 @@ export function useFeedbackAdmin() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<FeedbackFilter>('open');
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setIsLoading(true);
+    setError('');
     getFeedbackList()
       .then(setItems)
       .catch(() => setError(translateNow('ui.errorLoadingFeedback')))
       .finally(() => setIsLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const replaceItem = useCallback((updated: FeedbackItem) => {
     setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
@@ -134,6 +140,7 @@ export function useFeedbackAdmin() {
     setFilter,
     isLoading,
     error,
+    reload: load,
     toggleResolved,
     reply,
     reject,

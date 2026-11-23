@@ -118,3 +118,28 @@ export const getEctsWorkload = async (
   });
   return response.data;
 };
+
+// Aula criada ou editada a mao (sem .ics). `date` e "YYYY-MM-DD".
+export interface ClassInput {
+  date: string;
+  startMinutes: number;
+  endMinutes: number;
+  subject: string;
+  location?: string;
+  professor?: string;
+}
+
+export const createClass = async (input: ClassInput): Promise<ClassOccurrence> => {
+  const response = await api.post<ClassOccurrence>('/schedule/class', input);
+  return response.data;
+};
+
+// location/professor vazios limpam o campo no servidor.
+export const updateClass = async (id: string, changes: Partial<ClassInput>): Promise<ClassOccurrence> => {
+  const response = await api.patch<ClassOccurrence>(`/schedule/${encodeURIComponent(id)}`, changes);
+  return response.data;
+};
+
+export const deleteClass = async (id: string): Promise<void> => {
+  await api.delete(`/schedule/${encodeURIComponent(id)}`);
+};

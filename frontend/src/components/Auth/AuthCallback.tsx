@@ -9,16 +9,16 @@ import { fillNodes } from '../../i18n/fillNodes';
 
 const AccountBlockedPage = lazy(() => import('../AccountBlocked/AccountBlockedPage'));
 
-// Token de recurso que o OAuthConflictRedirectFilter poe no fragmento
-// (#appeal=...) quando a conta esta banida/suspensa. Lido uma vez e tirado
-// da barra de endereco, para nao ficar no historico.
-function takeAppealTokenFromHash(): string | null {
+// Valores sensiveis que o OAuthConflictRedirectFilter poe no fragmento
+// (#appeal=... numa conta banida/suspensa, #email=... num conflito de conta).
+// Lidos uma vez e tirados da barra de endereco, para nao ficarem no historico.
+function takeFromHash(key: string): string | null {
   const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  const token = params.get('appeal');
-  if (token) {
+  const value = params.get(key);
+  if (value) {
     window.history.replaceState(null, '', window.location.pathname + window.location.search);
   }
-  return token;
+  return value;
 }
 
 export default function AuthCallback() {
@@ -39,18 +39,18 @@ export default function AuthCallback() {
     hasRun.current = true;
 
     // O OAuthConflictRedirectFilter no backend redireciona para aqui com
-    // ?error=account_conflict&email=... quando o mesmo email já tem conta
+    // ?error=account_conflict#email=... quando o mesmo email já tem conta
     // por outro método - mostramos uma mensagem clara em vez de tentar
     // continuar o login (que ia falhar de qualquer forma, sem sessão).
     const error = searchParams.get('error');
     if (error === 'account_conflict') {
-      setConflictEmail(searchParams.get('email'));
+      setConflictEmail(takeFromHash('email'));
       return;
     }
     // Conta banida/suspensa: mesmo ecra de bloqueio + recurso do login por
     // password (Login.tsx). Sem token cai no erro generico abaixo.
     if (error === 'account_blocked') {
-      const token = takeAppealTokenFromHash();
+      const token = takeFromHash('appeal');
       if (token) {
         setAppealToken(token);
       } else {

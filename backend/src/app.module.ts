@@ -57,6 +57,10 @@ import { RequestUserLoggerInterceptor } from './common/interceptors/request-user
 @Module({
   imports: [
     // 100 pedidos por minuto
+    // Pressuposto de instância única (S-34): o throttler guarda os contadores
+    // em memória, por processo. Com várias instâncias o limite efetivo passa
+    // a ser N vezes maior. Se escalar: usar storage em Redis no throttler
+    // (ThrottlerStorageRedisService) para os contadores serem partilhados.
     ThrottlerModule.forRoot([
       {
         ttl: THROTTLE_WINDOW_MS,

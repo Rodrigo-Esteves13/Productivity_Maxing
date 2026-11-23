@@ -1,3 +1,4 @@
+import { POLL_MS } from '../lib/pollIntervals';
 import { useCallback, useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
 import {
@@ -14,7 +15,7 @@ import {
   type SocialOverview,
 } from '../api/socialService';
 import { useLiveRefresh } from './useLiveRefresh';
-import { notifySocialChanged } from '../lib/socialEvents';
+import { notifySocialChanged, onSocialChanged } from '../lib/socialEvents';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
 import { parseFriendInput } from '../lib/friendLink';
@@ -53,7 +54,10 @@ export function useSocial() {
   }, [load]);
 
   // Pedidos novos aparecem sem refresh (push, voltar ao separador, polling).
-  useLiveRefresh(() => void load(true), { enabled: true, intervalMs: 20000 });
+  useLiveRefresh(() => void load(true), { enabled: true, intervalMs: POLL_MS.social });
+  // Acao noutro cartao do Social (ex: aceitar um pedido de notas): le de novo
+  // em silencio. O GET repetido pelo proprio emissor junta-se no dedupe.
+  useEffect(() => onSocialChanged(() => void load(true)), [load]);
 
   const run = useCallback(
     async (action: () => Promise<unknown>): Promise<boolean> => {

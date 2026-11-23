@@ -262,6 +262,6 @@ export const fase7: Record<string, string> = {
   'canvas.paste': "Colar",
   'canvas.duplicate': "Duplicar",
   'canvas.deleteSelection': "Apagar seleção",
-  'notes.deleteConfirm': "Apagar \"{title}\"? Não dá para desfazer.",
+  'notes.deleteConfirm': "Apagar \"{title}\"? Podes anular logo a seguir.",
   'wellbeing.blood.deleteConfirm': "Apagar a dádiva de {date}? Não dá para desfazer.",
 };

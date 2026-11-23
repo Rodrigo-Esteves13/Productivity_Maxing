@@ -4,6 +4,7 @@ import PageHeader from "../components/Layout/PageHeader";
 import Button from "../components/UI/Button";
 import ErrorState from "../components/UI/ErrorState";
 import EmptyState from "../components/UI/EmptyState";
+import SearchField from "../components/UI/SearchField";
 import TableSkeleton from "../components/UI/TableSkeleton";
 import ConfirmActionDialog from "../components/Turma/ConfirmActionDialog";
 import {
@@ -15,6 +16,8 @@ import {
 import useDocumentTitle from "../hooks/useDocumentTitle";
 import { useLoadOnce } from "../hooks/useLoadOnce";
 import { useConfirmAction } from "../hooks/useConfirmAction";
+import { useListSearch } from "../hooks/useListSearch";
+import { blockedSources } from "../lib/adminLists";
 import { useI18n } from "../i18n/useI18n";
 import { formatDateTime } from "../lib/timeFormat";
 import { adminUserPath, padPath } from "../lib/appLinks";
@@ -26,10 +29,27 @@ const ANON_HASH_SHOWN = 8;
 // Moderacao de pads (admin): os alterados mais recentemente, quem gravou por
 // ultimo e apagar. Cada apagar fica no security log.
 export default function PadsAdmin() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   useDocumentTitle(t("nav.admin.pads"));
   const { data, isLoading, error, reload } = useLoadOnce(getRecentPadsForAdmin);
   const confirm = useConfirmAction(t("turma.actionError"));
+  const pads = data ?? [];
+  const { query, setQuery, filtered, isFiltering } = useListSearch(pads, (pad) => [pad.slug]);
+  // So os que aparecem nesta lista (os pads mais recentes): nao ha endpoint
+  // proprio para listar todas as origens bloqueadas.
+  const blocked = blockedSources(pads);
+
+  const requestUnblock = (ipHash: string) =>
+    confirm.request({
+      title: t("pad.admin.unblock"),
+      message: t("pad.admin.unblockConfirm"),
+      confirmLabel: t("pad.admin.unblock"),
+      tone: "default",
+      run: async () => {
+        await unblockPadSource(ipHash);
+        reload();
+      },
+    });
 
   return (
     <PageLayout>
@@ -40,12 +60,42 @@ export default function PadsAdmin() {
       {isLoading ? (
         <TableSkeleton />
       ) : error ? (
-        <ErrorState message={t("pad.loadError")} />
+        <ErrorState message={t("pad.loadError")} onRetry={reload} />
       ) : !data || data.length === 0 ? (
         <EmptyState message={t("pad.admin.none")} />
       ) : (
+        <>
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <SearchField value={query} onChange={setQuery} label={t("ux4adm2.pads.search")} />
+            {isFiltering && (
+              <span className="text-xs text-neutral-500" aria-live="polite">
+                {t("search.count", { shown: filtered.length, total: pads.length })}
+              </span>
+            )}
+          </div>
+          {blocked.length > 0 && (
+            <section className="mb-4 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+              <h2 className="mb-1 text-sm font-semibold text-white">{t("ux4adm2.pads.blockedTitle")}</h2>
+              <p className="mb-2 text-xs text-neutral-500">{t("ux4adm2.pads.blockedHint")}</p>
+              <ul className="space-y-2">
+                {blocked.map((ipHash) => (
+                  <li key={ipHash} className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-mono text-xs text-neutral-300" title={ipHash}>
+                      {t("pad.admin.anonymous", { hash: ipHash.slice(0, ANON_HASH_SHOWN) })}
+                    </span>
+                    <Button variant="secondary" size="sm" onClick={() => requestUnblock(ipHash)}>
+                      {t("pad.admin.unblock")}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {filtered.length === 0 ? (
+            <EmptyState message={t("search.noResultsFor", { query: query.trim() })} />
+          ) : (
         <ul className="space-y-2">
-          {data.map((pad) => (
+          {filtered.map((pad) => (
             <li
               key={pad.slug}
               className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4"
@@ -123,8 +173,8 @@ export default function PadsAdmin() {
                 {pad.preview || t("pad.admin.empty")}
               </p>
               <p className="text-xs text-neutral-500">
-                {t("pad.admin.length", { count: pad.length.toLocaleString() })}{" "}
-                · {formatDateTime(pad.updatedAt)} ·{" "}
+                {t("pad.admin.length", { count: pad.length.toLocaleString(lang) })}{" "}
+                · {formatDateTime(pad.updatedAt, lang)} ·{" "}
                 {pad.updatedBy ? (
                   <Link
                     to={adminUserPath(pad.updatedBy.id)}
@@ -154,6 +204,8 @@ export default function PadsAdmin() {
             </li>
           ))}
         </ul>
+          )}
+        </>
       )}
       <ConfirmActionDialog state={confirm} />
     </PageLayout>

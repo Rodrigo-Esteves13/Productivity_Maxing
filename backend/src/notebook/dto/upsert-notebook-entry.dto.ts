@@ -22,6 +22,7 @@ import { Type } from 'class-transformer';
 import { NotebookEntryType } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsStringMatrix } from './is-string-matrix.validator';
+import { NOTEBOOK_CLASS_NUMBER_MAX } from '../notebook.constants';
 
 // Um ponto de um traço. `pressure` é opcional (nem todo o rato/touchpad
 // reporta pressão - só canetas/ecrãs sensíveis a isso) e nunca é usado
@@ -286,6 +287,7 @@ export class CreateNotebookEntryDto {
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Max(NOTEBOOK_CLASS_NUMBER_MAX)
   classNumber?: number;
 
   @ApiPropertyOptional({ example: 'Hoje vimos normalização até 3FN...' })
@@ -387,6 +389,7 @@ export class UpdateNotebookEntryDto {
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Max(NOTEBOOK_CLASS_NUMBER_MAX)
   classNumber?: number;
 
   @ApiPropertyOptional({ example: 'Hoje vimos normalização até 3FN...' })

@@ -201,6 +201,8 @@ describe('PasswordAuthService password link', () => {
   it('forgot password on an account without a password sends the link', async () => {
     const { service, clients, passwordLink } = setup(OAUTH_USER, 1);
     await service.forgotPassword(OAUTH_USER.email);
+    // O envio corre em background (S-11): deixa a fila de promessas esvaziar.
+    await new Promise((resolve) => setImmediate(resolve));
     expect(passwordLink.send).toHaveBeenCalledWith(OAUTH_USER);
     expect(clients.admin.auth.admin.generateLink).not.toHaveBeenCalled();
   });

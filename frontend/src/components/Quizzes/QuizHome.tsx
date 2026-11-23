@@ -176,7 +176,13 @@ export default function QuizHome({
                 <Button variant="secondary" size="sm" onClick={onFinishNow}>
                   {t('quizzes.home.finishNow')}
                 </Button>
-                <Button variant="secondary" size="sm" onClick={onDiscard}>
+                {/* Destrutivo e sem moldura: pesa menos que "Terminar agora" e nao se confunde com ele. */}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="border-transparent! text-red-300! hover:text-red-200!"
+                  onClick={onDiscard}
+                >
                   {t('quizzes.home.discard')}
                 </Button>
               </div>

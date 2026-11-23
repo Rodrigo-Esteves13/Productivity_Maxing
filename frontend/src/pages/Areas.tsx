@@ -65,7 +65,7 @@ const SELECT_PARAM_ON = '1';
 
 export default function Areas() {
   const { t, lang } = useI18n();
-  useDocumentTitle('Areas');
+  useDocumentTitle(t('nav.areas'));
   const {
     isAdmin,
     areas,
@@ -73,6 +73,7 @@ export default function Areas() {
     taskTypes,
     isLoading,
     error,
+    reload,
     createMode,
     selectedArea,
     isEditing,
@@ -241,7 +242,7 @@ export default function Areas() {
           <CardGridSkeleton cards={SKELETON_CARDS} />
         </>
       ) : error ? (
-        <ErrorState message={error} />
+        <ErrorState message={error} onRetry={() => void reload()} />
       ) : (
         <div className="motion-page">
           {isAdmin && (

@@ -56,5 +56,44 @@ export function useTaskTemplates() {
     setTemplates((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  return { templates, saveTemplate, deleteTemplate, isFull: templates.length >= MAX_TASK_TEMPLATES };
+  // Modelo com este nome (sem maiusculas), para pedir confirmacao antes de o substituir.
+  const findByName = useCallback(
+    (name: string): TaskTemplate | undefined => {
+      const wanted = name.trim().toLowerCase();
+      return templates.find((t) => t.name.toLowerCase() === wanted);
+    },
+    [templates],
+  );
+
+  // Repoe um modelo apagado (Anular), com o mesmo id.
+  const restoreTemplate = useCallback((template: TaskTemplate) => {
+    setTemplates((prev) =>
+      prev.some((t) => t.id === template.id) || prev.length >= MAX_TASK_TEMPLATES
+        ? prev
+        : [...prev, template].sort((a, b) => a.name.localeCompare(b.name)),
+    );
+  }, []);
+
+  // Devolve false se o nome ficar vazio ou ja for de outro modelo.
+  const renameTemplate = useCallback(
+    (id: string, rawName: string): boolean => {
+      const name = rawName.trim().slice(0, MAX_TEMPLATE_NAME_LENGTH);
+      if (!name) return false;
+      const clash = templates.find((t) => t.id !== id && t.name.toLowerCase() === name.toLowerCase());
+      if (clash) return false;
+      setTemplates(templates.map((t) => (t.id === id ? { ...t, name } : t)).sort((a, b) => a.name.localeCompare(b.name)));
+      return true;
+    },
+    [templates],
+  );
+
+  return {
+    templates,
+    saveTemplate,
+    deleteTemplate,
+    findByName,
+    restoreTemplate,
+    renameTemplate,
+    isFull: templates.length >= MAX_TASK_TEMPLATES,
+  };
 }

@@ -25,7 +25,7 @@ export const finance: Record<string, string> = {
   "finance.entries": "Este mes",
   "finance.noEntries": "Nada registrado este mes.",
   "finance.deleteEntry": "Eliminar registro",
-  "finance.deleteEntryConfirm": "¿Eliminar este registro de {amount}? No se puede deshacer.",
+  "finance.deleteEntryConfirm": "¿Eliminar este registro de {amount}? Puedes anularlo justo después.",
   "finance.byCategory": "Gastos por categoría",
   "finance.cat.SALARY": "Salario",
   "finance.cat.ALLOWANCE": "Paga",

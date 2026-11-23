@@ -1,6 +1,7 @@
+import { STORAGE_KEYS } from '../lib/storageKeys';
 import { useEffect, useState } from 'react';
 
-const STORAGE_KEY = 'pm-single-task-mode';
+const STORAGE_KEY = STORAGE_KEYS.singleTaskMode;
 
 function loadSingleTaskMode(): boolean {
   try {

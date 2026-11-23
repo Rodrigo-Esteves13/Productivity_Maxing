@@ -38,6 +38,15 @@ export class CreateTaskPackDto {
   taskIds: string[];
 }
 
+export class RenameTaskPackDto {
+  @ApiProperty({ example: 'Redes - 2.º semestre' })
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(MAX_PACK_NAME_LENGTH)
+  name: string;
+}
+
 export class ImportPackItemDto {
   @ApiProperty()
   @IsUUID()

@@ -110,4 +110,12 @@ export const readiness: Record<string, string> = {
   'bulkEffort.doneOne': "Effort set on 1 task.",
   'bulkEffort.doneMany': "Effort set on {count} tasks.",
   'bulkEffort.failed': "Could not set the effort. Please try again.",
+  'focus.distractions.noteTitle': "During focus",
+  'focus.distractions.thoughtLabel': "What pulled you away?",
+  'focus.distractions.thoughtPlaceholder': "Jot it down for later (optional)",
+  'focus.distractions.thoughtSave': "Save",
+  'focus.distractions.thoughtSaved': "Saved to your notes. Back to it.",
+  'focus.distractions.thoughtError': "Could not save that thought. Keep going anyway.",
+  'focus.distractions.thoughtTrimmed': "Saved. The oldest thoughts were removed to fit the note.",
+  'focus.distractions.thoughtFull': "Your notes are full (500). Delete a note to save thoughts.",
 };

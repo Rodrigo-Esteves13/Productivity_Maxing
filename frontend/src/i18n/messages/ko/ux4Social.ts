@@ -1,0 +1,18 @@
+export const ux4Social: Record<string, string> = {
+  'ux4social.sort.name': "이름",
+  'ux4social.sort.recent': "최근 추가순",
+  'ux4social.sort.newest': "최신순",
+  'ux4social.sort.oldest': "오래된순",
+  'ux4social.sort.title': "제목",
+  'ux4social.friends.search': "친구 검색",
+  'ux4social.notes.search': "노트 검색",
+  'ux4social.notes.areaFilter': "과목별 필터",
+  'ux4social.notes.allAreas': "모든 과목",
+  'ux4social.notes.sortLabel': "노트 정렬",
+  'ux4social.areas.all': "전체",
+  'ux4social.areas.none': "없음",
+  'ux4social.decline.title': "이 요청을 거절할까요?",
+  'ux4social.decline.message': "{name}님은 내 노트에 접근할 수 없습니다. 다시 요청할 수 있습니다.",
+  'ux4social.block.title': "{name}님을 차단할까요?",
+  'ux4social.remove.title': "{name}님을 삭제할까요?",
+};

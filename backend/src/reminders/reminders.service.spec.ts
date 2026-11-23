@@ -1,7 +1,11 @@
 import type { PersonalNotesService } from '../personal-notes/personal-notes.service';
 import type { PadsService } from '../pads/pads.service';
 import type { MedicationsService } from '../wellbeing/medications.service';
-import { RemindersService } from './reminders.service';
+import {
+  LOOKAHEAD_MS,
+  RemindersService,
+  TASKS_PAGE_SIZE,
+} from './reminders.service';
 import type { AbsenceLimitRemindersService } from './absence-limit-reminders.service';
 import type { AccountAnniversaryRemindersService } from './account-anniversary-reminders.service';
 import type { GradeAlmostThereRemindersService } from './grade-almost-there-reminders.service';
@@ -344,5 +348,46 @@ describe('RemindersService email language', () => {
     ];
     expect(lang).toBe('en');
     expect(items[0].dueLabel).toBe('due in about 2h');
+  });
+});
+
+describe('RemindersService.run candidate query', () => {
+  const prefs = { deadlineEmailReminders: true, deadlinePushReminders: true };
+
+  it('only looks ahead as far as the earliest reminder lead plus a margin', async () => {
+    const { service, prisma } = setup([]);
+    await service.run(NOW);
+    const [args] = prisma.task.findMany.mock.calls[0] as [
+      { where: { OR: { date?: { gt: Date; lte: Date } }[] } },
+    ];
+    const window = args.where.OR[0].date!;
+    expect(window.gt).toEqual(NOW);
+    expect(window.lte.getTime() - NOW.getTime()).toBe(LOOKAHEAD_MS);
+    // 24h de antecedencia maxima + margem pequena, nunca os 72h de antes.
+    expect(LOOKAHEAD_MS).toBeLessThan(2 * 24 * 60 * 60 * 1000);
+  });
+
+  it('pages past tasks that were already reminded instead of truncating', async () => {
+    const alreadySent = Array.from({ length: TASKS_PAGE_SIZE }, (_, i) => ({
+      ...task(`s${i}`, 'u-old', prefs),
+      sentReminders: [{ taskDate: SOON }],
+    }));
+    const pending = task('p1', 'u-new', prefs);
+    const { service, prisma, mail } = setup([]);
+    prisma.task.findMany
+      .mockReset()
+      .mockResolvedValueOnce(alreadySent)
+      .mockResolvedValueOnce([pending]);
+
+    const result = await service.run(NOW);
+
+    expect(prisma.task.findMany).toHaveBeenCalledTimes(2);
+    const [second] = prisma.task.findMany.mock.calls[1] as [
+      { cursor: { id: string }; skip: number },
+    ];
+    expect(second.cursor).toEqual({ id: `s${TASKS_PAGE_SIZE - 1}` });
+    expect(second.skip).toBe(1);
+    expect(mail.sendDeadlineReminderEmail).toHaveBeenCalledTimes(1);
+    expect(result.remindersSent).toBe(1);
   });
 });

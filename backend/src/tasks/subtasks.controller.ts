@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   UseGuards,
@@ -35,7 +36,7 @@ export class SubtasksController {
   @Get()
   list(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('taskId') taskId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
   ) {
     return this.subtasksService.list(user.id, taskId);
   }
@@ -43,7 +44,7 @@ export class SubtasksController {
   @Post()
   create(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('taskId') taskId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
     @Body() dto: CreateSubtaskDto,
   ) {
     return this.subtasksService.create(user.id, taskId, dto.title);
@@ -54,7 +55,7 @@ export class SubtasksController {
   @Post('bulk')
   createBulk(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('taskId') taskId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
     @Body() dto: CreateSubtasksBulkDto,
   ) {
     return this.subtasksService.createMany(user.id, taskId, dto.titles);
@@ -63,7 +64,7 @@ export class SubtasksController {
   @Patch('reorder')
   reorder(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('taskId') taskId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
     @Body() dto: ReorderSubtasksDto,
   ) {
     return this.subtasksService.reorder(user.id, taskId, dto.subtaskIds);
@@ -73,8 +74,8 @@ export class SubtasksController {
   @Post(':subtaskId/convert')
   convertToTask(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('taskId') taskId: string,
-    @Param('subtaskId') subtaskId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Param('subtaskId', ParseUUIDPipe) subtaskId: string,
   ) {
     return this.tasksService.createFromSubtask(user.id, taskId, subtaskId);
   }
@@ -82,8 +83,8 @@ export class SubtasksController {
   @Patch(':subtaskId')
   update(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('taskId') taskId: string,
-    @Param('subtaskId') subtaskId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Param('subtaskId', ParseUUIDPipe) subtaskId: string,
     @Body() dto: UpdateSubtaskDto,
   ) {
     return this.subtasksService.update(user.id, taskId, subtaskId, dto);
@@ -93,8 +94,8 @@ export class SubtasksController {
   @HttpCode(204)
   async remove(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('taskId') taskId: string,
-    @Param('subtaskId') subtaskId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Param('subtaskId', ParseUUIDPipe) subtaskId: string,
   ) {
     await this.subtasksService.remove(user.id, taskId, subtaskId);
   }

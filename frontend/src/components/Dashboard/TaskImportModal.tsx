@@ -4,6 +4,13 @@ import { useTaskImport } from '../../hooks/useTaskImport';
 import { CheckIcon, AlertTriangleIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
 import { fillNodes } from '../../i18n/fillNodes';
+import Button from '../UI/Button';
+import { downloadTextFile } from '../../utils/downloadTextFile';
+import {
+  TASK_IMPORT_TEMPLATE_FILENAME,
+  TASK_IMPORT_TEMPLATE_MIME,
+  buildTaskImportTemplateCsv,
+} from '../../lib/taskImportTemplate';
 
 interface TaskImportModalProps {
   isOpen: boolean;
@@ -18,7 +25,7 @@ const ACCEPTED_EXTENSIONS = '.xlsx,.xls,.csv';
 
 export default function TaskImportModal({ isOpen, onClose, onImported }: TaskImportModalProps) {
   const { t } = useI18n();
-  const { stage, outcome, errorMessage, runImport, reset } = useTaskImport();
+  const { stage, outcome, errorMessage, preview, prepare, confirmImport, reset } = useTaskImport();
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasNotifiedRef = useRef(false);
@@ -36,7 +43,7 @@ export default function TaskImportModal({ isOpen, onClose, onImported }: TaskImp
     if (!file) return;
     setFileName(file.name);
     hasNotifiedRef.current = false;
-    await runImport(file);
+    await prepare(file);
   };
 
   // Notify the parent as soon as we know at least one task was created -
@@ -70,6 +77,16 @@ export default function TaskImportModal({ isOpen, onClose, onImported }: TaskImp
           </p>
         </div>
 
+        <button
+          type="button"
+          onClick={() =>
+            downloadTextFile(buildTaskImportTemplateCsv(), TASK_IMPORT_TEMPLATE_FILENAME, TASK_IMPORT_TEMPLATE_MIME)
+          }
+          className="text-sm text-violet-400 underline decoration-dotted hover:text-violet-300 pointer-coarse:min-h-11"
+        >
+          {t('ux4tasks.downloadTemplate')}
+        </button>
+
         <input
           ref={fileInputRef}
           type="file"
@@ -83,6 +100,32 @@ export default function TaskImportModal({ isOpen, onClose, onImported }: TaskImp
           <p className="text-sm text-neutral-400">
             {stage === 'reading' ? t('ui.readingFile', { name: fileName ?? '' }) : t('ui.creatingTasks')}
           </p>
+        )}
+
+        {stage === 'preview' && preview && (
+          <div className="space-y-3">
+            <p className="text-sm text-neutral-200" role="status">
+              {t('ux4tasks.previewSummary', { valid: preview.rows.length, errors: preview.parseErrors.length })}
+            </p>
+            {preview.parseErrors.length > 0 && (
+              <div className="max-h-48 overflow-y-auto bg-neutral-950 border border-neutral-800 rounded-lg p-3 space-y-1">
+                <p className="text-xs uppercase tracking-wide text-neutral-500 mb-1">{t('ui.rowsSkipped')}</p>
+                {preview.parseErrors.map((e) => (
+                  <p key={`preview-${e.row}`} className="text-xs text-neutral-400">
+                    {t('ui.row', { row: e.row, message: e.message })}
+                  </p>
+                ))}
+              </div>
+            )}
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={handleClose}>
+                {t('ui.cancel')}
+              </Button>
+              <Button type="button" onClick={() => void confirmImport()}>
+                {t('ux4tasks.importRows', { count: preview.rows.length })}
+              </Button>
+            </div>
+          </div>
         )}
 
         {stage === 'error' && errorMessage && (

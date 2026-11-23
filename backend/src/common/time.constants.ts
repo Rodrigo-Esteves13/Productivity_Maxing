@@ -10,3 +10,6 @@ export const ISO_DATE_KEY_LENGTH = 'YYYY-MM-DD'.length;
 
 // Fuso de referencia da app: o "dia" de uma aula/turno/task e o dia em Lisboa.
 export const APP_TIME_ZONE = 'Europe/Lisbon';
+
+// Timeout das transacoes interativas longas (imports em lote).
+export const LONG_TRANSACTION_TIMEOUT_MS = 30 * MS_PER_SECOND;

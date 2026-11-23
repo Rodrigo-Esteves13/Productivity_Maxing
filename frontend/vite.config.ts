@@ -214,7 +214,21 @@ export default defineConfig({
     // referenciados por nada, logo ninguém os encontra por engano, mas
    
     // vale a pena um Disallow: /**/*.map no robots.txt se quiseres reforçar).
-    sourcemap: 'hidden'
+    sourcemap: 'hidden',
+    // Vendor em chunks proprios (F-44): mudam raramente, por isso a cache do
+    // browser sobrevive aos deploys que so mexem no codigo da app.
+    rolldownOptions: {
+      output: {
+        advancedChunks: {
+          groups: [
+            { name: 'vendor-react', test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+            { name: 'vendor-router', test: /[\\/]node_modules[\\/](react-router|react-router-dom|@remix-run)[\\/]/ },
+            { name: 'vendor-axios', test: /[\\/]node_modules[\\/]axios[\\/]/ },
+            { name: 'vendor-recharts', test: /[\\/]node_modules[\\/](recharts|d3-[^\\/]+|victory-vendor|internmap)[\\/]/ },
+          ],
+        },
+      },
+    },
   },
   server: {
     host: true,

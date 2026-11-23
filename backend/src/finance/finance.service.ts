@@ -21,6 +21,7 @@ import {
   addUtcDays,
   diffUtcDays,
   getLisbonNow,
+  isRealDateKey,
   parseDateKey,
   toDateKey,
 } from '../common/date-key.util';
@@ -99,9 +100,8 @@ import {
   quantityFromInvested,
 } from './finance-holdings.util';
 import { FinancePricesService } from './finance-prices.service';
-
-const MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
-const UNIQUE_VIOLATION = 'P2002';
+import { isUniqueViolation } from '../common/prisma-errors';
+import { FINANCE_MONTH_PATTERN } from './finance.constants';
 
 /**
  * Chave de duplicado da importacao: mesmo dia, tipo, categoria, valor e nota
@@ -148,11 +148,10 @@ export function resolveRequestKey(
  * e "2026-02-31" passava a 3 de marco sem aviso.
  */
 export function parseDay(key: string, field: string): Date {
-  const date = parseDateKey(key);
-  if (Number.isNaN(date.getTime()) || toDateKey(date) !== key) {
+  if (!isRealDateKey(key)) {
     throw new BadRequestException(`${field} is not a valid date.`);
   }
-  return date;
+  return parseDateKey(key);
 }
 
 export interface Settings {
@@ -182,7 +181,7 @@ type HoldingRow = FinanceHolding & {
 
 /** [inicio do mes, inicio do mes seguinte) em meia-noite UTC. */
 export function monthBounds(month: string): { start: Date; end: Date } {
-  const match = MONTH_PATTERN.exec(month);
+  const match = FINANCE_MONTH_PATTERN.exec(month);
   if (!match) {
     throw new BadRequestException('month must be formatted YYYY-MM.');
   }
@@ -910,7 +909,7 @@ export class FinanceService {
     try {
       return await create(key);
     } catch (err) {
-      if ((err as { code?: string } | null)?.code !== UNIQUE_VIOLATION) {
+      if (!isUniqueViolation(err)) {
         throw err;
       }
       const winner = await find(key);

@@ -2,6 +2,12 @@ import FormField from '../UI/FormField';
 import Input from '../UI/Input';
 import Select from '../UI/Select';
 import Button from '../UI/Button';
+import { RefreshIcon, DownloadIcon } from '../UI/Icons';
+import { useFeedback } from '../../context/useFeedback';
+import { securityLogsToCsv, SECURITY_LOGS_CSV_COLUMNS } from '../../utils/securityLogsCsv';
+import { downloadTextFile } from '../../utils/downloadTextFile';
+import { todayKey } from '../../lib/dateKey';
+import type { SecurityLog } from '../../types/models';
 import type { SecurityLogsFiltersState } from '../../hooks/useSecurityLogsPage';
 import { useI18n } from '../../i18n/useI18n';
 
@@ -11,7 +17,13 @@ interface SecurityLogsFiltersProps {
   onClear: () => void;
   onPurge: (olderThanDays?: number) => void;
   isPurging: boolean;
+  onRefresh: () => void;
+  // Linhas da pagina atual (o que o botao de exportar grava).
+  logs: readonly SecurityLog[];
 }
+
+const CSV_MIME_TYPE = 'text/csv;charset=utf-8';
+const CSV_FILE_PREFIX = 'pmaxing_security_logs_';
 
 export default function SecurityLogsFilters({
   filters,
@@ -19,10 +31,19 @@ export default function SecurityLogsFilters({
   onClear,
   onPurge,
   isPurging,
+  onRefresh,
+  logs,
 }: SecurityLogsFiltersProps) {
   const { t } = useI18n();
+  const { notify } = useFeedback();
   const update = (patch: Partial<SecurityLogsFiltersState>) => onChange({ ...filters, ...patch });
   const hasActiveFilters = filters.ip !== '' || filters.path !== '' || filters.window !== '';
+
+  const handleExport = () => {
+    const headers = SECURITY_LOGS_CSV_COLUMNS.map((column) => t(`ux4admin.logs.col.${column}`));
+    downloadTextFile(securityLogsToCsv(logs, headers), `${CSV_FILE_PREFIX}${todayKey()}.csv`, CSV_MIME_TYPE);
+    notify(t('ux4admin.logs.exported', { count: logs.length }), 'success');
+  };
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 mb-6">
@@ -58,13 +79,31 @@ export default function SecurityLogsFilters({
           </Select>
         </FormField>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {hasActiveFilters && (
             <Button type="button" variant="secondary" onClick={onClear} className="whitespace-nowrap">
               {t('ui.clearFilters')}
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Button type="button" variant="secondary" onClick={onRefresh} className="inline-flex items-center gap-2">
+          <RefreshIcon className="h-4 w-4" aria-hidden="true" />
+          {t('ux4admin.logs.refresh')}
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={handleExport}
+          disabled={logs.length === 0}
+          title={t('ux4admin.logs.exportHint')}
+          className="inline-flex items-center gap-2"
+        >
+          <DownloadIcon className="h-4 w-4" aria-hidden="true" />
+          {t('ux4admin.logs.export')}
+        </Button>
       </div>
 
       <div className="mt-4 pt-4 border-t border-neutral-800 flex flex-wrap items-center gap-2">

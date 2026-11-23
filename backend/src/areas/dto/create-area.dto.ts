@@ -5,8 +5,10 @@ import {
   IsOptional,
   IsInt,
   Min,
+  Max,
   MaxLength,
 } from 'class-validator';
+import { MAX_AREA_CREDITS } from '../areas.constants';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAreaDto {
@@ -44,5 +46,6 @@ export class CreateAreaDto {
   @IsOptional()
   @IsInt()
   @Min(0)
+  @Max(MAX_AREA_CREDITS)
   credits?: number | null;
 }

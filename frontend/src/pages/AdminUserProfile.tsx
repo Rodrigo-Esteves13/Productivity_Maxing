@@ -111,7 +111,10 @@ export default function AdminUserProfile() {
     return (
       <PageLayout>
         <Breadcrumbs items={crumbs} />
-        <ErrorState message={state === 'not_found' ? t('adminSocial.notFound') : t('adminSocial.loadError')} />
+        <ErrorState
+          message={state === 'not_found' ? t('adminSocial.notFound') : t('adminSocial.loadError')}
+          onRetry={state === 'not_found' ? undefined : () => void load()}
+        />
       </PageLayout>
     );
   }
@@ -135,8 +138,8 @@ export default function AdminUserProfile() {
       <header className="flex flex-wrap items-center gap-4 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 sm:p-5">
         <PersonAvatar name={name} avatarUrl={user.avatarUrl} size="lg" />
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-xl font-bold text-white">{name}</h1>
-          <p className="truncate text-sm text-neutral-400">{user.email}</p>
+          <h1 className="truncate text-xl font-bold text-white" title={name}>{name}</h1>
+          <p className="truncate text-sm text-neutral-400" title={user.email}>{user.email}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
             <RoleBadge role={user.role} />
             <UserStatusBadge status={user.status} />

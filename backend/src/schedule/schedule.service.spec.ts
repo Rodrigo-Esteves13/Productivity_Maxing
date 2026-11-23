@@ -282,3 +282,141 @@ describe('EctsWorkloadQueryDto', () => {
     expect(errors.map((e) => e.property)).toEqual(['periodId']);
   });
 });
+
+describe('ScheduleService today cut (attendance, study-vs-class)', () => {
+  const prisma = {
+    classOccurrence: { groupBy: jest.fn(), findMany: jest.fn() },
+    studySession: { findMany: jest.fn() },
+    areaScheduleLink: { findMany: jest.fn() },
+    area: { findMany: jest.fn() },
+  };
+  const service = new ScheduleService(prisma as never, {} as never);
+  const FROM = new Date('2026-07-01T00:00:00.000Z');
+  const END_OF_TODAY = new Date('2026-07-15T23:59:59.999Z');
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers({ now: NOW });
+    prisma.classOccurrence.groupBy.mockResolvedValue([]);
+    prisma.classOccurrence.findMany.mockResolvedValue([]);
+    prisma.studySession.findMany.mockResolvedValue([]);
+    prisma.areaScheduleLink.findMany.mockResolvedValue([]);
+    prisma.area.findMany.mockResolvedValue([]);
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it('cuts attendance at the end of today', async () => {
+    await service.attendanceSummary(
+      USER_ID,
+      FROM,
+      new Date('2026-12-31T00:00:00.000Z'),
+    );
+    const where = firstWhere(prisma.classOccurrence.groupBy);
+    expect(where.userId).toBe(USER_ID);
+    expect(where.date.lte).toEqual(END_OF_TODAY);
+  });
+
+  it('keeps a past end date as the end of that day', async () => {
+    await service.studyVsClass(
+      USER_ID,
+      FROM,
+      new Date('2026-07-10T00:00:00.000Z'),
+    );
+    const where = firstWhere(prisma.classOccurrence.findMany);
+    expect(where.date.lte).toEqual(new Date('2026-07-10T23:59:59.999Z'));
+  });
+
+  it('cuts study-vs-class at the end of today', async () => {
+    await service.studyVsClass(
+      USER_ID,
+      FROM,
+      new Date('2026-12-31T00:00:00.000Z'),
+    );
+    expect(firstWhere(prisma.classOccurrence.findMany).date.lte).toEqual(
+      END_OF_TODAY,
+    );
+  });
+});
+
+describe('ScheduleService manual classes', () => {
+  const OTHER_ID = '22222222-2222-4222-8222-222222222222';
+  const prisma = {
+    classOccurrence: {
+      create: jest.fn(),
+      findFirst: jest.fn(),
+      updateMany: jest.fn(),
+      deleteMany: jest.fn(),
+    },
+  };
+  const service = new ScheduleService(prisma as never, {} as never);
+  const BASE = {
+    date: '2026-09-14',
+    startMinutes: 540,
+    endMinutes: 600,
+    subject: ' Maths ',
+  };
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('creates a class for the user with a manual uid', async () => {
+    prisma.classOccurrence.create.mockResolvedValue({ id: 'c1' });
+    await service.createClass(USER_ID, BASE);
+    const data = (
+      prisma.classOccurrence.create.mock.calls as {
+        data: Record<string, unknown>;
+      }[][]
+    )[0][0].data;
+    expect(data.userId).toBe(USER_ID);
+    expect(data.subject).toBe('Maths');
+    expect(String(data.externalUid).startsWith('manual-')).toBe(true);
+  });
+
+  it('rejects start after end on create', async () => {
+    await expect(
+      service.createClass(USER_ID, { ...BASE, startMinutes: 700 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('404s when updating a class of another user', async () => {
+    prisma.classOccurrence.findFirst.mockResolvedValue(null);
+    await expect(
+      service.updateClass(USER_ID, OTHER_ID, { subject: 'x' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.classOccurrence.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: OTHER_ID, userId: USER_ID } }),
+    );
+    expect(prisma.classOccurrence.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('validates the merged time range on update', async () => {
+    prisma.classOccurrence.findFirst.mockResolvedValue({
+      startMinutes: 540,
+      endMinutes: 600,
+    });
+    await expect(
+      service.updateClass(USER_ID, OTHER_ID, { startMinutes: 650 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('scopes update and delete by userId', async () => {
+    prisma.classOccurrence.findFirst.mockResolvedValue({
+      startMinutes: 540,
+      endMinutes: 600,
+    });
+    prisma.classOccurrence.updateMany.mockResolvedValue({ count: 1 });
+    await service.updateClass(USER_ID, OTHER_ID, { location: '' });
+    expect(prisma.classOccurrence.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: OTHER_ID, userId: USER_ID },
+        data: expect.objectContaining({ location: null }) as unknown,
+      }),
+    );
+    prisma.classOccurrence.deleteMany.mockResolvedValue({ count: 0 });
+    await expect(service.deleteClass(USER_ID, OTHER_ID)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(prisma.classOccurrence.deleteMany).toHaveBeenCalledWith({
+      where: { id: OTHER_ID, userId: USER_ID },
+    });
+  });
+});

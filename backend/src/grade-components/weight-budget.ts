@@ -1,6 +1,10 @@
 import { roundTo } from '../common/round.util';
 import { BadRequestException } from '@nestjs/common';
-import type { PrismaService } from '../prisma/prisma.service';
+import type { Prisma } from '@prisma/client';
+
+// Cliente normal ou de transacao (tasks.service valida o peso dentro da
+// transacao com o lock do user, B-42).
+type WeightDb = Pick<Prisma.TransactionClient, 'task' | 'gradeComponent'>;
 
 // Uma cadeira (Area) num periodo vale 100% da nota final. Tasks avaliadas
 // e componentes de nota (exame, seminarios, participacao...) partilham
@@ -16,12 +20,22 @@ export interface WeightScope {
   periodId: string | null;
   // Fora da soma: a task/componente que esta a ser editada.
   excludeTaskId?: string;
+  // Tasks que vao ser apagadas a seguir (import de pacote em modo substituir).
+  excludeTaskIds?: string[];
   excludeComponentId?: string;
+}
+
+function excludedTaskFilter(scope: WeightScope) {
+  const ids = [
+    ...(scope.excludeTaskId ? [scope.excludeTaskId] : []),
+    ...(scope.excludeTaskIds ?? []),
+  ];
+  return ids.length > 0 ? { id: { notIn: ids } } : {};
 }
 
 /** Peso ja atribuido na cadeira+periodo (tasks com peso + componentes). */
 export async function loadUsedWeight(
-  prisma: PrismaService,
+  prisma: WeightDb,
   scope: WeightScope,
 ): Promise<number> {
   const [tasks, components] = await Promise.all([
@@ -31,7 +45,7 @@ export async function loadUsedWeight(
         areaId: scope.areaId,
         periodId: scope.periodId,
         weightPercentage: { not: null },
-        ...(scope.excludeTaskId ? { id: { not: scope.excludeTaskId } } : {}),
+        ...excludedTaskFilter(scope),
       },
       select: {
         title: true,
@@ -73,9 +87,64 @@ export async function loadUsedWeight(
   return taskTotal + (components._sum.weightPercentage ?? 0);
 }
 
+export interface AreaWeightScope {
+  userId: string;
+  periodId: string | null;
+  // Sem areaIds: todas as cadeiras com algum peso no periodo.
+  areaIds?: string[];
+}
+
+/**
+ * Peso ja atribuido por cadeira num periodo, em 3 groupBy em vez de
+ * loadUsedWeight por cadeira (B-36). Mesmas regras de loadUsedWeight: uma
+ * serie recorrente (mesmo titulo) conta o peso maior UMA vez, e os
+ * componentes so filtram por periodo quando ha periodo.
+ */
+export async function loadUsedWeightByArea(
+  prisma: WeightDb,
+  scope: AreaWeightScope,
+): Promise<Map<string, number>> {
+  const areaFilter = scope.areaIds ? { areaId: { in: scope.areaIds } } : {};
+  const taskWhere = {
+    userId: scope.userId,
+    periodId: scope.periodId,
+    weightPercentage: { not: null },
+    ...areaFilter,
+  };
+  const [singleTasks, seriesTasks, components] = await Promise.all([
+    prisma.task.groupBy({
+      by: ['areaId'],
+      where: { ...taskWhere, recurrenceFrequency: null },
+      _sum: { weightPercentage: true },
+    }),
+    prisma.task.groupBy({
+      by: ['areaId', 'title'],
+      where: { ...taskWhere, recurrenceFrequency: { not: null } },
+      _max: { weightPercentage: true },
+    }),
+    prisma.gradeComponent.groupBy({
+      by: ['areaId'],
+      where: {
+        userId: scope.userId,
+        ...(scope.periodId ? { periodId: scope.periodId } : {}),
+        ...areaFilter,
+      },
+      _sum: { weightPercentage: true },
+    }),
+  ]);
+
+  const used = new Map<string, number>();
+  const add = (areaId: string, weight: number | null) =>
+    used.set(areaId, (used.get(areaId) ?? 0) + (weight ?? 0));
+  for (const row of singleTasks) add(row.areaId, row._sum.weightPercentage);
+  for (const row of seriesTasks) add(row.areaId, row._max.weightPercentage);
+  for (const row of components) add(row.areaId, row._sum.weightPercentage);
+  return used;
+}
+
 /** Lanca 400 se `weight` fizer a cadeira passar dos 100%. */
 export async function assertWeightFits(
-  prisma: PrismaService,
+  prisma: WeightDb,
   scope: WeightScope,
   weight: number | null | undefined,
 ): Promise<void> {

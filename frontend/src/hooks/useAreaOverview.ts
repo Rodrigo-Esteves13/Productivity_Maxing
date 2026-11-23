@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getAreaTeachers } from '../api/areaTeachersService';
 import { getCourseRiskOverview } from '../api/courseRiskService';
 import { getUserTasks } from '../api/userService';
 import { useAcademic } from '../context/useAcademic';
 import { isRequestCanceled } from '../lib/abortable';
 import { buildAreaOverview, type AreaOverviewItem } from '../lib/areaOverview';
+import { AREA_OVERVIEW_DOMAINS } from '../lib/domainEvents';
+import { useDomainKey } from './useDomainVersion';
 import type { AreaTeacherNote, CourseRiskOverview, Task } from '../types/models';
 
 export type { AreaOverviewItem };
@@ -27,6 +29,11 @@ export function useAreaOverview(): {
   const [teachers, setTeachers] = useState<AreaTeacherNote[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  // Mudar o docente no modal, lancar uma nota ou mexer em tasks (aqui ou
+  // noutra pagina) refaz o resumo em silencio: cracha e filtro certos.
+  const dataKey = useDomainKey(AREA_OVERVIEW_DOMAINS);
+  // Periodo cujo resumo esta no ecra: so mostra "a carregar" se mudar.
+  const loadedForRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isAcademicLoading) return;
@@ -37,13 +44,15 @@ export function useAreaOverview(): {
         if (!isRequestCanceled(caught)) anyFailed = true;
         return null;
       });
-    setIsLoading(true);
+    const loadKey = `${periodParam ?? ''}|${riskPeriodId ?? ''}`;
+    if (loadedForRef.current !== loadKey) setIsLoading(true);
     void Promise.all([
       swallow(getUserTasks(periodParam, controller.signal)),
       swallow(getCourseRiskOverview({ periodId: riskPeriodId }, controller.signal)),
       swallow(getAreaTeachers()),
     ]).then(([taskRows, riskData, teacherRows]) => {
       if (controller.signal.aborted) return;
+      loadedForRef.current = loadKey;
       setTasks(taskRows);
       setRisk(riskData);
       setTeachers(teacherRows);
@@ -51,7 +60,7 @@ export function useAreaOverview(): {
       setIsLoading(false);
     });
     return () => controller.abort();
-  }, [isAcademicLoading, periodParam, riskPeriodId]);
+  }, [isAcademicLoading, periodParam, riskPeriodId, dataKey]);
 
   const byAreaId = useMemo(() => buildAreaOverview(tasks, risk, teachers), [tasks, risk, teachers]);
   return { byAreaId, isLoading, failed };

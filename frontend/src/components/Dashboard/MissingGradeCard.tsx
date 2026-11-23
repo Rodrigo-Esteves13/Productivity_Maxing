@@ -10,17 +10,16 @@ import ColorDot from '../UI/ColorDot';
 
 interface MissingGradeCardProps {
   areas: Area[];
-  // Muda quando as tasks mudam, para refazer o pedido.
-  refreshKey: number;
 }
 
 // "Falta 10%": cadeiras do periodo cujos pesos (tasks + componentes de
 // nota) ainda nao somam o maximo, e as que o passam. Fica visivel no topo
 // do Dashboard e desaparece sozinho quando tudo esta completo.
-export default function MissingGradeCard({ areas, refreshKey }: MissingGradeCardProps) {
+export default function MissingGradeCard({ areas }: MissingGradeCardProps) {
   const { t } = useI18n();
   const { activePeriod } = useAcademic();
-  const data = useWeightBudgets(activePeriod?.id, refreshKey);
+  // Refaz o pedido sozinho quando tasks ou componentes de nota mudam.
+  const data = useWeightBudgets(activePeriod?.id);
   if (!data) return null;
 
   const areaById = new Map(areas.map((area) => [area.id, area]));

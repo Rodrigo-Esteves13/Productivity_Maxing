@@ -11,17 +11,21 @@ import { UpdateAreaDto } from './dto/update-area.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { accessibleAreaWhere } from './area-access';
+import { isUniqueViolation } from '../common/prisma-errors';
+
+import {
+  ALL_PERIODS_QUERY_VALUE,
+  AREA_IN_USE_CODE,
+  MAX_PENDING_PROPOSALS_PER_USER,
+  MAX_PRIVATE_AREAS_PER_USER,
+} from './areas.constants';
+
+const OFFICIAL_NAME_TAKEN_MESSAGE =
+  'An official area with this name already exists.';
 
 const AREA_INCLUDE = { defaultTaskType: { select: { key: true } } } as const;
 
 type AreaRow = Prisma.AreaGetPayload<{ include: typeof AREA_INCLUDE }>;
-
-/** Máximo de Areas privadas por user (trava abuso/spam de linhas). */
-export const MAX_PRIVATE_AREAS_PER_USER = 50;
-/** Máximo de propostas pendentes ao mesmo tempo por user. */
-export const MAX_PENDING_PROPOSALS_PER_USER = 5;
-/** Código do 409 ao apagar uma Area que ainda tem dados (ver remove()). */
-export const AREA_IN_USE_CODE = 'AREA_IN_USE';
 
 @Injectable()
 export class AreasService {
@@ -95,9 +99,24 @@ export class AreasService {
       select: { id: true },
     });
     if (clash) {
-      throw new ConflictException(
-        'An official area with this name already exists.',
-      );
+      throw new ConflictException(OFFICIAL_NAME_TAKEN_MESSAGE);
+    }
+  }
+
+  /**
+   * B-31: o findFirst de assertOfficialNameFree nao apanha duas escritas em
+   * paralelo. Com o indice unico parcial (lower(name) WHERE ownerId IS NULL)
+   * a segunda falha com P2002, que aqui vira o mesmo 409. Sem o indice
+   * (antes da migracao) isto e um simples passa-through.
+   */
+  private async mapOfficialNameClash<T>(write: () => Promise<T>): Promise<T> {
+    try {
+      return await write();
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException(OFFICIAL_NAME_TAKEN_MESSAGE);
+      }
+      throw error;
     }
   }
 
@@ -134,15 +153,17 @@ export class AreasService {
     const defaultTaskTypeId =
       await this.resolveDefaultTaskTypeId(defaultTaskType);
 
-    const area = await this.prisma.area.create({
-      data: {
-        ...rest,
-        name: name.trim(),
-        defaultTaskTypeId: defaultTaskTypeId ?? null,
-        ownerId: null,
-      },
-      include: AREA_INCLUDE,
-    });
+    const area = await this.mapOfficialNameClash(() =>
+      this.prisma.area.create({
+        data: {
+          ...rest,
+          name: name.trim(),
+          defaultTaskTypeId: defaultTaskTypeId ?? null,
+          ownerId: null,
+        },
+        include: AREA_INCLUDE,
+      }),
+    );
     return this.toResponse(area, adminId);
   }
 
@@ -193,7 +214,7 @@ export class AreasService {
         isHidden: hidden.has(a.id),
       }));
 
-    if (!periodId || periodId === 'all') return responses;
+    if (!periodId || periodId === ALL_PERIODS_QUERY_VALUE) return responses;
 
     const usedAreaIds = new Set(
       (
@@ -238,15 +259,17 @@ export class AreasService {
     const defaultTaskTypeId =
       await this.resolveDefaultTaskTypeId(defaultTaskType);
 
-    const area = await this.prisma.area.update({
-      where: { id },
-      data: {
-        ...rest,
-        ...(name !== undefined ? { name: name.trim() } : {}),
-        ...(defaultTaskTypeId !== undefined ? { defaultTaskTypeId } : {}),
-      },
-      include: AREA_INCLUDE,
-    });
+    const area = await this.mapOfficialNameClash(() =>
+      this.prisma.area.update({
+        where: { id },
+        data: {
+          ...rest,
+          ...(name !== undefined ? { name: name.trim() } : {}),
+          ...(defaultTaskTypeId !== undefined ? { defaultTaskTypeId } : {}),
+        },
+        include: AREA_INCLUDE,
+      }),
+    );
     return this.toResponse(area, user.id);
   }
 
@@ -400,15 +423,17 @@ export class AreasService {
 
     // Condição repetida no WHERE: se o dono retirou a proposta (ou outro
     // admin decidiu) entre o findFirst e aqui, não aprova nada.
-    const result = await this.prisma.area.updateMany({
-      where: { id, ownerId: { not: null }, proposalStatus: 'PENDING' },
-      data: {
-        ownerId: null,
-        proposalStatus: 'NONE',
-        proposedAt: null,
-        proposalReviewNote: null,
-      },
-    });
+    const result = await this.mapOfficialNameClash(() =>
+      this.prisma.area.updateMany({
+        where: { id, ownerId: { not: null }, proposalStatus: 'PENDING' },
+        data: {
+          ownerId: null,
+          proposalStatus: 'NONE',
+          proposedAt: null,
+          proposalReviewNote: null,
+        },
+      }),
+    );
     if (result.count === 0) throw new NotFoundException('Proposal not found.');
     return this.reloadFor(adminId, id);
   }

@@ -50,7 +50,7 @@ function SubjectChip({
       }`}
     >
       <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} aria-hidden="true" />
-      <span className="truncate">{area.name}</span>
+      <span className="truncate" title={area.name}>{area.name}</span>
     </button>
   );
 }

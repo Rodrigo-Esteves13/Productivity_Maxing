@@ -8,15 +8,22 @@ import EmptyState from '../UI/EmptyState';
 import ErrorState from '../UI/ErrorState';
 import LinesSkeleton from '../UI/LinesSkeleton';
 import IconButton from '../UI/IconButton';
-import { TrashIcon } from '../UI/Icons';
+import { PencilIcon, TrashIcon } from '../UI/Icons';
+import BloodDonationEditModal from './BloodDonationEditModal';
 import ConfirmActionDialog from '../Turma/ConfirmActionDialog';
 import { useConfirmAction } from '../../hooks/useConfirmAction';
-import { createBloodDonation, deleteBloodDonation, getBloodDonations } from '../../api/wellbeingService';
+import {
+  createBloodDonation,
+  deleteBloodDonation,
+  getBloodDonations,
+  updateBloodDonation,
+} from '../../api/wellbeingService';
 import { useLoadOnce } from '../../hooks/useLoadOnce';
 import { useLisbonToday } from '../../hooks/useLisbonToday';
 import { useTurmaAction } from '../../hooks/useTurmas';
 import { useI18n } from '../../i18n/useI18n';
-import type { BloodDonationType } from '../../types/models';
+import { useFeedback } from '../../context/useFeedback';
+import type { BloodDonation, BloodDonationType } from '../../types/models';
 
 const TYPES: { value: BloodDonationType; labelKey: string }[] = [
   { value: 'WHOLE_BLOOD', labelKey: 'wellbeing.blood.type.wholeBlood' },
@@ -25,15 +32,25 @@ const TYPES: { value: BloodDonationType; labelKey: string }[] = [
 ];
 const TYPE_LABEL_KEY = Object.fromEntries(TYPES.map((t) => [t.value, t.labelKey])) as Record<BloodDonationType, string>;
 const LOCATION_MAX_LENGTH = 120;
+// Quantas dadivas se mostram de cada vez; "ver mais" mostra outras tantas.
+const DONATIONS_PAGE_SIZE = 10;
+const NOON_UTC_SUFFIX = 'T12:00:00Z';
 
 // Registo das dadivas de sangue: historico, quantas este ano e quando foi
 // a ultima. Quando se pode voltar a doar fica com o servico de
 // sangue (a app nao da conselhos medicos).
 export default function BloodDonationsCard() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const today = useLisbonToday();
   const { data: donations, isLoading, error, reload } = useLoadOnce(getBloodDonations);
+  const { notify } = useFeedback();
   const save = useTurmaAction(createBloodDonation, t('wellbeing.blood.saveError'));
+  const edit = useTurmaAction(updateBloodDonation, t('wellbeing.blood.saveError'));
+  const [editing, setEditing] = useState<BloodDonation | null>(null);
+  const [visible, setVisible] = useState(DONATIONS_PAGE_SIZE);
+  // YYYY-MM-DD -> data na lingua da app (UTC, sem deslocar o dia).
+  const formatDay = (key: string) =>
+    new Date(`${key.slice(0, 10)}${NOON_UTC_SUFFIX}`).toLocaleDateString(lang, { timeZone: 'UTC' });
   const confirm = useConfirmAction(t('wellbeing.blood.saveError'));
   const [isAdding, setIsAdding] = useState(false);
   const [date, setDate] = useState(today);
@@ -58,6 +75,15 @@ export default function BloodDonationsCard() {
       setIsAdding(false);
       setLocation('');
       reload();
+    }
+  };
+
+  const handleEdit = async (id: string, changes: Parameters<typeof updateBloodDonation>[1]) => {
+    const updated = await edit.execute(id, changes);
+    if (updated) {
+      setEditing(null);
+      reload();
+      notify(t('ux4well.blood.edited'), 'success');
     }
   };
 
@@ -112,7 +138,7 @@ export default function BloodDonationsCard() {
       {isLoading ? (
         <LinesSkeleton lines={3} />
       ) : error ? (
-        <ErrorState message={t('wellbeing.blood.loadError')} />
+        <ErrorState message={t('wellbeing.blood.loadError')} onRetry={reload} />
       ) : !donations || donations.length === 0 ? (
         <EmptyState message={t('wellbeing.blood.empty')} />
       ) : (
@@ -122,26 +148,45 @@ export default function BloodDonationsCard() {
               {t('wellbeing.blood.summary', {
                 total: stats.total,
                 thisYear: stats.thisYear,
-                date: stats.lastDate,
+                date: formatDay(stats.lastDate),
               })}
             </p>
           )}
           <ul className="divide-y divide-neutral-800">
-            {donations.map((d) => (
+            {donations.slice(0, visible).map((d) => (
               <li key={d.id} className="flex items-center justify-between gap-2 py-2 text-sm">
                 <div className="min-w-0">
                   <p className="text-neutral-200">
-                    {d.date} · {t(TYPE_LABEL_KEY[d.type])}
+                    {formatDay(d.date)} · {t(TYPE_LABEL_KEY[d.type])}
                   </p>
-                  {d.location && <p className="truncate text-xs text-neutral-500">{d.location}</p>}
+                  {d.location && (
+                    <p className="truncate text-xs text-neutral-500" title={d.location}>
+                      {d.location}
+                    </p>
+                  )}
+                  {d.note && (
+                    <p className="truncate text-xs text-neutral-500" title={d.note}>
+                      {d.note}
+                    </p>
+                  )}
                 </div>
+                <div className="flex shrink-0 items-center">
+                <IconButton
+                  label={t('ux4well.blood.edit')}
+                  onClick={() => {
+                    edit.clearError();
+                    setEditing(d);
+                  }}
+                >
+                  <PencilIcon className="h-4 w-4" />
+                </IconButton>
                 <IconButton
                   label={t('wellbeing.blood.delete')}
                   tone="danger"
                   onClick={() =>
                     confirm.request({
                       title: t('wellbeing.blood.delete'),
-                      message: t('wellbeing.blood.deleteConfirm', { date: d.date }),
+                      message: t('wellbeing.blood.deleteConfirm', { date: formatDay(d.date) }),
                       confirmLabel: t('common.delete'),
                       tone: 'danger',
                       run: async () => {
@@ -153,12 +198,31 @@ export default function BloodDonationsCard() {
                 >
                   <TrashIcon />
                 </IconButton>
+                </div>
               </li>
             ))}
           </ul>
+          {donations.length > visible && (
+            <button
+              type="button"
+              onClick={() => setVisible((n) => n + DONATIONS_PAGE_SIZE)}
+              className="mt-2 min-h-8 text-xs font-medium text-violet-400 hover:text-violet-300 pointer-coarse:min-h-11"
+            >
+              {t('ux4well.blood.showMore', { shown: visible, total: donations.length })}
+            </button>
+          )}
         </>
       )}
       <p className="mt-3 text-[11px] text-neutral-500">{t('wellbeing.blood.caveat')}</p>
+      <BloodDonationEditModal
+        donation={editing}
+        types={TYPES}
+        today={today}
+        isBusy={edit.isBusy}
+        error={edit.error}
+        onSubmit={handleEdit}
+        onClose={() => setEditing(null)}
+      />
       <ConfirmActionDialog state={confirm} />
     </DashboardCard>
   );

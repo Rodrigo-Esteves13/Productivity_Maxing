@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   Res,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
@@ -34,6 +35,7 @@ import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { perMinute } from '../common/throttle.util';
+import { TASK_IMPORT_PER_MINUTE } from './tasks.constants';
 
 @ApiTags('Task')
 @ApiBearerAuth()
@@ -162,7 +164,7 @@ export class TasksController {
   // up to 500 sequential DB writes per request, more expensive than any
   // other endpoint in this controller.
   @Post('import')
-  @Throttle(perMinute(5))
+  @Throttle(perMinute(TASK_IMPORT_PER_MINUTE))
   importTasks(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: ImportTasksDto,
@@ -171,19 +173,25 @@ export class TasksController {
   }
 
   @Get(':id/changes')
-  listChanges(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  listChanges(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.tasksService.listChanges(user.id, id);
   }
 
   @Get(':id')
-  findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  findOne(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.tasksService.findOne(user.id, id);
   }
 
   @Patch(':id')
   update(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateTaskDto,
   ) {
     return this.tasksService.update(user.id, id, dto);
@@ -192,14 +200,17 @@ export class TasksController {
   @Patch(':id/overdue-checkin')
   confirmOverdue(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ConfirmOverdueDto,
   ) {
     return this.tasksService.confirmOverdue(user.id, id, dto);
   }
 
   @Delete(':id')
-  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.tasksService.remove(user.id, id);
   }
 }

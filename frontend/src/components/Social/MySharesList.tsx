@@ -19,7 +19,7 @@ export default function MySharesList({ items }: { items: MyShare[] }) {
               className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 transition-colors hover:border-violet-700"
             >
               <div className="min-w-0">
-                <p className="truncate font-medium text-white">{share.title}</p>
+                <p className="truncate font-medium text-white" title={share.title}>{share.title}</p>
                 <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-neutral-500">
                   <span className="inline-flex items-center gap-1">
                     <span

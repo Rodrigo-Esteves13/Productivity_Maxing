@@ -5,10 +5,11 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SocialService, type CodeChangeRequestView } from './social.service';
+import { MS_PER_DAY } from '../common/time.constants';
 
 /** Pedidos nos ultimos 30 dias (qualquer estado): evita pedir em ciclo. */
 const MAX_REQUESTS_PER_30_DAYS = 3;
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const THIRTY_DAYS_MS = 30 * MS_PER_DAY;
 
 // Codigos estaveis para o frontend mostrar a mensagem certa (sem depender do
 // texto da mensagem).

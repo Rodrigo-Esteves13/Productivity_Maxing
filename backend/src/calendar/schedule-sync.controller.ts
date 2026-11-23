@@ -20,10 +20,13 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 import { ScheduleSyncService } from './schedule-sync.service';
 import {
   DEFAULT_SYNC_DAYS,
-  MAX_SYNC_DAYS,
-  MIN_SYNC_DAYS,
   ScheduleSyncDto,
+  ScheduleSyncPreviewQueryDto,
 } from './dto/schedule-sync.dto';
+import {
+  SCHEDULE_SYNC_PREVIEW_PER_MINUTE,
+  SCHEDULE_SYNC_WRITE_PER_MINUTE,
+} from './schedule-sync.constants';
 import { perMinute } from '../common/throttle.util';
 
 @ApiTags('Calendar')
@@ -35,7 +38,7 @@ export class ScheduleSyncController {
 
   // Só leitura: mostra o que um sync faria, sem tocar no Google Calendar.
   @Get('preview')
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(SCHEDULE_SYNC_PREVIEW_PER_MINUTE))
   @ApiOperation({
     summary:
       'Counts of events a sync would add, update and remove. Writes nothing.',
@@ -43,18 +46,13 @@ export class ScheduleSyncController {
   @ApiQuery({ name: 'days', required: false, example: 7 })
   preview(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('days') daysParam?: string,
+    @Query() query: ScheduleSyncPreviewQueryDto,
   ) {
-    // Clamp em vez de rejeitar, como no StudyPlanController.
-    const parsed = Number(daysParam);
-    const days = Number.isFinite(parsed)
-      ? Math.min(Math.max(Math.trunc(parsed), MIN_SYNC_DAYS), MAX_SYNC_DAYS)
-      : DEFAULT_SYNC_DAYS;
-    return this.scheduleSyncService.preview(user.id, days);
+    return this.scheduleSyncService.preview(user.id, query.days);
   }
 
   @Post('sync')
-  @Throttle(perMinute(3))
+  @Throttle(perMinute(SCHEDULE_SYNC_WRITE_PER_MINUTE))
   @ApiOperation({
     summary:
       'Sends classes, work shifts, travel and suggested study blocks to Google Calendar. Only touches events this app created.',
@@ -67,7 +65,7 @@ export class ScheduleSyncController {
   }
 
   @Delete()
-  @Throttle(perMinute(3))
+  @Throttle(perMinute(SCHEDULE_SYNC_WRITE_PER_MINUTE))
   @ApiOperation({
     summary:
       'Removes every event this app created in Google Calendar (never your own events).',

@@ -20,6 +20,8 @@ import {
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UserSessionsService } from './services/user-sessions.service';
+import { SessionCookieService } from './services/session-cookie.service';
+import { ProfileService } from './services/profile.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoggingThrottlerGuard } from '../common/guards/logging-throttler.guard';
 import { SecurityLogsService } from '../security-logs/security-logs.service';
@@ -129,6 +131,8 @@ describe('POST /auth/refresh rate limit (wired end to end)', () => {
           },
         },
         { provide: PrismaService, useValue: {} },
+        SessionCookieService,
+        ProfileService,
         { provide: SecurityLogsService, useValue: { recordEvent } },
         { provide: APP_GUARD, useClass: LoggingThrottlerGuard },
       ],

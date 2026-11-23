@@ -6,6 +6,7 @@ import Button from '../UI/Button';
 import FormError from '../UI/FormError';
 import { updateProgram } from '../../api/academicService';
 import type { AcademicProgram } from '../../types/models';
+import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
 
 interface RenameProgramModalProps {
@@ -22,6 +23,7 @@ export default function RenameProgramModal({
   onRenamed,
 }: RenameProgramModalProps) {
   const { t } = useI18n();
+  const { notify } = useFeedback();
   const [name, setName] = useState(program.name);
   const [roundFinalGrade, setRoundFinalGrade] = useState(program.roundFinalGrade);
   const [roundInterimGrades, setRoundInterimGrades] = useState(program.roundInterimGrades);
@@ -50,6 +52,22 @@ export default function RenameProgramModal({
     setError(null);
     try {
       await updateProgram(program.id, { name: name.trim(), roundFinalGrade, roundInterimGrades });
+      onRenamed();
+      handleClose();
+    } catch {
+      setError(t('program.save.error'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Arquivar esconde o programa do seletor sem apagar nada; restaurar volta atras.
+  const handleToggleArchive = async () => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await updateProgram(program.id, { isActive: !program.isActive });
+      notify(t(program.isActive ? 'quickWins.programArchived' : 'quickWins.programRestored'), 'success');
       onRenamed();
       handleClose();
     } catch {
@@ -113,6 +131,20 @@ export default function RenameProgramModal({
             </span>
           </span>
         </label>
+
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+          <div>
+            <p className="text-sm text-neutral-200">
+              {t(program.isActive ? 'quickWins.programArchive' : 'quickWins.programRestore')}
+            </p>
+            <p className="text-xs text-neutral-500">
+              {t(program.isActive ? 'quickWins.programArchiveHelp' : 'quickWins.programRestoreHelp')}
+            </p>
+          </div>
+          <Button type="button" variant="secondary" size="sm" disabled={isSubmitting} onClick={() => void handleToggleArchive()}>
+            {t(program.isActive ? 'quickWins.programArchiveAction' : 'quickWins.programRestoreAction')}
+          </Button>
+        </div>
 
         {error && <FormError message={error} />}
 

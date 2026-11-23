@@ -109,4 +109,12 @@ export const readiness: Record<string, string> = {
   'bulkEffort.doneOne': "已为 1 个任务设置工作量。",
   'bulkEffort.doneMany': "已为 {count} 个任务设置工作量。",
   'bulkEffort.failed': "无法设置工作量，请重试。",
+  'focus.distractions.noteTitle': "专注期间",
+  'focus.distractions.thoughtLabel': "是什么让你分心了？",
+  'focus.distractions.thoughtPlaceholder': "记下来以后再看（可选）",
+  'focus.distractions.thoughtSave': "保存",
+  'focus.distractions.thoughtSaved': "已保存到笔记。继续专注。",
+  'focus.distractions.thoughtError': "无法保存该想法。请继续专注。",
+  'focus.distractions.thoughtTrimmed': "已保存。为了让笔记容纳，已删除最早的想法。",
+  'focus.distractions.thoughtFull': "笔记已满（500条）。请删除一条笔记后再保存想法。",
 };

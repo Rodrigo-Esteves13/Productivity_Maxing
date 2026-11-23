@@ -5,9 +5,11 @@ import { TargetIcon } from '../UI/Icons';
 import { computeWeightCoverage } from '../../utils/weightCoverage';
 import DashboardCard from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
+import { formatNumber } from '../../lib/ratings';
 import { fillNodes } from '../../i18n/fillNodes';
 import { useAcademic } from '../../context/useAcademic';
 import { roundInterimGrade } from '../../lib/interimGrade';
+import { loadGradeTargets, saveGradeTargets, withGradeTarget, type GradeTargets } from '../../lib/gradeTargets';
 
 interface GradeNeededCalculatorProps {
   tasks: Task[];
@@ -16,6 +18,8 @@ interface GradeNeededCalculatorProps {
 }
 
 const WHOLE_PERIOD_VALUE = '__whole_period__';
+const EXAMPLE_TARGET_RATIO = 0.8;
+const WEIGHT_FRACTION_DIGITS = 0;
 
 // Inverts the same math as computeWeightedAverage on the backend
 // (grade-average.util.ts): given a target average and the tasks already
@@ -23,7 +27,7 @@ const WHOLE_PERIOD_VALUE = '__whole_period__';
 // weighted tasks to reach it. Purely a frontend calculation over data the
 // Dashboard already has loaded - no new endpoint needed.
 export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeededCalculatorProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { activeProgram } = useAcademic();
   const max = scaleMax(scale);
   const areasWithTasks = useMemo(() => {
@@ -32,7 +36,14 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
   }, [tasks, areas]);
 
   const [scope, setScope] = useState<string>(WHOLE_PERIOD_VALUE);
-  const [target, setTarget] = useState<string>('');
+  // Alvo por Area guardado neste browser: nao se repoe a cada visita.
+  const [targets, setTargets] = useState<GradeTargets>(loadGradeTargets);
+  const target = targets[scope] ?? '';
+  const setTarget = (value: string) => {
+    const next = withGradeTarget(targets, scope, value);
+    setTargets(next);
+    saveGradeTargets(next);
+  };
 
   if (tasks.length === 0) return null;
 
@@ -104,8 +115,8 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
           type="number"
           value={target}
           onChange={(e) => setTarget(e.target.value)}
-          placeholder={t('ui.targetAveragePlaceholder', { example: (max * 0.8).toFixed(0) })}
-          aria-label={t('ui.targetAveragePlaceholder', { example: (max * 0.8).toFixed(0) })}
+          placeholder={t('ui.targetAveragePlaceholder', { example: formatNumber(max * EXAMPLE_TARGET_RATIO, lang, 0) })}
+          aria-label={t('ui.targetAveragePlaceholder', { example: formatNumber(max * EXAMPLE_TARGET_RATIO, lang, 0) })}
           min={0}
           max={max}
           step="0.1"
@@ -115,7 +126,7 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
 
       {weightGap > 0 && (
         <p className="text-xs text-amber-400 mb-2">
-          {t('ui.tasksOnFileForThis', { totalWeight: coverage.totalWeight.toFixed(0), weightGap: weightGap.toFixed(0) })}</p>
+          {t('ui.tasksOnFileForThis', { totalWeight: formatNumber(coverage.totalWeight, lang, WEIGHT_FRACTION_DIGITS), weightGap: formatNumber(weightGap, lang, WEIGHT_FRACTION_DIGITS) })}</p>
       )}
 
       {!hasValidTarget && (
@@ -137,9 +148,9 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
                 : weightGap > 0
                   ? 'ui.neededAvgRemainingPlusPart'
                   : 'ui.neededAvgRemaining',
-              { count: ungraded.length, target: targetNum.toFixed(2) },
+              { count: ungraded.length, target: formatNumber(targetNum, lang, 2) },
             ),
-            { average: <span className="font-bold text-lg">{neededAverage.toFixed(2)}</span> },
+            { average: <span className="font-bold text-lg">{formatNumber(neededAverage, lang, 2)}</span> },
           )}
           {impossible && ` ${t('ui.notAchievableInScale')}`}
         </p>

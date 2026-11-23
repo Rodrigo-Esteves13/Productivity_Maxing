@@ -103,7 +103,7 @@ export function AttachmentsSection({ isEditing, attachments, onUpload, onDelete 
                   {attachment.originalFileName}
                 </a>
               ) : (
-                <span className="truncate text-sm text-neutral-400">{attachment.originalFileName}</span>
+                <span className="truncate text-sm text-neutral-400" title={attachment.originalFileName}>{attachment.originalFileName}</span>
               )}
             </EntryListRow>
           ))}

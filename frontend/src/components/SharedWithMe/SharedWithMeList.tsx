@@ -39,7 +39,7 @@ export default function SharedWithMeList({ items, onRespond }: SharedWithMeListP
               className="flex items-center justify-between gap-4 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 transition-colors hover:border-violet-700"
             >
               <div className="min-w-0">
-                <p className="truncate font-medium text-white">
+                <p className="truncate font-medium text-white" title={accessible && item.title ? item.title : undefined}>
                   {accessible && item.title ? item.title : t('sharedWithMe.hiddenTitle')}
                 </p>
                 <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-neutral-500">

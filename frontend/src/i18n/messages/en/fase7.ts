@@ -262,6 +262,6 @@ export const fase7: Record<string, string> = {
   'canvas.paste': "Paste",
   'canvas.duplicate': "Duplicate",
   'canvas.deleteSelection': "Delete selection",
-  'notes.deleteConfirm': "Delete \"{title}\"? This cannot be undone.",
+  'notes.deleteConfirm': "Delete \"{title}\"? You can undo it right after.",
   'wellbeing.blood.deleteConfirm': "Delete the donation from {date}? This cannot be undone.",
 };

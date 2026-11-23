@@ -1,5 +1,15 @@
 import { Difficulty, Effort } from '@prisma/client';
 
+// GET /study-plan?days=N: dias de blocos devolvidos (o plano olha sempre
+// para PLANNING_HORIZON_DAYS).
+export const STUDY_PLAN_DEFAULT_DAYS = 7;
+export const STUDY_PLAN_MAX_DAYS = 30;
+
+// Pedidos por minuto (iguais aos literais que estavam no controller).
+// Leituras pesadas (podem treinar o modelo de previsao).
+export const STUDY_PLAN_READS_PER_MINUTE = 30;
+export const STUDY_PLAN_SETTINGS_WRITES_PER_MINUTE = 20;
+
 export const MINUTES_PER_DAY = 1440;
 
 // Quantos dias para a frente o plano olha de verdade (slots, aulas, turnos).

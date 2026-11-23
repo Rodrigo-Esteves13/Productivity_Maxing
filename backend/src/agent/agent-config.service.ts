@@ -44,7 +44,14 @@ export class AgentConfigService {
       where: { userId },
     });
     if (!config) {
-      return { ...DEFAULTS, isConfigured: false };
+      // Copias dos arrays: DEFAULTS e partilhado entre pedidos, e quem
+      // mutasse a resposta contaminava os defaults de todos os users.
+      return {
+        ...DEFAULTS,
+        blockedProcesses: [...DEFAULTS.blockedProcesses],
+        blockedDomains: [...DEFAULTS.blockedDomains],
+        isConfigured: false,
+      };
     }
     return { ...this.toResponse(config), isConfigured: true };
   }

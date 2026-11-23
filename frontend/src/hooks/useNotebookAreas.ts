@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getUserAreas } from '../api/userService';
 import type { Area } from '../types/models';
 import { translateNow } from '../i18n/translate';
@@ -7,6 +7,7 @@ export interface UseNotebookAreasResult {
   areas: Area[];
   isLoading: boolean;
   error: string;
+  reload: () => void;
 }
 
 // periodId: 'all' ou undefined devolve o catálogo global inteiro; um id
@@ -17,10 +18,12 @@ export function useNotebookAreas(periodId?: string): UseNotebookAreasResult {
   const [areas, setAreas] = useState<Area[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
+    setError('');
     getUserAreas(periodId)
       .then((data) => {
         if (cancelled) return;
@@ -36,7 +39,9 @@ export function useNotebookAreas(periodId?: string): UseNotebookAreasResult {
     return () => {
       cancelled = true;
     };
-  }, [periodId]);
+  }, [periodId, attempt]);
 
-  return { areas, isLoading, error };
+  const reload = useCallback(() => setAttempt((n) => n + 1), []);
+
+  return { areas, isLoading, error, reload };
 }

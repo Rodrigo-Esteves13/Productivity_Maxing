@@ -45,8 +45,10 @@ import { moneySnapshot } from './moneySnapshot';
 import { ambientGlobal } from './ambientGlobal';
 import { financeFixes } from './financeFixes';
 import { focusHours } from './focusHours';
+import { auditL10n } from './auditL10n';
 import { financeImport } from './financeImport';
 import { wakeLock } from './wakeLock';
+import { confirmGuards } from './confirmGuards';
 import { startFive } from './startFive';
 import { energyMatch } from './energyMatch';
 import { flashcardTest } from './flashcardTest';
@@ -84,6 +86,21 @@ import { greeting } from './greeting';
 import { weightVsGrade } from './weightVsGrade';
 import { quizzes } from './quizzes';
 import { quizGenerators } from './quizGenerators';
+import { quickWins } from './quickWins';
+import { undoDelete } from './undoDelete';
+import { uxSearch } from './uxSearch';
+import { ux4Tasks } from './ux4Tasks';
+import { ux4Packs } from './ux4Packs';
+import { ux4Areas } from './ux4Areas';
+import { ux4Notes } from './ux4Notes';
+import { ux4Study } from './ux4Study';
+import { ux4Finance } from './ux4Finance';
+import { ux4Wellbeing } from './ux4Wellbeing';
+import { ux4Schedule } from './ux4Schedule';
+import { ux4Admin } from './ux4Admin';
+import { ux4Admin2 } from './ux4Admin2';
+import { ux4Social } from './ux4Social';
+import { ux4Global } from './ux4Global';
 
 export const ko: Record<string, string> = {
   ...packs,
@@ -133,8 +150,10 @@ export const ko: Record<string, string> = {
   ...ambientGlobal,
   ...financeFixes,
   ...focusHours,
+  ...auditL10n,
   ...financeImport,
   ...wakeLock,
+  ...confirmGuards,
   ...startFive,
   ...energyMatch,
   ...flashcardTest,
@@ -172,4 +191,19 @@ export const ko: Record<string, string> = {
   ...weightVsGrade,
   ...quizzes,
   ...quizGenerators,
+  ...quickWins,
+  ...undoDelete,
+  ...uxSearch,
+  ...ux4Tasks,
+  ...ux4Packs,
+  ...ux4Areas,
+  ...ux4Notes,
+  ...ux4Study,
+  ...ux4Finance,
+  ...ux4Wellbeing,
+  ...ux4Schedule,
+  ...ux4Admin,
+  ...ux4Admin2,
+  ...ux4Social,
+  ...ux4Global,
 };

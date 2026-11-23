@@ -4,8 +4,10 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MAX_PROGRAMS_PER_USER } from './academic-programs.constants';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { UpdateProgramDto } from './dto/update-program.dto';
 import {
@@ -40,7 +42,20 @@ export class ProgramsService {
     return program;
   }
 
-  create(userId: string, dto: CreateProgramDto) {
+  /** Recusa criar mais programas do que o teto por utilizador. */
+  async assertCanAddPrograms(userId: string, extra = 1) {
+    const count = await this.prisma.academicProgram.count({
+      where: { userId },
+    });
+    if (count + extra > MAX_PROGRAMS_PER_USER) {
+      throw new BadRequestException(
+        `You can have at most ${MAX_PROGRAMS_PER_USER} programs.`,
+      );
+    }
+  }
+
+  async create(userId: string, dto: CreateProgramDto) {
+    await this.assertCanAddPrograms(userId);
     return this.prisma.academicProgram.create({
       data: {
         userId,
@@ -89,7 +104,7 @@ export class ProgramsService {
       );
     }
 
-    return this.prisma.academicProgram.delete({ where: { id } });
+    return this.prisma.academicProgram.delete({ where: { id, userId } });
   }
 
   /**

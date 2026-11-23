@@ -30,6 +30,7 @@ import {
   MEDICATION_REMINDER_WINDOW_MINUTES,
   MINUTES_PER_DAY,
 } from './wellbeing.constants';
+import { isUniqueViolation } from '../common/prisma-errors';
 
 const MEDICATION_SELECT = {
   id: true,
@@ -82,12 +83,6 @@ type ClaimKind = 'created' | 'updated';
 
 interface ClaimedDose extends DatedDueDose {
   how: ClaimKind;
-}
-
-const PRISMA_UNIQUE_VIOLATION = 'P2002';
-
-function isUniqueViolation(error: unknown): boolean {
-  return (error as { code?: unknown } | null)?.code === PRISMA_UNIQUE_VIOLATION;
 }
 
 // Chave de uma toma, sempre com o dono (userId).

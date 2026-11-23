@@ -168,6 +168,26 @@ export class CreateMedicationIntakeDto {
   note?: string;
 }
 
+// Corrigir hora, dose ou nota de uma toma ja registada. O medicamento nao muda.
+export class UpdateMedicationIntakeDto {
+  @ApiPropertyOptional({ example: '2026-10-24T21:30:00.000Z' })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  takenAt?: string;
+
+  @ApiPropertyOptional({ example: '1 tablet' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(MAX_MEDICATION_DOSAGE_LENGTH)
+  dose?: string;
+
+  @ApiPropertyOptional({ example: 'Before the exam' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(MAX_INTAKE_NOTE_LENGTH)
+  note?: string;
+}
+
 export class AcceptMedicationDisclaimerDto {
   @ApiProperty({
     example: 1,

@@ -23,6 +23,7 @@ function setup(opts: { mutedAt?: Date | null; updated?: unknown } = {}) {
       create: jest.fn().mockResolvedValue({ id: 'f1' }),
       findMany: jest.fn().mockResolvedValue([]),
       update: jest.fn().mockResolvedValue(updated),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
   };
   const push = { notifyUser: jest.fn().mockResolvedValue(1) };
@@ -51,6 +52,22 @@ describe('FeedbackService', () => {
     expect(args.where).toEqual({ userId: AUTHOR_ID });
     // Nunca expor dados do autor/moderador ao proprio.
     expect(args.select.user).toBeUndefined();
+  });
+
+  it('deleteMine only deletes feedback owned by the caller', async () => {
+    const { service, prisma } = setup();
+    await service.deleteMine(AUTHOR_ID, 'f1');
+    expect(prisma.feedback.deleteMany).toHaveBeenCalledWith({
+      where: { id: 'f1', userId: AUTHOR_ID },
+    });
+  });
+
+  it('deleteMine on someone else feedback is a 404', async () => {
+    const { service, prisma } = setup();
+    prisma.feedback.deleteMany.mockResolvedValue({ count: 0 });
+    await expect(service.deleteMine(AUTHOR_ID, 'other')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 
   it('reply stores the text, resolves when asked and notifies the author', async () => {
@@ -109,8 +126,25 @@ describe('FeedbackService', () => {
   it('mute on an unknown user is a 404', async () => {
     const { service, prisma } = setup();
     prisma.user.updateMany.mockResolvedValue({ count: 0 });
-    await expect(service.setMuted('ghost', true)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.setMuted('admin-1', 'ghost', true),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('an admin cannot mute themselves', async () => {
+    const { service, prisma } = setup();
+    await expect(
+      service.setMuted('admin-1', 'admin-1', true),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('an admin can mute another user', async () => {
+    const { service, prisma } = setup();
+    await expect(service.setMuted('admin-1', 'u2', true)).resolves.toEqual({
+      userId: 'u2',
+      muted: true,
+    });
+    expect(prisma.user.updateMany).toHaveBeenCalledTimes(1);
   });
 });
