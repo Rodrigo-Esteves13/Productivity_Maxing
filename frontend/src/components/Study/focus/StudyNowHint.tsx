@@ -1,14 +1,15 @@
 import { useBestTimesHeatmap } from '../../../hooks/useBestTimesHeatmap';
 import { useNow } from '../../../hooks/useNow';
+import { useStudyDataKey } from '../../../hooks/useSessionEndKey';
 import { suggestStudyWindow } from '../../../lib/studyWindow';
 import { computeFocusHours, FOCUS_HOURS_RATE_DECIMALS, formatFocusHour } from '../../../lib/focusHours';
 import type { DistractionStats } from '../../../api/studySessionsService';
 import { useI18n } from '../../../i18n/useI18n';
 
 // O heatmap vem em horas do servidor (UTC); mostra-se na hora local de quem le.
-function utcHourToLocalLabel(utcHour: number, now: Date): string {
+function utcHourToLocalLabel(utcHour: number, now: Date, lang: string): string {
   const moment = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), utcHour));
-  return moment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return moment.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
 }
 
 // Uma linha que diz se esta e uma das tuas boas horas. So aparece com
@@ -20,7 +21,8 @@ interface Props {
 
 export default function StudyNowHint({ distractionStats = null }: Props) {
   const { t, lang } = useI18n();
-  const { cells } = useBestTimesHeatmap();
+  const studyKey = useStudyDataKey();
+  const { cells } = useBestTimesHeatmap(studyKey);
   const now = useNow();
   const hint = suggestStudyWindow(cells, now);
   const focus = distractionStats ? computeFocusHours(distractionStats.byHour, now) : null;
@@ -41,7 +43,7 @@ export default function StudyNowHint({ distractionStats = null }: Props) {
         <p className="rounded-lg border border-violet-900/50 bg-violet-950/20 px-3 py-2 text-sm text-violet-200">
           {hint.kind === 'now'
             ? t('ui.productiveWindowNow')
-            : t('ui.bestWindowLeftToday', { start: utcHourToLocalLabel(hint.startHour, now), end: utcHourToLocalLabel(hint.endHour, now) })}
+            : t('ui.bestWindowLeftToday', { start: utcHourToLocalLabel(hint.startHour, now, lang), end: utcHourToLocalLabel(hint.endHour, now, lang) })}
         </p>
       )}
       {focusLine && (

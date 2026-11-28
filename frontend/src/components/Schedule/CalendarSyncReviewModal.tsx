@@ -49,7 +49,7 @@ function Summary({ preview }: { preview: SchedulePreview }) {
             <span className={`w-14 shrink-0 font-medium ${ACTION_CLASS[item.action]}`}>
               {ACTION_LABEL[item.action]}
             </span>
-            <span className="text-neutral-200 truncate">{item.title}</span>
+            <span title={item.title} className="text-neutral-200 truncate">{item.title}</span>
             <span className="ml-auto shrink-0 text-neutral-500">
               {formatDayLabel(item.date)} {formatClock(item.startMinutes)}-{formatClock(item.endMinutes)}
             </span>
@@ -126,7 +126,7 @@ function CalendarSyncReview() {
               type="button"
               onClick={deny}
               disabled={isBusy}
-              className="px-4 py-2 text-sm rounded-lg border border-neutral-700 text-neutral-300 hover:text-white disabled:opacity-50"
+              className="px-4 py-2 text-sm rounded-lg border border-neutral-700 text-neutral-300 hover:text-white disabled:opacity-50 pointer-coarse:min-h-11"
             >
               {hasChanges ? t('ui.deny') : t('ui.close')}
             </button>

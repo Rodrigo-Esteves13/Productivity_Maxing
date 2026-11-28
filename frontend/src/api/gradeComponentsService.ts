@@ -1,6 +1,7 @@
 // src/api/gradeComponentsService.ts
 import api from './client';
 import type { GradeComponent, GradeComponentInput } from '../types/models';
+import { notifyDomainChanged } from '../lib/domainEvents';
 
 export const getGradeComponents = async (params: {
   areaId?: string;
@@ -14,6 +15,7 @@ export const createGradeComponent = async (
   input: GradeComponentInput & { areaId: string; periodId: string },
 ): Promise<GradeComponent> => {
   const response = await api.post<GradeComponent>('/grade-components', input);
+  notifyDomainChanged('grades');
   return response.data;
 };
 
@@ -22,11 +24,13 @@ export const updateGradeComponent = async (
   changes: Partial<GradeComponentInput>,
 ): Promise<GradeComponent> => {
   const response = await api.patch<GradeComponent>(`/grade-components/${id}`, changes);
+  notifyDomainChanged('grades');
   return response.data;
 };
 
 export const deleteGradeComponent = async (id: string): Promise<void> => {
   await api.delete(`/grade-components/${id}`);
+  notifyDomainChanged('grades');
 };
 
 export interface GradeEntryInput {
@@ -37,6 +41,7 @@ export interface GradeEntryInput {
 
 export const addGradeEntry = async (componentId: string, input: GradeEntryInput): Promise<GradeComponent> => {
   const response = await api.post<GradeComponent>(`/grade-components/${componentId}/entries`, input);
+  notifyDomainChanged('grades');
   return response.data;
 };
 
@@ -49,11 +54,13 @@ export const updateGradeEntry = async (
     `/grade-components/${componentId}/entries/${entryId}`,
     changes,
   );
+  notifyDomainChanged('grades');
   return response.data;
 };
 
 export const removeGradeEntry = async (componentId: string, entryId: string): Promise<GradeComponent> => {
   const response = await api.delete<GradeComponent>(`/grade-components/${componentId}/entries/${entryId}`);
+  notifyDomainChanged('grades');
   return response.data;
 };
 

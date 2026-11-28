@@ -15,15 +15,16 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import type { Options as MulterOptions } from 'multer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { perMinute } from '../common/throttle.util';
-import { ATTACHMENT_MAX_SIZE_BYTES } from '../notebook/attachment-validation.util';
+import {
+  ATTACHMENT_MAX_SIZE_BYTES,
+  singleFileUpload,
+} from '../common/upload-limits';
 import { TurmasService } from './turmas.service';
 import { TurmaNotesService } from './turma-notes.service';
 import { TurmaFilesService } from './turma-files.service';
@@ -59,14 +60,6 @@ import {
   TURMA_UPLOADS_PER_MINUTE,
   TURMA_WRITES_PER_MINUTE,
 } from './turmas.constants';
-
-// Mesma mitigacao multer do upload de anexos do Notebook (ver
-// NotebookController.addAttachment): 1 ficheiro, 0 campos extra.
-type MulterLimitsWithFieldNestingDepth = NonNullable<
-  MulterOptions['limits']
-> & {
-  fieldNestingDepth?: number;
-};
 
 // Todas as rotas exigem sessao; a pertenca a turma e verificada em cada
 // servico (TurmaAccessService), nunca so aqui.
@@ -349,16 +342,7 @@ export class TurmasController {
 
   @Post(':id/files')
   @Throttle(perMinute(TURMA_UPLOADS_PER_MINUTE))
-  @UseInterceptors(
-    FileInterceptor('file', {
-      limits: {
-        fileSize: ATTACHMENT_MAX_SIZE_BYTES,
-        files: 1,
-        fields: 0,
-        fieldNestingDepth: 1,
-      } as MulterLimitsWithFieldNestingDepth,
-    }),
-  )
+  @UseInterceptors(singleFileUpload('file', ATTACHMENT_MAX_SIZE_BYTES))
   @ApiOperation({
     summary: 'Uploads a file (same types and size as notebook files).',
   })

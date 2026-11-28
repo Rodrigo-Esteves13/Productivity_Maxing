@@ -5,19 +5,19 @@ import PrivateRoute from './PrivateRoute';
 import AdminRoute from './AdminRoute';
 import RootRedirect from './RootRedirect';
 import Login from '../pages/Login';
-import Register from '../pages/Register';
-import ForgotPassword from '../pages/ForgotPassword';
 import AuthCallback from '../components/Auth/AuthCallback';
 import CookieNotice from '../components/Legal/CookieNotice';
 import CommandPaletteHost from '../components/CommandPalette/CommandPaletteHost';
 import GlobalStudyTimerHost from '../components/Study/GlobalStudyTimerHost';
 import RoutePrefetcher from './RoutePrefetcher';
-import DailyDigestHost from '../components/Digest/DailyDigestHost';
-import CalendarSyncReviewModal from '../components/Schedule/CalendarSyncReviewModal';
 import PushPermissionPrompt from '../pwa/PushPermissionPrompt';
 import PushSubscriptionSync from '../pwa/PushSubscriptionSync';
 import RouteSkeleton from '../components/UI/RouteSkeleton';
 import {
+  Register,
+  ForgotPassword,
+  DailyDigestHost,
+  CalendarSyncReviewModal,
   Dashboard,
   Tasks,
   Focus,
@@ -73,17 +73,19 @@ import {
   VerifyEmail,
   SetPassword,
   LoginTwoFactor,
+  preloadInitialRoute,
 } from './pages';
+
+preloadInitialRoute(window.location.pathname);
 
 // Route-level code splitting: everything below only downloads its JS chunk
 // when the user actually navigates there, instead of all of it (including
 // recharts/xlsx-heavy pages like Dashboard, and admin-only pages almost
 // nobody hits) being bundled into the one script every visitor's browser
-// has to parse before anything renders. Login/Register/ForgotPassword/
-// AuthCallback stay eager on purpose - they're the actual entry point for a
-// first-time or logged-out visitor, they're small (plain forms), and
-// lazy-loading them would just add a network round-trip to the page almost
-// everyone hits first. ResetPassword, VerifyEmail and the 2FA step are lazy:
+// has to parse before anything renders. Login/AuthCallback stay eager
+// on purpose - they're the actual entry point for a first-time or logged-out
+// visitor, and lazy-loading them would just add a network round-trip to the
+// page almost everyone hits first. Register/ForgotPassword are lazy (F-45). ResetPassword, VerifyEmail and the 2FA step are lazy:
 // they're only opened from an email link or a 2FA account, and ResetPassword
 // pulls in the whole Supabase client (~200 KB) that nothing else uses.
 // Home is lazy too, but imported inside RootRedirect.tsx itself (see
@@ -256,12 +258,17 @@ export default function AppRouter() {
           visible across every navigation instead of remounting per page
           the way it would if it lived inside PageLayout instead. */}
       <GlobalStudyTimerHost />
-      <DailyDigestHost />
+      {/* Casos pontuais: chunk proprio, sem esqueleto enquanto chega. */}
+      <Suspense fallback={null}>
+        <DailyDigestHost />
+      </Suspense>
       <RoutePrefetcher />
       {/* Montado uma vez: abre sozinho a pedir Confirm/Deny quando o
           horário, os turnos ou o plano mudam e o Google Calendar está
           ligado. Gated internamente por isAuthenticated. */}
-      <CalendarSyncReviewModal />
+      <Suspense fallback={null}>
+        <CalendarSyncReviewModal />
+      </Suspense>
       {/* Pede as notificacoes uma vez, logo ao entrar com sessao iniciada
           (gated por dentro). Depois a escolha vive no Profile. */}
       <PushPermissionPrompt />

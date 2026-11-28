@@ -1,5 +1,6 @@
 // src/api/subtasksService.ts
 import api from './client';
+import { notifyDomainChanged } from '../lib/domainEvents';
 import type { Subtask, Task } from '../types/models';
 
 const base = (taskId: string) => `/tasks/${taskId}/subtasks`;
@@ -32,6 +33,7 @@ export const reorderSubtasks = async (taskId: string, subtaskIds: string[]): Pro
 // Promove o passo a task propria (herda Area, tipo, periodo e prazo).
 export const convertSubtaskToTask = async (taskId: string, subtaskId: string): Promise<Task> => {
   const response = await api.post<Task>(`${base(taskId)}/${subtaskId}/convert`);
+  notifyDomainChanged('tasks');
   return response.data;
 };
 

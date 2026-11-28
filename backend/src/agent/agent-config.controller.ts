@@ -7,6 +7,10 @@ import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { perMinute } from '../common/throttle.util';
+import {
+  AGENT_CONFIG_READS_PER_MINUTE,
+  AGENT_CONFIG_WRITES_PER_MINUTE,
+} from './agent-config.constants';
 
 // Mesmo guard do TasksController: esta rota é chamada tanto pela página
 // Agent na app (sessão JWT normal) como pelo pmaxing-agent local a correr
@@ -24,7 +28,7 @@ export class AgentConfigController {
   // app.module.ts) documenta esse contrato e evita que uma key comprometida
   // consiga fazer polling agressivo sem ser abrandada.
   @Get()
-  @Throttle(perMinute(20))
+  @Throttle(perMinute(AGENT_CONFIG_READS_PER_MINUTE))
   find(@CurrentUser() user: AuthenticatedUser) {
     return this.agentConfigService.find(user.id);
   }
@@ -32,13 +36,13 @@ export class AgentConfigController {
   // Literal antes de qualquer rota com parametro. Mesmo limite do GET da
   // config: o agente faz poll dos dois no mesmo ciclo.
   @Get('focus')
-  @Throttle(perMinute(20))
+  @Throttle(perMinute(AGENT_CONFIG_READS_PER_MINUTE))
   focus(@CurrentUser() user: AuthenticatedUser) {
     return this.agentConfigService.focusState(user.id);
   }
 
   @Put()
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(AGENT_CONFIG_WRITES_PER_MINUTE))
   upsert(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpsertAgentConfigDto,

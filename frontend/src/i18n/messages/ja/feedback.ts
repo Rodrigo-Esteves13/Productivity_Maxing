@@ -56,4 +56,6 @@ export const feedback: Record<string, string> = {
   'feedback.mine.reply': "チームからの返信",
   'feedback.mine.link': "送信したフィードバックと返信を見る。",
   'feedback.muted': "現在このアカウントからはフィードバックを送信できません。",
+  'feedback.rateLimited': "短時間に送信しすぎです。1分ほど待ってからもう一度お試しください。",
+  'feedback.offline': "接続がありません。ネットワークを確認して再度お試しください。入力内容は保持されています。",
 };

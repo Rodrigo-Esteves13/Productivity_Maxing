@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
-import { isAxiosError } from 'axios';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getAgentConfig, updateAgentConfig } from '../api/agentService';
 import type { AgentConfig } from '../types/models';
 import { translateNow } from '../i18n/translate';
+import { getApiMessage } from '../lib/httpError';
 
 interface UseAgentConfigReturn {
   config: AgentConfig | null;
@@ -11,6 +11,12 @@ interface UseAgentConfigReturn {
   loadError: boolean;
   isSaving: boolean;
   saveError: string | null;
+  // Rascunho diferente do ultimo estado carregado/gravado.
+  isDirty: boolean;
+  // Repoe o rascunho para o ultimo estado gravado.
+  reset: () => void;
+  // Volta a pedir a configuracao (botao "Try again" do erro de carregar).
+  reload: () => void;
   // O componente vai editando um rascunho local (draft) e só chama save()
   // quando quiser persistir - evita um PUT a cada tecla premida num input
   // de texto (ex: a adicionar um domínio à lista).
@@ -27,12 +33,7 @@ interface UseAgentConfigReturn {
 // existir - é o que diz exatamente qual campo falhou e porquê (ex:
 // "pollIntervalSeconds must not be greater than 3600").
 function extractErrorMessage(error: unknown): string {
-  if (isAxiosError(error)) {
-    const data = error.response?.data as { message?: string | string[] } | undefined;
-    if (Array.isArray(data?.message)) return data.message.join(' ');
-    if (typeof data?.message === 'string') return data.message;
-  }
-  return translateNow('hook.couldNotSaveTheConfigurationTry');
+  return getApiMessage(error, translateNow('hook.couldNotSaveTheConfigurationTry'));
 }
 
 // Rede de segurança: mesmo que o input do formulário deixe passar algo
@@ -50,25 +51,52 @@ function clampPollInterval(value: number): number {
 
 export function useAgentConfig(): UseAgentConfigReturn {
   const [config, setConfig] = useState<AgentConfig | null>(null);
+  // Ultimo estado vindo do servidor (carregado ou gravado): base do "por gravar".
+  const [saved, setSaved] = useState<AgentConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      setIsLoading(true);
-      try {
-        const data = await getAgentConfig();
-        setConfig(data);
-      } catch (error: unknown) {
-        console.error('Failed to load agent config:', error);
-        setLoadError(true);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(false);
+    try {
+      const data = await getAgentConfig();
+      setConfig(data);
+      setSaved(data);
+    } catch (error: unknown) {
+      console.error('Failed to load agent config:', error);
+      setLoadError(true);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const isDirty = useMemo(
+    () => config !== null && saved !== null && JSON.stringify(config) !== JSON.stringify(saved),
+    [config, saved],
+  );
+
+  // Sair do separador/recarregar com alteracoes por gravar pede confirmacao.
+  useEffect(() => {
+    if (!isDirty) return undefined;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isDirty]);
+
+  const reset = useCallback(() => {
+    setConfig(saved);
+    setSaveError(null);
+  }, [saved]);
 
   const updateDraft = useCallback((patch: Partial<AgentConfig>) => {
     setConfig((prev) => (prev ? { ...prev, ...patch } : prev));
@@ -82,8 +110,9 @@ export function useAgentConfig(): UseAgentConfigReturn {
       const { isConfigured: _ignored, ...payload } = config;
       void _ignored;
       payload.pollIntervalSeconds = clampPollInterval(payload.pollIntervalSeconds);
-      const saved = await updateAgentConfig(payload);
-      setConfig(saved);
+      const savedConfig = await updateAgentConfig(payload);
+      setConfig(savedConfig);
+      setSaved(savedConfig);
       return true;
     } catch (error: unknown) {
       console.error('Failed to save agent config:', error);
@@ -94,5 +123,16 @@ export function useAgentConfig(): UseAgentConfigReturn {
     }
   }, [config]);
 
-  return { config, isLoading, loadError, isSaving, saveError, updateDraft, save };
+  return {
+    config,
+    isLoading,
+    loadError,
+    isSaving,
+    saveError,
+    isDirty,
+    reset,
+    reload: () => void load(),
+    updateDraft,
+    save,
+  };
 }

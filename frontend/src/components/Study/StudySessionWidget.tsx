@@ -28,8 +28,8 @@ import { formatTaskDue, hasFirmDate } from '../../lib/taskReadiness';
 // pretendido (mesma convenção do resto da app), formatar sem UTC
 // explícito reintroduzia o mesmo bug de "um dia a menos" que já
 // apanhámos no horário (ver comentário grande em useSchedule.ts).
-function formatTaskDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+function formatTaskDate(iso: string, lang: string): string {
+  return new Date(iso).toLocaleDateString(lang, {
     day: 'numeric',
     month: 'short',
     timeZone: 'UTC',
@@ -37,7 +37,7 @@ function formatTaskDate(iso: string): string {
 }
 
 export default function StudySessionWidget() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const {
     activeSession,
     areas,
@@ -223,7 +223,7 @@ export default function StudySessionWidget() {
                   <optgroup key={label} label={label}>
                     {(tasksByArea.get(label) ?? []).map((task) => (
                       <option key={task.id} value={task.id}>
-                        {task.title} ({hasFirmDate(task) ? formatTaskDate(task.date) : formatTaskDue(task)})
+                        {task.title} ({hasFirmDate(task) ? formatTaskDate(task.date, lang) : formatTaskDue(task)})
                       </option>
                     ))}
                   </optgroup>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { createManualSession, deleteStudySession, updateStudySession } from '../../../api/studySessionsService';
-import { useActiveStudySession } from '../../../context/useActiveStudySession';
+import { useSessionEndKey } from '../../../hooks/useSessionEndKey';
 import { useSessionHistory } from '../../../hooks/useSessionHistory';
 import { useIncrementalReveal } from '../../../hooks/useIncrementalReveal';
 import { getApiMessage } from '../../../lib/httpError';
@@ -37,9 +37,9 @@ function groupByDay(sessions: StudySession[]): [string, StudySession[]][] {
 // esqueceste de ligar. Dados fiaveis aqui = previsoes melhores.
 export default function SessionHistoryCard() {
   const { t } = useI18n();
-  const { activeSession } = useActiveStudySession();
+  const sessionEndKey = useSessionEndKey();
   const [historyDays, setHistoryDays] = useState<number>(DEFAULT_HISTORY_DAYS);
-  const { sessions, isLoading, error, reload } = useSessionHistory(historyDays, activeSession?.id ?? null);
+  const { sessions, isLoading, error, reload } = useSessionHistory(historyDays, sessionEndKey);
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [serverError, setServerError] = useState('');
@@ -100,7 +100,7 @@ export default function SessionHistoryCard() {
                 setServerError('');
                 setIsAdding(true);
               }}
-              className="flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300"
+              className="flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300 pointer-coarse:min-h-11"
             >
               <PlusIcon />
               {t('ui.addSession')}
@@ -145,11 +145,11 @@ export default function SessionHistoryCard() {
       {(hasMore || canCollapse) && (
         <div className="mt-3 flex items-center justify-center gap-4 text-sm">
           {hasMore && (
-            <button type="button" onClick={showMore} className="text-violet-400 hover:text-violet-300">
+            <button type="button" onClick={showMore} className="text-violet-400 hover:text-violet-300 pointer-coarse:min-h-11">
               {t('ui.showMoreDaysLeft', { remaining: groups.length - visibleCount })}</button>
           )}
           {canCollapse && (
-            <button type="button" onClick={collapse} className="text-neutral-400 hover:text-neutral-200">
+            <button type="button" onClick={collapse} className="text-neutral-400 hover:text-neutral-200 pointer-coarse:min-h-11">
               {t('ui.showLess')}
             </button>
           )}

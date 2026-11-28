@@ -1,21 +1,16 @@
 import { useMemo } from 'react';
 import { scaleMax } from '../../lib/gradeScale';
-import type { Task, Area } from '../../types/models';
 import { computeTargetVsReal } from '../../utils/targetVsReal';
 import { TargetIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
 import { useI18n } from '../../i18n/useI18n';
-
-interface TargetVsRealCardProps {
-  tasks: Task[];
-  areas: Area[];
-  scale: string;
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 // Target vs actual grade per course. AreaBreakdownCard shows where each
 // course stands; this shows how far that is from what was aimed for.
-export default function TargetVsRealCard({ tasks, areas, scale }: TargetVsRealCardProps) {
+export default function TargetVsRealCard() {
+  const { academicTasks: tasks, academicAreas: areas, gradeScale: scale } = useDashboardCardData();
   const { t } = useI18n();
   const rows = useMemo(() => computeTargetVsReal(tasks, areas), [tasks, areas]);
   if (rows.length === 0) return null;
@@ -34,7 +29,7 @@ export default function TargetVsRealCard({ tasks, areas, scale }: TargetVsRealCa
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-2 min-w-0">
                 <ColorDot size="xs" color={row.area.colorHex} />
-                <span className="truncate text-neutral-200">{row.area.name}</span>
+                <span className="truncate text-neutral-200" title={row.area.name}>{row.area.name}</span>
               </div>
               <span
                 className={`text-xs shrink-0 ${

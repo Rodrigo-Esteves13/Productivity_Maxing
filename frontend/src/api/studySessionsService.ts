@@ -1,6 +1,7 @@
 // src/api/studySessionsService.ts
 import api from './client';
 import type { StudySession, HeatmapCell, Task } from '../types/models';
+import { notifyDomainChanged } from '../lib/domainEvents';
 
 export interface StartStudySessionInput {
   taskId?: string;
@@ -46,6 +47,8 @@ export const stopStudySession = async (
     `/study-sessions/${id}/stop`,
     data,
   );
+  // Sem aviso de dominio aqui: parar muda a sessao ativa e os cartoes ja
+  // reagem por useSessionEndKey (avisar tambem pedia os dados duas vezes).
   return response.data;
 };
 
@@ -71,16 +74,19 @@ export const getSessionHistory = async (days = 14, signal?: AbortSignal): Promis
 
 export const createManualSession = async (data: ManualSessionInput): Promise<StudySession> => {
   const response = await api.post<StudySession>('/study-sessions/manual', data);
+  notifyDomainChanged('studySessions');
   return response.data;
 };
 
 export const updateStudySession = async (id: string, data: UpdateSessionInput): Promise<StudySession> => {
   const response = await api.patch<StudySession>(`/study-sessions/${id}`, data);
+  notifyDomainChanged('studySessions');
   return response.data;
 };
 
 export const deleteStudySession = async (id: string): Promise<void> => {
   await api.delete(`/study-sessions/${id}`);
+  notifyDomainChanged('studySessions');
 };
 
 export const getActiveStudySession = async (): Promise<StudySession | null> => {

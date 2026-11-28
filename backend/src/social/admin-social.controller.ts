@@ -26,6 +26,7 @@ import {
   type AdminSocialProfile,
 } from './admin-social.service';
 import { perMinute } from '../common/throttle.util';
+import { ADMIN_FRIEND_CODE_RESETS_PER_MINUTE } from './social.constants';
 
 // Admin: ligacoes sociais de uma conta e codigo de amigo. Sessao normal (nao
 // API key), como o resto da gestao de utilizadores.
@@ -49,7 +50,7 @@ export class AdminSocialController {
 
   @Post(':id/friend-code')
   @HttpCode(HttpStatus.OK)
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(ADMIN_FRIEND_CODE_RESETS_PER_MINUTE))
   @ApiOperation({
     summary:
       'Generates a new friend code for a user, no request needed (Admin only).',

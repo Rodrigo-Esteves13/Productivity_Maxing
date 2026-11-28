@@ -74,7 +74,7 @@ export default function ArchivePeriodButton() {
       type="button"
       onClick={() => handleArchive(false)}
       disabled={isArchiving}
-      className="text-sm text-neutral-400 hover:text-neutral-200 underline decoration-dotted disabled:opacity-50"
+      className="text-sm text-neutral-400 hover:text-neutral-200 underline decoration-dotted disabled:opacity-50 pointer-coarse:min-h-11"
     >
       {isArchiving ? t('period.archive.busy') : t('period.archive.button')}
     </button>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getUserAreas, getUserTasks } from '../api/userService';
+import { getUserAreas } from '../api/areasService';
+import { getUserTasks } from '../api/tasksService';
 import type { Area, Task } from '../types/models';
 import { useActiveStudySession } from '../context/useActiveStudySession';
 import { translateNow } from '../i18n/translate';

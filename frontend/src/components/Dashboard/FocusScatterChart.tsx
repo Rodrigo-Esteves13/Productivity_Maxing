@@ -26,7 +26,7 @@ function PointTooltip({ active, payload }: TooltipProps) {
   const point = payload[0].payload;
   return (
     <div className="max-w-56 rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-xs shadow-2xl shadow-violet-950/50">
-      <p className="truncate font-medium text-neutral-200">{point.title}</p>
+      <p className="truncate font-medium text-neutral-200" title={point.title}>{point.title}</p>
       <p className="text-neutral-500">{point.areaName} - {point.date}</p>
       <p className="text-violet-300">{t('focusTrend.focusValue', { value: point.avgFocus, max: RATING_MAX })}</p>
       <p className="text-neutral-300">{t('focusScatter.grade', { value: point.gradePercent })}</p>

@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../prisma/prisma.service';
 import { FlashcardsService } from './flashcards.service';
 import {
@@ -11,6 +11,8 @@ function setup(existing = 0) {
     flashcard: {
       count: jest.fn().mockResolvedValue(existing),
       findMany: jest.fn().mockResolvedValue([]),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findFirstOrThrow: jest.fn().mockResolvedValue({ id: 'c1' }),
       createMany: jest.fn(({ data }: { data: unknown[] }) =>
         Promise.resolve({ count: data.length }),
       ),
@@ -50,6 +52,35 @@ describe('FlashcardsService.createMany', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.flashcard.createMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('FlashcardsService.restore', () => {
+  const dto = {
+    dueAt: '2026-01-01T00:00:00.000Z',
+    intervalDays: 3,
+    ease: 2.5,
+    reps: 2,
+    lapses: 0,
+  };
+
+  it('scopes the update and the read by userId', async () => {
+    const { service, prisma } = setup();
+    await service.restore('u1', 'c1', dto);
+    expect(prisma.flashcard.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'c1', userId: 'u1' } }),
+    );
+    expect(prisma.flashcard.findFirstOrThrow).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'c1', userId: 'u1' } }),
+    );
+  });
+
+  it('refuses a card that belongs to someone else', async () => {
+    const { service, prisma } = setup();
+    prisma.flashcard.updateMany.mockResolvedValue({ count: 0 });
+    await expect(service.restore('u2', 'c1', dto)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });
 

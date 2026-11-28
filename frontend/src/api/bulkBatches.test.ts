@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { BULK_TASK_BATCH_SIZE, chunkIds } from './userService';
+import { BULK_TASK_BATCH_SIZE, chunkIds } from './tasksService';
+import backendConstants from '../../../backend/src/tasks/tasks.constants.ts?raw';
+
+describe('BULK_TASK_BATCH_SIZE', () => {
+  it('matches the cap of the backend bulk endpoints', () => {
+    expect(backendConstants).toContain(`TASK_BULK_MAX = ${BULK_TASK_BATCH_SIZE};`);
+  });
+});
 
 describe('chunkIds (B-07)', () => {
   it('splits a large selection into batches the backend accepts', () => {

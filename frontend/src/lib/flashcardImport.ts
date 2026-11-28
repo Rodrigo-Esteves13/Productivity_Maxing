@@ -2,6 +2,8 @@
 // calculo): um cartao por linha, frente e verso separados por TAB, ponto e
 // virgula ou virgula (a primeira que aparecer na linha; o verso pode ter mais
 // virgulas). Puro e sem rede.
+import { unneutralizeFormulaPrefix } from '../utils/csvParse';
+
 export const IMPORT_FRONT_MAX = 300;
 export const IMPORT_BACK_MAX = 2000;
 // Espelha FLASHCARD_BULK_MAX do backend (flashcards.constants.ts).
@@ -35,7 +37,8 @@ function splitLine(line: string): [string, string] | null {
   const tab = line.indexOf('\t');
   if (tab !== -1) best = tab;
   if (best === -1) return null;
-  return [line.slice(0, best).trim(), line.slice(best + 1).trim()];
+  const field = (text: string) => unneutralizeFormulaPrefix(text.trim());
+  return [field(line.slice(0, best)), field(line.slice(best + 1))];
 }
 
 /** `existingFronts`: frentes que o user ja tem (comparacao sem maiusculas). */

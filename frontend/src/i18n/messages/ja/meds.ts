@@ -55,4 +55,10 @@ export const meds: Record<string, string> = {
   'wellbeing.meds.push.unconfigured': "現在リマインダーを送信できません。このサーバーでは通知を利用できません。",
   'wellbeing.meds.timesZone': "時刻はリスボン時間(ポルトガル本土)です。",
   'wellbeing.meds.timesZoneDiffers': "お使いのデバイスは別のタイムゾーンです。リマインダーは現地時間ではなく、設定したリスボン時間に届きます。",
+  'wellbeing.meds.intake.heading': "追加・頓服の服用",
+  'wellbeing.meds.intake.logAnother': "保存してもう1件追加",
+  'wellbeing.meds.intake.loggedCount': "このウィンドウで記録済み: {count}",
+  'wellbeing.mood.promptPast': "この日の調子はどうでしたか？必須なのは気分だけです。",
+  'wellbeing.mood.loggedPast': "この日はすでに記録済みです。まだ変更できます。",
+  'wellbeing.mood.titlePast': "この日のチェックイン",
 };

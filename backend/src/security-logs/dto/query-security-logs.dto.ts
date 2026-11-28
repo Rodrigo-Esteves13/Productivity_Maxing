@@ -4,6 +4,12 @@ const IP_FILTER_MAX_LENGTH = 45; // IPv6 completo
 const PATH_FILTER_MAX_LENGTH = 200;
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import {
+  SECURITY_LOG_SORT_DIRECTIONS,
+  SECURITY_LOG_SORT_FIELDS,
+  type SecurityLogSortDirection,
+  type SecurityLogSortField,
+} from '../security-logs.constants';
 
 // skip/take vêm de PaginationDto - também usado por QueryAppealsDto.
 export class QuerySecurityLogsDto extends PaginationDto {
@@ -32,4 +38,20 @@ export class QuerySecurityLogsDto extends PaginationDto {
   @IsOptional()
   @IsIn(['1h', '24h', '7d'])
   window?: '1h' | '24h' | '7d';
+
+  @ApiPropertyOptional({
+    description: 'Sort column (default createdAt)',
+    enum: SECURITY_LOG_SORT_FIELDS,
+  })
+  @IsOptional()
+  @IsIn(SECURITY_LOG_SORT_FIELDS)
+  sortBy?: SecurityLogSortField;
+
+  @ApiPropertyOptional({
+    description: 'Sort direction (default desc)',
+    enum: SECURITY_LOG_SORT_DIRECTIONS,
+  })
+  @IsOptional()
+  @IsIn(SECURITY_LOG_SORT_DIRECTIONS)
+  sortDir?: SecurityLogSortDirection;
 }

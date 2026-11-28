@@ -46,7 +46,7 @@ export default function ImportCardsModal({ areas, existingFronts, existingCount,
   };
 
   return (
-    <Modal isOpen onClose={onClose} title={t('flashcardImport.title')}>
+    <Modal isOpen onClose={onClose} title={t('flashcardImport.title')} isDirty={text.trim() !== '' && !isSaving}>
       <div className="space-y-3">
         <p className="text-sm text-neutral-400">{t('flashcardImport.help')}</p>
         <Textarea
@@ -88,7 +88,7 @@ export default function ImportCardsModal({ areas, existingFronts, existingCount,
             )}
             <ul className="mt-2 space-y-1 text-xs text-neutral-400">
               {parsed.cards.slice(0, PREVIEW_ROWS).map((card) => (
-                <li key={card.front} className="truncate">
+                <li key={card.front} className="truncate" title={`${card.front} / ${card.back}`}>
                   {card.front} / {card.back}
                 </li>
               ))}
@@ -97,6 +97,11 @@ export default function ImportCardsModal({ areas, existingFronts, existingCount,
                   {t(`flashcardImport.skip.${skip.reason}`, { line: skip.line })}
                 </li>
               ))}
+              {parsed.skipped.length > PREVIEW_ROWS && (
+                <li className="text-amber-300">
+                  {t('ux4study.skippedMore', { count: parsed.skipped.length - PREVIEW_ROWS })}
+                </li>
+              )}
             </ul>
           </div>
         )}

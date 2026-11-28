@@ -5,7 +5,7 @@ import { sendFeedback } from '../../api/feedbackService';
 import { useI18n } from '../../i18n/useI18n';
 import { useFeedback } from '../../context/useFeedback';
 import type { FeedbackCategory } from '../../types/models';
-import { getHttpStatus, HTTP_FORBIDDEN } from '../../lib/httpError';
+import { getHttpStatus, HTTP_FORBIDDEN, HTTP_TOO_MANY_REQUESTS } from '../../lib/httpError';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -19,6 +19,17 @@ const CATEGORIES: { value: FeedbackCategory; key: string }[] = [
   { value: 'CONFUSING', key: 'feedback.category.confusing' },
   { value: 'OTHER', key: 'feedback.category.other' },
 ];
+
+// Mensagem por tipo de falha: 403 = o admin bloqueou o feedback desta conta;
+// 429 = limite por minuto (rede movel partilha o IP); sem resposta = sem rede.
+function errorKeyFor(status: number | undefined): string {
+  if (status === undefined) return navigator.onLine ? 'feedback.error' : 'feedback.offline';
+  return STATUS_ERROR_KEY[status] ?? 'feedback.error';
+}
+const STATUS_ERROR_KEY: Record<number, string> = {
+  [HTTP_FORBIDDEN]: 'feedback.muted',
+  [HTTP_TOO_MANY_REQUESTS]: 'feedback.rateLimited',
+};
 
 // Feedback em qualquer língua (o texto livre nunca é restringido a um
 // alfabeto). A língua da app e a página seguem junto para o admin ter contexto.
@@ -59,8 +70,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
       setCategory('OTHER');
       onClose();
     } catch (err) {
-      // 403: o admin bloqueou o feedback desta conta.
-      setError(getHttpStatus(err) === HTTP_FORBIDDEN ? t('feedback.muted') : t('feedback.error'));
+      setError(t(errorKeyFor(getHttpStatus(err))));
     } finally {
       setIsSending(false);
     }
@@ -85,7 +95,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                 type="button"
                 aria-pressed={category === c.value}
                 onClick={() => setCategory(c.value)}
-                className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                className={`pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border px-3 py-1 text-xs transition-colors ${
                   category === c.value
                     ? 'border-violet-500 bg-violet-500/20 text-violet-200'
                     : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'
@@ -127,7 +137,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
             rows={5}
             onChange={(e) => setMessage(e.target.value)}
             placeholder={t('feedback.placeholder')}
-            className="mt-1.5 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none"
+            className="mt-1.5 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-base text-white sm:text-sm focus:border-violet-500 focus:outline-none"
           />
         </label>
 

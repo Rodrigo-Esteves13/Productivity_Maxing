@@ -40,7 +40,7 @@ export default function AdminFriendCodeCard({ code, requests, isRegenerating, on
           type="button"
           onClick={onRegenerate}
           disabled={isRegenerating}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-violet-500 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-violet-500 disabled:opacity-50 pointer-coarse:min-h-11"
         >
           <RepeatIcon className="h-3.5 w-3.5" />
           {isRegenerating

@@ -76,7 +76,7 @@ export default function SingleTaskView({ tasks, areas, onComplete, onExit }: Sin
           type="button"
           onClick={handleComplete}
           disabled={isCompleting}
-          className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+          className="pointer-coarse:min-h-11 inline-flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
         >
           <CheckIcon />
           {t('singleTaskMode.markDone')}

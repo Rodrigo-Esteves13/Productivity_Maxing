@@ -32,7 +32,7 @@ function MobileCard({ row }: { row: RatingCourseRow }) {
     <li className="rounded-lg border border-neutral-800 bg-neutral-900/40 p-3">
       <p className="mb-2 flex items-center gap-2 font-medium text-white">
         <ColorDot color={row.colorHex} />
-        <span className="min-w-0 truncate">{row.areaName}</span>
+        <span className="min-w-0 truncate" title={row.areaName}>{row.areaName}</span>
       </p>
       <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
         {items.map(([label, value]) => (

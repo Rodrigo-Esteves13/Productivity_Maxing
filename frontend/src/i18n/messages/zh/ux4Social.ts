@@ -1,0 +1,18 @@
+export const ux4Social: Record<string, string> = {
+  'ux4social.sort.name': "姓名",
+  'ux4social.sort.recent': "最近添加",
+  'ux4social.sort.newest': "最新优先",
+  'ux4social.sort.oldest': "最旧优先",
+  'ux4social.sort.title': "标题",
+  'ux4social.friends.search': "搜索好友",
+  'ux4social.notes.search': "搜索笔记",
+  'ux4social.notes.areaFilter': "按科目筛选",
+  'ux4social.notes.allAreas': "所有科目",
+  'ux4social.notes.sortLabel': "笔记排序",
+  'ux4social.areas.all': "全部",
+  'ux4social.areas.none': "无",
+  'ux4social.decline.title': "拒绝此请求?",
+  'ux4social.decline.message': "{name} 将无法访问你的笔记，但可以再次申请。",
+  'ux4social.block.title': "屏蔽 {name}?",
+  'ux4social.remove.title': "移除 {name}?",
+};

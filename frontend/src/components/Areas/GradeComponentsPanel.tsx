@@ -106,7 +106,7 @@ export default function GradeComponentsPanel({ area }: GradeComponentsPanelProps
                   onUpdate={(changes) => update(component.id, changes)}
                   onRequestDelete={() => setToDelete(component)}
                   onAddEntry={(input) => addEntry(component.id, input)}
-                  onEditEntry={(entryId, grade) => editEntry(component.id, entryId, { grade })}
+                  onEditEntry={(entryId, changes) => editEntry(component.id, entryId, changes)}
                   onRemoveEntry={(entryId) => removeEntry(component.id, entryId)}
                 />
               ))}

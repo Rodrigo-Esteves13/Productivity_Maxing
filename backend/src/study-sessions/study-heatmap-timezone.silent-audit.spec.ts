@@ -5,21 +5,24 @@
 // Windows machine set to Lisbon the test then passes by accident).
 process.env.TZ = 'UTC';
 
+import { Prisma } from '@prisma/client';
 import { StudySessionsService } from './study-sessions.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import { APP_TIME_ZONE } from '../common/time.constants';
 
 describe('[silent-audit a-08] "best times" heatmap uses the server clock, not Lisbon', () => {
+  // B-33: weekday/hour now come from Postgres. The fix lives in the SQL: the
+  // UTC column is converted to APP_TIME_ZONE (DST aware) before EXTRACT,
+  // never read in the process zone.
   it('a session at 20:30 Lisbon (summer) lands in the 20-24 bucket', async () => {
-    // Saturday 2026-07-04 20:30 Lisbon (UTC+1) = 19:30 UTC.
-    const startedAt = new Date('2026-07-04T19:30:00.000Z');
+    // Saturday 2026-07-04 20:30 Lisbon (UTC+1) = 19:30 UTC: Postgres, with
+    // the Lisbon conversion, answers weekday 6 and hour 20.
     const prisma = {
-      studySession: {
-        findMany: jest
-          .fn()
-          .mockResolvedValue([
-            { startedAt, endedAt: new Date(startedAt.getTime() + 60 * 60_000) },
-          ]),
-      },
+      $queryRaw: jest
+        .fn()
+        .mockResolvedValue([
+          { dayOfWeek: 6, hour: 20, totalSeconds: 3600, sessionCount: 1 },
+        ]),
     };
     const service = new StudySessionsService(
       prisma as unknown as PrismaService,
@@ -28,9 +31,12 @@ describe('[silent-audit a-08] "best times" heatmap uses the server clock, not Li
     const grid = await service.getHeatmap('u1');
     const filled = grid.filter((c) => c.sessionCount > 0);
 
-    // BUG: getDay()/getHours() read the process time zone (UTC), so the
-    // session is shown at 16-20 instead of 20-24. Every other stat in the
-    // same service (streak, daily totals) already uses Lisbon days.
+    const [query] = prisma.$queryRaw.mock.calls[0] as [Prisma.Sql];
+    // BUG was: getDay()/getHours() read the process time zone (UTC).
+    expect(query.text).toMatch(
+      /EXTRACT\(DOW FROM l\."localStart"\)[\s\S]*\(\(s\."startedAt" AT TIME ZONE \$\d+::text\) AT TIME ZONE \$\d+::text\) AS "localStart"/,
+    );
+    expect(query.values).toEqual(['UTC', APP_TIME_ZONE, 'u1']);
     expect(filled).toEqual([
       expect.objectContaining({ dayOfWeek: 6, hourBucket: 5 }),
     ]);

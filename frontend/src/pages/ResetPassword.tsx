@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { completePasswordResetRequest, RESET_LINK_INVALID_CODE } from '../api/userService';
+import { completePasswordResetRequest, RESET_LINK_INVALID_CODE } from '../api/authService';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';

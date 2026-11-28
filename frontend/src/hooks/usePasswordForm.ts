@@ -1,5 +1,5 @@
 import { useState, type SyntheticEvent  } from 'react';
-import { setPasswordRequest } from '../api/userService';
+import { setPasswordRequest } from '../api/authService';
 import type { User } from '../types/models';
 import { translateNow } from '../i18n/translate';
 import { getHttpStatus, HTTP_UNAUTHORIZED } from '../lib/httpError';

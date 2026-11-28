@@ -93,6 +93,11 @@ export const clearQuizAttempts = async (id: string): Promise<void> => {
   await api.delete(`${url(id)}/attempts`);
 };
 
+// Apaga uma so tentativa do historico.
+export const deleteQuizAttempt = async (id: string, attemptId: string): Promise<void> => {
+  await api.delete(`${url(id)}/attempts/${encodeURIComponent(attemptId)}`);
+};
+
 // Repoe o dominio (estatisticas por pergunta) a zero.
 export const resetQuizStats = async (id: string): Promise<void> => {
   await api.delete(`${url(id)}/stats`);

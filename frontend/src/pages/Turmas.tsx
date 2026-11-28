@@ -49,7 +49,7 @@ export default function Turmas() {
                 className="block h-full rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 transition-colors hover:border-violet-700"
               >
                 <div className="mb-1 flex items-start justify-between gap-2">
-                  <span className="min-w-0 truncate font-semibold text-white">{turma.name}</span>
+                  <span className="min-w-0 truncate font-semibold text-white" title={turma.name}>{turma.name}</span>
                   <TurmaRoleBadge role={turma.myRole} />
                 </div>
                 {turma.description && <p className="mb-2 line-clamp-2 text-sm text-neutral-400">{turma.description}</p>}

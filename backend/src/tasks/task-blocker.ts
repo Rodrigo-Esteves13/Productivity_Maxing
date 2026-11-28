@@ -44,14 +44,19 @@ export async function assertBlockerValid(
   return { blockerOpen: blocker.progressStatus !== ProgressStatus.COMPLETED };
 }
 
-/** Ao concluir `taskId`, desbloqueia as tasks do user que esperavam por ela. */
+/**
+ * Ao concluir uma ou varias tasks, desbloqueia as tasks do user que
+ * esperavam por elas.
+ */
 export async function unblockDependents(
   prisma: PrismaService,
   userId: string,
-  taskId: string,
+  taskIds: string | string[],
 ): Promise<number> {
+  const ids = Array.isArray(taskIds) ? taskIds : [taskIds];
+  if (ids.length === 0) return 0;
   const result = await prisma.task.updateMany({
-    where: { userId, blockedByTaskId: taskId, isBlocked: true },
+    where: { userId, blockedByTaskId: { in: ids }, isBlocked: true },
     data: { isBlocked: false },
   });
   return result.count;

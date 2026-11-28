@@ -1,73 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import {
-  getUserTasks,
-  getUserAreas,
-  createTask,
-  updateTask,
-  getTaskMetadata,
-  deleteTask,
-  reorderTasks,
-  bulkRescheduleTasks,
-} from '../api/userService';
-import { syncTaskToCalendar, unsyncTaskFromCalendar } from '../api/calendarService';
-import { addSubtasksBulk } from '../api/subtasksService';
-import type {
-  Task,
-  Area,
-  TaskTypeOption,
-  AcademicTaskTypeOption,
-  PriorityOption,
-  TaskFormSubmission,
-  TaskWriteInput,
-  Subtask,
-} from '../types/models';
+import { useCallback } from 'react';
 import { useQuickReschedule } from './useQuickReschedule';
-import { useCompleteWithUndo } from './useCompleteWithUndo';
-import { isRequestCanceled } from '../lib/abortable';
+import { usePeriodTasks } from './usePeriodTasks';
+import { useTaskCatalog } from './useTaskCatalog';
+import { useTaskCrud } from './useTaskCrud';
+import { useTaskDetail } from './useTaskDetail';
+import { useTaskListActions } from './useTaskListActions';
+import { useTaskReplan } from './useTaskReplan';
 import { useAcademic } from '../context/useAcademic';
-import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
-import { celebrateCompletion } from '../lib/completionFeedback';
-import { askIfFinishedOnTime, onOnTimeSaved } from '../lib/onTimeQuestion';
 
-// /tasks?new=1 (atalho do icone da app) abre o formulario de criar task.
-const NEW_TASK_PARAM = 'new';
-
+// Estado e acoes da pagina Tasks: junta os hooks de cada assunto.
 export function useTasksPage() {
-  const { notify, confirm } = useFeedback();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [areas, setAreas] = useState<Area[]>([]);
-
-  const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
-  const [academicTaskTypes, setAcademicTaskTypes] = useState<AcademicTaskTypeOption[]>([]);
-  const [difficulties, setDifficulties] = useState<string[]>([]);
-  const [priorities, setPriorities] = useState<PriorityOption[]>([]);
-  const [progressStatuses, setProgressStatuses] = useState<string[]>([]);
-
-  const [error, setError] = useState<string | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-
-  // Hook do reagendamento (Feature anterior)
-  // Swipe para a direita nos cartoes (Undo na mensagem).
-  const { completeOne: completeTask } = useCompleteWithUndo(setTasks);
-  const { rescheduleToTomorrow, reschedulingId } = useQuickReschedule((updatedTask) => {
-    setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
-  });
-
-  // Resposta a "acabaste a tempo?" gravada: lista e detalhe aberto mostram-na.
-  useEffect(
-    () =>
-      onOnTimeSaved((saved) => {
-        setTasks((prev) => prev.map((t) => (t.id === saved.id ? { ...t, ...saved } : t)));
-        setSelectedTask((prev) => (prev?.id === saved.id ? { ...prev, ...saved } : prev));
-      }),
-    [],
-  );
-
   // Segue sempre o período selecionado no topo da página (PeriodSelector).
   // "No program" (isViewingAllPrograms) também cai no 'all' do backend -
   // esse filtro já não tem qualquer restrição de periodId, logo já
@@ -75,499 +18,61 @@ export function useTasksPage() {
   const { activePeriod, isViewingAllPeriods, isViewingAllPrograms, isLoading: isAcademicLoading } = useAcademic();
   const periodParam = isViewingAllPeriods || isViewingAllPrograms ? 'all' : activePeriod?.id;
 
-  const [isTasksLoading, setIsTasksLoading] = useState(true);
-  const [isMetaLoading, setIsMetaLoading] = useState(true);
-  // Kept as a single derived flag for every existing `isLoading` read
-  // below/in Tasks.tsx - true exactly when it used to be true.
-  const isLoading = isTasksLoading || isMetaLoading;
+  const catalog = useTaskCatalog();
+  const period = usePeriodTasks(periodParam, isAcademicLoading);
+  const { tasks, setTasks, isStale, refreshTasks } = period;
 
-  // Same split as Dashboard.tsx's fetch effects, and the same reason:
-  // Areas + task metadata don't depend on periodParam at all (getUserAreas
-  // and getTaskMetadata take no arguments), so there's no reason for them
-  // to wait behind AcademicContext's own load (getPrograms ->
-  // getProgramPeriods) just because they used to share one Promise.all
-  // with the tasks fetch that DOES need periodParam.
-  const fetchMeta = async () => {
-    try {
-      setIsMetaLoading(true);
-      const [areasData, metaData] = await Promise.all([getUserAreas(), getTaskMetadata()]);
-      setAreas(areasData);
-      setTaskTypes(metaData.taskTypes);
-      setAcademicTaskTypes(metaData.academicTaskTypes);
-      setDifficulties(metaData.difficulties);
-      // `?? []` de propósito: se o backend ainda não tiver a migração da
-      // Priority aplicada (ou estiver a correr uma versão mais antiga do
-      // código durante um deploy), metaData.priorities vem undefined - sem
-      // isto, isso sobrescrevia o estado inicial (`useState<string[]>([])`)
-      // com undefined, e o `.includes()` em DifficultyTypeFields rebentava.
-      setPriorities(metaData.priorities ?? []);
-      setProgressStatuses(metaData.progressStatuses);
-    } catch {
-      setError(translateNow('hook.couldNotLoadTheData'));
-    } finally {
-      setIsMetaLoading(false);
-    }
-  };
+  const { rescheduleToTomorrow, reschedulingId } = useQuickReschedule((updatedTask) => {
+    setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+  });
 
-  // `signal` cancela o pedido quando o periodo muda a meio (a resposta do
-  // periodo antigo nunca pode pisar a do novo).
-  const fetchTasks = async (signal: AbortSignal) => {
-    try {
-      setIsTasksLoading(true);
-      const tasksData = await getUserTasks(periodParam, signal);
-      setTasks(tasksData);
-      setIsTasksLoading(false);
-    } catch (caught) {
-      if (isRequestCanceled(caught)) return;
-      setError(translateNow('hook.couldNotLoadTheData'));
-      setIsTasksLoading(false);
-    }
-  };
+  const { setSelectedTask, setIsEditing, ...detail } = useTaskDetail(tasks, setTasks, isStale);
+  const crud = useTaskCrud({
+    setTasks,
+    taskTypes: catalog.taskTypes,
+    selectedTask: detail.selectedTask,
+    setSelectedTask,
+    setIsEditing,
+    closeDetailModal: detail.closeDetailModal,
+  });
+  const actions = useTaskListActions({
+    tasks,
+    setTasks,
+    selectedTask: detail.selectedTask,
+    setSelectedTask,
+  });
+  const { replanTasks, replanError, clearReplanError } = useTaskReplan(setTasks, refreshTasks);
 
-  useEffect(() => {
-    fetchMeta();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const loadError = catalog.hasError || period.hasError ? translateNow('hook.couldNotLoadTheData') : null;
 
-  useEffect(() => {
-    // See Dashboard.tsx's identical guard: without this, periodParam is
-    // briefly `undefined` before AcademicContext resolves
-    // activePeriod, firing this effect once wastefully, then again a
-    // moment later with the real value.
-    if (isAcademicLoading) return;
-    const controller = new AbortController();
-    void fetchTasks(controller.signal);
-    return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [periodParam, isAcademicLoading]);
-
-  // Aplica o resultado da checkbox "Add to Google Calendar" depois de criar
-  // ou atualizar uma task. Nunca lança - se a chamada ao Google falhar, a
-  // task em si já foi guardada com sucesso; falhar aqui só significa que o
-  // evento não foi criado/removido, e o botão de sync no Dashboard
-  // (CalendarSyncButton) fica sempre disponível para tentar outra vez.
-  const applyCalendarSync = async (task: Task, syncToCalendar: boolean): Promise<Task> => {
-    try {
-      if (syncToCalendar) {
-        const { googleCalendarEventId } = await syncTaskToCalendar(task.id);
-        return { ...task, googleCalendarEventId };
-      }
-      if (task.googleCalendarEventId) {
-        await unsyncTaskFromCalendar(task.id);
-        return { ...task, googleCalendarEventId: null };
-      }
-    } catch {
-      // falha silenciosa de propósito - ver comentário acima
-    }
-    return task;
-  };
-
-  const openCreateModal = () => setIsCreateModalOpen(true);
-  const closeCreateModal = () => setIsCreateModalOpen(false);
-
-  const handleCreateTask = async (taskData: TaskFormSubmission | TaskWriteInput): Promise<Task> => {
-    // syncToCalendar é só de UI - o backend (whitelist: true,
-    // forbidNonWhitelisted: true) rejeitaria a criação se este campo fosse
-    // enviado no payload de Task.
-    // subtasks tambem e so de UI: vai a seguir por /subtasks/bulk.
-    const { syncToCalendar, subtasks: subtaskTitles, ...taskPayload } = taskData as TaskWriteInput & {
-      syncToCalendar?: boolean;
-      subtasks?: string[];
-    };
-    const created = await createTask(taskPayload);
-    let createdWithChecklist = created;
-    if (subtaskTitles && subtaskTitles.length > 0) {
-      try {
-        const subtasks = await addSubtasksBulk(created.id, subtaskTitles);
-        createdWithChecklist = { ...created, subtasks };
-      } catch {
-        notify(translateNow('hook.taskCreatedButTheChecklistCould'), 'error');
-      }
-    }
-    const finalTask = await applyCalendarSync(createdWithChecklist, !!syncToCalendar);
-    setTasks((prev) =>
-      [...prev, finalTask].sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-      ),
-    );
-    setIsCreateModalOpen(false);
-    return finalTask;
-  };
-
-  const handleSelectTask = useCallback((task: Task) => {
-    setSelectedTask(task);
-    setIsEditing(false);
-  }, []);
-
-  // Lets other parts of the app (the command palette's task search) link
-  // straight to a task's detail modal via /tasks?open=<id>, without needing
-  // to know anything about how this page renders its list. Waits for
-  // `tasks` to be loaded (fetchData is async) before it can find a match;
-  // clears the param once handled so a page refresh or Back doesn't
-  // re-open the same modal.
-  const [searchParams, setSearchParams] = useSearchParams();
-  useEffect(() => {
-    const openId = searchParams.get('open');
-    if (!openId || tasks.length === 0) return;
-
-    const match = tasks.find((t) => t.id === openId);
-    if (match) {
-      handleSelectTask(match);
-    }
-
-    const next = new URLSearchParams(searchParams);
-    next.delete('open');
-    setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasks]);
-
-  // Atalho do icone da app (shortcuts do manifest em vite.config.ts):
-  // /tasks?new=1 abre logo o formulario de criar. Espera pelos tipos (o
-  // formulario escolhe o tipo a partir deles) e limpa o param como o ?open=.
-  useEffect(() => {
-    if (searchParams.get(NEW_TASK_PARAM) !== '1' || taskTypes.length === 0) return;
-    setIsCreateModalOpen(true);
-    const next = new URLSearchParams(searchParams);
-    next.delete(NEW_TASK_PARAM);
-    setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [taskTypes]);
-
-  // Checklist alterada no detalhe: espalha pela lista e pelo detalhe aberto
-  // (o contador "2/5" dos cards atualiza sem recarregar).
-  const handleSubtasksChange = useCallback((taskId: string, subtasks: Subtask[]) => {
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, subtasks } : t)));
-    setSelectedTask((prev) => (prev?.id === taskId ? { ...prev, subtasks } : prev));
-  }, []);
-
-  // Passo promovido a task: entra na lista (o passo ja saiu da checklist
-  // via onChange do SubtaskChecklist).
-  const handleSubtaskConverted = useCallback((created: Task) => {
-    setTasks((prev) => (prev.some((t) => t.id === created.id) ? prev : [...prev, created]));
-  }, []);
-
-  const closeDetailModal = useCallback(() => {
-    setSelectedTask(null);
-    setIsEditing(false);
-  }, []);
-
-  const toggleEditing = useCallback(() => setIsEditing((prev) => !prev), []);
-  const stopEditing = useCallback(() => setIsEditing(false), []);
-
-  // Concluir uma task pode criar outras no backend (proxima ocorrencia de
-  // uma recorrente, revisoes espacadas): vem em `spawnedTasks`. Tira-as da
-  // task, junta-as a lista e avisa. Devolve a task limpa.
-  const absorbSpawnedTasks = useCallback(
-    (updated: Task): Task => {
-      const { spawnedTasks, ...task } = updated;
-      if (spawnedTasks && spawnedTasks.length > 0) {
-        setTasks((prev) => {
-          const known = new Set(prev.map((t) => t.id));
-          return [...prev, ...spawnedTasks.filter((s) => !known.has(s.id))];
-        });
-        notify(
-          spawnedTasks.length === 1
-            ? '1 new task was created (next repeat or review).'
-            : `${spawnedTasks.length} new tasks were created (repeat or reviews).`,
-          'info',
-        );
-      }
-      return task;
-    },
-    [notify],
-  );
-
-  const handleUpdateTask = useCallback(
-    async (taskData: TaskFormSubmission): Promise<Task | undefined> => {
-      if (!selectedTask) return;
-      const { syncToCalendar, subtasks: ignoredSubtasks, ...taskPayload } = taskData;
-      void ignoredSubtasks;
-      const updated = absorbSpawnedTasks(await updateTask(selectedTask.id, taskPayload));
-      // Concluida a partir do formulario de edicao: a mesma pergunta.
-      if (selectedTask.progressStatus !== 'COMPLETED' && updated.progressStatus === 'COMPLETED') {
-        askIfFinishedOnTime([updated]);
-      }
-      const finalTask = await applyCalendarSync(updated, !!syncToCalendar);
-      setTasks((prev) => prev.map((t) => (t.id === finalTask.id ? finalTask : t)));
-      setSelectedTask(finalTask);
-      setIsEditing(false);
-      return finalTask;
-    },
-    [selectedTask, absorbSpawnedTasks]
-  );
-
-  const handleDeleteTask = useCallback(async () => {
-    if (!selectedTask) return;
-
-    const confirmDelete = await confirm({
-      title: translateNow('hook.deleteTask'),
-      message: translateNow('hook.areYouSureYouWantTo'),
-      confirmLabel: translateNow('hook.delete'),
-      tone: 'danger',
-    });
-    if (!confirmDelete) return;
-
-    // Só pergunta se a task estiver mesmo sincronizada - não faz sentido
-    // incomodar com uma pergunta sobre um evento que nunca existiu. "OK"
-    // fica como resposta por omissão (basta Enter) porque quem tem a task
-    // sincronizada normalmente quer os dois lados a condizer.
-    const shouldRemoveFromCalendar =
-      !!selectedTask.googleCalendarEventId &&
-      (await confirm({
-        title: translateNow('hook.googleCalendar'),
-        message: translateNow('hook.alsoRemoveTheLinkedEventFrom'),
-        confirmLabel: translateNow('hook.removeEvent'),
-        cancelLabel: translateNow('hook.keepEvent'),
-      }));
-
-    try {
-      if (shouldRemoveFromCalendar) {
-        try {
-          await unsyncTaskFromCalendar(selectedTask.id);
-        } catch {
-          // Falha ao remover do Calendar não deve impedir apagar a task -
-          // fica um evento órfão na Google, mas apagável à mão.
-        }
-      }
-      await deleteTask(selectedTask.id);
-      setTasks((prev) => prev.filter((t) => t.id !== selectedTask.id));
-      closeDetailModal();
-    } catch {
-      notify(translateNow('hook.couldNotDeleteTheTaskPlease'), 'error');
-    }
-  }, [selectedTask, closeDetailModal, confirm, notify]);
-
-  // Função de Duplicar corrigida!
-  const handleDuplicateTask = useCallback(async () => {
-    if (!selectedTask) return;
-
-    const confirmDuplicate = await confirm({
-      title: translateNow('hook.duplicateTask'),
-      message: translateNow('hook.doYouWantToDuplicateThis'),
-      confirmLabel: translateNow('hook.duplicate'),
-    });
-    if (!confirmDuplicate) return;
-
-    try {
-      // Usamos .type e .academicType para respeitar o model Task do frontend
-      const newTaskData = {
-        title: `${selectedTask.title} (Copy)`,
-        areaId: selectedTask.areaId,
-        date: selectedTask.date,
-        type: selectedTask.type,
-        academicType: selectedTask.academicType,
-        topics: selectedTask.topics,
-        weightPercentage: selectedTask.weightPercentage,
-        difficulty: selectedTask.difficulty,
-        referenceLink: selectedTask.referenceLink,
-        targetGrade: selectedTask.targetGrade,
-        // Copia completa: tudo o que descreve a task em si. O que e estado
-        // (progresso, nota real, evento do Calendar, tempo ja estudado)
-        // fica de fora de proposito, para a copia comecar limpa.
-        periodId: selectedTask.periodId ?? undefined,
-        priority: selectedTask.priority ?? undefined,
-        notes: selectedTask.notes ?? undefined,
-        tags: selectedTask.tags,
-        estimatedMinutes: selectedTask.estimatedMinutes ?? undefined,
-        calendarDurationMinutes: selectedTask.calendarDurationMinutes ?? undefined,
-        // Prontidao e duas fases tambem descrevem a task (o mesmo que um
-        // pacote copia).
-        effort: selectedTask.effort ?? null,
-        dateCertainty: selectedTask.dateCertainty,
-        isBlocked: selectedTask.isBlocked,
-        availableFrom: selectedTask.availableFrom ?? null,
-        submissionDate: selectedTask.submissionDate ?? null,
-        // Copia a checklist (todos os passos voltam a "por fazer").
-        subtasks: (selectedTask.subtasks ?? []).map((s) => s.title),
-      };
-
-      await handleCreateTask(newTaskData);
-      closeDetailModal();
-    } catch {
-      // Falha ao duplicar é sempre um erro de rede/API neste fluxo (a
-      // criação em si já trata os seus próprios erros de validação) - não
-      // precisamos do objeto de erro para dar uma mensagem útil aqui.
-      notify(translateNow('hook.couldNotDuplicateTheTaskPlease'), 'error');
-    }
-  // handleCreateTask fica de fora de proposito: nao esta memoizado e
-  // incluí-lo recriaria este callback em cada render.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTask, closeDetailModal, confirm, notify]);  // handleCreateTask fica de fora de proposito (ver comentario abaixo)
-  // Não coloquei 'handleCreateTask' nas dependências para evitar loop de re-renders
-
-  // Lightweight counterpart to handleUpdateTask - sends only the one
-  // changed field instead of a whole TaskEditForm payload. Safe because
-  // UpdateTaskDto on the backend is a PartialType(CreateTaskDto) (same
-  // reasoning bulkUpdateTaskStatus already relies on); this is what the
-  // 'c' keyboard shortcut calls, so completing a task doesn't require
-  // opening the edit form first.
-  const markSelectedTaskComplete = useCallback(async () => {
-    if (!selectedTask || selectedTask.progressStatus === 'COMPLETED') return;
-    try {
-      const updated = absorbSpawnedTasks(
-        await updateTask(selectedTask.id, { progressStatus: 'COMPLETED' }),
-      );
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-      setSelectedTask(updated);
-      celebrateCompletion();
-      askIfFinishedOnTime([updated]);
-    } catch {
-      notify(translateNow('hook.couldNotMarkTheTaskAs'), 'error');
-    }
-  }, [selectedTask, notify, absorbSpawnedTasks]);
-
-  // Aplica a prioridade sugerida (decisao do user, so um PATCH da prioridade).
-  const applyPrioritySuggestion = useCallback(
-    async (key: string) => {
-      if (!selectedTask) return;
-      try {
-        const updated = await updateTask(selectedTask.id, { priority: key });
-        setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-        setSelectedTask(updated);
-      } catch {
-        notify(translateNow('hook.couldNotSaveTheChanges'), 'error');
-      }
-    },
-    [selectedTask, notify],
-  );
-
-  // Quadro Kanban: mudar de coluna = mudar o estado. Concluir passa pelo
-  // completeTask (Undo e tasks criadas ao concluir); o resto e otimista
-  // (o cartao muda logo de coluna) e volta atras se o PATCH falhar.
-  const changeTaskStatus = useCallback(
-    async (task: Task, status: string) => {
-      if (task.progressStatus === status) return;
-      if (status === 'COMPLETED') {
-        await completeTask(task);
-        return;
-      }
-      setTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? { ...t, progressStatus: status as Task['progressStatus'] } : t)),
-      );
-      try {
-        const { spawnedTasks: ignored, ...updated } = await updateTask(task.id, { progressStatus: status });
-        void ignored;
-        setTasks((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
-      } catch {
-        setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
-        notify(translateNow('board.moveFailed'), 'error');
-      }
-    },
-    [completeTask, notify],
-  );
-
-  // Same partial-PATCH pattern as markSelectedTaskComplete, but for any
-  // task in the list (not just the one open in the detail modal) - this
-  // is what the quick Area dropdown on each TaskCard calls, so
-  // recategorizing a task doesn't require opening it first.
-  const moveTaskToArea = useCallback(
-    async (task: Task, areaId: string) => {
-      if (task.areaId === areaId) return;
-      try {
-        const updated = await updateTask(task.id, { areaId });
-        setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-        setSelectedTask((prev) => (prev?.id === updated.id ? updated : prev));
-      } catch {
-        notify(translateNow('hook.couldNotMoveTheTaskTo'), 'error');
-      }
-    },
-    [notify],
-  );
-
-  // Same partial-PATCH pattern as moveTaskToArea/markSelectedTaskComplete
-  // - works on any task in the list, not just the one open in the detail
-  // modal, since pinning happens from the card/row directly.
-  const toggleTaskPin = useCallback(async (task: Task) => {
-    try {
-      const updated = await updateTask(task.id, { isPinned: !task.isPinned });
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-      setSelectedTask((prev) => (prev?.id === updated.id ? updated : prev));
-    } catch {
-      notify(translateNow('hook.couldNotUpdateThePinPlease'), 'error');
-    }
-  }, [notify]);
-
-  // Drag-and-drop no TaskGrid. orderedIds é a sequência VISÍVEL completa
-  // após o drop (já inclui a task movida na posição nova) - atualiza o
-  // estado local otimisticamente (a UI não espera pela rede) e só
-  // reverte se o PATCH falhar. Tasks que não estavam em orderedIds (ex:
-  // arquivadas e escondidas pelo toggle "Show archived") mantêm a sua
-  // posição relativa entre si, só são empurradas para depois das que
-  // foram reordenadas.
-  const reorderTasksInState = useCallback(
-    async (orderedIds: string[]) => {
-      const previousTasks = tasks;
-      const indexById = new Map(orderedIds.map((id, i) => [id, i]));
-      const newTasks = [...tasks].sort((a, b) => {
-        const ai = indexById.get(a.id);
-        const bi = indexById.get(b.id);
-        if (ai === undefined && bi === undefined) return 0;
-        if (ai === undefined) return 1;
-        if (bi === undefined) return -1;
-        return ai - bi;
-      });
-      setTasks(newTasks);
-
-      try {
-        await reorderTasks(orderedIds);
-      } catch {
-        setTasks(previousTasks);
-        notify(translateNow('hook.couldNotSaveTheNewOrder'), 'error');
-      }
-    },
-    [tasks, notify],
-  );
-
-  // Aplica um plano de "replanear atrasadas": uma chamada por dia de destino.
-  const replanTasks = async (moves: { id: string; date: string }[]): Promise<boolean> => {
-    const byDate = new Map<string, string[]>();
-    for (const move of moves) byDate.set(move.date, [...(byDate.get(move.date) ?? []), move.id]);
-    try {
-      for (const [date, ids] of byDate) await bulkRescheduleTasks(ids, new Date(date).toISOString());
-    } catch {
-      setError(translateNow('replan.error'));
-      return false;
-    } finally {
-      const controller = new AbortController();
-      void fetchTasks(controller.signal);
-    }
-    return true;
-  };
+  // Tentar outra vez depois de um erro de carregamento.
+  const reloadCatalog = catalog.reload;
+  const reloadTasks = period.reload;
+  const reload = useCallback(() => {
+    clearReplanError();
+    reloadCatalog();
+    reloadTasks();
+  }, [clearReplanError, reloadCatalog, reloadTasks]);
 
   return {
     tasks,
     replanTasks,
-    areas,
-    taskTypes,
-    academicTaskTypes,
-    difficulties,
-    priorities,
-    progressStatuses,
-    isLoading,
-    error,
-    isCreateModalOpen,
-    selectedTask,
-    isEditing,
-    openCreateModal,
-    completeTask,
-    changeTaskStatus,
-    closeCreateModal,
-    handleCreateTask,
-    handleSelectTask,
-    closeDetailModal,
-    toggleEditing,
-    stopEditing,
-    handleUpdateTask,
-    applyPrioritySuggestion,
-    handleDeleteTask,
+    areas: catalog.areas,
+    taskTypes: catalog.taskTypes,
+    academicTaskTypes: catalog.academicTaskTypes,
+    difficulties: catalog.difficulties,
+    priorities: catalog.priorities,
+    progressStatuses: catalog.progressStatuses,
+    isLoading: period.isLoading || catalog.isLoading,
+    // As tasks no ecra sao do periodo anterior (o novo esta a chegar).
+    isStale,
+    dataPeriod: period.dataPeriod,
+    error: replanError ?? loadError,
+    reload,
     rescheduleToTomorrow,
     reschedulingId,
-    handleDuplicateTask,
-    markSelectedTaskComplete,
-    moveTaskToArea,
-    toggleTaskPin,
-    reorderTasksInState,
-    handleSubtasksChange,
-    handleSubtaskConverted,
+    ...detail,
+    ...crud,
+    ...actions,
   };
 }

@@ -55,4 +55,10 @@ export const meds: Record<string, string> = {
   'wellbeing.meds.push.unconfigured': "Reminders cannot be sent right now: notifications are not available on this server.",
   'wellbeing.meds.timesZone': "Times are in Lisbon time (mainland Portugal).",
   'wellbeing.meds.timesZoneDiffers': "Your device is on a different time zone: reminders come at the Lisbon time you set, not at your local time.",
+  'wellbeing.meds.intake.heading': "Extra and as-needed doses",
+  'wellbeing.meds.intake.logAnother': "Save and add another",
+  'wellbeing.meds.intake.loggedCount': "Logged in this window: {count}",
+  'wellbeing.mood.promptPast': "How were you doing on this day? Only mood is required.",
+  'wellbeing.mood.loggedPast': "Already logged for this day. You can still change it.",
+  'wellbeing.mood.titlePast': "Check-in for this day",
 };

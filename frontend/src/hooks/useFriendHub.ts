@@ -1,3 +1,4 @@
+import { POLL_MS } from '../lib/pollIntervals';
 import { useCallback, useEffect, useState } from 'react';
 import { getFriendHub, type FriendHub } from '../api/socialHubService';
 import { getHttpStatus } from '../lib/httpError';
@@ -36,7 +37,7 @@ export function useFriendHub(userId: string | undefined) {
     void load(false);
   }, [load]);
 
-  useLiveRefresh(() => void load(true), { enabled: state === 'ready', intervalMs: 30000 });
+  useLiveRefresh(() => void load(true), { enabled: state === 'ready', intervalMs: POLL_MS.friendHub });
 
   return { hub, state, reload: () => load(true) };
 }

@@ -1,21 +1,31 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { bulkDeleteTasks, bulkRescheduleTasks, bulkSetTaskEffort } from '../api/userService';
+import { bulkDeleteTasks, bulkRescheduleTasks, bulkSetTaskEffort } from '../api/tasksService';
 import { syncTaskToCalendar, unsyncTaskFromCalendar } from '../api/calendarService';
 import type { Task } from '../types/models';
 import { useCompleteWithUndo } from './useCompleteWithUndo';
+import { useUndoableDelete } from './useUndoableDelete';
+import { TASK_UNDO_MAX } from '../lib/batch';
+import { restoreTasks } from '../lib/restoreTask';
+import { applyBulkReschedule } from '../lib/taskReschedule';
+import { translateNow } from '../i18n/translate';
 
 const COMPLETED_STATUS = 'COMPLETED';
 
-// Selecao de linhas da tabela e acoes em massa. `resetKey` limpa a selecao
-// quando muda (ex: filtros), porque uma selecao de tarefas que ja nao se
-// veem confunde mais do que ajuda.
+// Selecao de linhas (tabela ou cartoes) e acoes em massa. `resetKey` limpa a
+// selecao quando muda (ex: filtros), porque uma selecao de tarefas que ja nao
+// se veem confunde mais do que ajuda. Uma task que saia de `visibleTasks` (ex:
+// concluida com o filtro "pendentes") deixa de contar como selecionada.
 export function useTaskSelection(
   visibleTasks: Task[],
   setTasks: Dispatch<SetStateAction<Task[]>>,
   resetKey: unknown,
 ) {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [pickedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const selectedIds = useMemo(
+    () => new Set(visibleTasks.filter((t) => pickedIds.has(t.id)).map((t) => t.id)),
+    [pickedIds, visibleTasks],
+  );
 
   useEffect(() => {
     setSelectedIds(new Set());
@@ -38,7 +48,22 @@ export function useTaskSelection(
     });
   }, [visibleTasks]);
 
+  // "Selecionar tudo" de uma lista parcial (cartoes ja desenhados): marca as
+  // que faltam; se ja estavam todas, desmarca-as.
+  const toggleSelectMany = useCallback((ids: string[]) => {
+    setSelectedIds((prev) => {
+      const allSelected = ids.length > 0 && ids.every((id) => prev.has(id));
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (allSelected) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
   const { completeMany } = useCompleteWithUndo(setTasks);
+  const offerUndoDelete = useUndoableDelete();
 
   const markSelectedDone = useCallback(async () => {
     await completeMany(visibleTasks.filter((t) => selectedIds.has(t.id)));
@@ -58,17 +83,7 @@ export function useTaskSelection(
       if (moved.length === 0) return 0;
       const { count } = await bulkRescheduleTasks(moved.map((t) => t.id), date);
       const movedIds = new Set(moved.map((t) => t.id));
-      setTasks((prev) =>
-        prev.map((t) =>
-          movedIds.has(t.id)
-            ? {
-                ...t,
-                date,
-                postponedCount: t.postponedCount + (new Date(t.date) < new Date(date) ? 1 : 0),
-              }
-            : t,
-        ),
-      );
+      setTasks((prev) => applyBulkReschedule(prev, movedIds, date));
       setSelectedIds(new Set());
       for (const task of moved.filter((t) => t.googleCalendarEventId)) {
         try {
@@ -119,16 +134,35 @@ export function useTaskSelection(
         }
       }
     }
+    // Guardadas antes de apagar: e com elas que o "Anular" recria.
+    const removed = visibleTasks.filter((t) => selectedIds.has(t.id));
     await bulkDeleteTasks(ids);
     const deleted = new Set(ids);
     setTasks((prev) => prev.filter((t) => !deleted.has(t.id)));
     setSelectedIds(new Set());
-  }, [selectedIds, setTasks, visibleTasks]);
+    // Acima do limite nao ha Anular (a confirmacao avisa).
+    if (ids.length > TASK_UNDO_MAX) return;
+    offerUndoDelete({
+      message: translateNow(ids.length === 1 ? 'ux4global.tasks.deletedOne' : 'ux4global.tasks.deletedMany', {
+        count: ids.length,
+      }),
+      restore: async () => {
+        const { restored, failed } = await restoreTasks(removed);
+        setTasks((prev) =>
+          [...prev, ...restored].sort(
+            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+          ),
+        );
+        if (failed > 0) throw new Error('Some tasks could not be restored.');
+      },
+    });
+  }, [selectedIds, setTasks, visibleTasks, offerUndoDelete]);
 
   return {
     selectedIds,
     toggleSelect,
     toggleSelectAll,
+    toggleSelectMany,
     markSelectedDone,
     rescheduleSelected,
     setEffortSelected,

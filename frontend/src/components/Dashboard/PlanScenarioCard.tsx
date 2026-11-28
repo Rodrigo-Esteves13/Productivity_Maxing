@@ -23,7 +23,7 @@ function CourseRow({ course, passThreshold }: { course: PlanScenarioCourse; pass
       <div className="flex items-baseline justify-between gap-3">
         <span className="flex min-w-0 items-center gap-2 text-neutral-200">
           <ColorDot size="xs" color={course.areaColorHex} />
-          <span className="truncate">{course.areaName}</span>
+          <span className="truncate" title={course.areaName}>{course.areaName}</span>
         </span>
         {/* A cor sozinha nao chega: no Sunset com daltonismo o acento (ambar)
             e o vermelho (laranja) ficam parecidos. Abaixo da nota de passagem
@@ -84,7 +84,7 @@ export default function PlanScenarioCard() {
         </CardHeading>
         <p className="text-sm text-neutral-400">
           {t('planScenario.loadError')}{' '}
-          <button type="button" onClick={reload} className="text-violet-400 underline underline-offset-2 hover:text-violet-300">
+          <button type="button" onClick={reload} className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center text-violet-400 underline underline-offset-2 hover:text-violet-300">
             {t('common.tryAgain')}
           </button>
         </p>

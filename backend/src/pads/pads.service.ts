@@ -10,11 +10,18 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SecurityLogsService } from '../security-logs/security-logs.service';
 import { SavePadDto } from './dto/pad.dto';
 import {
+  QueryAdminPadsDto,
+  QueryBlockedSourcesDto,
+} from './dto/query-admin-pads.dto';
+import {
+  ADMIN_BLOCKED_SOURCES_PAGE_SIZE,
+  ADMIN_PADS_LIST_PAGE_SIZE,
   ADMIN_PADS_PAGE_SIZE,
   ADMIN_PAD_PREVIEW_LENGTH,
   PAD_ANON_MAX_CONTENT_LENGTH,
   PAD_EXPIRY_MS,
 } from './pads.constants';
+import { isUniqueViolation } from '../common/prisma-errors';
 
 // Quem fez o pedido de moderacao, para o security log.
 export interface AdminRequestInfo {
@@ -54,8 +61,6 @@ const PAD_SELECT = {
 } satisfies Prisma.PadSelect;
 
 type PadRow = Prisma.PadGetPayload<{ select: typeof PAD_SELECT }>;
-
-const UNIQUE_VIOLATION = 'P2002';
 
 function toView(slug: string, pad: PadRow | null, viewer: PadViewer): PadView {
   const maxLength = viewer.userId ? null : PAD_ANON_MAX_CONTENT_LENGTH;
@@ -153,7 +158,7 @@ export class PadsService {
             },
           });
         } catch (err) {
-          if (!this.isUniqueViolation(err)) throw err;
+          if (!isUniqueViolation(err)) throw err;
           // Alguem criou-o entretanto: tenta trancar outra vez.
           return this.lock(userId, slug);
         }
@@ -196,7 +201,7 @@ export class PadsService {
       });
       return toView(slug, pad, viewer);
     } catch (err) {
-      if (this.isUniqueViolation(err)) return null;
+      if (isUniqueViolation(err)) return null;
       throw err;
     }
   }
@@ -229,20 +234,73 @@ export class PadsService {
       : { updatedById: null, updatedByIpHash: viewer.ipHash };
   }
 
-  private isUniqueViolation(err: unknown): boolean {
-    return (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === UNIQUE_VIOLATION
-    );
-  }
-
   // Moderacao: pads alterados mais recentemente, com quem gravou por ultimo
   // (conta ou hash do IP). So admins (o controller aplica o RolesGuard); os
   // utilizadores nunca veem quem editou um pad.
-  async listRecentForAdmin() {
+  listRecentForAdmin() {
+    return this.findPadsForAdmin({ take: ADMIN_PADS_PAGE_SIZE });
+  }
+
+  // Moderacao: todos os pads, com pesquisa por nome e paginacao.
+  async searchForAdmin(query: QueryAdminPadsDto) {
+    const where: Prisma.PadWhereInput = query.q
+      ? { slug: { contains: query.q } }
+      : {};
+    const [total, items] = await Promise.all([
+      this.prisma.pad.count({ where }),
+      this.findPadsForAdmin({
+        where,
+        skip: query.skip ?? 0,
+        take: query.take ?? ADMIN_PADS_LIST_PAGE_SIZE,
+      }),
+    ]);
+    return { total, items };
+  }
+
+  // Moderacao: todas as origens bloqueadas, mais recentes primeiro, com o
+  // numero de pads cuja ultima gravacao veio de cada uma.
+  async listBlockedSourcesForAdmin(query: QueryBlockedSourcesDto) {
+    const [total, rows] = await Promise.all([
+      this.prisma.padBlockedSource.count(),
+      this.prisma.padBlockedSource.findMany({
+        orderBy: [{ createdAt: 'desc' }, { ipHash: 'asc' }],
+        skip: query.skip ?? 0,
+        take: query.take ?? ADMIN_BLOCKED_SOURCES_PAGE_SIZE,
+        select: {
+          ipHash: true,
+          createdAt: true,
+          blockedBy: { select: { id: true, name: true, email: true } },
+        },
+      }),
+    ]);
+    const grouped = rows.length
+      ? await this.prisma.pad.groupBy({
+          by: ['updatedByIpHash'],
+          where: { updatedByIpHash: { in: rows.map((row) => row.ipHash) } },
+          _count: { _all: true },
+        })
+      : [];
+    const padCounts = new Map(
+      grouped.map((row) => [row.updatedByIpHash, row._count._all]),
+    );
+    return {
+      total,
+      items: rows.map(({ createdAt, ...row }) => ({
+        ...row,
+        createdAt: createdAt.toISOString(),
+        padCount: padCounts.get(row.ipHash) ?? 0,
+      })),
+    };
+  }
+
+  private async findPadsForAdmin(args: {
+    where?: Prisma.PadWhereInput;
+    skip?: number;
+    take: number;
+  }) {
     const pads = await this.prisma.pad.findMany({
-      orderBy: { updatedAt: 'desc' },
-      take: ADMIN_PADS_PAGE_SIZE,
+      ...args,
+      orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
       select: {
         slug: true,
         content: true,

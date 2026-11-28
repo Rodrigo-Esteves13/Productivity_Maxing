@@ -218,3 +218,63 @@ describe('PadsService moderation', () => {
     expect(securityLogs.recordEvent).not.toHaveBeenCalled();
   });
 });
+
+describe('PadsService admin listings', () => {
+  function adminSetup() {
+    const prisma = {
+      pad: {
+        count: jest.fn().mockResolvedValue(41),
+        findMany: jest.fn().mockResolvedValue([]),
+        groupBy: jest
+          .fn()
+          .mockResolvedValue([{ updatedByIpHash: 'h1', _count: { _all: 3 } }]),
+      },
+      padBlockedSource: {
+        count: jest.fn().mockResolvedValue(1),
+        findMany: jest
+          .fn()
+          .mockResolvedValueOnce([
+            {
+              ipHash: 'h1',
+              createdAt: new Date('2026-01-01T00:00:00Z'),
+              blockedBy: null,
+            },
+          ])
+          .mockResolvedValue([]),
+      },
+    };
+    const service = new PadsService(
+      prisma as unknown as PrismaService,
+      {} as unknown as SecurityLogsService,
+    );
+    return { service, prisma };
+  }
+
+  it('lists blocked sources with the number of pads of each', async () => {
+    const { service } = adminSetup();
+    await expect(service.listBlockedSourcesForAdmin({})).resolves.toEqual({
+      total: 1,
+      items: [
+        {
+          ipHash: 'h1',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          blockedBy: null,
+          padCount: 3,
+        },
+      ],
+    });
+  });
+
+  it('searches every pad by name and paginates', async () => {
+    const { service, prisma } = adminSetup();
+    prisma.padBlockedSource.findMany.mockReset().mockResolvedValue([]);
+    const page = await service.searchForAdmin({ q: 'fis', skip: 20 });
+    expect(page).toEqual({ total: 41, items: [] });
+    const [args] = prisma.pad.findMany.mock.calls[0] as [
+      { where: unknown; skip: number; take: number },
+    ];
+    expect(args.where).toEqual({ slug: { contains: 'fis' } });
+    expect(args.skip).toBe(20);
+    expect(args.take).toBe(20);
+  });
+});

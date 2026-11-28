@@ -12,7 +12,7 @@ import {
   getChangeProposals,
   getShareVisits,
   decideChangeProposal,
-} from '../api/notebookService';
+} from '../api/notebookShareService';
 import type {
   ShareVisits,
   ChangeProposal,

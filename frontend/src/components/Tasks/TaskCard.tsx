@@ -13,9 +13,8 @@ import IconButton from '../UI/IconButton';
 import { CheckIcon, ClockIcon, PinIcon, RepeatIcon } from '../UI/Icons';
 import SwipeableRow from '../UI/SwipeableRow';
 import { recurrenceLabel } from '../../lib/recurrence';
-import { getDateStatus } from '../../utils/taskDateStatus';
 import { useI18n } from '../../i18n/useI18n';
-import { formatHandIn, formatTaskDue } from '../../lib/taskReadiness';
+import { getSwipeActions, getTaskPresentation } from '../../lib/taskPresentation';
 
 interface TaskCardProps {
   task: Task;
@@ -46,17 +45,13 @@ function TaskCard({
   const { t, lang } = useI18n();
   const areaName = task.area?.name || t('ui.noArea2');
   const isInteractive = Boolean(onSelect);
-  const status = getDateStatus(task);
+  const { isOverdue, due, handIn } = getTaskPresentation(task, lang);
   const canMoveArea = Boolean(areas && areas.length > 1 && onMoveArea);
-
-  const canComplete = Boolean(onComplete) && task.progressStatus !== 'COMPLETED';
-  const canPostpone = Boolean(onReschedule) && status === 'overdue';
 
   return (
     <SwipeableRow
       className="h-full rounded-xl"
-      onSwipeRight={canComplete ? () => onComplete?.(task) : undefined}
-      onSwipeLeft={canPostpone ? () => onReschedule?.(null, task) : undefined}
+      {...getSwipeActions(task, isOverdue, { onComplete, onReschedule })}
       rightHint={<><CheckIcon aria-hidden="true" />{t('swipe.done')}</>}
       leftHint={<>{t('swipe.tomorrow')}<ClockIcon aria-hidden="true" /></>}
     >
@@ -82,7 +77,7 @@ function TaskCard({
           quebravam de forma inconsistente entre cards. Com só 1 badge,
           o título tem sempre a largura que precisa. */}
       <div className="flex justify-between items-start mb-3 gap-3">
-        <h2 className="text-lg font-medium text-white line-clamp-2 min-w-0">
+        <h2 className="text-lg font-medium text-white line-clamp-2 pointer-coarse:line-clamp-none min-w-0">
           {isInteractive ? (
             <button
               type="button"
@@ -90,9 +85,9 @@ function TaskCard({
                 e.stopPropagation();
                 onSelect?.(task);
               }}
-              className="inline text-left hover:text-violet-200"
+              className="inline text-left hover:text-violet-200 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
             >
-              {task.title}
+              <span className="pointer-coarse:line-clamp-2">{task.title}</span>
             </button>
           ) : (
             task.title
@@ -139,7 +134,7 @@ function TaskCard({
               }}
               title={t('ui.moveToADifferentArea')}
               aria-label={t('ui.moveToADifferentArea')}
-              className="px-2 py-1.5 bg-neutral-800 rounded-md font-medium text-neutral-300 truncate max-w-[10rem] border border-transparent hover:border-neutral-600 focus:border-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 cursor-pointer"
+              className="px-2 py-1.5 bg-neutral-800 rounded-md font-medium text-neutral-300 truncate max-w-[10rem] border border-transparent hover:border-neutral-600 focus:border-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 cursor-pointer pointer-coarse:min-h-11"
             >
               {areas!.map((area) => (
                 <option key={area.id} value={area.id}>
@@ -148,15 +143,15 @@ function TaskCard({
               ))}
             </select>
           ) : (
-            <span className="px-2 py-1.5 bg-neutral-800 rounded-md font-medium text-neutral-300 truncate max-w-[10rem]">
+            <span className="px-2 py-1.5 bg-neutral-800 rounded-md font-medium text-neutral-300 truncate max-w-[10rem]" title={areaName}>
               {areaName}
             </span>
           )}
           <span>•</span>
-          <span className={status === 'overdue' ? 'text-red-400 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>
-            {formatTaskDue(task, lang)}
+          <span className={isOverdue ? 'text-red-400 font-medium whitespace-nowrap' : 'whitespace-nowrap'}>
+            {due}
           </span>
-          {formatHandIn(task, lang) && <span className="whitespace-nowrap">· {formatHandIn(task, lang)}</span>}
+          {handIn && <span className="whitespace-nowrap">· {handIn}</span>}
         </div>
 
         <div className="flex items-center justify-between gap-2">
@@ -178,7 +173,7 @@ function TaskCard({
               </span>
             )}
           </div>
-          {status === 'overdue' && onReschedule && (
+          {isOverdue && onReschedule && (
             <RescheduleButton
               isLoading={isRescheduling}
               onClick={(e) => onReschedule(e, task)}

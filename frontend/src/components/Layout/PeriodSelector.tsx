@@ -76,7 +76,7 @@ export default function PeriodSelector() {
             {!isViewingAllPeriods && activePeriod?.isPinned && (
               <PinIcon className="text-violet-400 shrink-0" />
             )}
-            <span className="truncate">{currentLabel}</span>
+            <span className="truncate" title={currentLabel}>{currentLabel}</span>
             <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400" />
           </button>
 
@@ -98,7 +98,7 @@ export default function PeriodSelector() {
                   }`}
                 >
                   {period.isPinned && <PinIcon className="text-violet-400 shrink-0" />}
-                  <span className="truncate">
+                  <span className="truncate" title={period.name}>
                     {period.name}
                     {period.isArchived ? ` ${t('period.archivedTag')}` : ''}
                   </span>

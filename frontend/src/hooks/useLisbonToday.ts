@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { lisbonTodayKey } from '../lib/dateKey';
 import { MS_PER_MINUTE } from '../lib/timeConstants';
+import { useVisibleInterval } from './useVisibleInterval';
 
 // De quanto em quanto tempo (com o separador visivel) se confirma se o dia
 // de Lisboa ja mudou. Um minuto chega: a meia-noite nao precisa de ser ao
@@ -17,23 +18,21 @@ const DAY_CHECK_INTERVAL_MS = MS_PER_MINUTE;
 export function useLisbonToday(): string {
   const [today, setToday] = useState(lisbonTodayKey);
 
+  // setState com o mesmo valor nao volta a renderizar.
+  const check = useCallback(() => setToday(lisbonTodayKey()), []);
+  useVisibleInterval(check, DAY_CHECK_INTERVAL_MS);
+
   useEffect(() => {
-    // setState com o mesmo valor nao volta a renderizar.
-    const check = () => setToday(lisbonTodayKey());
     const onVisibility = () => {
       if (document.visibilityState === 'visible') check();
     };
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') check();
-    }, DAY_CHECK_INTERVAL_MS);
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('focus', check);
     return () => {
-      window.clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('focus', check);
     };
-  }, []);
+  }, [check]);
 
   return today;
 }

@@ -6,33 +6,11 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-import { timingSafeEqual } from 'crypto';
 import { ACCESS_TOKEN_COOKIE, CSRF_COOKIE } from '../cookie.config';
 import { SKIP_CSRF_KEY } from '../../common/decorators/skip-csrf.decorator';
+import { safeEqual } from '../../common/safe-equal.util';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-
-/**
- * Compara duas strings em tempo constante, para não vazar por timing side
- * channel quantos bytes iniciais coincidem entre o cookie e o header.
- * O token CSRF não é um segredo tão crítico como uma password, mas isto
- * é defesa em profundidade sem custo nenhum.
- *
- * timingSafeEqual exige buffers do MESMO tamanho, senão lança excepção -
- * por isso, quando os tamanhos diferem, comparamos `a` consigo próprio só
- * para manter o tempo de execução consistente, e devolvemos false na mesma.
- */
-function safeCompare(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-
-  if (bufA.length !== bufB.length) {
-    timingSafeEqual(bufA, bufA);
-    return false;
-  }
-
-  return timingSafeEqual(bufA, bufB);
-}
 
 /**
  * Proteção CSRF via "double submit cookie": o cookie csrf_token (legível por
@@ -88,7 +66,7 @@ export class CsrfGuard implements CanActivate {
       !cookieCsrf ||
       !headerCsrf ||
       typeof headerCsrf !== 'string' ||
-      !safeCompare(cookieCsrf, headerCsrf)
+      !safeEqual(cookieCsrf, headerCsrf)
     ) {
       throw new ForbiddenException('Invalid or missing CSRF token.');
     }

@@ -35,7 +35,8 @@ export interface FriendHub {
   };
   sharedWithMe: HubSharedWithMe[];
   sharedByMe: HubSharedByMe[];
-  theirNotebook: { status: HubGrantStatus; areaCount: number };
+  // grantId: so existe quando o servidor o envia (cancelar pedido / deixar de ver).
+  theirNotebook: { status: HubGrantStatus; areaCount: number; grantId?: string | null };
   myNotebook: { status: HubGrantStatus; areaCount: number; grantId: string | null };
   /** Turmas onde estao os dois. */
   commonTurmas: { id: string; name: string }[];

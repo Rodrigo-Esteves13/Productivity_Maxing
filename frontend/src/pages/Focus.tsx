@@ -10,19 +10,20 @@ import StudyNowHint from '../components/Study/focus/StudyNowHint';
 import SessionHistoryCard from '../components/Study/focus/SessionHistoryCard';
 import AmbientSoundCard from '../components/Study/focus/AmbientSoundCard';
 import { useDistractionStats } from '../hooks/useDistractionStats';
-import { useActiveStudySession } from '../context/useActiveStudySession';
+import { useStudyDataKey } from '../hooks/useSessionEndKey';
 import { useStudyPlan } from '../hooks/useStudyPlan';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useI18n } from '../i18n/useI18n';
 
 export default function Focus() {
   const { t } = useI18n();
-  useDocumentTitle('Focus');
+  useDocumentTitle(t('nav.focus'));
   // Um so pedido do plano, partilhado pelo progresso do dia e pelos blocos.
   const { plan, isLoading, error } = useStudyPlan(1);
   // Um so pedido das estatisticas de distracao, partilhado pelo cartao e pela dica.
-  const { activeSession } = useActiveStudySession();
-  const distraction = useDistractionStats(activeSession?.id ?? null);
+  // Muda ao parar uma sessao e ao corrigir/apagar/acrescentar uma no historico.
+  const studyKey = useStudyDataKey();
+  const distraction = useDistractionStats(studyKey);
 
   return (
     <PageLayout>

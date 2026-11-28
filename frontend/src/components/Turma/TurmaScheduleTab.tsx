@@ -8,6 +8,7 @@ import LinesSkeleton from '../UI/LinesSkeleton';
 import { copyTurmaSubject, getTurmaSchedule, setTurmaScheduleSharing } from '../../api/turmasService';
 import { useLoadOnce } from '../../hooks/useLoadOnce';
 import { useFeedback } from '../../context/useFeedback';
+import { useReloadOnReturn } from '../../hooks/useReloadOnReturn';
 import { useI18n } from '../../i18n/useI18n';
 import { formatClock } from '../../lib/timeFormat';
 
@@ -23,6 +24,7 @@ export default function TurmaScheduleTab({ turmaId }: TurmaScheduleTabProps) {
   const { notify } = useFeedback();
   const fetcher = useCallback(() => getTurmaSchedule(turmaId), [turmaId]);
   const { data, isLoading, error, reload } = useLoadOnce(fetcher);
+  useReloadOnReturn(reload);
   const [busy, setBusy] = useState<string | null>(null);
 
   const toggleSharing = async (share: boolean) => {
@@ -69,7 +71,7 @@ export default function TurmaScheduleTab({ turmaId }: TurmaScheduleTabProps) {
         />
         <p className="mt-2 text-xs text-neutral-500">
           {t('turma.schedule.sharers', { count: data.sharers })}{' '}
-          <Link to="/schedule" className="text-violet-400 hover:text-violet-300">
+          <Link to="/schedule" className="text-violet-400 hover:text-violet-300 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center">
             {t('turma.schedule.openMine')}
           </Link>
         </p>
@@ -100,7 +102,7 @@ export default function TurmaScheduleTab({ turmaId }: TurmaScheduleTabProps) {
                       {formatClock(c.startMinutes)}-{formatClock(c.endMinutes)}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-neutral-100">{c.subject}</p>
+                      <p className="truncate text-sm text-neutral-100" title={c.subject}>{c.subject}</p>
                       <p className="text-xs text-neutral-500">
                         {[c.location, t('turma.schedule.sharedBy', { count: c.sharedBy })].filter(Boolean).join(' · ')}
                       </p>
@@ -112,7 +114,7 @@ export default function TurmaScheduleTab({ turmaId }: TurmaScheduleTabProps) {
                         type="button"
                         disabled={busy !== null}
                         onClick={() => void copySubject(c.subject)}
-                        className="text-xs font-medium text-violet-400 hover:text-violet-300 disabled:opacity-50"
+                        className="text-xs font-medium text-violet-400 hover:text-violet-300 disabled:opacity-50 pointer-coarse:min-h-11"
                       >
                         {busy === c.subject ? t('common.saving') : t('turma.schedule.copy')}
                       </button>

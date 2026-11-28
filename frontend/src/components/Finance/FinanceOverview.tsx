@@ -2,7 +2,9 @@ import { useState, type FormEvent } from 'react';
 import Card from '../UI/Card';
 import Input from '../UI/Input';
 import Select from '../UI/Select';
-import ActionButton from '../UI/ActionButton';
+import EmptyState from '../UI/EmptyState';
+import Button from '../UI/Button';
+import FinanceSubmitButton from './FinanceSubmitButton';
 import ProgressBar from '../UI/ProgressBar';
 import { FINANCE_CURRENCIES, type FinanceSettings, type FinanceSummary } from '../../api/financeService';
 import Money, { PrivateText } from './Money';
@@ -55,6 +57,7 @@ export default function FinanceOverview({ summary, onSaveSettings }: FinanceOver
   const [leisure, setLeisure] = useState('');
   const [currency, setCurrency] = useState(settings.currency);
   const [formError, setFormError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const startEditing = () => {
     setBudget(centsToInput(settings.monthlyBudgetCents));
@@ -75,8 +78,13 @@ export default function FinanceOverview({ summary, onSaveSettings }: FinanceOver
       setFormError(t('finance.invalidAmount'));
       return;
     }
-    if (await onSaveSettings({ currency, monthlyBudgetCents, leisureBudgetCents })) {
-      setIsEditing(false);
+    if (isSaving) return;
+    setFormError('');
+    setIsSaving(true);
+    try {
+      if (await onSaveSettings({ currency, monthlyBudgetCents, leisureBudgetCents })) setIsEditing(false);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -110,8 +118,13 @@ export default function FinanceOverview({ summary, onSaveSettings }: FinanceOver
           />
           {formError && <p className="text-sm text-red-400 sm:col-span-2">{formError}</p>}
           <div className="flex gap-2 sm:col-span-2">
-            <ActionButton type="submit">{t('finance.save')}</ActionButton>
-            <button type="button" onClick={() => setIsEditing(false)} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+            <FinanceSubmitButton isSubmitting={isSaving}>{t('finance.save')}</FinanceSubmitButton>
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              disabled={isSaving}
+              className="px-3 py-2 text-sm text-neutral-400 hover:text-white disabled:opacity-50 pointer-coarse:min-h-11"
+            >
               {t('common.cancel')}
             </button>
           </div>
@@ -120,7 +133,11 @@ export default function FinanceOverview({ summary, onSaveSettings }: FinanceOver
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-neutral-200">{t('finance.monthSummary')}</h3>
-            <button type="button" onClick={startEditing} className="text-sm text-violet-400 hover:text-violet-300">
+            <button
+              type="button"
+              onClick={startEditing}
+              className="-my-2 inline-flex min-h-10 items-center px-2 text-sm text-violet-400 hover:text-violet-300 pointer-coarse:min-h-11"
+            >
               {t('finance.editSettings')}
             </button>
           </div>
@@ -138,6 +155,17 @@ export default function FinanceOverview({ summary, onSaveSettings }: FinanceOver
           </dl>
           <BudgetLine label={t('finance.monthlyBudget')} spent={totals.expenseCents} limit={settings.monthlyBudgetCents} currency={settings.currency} />
           <BudgetLine label={t('finance.leisureBudget')} spent={totals.leisureCents} limit={settings.leisureBudgetCents} currency={settings.currency} />
+          {settings.monthlyBudgetCents === null && settings.leisureBudgetCents === null && (
+            <EmptyState
+              variant="inline"
+              message={t('ux4fin.noBudget')}
+              action={
+                <Button type="button" variant="secondary" size="sm" onClick={startEditing}>
+                  {t('ux4fin.setBudget')}
+                </Button>
+              }
+            />
+          )}
         </div>
       )}
     </Card>

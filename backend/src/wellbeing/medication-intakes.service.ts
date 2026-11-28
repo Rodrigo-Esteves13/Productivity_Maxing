@@ -3,7 +3,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MedicationSchedule } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MedicationDisclaimerService } from './medication-disclaimer.service';
 import {
@@ -16,11 +15,13 @@ import { MS_PER_DAY, MS_PER_MINUTE } from '../common/time.constants';
 import {
   CreateMedicationIntakeDto,
   MedicationIntakeRangeQueryDto,
+  UpdateMedicationIntakeDto,
 } from './dto/medication.dto';
 import {
   MAX_INTAKE_FUTURE_MINUTES,
   MAX_INTAKE_PAST_DAYS,
   MAX_INTAKE_RANGE_DAYS,
+  MAX_INTAKE_RESTORE_PAST_DAYS,
   MAX_INTAKES_PER_DAY,
 } from './wellbeing.constants';
 
@@ -60,7 +61,9 @@ const toView = (row: IntakeRow): MedicationIntakeView => ({
   note: row.note,
 });
 
-// Registo das tomas "se necessario". So guarda o que o utilizador registou:
+// Registo de tomas avulso: "se necessario" ou doses extra de qualquer
+// medicamento. Varias tomas do mesmo medicamento, ate na mesma hora exata,
+// sao validas (sem unique no modelo). So guarda o que o utilizador registou:
 // nao avalia doses, combinacoes nem dependencia (de proposito, para a app
 // nunca dizer se algo e seguro).
 @Injectable()
@@ -94,47 +97,113 @@ export class MedicationIntakesService {
     return rows.map(toView);
   }
 
-  async create(
+  create(
     userId: string,
     dto: CreateMedicationIntakeDto,
   ): Promise<MedicationIntakeView> {
+    return this.insert(userId, dto, MAX_INTAKE_PAST_DAYS);
+  }
+
+  // Anular o apagar: as mesmas regras do registo (aviso, dono do medicamento,
+  // limite diario), mas aceita a hora antiga que a toma ja tinha.
+  restore(
+    userId: string,
+    dto: CreateMedicationIntakeDto,
+  ): Promise<MedicationIntakeView> {
+    return this.insert(userId, dto, MAX_INTAKE_RESTORE_PAST_DAYS);
+  }
+
+  private async insert(
+    userId: string,
+    dto: CreateMedicationIntakeDto,
+    maxPastDays: number,
+  ): Promise<MedicationIntakeView> {
     await this.disclaimer.assertAccepted(userId);
-    const takenAt = this.parseTakenAt(dto.takenAt);
+    const takenAt = this.parseTakenAt(dto.takenAt, maxPastDays);
 
     const medication = await this.prisma.medication.findFirst({
       where: { id: dto.medicationId, userId },
-      select: { schedule: true },
+      select: { id: true },
     });
     if (!medication) {
       throw new NotFoundException(
         `Medication not found or you don't have access.`,
       );
     }
-    if (medication.schedule !== MedicationSchedule.AS_NEEDED) {
-      throw new BadRequestException(
-        'Only "as needed" medication is logged per intake.',
-      );
-    }
 
     const { start, end } = lisbonDayBounds(toLisbonDateKey(takenAt));
-    const sameDay = await this.prisma.medicationIntake.count({
-      where: { userId, takenAt: { gte: start, lt: end } },
+    // Contar e criar na mesma transacao, com um lock por utilizador: dois
+    // pedidos em simultaneo nao passam do limite diario.
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+      const sameDay = await tx.medicationIntake.count({
+        where: { userId, takenAt: { gte: start, lt: end } },
+      });
+      if (sameDay >= MAX_INTAKES_PER_DAY) {
+        throw new BadRequestException(
+          `You can log at most ${MAX_INTAKES_PER_DAY} entries per day.`,
+        );
+      }
+      return tx.medicationIntake.create({
+        data: {
+          userId,
+          medicationId: dto.medicationId,
+          takenAt,
+          dose: dto.dose?.trim() || null,
+          note: dto.note?.trim() || null,
+        },
+        select: INTAKE_SELECT,
+      });
     });
-    if (sameDay >= MAX_INTAKES_PER_DAY) {
-      throw new BadRequestException(
-        `You can log at most ${MAX_INTAKES_PER_DAY} entries per day.`,
-      );
-    }
+    return toView(row);
+  }
 
-    const row = await this.prisma.medicationIntake.create({
-      data: {
-        userId,
-        medicationId: dto.medicationId,
-        takenAt,
-        dose: dto.dose?.trim() || null,
-        note: dto.note?.trim() || null,
-      },
-      select: INTAKE_SELECT,
+  // Corrige hora, dose ou nota. Sempre com userId na query; se a toma muda de
+  // dia, o limite diario do dia novo aplica-se (a propria toma nao conta).
+  async update(
+    userId: string,
+    id: string,
+    dto: UpdateMedicationIntakeDto,
+  ): Promise<MedicationIntakeView> {
+    await this.disclaimer.assertAccepted(userId);
+    const takenAt =
+      dto.takenAt === undefined ? undefined : this.parseTakenAt(dto.takenAt);
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+      const current = await tx.medicationIntake.findFirst({
+        where: { id, userId },
+        select: { id: true },
+      });
+      if (!current) {
+        throw new NotFoundException(
+          `Entry not found or you don't have access.`,
+        );
+      }
+      if (takenAt) {
+        const { start, end } = lisbonDayBounds(toLisbonDateKey(takenAt));
+        const sameDay = await tx.medicationIntake.count({
+          where: {
+            userId,
+            id: { not: id },
+            takenAt: { gte: start, lt: end },
+          },
+        });
+        if (sameDay >= MAX_INTAKES_PER_DAY) {
+          throw new BadRequestException(
+            `You can log at most ${MAX_INTAKES_PER_DAY} entries per day.`,
+          );
+        }
+      }
+      return tx.medicationIntake.update({
+        where: { id, userId },
+        data: {
+          ...(takenAt ? { takenAt } : {}),
+          ...(dto.dose !== undefined ? { dose: dto.dose.trim() || null } : {}),
+          ...(dto.note !== undefined ? { note: dto.note.trim() || null } : {}),
+        },
+        select: INTAKE_SELECT,
+      });
     });
     return toView(row);
   }
@@ -148,15 +217,18 @@ export class MedicationIntakesService {
     }
   }
 
-  private parseTakenAt(value: string): Date {
+  private parseTakenAt(
+    value: string,
+    maxPastDays = MAX_INTAKE_PAST_DAYS,
+  ): Date {
     const takenAt = new Date(value);
     const now = Date.now();
     const tooNew =
       takenAt.getTime() > now + MAX_INTAKE_FUTURE_MINUTES * MS_PER_MINUTE;
-    const tooOld = takenAt.getTime() < now - MAX_INTAKE_PAST_DAYS * MS_PER_DAY;
+    const tooOld = takenAt.getTime() < now - maxPastDays * MS_PER_DAY;
     if (Number.isNaN(takenAt.getTime()) || tooNew || tooOld) {
       throw new BadRequestException(
-        `The time must be in the last ${MAX_INTAKE_PAST_DAYS} days and not in the future.`,
+        `The time must be in the last ${maxPastDays} days and not in the future.`,
       );
     }
     return takenAt;

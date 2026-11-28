@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   Res,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
@@ -29,11 +30,16 @@ import { Throttle } from '@nestjs/throttler';
 import { ImportTasksDto } from './dto/import-tasks.dto';
 import { ReorderTasksDto } from './dto/reorder-tasks.dto';
 import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
+import { RestoreTasksDto } from './dto/restore-tasks.dto';
 
 import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { perMinute } from '../common/throttle.util';
+import {
+  TASK_IMPORT_PER_MINUTE,
+  TASK_RESTORE_PER_MINUTE,
+} from './tasks.constants';
 
 @ApiTags('Task')
 @ApiBearerAuth()
@@ -155,6 +161,16 @@ export class TasksController {
     return this.tasksService.bulkRemove(user.id, dto.ids);
   }
 
+  // "Anular" do apagar em massa: recria as tasks apagadas (id novo).
+  @Post('bulk-restore')
+  @Throttle(perMinute(TASK_RESTORE_PER_MINUTE))
+  bulkRestore(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RestoreTasksDto,
+  ) {
+    return this.tasksService.bulkRestore(user.id, dto.tasks);
+  }
+
   // Excel/CSV import (SheetJS parses the file client-side, see
   // hooks/useTaskImport.ts on the frontend) - a bulk-create, so same
   // literal-path-before-:id reasoning as bulk-status/bulk-delete above.
@@ -162,7 +178,7 @@ export class TasksController {
   // up to 500 sequential DB writes per request, more expensive than any
   // other endpoint in this controller.
   @Post('import')
-  @Throttle(perMinute(5))
+  @Throttle(perMinute(TASK_IMPORT_PER_MINUTE))
   importTasks(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: ImportTasksDto,
@@ -171,19 +187,25 @@ export class TasksController {
   }
 
   @Get(':id/changes')
-  listChanges(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  listChanges(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.tasksService.listChanges(user.id, id);
   }
 
   @Get(':id')
-  findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  findOne(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.tasksService.findOne(user.id, id);
   }
 
   @Patch(':id')
   update(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateTaskDto,
   ) {
     return this.tasksService.update(user.id, id, dto);
@@ -192,14 +214,17 @@ export class TasksController {
   @Patch(':id/overdue-checkin')
   confirmOverdue(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ConfirmOverdueDto,
   ) {
     return this.tasksService.confirmOverdue(user.id, id, dto);
   }
 
   @Delete(':id')
-  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.tasksService.remove(user.id, id);
   }
 }

@@ -69,6 +69,10 @@ export const FINANCE_INTEREST_KINDS: FinanceInterestKind[] = ['NONE', 'SIMPLE', 
 export const FINANCE_GOAL_STATUSES: GoalPlanStatus[] = ['ON_TRACK', 'AT_RISK', 'UNREALISTIC', 'NO_DEADLINE', 'DONE'];
 export const FINANCE_MAX_ARREARS_MONTHS = 3;
 export const FINANCE_MAX_SKIP_OCCURRENCES = 60;
+// Mesmos limites do backend: movimentos por apagar em massa e ids religados
+// por pedido ao anular o apagar de uma conta.
+export const FINANCE_BULK_MAX_ENTRIES = 100;
+export const FINANCE_RELINK_MAX_IDS = 1000;
 export const FINANCE_DEBTOR_NAME_MAX_LENGTH = 80;
 export const FINANCE_MAX_RATE_PCT = 100;
 
@@ -334,6 +338,7 @@ export interface FinanceAccountInput {
   name: string;
   type: FinanceAccountType;
   balanceCents?: number;
+  currency?: string | null;
 }
 
 /** Manda quantity OU investedCents, nunca os dois. */
@@ -343,6 +348,8 @@ export interface FinanceHoldingInput {
   accountId?: string | null;
   quantity?: string;
   investedCents?: number;
+  priceCents?: number;
+  costBasisCents?: number | null;
 }
 
 export type FinanceHoldingUpdate = Partial<Omit<FinanceHoldingInput, 'symbol'>>;
@@ -373,8 +380,8 @@ const enc = encodeURIComponent;
 // Um uuid por intencao de criar; o backend devolve a mesma linha se repetir.
 const idempotent = (key: string) => ({ headers: { [IDEMPOTENCY_HEADER]: key } });
 
-export const getFinance = async (month: string): Promise<FinanceSummary> =>
-  (await api.get<FinanceSummary>('/finance', { params: { month } })).data;
+export const getFinance = async (month: string, signal?: AbortSignal): Promise<FinanceSummary> =>
+  (await api.get<FinanceSummary>('/finance', { params: { month }, signal })).data;
 
 export const getFinanceAnalytics = async (query: AnalyticsQuery): Promise<FinanceAnalytics> =>
   (await api.get<FinanceAnalytics>('/finance/analytics', { params: query })).data;
@@ -471,8 +478,18 @@ export interface FinanceImportResult {
 export const importFinanceEntries = async (rows: FinanceImportRow[], requestId: string): Promise<FinanceImportResult> =>
   (await api.post<FinanceImportResult>('/finance/import', { rows }, idempotent(requestId))).data;
 
-export const deleteFinanceEntry = async (id: string): Promise<void> => {
-  await api.delete(`/finance/entries/${enc(id)}`);
+/** Movimento apagado, tal como o backend o aceita de volta. */
+export type DeletedFinanceEntry = FinanceEntryInput & {
+  clientRequestId: string;
+  debtPaymentIds: string[];
+  incomePaymentId: string | null;
+};
+
+export const bulkDeleteFinanceEntries = async (ids: string[]): Promise<DeletedFinanceEntry[]> =>
+  (await api.post<{ entries: DeletedFinanceEntry[] }>('/finance/entries/bulk-delete', { ids })).data.entries;
+
+export const restoreFinanceEntries = async (entries: DeletedFinanceEntry[]): Promise<void> => {
+  await api.post('/finance/entries/restore', { entries });
 };
 
 export const createFinanceAccount = async (input: FinanceAccountInput, requestId: string): Promise<FinanceAccount> =>
@@ -481,8 +498,32 @@ export const createFinanceAccount = async (input: FinanceAccountInput, requestId
 export const updateFinanceAccount = async (id: string, changes: Partial<FinanceAccountInput>): Promise<FinanceAccount> =>
   (await api.patch<FinanceAccount>(`/finance/accounts/${enc(id)}`, changes)).data;
 
-export const deleteFinanceAccount = async (id: string): Promise<void> => {
-  await api.delete(`/finance/accounts/${enc(id)}`);
+/** O que estava ligado a uma conta apagada. */
+export interface FinanceAccountLinks {
+  entryIds: string[];
+  holdingIds: string[];
+}
+
+export const deleteFinanceAccount = async (id: string): Promise<FinanceAccountLinks> =>
+  (await api.delete<FinanceAccountLinks>(`/finance/accounts/${enc(id)}`)).data;
+
+// Recria a conta e religa. A chave (id antigo) torna os pedidos repetidos
+// seguros, por isso listas grandes vao em varios lotes.
+export const restoreFinanceAccount = async (
+  oldId: string,
+  input: FinanceAccountInput,
+  links: FinanceAccountLinks,
+): Promise<void> => {
+  const size = FINANCE_RELINK_MAX_IDS;
+  const batches = Math.max(1, Math.ceil(links.entryIds.length / size), Math.ceil(links.holdingIds.length / size));
+  for (let i = 0; i < batches; i += 1) {
+    await api.post('/finance/accounts/restore', {
+      ...input,
+      clientRequestId: oldId,
+      entryIds: links.entryIds.slice(i * size, (i + 1) * size),
+      holdingIds: links.holdingIds.slice(i * size, (i + 1) * size),
+    });
+  }
 };
 
 export const createFinanceHolding = async (input: FinanceHoldingInput, requestId: string): Promise<FinanceHolding> =>

@@ -15,6 +15,8 @@ export default function BreakBanner() {
   const [now, setNow] = useState(() => Date.now());
   const alertedFor = useRef<number | null>(null);
 
+  // setInterval direto de proposito (nao useVisibleInterval): o aviso e o som
+  // do fim da pausa tem de disparar com o separador escondido.
   useEffect(() => {
     if (!restBreak) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);

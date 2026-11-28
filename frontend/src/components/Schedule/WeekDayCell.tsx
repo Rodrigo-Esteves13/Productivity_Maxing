@@ -4,7 +4,7 @@ import { formatClock } from '../../lib/timeFormat';
 import type { AgendaItem } from '../../lib/agenda';
 import { AGENDA_TONE_CLASSES, getAgendaTone } from '../../lib/agendaTone';
 import { MONTH_CHIP_TONE_CLASSES, pinDeadlinesToClasses, type DeadlineChip } from '../../lib/monthAgenda';
-import { CalendarXIcon, GraduationCapIcon } from '../UI/Icons';
+import { CalendarXIcon, GraduationCapIcon, PencilIcon } from '../UI/Icons';
 import type { ClassOccurrence, WorkShiftOccurrence } from '../../types/models';
 import AttendanceToggle from './AttendanceToggle';
 import { useI18n } from '../../i18n/useI18n';
@@ -21,6 +21,8 @@ interface WeekDayCellProps {
   onAttendanceChange?: (occurrence: ClassOccurrence, attended: boolean | null) => void;
   // Professor faltou / aula desmarcada (ou desfazer).
   onCancelChange?: (occurrence: ClassOccurrence, cancelled: boolean) => void;
+  // Abre o formulario de editar esta aula.
+  onEditClass?: (occurrence: ClassOccurrence) => void;
   // Abre "mudar este turno" (folga, outra hora, ferias) num turno semanal.
   onShiftClick?: (occurrence: WorkShiftOccurrence) => void;
   // Nome traduzido do feriado nacional deste dia.
@@ -34,6 +36,7 @@ interface AgendaEntryProps {
   markableUntilMinutes: number | null;
   onAttendanceChange?: WeekDayCellProps['onAttendanceChange'];
   onCancelChange?: WeekDayCellProps['onCancelChange'];
+  onEditClass?: WeekDayCellProps['onEditClass'];
   onShiftClick?: WeekDayCellProps['onShiftClick'];
 }
 
@@ -87,6 +90,7 @@ function AgendaEntry({
   markableUntilMinutes,
   onAttendanceChange,
   onCancelChange,
+  onEditClass,
   onShiftClick,
 }: AgendaEntryProps) {
   const { t } = useI18n();
@@ -147,13 +151,24 @@ function AgendaEntry({
               aria-label={cancelLabel}
               title={cancelLabel}
               onClick={() => onCancelChange(item.occurrence, !isCancelled)}
-              className={`flex h-6 w-6 items-center justify-center rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+              className={`flex h-6 w-6 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
                 isCancelled
                   ? 'border-amber-600 bg-amber-900/50 text-amber-200'
                   : 'border-neutral-700 text-neutral-500 hover:text-white'
               }`}
             >
               <CalendarXIcon className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          )}
+          {onEditClass && (
+            <button
+              type="button"
+              aria-label={t('ux4sched.class.editNamed', { subject })}
+              title={t('ux4sched.class.editNamed', { subject })}
+              onClick={() => onEditClass(item.occurrence)}
+              className="flex h-6 w-6 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded border border-neutral-700 text-neutral-500 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            >
+              <PencilIcon className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -216,6 +231,7 @@ export default function WeekDayCell({
   markableUntilMinutes = null,
   onAttendanceChange,
   onCancelChange,
+  onEditClass,
   onShiftClick,
   holidayName,
 }: WeekDayCellProps) {
@@ -254,6 +270,7 @@ export default function WeekDayCell({
             markableUntilMinutes={markableUntilMinutes}
             onAttendanceChange={onAttendanceChange}
             onCancelChange={onCancelChange}
+            onEditClass={onEditClass}
             onShiftClick={onShiftClick}
           />
         ))}

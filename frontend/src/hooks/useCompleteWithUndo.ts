@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { bulkDeleteTasks, bulkUpdateTaskStatus, updateTask } from '../api/userService';
+import { bulkDeleteTasks, bulkUpdateTaskStatus, updateTask } from '../api/tasksService';
 import type { Task } from '../types/models';
 import { useFeedback } from '../context/useFeedback';
 import { useI18n } from '../i18n/useI18n';

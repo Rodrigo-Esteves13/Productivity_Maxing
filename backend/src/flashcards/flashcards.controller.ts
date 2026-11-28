@@ -23,6 +23,7 @@ import {
   BulkFlashcardsDto,
   CreateFlashcardDto,
   ListFlashcardsQueryDto,
+  RestoreFlashcardDto,
   ReviewFlashcardDto,
   UpdateFlashcardDto,
 } from './dto/flashcard.dto';
@@ -112,5 +113,17 @@ export class FlashcardsController {
     @Body() dto: ReviewFlashcardDto,
   ) {
     return this.cards.review(user.id, id, dto.grade);
+  }
+
+  @Post(':id/restore')
+  @HttpCode(HttpStatus.OK)
+  @WRITE
+  @ApiOperation({ summary: 'Puts back a card schedule (undo a review).' })
+  restore(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RestoreFlashcardDto,
+  ) {
+    return this.cards.restore(user.id, id, dto);
   }
 }

@@ -11,7 +11,7 @@ export const flashcards: Record<string, string> = {
   'flashcards.allAreas': "すべての科目",
   'flashcards.edit': "カードを編集",
   'flashcards.delete': "カードを削除",
-  'flashcards.deleteConfirm': "このフラッシュカードを削除しますか？元に戻せません。",
+  'flashcards.deleteConfirm': "このフラッシュカードを削除しますか？直後なら取り消せます。",
   'flashcards.due': "復習待ち",
   'flashcards.deckCount': "{count}枚、復習待ち{due}枚",
   'flashcards.again': "もう一度",

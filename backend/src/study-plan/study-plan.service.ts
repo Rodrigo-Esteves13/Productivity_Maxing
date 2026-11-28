@@ -16,6 +16,7 @@ import {
   sumFocusedSessionMinutes,
 } from '../common/session-minutes.util';
 import type { PredictionMethod } from '../prediction/prediction.types';
+import { loadAggregatedTaskSessions } from '../prediction/task-study-time.loader';
 import { addUtcDays, getLisbonNow, toDateKey } from '../common/date-key.util';
 import {
   DEFAULT_DAILY_STUDY_LIMIT_MINUTES,
@@ -55,6 +56,7 @@ import type {
   StudyPlanTask,
 } from './study-plan.types';
 import { ItineraryService } from '../schedule/itinerary.service';
+import { MS_PER_DAY } from '../common/time.constants';
 
 export interface EstimableTask {
   id: string;
@@ -497,7 +499,6 @@ export class StudyPlanService {
       if (!previous || key > previous) lastStudiedKey.set(areaId, key);
     }
 
-    const msPerDay = 86_400_000;
     const courses: ReviewCourse[] = [...areas.keys()].map((areaId) => {
       const last = lastStudiedKey.get(areaId);
       return {
@@ -506,7 +507,9 @@ export class StudyPlanService {
         daysSinceStudied: last
           ? Math.max(
               0,
-              Math.round((Date.parse(todayKey) - Date.parse(last)) / msPerDay),
+              Math.round(
+                (Date.parse(todayKey) - Date.parse(last)) / MS_PER_DAY,
+              ),
             )
           : null,
       };
@@ -650,6 +653,10 @@ export class StudyPlanService {
 
   // Tempo real gasto nas tasks CONCLUÍDAS de cada cadeira, separado em
   // com nota / sem nota (uma frequência não se compara a um exercício).
+  // B-34: o tempo de cada task vem somado do Postgres (sem carregar as
+  // sessões aninhadas). Sem janela de tempo de propósito: GET
+  // /study-plan/courses mostra "estudado até agora" e as tarefas concluídas
+  // por cadeira, que encolheriam com uma janela.
   private async loadCourseHistory(
     userId: string,
   ): Promise<Map<string, CourseHistory>> {
@@ -660,20 +667,22 @@ export class StudyPlanService {
         AND: [hasStudyTimeWhere()],
       },
       select: {
+        id: true,
         areaId: true,
         weightPercentage: true,
         recalledStudyMinutes: true,
-        studySessions: {
-          where: { endedAt: { not: null } },
-          select: { startedAt: true, endedAt: true, focusRating: true },
-        },
       },
     });
+    const sessionsByTask = await loadAggregatedTaskSessions(
+      this.prisma,
+      userId,
+      done.map((task) => task.id),
+    );
 
     const history = new Map<string, CourseHistory>();
     for (const task of done) {
       const minutes = resolveFocusedStudyMinutes(
-        task.studySessions,
+        sessionsByTask.get(task.id) ?? [],
         task.recalledStudyMinutes,
       );
       if (minutes <= 0) continue;

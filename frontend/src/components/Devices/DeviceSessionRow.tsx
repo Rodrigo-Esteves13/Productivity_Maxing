@@ -30,6 +30,7 @@ function DeviceSessionRow({ session, isRevoking, onRevoke }: DeviceSessionRowPro
   const Icon = KIND_ICON[parsed.kind];
   const browser = parsed.browser ?? t('devices.unknownBrowser');
   const os = parsed.os ?? t('devices.unknownSystem');
+  const deviceName = t('devices.browserOnSystem', { browser, os });
 
   return (
     <li className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -39,7 +40,9 @@ function DeviceSessionRow({ session, isRevoking, onRevoke }: DeviceSessionRowPro
         </span>
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-white">
-            <span className="truncate">{t('devices.browserOnSystem', { browser, os })}</span>
+            <span className="truncate" title={deviceName}>
+              {deviceName}
+            </span>
             {session.current && (
               <span className="rounded-full border border-violet-800/60 bg-violet-950/50 px-2 py-0.5 text-xs font-medium text-violet-300">
                 {t('devices.thisDevice')}
@@ -63,7 +66,7 @@ function DeviceSessionRow({ session, isRevoking, onRevoke }: DeviceSessionRowPro
           type="button"
           onClick={() => onRevoke(session)}
           disabled={isRevoking}
-          className="press self-start rounded-lg border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:border-red-800 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50 sm:self-center"
+          className="press self-start rounded-lg border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:border-red-800 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50 sm:self-center pointer-coarse:min-h-11"
         >
           {isRevoking ? t('devices.signingOut') : t('devices.signOut')}
         </button>

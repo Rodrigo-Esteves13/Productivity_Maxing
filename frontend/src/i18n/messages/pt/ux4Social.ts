@@ -1,0 +1,18 @@
+export const ux4Social: Record<string, string> = {
+  'ux4social.sort.name': "Nome",
+  'ux4social.sort.recent': "Adicionados recentemente",
+  'ux4social.sort.newest': "Mais recentes primeiro",
+  'ux4social.sort.oldest': "Mais antigas primeiro",
+  'ux4social.sort.title': "Título",
+  'ux4social.friends.search': "Pesquisar amigos",
+  'ux4social.notes.search': "Pesquisar notas",
+  'ux4social.notes.areaFilter': "Filtrar por cadeira",
+  'ux4social.notes.allAreas': "Todas as cadeiras",
+  'ux4social.notes.sortLabel': "Ordenar notas",
+  'ux4social.areas.all': "Todas",
+  'ux4social.areas.none': "Nenhuma",
+  'ux4social.decline.title': "Recusar este pedido?",
+  'ux4social.decline.message': "{name} não vai ter acesso às tuas notas. Pode voltar a pedir.",
+  'ux4social.block.title': "Bloquear {name}?",
+  'ux4social.remove.title': "Remover {name}?",
+};

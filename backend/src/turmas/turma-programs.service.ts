@@ -7,6 +7,12 @@ import {
 import { GradeAggregation, Prisma, TurmaRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TurmaAccessService } from './turma-access.service';
+import { MAX_PRIVATE_AREAS_PER_USER } from '../areas/areas.constants';
+import {
+  MAX_PERIODS_PER_PROGRAM,
+  MAX_PROGRAMS_PER_USER,
+} from '../academic-programs/academic-programs.constants';
+import { LONG_TRANSACTION_TIMEOUT_MS } from '../common/time.constants';
 
 // Limites de uma licenciatura partilhada (uma licenciatura real fica longe).
 export const MAX_TURMA_PROGRAMS = 10;
@@ -248,6 +254,13 @@ export class TurmaProgramsService {
       ownAreas.map((a) => [a.name.trim().toLowerCase(), a.id]),
     );
 
+    await this.assertImportFitsLimits(
+      userId,
+      snapshot,
+      areaByName,
+      ownAreas.length,
+    );
+
     return this.prisma.$transaction(
       async (tx) => {
         const program = await tx.academicProgram.create({
@@ -309,7 +322,41 @@ export class TurmaProgramsService {
           courses,
         };
       },
-      { timeout: 30_000 },
+      { timeout: LONG_TRANSACTION_TIMEOUT_MS },
     );
+  }
+
+  /**
+   * O import salta os tetos normais (areas, programas, periodos), por isso
+   * confirma-os antes de abrir a transacao: Areas privadas existentes mais
+   * as novas, um programa novo e os periodos do snapshot.
+   */
+  private async assertImportFitsLimits(
+    userId: string,
+    snapshot: ProgramSnapshot,
+    areaByName: Map<string, string>,
+    ownAreaCount: number,
+  ) {
+    const newAreaKeys = new Set<string>();
+    for (const period of snapshot.periods) {
+      for (const course of period.courses) {
+        const key = course.name.trim().toLowerCase();
+        if (!areaByName.has(key)) newAreaKeys.add(key);
+      }
+    }
+    if (ownAreaCount + newAreaKeys.size > MAX_PRIVATE_AREAS_PER_USER) {
+      throw new BadRequestException(
+        'Importing this program would exceed your subject limit.',
+      );
+    }
+    if (snapshot.periods.length > MAX_PERIODS_PER_PROGRAM) {
+      throw new BadRequestException('This program has too many periods.');
+    }
+    const programs = await this.prisma.academicProgram.count({
+      where: { userId },
+    });
+    if (programs >= MAX_PROGRAMS_PER_USER) {
+      throw new BadRequestException('You have reached your program limit.');
+    }
   }
 }

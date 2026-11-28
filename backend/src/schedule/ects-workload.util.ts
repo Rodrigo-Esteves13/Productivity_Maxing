@@ -1,9 +1,8 @@
 import { MS_PER_MINUTE } from '../common/time.constants';
 import {
-  DATE_KEY_PATTERN,
+  isRealDateKey,
   lisbonDayBounds,
   parseDateKey,
-  toDateKey,
 } from '../common/date-key.util';
 import { MS_PER_DAY } from '../common/time.constants';
 
@@ -11,13 +10,8 @@ import { MS_PER_DAY } from '../common/time.constants';
 // um teto ao trabalho de BD por pedido.
 export const ECTS_MAX_RANGE_DAYS = 400;
 
-// "YYYY-MM-DD" que e mesmo um dia de calendario (rejeita 2026-13-01 e
-// 2026-02-31, que a regex sozinha deixa passar).
-export function isRealDateKey(value: unknown): boolean {
-  if (typeof value !== 'string' || !DATE_KEY_PATTERN.test(value)) return false;
-  const parsed = parseDateKey(value);
-  return !Number.isNaN(parsed.getTime()) && toDateKey(parsed) === value;
-}
+// Reexportado para nao partir imports antigos (vive em common/date-key.util).
+export { isRealDateKey };
 
 // Numero de dias do intervalo, inclusive nas duas pontas.
 export function ectsRangeDays(fromKey: string, toKey: string): number {

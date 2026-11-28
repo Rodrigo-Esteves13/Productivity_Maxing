@@ -93,7 +93,14 @@ function setup(existing: ReturnType<typeof taskRow>) {
     user: {
       findUnique: jest.fn().mockResolvedValue({ spacedReviewsEnabled: false }),
     },
-    $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
+    $executeRaw: jest.fn().mockResolvedValue(1),
+    // Array (lote) ou callback (transacao interativa com o lock do user).
+    $transaction: jest.fn((arg: unknown): Promise<unknown> => {
+      if (typeof arg === 'function') {
+        return (arg as (tx: unknown) => Promise<unknown>)(prisma);
+      }
+      return Promise.all(arg as unknown[]);
+    }),
   };
   const service = new TasksService(
     prisma as unknown as PrismaService,

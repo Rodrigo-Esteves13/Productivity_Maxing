@@ -2,10 +2,14 @@ import { useMemo } from 'react';
 import type { Task } from '../../types/models';
 import { buildTimeline } from '../../lib/taskTimeline';
 import { useI18n } from '../../i18n/useI18n';
+import ShowMoreTasksButton from '../UI/ShowMoreTasksButton';
+import { useRevealedTasks } from '../../hooks/useRevealedTasks';
 
 interface TaskTimelineProps {
   // Ja filtradas e ordenadas pela pagina (arquivadas, ordem escolhida).
   tasks: Task[];
+  // Muda com periodo, filtros e ordem: volta as primeiras linhas.
+  resetKey?: string;
   onSelect: (task: Task) => void;
 }
 
@@ -14,10 +18,12 @@ const LABEL_COLUMN = 'w-40 sm:w-56 shrink-0';
 // Gantt simples: cada task aberta e uma barra do dia em que abre (ou hoje)
 // ate ao prazo, nas proximas 8 semanas. O titulo fica numa coluna fixa e a
 // area das barras faz scroll horizontal dentro do cartao (a pagina nunca).
-export default function TaskTimeline({ tasks, onSelect }: TaskTimelineProps) {
+export default function TaskTimeline({ tasks, resetKey, onSelect }: TaskTimelineProps) {
   const { t, lang } = useI18n();
   const model = useMemo(() => buildTimeline(tasks), [tasks]);
   const dayFormat = useMemo(() => new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short' }), [lang]);
+
+  const { visible, remaining, showMore } = useRevealedTasks(model.rows, resetKey);
 
   if (model.rows.length === 0) {
     return <p className="text-sm text-neutral-400">{t('timeline.empty')}</p>;
@@ -41,7 +47,7 @@ export default function TaskTimeline({ tasks, onSelect }: TaskTimelineProps) {
           </div>
         </div>
         <ul>
-          {model.rows.map((row) => (
+          {visible.map((row) => (
             <li key={row.task.id} className="flex items-center border-t border-neutral-800/70">
               <button
                 type="button"
@@ -73,6 +79,7 @@ export default function TaskTimeline({ tasks, onSelect }: TaskTimelineProps) {
             </li>
           ))}
         </ul>
+        <ShowMoreTasksButton remaining={remaining} onClick={showMore} />
         <p className="mt-2 text-xs text-neutral-500">{t('timeline.hint')}</p>
       </div>
     </div>

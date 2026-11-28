@@ -20,6 +20,7 @@ describe('PushService delivery options', () => {
             p256dh: 'p',
             auth: 'a',
             lang: 'en',
+            user: { mutedPushKinds: [] },
           },
         ]),
       },

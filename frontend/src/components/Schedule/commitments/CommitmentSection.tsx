@@ -6,6 +6,7 @@ import ShiftForm from './ShiftForm';
 import type { ShiftFormValues } from './ShiftForm';
 import ShiftList from './ShiftList';
 import { describeDaysOff } from './shiftText';
+import { formatTaskDate } from '../../../lib/timeFormat';
 import type { CommitmentInput } from '../../../api/commitmentsService';
 import type {
   CommitmentWithShifts,
@@ -42,7 +43,7 @@ export default function CommitmentSection({
   onEditShift,
   onDeleteShift,
 }: CommitmentSectionProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [mode, setMode] = useState<Mode>('view');
 
   const handleAddShift = async (values: ShiftFormValues): Promise<boolean> => {
@@ -77,7 +78,7 @@ export default function CommitmentSection({
       ) : (
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-base font-semibold text-white truncate">{commitment.name}</h3>
+            <h3 title={commitment.name} className="text-base font-semibold text-white truncate">{commitment.name}</h3>
             <p className="text-xs text-neutral-500">
               {commitment.commuteMinutes > 0
                 ? t('commitment.travelLine', { minutes: commitment.commuteMinutes })
@@ -90,7 +91,7 @@ export default function CommitmentSection({
                 {t(CONTRACT_LINE_KEYS[commitment.contractType])}
                 {commitment.endsOn &&
                   ` · ${t('commitment.contract.until', {
-                    date: new Date(commitment.endsOn).toLocaleDateString(undefined, { timeZone: 'UTC' }),
+                    date: formatTaskDate(commitment.endsOn, lang),
                   })}`}
               </p>
             )}
@@ -142,7 +143,7 @@ export default function CommitmentSection({
           <button
             type="button"
             onClick={() => setMode('add-shift')}
-            className="press -mb-1.5 -ml-2 mt-auto flex items-center gap-1.5 self-start rounded-lg px-2 py-1.5 text-sm text-violet-400 hover:bg-violet-500/10 hover:text-violet-300"
+            className="press -mb-1.5 -ml-2 mt-auto flex items-center gap-1.5 self-start rounded-lg px-2 py-1.5 text-sm text-violet-400 hover:bg-violet-500/10 hover:text-violet-300 pointer-coarse:min-h-11"
           >
             <PlusIcon />
             {t('ui.addShift')}

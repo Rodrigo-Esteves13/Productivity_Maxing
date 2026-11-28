@@ -7,7 +7,7 @@ import { getMyQuizShares, getQuizzesSharedWithMe, type MyQuizShare, type QuizSha
 import { useI18n } from '../../i18n/useI18n';
 import { quizPath, sharedQuizPath } from '../../lib/appLinks';
 import { stripQuizMarkdown } from '../../lib/quizMarkdown';
-import { onSocialChanged } from '../../lib/socialEvents';
+import * as bus from '../../lib/bus';
 
 // Carrega uma lista de partilhas de quizzes e volta a carregar quando algo
 // muda no Social (adicionar uma copia, partilhar com um amigo).
@@ -24,7 +24,7 @@ function useQuizShareList<T>(fetcher: () => Promise<T[]>) {
   }, [fetcher]);
   useEffect(() => {
     load();
-    return onSocialChanged(load);
+    return bus.on('social:changed', load);
   }, [load]);
   return { items, hasError, reload: load };
 }

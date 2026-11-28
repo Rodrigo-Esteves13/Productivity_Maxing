@@ -7,6 +7,8 @@ import {
 } from '../utils/parseIcsSchedule';
 import type { ImportScheduleResult } from '../types/models';
 import { translateNow } from '../i18n/translate';
+import { usePersistedState, type PersistedCodec } from './usePersistedState';
+import { ACCOUNT_SCOPED_KEYS, accountStorageKey } from '../lib/storageKeys';
 
 export type ScheduleImportStage = 'idle' | 'reading' | 'importing' | 'done' | 'error';
 
@@ -19,11 +21,8 @@ export interface ScheduleImportOutcome {
 // ficheiro -> parseIcsSchedule (client-side, ver utils/parseIcsSchedule.ts)
 // -> POST /schedule/import -> juntar erros de parsing e de backend num só
 // sítio para o modal renderizar.
-const OPTIONS_STORAGE_KEY = 'pmaxing.scheduleImportOptions';
-
-function loadOptions(): IcsImportOptions {
+function parseOptions(raw: string | null): IcsImportOptions {
   try {
-    const raw = localStorage.getItem(OPTIONS_STORAGE_KEY);
     if (!raw) return DEFAULT_ICS_IMPORT_OPTIONS;
     const parsed = JSON.parse(raw) as Partial<IcsImportOptions>;
     const list = (v: unknown, fallback: string[]) =>
@@ -45,16 +44,17 @@ function loadOptions(): IcsImportOptions {
   }
 }
 
+// Guardadas por conta. Sem storage (modo privado) valem so nesta sessao.
+const OPTIONS_CODEC: PersistedCodec<IcsImportOptions> = {
+  parse: parseOptions,
+  serialize: (options) => JSON.stringify(options),
+};
+
 export function useScheduleImport() {
-  const [options, setOptionsState] = useState<IcsImportOptions>(loadOptions);
-  const setOptions = (next: IcsImportOptions) => {
-    setOptionsState(next);
-    try {
-      localStorage.setItem(OPTIONS_STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // sem storage (modo privado): as opções valem só nesta sessão.
-    }
-  };
+  const [options, setOptions] = usePersistedState(
+    accountStorageKey(ACCOUNT_SCOPED_KEYS.scheduleImportOptions),
+    OPTIONS_CODEC,
+  );
   const [stage, setStage] = useState<ScheduleImportStage>('idle');
   const [outcome, setOutcome] = useState<ScheduleImportOutcome | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

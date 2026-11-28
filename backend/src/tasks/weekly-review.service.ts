@@ -3,8 +3,8 @@ import { roundTo } from '../common/round.util';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MS_PER_MINUTE } from '../common/time.constants';
+import { MS_PER_DAY } from '../common/time.constants';
 
-const DAY_MS = 86_400_000;
 // Uma sessão esquecida aberta não pode inflacionar a semana: tecto por sessão
 // (as sessões esquecidas já são fechadas sozinhas, isto é só rede de segurança).
 const MAX_SESSION_MINUTES = 12 * 60;
@@ -50,8 +50,8 @@ export class WeeklyReviewService {
   constructor(private readonly prisma: PrismaService) {}
 
   async build(userId: string, now = new Date()): Promise<WeeklyReview> {
-    const from = new Date(now.getTime() - 7 * DAY_MS);
-    const to = new Date(now.getTime() + 7 * DAY_MS);
+    const from = new Date(now.getTime() - 7 * MS_PER_DAY);
+    const to = new Date(now.getTime() + 7 * MS_PER_DAY);
     const startOfToday = new Date(now);
     startOfToday.setUTCHours(0, 0, 0, 0);
 

@@ -69,7 +69,7 @@ export const extra: Record<string, string> = {
   "hook.couldNotLoadTheData": "Não foi possível carregar os dados.",
   "hook.taskCreatedButTheChecklistCould": "Tarefa criada, mas não foi possível guardar a lista de verificação.",
   "hook.deleteTask": "Apagar tarefa",
-  "hook.areYouSureYouWantTo": "Tens a certeza de que queres apagar esta tarefa? Esta ação é irreversível.",
+  "hook.areYouSureYouWantTo": "Tens a certeza de que queres apagar esta tarefa? Podes anular logo a seguir.",
   "hook.googleCalendar": "Google Calendar",
   "hook.alsoRemoveTheLinkedEventFrom": "Remover também o evento ligado no Google Calendar?",
   "hook.removeEvent": "Remover evento",

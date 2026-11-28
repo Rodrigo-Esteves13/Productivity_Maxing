@@ -42,12 +42,12 @@ export default function AttachmentPreviewModal({ attachment, onClose }: Attachme
         <iframe
           src={preview.objectUrl}
           title={attachment?.originalFileName ?? ''}
-          className="h-[70vh] w-full rounded-md border border-neutral-800 bg-white"
+          className="h-[70dvh] w-full rounded-md border border-neutral-800 bg-white"
         />
       )}
       {preview.status === 'ready' && preview.kind === 'text' && (
         <>
-          <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap break-words rounded-md border border-neutral-800 bg-neutral-950 p-3 font-mono text-xs text-neutral-200">
+          <pre className="max-h-[70dvh] overflow-auto whitespace-pre-wrap break-words rounded-md border border-neutral-800 bg-neutral-950 p-3 font-mono text-xs text-neutral-200">
             {preview.text}
           </pre>
           {preview.truncated && <p className="mt-2 text-xs text-neutral-500">{t('notebook.files.previewTruncated')}</p>}

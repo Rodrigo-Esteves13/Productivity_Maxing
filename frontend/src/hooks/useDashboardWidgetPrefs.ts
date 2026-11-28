@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { usePersistedState, type PersistedCodec } from './usePersistedState';
 
 export type DashboardWidgetKey =
   | 'today'
@@ -135,27 +135,20 @@ const DEFAULT_VISIBLE: Record<DashboardWidgetKey, boolean> = {
   ectsWorkload: true,
 };
 
-function loadPrefs(): Record<DashboardWidgetKey, boolean> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+const CODEC: PersistedCodec<Record<DashboardWidgetKey, boolean>> = {
+  parse: (raw) => {
     if (!raw) return DEFAULT_VISIBLE;
-    return { ...DEFAULT_VISIBLE, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_VISIBLE;
-  }
-}
+    try {
+      return { ...DEFAULT_VISIBLE, ...JSON.parse(raw) };
+    } catch {
+      return DEFAULT_VISIBLE;
+    }
+  },
+  serialize: (visibility) => JSON.stringify(visibility),
+};
 
 export function useDashboardWidgetPrefs() {
-  const [visibility, setVisibility] = useState<Record<DashboardWidgetKey, boolean>>(loadPrefs);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(visibility));
-    } catch {
-      // Best-effort only - a user with storage disabled/full just doesn't
-      // get the preference remembered across reloads, nothing breaks.
-    }
-  }, [visibility]);
+  const [visibility, setVisibility] = usePersistedState(STORAGE_KEY, CODEC);
 
   const toggle = (key: DashboardWidgetKey) => {
     setVisibility((prev) => ({ ...prev, [key]: !prev[key] }));

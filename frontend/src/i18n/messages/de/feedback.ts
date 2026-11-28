@@ -56,4 +56,6 @@ export const feedback: Record<string, string> = {
   'feedback.mine.reply': "Antwort des Teams",
   'feedback.mine.link': "Dein Feedback und die Antworten ansehen.",
   'feedback.muted': "Von diesem Konto kannst du gerade kein Feedback senden.",
+  'feedback.rateLimited': "Zu viele Nachrichten in kurzer Zeit. Warte eine Minute und versuche es erneut.",
+  'feedback.offline': "Keine Verbindung. Prüfe dein Internet und versuche es erneut; dein Text bleibt erhalten.",
 };

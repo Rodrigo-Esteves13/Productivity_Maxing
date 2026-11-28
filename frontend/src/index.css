@@ -80,6 +80,14 @@ body {
   h1, h2, h3 {
     text-wrap: balance;
   }
+
+  /* Alvo de toque de 44px nas caixas de selecao com rotulo: cresce a area
+     clicavel, nao a caixa. Rotulos so com a caixa tratam a largura no sitio. */
+  @media (pointer: coarse) {
+    label:has(> input:is([type='checkbox'], [type='radio'])) {
+      min-height: --spacing(11);
+    }
+  }
   p {
     text-wrap: pretty;
   }

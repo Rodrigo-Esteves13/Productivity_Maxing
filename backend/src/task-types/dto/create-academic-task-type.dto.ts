@@ -5,8 +5,10 @@ import {
   IsInt,
   IsBoolean,
   IsUUID,
+  Max,
   MaxLength,
 } from 'class-validator';
+import { TASK_TYPE_ORDER_MAX } from '../task-types.constants';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // Sem "key" aqui pela mesma razão do CreateTaskTypeDto - é gerada
@@ -36,6 +38,7 @@ export class CreateAcademicTaskTypeDto {
   })
   @IsOptional()
   @IsInt()
+  @Max(TASK_TYPE_ORDER_MAX)
   order?: number;
 
   @ApiPropertyOptional({

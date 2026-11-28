@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import ErrorState from '../components/UI/ErrorState';
@@ -30,20 +30,24 @@ export default function Security() {
     goToNextPage,
     goToPrevPage,
     handlePurge,
+    refresh,
+    sort,
+    toggleSort,
+    exportCsv,
+    isExporting,
   } = useSecurityLogsPage();
 
-  // Só para saber quais já estão banidos (mostrar "banned" em vez do
-  // botão "Ban" na tabela de logs) - o ban em si vive todo dentro do
-  // BannedIpsCard, que tem a sua própria instância de useBannedIps.
-  const { bannedIps } = useBannedIps();
-  const bannedIpSet = new Set(bannedIps.map((b) => b.ip));
+  // Uma so instancia, partilhada: o cartao de IPs banidos escreve nela e a
+  // tabela de logs le dela (o selo "banned" atualiza logo, sem refresh).
+  const banned = useBannedIps();
+  const bannedIpSet = useMemo(() => new Set(banned.bannedIps.map((b) => b.ip)), [banned.bannedIps]);
 
   // Clicar "Ban" numa linha da tabela só preenche o campo do
   // BannedIpsCard - o admin ainda confirma (e pode acrescentar um
-  // motivo) antes de o ban ser efetivo. Um valor novo (mesmo repetido)
-  // tem de disparar o useEffect do card outra vez, daí o contador.
-  const [banRequest, setBanRequest] = useState({ ip: '', nonce: 0 });
-  const requestBan = (ip: string) => setBanRequest((prev) => ({ ip, nonce: prev.nonce + 1 }));
+  // motivo) antes de o ban ser efetivo. Cada pedido e um objeto novo (mesmo
+  // com o mesmo IP), por isso o useEffect do card corre sempre, sem remontar.
+  const [banRequest, setBanRequest] = useState<{ ip: string }>({ ip: '' });
+  const requestBan = (ip: string) => setBanRequest({ ip });
 
   return (
     <PageLayout>
@@ -54,7 +58,7 @@ export default function Security() {
 
       <SecurityStatsCards stats={stats} />
 
-      <BannedIpsCard key={banRequest.nonce} prefillIp={banRequest.ip} />
+      <BannedIpsCard banned={banned} prefill={banRequest} />
 
       <SecurityLogsFilters
         filters={filters}
@@ -62,15 +66,21 @@ export default function Security() {
         onClear={clearFilters}
         onPurge={handlePurge}
         isPurging={isPurging}
+        onRefresh={refresh}
+        onExport={() => void exportCsv()}
+        isExporting={isExporting}
+        total={total}
       />
 
       {isLoading ? (
         <TableSkeleton rows={8} columns={5} />
       ) : error ? (
-        <ErrorState message={error} />
+        <ErrorState message={error} onRetry={refresh} />
       ) : (
         <SecurityLogsTable
           logs={logs}
+          sort={sort}
+          onSort={toggleSort}
           total={total}
           skip={skip}
           pageSize={pageSize}

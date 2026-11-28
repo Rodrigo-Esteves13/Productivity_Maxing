@@ -77,7 +77,32 @@ describe('PersonalNotesService', () => {
       url: PERSONAL_NOTES_PATH,
     });
     expect(prisma.personalNote.updateMany).toHaveBeenCalledWith({
-      where: { id: 'n1', remindedAt: null },
+      where: { id: { in: ['n1'] }, userId: 'u1', remindedAt: null },
+      data: { remindedAt: now },
+    });
+  });
+
+  it('groups due notes per user: one UPDATE per user, only delivered ones', async () => {
+    const due = [
+      { id: 'n1', userId: 'u1', title: 'a' },
+      { id: 'n2', userId: 'u2', title: 'b' },
+      { id: 'n3', userId: 'u1', title: 'c' },
+    ];
+    const { service, prisma, push } = setup({ due });
+    // Ordem de envio: n1, n3 (u1) e n2 (u2). n3 nao chega a nenhum dispositivo.
+    push.notifyUser
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(1);
+    const now = new Date('2026-10-28T09:00:00Z');
+    await expect(service.sendDueReminders(now)).resolves.toBe(2);
+    expect(prisma.personalNote.updateMany).toHaveBeenCalledTimes(2);
+    expect(prisma.personalNote.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['n1'] }, userId: 'u1', remindedAt: null },
+      data: { remindedAt: now },
+    });
+    expect(prisma.personalNote.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['n2'] }, userId: 'u2', remindedAt: null },
       data: { remindedAt: now },
     });
   });

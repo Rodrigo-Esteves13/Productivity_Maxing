@@ -1,36 +1,23 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { clearSlot } from '../lib/dailyDigest';
 import { todayKey } from '../lib/dateKey';
+import { readPersisted, usePersistedState, type PersistedCodec } from './usePersistedState';
 
 const STORAGE_KEY = 'pm-daily-digest-enabled';
 const DEFAULT_ENABLED = true;
 
-export function readDailyDigestEnabled(): boolean {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw === null ? DEFAULT_ENABLED : raw === 'true';
-  } catch {
-    return DEFAULT_ENABLED;
-  }
-}
+const CODEC: PersistedCodec<boolean> = {
+  parse: (raw) => (raw === null ? DEFAULT_ENABLED : raw === 'true'),
+};
 
-function write(enabled: boolean): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, String(enabled));
-  } catch {
-    // Best-effort, como os outros prefs hooks.
-  }
+export function readDailyDigestEnabled(): boolean {
+  return readPersisted(STORAGE_KEY, CODEC);
 }
 
 // Resumo diario ligado/desligado (por dispositivo). Reset: volta ao
 // valor por omissao e liberta a vaga de hoje.
 export function useDailyDigestPref() {
-  const [enabled, setEnabledState] = useState<boolean>(readDailyDigestEnabled);
-
-  const setEnabled = useCallback((next: boolean) => {
-    setEnabledState(next);
-    write(next);
-  }, []);
+  const [enabled, setEnabled] = usePersistedState(STORAGE_KEY, CODEC);
 
   const reset = useCallback(() => {
     setEnabled(DEFAULT_ENABLED);

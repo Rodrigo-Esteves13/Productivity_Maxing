@@ -3,14 +3,18 @@ import { TrendingUpIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
 import ProgressBar from '../UI/ProgressBar';
+import ErrorState from '../UI/ErrorState';
+import { formatNumber } from '../../lib/ratings';
 import BackfillStudyTime from './BackfillStudyTime';
 import { useGradeProjection } from '../../hooks/useGradeProjection';
 import { formatDayLabel, formatDuration } from '../../lib/timeFormat';
 import type { GradeProjection, GradeProjectionTask } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
 import { translateNow } from '../../i18n/translate';
+import { detectLanguage } from '../../i18n/storage';
 
 const MAX_TASKS_SHOWN = 4;
+const GRADE_FRACTION_DIGITS = 1;
 // A partir daqui mais dados ja mexem pouco no resultado: deixa de se insistir.
 const ENOUGH_SAMPLES_TO_STOP_ASKING = 20;
 
@@ -39,7 +43,7 @@ function targetAdvice(task: GradeProjectionTask): string | null {
 }
 
 function gradeText(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return formatNumber(value, detectLanguage(), GRADE_FRACTION_DIGITS);
 }
 
 function TaskLine({ task }: { task: GradeProjectionTask }) {
@@ -53,7 +57,7 @@ function TaskLine({ task }: { task: GradeProjectionTask }) {
       <div className="flex items-baseline justify-between gap-3">
         <p className="flex min-w-0 items-center gap-2 text-sm text-neutral-200">
           <ColorDot size="xs" color={task.areaColorHex} />
-          <span className="truncate">{task.title}</span>
+          <span className="truncate" title={task.title}>{task.title}</span>
         </p>
         <p className="shrink-0 text-xs text-neutral-500">{formatDayLabel(task.deadline)}</p>
       </div>
@@ -90,7 +94,19 @@ export default function GradeProjectionCard() {
   const { t } = useI18n();
   const { projection, isLoading, error, reload } = useGradeProjection();
 
-  if (isLoading || error || !projection || projection.status === 'nothing_pending') return null;
+  // Erro de rede: o cartao nao desaparece em silencio, mostra "Tentar de novo".
+  if (error && !projection) {
+    return (
+      <DashboardCard>
+        <CardHeading className="mb-3">
+          <TrendingUpIcon className="shrink-0" />
+          {t('ui.gradeProjection')}
+        </CardHeading>
+        <ErrorState message={t('ux4areas.projectionLoadError')} onRetry={reload} />
+      </DashboardCard>
+    );
+  }
+  if (isLoading || !projection || projection.status === 'nothing_pending') return null;
 
   const shown = projection.tasks.slice(0, MAX_TASKS_SHOWN);
   const hidden = projection.tasks.length - shown.length;
@@ -137,7 +153,7 @@ export default function GradeProjectionCard() {
 
       {shouldAskForHistory && (
         <details className="mt-3 rounded-lg border border-neutral-800 p-3" open={!isReady}>
-          <summary className="cursor-pointer text-xs font-medium text-violet-300">
+          <summary className="pointer-coarse:py-3.5 cursor-pointer text-xs font-medium text-violet-300">
             {isReady
               ? t('ui.makeItMoreAccurateAdd')
               : t('ui.unlockThisNowHowLong')}
@@ -150,7 +166,7 @@ export default function GradeProjectionCard() {
 
       <Link
         to="/schedule"
-        className="mt-3 inline-block text-xs text-violet-400 underline decoration-dotted hover:text-violet-300"
+        className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center mt-3 inline-block text-xs text-violet-400 underline decoration-dotted hover:text-violet-300"
       >
         {t('ui.openStudyPlan')}
       </Link>

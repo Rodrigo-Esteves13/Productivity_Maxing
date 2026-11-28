@@ -23,7 +23,7 @@ import { useAuth } from '../../context/useAuth';
 import { useI18n } from '../../i18n/useI18n';
 import { TURMAS_PATH, friendPath, socialTabPath } from '../../lib/appLinks';
 import { sendClassmateFriendRequest } from '../../api/socialService';
-import { notifySocialChanged } from '../../lib/socialEvents';
+import * as bus from '../../lib/bus';
 import { useFeedback } from '../../context/useFeedback';
 import type { TurmaDetail, TurmaMember } from '../../types/models';
 import { TURMA_DESCRIPTION_MAX_LENGTH, TURMA_NAME_MAX_LENGTH, turmaInviteLink } from './turmaConfig';
@@ -68,7 +68,7 @@ export default function TurmaMembersTab({ turma, onChanged }: TurmaMembersTabPro
             return (
               <li key={member.userId} className="flex flex-wrap items-center gap-3 p-3">
                 <PersonAvatar name={name} avatarUrl={member.avatarUrl} size="sm" />
-                <span className="min-w-0 flex-1 truncate text-sm text-neutral-200">
+                <span className="min-w-0 flex-1 truncate text-sm text-neutral-200" title={name}>
                   {name}
                   {isMe && <span className="ml-1 text-neutral-500">({t('turma.you')})</span>}
                 </span>
@@ -191,7 +191,7 @@ function ClassmateFriendAction({
     try {
       const result = await sendClassmateFriendRequest(turmaId, member.userId);
       notify(t(result.status === 'ACCEPTED' ? 'turma.members.nowFriends' : 'turma.members.requestSentToast'), 'success');
-      notifySocialChanged();
+      bus.emit('social:changed');
       onChanged();
     } catch {
       notify(t('turma.actionError'), 'error');

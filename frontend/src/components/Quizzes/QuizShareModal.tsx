@@ -16,9 +16,11 @@ import {
   type QuizShareStatus,
 } from '../../api/quizzesService';
 import { getSocialOverview, type FriendEntry } from '../../api/socialService';
+import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
 import { sharedQuizPath, socialTabPath } from '../../lib/appLinks';
-import { notifySocialChanged } from '../../lib/socialEvents';
+import { getApiMessage } from '../../lib/httpError';
+import * as bus from '../../lib/bus';
 
 interface QuizShareModalProps {
   quizId: string;
@@ -34,11 +36,13 @@ const NO_FRIEND = '';
 // a quem o abre uma copia na conta dele. Nao ha ficheiro nem download.
 export default function QuizShareModal({ quizId, isOpen, onClose, onChanged }: QuizShareModalProps) {
   const { t, lang } = useI18n();
+  const { notify } = useFeedback();
   const [status, setStatus] = useState<QuizShareStatus | null>(null);
   const [friends, setFriends] = useState<FriendEntry[]>([]);
   const [friendId, setFriendId] = useState(NO_FRIEND);
   const [isBusy, setIsBusy] = useState(false);
   const [askRevoke, setAskRevoke] = useState(false);
+  const [askRemoveId, setAskRemoveId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -47,8 +51,8 @@ export default function QuizShareModal({ quizId, isOpen, onClose, onChanged }: Q
       const [share, social] = await Promise.all([getQuizShare(quizId), getSocialOverview()]);
       setStatus(share);
       setFriends(social.friends);
-    } catch {
-      setError(t('quizzes.share.loadError'));
+    } catch (err) {
+      setError(getApiMessage(err, t('quizzes.share.loadError')));
     }
   }, [quizId, t]);
 
@@ -56,16 +60,17 @@ export default function QuizShareModal({ quizId, isOpen, onClose, onChanged }: Q
     if (isOpen) void load();
   }, [isOpen, load]);
 
-  const run = async (action: () => Promise<QuizShareStatus | null>) => {
+  const run = async (action: () => Promise<QuizShareStatus | null>, successKey: string) => {
     setIsBusy(true);
     setError('');
     try {
       const next = await action();
       setStatus(next ?? { token: null, copyCount: 0, createdAt: null, recipients: [] });
       onChanged(Boolean(next?.token));
-      notifySocialChanged();
-    } catch {
-      setError(t('quizzes.share.error'));
+      bus.emit('social:changed');
+      notify(t(successKey), 'success');
+    } catch (err) {
+      setError(getApiMessage(err, t('quizzes.share.error')));
     } finally {
       setIsBusy(false);
     }
@@ -80,20 +85,21 @@ export default function QuizShareModal({ quizId, isOpen, onClose, onChanged }: Q
       const next = await shareQuizWithFriend(quizId, friendId);
       setFriendId(NO_FRIEND);
       return next;
-    });
+    }, 'quickWins.quizShareSent');
 
   const removeRecipient = (recipientId: string) =>
     run(async () => {
       await removeQuizShareRecipient(quizId, recipientId);
+      setAskRemoveId(null);
       return getQuizShare(quizId);
-    });
+    }, 'quickWins.quizShareRecipientRemoved');
 
   const revoke = () =>
     run(async () => {
       await revokeQuizShare(quizId);
       setAskRevoke(false);
       return null;
-    });
+    }, 'quickWins.quizShareRevoked');
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('quizzes.share.title')}>
@@ -132,7 +138,7 @@ export default function QuizShareModal({ quizId, isOpen, onClose, onChanged }: Q
                   )}
                 </>
               ) : (
-                <Button size="sm" disabled={isBusy} onClick={() => void run(() => createQuizShare(quizId))}>
+                <Button size="sm" disabled={isBusy} onClick={() => void run(() => createQuizShare(quizId), 'quickWins.quizShareCreated')}>
                   {t('quizzes.share.create')}
                 </Button>
               )}
@@ -170,9 +176,19 @@ export default function QuizShareModal({ quizId, isOpen, onClose, onChanged }: Q
                       <span className={`text-xs ${r.addedAt ? 'text-violet-300' : 'text-neutral-400'}`}>
                         {r.addedAt ? t('quizzes.share.added', { date: new Date(r.addedAt).toLocaleDateString(lang) }) : t('quizzes.share.notAdded')}
                       </span>
-                      <Button size="sm" variant="secondary" disabled={isBusy} onClick={() => void removeRecipient(r.id)}>
-                        {t('quizzes.share.remove')}
-                      </Button>
+                      {askRemoveId === r.id ? (
+                        <InlineConfirm
+                          message={t('safeActions.removeRecipient.message', { name: r.name || t('quizzes.share.unnamed') })}
+                          confirmLabel={t('quizzes.share.remove')}
+                          isBusy={isBusy}
+                          onConfirm={() => void removeRecipient(r.id)}
+                          onCancel={() => setAskRemoveId(null)}
+                        />
+                      ) : (
+                        <Button size="sm" variant="secondary" disabled={isBusy} onClick={() => setAskRemoveId(r.id)}>
+                          {t('quizzes.share.remove')}
+                        </Button>
+                      )}
                     </li>
                   ))}
                 </ul>

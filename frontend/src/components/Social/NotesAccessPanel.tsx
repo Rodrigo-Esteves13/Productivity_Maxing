@@ -3,6 +3,8 @@ import type { IncomingGrant, IncomingGrantsView } from '../../api/socialNotesSer
 import { useI18n } from '../../i18n/useI18n';
 import { friendPath } from '../../lib/appLinks';
 import PersonRow from './PersonRow';
+import ConfirmActionDialog from '../Turma/ConfirmActionDialog';
+import { useConfirmAction } from '../../hooks/useConfirmAction';
 import { selectableGrantAreaIds } from '../../lib/notesAccess';
 
 interface Props {
@@ -15,7 +17,7 @@ interface Props {
   onRevoke: (grantId: string) => Promise<boolean>;
 }
 
-const btn = 'text-sm text-neutral-400 hover:text-white';
+const btn = 'text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11 disabled:opacity-50';
 
 /** Escolha de cadeiras: nada vem marcado por omissao (o dono escolhe de forma consciente). */
 function AreaPicker({
@@ -33,12 +35,30 @@ function AreaPicker({
 }) {
   const { t } = useI18n();
   const [picked, setPicked] = useState<string[]>(initial);
+  const [isSaving, setIsSaving] = useState(false);
   const toggle = (id: string) =>
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   return (
     <div className="mt-2 w-full space-y-2 rounded-md border border-neutral-800 bg-neutral-950/60 p-3">
-      <p className="text-xs text-neutral-400">{t('social.notes.pickAreas')}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-neutral-400">{t('social.notes.pickAreas')}</p>
+        {view.areas.length > 1 && (
+          <div className="flex gap-3">
+            <button
+              type="button"
+              disabled={picked.length === view.areas.length}
+              onClick={() => setPicked(view.areas.map((a) => a.areaId))}
+              className={btn}
+            >
+              {t('ux4social.areas.all')}
+            </button>
+            <button type="button" disabled={picked.length === 0} onClick={() => setPicked([])} className={btn}>
+              {t('ux4social.areas.none')}
+            </button>
+          </div>
+        )}
+      </div>
       {view.areas.length === 0 ? (
         <p className="text-xs text-neutral-500">{t('social.notes.noAreas')}</p>
       ) : (
@@ -63,9 +83,14 @@ function AreaPicker({
       <div className="flex gap-3">
         <button
           type="button"
-          disabled={picked.length === 0}
-          onClick={() => void onSubmit(picked).then((ok) => ok && onCancel())}
-          className="rounded-md bg-violet-600 px-2.5 py-1 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+          disabled={picked.length === 0 || isSaving}
+          onClick={() => {
+            setIsSaving(true);
+            void onSubmit(picked)
+              .then((ok) => ok && onCancel())
+              .finally(() => setIsSaving(false));
+          }}
+          className="rounded-md bg-violet-600 px-2.5 py-1 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50 pointer-coarse:min-h-11"
         >
           {submitLabel}
         </button>
@@ -80,6 +105,7 @@ function AreaPicker({
 export default function NotesAccessPanel({ view, status, title, onDecide, onUpdateAreas, onRevoke }: Props) {
   const { t } = useI18n();
   const [open, setOpen] = useState<string | null>(null);
+  const revokeConfirm = useConfirmAction(t('confirmGuard.error'));
   const grants = view.grants.filter((g) => g.status === status);
   if (grants.length === 0) return null;
 
@@ -99,12 +125,27 @@ export default function NotesAccessPanel({ view, status, title, onDecide, onUpda
             <>
               <button
                 type="button"
+                aria-expanded={open === g.grantId}
                 onClick={() => setOpen(open === g.grantId ? null : g.grantId)}
-                className="rounded-md bg-violet-600 px-2.5 py-1 text-sm font-medium text-white hover:bg-violet-500"
+                className="rounded-md bg-violet-600 px-2.5 py-1 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
               >
                 {t('social.accept')}
               </button>
-              <button type="button" onClick={() => void onDecide(g.grantId, false)} className={btn}>
+              <button
+                type="button"
+                onClick={() =>
+                  revokeConfirm.request({
+                    title: t('ux4social.decline.title'),
+                    message: t('ux4social.decline.message', { name: g.viewerName ?? '' }),
+                    confirmLabel: t('social.decline'),
+                    tone: 'default',
+                    run: async () => {
+                      if (!(await onDecide(g.grantId, false))) throw new Error('decline failed');
+                    },
+                  })
+                }
+                className={btn}
+              >
                 {t('social.decline')}
               </button>
             </>
@@ -119,7 +160,17 @@ export default function NotesAccessPanel({ view, status, title, onDecide, onUpda
               </button>
               <button
                 type="button"
-                onClick={() => void onRevoke(g.grantId)}
+                onClick={() =>
+                  revokeConfirm.request({
+                    title: t('confirmGuard.revokeNotes.title'),
+                    message: t('confirmGuard.revokeNotes.message', { name: g.viewerName ?? '' }),
+                    confirmLabel: t('confirmGuard.revokeNotes.confirm'),
+                    tone: 'danger',
+                    run: async () => {
+                      if (!(await onRevoke(g.grantId))) throw new Error('revoke failed');
+                    },
+                  })
+                }
                 className={`${btn} hover:text-red-400`}
               >
                 {t('social.notes.revoke')}
@@ -150,6 +201,7 @@ export default function NotesAccessPanel({ view, status, title, onDecide, onUpda
       <h2 className="text-sm font-semibold text-white">{title}</h2>
       <p className="text-xs text-neutral-500">{t('social.notes.readOnlyHint')}</p>
       <ul className="space-y-2">{grants.map(renderRow)}</ul>
+      <ConfirmActionDialog state={revokeConfirm} />
     </section>
   );
 }

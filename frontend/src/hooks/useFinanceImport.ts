@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { isAxiosError } from 'axios';
+import { getHttpStatus } from '../lib/httpError';
 import {
   FINANCE_IMPORT_MAX_ROWS,
   FINANCE_MAX_ENTRIES_PER_USER,
@@ -100,7 +100,7 @@ export function useFinanceImport() {
       setStage('done');
     } catch (err) {
       setResult(total);
-      fail(isAxiosError(err) && err.response?.status === HTTP_TOO_MANY_REQUESTS ? 'rateLimited' : 'import');
+      fail(getHttpStatus(err) === HTTP_TOO_MANY_REQUESTS ? 'rateLimited' : 'import');
     }
     return total;
   }, [preview, fail]);

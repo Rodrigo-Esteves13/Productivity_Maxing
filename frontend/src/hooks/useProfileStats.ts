@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getUserTasks, getTaskMetadata } from '../api/userService';
+import { getUserTasks } from '../api/tasksService';
+import { getTaskMetadata } from '../api/metadataService';
 import { computeProfileStats, extractProjectTypeKeys, type ProfileStats } from '../utils/profileStats';
 import { useStreakRestPref } from './useStreakRestPref';
 import type { Task } from '../types/models';

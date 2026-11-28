@@ -10,17 +10,16 @@ import ColorDot from '../UI/ColorDot';
 
 interface MissingGradeCardProps {
   areas: Area[];
-  // Muda quando as tasks mudam, para refazer o pedido.
-  refreshKey: number;
 }
 
 // "Falta 10%": cadeiras do periodo cujos pesos (tasks + componentes de
 // nota) ainda nao somam o maximo, e as que o passam. Fica visivel no topo
 // do Dashboard e desaparece sozinho quando tudo esta completo.
-export default function MissingGradeCard({ areas, refreshKey }: MissingGradeCardProps) {
+export default function MissingGradeCard({ areas }: MissingGradeCardProps) {
   const { t } = useI18n();
   const { activePeriod } = useAcademic();
-  const data = useWeightBudgets(activePeriod?.id, refreshKey);
+  // Refaz o pedido sozinho quando tasks ou componentes de nota mudam.
+  const data = useWeightBudgets(activePeriod?.id);
   if (!data) return null;
 
   const areaById = new Map(areas.map((area) => [area.id, area]));
@@ -45,7 +44,7 @@ export default function MissingGradeCard({ areas, refreshKey }: MissingGradeCard
           <li key={area.id} className="flex items-center justify-between gap-3 text-sm">
             <span className="flex min-w-0 items-center gap-2 text-neutral-200">
               <ColorDot size="xs" color={area.colorHex} />
-              <span className="truncate">{area.name}</span>
+              <span className="truncate" title={area.name}>{area.name}</span>
             </span>
             <span className={`shrink-0 font-medium ${missing < 0 ? 'text-red-400' : 'text-amber-400'}`}>
               {missing < 0
@@ -55,7 +54,7 @@ export default function MissingGradeCard({ areas, refreshKey }: MissingGradeCard
           </li>
         ))}
       </ul>
-      <Link to="/areas" className="text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted">
+      <Link to="/areas" className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted">
         {t('missingGrade.action')}
       </Link>
     </DashboardCard>

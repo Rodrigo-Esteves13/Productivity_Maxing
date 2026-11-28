@@ -286,7 +286,7 @@ function AnalyticsBody({ data, granularity, money, compact }: AnalyticsBodyProps
                     <div className="flex items-center justify-between gap-2">
                       <span className="flex min-w-0 items-center gap-2 text-neutral-300">
                         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.swatch.dotClass}`} aria-hidden="true" />
-                        <span className="truncate">{categoryName(s.key)}</span>
+                        <span className="truncate" title={categoryName(s.key)}>{categoryName(s.key)}</span>
                       </span>
                       <span className="tabular-nums text-neutral-200">
                         <Money cents={s.cents} currency={currency} />
@@ -320,7 +320,7 @@ function AnalyticsBody({ data, granularity, money, compact }: AnalyticsBodyProps
             {data.subscriptions.items.map((sub) => (
               <li key={sub.entryId} className="flex items-center justify-between gap-3 py-2">
                 <div className="min-w-0">
-                  <p className="truncate text-sm text-neutral-200">{sub.note ?? t('finance.cat.SUBSCRIPTIONS')}</p>
+                  <p className="truncate text-sm text-neutral-200" title={sub.note ?? t('finance.cat.SUBSCRIPTIONS')}>{sub.note ?? t('finance.cat.SUBSCRIPTIONS')}</p>
                   <p className="text-xs text-neutral-500">
                     {t(`finance.freq.${sub.frequency}`)}
                     {sub.nextDate && ` · ${t('finance.nextCharge', { date: new Date(`${sub.nextDate}T00:00:00`).toLocaleDateString(lang) })}`}

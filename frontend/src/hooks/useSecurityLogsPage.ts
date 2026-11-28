@@ -1,15 +1,28 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   getSecurityLogs,
   getSecurityLogsStats,
   purgeSecurityLogs,
   type SecurityLogsQuery,
 } from '../api/securityLogsService';
+import {
+  DEFAULT_SECURITY_LOG_SORT,
+  nextSecurityLogSort,
+  type SecurityLogSortKey,
+} from '../lib/securityLogSort';
+import { securityLogsToCsv, SECURITY_LOGS_CSV_COLUMNS } from '../utils/securityLogsCsv';
+import { fetchSecurityLogsForExport } from '../utils/securityLogsExport';
+import { downloadTextFile } from '../utils/downloadTextFile';
+import { todayKey } from '../lib/dateKey';
 import type { SecurityLog, SecurityLogsStats } from '../types/models';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
 
 const PAGE_SIZE = 25;
+// Espera antes de pedir ao servidor depois de escrever num filtro.
+const FILTER_DEBOUNCE_MS = 300;
+const CSV_MIME_TYPE = 'text/csv;charset=utf-8';
+const CSV_FILE_PREFIX = 'pmaxing_security_logs_';
 
 export interface SecurityLogsFiltersState {
   ip: string;
@@ -27,6 +40,16 @@ export function useSecurityLogsPage() {
   const [stats, setStats] = useState<SecurityLogsStats | null>(null);
 
   const [filters, setFilters] = useState<SecurityLogsFiltersState>(emptyFilters);
+  // Os filtros que realmente vao ao servidor (os de cima seguem cada tecla).
+  const [appliedFilters, setAppliedFilters] = useState<SecurityLogsFiltersState>(emptyFilters);
+  const latestRequest = useRef(0);
+  const [sort, setSort] = useState(DEFAULT_SECURITY_LOG_SORT);
+  const [isExporting, setIsExporting] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setAppliedFilters(filters), FILTER_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [filters]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,26 +59,31 @@ export function useSecurityLogsPage() {
     (skipOverride: number): SecurityLogsQuery => ({
       skip: skipOverride,
       take: PAGE_SIZE,
-      ...(filters.ip.trim() ? { ip: filters.ip.trim() } : {}),
-      ...(filters.path.trim() ? { path: filters.path.trim() } : {}),
-      ...(filters.window ? { window: filters.window } : {}),
+      ...(appliedFilters.ip.trim() ? { ip: appliedFilters.ip.trim() } : {}),
+      ...(appliedFilters.path.trim() ? { path: appliedFilters.path.trim() } : {}),
+      ...(appliedFilters.window ? { window: appliedFilters.window } : {}),
+      sortBy: sort.key,
+      sortDir: sort.direction,
     }),
-    [filters],
+    [appliedFilters, sort],
   );
 
   const fetchLogs = useCallback(
     async (skipOverride = 0) => {
+      // Respostas fora de ordem: so a do pedido mais recente conta.
+      const requestId = ++latestRequest.current;
       try {
         setIsLoading(true);
         setError('');
         const data = await getSecurityLogs(buildQuery(skipOverride));
+        if (requestId !== latestRequest.current) return;
         setLogs(data.logs);
         setTotal(data.total);
         setSkip(data.skip);
       } catch {
-        setError(translateNow('hook.errorLoadingSecurityLogs'));
+        if (requestId === latestRequest.current) setError(translateNow('hook.errorLoadingSecurityLogs'));
       } finally {
-        setIsLoading(false);
+        if (requestId === latestRequest.current) setIsLoading(false);
       }
     },
     [buildQuery],
@@ -71,7 +99,7 @@ export function useSecurityLogsPage() {
     }
   }, []);
 
-  // Sempre que os filtros mudam, volta à primeira página.
+  // Sempre que os filtros ou a ordem mudam, volta à primeira página.
   useEffect(() => {
     fetchLogs(0);
   }, [fetchLogs]);
@@ -81,6 +109,11 @@ export function useSecurityLogsPage() {
   }, [fetchStats]);
 
   const clearFilters = () => setFilters(emptyFilters);
+
+  // Volta a pedir a pagina atual e os totais (sem saltar para a primeira).
+  const refresh = useCallback(() => {
+    void Promise.all([fetchLogs(skip), fetchStats()]);
+  }, [fetchLogs, fetchStats, skip]);
 
   const goToNextPage = () => {
     if (skip + PAGE_SIZE >= total) return;
@@ -115,7 +148,34 @@ export function useSecurityLogsPage() {
     }
   };
 
+  const toggleSort = (key: SecurityLogSortKey) => setSort((prev) => nextSecurityLogSort(prev, key));
+
+  // CSV de todos os resultados dos filtros (nao so da pagina), ate ao teto.
+  // Os cabecalhos vem de quem chama, ja traduzidos.
+  const exportCsv = async () => {
+    setIsExporting(true);
+    try {
+      const result = await fetchSecurityLogsForExport(getSecurityLogs, buildQuery(0));
+      const headers = SECURITY_LOGS_CSV_COLUMNS.map((column) => translateNow(`ux4admin.logs.col.${column}`));
+      downloadTextFile(securityLogsToCsv(result.logs, headers), `${CSV_FILE_PREFIX}${todayKey()}.csv`, CSV_MIME_TYPE);
+      const count = result.logs.length;
+      if (result.isCapped) {
+        notify(translateNow('f7admin.logs.exportCapped', { count, total: result.total }), 'info');
+      } else {
+        notify(translateNow('ux4admin.logs.exported', { count }), 'success');
+      }
+    } catch {
+      notify(translateNow('f7admin.logs.exportError'), 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return {
+    sort,
+    toggleSort,
+    exportCsv,
+    isExporting,
     logs,
     total,
     skip,
@@ -130,5 +190,6 @@ export function useSecurityLogsPage() {
     goToNextPage,
     goToPrevPage,
     handlePurge,
+    refresh,
   };
 }

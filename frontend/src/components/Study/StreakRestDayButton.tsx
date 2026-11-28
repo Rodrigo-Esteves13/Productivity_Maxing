@@ -53,7 +53,7 @@ export default function StreakRestDayButton({ refreshKey, onChange }: StreakRest
           type="button"
           disabled={isBusy}
           onClick={() => run(() => deleteStreakFreeze(todayFreezeId))}
-          className="text-neutral-400 underline-offset-2 hover:text-neutral-200 hover:underline disabled:opacity-50"
+          className="text-neutral-400 underline-offset-2 hover:text-neutral-200 hover:underline disabled:opacity-50 pointer-coarse:min-h-11"
         >
           {t('streakFreeze.claim.undo')}
         </button>
@@ -69,7 +69,7 @@ export default function StreakRestDayButton({ refreshKey, onChange }: StreakRest
         disabled={isBusy}
         onClick={() => run(() => createStreakFreeze())}
         title={t('streakFreeze.claim.hint', { max: status.maxPerWeek })}
-        className="rounded-md border border-neutral-700 px-2 py-0.5 text-neutral-300 transition-colors hover:border-sky-500/60 hover:text-sky-300 disabled:opacity-50"
+        className="rounded-md border border-neutral-700 px-2 py-0.5 text-neutral-300 transition-colors hover:border-sky-500/60 hover:text-sky-300 disabled:opacity-50 pointer-coarse:min-h-11"
       >
         {t('streakFreeze.claim.button')}
       </button>

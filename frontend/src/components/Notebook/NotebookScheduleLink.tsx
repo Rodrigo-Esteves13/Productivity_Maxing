@@ -80,7 +80,7 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
         <button
           type="button"
           onClick={() => setIsEditing(true)}
-          className="text-violet-400 hover:underline"
+          className="text-violet-400 hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
         >
           {t('ui.change')}
         </button>
@@ -93,7 +93,7 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
       <button
         type="button"
         onClick={() => setIsEditing(true)}
-        className="text-xs text-violet-400 hover:underline"
+        className="text-xs text-violet-400 hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
       >
         {t('ui.linkThisSubjectToYour')}
       </button>
@@ -107,13 +107,13 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
         onChange={(e) => setDraft(e.target.value)}
         placeholder={t('ui.subjectTextAsItAppears')}
         aria-label={t('ui.subjectTextAsItAppears')}
-        className="w-full sm:w-64 rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none"
+        className="w-full sm:w-64 rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 pointer-coarse:min-h-11 text-xs text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none"
       />
       <button
         type="button"
         onClick={handleSave}
         disabled={isSaving}
-        className="rounded-md p-1 text-violet-400 hover:bg-neutral-800 disabled:opacity-50"
+        className="rounded-md p-1 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center pointer-coarse:min-w-11 pointer-coarse:justify-center text-violet-400 hover:bg-neutral-800 disabled:opacity-50"
         aria-label={t('ui.saveLink')}
       >
         <CheckIcon className="h-3.5 w-3.5" />
@@ -122,7 +122,7 @@ export default function NotebookScheduleLink({ areaId }: NotebookScheduleLinkPro
         <button
           type="button"
           onClick={handleRemove}
-          className="rounded-md p-1 text-red-400 hover:bg-neutral-800"
+          className="rounded-md p-1 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center pointer-coarse:min-w-11 pointer-coarse:justify-center text-red-400 hover:bg-neutral-800"
           aria-label={t('ui.removeLink')}
         >
           <XIcon className="h-3.5 w-3.5" />

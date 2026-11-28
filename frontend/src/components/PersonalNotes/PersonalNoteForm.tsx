@@ -3,6 +3,7 @@ import Button from '../UI/Button';
 import Input from '../UI/Input';
 import Textarea from '../UI/Textarea';
 import { useI18n } from '../../i18n/useI18n';
+import { isPastLocalInput } from '../../lib/personalNotesFilter';
 import type { PersonalNoteInput } from '../../api/personalNotesService';
 import type { PersonalNote } from '../../types/models';
 
@@ -21,19 +22,26 @@ interface PersonalNoteFormProps {
   initial?: PersonalNote;
   onSubmit: (input: PersonalNoteInput & { title: string }) => Promise<boolean>;
   onCancel?: () => void;
+  // Limite de notas atingido: nao deixa criar mais (editar continua a dar).
+  isFull?: boolean;
 }
 
 // Criar ou editar uma nota pessoal, com lembrete opcional.
-export default function PersonalNoteForm({ initial, onSubmit, onCancel }: PersonalNoteFormProps) {
+export default function PersonalNoteForm({ initial, onSubmit, onCancel, isFull = false }: PersonalNoteFormProps) {
   const { t } = useI18n();
   const [title, setTitle] = useState(initial?.title ?? '');
   const [body, setBody] = useState(initial?.body ?? '');
   const [remindAt, setRemindAt] = useState(toLocalInput(initial?.remindAt ?? null));
   const [isSaving, setIsSaving] = useState(false);
+  // Aviso so quando a hora e nova e ja passou: um lembrete antigo ja enviado
+  // nao bloqueia editar o resto da nota.
+  const initialRemindAt = toLocalInput(initial?.remindAt ?? null);
+  const isPastReminder = remindAt !== initialRemindAt && isPastLocalInput(remindAt);
+  const blockedByLimit = isFull && !initial;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || isPastReminder || blockedByLimit) return;
     setIsSaving(true);
     const ok = await onSubmit({
       title: title.trim(),
@@ -74,7 +82,13 @@ export default function PersonalNoteForm({ initial, onSubmit, onCancel }: Person
             className="mt-1"
             value={remindAt}
             onChange={(e) => setRemindAt(e.target.value)}
+            aria-invalid={isPastReminder || undefined}
           />
+          {isPastReminder && (
+            <span role="alert" className="mt-1 block text-xs text-amber-400">
+              {t('ux4notes.reminderPast')}
+            </span>
+          )}
         </label>
         <div className="ml-auto flex gap-2">
           {onCancel && (
@@ -82,7 +96,7 @@ export default function PersonalNoteForm({ initial, onSubmit, onCancel }: Person
               {t('ui.cancel')}
             </Button>
           )}
-          <Button type="submit" size="sm" disabled={isSaving || !title.trim()}>
+          <Button type="submit" size="sm" disabled={isSaving || !title.trim() || isPastReminder || blockedByLimit}>
             {initial ? t('notes.save') : t('notes.add')}
           </Button>
         </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import ColorDot from '../UI/ColorDot';
-import { updateTask } from '../../api/userService';
+import { updateTask } from '../../api/tasksService';
 import { formatDayLabel } from '../../lib/timeFormat';
 import type { BackfillCandidate } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
@@ -44,7 +44,7 @@ function BackfillRow({ candidate, onSaved }: BackfillRowProps) {
       <div className="min-w-0 flex-1 basis-40">
         <p className="flex items-center gap-2 text-sm text-neutral-200">
           <ColorDot size="xs" color={candidate.areaColorHex} />
-          <span className="truncate">{candidate.title}</span>
+          <span className="truncate" title={candidate.title}>{candidate.title}</span>
         </p>
         <p className="pl-4 text-[11px] text-neutral-500">
           {t('ui.grade', { areaName: candidate.areaName, date: formatDayLabel(candidate.date), grade: candidate.grade, gradeMax: candidate.gradeMax })}</p>
@@ -59,13 +59,13 @@ function BackfillRow({ candidate, onSaved }: BackfillRowProps) {
         onKeyDown={(e) => {
           if (e.key === 'Enter') void save();
         }}
-        className="w-20 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none"
+        className="pointer-coarse:min-h-11 w-20 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none"
       />
       <button
         type="button"
         onClick={() => void save()}
         disabled={isSaving || hours.trim() === ''}
-        className="rounded-md bg-violet-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+        className="pointer-coarse:min-h-11 rounded-md bg-violet-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
       >
         {isSaving ? t('common.saving') : t('ui.save')}
       </button>

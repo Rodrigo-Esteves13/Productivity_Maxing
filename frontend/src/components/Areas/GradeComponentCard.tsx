@@ -15,7 +15,7 @@ interface GradeComponentCardProps {
   onUpdate: (changes: Partial<GradeComponentInput>) => Promise<void>;
   onRequestDelete: () => void;
   onAddEntry: (input: GradeEntryInput) => Promise<void>;
-  onEditEntry: (entryId: string, grade: number) => Promise<void>;
+  onEditEntry: (entryId: string, changes: Partial<GradeEntryInput>) => Promise<void>;
   onRemoveEntry: (entryId: string) => Promise<void>;
 }
 
@@ -82,7 +82,7 @@ export default function GradeComponentCard({
     <li className="space-y-3 rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-white">{component.name}</p>
+          <p className="truncate text-sm font-medium text-white" title={component.name}>{component.name}</p>
           <p className="text-xs text-neutral-500">
             {t('grades.weightValue', { weight: component.weightPercentage })} · {ruleLabel}
           </p>
@@ -121,7 +121,7 @@ export default function GradeComponentCard({
             <GradeEntryChip
               key={entry.id}
               entry={entry}
-              onChange={(grade) => guard(() => onEditEntry(entry.id, grade))}
+              onChange={(changes) => guard(() => onEditEntry(entry.id, changes))}
               onRemove={() => guard(() => onRemoveEntry(entry.id))}
             />
           ))}

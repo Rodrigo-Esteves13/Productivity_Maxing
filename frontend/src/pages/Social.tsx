@@ -47,6 +47,7 @@ export default function Social() {
     remove,
     block,
     unblock,
+    reload,
   } = useSocial();
 
   const invitations = shared.items.filter((item) => item.invited);
@@ -78,6 +79,7 @@ export default function Social() {
         onUnblock={unblock}
         outgoingGrants={notes.outgoing}
         onRequestNotes={notes.request}
+        onRemoveGrant={notes.remove}
       />
     );
 
@@ -124,7 +126,7 @@ export default function Social() {
           {isLoading ? (
             <LinesSkeleton lines={3} />
           ) : hasError || !data ? (
-            <ErrorState message={t('social.loadError')} />
+            <ErrorState message={t('social.loadError')} onRetry={reload} />
           ) : (
             <>
               {lists(['incoming'])}
@@ -149,7 +151,7 @@ export default function Social() {
           {isLoading ? (
             <CardGridSkeleton cards={3} />
           ) : hasError || !data ? (
-            <ErrorState message={t('social.loadError')} />
+            <ErrorState message={t('social.loadError')} onRetry={reload} />
           ) : (
             <div className="space-y-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -160,7 +162,7 @@ export default function Social() {
                 <EmptyState
                   message={t('social.emptyWithClasses')}
                   action={
-                    <Link to="/classes" className="text-sm font-medium text-violet-400 hover:text-violet-300">
+                    <Link to="/classes" className="text-sm font-medium text-violet-400 hover:text-violet-300 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center">
                       {t('social.openClasses')}
                     </Link>
                   }

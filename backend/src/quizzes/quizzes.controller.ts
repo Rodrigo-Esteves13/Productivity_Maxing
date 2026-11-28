@@ -107,6 +107,18 @@ export class QuizzesController {
     return this.quizzes.clearAttempts(user.id, id);
   }
 
+  @Delete(':id/attempts/:attemptId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @WRITE
+  @ApiOperation({ summary: 'Deletes one attempt from the history of a quiz.' })
+  removeAttempt(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('attemptId', ParseUUIDPipe) attemptId: string,
+  ) {
+    return this.quizzes.removeAttempt(user.id, id, attemptId);
+  }
+
   @Delete(':id/stats')
   @HttpCode(HttpStatus.NO_CONTENT)
   @WRITE

@@ -5,6 +5,10 @@ import { ReportClientErrorDto } from './dto/report-client-error.dto';
 import { ReportWebVitalDto } from './dto/report-web-vital.dto';
 import { SkipCsrf } from '../common/decorators/skip-csrf.decorator';
 import { perMinute } from '../common/throttle.util';
+import {
+  CLIENT_ERROR_REPORTS_PER_MINUTE,
+  WEB_VITAL_REPORTS_PER_MINUTE,
+} from './telemetry.constants';
 
 /**
  * Deliberately unauthenticated (no JwtAuthGuard) - an ErrorBoundary crash
@@ -31,7 +35,7 @@ export class TelemetryController {
   @Post('client-error')
   @HttpCode(204)
   @SkipCsrf()
-  @Throttle(perMinute(20))
+  @Throttle(perMinute(CLIENT_ERROR_REPORTS_PER_MINUTE))
   reportClientError(@Body() dto: ReportClientErrorDto): void {
     this.telemetryService.reportClientError(dto);
   }
@@ -39,7 +43,7 @@ export class TelemetryController {
   @Post('web-vitals')
   @HttpCode(204)
   @SkipCsrf()
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(WEB_VITAL_REPORTS_PER_MINUTE))
   reportWebVital(@Body() dto: ReportWebVitalDto): void {
     this.telemetryService.reportWebVital(dto);
   }

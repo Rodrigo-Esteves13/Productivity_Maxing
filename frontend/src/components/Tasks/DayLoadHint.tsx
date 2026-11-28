@@ -41,7 +41,7 @@ function formatHours(minutes: number): string {
 // carregados? Mesmo criterio do OverloadAlertCard (contagem de tasks por
 // fazer), so frontend, sobre as tasks que a pagina ja tem.
 export default function DayLoadHint({ date, tasks, excludeTaskId, onPickDate }: DayLoadHintProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const load = useMemo(() => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
     const start = dayIndex(date);
@@ -88,7 +88,7 @@ export default function DayLoadHint({ date, tasks, excludeTaskId, onPickDate }: 
         )}
         {onPickDate && load.lighterDay && (
           <p className="flex flex-wrap items-center gap-2">
-            <span>{t('lighterDay.text', { date: new Date(`${load.lighterDay}T00:00:00`).toLocaleDateString() })}</span>
+            <span>{t('lighterDay.text', { date: new Date(`${load.lighterDay}T00:00:00`).toLocaleDateString(lang) })}</span>
             <button
               type="button"
               onClick={() => onPickDate(load.lighterDay as string)}

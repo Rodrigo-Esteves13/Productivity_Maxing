@@ -15,13 +15,13 @@ export const HISTORY_RANGE_DAYS: Record<HistoryRange, number> = {
 };
 
 // Historico de adesao da medicacao para a vista escolhida.
-export function useMedicationHistory() {
+export function useMedicationHistory(refreshKey = 0) {
   const today = useLisbonToday();
   const [range, setRange] = useState<HistoryRange>('week');
   const fetcher = useCallback(() => {
     const from = toDateKey(new Date(Date.parse(today) - (HISTORY_RANGE_DAYS[range] - 1) * MS_PER_DAY));
     return getMedicationHistory(from, today);
   }, [range, today]);
-  const { data, isLoading, error } = useLoadOnce(fetcher, `${range}:${today}`);
-  return { history: data, isLoading, error, range, setRange };
+  const { data, isLoading, error, reload } = useLoadOnce(fetcher, `${range}:${today}:${refreshKey}`);
+  return { history: data, isLoading, error, range, setRange, reload };
 }

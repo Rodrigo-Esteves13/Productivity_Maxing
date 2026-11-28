@@ -24,6 +24,11 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { perMinute } from '../common/throttle.util';
+import {
+  NOTEBOOK_SHARE_ACCESS_REQUESTS_PER_MINUTE,
+  NOTEBOOK_SHARE_EDITS_PER_MINUTE,
+  NOTEBOOK_SHARE_READS_PER_MINUTE,
+} from './notebook.constants';
 
 // Controller à parte de NotebookController de propósito: aquele tem
 // @UseGuards(JwtAuthGuard) na classe toda, e este é exatamente o oposto -
@@ -43,7 +48,7 @@ export class NotebookShareController {
   // Declarada ANTES de ':token' - senao 'with-me' seria apanhado como token.
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(NOTEBOOK_SHARE_READS_PER_MINUTE))
   @Get('with-me')
   @ApiOperation({
     summary:
@@ -65,7 +70,7 @@ export class NotebookShareController {
   // valor (baixo, são UUIDs, mas na dúvida mais vale um limite explícito
   // do que confiar só na imprevisibilidade do UUID).
   @UseGuards(OptionalJwtAuthGuard)
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(NOTEBOOK_SHARE_READS_PER_MINUTE))
   @Get(':token')
   @ApiOperation({
     summary:
@@ -89,7 +94,7 @@ export class NotebookShareController {
   // na classe, porque só esta rota tem esse requisito.
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(NOTEBOOK_SHARE_ACCESS_REQUESTS_PER_MINUTE))
   @Post(':token/request-access')
   @ApiOperation({
     summary: 'Request access to an AUTHORIZED share. Idempotent.',
@@ -107,7 +112,7 @@ export class NotebookShareController {
   // pessoa concreta).
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(NOTEBOOK_SHARE_EDITS_PER_MINUTE))
   @Post(':token/edit')
   @ApiOperation({
     summary:

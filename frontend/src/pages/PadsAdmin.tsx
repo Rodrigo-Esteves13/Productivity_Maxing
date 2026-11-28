@@ -4,32 +4,60 @@ import PageHeader from "../components/Layout/PageHeader";
 import Button from "../components/UI/Button";
 import ErrorState from "../components/UI/ErrorState";
 import EmptyState from "../components/UI/EmptyState";
+import SearchField from "../components/UI/SearchField";
+import Pagination from "../components/UI/Pagination";
+import BlockedPadSources from "../components/PadsAdmin/BlockedPadSources";
 import TableSkeleton from "../components/UI/TableSkeleton";
 import ConfirmActionDialog from "../components/Turma/ConfirmActionDialog";
 import {
   blockPadSource,
   deletePadAsAdmin,
-  getRecentPadsForAdmin,
   unblockPadSource,
 } from "../api/padsService";
 import useDocumentTitle from "../hooks/useDocumentTitle";
-import { useLoadOnce } from "../hooks/useLoadOnce";
+import { usePadsAdmin } from "../hooks/usePadsAdmin";
 import { useConfirmAction } from "../hooks/useConfirmAction";
 import { useI18n } from "../i18n/useI18n";
 import { formatDateTime } from "../lib/timeFormat";
 import { adminUserPath, padPath } from "../lib/appLinks";
+import { PAD_SLUG_MAX_LENGTH } from "../lib/padSlug";
 
 // Primeiros caracteres do hash do IP: chegam para ver a mesma origem em
 // varios pads (o hash inteiro fica no title).
 const ANON_HASH_SHOWN = 8;
 
-// Moderacao de pads (admin): os alterados mais recentemente, quem gravou por
-// ultimo e apagar. Cada apagar fica no security log.
+// Moderacao de pads (admin): todos os pads (mais recentes primeiro), quem
+// gravou por ultimo, origens bloqueadas e apagar. Cada apagar fica no
+// security log.
 export default function PadsAdmin() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   useDocumentTitle(t("nav.admin.pads"));
-  const { data, isLoading, error, reload } = useLoadOnce(getRecentPadsForAdmin);
+  const {
+    pads,
+    blocked,
+    query,
+    setQuery,
+    search,
+    skip,
+    setSkip,
+    blockedSkip,
+    setBlockedSkip,
+    pageSize,
+    reload,
+  } = usePadsAdmin();
   const confirm = useConfirmAction(t("turma.actionError"));
+
+  const requestUnblock = (ipHash: string) =>
+    confirm.request({
+      title: t("pad.admin.unblock"),
+      message: t("pad.admin.unblockConfirm"),
+      confirmLabel: t("pad.admin.unblock"),
+      tone: "default",
+      run: async () => {
+        await unblockPadSource(ipHash);
+        reload();
+      },
+    });
 
   return (
     <PageLayout>
@@ -37,15 +65,33 @@ export default function PadsAdmin() {
         title={t("nav.admin.pads")}
         description={t("pad.admin.description")}
       />
-      {isLoading ? (
+      <BlockedPadSources
+        sources={blocked}
+        skip={blockedSkip}
+        pageSize={pageSize}
+        onSkipChange={setBlockedSkip}
+        onUnblock={requestUnblock}
+      />
+      {pads.isLoading ? (
         <TableSkeleton />
-      ) : error ? (
-        <ErrorState message={t("pad.loadError")} />
-      ) : !data || data.length === 0 ? (
+      ) : pads.hasError || !pads.data ? (
+        <ErrorState message={t("pad.loadError")} onRetry={reload} />
+      ) : !search && pads.data.total === 0 ? (
         <EmptyState message={t("pad.admin.none")} />
       ) : (
+        <>
+          <div className="mb-3">
+            <SearchField
+              value={query}
+              onChange={(value) => setQuery(value.slice(0, PAD_SLUG_MAX_LENGTH))}
+              label={t("ux4adm2.pads.search")}
+            />
+          </div>
+          {pads.data.items.length === 0 ? (
+            <EmptyState message={t("search.noResultsFor", { query: search })} />
+          ) : (
         <ul className="space-y-2">
-          {data.map((pad) => (
+          {pads.data.items.map((pad) => (
             <li
               key={pad.slug}
               className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4"
@@ -53,7 +99,7 @@ export default function PadsAdmin() {
               <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
                 <Link
                   to={padPath(pad.slug)}
-                  className="font-mono text-sm font-semibold text-violet-400 hover:underline"
+                  className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center font-mono text-sm font-semibold text-violet-400 hover:underline"
                 >
                   /pad/{pad.slug}
                 </Link>
@@ -61,7 +107,7 @@ export default function PadsAdmin() {
                   {pad.updatedByIpHash && !pad.updatedBy && (
                     <Button
                       variant="secondary"
-                      className="px-2.5 py-1 text-xs"
+                      size="sm"
                       onClick={() => {
                         const ipHash = pad.updatedByIpHash as string;
                         confirm.request({
@@ -99,7 +145,7 @@ export default function PadsAdmin() {
                   )}
                   <Button
                     variant="danger"
-                    className="px-2.5 py-1 text-xs"
+                    size="sm"
                     onClick={() =>
                       confirm.request({
                         title: t("pad.admin.delete"),
@@ -123,8 +169,8 @@ export default function PadsAdmin() {
                 {pad.preview || t("pad.admin.empty")}
               </p>
               <p className="text-xs text-neutral-500">
-                {t("pad.admin.length", { count: pad.length.toLocaleString() })}{" "}
-                · {formatDateTime(pad.updatedAt)} ·{" "}
+                {t("pad.admin.length", { count: pad.length.toLocaleString(lang) })}{" "}
+                · {formatDateTime(pad.updatedAt, lang)} ·{" "}
                 {pad.updatedBy ? (
                   <Link
                     to={adminUserPath(pad.updatedBy.id)}
@@ -154,6 +200,15 @@ export default function PadsAdmin() {
             </li>
           ))}
         </ul>
+          )}
+          <Pagination
+            total={pads.data.total}
+            skip={skip}
+            pageSize={pageSize}
+            onNextPage={() => setSkip(skip + pageSize)}
+            onPrevPage={() => setSkip(Math.max(0, skip - pageSize))}
+          />
+        </>
       )}
       <ConfirmActionDialog state={confirm} />
     </PageLayout>

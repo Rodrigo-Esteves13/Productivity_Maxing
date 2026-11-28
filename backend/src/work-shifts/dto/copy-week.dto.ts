@@ -3,12 +3,14 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DATE_KEY_PATTERN } from '../../common/date-key.util';
 import { COPY_WEEK_MODES } from '../work-shifts.constants';
 import type { CopyWeekMode } from '../work-shifts.constants';
+import { IsRealDateKey } from '../../common/validators/is-real-date-key.decorator';
 
 export class CopyWeekDto {
   @ApiProperty({
     example: '2026-09-28',
     description: 'Monday of the week to copy from.',
   })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, {
     message: 'fromWeekStart must be formatted YYYY-MM-DD.',
   })
@@ -20,6 +22,7 @@ export class CopyWeekDto {
       'Monday of the week to copy into. Required for one-off, ignored for fixed.',
   })
   @IsOptional()
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, {
     message: 'toWeekStart must be formatted YYYY-MM-DD.',
   })

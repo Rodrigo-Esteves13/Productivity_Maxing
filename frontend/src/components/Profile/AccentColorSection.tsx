@@ -33,7 +33,7 @@ export default function AccentColorSection() {
               aria-pressed={selected}
               aria-label={name}
               title={name}
-              className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-white transition-colors ${
+              className={`flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-full border-2 text-white transition-colors ${
                 selected ? 'border-white' : 'border-neutral-700 hover:border-neutral-400'
               } ${unlocked ? '' : 'opacity-30 cursor-not-allowed'}`}
               style={{ background: ACCENT_SWATCHES[id] }}
@@ -46,7 +46,7 @@ export default function AccentColorSection() {
           type="button"
           onClick={resetAccent}
           disabled={isDefault}
-          className="ml-1 inline-flex items-center gap-1 rounded-lg border border-neutral-800 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-50 disabled:hover:bg-transparent"
+          className="ml-1 inline-flex pointer-coarse:min-h-11 items-center gap-1 rounded-lg border border-neutral-800 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-50 disabled:hover:bg-transparent"
         >
           <UndoIcon className="h-4 w-4" aria-hidden="true" />
           {t('accentColor.reset')}

@@ -83,7 +83,7 @@ export default function MoneySnapshotCard() {
 
       <Link
         to="/finance"
-        className="mt-3 block text-xs text-violet-400 underline decoration-dotted hover:text-violet-300"
+        className="pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center mt-3 block text-xs text-violet-400 underline decoration-dotted hover:text-violet-300"
       >
         {t('moneySnapshot.open')}
       </Link>

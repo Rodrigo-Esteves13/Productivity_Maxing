@@ -56,4 +56,6 @@ export const feedback: Record<string, string> = {
   'feedback.mine.reply': "팀의 답변",
   'feedback.mine.link': "보낸 피드백과 답변 보기.",
   'feedback.muted': "지금은 이 계정으로 피드백을 보낼 수 없습니다.",
+  'feedback.rateLimited': "짧은 시간에 너무 많이 보냈습니다. 1분 뒤에 다시 시도해 주세요.",
+  'feedback.offline': "연결되지 않았습니다. 인터넷을 확인하고 다시 시도해 주세요. 입력한 내용은 유지됩니다.",
 };

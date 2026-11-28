@@ -27,6 +27,14 @@ interface ManagePeriodsModalProps {
 
 // Converts an ISO date string to the yyyy-mm-dd shape <input type="date">
 // expects.
+// Fim antes do inicio nao faz sentido; datas yyyy-mm-dd comparam-se como texto.
+function isEndBeforeStart(start: string, end: string): boolean {
+  return Boolean(start && end && end < start);
+}
+
+const ACTION_BUTTON_CLASS =
+  'min-h-10 px-1 text-xs text-neutral-400 hover:text-neutral-200 underline decoration-dotted disabled:opacity-50 pointer-coarse:min-h-11';
+
 function toDateInputValue(iso: string | null): string {
   if (!iso) return '';
   return iso.slice(0, 10);
@@ -44,6 +52,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
   const [editName, setEditName] = useState('');
   const [editStart, setEditStart] = useState('');
   const [editEnd, setEditEnd] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const [newName, setNewName] = useState('');
@@ -74,12 +83,21 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
     setEditName(period.name);
     setEditStart(toDateInputValue(period.startDate));
     setEditEnd(toDateInputValue(period.endDate));
+    setEditError(null);
   };
 
-  const cancelEditing = () => setEditingId(null);
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditError(null);
+  };
 
   const saveEditing = async (period: AcademicPeriod) => {
     if (!editName.trim() || !editStart) return;
+    if (isEndBeforeStart(editStart, editEnd)) {
+      setEditError(t('ux4areas.endBeforeStart'));
+      return;
+    }
+    setEditError(null);
     setBusyId(period.id);
     try {
       await updatePeriod(period.id, {
@@ -90,8 +108,8 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
       setEditingId(null);
       await loadPeriods();
       await refreshContext();
-    } catch {
-      notify(t('periods.saveError'), 'error');
+    } catch (err: unknown) {
+      notify(getApiMessage(err, t('periods.saveError')), 'error');
     } finally {
       setBusyId(null);
     }
@@ -152,6 +170,10 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     if (!newName.trim() || !newStart) return;
+    if (isEndBeforeStart(newStart, newEnd)) {
+      setError(t('ux4areas.endBeforeStart'));
+      return;
+    }
 
     setIsCreating(true);
     setError(null);
@@ -167,8 +189,8 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
       setNewEnd('');
       await loadPeriods();
       await refreshContext();
-    } catch {
-      setError(t('periods.createError'));
+    } catch (err: unknown) {
+      setError(getApiMessage(err, t('periods.createError')));
     } finally {
       setIsCreating(false);
     }
@@ -199,19 +221,30 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
                       autoFocus
                     />
                     <div className="flex gap-2">
-                      <Input
-                        type="date"
-                        value={editStart}
-                        onChange={(e) => setEditStart(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Input
-                        type="date"
-                        value={editEnd}
-                        onChange={(e) => setEditEnd(e.target.value)}
-                        className="flex-1"
-                      />
+                      <FormField label={t('periods.start')} htmlFor={`edit-period-start-${period.id}`} className="flex-1">
+                        <Input
+                          id={`edit-period-start-${period.id}`}
+                          type="date"
+                          value={editStart}
+                          onChange={(e) => {
+                            setEditStart(e.target.value);
+                            setEditError(null);
+                          }}
+                        />
+                      </FormField>
+                      <FormField label={t('periods.end')} htmlFor={`edit-period-end-${period.id}`} className="flex-1">
+                        <Input
+                          id={`edit-period-end-${period.id}`}
+                          type="date"
+                          value={editEnd}
+                          onChange={(e) => {
+                            setEditEnd(e.target.value);
+                            setEditError(null);
+                          }}
+                        />
+                      </FormField>
                     </div>
+                    {editError && <FormError message={editError} />}
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="secondary" onClick={cancelEditing}>
                         {t('common.cancel')}
@@ -250,7 +283,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
                       <button
                         type="button"
                         onClick={() => startEditing(period)}
-                        className="text-xs text-neutral-400 hover:text-neutral-200 underline decoration-dotted"
+                        className={ACTION_BUTTON_CLASS}
                       >
                         {t('periods.rename')}
                       </button>
@@ -259,7 +292,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
                           type="button"
                           onClick={() => togglePin(period)}
                           disabled={busyId === period.id}
-                          className="text-xs text-neutral-400 hover:text-neutral-200 underline decoration-dotted disabled:opacity-50"
+                          className={ACTION_BUTTON_CLASS}
                         >
                           {period.isPinned ? t('periods.unpin') : t('periods.pin')}
                         </button>
@@ -268,7 +301,7 @@ export default function ManagePeriodsModal({ isOpen, onClose, program }: ManageP
                         type="button"
                         onClick={() => toggleArchived(period)}
                         disabled={busyId === period.id}
-                        className="text-xs text-neutral-400 hover:text-neutral-200 underline decoration-dotted disabled:opacity-50"
+                        className={ACTION_BUTTON_CLASS}
                       >
                         {period.isArchived ? t('periods.restore') : t('periods.archive')}
                       </button>

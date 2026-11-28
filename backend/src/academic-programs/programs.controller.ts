@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  ParseUUIDPipe,
   Patch,
   Delete,
   Query,
@@ -55,7 +56,7 @@ export class ProgramsController {
   })
   update(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateProgramDto,
   ) {
     return this.programsService.update(user.id, id, dto);
@@ -66,13 +67,19 @@ export class ProgramsController {
     summary:
       'Permanently deletes a program. Returns 409 if the program still has any task in it (any period, archived or not) - move or delete those tasks first.',
   })
-  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.programsService.remove(user.id, id);
   }
 
   @Get(':id/periods')
   @ApiOperation({ summary: 'Lists the periods of a program' })
-  findPeriods(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  findPeriods(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.periodsService.findAllForProgram(user.id, id);
   }
 
@@ -83,7 +90,7 @@ export class ProgramsController {
   })
   getAverage(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Query() query: GradeScenarioQueryDto,
   ) {
     return this.programsService.getAverage(user.id, id, query.scenario);
@@ -96,7 +103,7 @@ export class ProgramsController {
   })
   getCreditsSummary(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Query() query: GradeScenarioQueryDto,
   ) {
     return this.programsService.getCreditsSummary(user.id, id, query.scenario);
@@ -109,7 +116,7 @@ export class ProgramsController {
   })
   getPeriodsComparison(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Query() query: GradeScenarioQueryDto,
   ) {
     return this.programsService.getPeriodsComparison(

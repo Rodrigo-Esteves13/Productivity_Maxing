@@ -1,23 +1,20 @@
 import { useCallback, useState } from 'react';
-import api from '../../api/client';
+import { getTaskChanges } from '../../api/taskHistoryService';
 import LinesSkeleton from '../UI/LinesSkeleton';
-import { useLoadOnce } from '../../hooks/useLoadOnce';
+import { useLoadAbortable } from '../../hooks/useLoadOnce';
 import { useEnumLabel } from '../../hooks/useEnumLabel';
 import { useI18n } from '../../i18n/useI18n';
-import { formatChangeValue, isOpaqueField, type TaskChange } from '../../lib/taskHistory';
+import { formatChangeValue, isOpaqueField } from '../../lib/taskHistory';
 
 interface TaskHistorySectionProps {
   taskId: string;
 }
 
 function HistoryList({ taskId }: TaskHistorySectionProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const enumLabel = useEnumLabel();
-  const fetcher = useCallback(
-    async () => (await api.get<TaskChange[]>(`/tasks/${encodeURIComponent(taskId)}/changes`)).data,
-    [taskId],
-  );
-  const { data, isLoading, error } = useLoadOnce(fetcher);
+  const fetcher = useCallback((signal: AbortSignal) => getTaskChanges(taskId, signal), [taskId]);
+  const { data, isLoading, error } = useLoadAbortable(fetcher);
 
   if (isLoading) return <LinesSkeleton lines={3} />;
   if (error) return <p className="text-sm text-neutral-400">{t('taskHistory.error')}</p>;
@@ -26,13 +23,13 @@ function HistoryList({ taskId }: TaskHistorySectionProps) {
   const deps = {
     t,
     enumLabel,
-    formatDate: (iso: string) => new Date(iso).toLocaleDateString(),
+    formatDate: (iso: string) => new Date(iso).toLocaleDateString(lang),
   };
   return (
     <ul className="space-y-1.5">
       {data.map((change) => (
         <li key={change.id} className="text-sm text-neutral-300">
-          <span className="text-neutral-500 tabular-nums">{new Date(change.createdAt).toLocaleString()}</span>{' '}
+          <span className="text-neutral-500 tabular-nums">{new Date(change.createdAt).toLocaleString(lang)}</span>{' '}
           <span className="font-medium text-white">{t(`taskHistory.field.${change.field}`)}</span>
           {isOpaqueField(change.field)
             ? ''

@@ -4,8 +4,10 @@ import {
   IsOptional,
   IsInt,
   IsHexColor,
+  Max,
   MaxLength,
 } from 'class-validator';
+import { PRIORITY_ORDER_MAX } from '../priorities.constants';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // Sem "key" aqui de propósito, mesma razão que CreateTaskTypeDto: o admin
@@ -37,5 +39,6 @@ export class CreatePriorityDto {
   })
   @IsOptional()
   @IsInt()
+  @Max(PRIORITY_ORDER_MAX)
   order?: number;
 }

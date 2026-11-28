@@ -1,4 +1,14 @@
-import type { FeedbackItem } from '../../types/models';
+import type { FeedbackCategory, FeedbackItem } from '../../types/models';
+
+// Categoria de feedback -> chave i18n (a mesma do formulario de envio).
+export const FEEDBACK_CATEGORY_KEY: Record<FeedbackCategory, string> = {
+  BUG: 'feedback.category.bug',
+  IDEA: 'feedback.category.idea',
+  TRANSLATION: 'feedback.category.translation',
+  CONFUSING: 'feedback.category.confusing',
+  OTHER: 'feedback.category.other',
+};
+export const FEEDBACK_CATEGORIES = Object.keys(FEEDBACK_CATEGORY_KEY) as FeedbackCategory[];
 
 // Estado mostrado de um feedback (admin e autor usam o mesmo): chave i18n.
 type StatusKey = 'feedback.status.open' | 'feedback.status.replied' | 'feedback.status.done' | 'feedback.status.rejected';
@@ -14,6 +24,13 @@ const RESOLUTION_KEY: Record<NonNullable<FeedbackItem['resolution']>, StatusKey>
   DONE: 'feedback.status.done',
   REJECTED: 'feedback.status.rejected',
 };
+
+// O autor so edita enquanto ninguem fechou nem respondeu (o backend repete a regra).
+export function canEditFeedback(
+  item: Pick<FeedbackItem, 'isResolved' | 'resolution' | 'adminReply'>,
+): boolean {
+  return !item.isResolved && !item.resolution && !item.adminReply;
+}
 
 export function feedbackStatusKey(
   item: Pick<FeedbackItem, 'isResolved' | 'resolution' | 'adminReply'>,

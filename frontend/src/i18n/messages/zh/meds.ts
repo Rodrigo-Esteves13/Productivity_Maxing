@@ -55,4 +55,10 @@ export const meds: Record<string, string> = {
   'wellbeing.meds.push.unconfigured': "目前无法发送提醒：此服务器不提供通知。",
   'wellbeing.meds.timesZone': "时间为里斯本时间(葡萄牙本土)。",
   'wellbeing.meds.timesZoneDiffers': "你的设备处于其他时区：提醒会在你设置的里斯本时间到达，而不是你的当地时间。",
+  'wellbeing.meds.intake.heading': "额外及按需服药",
+  'wellbeing.meds.intake.logAnother': "保存并再添加一条",
+  'wellbeing.meds.intake.loggedCount': "本窗口已记录：{count}",
+  'wellbeing.mood.promptPast': "这一天感觉如何？只有心情为必填。",
+  'wellbeing.mood.loggedPast': "这一天已记录。您仍可修改。",
+  'wellbeing.mood.titlePast': "这一天的签到",
 };

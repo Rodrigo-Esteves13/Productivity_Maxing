@@ -19,11 +19,12 @@ import {
   type TurmaDeadline,
   type TurmaDeadlineKind,
 } from '../../api/turmasService';
-import { getUserAreas } from '../../api/userService';
+import { getUserAreas } from '../../api/areasService';
 import { useLoadOnce } from '../../hooks/useLoadOnce';
 import { useConfirmAction } from '../../hooks/useConfirmAction';
 import { useFeedback } from '../../context/useFeedback';
 import { useAuth } from '../../context/useAuth';
+import { useReloadOnReturn } from '../../hooks/useReloadOnReturn';
 import { useI18n } from '../../i18n/useI18n';
 import { formatDateTime } from '../../lib/timeFormat';
 
@@ -67,7 +68,8 @@ export default function TurmaDeadlinesTab({ turmaId, isDelegado }: TurmaDeadline
   const fetcher = useCallback(() => getTurmaDeadlines(turmaId), [turmaId]);
   const { data, isLoading, error, reload } = useLoadOnce(fetcher);
   const areasFetcher = useCallback(() => getUserAreas(), []);
-  const { data: areas } = useLoadOnce(areasFetcher);
+  const { data: areas, reload: reloadAreas } = useLoadOnce(areasFetcher);
+  useReloadOnReturn(reload, reloadAreas);
   const confirm = useConfirmAction(t('turma.actionError'));
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);

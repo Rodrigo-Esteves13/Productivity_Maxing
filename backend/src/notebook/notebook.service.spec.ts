@@ -1,5 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
 import { NotebookService, type NotebookEntrySummary } from './notebook.service';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { SearchNotebookQueryDto } from './dto/search-notebook-query.dto';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { PushService } from '../push/push.service';
 
@@ -169,53 +172,88 @@ describe('NotebookService.listSummariesForArea', () => {
 });
 
 describe('NotebookService.search', () => {
-  const candidates = [
-    {
-      id: 'n1',
-      title: 'Redes',
-      textContent: null,
-      date: new Date('2026-10-02'),
-      area: { name: 'CDR' },
-    },
-    {
-      id: 'n2',
-      title: 'Outra',
-      textContent: 'nada',
-      date: new Date('2026-10-01'),
-      area: { name: 'BD' },
-    },
-    {
-      id: 'n3',
-      title: 'Aula',
-      textContent: 'protocolo de redes',
-      date: new Date('2026-09-30'),
-      area: { name: 'CDR' },
-    },
-  ];
-
-  it('loads full rows only for the matches, in date order', async () => {
-    const { service, findMany } = setup(candidates, [
-      { ...entry('n3', []), area: { id: 'a', name: 'CDR', colorHex: null } },
-      { ...entry('n1', []), area: { id: 'a', name: 'CDR', colorHex: null } },
-    ]);
-
-    const result = await service.search('user-1', 'redes');
-
-    expect(findMany).toHaveBeenCalledTimes(2);
-    const firstArgs = (findMany.mock.calls[0] as [{ select: object }])[0];
-    expect(Object.keys(firstArgs.select)).not.toContain('drawingStrokes');
-    const secondArgs = (
-      findMany.mock.calls[1] as [{ where: { id: { in: string[] } } }]
-    )[0];
-    expect(secondArgs.where.id.in).toEqual(['n1', 'n3']);
-    expect(result.map((r) => r.id)).toEqual(['n1', 'n3']);
+  const row = (id: string, textContent: string | null = null) => ({
+    id,
+    areaId: 'a',
+    title: `Aula ${id}`,
+    entryType: 'NOTE',
+    classNumber: null,
+    date: new Date('2026-10-02'),
+    textContent,
+    area: { id: 'a', name: 'CDR', colorHex: '#fff' },
+    _count: { photos: 1, attachments: 0 },
   });
 
-  it('skips the second query when nothing matches', async () => {
-    const { service, findMany } = setup(candidates);
+  it('filters in SQL scoped by userId, capped at 50, and returns light summaries', async () => {
+    const { service, findMany, createSignedUrls } = setup([
+      row('n1', 'protocolo de redes'),
+    ]);
 
-    expect(await service.search('user-1', 'xyz')).toEqual([]);
+    const result = await service.search('user-1', ' redes ');
+
     expect(findMany).toHaveBeenCalledTimes(1);
+    const args = (
+      findMany.mock.calls[0] as [
+        { where: { userId: string; OR: unknown[] }; take: number },
+      ]
+    )[0];
+    expect(args.where.userId).toBe('user-1');
+    expect(args.take).toBe(50);
+    expect(args.where.OR).toEqual(
+      expect.arrayContaining([
+        { title: { contains: 'redes', mode: 'insensitive' } },
+        { textContent: { contains: 'redes', mode: 'insensitive' } },
+        { area: { name: { contains: 'redes', mode: 'insensitive' } } },
+      ]),
+    );
+    // Sem desenhos, fotos nem URLs assinados.
+    expect(createSignedUrls).not.toHaveBeenCalled();
+    expect(result[0]).toMatchObject({
+      id: 'n1',
+      preview: 'protocolo de redes',
+      photoCount: 1,
+      area: { name: 'CDR' },
+    });
+    expect(result[0]).not.toHaveProperty('textContent');
+  });
+
+  it('keeps the dd/mm/yyyy date search for digit-and-slash queries', async () => {
+    const dates = [
+      { id: 'n1', date: new Date('2026-10-02T12:00:00Z') },
+      { id: 'n2', date: new Date('2026-09-30T12:00:00Z') },
+    ];
+    const { service, findMany } = setup(dates, [row('n1')]);
+
+    const result = await service.search('user-1', '02/10/2026');
+
+    expect(findMany).toHaveBeenCalledTimes(2);
+    const second = (
+      findMany.mock.calls[1] as [{ where: { OR: { id?: { in: string[] } }[] } }]
+    )[0];
+    expect(second.where.OR).toContainEqual({ id: { in: ['n1'] } });
+    expect(result.map((r) => r.id)).toEqual(['n1']);
+  });
+
+  it('empty query returns nothing without touching the database', async () => {
+    const { service, findMany } = setup([]);
+    expect(await service.search('user-1', '   ')).toEqual([]);
+    expect(findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('SearchNotebookQueryDto', () => {
+  it('rejects queries longer than 200 characters', async () => {
+    const dto = plainToInstance(SearchNotebookQueryDto, { q: 'x'.repeat(201) });
+    expect(await validate(dto)).toHaveLength(1);
+  });
+
+  it('accepts a normal query and a missing one', async () => {
+    expect(
+      await validate(plainToInstance(SearchNotebookQueryDto, { q: 'redes' })),
+    ).toHaveLength(0);
+    expect(
+      await validate(plainToInstance(SearchNotebookQueryDto, {})),
+    ).toHaveLength(0);
   });
 });
 

@@ -69,7 +69,7 @@ export const extra: Record<string, string> = {
   "hook.couldNotLoadTheData": "无法加载数据。",
   "hook.taskCreatedButTheChecklistCould": "任务已创建，但无法保存清单。",
   "hook.deleteTask": "删除任务",
-  "hook.areYouSureYouWantTo": "确定要删除此任务吗？此操作无法撤销。",
+  "hook.areYouSureYouWantTo": "确定要删除此任务吗？删除后可立即撤销。",
   "hook.googleCalendar": "Google 日历",
   "hook.alsoRemoveTheLinkedEventFrom": "同时从 Google 日历中移除关联的事件？",
   "hook.removeEvent": "移除事件",

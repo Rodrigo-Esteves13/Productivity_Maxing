@@ -56,7 +56,7 @@ function CourseName({ row, dimmed = false }: { row: CourseRiskOverviewRow; dimme
   return (
     <span className={`flex min-w-0 items-center gap-2 ${dimmed ? 'text-neutral-400' : 'text-neutral-100'}`}>
       <ColorDot size="xs" color={row.colorHex} />
-      <span className="truncate font-medium">{row.areaName}</span>
+      <span className="truncate font-medium" title={row.areaName}>{row.areaName}</span>
     </span>
   );
 }

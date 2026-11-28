@@ -28,6 +28,13 @@ export const deleteFlashcard = async (id: string): Promise<void> => {
 export const reviewFlashcard = async (id: string, grade: FlashcardGrade): Promise<Flashcard> =>
   (await api.post<Flashcard>(`${url(id)}/review`, { grade })).data;
 
+// Estado de agenda de um cartao (o que uma classificacao altera).
+export type FlashcardSchedule = Pick<Flashcard, 'dueAt' | 'intervalDays' | 'ease' | 'reps' | 'lapses'>;
+
+// Repoe a agenda anterior (desfazer a ultima classificacao).
+export const restoreFlashcard = async (id: string, schedule: FlashcardSchedule): Promise<Flashcard> =>
+  (await api.post<Flashcard>(`${url(id)}/restore`, schedule)).data;
+
 export interface FlashcardForecastDay {
   // 'YYYY-MM-DD', hoje primeiro; os atrasados entram no dia 0.
   date: string;

@@ -98,7 +98,7 @@ export default function OptionalInfoFields({
           className="mt-0.5 h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-violet-600 focus:ring-violet-600 disabled:opacity-60 disabled:cursor-not-allowed"
         />
         <div className="flex-1">
-          <label htmlFor="sync-to-calendar" className={calendarConnected ? 'cursor-pointer' : ''}>
+          <label htmlFor="sync-to-calendar" className={`block pointer-coarse:min-h-11 ${calendarConnected ? 'cursor-pointer' : ''}`}>
             <span className="text-sm text-neutral-400">{t('ui.addToGoogleCalendar')}</span>
             <p className="text-xs text-neutral-500">
               {calendarConnected ? t('ui.createsOrUpdatesAnEvent') : t('ui.connectGoogleCalendarInYour2')}

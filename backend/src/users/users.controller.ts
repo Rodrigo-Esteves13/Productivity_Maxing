@@ -3,7 +3,10 @@ import {
   ForbiddenException,
   Get,
   Param,
+  ParseEnumPipe,
   Patch,
+  Query,
+  Res,
   Post,
   Delete,
   Body,
@@ -17,6 +20,19 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
+import type { Response } from 'express';
+import { Throttle } from '@nestjs/throttler';
+import { perMinute } from '../common/throttle.util';
+import {
+  AUTH_PROVIDER,
+  DATA_EXPORT_PER_MINUTE,
+  type AuthProvider,
+} from './users.constants';
+import { ListUsersQueryDto } from './dto/list-users-query.dto';
+import {
+  RESULT_TRUNCATED_HEADER,
+  type ListMeta,
+} from '../common/pagination.util';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SuspendUserDto, BanUserDto } from './dto/update-user-status.dto';
@@ -44,6 +60,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('me/export')
+  @Throttle(perMinute(DATA_EXPORT_PER_MINUTE))
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
@@ -63,8 +80,15 @@ export class UsersController {
   @ApiOperation({
     summary: 'Gets the list of all users (Admin only)',
   })
-  findAll() {
-    return this.usersService.findAll();
+  // q/limit/cursor/paginated opcionais: sem eles devolve o array de sempre.
+  async findAll(
+    @Query() query: ListUsersQueryDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const meta: ListMeta = {};
+    const result = await this.usersService.findAll(query, meta);
+    if (meta.truncated) res.setHeader(RESULT_TRUNCATED_HEADER, 'true');
+    return result;
   }
 
   // User profile - só o próprio dono ou um ADMIN. Antes desta correção,
@@ -119,7 +143,7 @@ export class UsersController {
   getProviderAccount(
     @CurrentUser() me: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
-    @Param('provider') provider: 'google' | 'github' | 'discord',
+    @Param('provider', new ParseEnumPipe(AUTH_PROVIDER)) provider: AuthProvider,
   ) {
     assertSelfOrAdmin(me, id);
     return this.usersService.getProviderAccount(id, provider);
@@ -128,6 +152,7 @@ export class UsersController {
   // Export "portabilidade dos dados" (self ou admin) - mesma regra de
   // acesso que o resto: só o próprio dono ou um ADMIN.
   @Get(':id/export')
+  @Throttle(perMinute(DATA_EXPORT_PER_MINUTE))
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
@@ -158,12 +183,7 @@ export class UsersController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateUserDto,
   ) {
-    if (me.id === id && dto.role !== undefined && dto.role !== Role.ADMIN) {
-      throw new ForbiddenException(
-        'You cannot change your own role. Ask another admin to do it.',
-      );
-    }
-    return this.usersService.update(id, dto);
+    return this.usersService.update(me.id, id, dto);
   }
 
   // Apaga outro utilizador -> ADMIN ONLY. Bloqueado explicitamente para a
@@ -179,12 +199,7 @@ export class UsersController {
     @CurrentUser() me: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    if (me.id === id) {
-      throw new ForbiddenException(
-        'You cannot delete your own account from here. Use "Delete account" in your Profile instead.',
-      );
-    }
-    await this.usersService.remove(id);
+    await this.usersService.remove(me.id, id);
     return { message: 'User deleted.' };
   }
 
@@ -207,9 +222,6 @@ export class UsersController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: SuspendUserDto,
   ) {
-    if (me.id === id) {
-      throw new ForbiddenException('You cannot suspend your own account.');
-    }
     return this.usersService.suspendUser(me.id, id, dto);
   }
 
@@ -224,9 +236,6 @@ export class UsersController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: BanUserDto,
   ) {
-    if (me.id === id) {
-      throw new ForbiddenException('You cannot ban your own account.');
-    }
     return this.usersService.banUser(me.id, id, dto);
   }
 

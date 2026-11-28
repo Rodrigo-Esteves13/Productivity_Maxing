@@ -1,7 +1,6 @@
 import { useState, type DragEvent, type KeyboardEvent } from 'react';
 import AreaCard from './AreaCard';
 import type { Area } from '../../types/models';
-import type { AreaOverviewItem } from '../../lib/areaOverview';
 import { useI18n } from '../../i18n/useI18n';
 
 interface AreaGridProps {
@@ -18,11 +17,6 @@ interface AreaGridProps {
   selectMode?: boolean;
   selectedIds?: ReadonlySet<string>;
   onToggleSelect?: (area: Area) => void;
-  // Resumo opcional por cadeira (useAreaOverview).
-  overviewById?: ReadonlyMap<string, AreaOverviewItem>;
-  overviewLoading?: boolean;
-  overviewFailed?: boolean;
-  gradeMax?: number | null;
 }
 
 // Alt + seta: troca com o vizinho (teclado, sem rato).
@@ -39,10 +33,6 @@ export default function AreaGrid({
   selectMode = false,
   selectedIds,
   onToggleSelect,
-  overviewById,
-  overviewLoading = false,
-  overviewFailed = false,
-  gradeMax = null,
 }: AreaGridProps) {
   const { t } = useI18n();
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -91,10 +81,6 @@ export default function AreaGrid({
             selectMode={selectMode}
             selected={selectedIds?.has(area.id) ?? false}
             onToggleSelect={onToggleSelect}
-            overview={overviewById?.get(area.id)}
-            overviewLoading={overviewLoading}
-            overviewFailed={overviewFailed}
-            gradeMax={gradeMax}
           />
         );
         if (!onReorder) return <div key={area.id} className="h-full">{card}</div>;

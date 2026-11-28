@@ -12,9 +12,9 @@ import { useFeedback } from '../context/useFeedback';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useI18n } from '../i18n/useI18n';
 import { quizPath } from '../lib/appLinks';
-import { getHttpStatus } from '../lib/httpError';
+import { getApiMessage, getHttpStatus } from '../lib/httpError';
 import { stripQuizMarkdown } from '../lib/quizMarkdown';
-import { notifySocialChanged } from '../lib/socialEvents';
+import * as bus from '../lib/bus';
 
 const HTTP_NOT_FOUND = 404;
 const MAX_TOPICS_SHOWN = 12;
@@ -45,12 +45,12 @@ export default function SharedQuiz() {
     try {
       const { id } = await addSharedQuiz(token);
       if (!preview?.isOwner) {
-        notifySocialChanged();
+        bus.emit('social:changed');
         notify(t('quizzes.shared.addedToast'), 'success');
       }
       navigate(quizPath(id));
-    } catch {
-      notify(t('quizzes.shared.addError'), 'error');
+    } catch (err) {
+      notify(getApiMessage(err, t('quizzes.shared.addError')), 'error');
       setIsAdding(false);
     }
   };

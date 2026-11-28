@@ -9,6 +9,7 @@ import { formatClock, formatTaskDate, parseClock } from '../../lib/timeFormat';
 import { addUtcDays, startOfWeek } from '../../lib/weekDates';
 import { toDateKey } from '../../lib/dateKey';
 import { getApiMessage } from '../../lib/httpError';
+import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
 import type { ScheduleExceptionKind, WorkShiftOccurrence } from '../../types/models';
 
@@ -28,6 +29,7 @@ const MAX_NOTE = 120;
 // so como desfazer.
 export default function ShiftChangeModal({ occurrence, onClose, onChanged }: ShiftChangeModalProps) {
   const { t, lang } = useI18n();
+  const { notify } = useFeedback();
   const [kind, setKind] = useState<ScheduleExceptionKind>('OFF');
   const [scope, setScope] = useState<Scope>('shift');
   const [from, setFrom] = useState(occurrence.date);
@@ -47,6 +49,7 @@ export default function ShiftChangeModal({ occurrence, onClose, onChanged }: Shi
     setError('');
     try {
       await createScheduleException(input);
+      notify(t('quickWins.shiftChangeSaved'), 'success');
       onChanged();
       onClose();
     } catch (caught) {
@@ -61,6 +64,7 @@ export default function ShiftChangeModal({ occurrence, onClose, onChanged }: Shi
     setError('');
     try {
       await deleteScheduleException(occurrence.exceptionId);
+      notify(t('quickWins.shiftChangeUndone'), 'success');
       onChanged();
       onClose();
     } catch (caught) {
@@ -132,7 +136,7 @@ export default function ShiftChangeModal({ occurrence, onClose, onChanged }: Shi
                 {t('shiftChange.undo')}
               </ActionButton>
             )}
-            <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+            <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
               {t('common.cancel')}
             </button>
           </div>
@@ -208,7 +212,7 @@ export default function ShiftChangeModal({ occurrence, onClose, onChanged }: Shi
           <ActionButton type="submit" disabled={isSaving}>
             {isSaving ? t('common.saving') : t('shiftChange.save')}
           </ActionButton>
-          <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+          <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
             {t('common.cancel')}
           </button>
         </div>

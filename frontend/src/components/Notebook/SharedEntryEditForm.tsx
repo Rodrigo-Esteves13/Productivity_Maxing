@@ -5,7 +5,7 @@ import Input from '../UI/Input';
 import { CheckIcon, XIcon, PencilIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
 import { getApiMessage } from '../../lib/httpError';
-import { editSharedEntry } from '../../api/notebookService';
+import { editSharedEntry } from '../../api/notebookShareService';
 import { parseEntryConflict } from '../../lib/notebookEntryConflict';
 import CaseTransformBar from './CaseTransformBar';
 import EntrySectionHeader from './entry/EntrySectionHeader';

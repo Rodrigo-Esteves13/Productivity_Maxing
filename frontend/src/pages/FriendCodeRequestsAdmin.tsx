@@ -14,11 +14,12 @@ import {
 } from '../api/socialService';
 import { useI18n } from '../i18n/useI18n';
 import { adminUserPath } from '../lib/appLinks';
+import { formatDateTime } from '../lib/timeFormat';
 
 // Admin: pedidos de troca de codigo de amigo. Aprovar gera o codigo novo do
 // utilizador (as amizades ficam); recusar deixa uma nota opcional visivel a ele.
 export default function FriendCodeRequestsAdmin() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   useDocumentTitle(t('friendCodes.title'));
   const [rows, setRows] = useState<FriendCodeRequestRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,7 +60,7 @@ export default function FriendCodeRequestsAdmin() {
       {isLoading ? (
         <CardGridSkeleton cards={3} />
       ) : hasError ? (
-        <ErrorState message={t('friendCodes.error')} />
+        <ErrorState message={t('friendCodes.error')} onRetry={() => void load()} />
       ) : rows.length === 0 ? (
         <EmptyState message={t('friendCodes.empty')} />
       ) : (
@@ -80,7 +81,7 @@ export default function FriendCodeRequestsAdmin() {
                   {row.user.name ?? t('common.na')}
                 </Link>
                 <span className="break-all">{row.user.email}</span>
-                <span className="ml-auto">{new Date(row.createdAt).toLocaleString()}</span>
+                <span className="ml-auto">{formatDateTime(row.createdAt, lang)}</span>
               </div>
               {/* Texto de utilizador: nunca como HTML. */}
               <p className="mt-2 whitespace-pre-wrap break-words text-sm text-neutral-100">{row.reason}</p>
@@ -98,7 +99,7 @@ export default function FriendCodeRequestsAdmin() {
                   type="button"
                   disabled={busyId === row.id}
                   onClick={() => void decide(row, true)}
-                  className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+                  className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50 pointer-coarse:min-h-11"
                 >
                   {t('friendCodes.approve')}
                 </button>
@@ -106,7 +107,7 @@ export default function FriendCodeRequestsAdmin() {
                   type="button"
                   disabled={busyId === row.id}
                   onClick={() => void decide(row, false)}
-                  className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+                  className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-50 pointer-coarse:min-h-11"
                 >
                   {t('friendCodes.reject')}
                 </button>

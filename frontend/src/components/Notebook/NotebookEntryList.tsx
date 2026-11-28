@@ -6,6 +6,13 @@ import { entryPreview } from '../../lib/notebookOverview';
 import { ENTRY_TYPE_ICON, useEntryTypeOptions } from '../../hooks/useEntryTypeOptions';
 import SegmentedControl, { type SegmentedOption } from '../UI/SegmentedControl';
 import EmptyState from '../UI/EmptyState';
+import { matchesQuery } from '../../lib/listFilter';
+import { useIncrementalReveal } from '../../hooks/useIncrementalReveal';
+import { minVisibleForIndex } from '../../lib/incrementalReveal';
+
+// Notas visiveis antes do "Mostrar mais": uma cadeira com muitas aulas nao
+// desenha a lista toda de uma vez.
+const ENTRIES_PER_PAGE = 30;
 
 /** Estado de partilha de uma nota (de "As minhas partilhas"). */
 export interface EntryShareBadge {
@@ -24,10 +31,6 @@ interface NotebookEntryListProps {
 
 type TypeFilter = 'ALL' | NotebookEntryType;
 
-// Só mostra filtros/pesquisa a partir de alguns itens - com 3 entradas
-// seria ruído.
-const FILTER_MIN_ENTRIES = 6;
-
 export default function NotebookEntryList({ entries, selectedId, onSelect, onPrefetch, shareByEntry }: NotebookEntryListProps) {
   const { t, lang } = useI18n();
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
@@ -39,16 +42,27 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
     ...typeOptions,
   ];
 
+  // Procura no titulo e no preview (como a pesquisa global procura no conteudo).
+  const matching = useMemo(
+    () =>
+      entries.filter(
+        (e) => (typeFilter === 'ALL' || e.entryType === typeFilter) && matchesQuery(query, [e.title, e.preview]),
+      ),
+    [entries, typeFilter, query],
+  );
+  // A nota aberta (link, pesquisa, anterior/seguinte) fica sempre na lista.
+  const selectedPosition = matching.findIndex((e) => e.id === selectedId);
+  const { visibleCount, hasMore, showMore } = useIncrementalReveal(
+    matching.length,
+    ENTRIES_PER_PAGE,
+    `${typeFilter}|${query}`,
+    minVisibleForIndex(selectedPosition, ENTRIES_PER_PAGE),
+  );
+
   // Mantém a ordem vinda da API e agrupa por mês (secções contíguas).
   const groups = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    const visible = entries.filter(
-      (e) =>
-        (typeFilter === 'ALL' || e.entryType === typeFilter) &&
-        (!normalized || (e.title ?? '').toLowerCase().includes(normalized)),
-    );
     const result: { key: string; label: string; items: NotebookEntrySummary[] }[] = [];
-    for (const entry of visible) {
+    for (const entry of matching.slice(0, visibleCount)) {
       const key = entry.date.slice(0, 7);
       const last = result[result.length - 1];
       if (last && last.key === key) {
@@ -59,7 +73,7 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
       }
     }
     return result;
-  }, [entries, typeFilter, query, lang]);
+  }, [matching, visibleCount, lang]);
 
   // Setas cima/baixo (e Home/End) andam pela lista visivel e abrem a nota,
   // como num explorador de ficheiros.
@@ -70,6 +84,11 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
     const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
     if (current === -1 || buttons.length === 0) return;
     event.preventDefault();
+    // Descer a partir da ultima visivel revela o bloco seguinte.
+    if (event.key === 'ArrowDown' && current === buttons.length - 1 && hasMore) {
+      showMore();
+      return;
+    }
     const next =
       event.key === 'Home'
         ? 0
@@ -85,25 +104,21 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
     return <EmptyState message={t('notebook.list.empty')} />;
   }
 
-  const showFilters = entries.length >= FILTER_MIN_ENTRIES;
-
   return (
     <div className="space-y-3">
-      {showFilters && (
-        <div className="space-y-2">
-          <SegmentedControl size="sm" options={filterOptions} value={typeFilter} onChange={setTypeFilter} />
-          <div className="relative">
-            <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('notebook.filter.search')}
-              aria-label={t('notebook.filter.search')}
-              className="w-full rounded-md border border-neutral-800 bg-neutral-900 py-1.5 pl-8 pr-2 text-xs text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none"
-            />
-          </div>
+      <div className="space-y-2">
+        <SegmentedControl size="sm" options={filterOptions} value={typeFilter} onChange={setTypeFilter} />
+        <div className="relative">
+          <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('notebook.filter.search')}
+            aria-label={t('notebook.filter.search')}
+            className="w-full rounded-md border border-neutral-800 bg-neutral-900 py-1.5 pl-8 pr-2 text-xs text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none pointer-coarse:min-h-11"
+          />
         </div>
-      )}
+      </div>
 
       <p id="notebook-list-keys" className="sr-only">
         {t('notebook.list.keysHint')}
@@ -132,7 +147,7 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
                       onPointerEnter={isSelected ? undefined : () => onPrefetch?.(entry.id)}
                       aria-current={isSelected ? 'true' : undefined}
                       aria-describedby="notebook-list-keys"
-                      className={`w-full rounded-md border-l-2 px-3 py-2 text-left text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 ${
+                      className={`w-full pointer-coarse:min-h-11 rounded-md border-l-2 px-3 py-2 text-left text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 ${
                         isSelected
                           ? 'border-violet-500 bg-violet-600/15 text-white'
                           : 'border-transparent text-neutral-300 hover:bg-neutral-800'
@@ -140,7 +155,7 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
                     >
                       <span className="flex w-full items-center gap-2">
                       <Icon className="h-3.5 w-3.5 shrink-0 opacity-60" />
-                      <span className="flex-1 truncate">
+                      <span className="flex-1 truncate" title={entry.title || t('notebook.untitled')}>
                         {entry.entryType === 'CLASS' && entry.classNumber != null && (
                           <span className="mr-1 text-violet-400">#{entry.classNumber}</span>
                         )}
@@ -168,7 +183,7 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
                       </span>
                       {(preview || photoCount > 0 || fileCount > 0) && (
                         <span className="mt-0.5 flex items-center gap-2 pl-5.5 text-xs text-neutral-500">
-                          <span className="min-w-0 flex-1 truncate">{preview}</span>
+                          <span className="min-w-0 flex-1 truncate" title={preview}>{preview}</span>
                           {photoCount > 0 && (
                             <span className="flex shrink-0 items-center gap-0.5" title={t('notebook.list.photos', { count: photoCount })}>
                               <ImageIcon className="h-3 w-3" aria-hidden="true" />
@@ -193,6 +208,15 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
           </section>
         ))}
         </div>
+      )}
+      {hasMore && (
+        <button
+          type="button"
+          onClick={showMore}
+          className="w-full rounded-md px-3 py-1.5 text-sm text-violet-400 hover:bg-neutral-800 hover:text-violet-300 pointer-coarse:min-h-11"
+        >
+          {t('notebook.list.showMore', { remaining: matching.length - visibleCount })}
+        </button>
       )}
     </div>
   );

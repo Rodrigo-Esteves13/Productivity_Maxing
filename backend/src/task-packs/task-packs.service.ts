@@ -5,16 +5,27 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
-import type { DateCertainty, Effort, TaskPackItem } from '@prisma/client';
+import type {
+  DateCertainty,
+  Effort,
+  Prisma,
+  TaskPackItem,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TasksService } from '../tasks/tasks.service';
+import { runWithUserTaskLock } from '../tasks/user-lock.util';
 import {
   accessibleAreaWhere,
   assertAreaAccessible,
 } from '../areas/area-access';
 import type { CreateTaskDto } from '../tasks/dto/create-task.dto';
-import { CreateTaskPackDto, ImportTaskPackDto } from './dto/task-pack.dto';
+import {
+  CreateTaskPackDto,
+  ImportTaskPackDto,
+  RenameTaskPackDto,
+} from './dto/task-pack.dto';
 import { MAX_PACKS_PER_USER } from './task-packs.constants';
+import { findOwnPackSources, packItemFromTask } from './task-pack-source';
 
 export interface TaskPackSummary {
   id: string;
@@ -74,6 +85,64 @@ interface ResolvedItem {
   areaId: string;
 }
 
+interface ReplacePlan {
+  toDelete: string[];
+  keptByItem: Map<string, string>;
+}
+
+interface ImportOutcome {
+  results: ImportItemResult[];
+  replaced: number;
+  kept: number;
+}
+
+// Modo substituir e tudo ou nada: os itens que nao falharam levam esta
+// mensagem, o que falhou leva o motivo real.
+const REPLACE_ABORTED_MESSAGE =
+  'Not imported: another task in this pack failed, so nothing was replaced.';
+const IMPORT_GENERIC_ERROR = 'Could not create this task.';
+
+// Lancado dentro da transacao do modo substituir para a fazer voltar atras.
+class ReplaceAbortedError extends Error {
+  constructor(
+    readonly itemId: string,
+    readonly reason: string,
+  ) {
+    super(reason);
+  }
+}
+
+// Mensagens de regra de negocio (peso>100%, area invalida...) sao seguras;
+// erros internos viram uma mensagem generica.
+function importErrorMessage(error: unknown): string {
+  return error instanceof HttpException && error.getStatus() < 500
+    ? error.message
+    : IMPORT_GENERIC_ERROR;
+}
+
+// Data, peso, titulo, tipo, esforco e certeza da data vem SEMPRE do item.
+function packItemTaskDto(
+  item: TaskPackItem,
+  areaId: string,
+  periodId: string,
+): CreateTaskDto {
+  return {
+    areaId,
+    periodId,
+    title: item.title,
+    date: item.dueDate.toISOString(),
+    type: item.taskType,
+    academicType: item.academicType ?? undefined,
+    weightPercentage: item.weightPercentage ?? undefined,
+    difficulty: 'MEDIUM',
+    effort: item.effort,
+    dateCertainty: item.dateCertainty,
+    availableFrom: item.availableFrom?.toISOString() ?? null,
+    isBlocked: item.isBlocked,
+    submissionDate: item.submissionDate?.toISOString() ?? null,
+  };
+}
+
 const COMPLETED_STATUS = 'COMPLETED';
 const titleKey = (areaId: string, title: string) =>
   `${areaId}|${title.trim().toLowerCase()}`;
@@ -99,28 +168,7 @@ export class TaskPacksService {
       );
     }
 
-    // Só tarefas do próprio dono (IDOR): ids de outros simplesmente não aparecem.
-    const tasks = await this.prisma.task.findMany({
-      where: { userId: ownerId, id: { in: dto.taskIds } },
-      select: {
-        id: true,
-        title: true,
-        date: true,
-        weightPercentage: true,
-        effort: true,
-        dateCertainty: true,
-        availableFrom: true,
-        isBlocked: true,
-        submissionDate: true,
-        areaId: true,
-        area: { select: { name: true, ownerId: true } },
-        taskType: { select: { key: true } },
-        academicType: { select: { key: true } },
-      },
-    });
-    if (tasks.length !== dto.taskIds.length) {
-      throw new NotFoundException('Some of those tasks were not found.');
-    }
+    const tasks = await findOwnPackSources(this.prisma, ownerId, dto.taskIds);
     const byId = new Map(tasks.map((t) => [t.id, t]));
 
     const pack = await this.prisma.taskPack.create({
@@ -129,33 +177,9 @@ export class TaskPacksService {
         name: dto.name,
         code: newCode(),
         items: {
-          create: dto.taskIds.map((id, position) => {
-            const t = byId.get(id)!;
-            return {
-              position,
-              title: t.title,
-              dueDate: t.date,
-              weightPercentage: t.weightPercentage,
-              // Só Areas oficiais são iguais para toda a gente; o id de uma
-              // Area pessoal nunca sai da conta do dono.
-              areaId: t.area.ownerId === null ? t.areaId : null,
-              areaName: t.area.name,
-              taskType: t.taskType.key,
-              academicType: t.academicType?.key ?? null,
-              // Iguais para toda a turma: quanto trabalho da, se a data ja
-              // esta marcada, quando o enunciado sai e se ainda nao da para
-              // comecar.
-              effort: t.effort,
-              dateCertainty: t.dateCertainty,
-              availableFrom: t.availableFrom,
-              isBlocked: t.isBlocked,
-              // Duas fases (entregar e depois apresentar): igual para a turma.
-              submissionDate: t.submissionDate,
-              // Para o dono poder publicar alteracoes mais tarde (ver
-              // TaskPackSyncService.publish).
-              sourceTaskId: t.id,
-            };
-          }),
+          create: dto.taskIds.map((id, position) =>
+            packItemFromTask(byId.get(id)!, position),
+          ),
         },
       },
       include: { _count: { select: { items: true } } },
@@ -170,6 +194,25 @@ export class TaskPacksService {
       include: { _count: { select: { items: true } } },
     });
     return packs.map((p) => this.toSummary(p));
+  }
+
+  // So o nome: o codigo partilhado e os itens ficam iguais.
+  async rename(
+    ownerId: string,
+    id: string,
+    dto: RenameTaskPackDto,
+  ): Promise<TaskPackSummary> {
+    const { count } = await this.prisma.taskPack.updateMany({
+      where: { id, ownerId },
+      data: { name: dto.name },
+    });
+    if (count === 0) throw new NotFoundException('Task pack not found.');
+    const pack = await this.prisma.taskPack.findFirst({
+      where: { id, ownerId },
+      include: { _count: { select: { items: true } } },
+    });
+    if (!pack) throw new NotFoundException('Task pack not found.');
+    return this.toSummary(pack);
   }
 
   async remove(ownerId: string, id: string): Promise<void> {
@@ -267,58 +310,10 @@ export class TaskPacksService {
       userId,
       dto.periodId,
     );
-    const replace = dto.replaceExisting
-      ? await this.clearForReplace(userId, periodId, resolved)
-      : { deleted: 0, keptByItem: new Map<string, string>() };
-
-    for (const { item, areaId } of resolved) {
-      const keptTaskId = replace.keptByItem.get(item.id);
-      if (keptTaskId) {
-        // A task com nota fica como esta, so passa a seguir o pacote.
-        await this.prisma.task.update({
-          where: { id: keptTaskId, userId },
-          data: { packItemId: item.id, packItemVersion: item.version },
-        });
-        results.push({ itemId: item.id, ok: true });
-        continue;
-      }
-      const taskDto: CreateTaskDto = {
-        areaId,
-        periodId,
-        title: item.title,
-        date: item.dueDate.toISOString(),
-        type: item.taskType,
-        academicType: item.academicType ?? undefined,
-        weightPercentage: item.weightPercentage ?? undefined,
-        difficulty: 'MEDIUM',
-        effort: item.effort,
-        dateCertainty: item.dateCertainty,
-        availableFrom: item.availableFrom?.toISOString() ?? null,
-        isBlocked: item.isBlocked,
-        submissionDate: item.submissionDate?.toISOString() ?? null,
-      };
-      try {
-        const created = await this.tasksService.create(userId, taskDto);
-        // Liga a task ao item para receber as atualizacoes do dono (sempre
-        // com pedido de autorizacao, ver TaskPackSyncService).
-        await this.prisma.task.update({
-          where: { id: created.id, userId },
-          data: { packItemId: item.id, packItemVersion: item.version },
-        });
-        results.push({ itemId: item.id, ok: true });
-      } catch (error) {
-        results.push({
-          itemId: item.id,
-          ok: false,
-          // Mensagens de regra de negócio (peso>100%, área inválida...) são
-          // seguras; erros internos viram uma mensagem genérica.
-          error:
-            error instanceof HttpException && error.getStatus() < 500
-              ? error.message
-              : 'Could not create this task.',
-        });
-      }
-    }
+    const outcome = dto.replaceExisting
+      ? await this.importReplacing(userId, periodId, resolved)
+      : await this.importAdding(userId, periodId, resolved);
+    results.push(...outcome.results);
 
     const ok = results.filter((r) => r.ok).length;
     if (ok > 0) {
@@ -327,31 +322,143 @@ export class TaskPacksService {
         data: { importCount: { increment: 1 } },
       });
     }
-    const kept = replace.keptByItem.size;
     return {
-      created: ok - kept,
+      created: ok - outcome.kept,
       failed: results.length - ok,
-      replaced: replace.deleted,
-      kept,
+      replaced: outcome.replaced,
+      kept: outcome.kept,
       results,
     };
   }
 
+  /** Modo normal: cada task e independente, uma falha nao trava as outras. */
+  private async importAdding(
+    userId: string,
+    periodId: string,
+    resolved: ResolvedItem[],
+  ): Promise<ImportOutcome> {
+    const results: ImportItemResult[] = [];
+    for (const { item, areaId } of resolved) {
+      try {
+        // packItem liga a task ao item para receber as atualizacoes do dono
+        // (sempre com pedido de autorizacao, ver TaskPackSyncService).
+        await this.tasksService.create(
+          userId,
+          packItemTaskDto(item, areaId, periodId),
+          {
+            packItem: { id: item.id, version: item.version },
+            weightExcludeTaskIds: [],
+          },
+        );
+        results.push({ itemId: item.id, ok: true });
+      } catch (error) {
+        results.push({
+          itemId: item.id,
+          ok: false,
+          error: importErrorMessage(error),
+        });
+      }
+    }
+    return { results, replaced: 0, kept: 0 };
+  }
+
   /**
-   * Modo substituir: apaga as tasks do user no periodo e nas cadeiras que o
-   * import vai preencher, para o pacote ficar no lugar delas (e o limite de
-   * 100% de peso nao travar o import). Tasks com nota ou concluidas sao
+   * Modo substituir (B-27): tudo ou nada, numa so transacao com o lock de
+   * escrita de tasks do user. Creates, ligacao das tasks mantidas e o
+   * apagar das antigas fazem commit juntos; ao primeiro item que falha a
+   * transacao volta atras e o user fica exatamente com o que tinha. Os
+   * anexos das tasks apagadas so saem do storage depois do commit.
+   */
+  private async importReplacing(
+    userId: string,
+    periodId: string,
+    resolved: ResolvedItem[],
+  ): Promise<ImportOutcome> {
+    const plan = await this.planReplace(userId, periodId, resolved);
+    try {
+      const removed = await runWithUserTaskLock(
+        this.prisma,
+        userId,
+        async (tx) => {
+          for (const { item, areaId } of resolved) {
+            await this.replaceItemInTx(tx, userId, periodId, plan, {
+              item,
+              areaId,
+            });
+          }
+          return plan.toDelete.length > 0
+            ? this.tasksService.bulkRemoveInTx(tx, userId, plan.toDelete)
+            : { count: 0, storagePaths: [] as string[] };
+        },
+      );
+      await this.tasksService.removeAttachmentFiles(removed.storagePaths);
+      return {
+        results: resolved.map(({ item }) => ({ itemId: item.id, ok: true })),
+        replaced: removed.count,
+        kept: plan.keptByItem.size,
+      };
+    } catch (error) {
+      if (!(error instanceof ReplaceAbortedError)) throw error;
+      // Rollback feito: nenhum item ficou importado.
+      return {
+        results: resolved.map(({ item }) => ({
+          itemId: item.id,
+          ok: false,
+          error:
+            item.id === error.itemId ? error.reason : REPLACE_ABORTED_MESSAGE,
+        })),
+        replaced: 0,
+        kept: 0,
+      };
+    }
+  }
+
+  private async replaceItemInTx(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    periodId: string,
+    plan: ReplacePlan,
+    { item, areaId }: ResolvedItem,
+  ): Promise<void> {
+    try {
+      const keptTaskId = plan.keptByItem.get(item.id);
+      if (keptTaskId) {
+        // A task com nota fica como esta, so passa a seguir o pacote.
+        await tx.task.update({
+          where: { id: keptTaskId, userId },
+          data: { packItemId: item.id, packItemVersion: item.version },
+        });
+        return;
+      }
+      await this.tasksService.create(
+        userId,
+        packItemTaskDto(item, areaId, periodId),
+        {
+          tx,
+          packItem: { id: item.id, version: item.version },
+          weightExcludeTaskIds: plan.toDelete,
+        },
+      );
+    } catch (error) {
+      throw new ReplaceAbortedError(item.id, importErrorMessage(error));
+    }
+  }
+
+  /**
+   * Modo substituir: decide que tasks do user, no periodo e nas cadeiras que
+   * o import vai preencher, saem para o pacote ficar no lugar delas (o limite
+   * de 100% de peso ignora-as). NAO apaga: quem chama apaga depois dos creates. Tasks com nota ou concluidas sao
    * historia e ficam; se o titulo bater com um item, passam a ser essa task
    * do pacote em vez de se criar uma copia.
    *
    * Cadeiras a que o user nao tem acesso saem antes de apagar: esses itens
    * iam falhar no create e nao se apaga nada que nao vai ser substituido.
    */
-  private async clearForReplace(
+  private async planReplace(
     userId: string,
     periodId: string,
     resolved: ResolvedItem[],
-  ): Promise<{ deleted: number; keptByItem: Map<string, string> }> {
+  ): Promise<ReplacePlan> {
     const areaIds: string[] = [];
     for (const areaId of new Set(resolved.map((r) => r.areaId))) {
       try {
@@ -361,7 +468,7 @@ export class TaskPacksService {
         // fica de fora: o item correspondente falha no create com a mensagem certa
       }
     }
-    if (areaIds.length === 0) return { deleted: 0, keptByItem: new Map() };
+    if (areaIds.length === 0) return { toDelete: [], keptByItem: new Map() };
 
     const existing = await this.prisma.task.findMany({
       where: { userId, periodId, areaId: { in: areaIds } },
@@ -391,9 +498,7 @@ export class TaskPacksService {
     }
 
     const toDelete = existing.filter((t) => !isHistory(t)).map((t) => t.id);
-    if (toDelete.length === 0) return { deleted: 0, keptByItem };
-    const { count } = await this.tasksService.bulkRemove(userId, toDelete);
-    return { deleted: count, keptByItem };
+    return { toDelete, keptByItem };
   }
 
   private async findByCodeOrThrow(code: string) {

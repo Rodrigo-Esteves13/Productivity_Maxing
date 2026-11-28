@@ -38,7 +38,7 @@ export default function AttendanceToggle({ subject, attended, onChange }: Attend
             aria-label={t(labelKey)}
             title={t(labelKey)}
             onClick={() => onChange(pressed ? null : value)}
-            className={`flex h-6 w-6 items-center justify-center rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+            className={`flex h-6 w-6 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
               pressed ? activeClass : 'border-neutral-700 text-neutral-500 hover:text-white'
             }`}
           >

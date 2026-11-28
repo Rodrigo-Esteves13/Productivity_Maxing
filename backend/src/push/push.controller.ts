@@ -14,6 +14,10 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 import { PushService } from './push.service';
 import { SubscribePushDto, UnsubscribePushDto } from './dto/subscribe-push.dto';
 import { perMinute } from '../common/throttle.util';
+import {
+  PUSH_SUBSCRIBE_PER_MINUTE,
+  PUSH_TEST_PER_MINUTE,
+} from './push.constants';
 
 @ApiTags('Push')
 @ApiBearerAuth()
@@ -39,7 +43,7 @@ export class PushController {
 
   @Post('subscribe')
   @HttpCode(200)
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(PUSH_SUBSCRIBE_PER_MINUTE))
   subscribe(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: SubscribePushDto,
@@ -49,7 +53,7 @@ export class PushController {
 
   @Post('unsubscribe')
   @HttpCode(200)
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(PUSH_SUBSCRIBE_PER_MINUTE))
   unsubscribe(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UnsubscribePushDto,
@@ -59,7 +63,7 @@ export class PushController {
 
   @Post('test')
   @HttpCode(200)
-  @Throttle(perMinute(3))
+  @Throttle(perMinute(PUSH_TEST_PER_MINUTE))
   @ApiOperation({
     summary: "Send a test notification to the current user's own devices.",
   })

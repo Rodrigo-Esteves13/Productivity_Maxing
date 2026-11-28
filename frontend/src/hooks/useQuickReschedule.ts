@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { updateTask } from '../api/userService';
+import { updateTask } from '../api/tasksService';
 import { syncTaskToCalendar } from '../api/calendarService';
 import type { Task } from '../types/models';
 import { useFeedback } from '../context/useFeedback';

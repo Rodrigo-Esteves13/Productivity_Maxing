@@ -91,4 +91,8 @@ export const fase7b: Record<string, string> = {
   'areas.empty.createFirst': "Crear mi primera área",
   'areas.section.count': "{count} áreas",
   'areas.overview.failed': "No se pudieron cargar los detalles de tareas y riesgo. Tus áreas siguen funcionando con normalidad.",
+  'reportCard.improve.title': "Mejora de nota",
+  'reportCard.improve.intro': "Cuánto subiría la media de este periodo si una asignatura aprobada subiera 1 o 2 puntos. Mayor ganancia primero.",
+  'reportCard.improve.raise': "Si +{delta}",
+  'reportCard.improve.caveat': "Es solo una simulación. Poder mejorar una nota (normalmente una vez por asignatura, nunca en época especial) depende del reglamento de tu centro, así que confírmalo antes de planificar.",
 };

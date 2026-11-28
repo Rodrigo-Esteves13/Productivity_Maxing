@@ -1,6 +1,6 @@
 import { FIRM_DATE_WHERE } from '../common/task-readiness.util';
 import { Injectable, Logger } from '@nestjs/common';
-import { UserStatus } from '@prisma/client';
+import { Prisma, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { PushService } from '../push/push.service';
@@ -27,15 +27,54 @@ import {
   MAIL_DATE_LOCALE,
   resolveMailLanguage,
 } from '../mail/mail-messages';
+import { MS_PER_HOUR } from '../common/time.constants';
+import {
+  pendingReminderTaskIdsSql,
+  type ReminderWindow,
+} from './reminders.sql';
 
-const HOUR_MS = 3_600_000;
 // Task com hora: avisa 24h antes. Task só com dia: avisa na manhã do dia
 // anterior (09:00, hora de Lisboa) - "24h antes de meia-noite" seria às 00h.
-const TIMED_LEAD_MS = 24 * HOUR_MS;
+const TIMED_LEAD_MS = 24 * MS_PER_HOUR;
 const DATE_ONLY_REMINDER_MINUTES = 9 * 60;
-// Só olha para o futuro próximo (o lembrete mais cedo é a manhã antes).
-const LOOKAHEAD_MS = 72 * HOUR_MS;
-const MAX_TASKS_PER_RUN = 1000;
+// So olha para as tasks cujo lembrete ja pode sair: o mais cedo e 24h antes
+// (task com hora); o de task so com dia sai ainda mais tarde (15-16h antes).
+// A margem cobre o atraso do cron.
+const LOOKAHEAD_MARGIN_MS = MS_PER_HOUR;
+export const LOOKAHEAD_MS = TIMED_LEAD_MS + LOOKAHEAD_MARGIN_MS;
+// Tasks lidas por lote e maximo de lotes por execucao. As ja avisadas saem
+// no SQL (B-39, ver reminders.sql.ts), por isso o teto so conta tasks que
+// ainda precisam de lembrete.
+export const TASKS_PAGE_SIZE = 1000;
+const MAX_TASK_PAGES = 10;
+
+const REMINDER_TASK_SELECT = {
+  id: true,
+  title: true,
+  date: true,
+  submissionDate: true,
+  userId: true,
+  area: { select: { name: true } },
+  user: {
+    select: {
+      email: true,
+      quietHoursStart: true,
+      quietHoursEnd: true,
+      deadlineEmailReminders: true,
+      deadlinePushReminders: true,
+      // Lingua da app (a das subscricoes push), para o email.
+      pushSubscriptions: {
+        select: { lang: true },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
+    },
+  },
+  sentReminders: { select: { taskDate: true } },
+} satisfies Prisma.TaskSelect;
+type ReminderTask = Prisma.TaskGetPayload<{
+  select: typeof REMINDER_TASK_SELECT;
+}>;
 
 export interface ReminderRunResult {
   usersEmailed: number;
@@ -117,48 +156,7 @@ export class RemindersService {
 
   private async runOnce(now: Date): Promise<ReminderRunResult> {
     const window = { gt: now, lte: new Date(now.getTime() + LOOKAHEAD_MS) };
-    const tasks = await this.prisma.task.findMany({
-      where: {
-        progressStatus: { not: 'COMPLETED' },
-        // A entrega de um trabalho em duas fases tambem tem lembrete.
-        OR: [{ date: window }, { submissionDate: window }],
-        // Data por marcar/surpresa e so um palpite: "falta 1 dia" mentia.
-        ...FIRM_DATE_WHERE,
-        user: {
-          OR: [
-            { deadlineEmailReminders: true },
-            { deadlinePushReminders: true },
-          ],
-          status: { not: UserStatus.BANNED },
-        },
-      },
-      select: {
-        id: true,
-        title: true,
-        date: true,
-        submissionDate: true,
-        userId: true,
-        area: { select: { name: true } },
-        user: {
-          select: {
-            email: true,
-            quietHoursStart: true,
-            quietHoursEnd: true,
-            deadlineEmailReminders: true,
-            deadlinePushReminders: true,
-            // Lingua da app (a das subscricoes push), para o email.
-            pushSubscriptions: {
-              select: { lang: true },
-              orderBy: { createdAt: 'desc' },
-              take: 1,
-            },
-          },
-        },
-        sentReminders: { select: { taskDate: true } },
-      },
-      orderBy: { date: 'asc' },
-      take: MAX_TASKS_PER_RUN,
-    });
+    const tasks = await this.loadCandidateTasks(window);
 
     const nowMinutes = getLisbonNow().nowMinutes;
     // Um lembrete por prazo: a apresentacao (`date`) e, num trabalho em duas
@@ -371,6 +369,45 @@ export class RemindersService {
     return result;
   }
 
+  /**
+   * Tasks com prazo na janela e ainda sem lembrete (B-39). Primeiro o
+   * Postgres devolve so os ids pendentes (o NOT EXISTS no SentReminder, ver
+   * reminders.sql.ts); depois o Prisma le os dados em lotes, com os mesmos
+   * filtros de sempre. As ja avisadas nunca chegam a sair da BD.
+   */
+  private async loadCandidateTasks(
+    window: ReminderWindow,
+  ): Promise<ReminderTask[]> {
+    const pending = await this.prisma.$queryRaw<{ id: string }[]>(
+      pendingReminderTaskIdsSql(window, TASKS_PAGE_SIZE * MAX_TASK_PAGES),
+    );
+    const ids = pending.map((row) => row.id);
+    const tasks: ReminderTask[] = [];
+    for (let start = 0; start < ids.length; start += TASKS_PAGE_SIZE) {
+      const rows = await this.prisma.task.findMany({
+        where: {
+          id: { in: ids.slice(start, start + TASKS_PAGE_SIZE) },
+          progressStatus: { not: 'COMPLETED' },
+          // A entrega de um trabalho em duas fases tambem tem lembrete.
+          OR: [{ date: window }, { submissionDate: window }],
+          // Data por marcar/surpresa e so um palpite: "falta 1 dia" mentia.
+          ...FIRM_DATE_WHERE,
+          user: {
+            OR: [
+              { deadlineEmailReminders: true },
+              { deadlinePushReminders: true },
+            ],
+            status: { not: UserStatus.BANNED },
+          },
+        },
+        select: REMINDER_TASK_SELECT,
+        orderBy: [{ date: 'asc' }, { id: 'asc' }],
+      });
+      tasks.push(...rows);
+    }
+    return tasks;
+  }
+
   private isDateOnly(date: Date): boolean {
     return (
       date.getUTCHours() === 0 &&
@@ -382,7 +419,7 @@ export class RemindersService {
   /** Instante a partir do qual o lembrete pode sair. */
   private remindAt(date: Date): Date {
     if (!this.isDateOnly(date)) return new Date(date.getTime() - TIMED_LEAD_MS);
-    const dayBefore = new Date(date.getTime() - 24 * HOUR_MS);
+    const dayBefore = new Date(date.getTime() - 24 * MS_PER_HOUR);
     return lisbonWallClockToUtc(
       toDateKey(dayBefore),
       DATE_ONLY_REMINDER_MINUTES,
@@ -400,7 +437,7 @@ export class RemindersService {
     }
     const hours = Math.max(
       1,
-      Math.round((date.getTime() - now.getTime()) / HOUR_MS),
+      Math.round((date.getTime() - now.getTime()) / MS_PER_HOUR),
     );
     return fillMailTemplate(text.dueInHours, { hours });
   }

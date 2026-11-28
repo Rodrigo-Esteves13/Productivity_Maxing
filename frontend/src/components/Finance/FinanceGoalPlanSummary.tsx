@@ -77,7 +77,7 @@ export default function FinanceGoalPlanSummary({ summary, goals, currency }: Fin
           <ul className="space-y-1 text-sm">
             {split.map((s) => (
               <li key={s.goalId} className="flex justify-between gap-3">
-                <span className="truncate text-neutral-300">{names.get(s.goalId)}</span>
+                <span className="truncate text-neutral-300" title={names.get(s.goalId)}>{names.get(s.goalId)}</span>
                 <Money cents={s.suggestedMonthlyCents} currency={currency} className="tabular-nums text-neutral-100" />
               </li>
             ))}

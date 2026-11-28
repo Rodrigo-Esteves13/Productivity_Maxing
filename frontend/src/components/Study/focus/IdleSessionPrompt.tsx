@@ -4,15 +4,15 @@ import { useStopSession } from '../../../hooks/useStopSession';
 import Button from '../../UI/Button';
 import { useI18n } from '../../../i18n/useI18n';
 
-function clock(ms: number): string {
-  return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+function clock(ms: number, lang: string): string {
+  return new Date(ms).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
 }
 
 // "Ainda estas a estudar?" depois de muito tempo sem mexer na app. Nunca
 // para sozinho: a pessoa decide se continua ou se corta a sessao na hora
 // da ultima atividade (o tempo parado nao entra nas previsoes).
 export default function IdleSessionPrompt() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { activeSession, isSubmitting } = useActiveStudySession();
   const { idleSince, stillHere } = useIdleSession();
   const { stopSession } = useStopSession();
@@ -25,7 +25,7 @@ export default function IdleSessionPrompt() {
   return (
     <div role="alertdialog" aria-label={t('ui.stillStudying')} className="rounded-xl border border-amber-700/60 bg-neutral-900/95 p-4 shadow-lg backdrop-blur-sm">
       <p className="text-sm font-medium text-white">{t('ui.stillStudying')}</p>
-      <p className="mt-1 text-xs text-neutral-400">{t('ui.noActivitySince', { idleSince: clock(idleSince) })}</p>
+      <p className="mt-1 text-xs text-neutral-400">{t('ui.noActivitySince', { idleSince: clock(idleSince, lang) })}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         <Button variant="primary" size="sm" onClick={stillHere}>
           {t('ui.iMStillHere')}
@@ -37,7 +37,7 @@ export default function IdleSessionPrompt() {
             disabled={isSubmitting}
             onClick={() => void stopSession({ endedAt: new Date(idleSince).toISOString() })}
           >
-            {t('ui.stopAt', { idleSince: clock(idleSince) })}</Button>
+            {t('ui.stopAt', { idleSince: clock(idleSince, lang) })}</Button>
         )}
         <Button variant="secondary" size="sm" disabled={isSubmitting} onClick={() => void stopSession()}>
           {t('ui.stopNow')}

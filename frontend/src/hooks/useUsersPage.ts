@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  getAllUsers,
+  getUsersPage,
   updateUser,
   deleteUser,
   exportUserData,
@@ -8,17 +8,29 @@ import {
   banUser,
   reactivateUser,
 } from '../api/userService';
+import {
+  appendById,
+  usersPageQuery,
+  type UsersListCriteria,
+  type UsersPageQuery,
+} from '../lib/adminLists';
+import { isRequestCanceled } from '../lib/abortable';
+import { HTTP_BAD_REQUEST, getHttpStatus } from '../lib/httpError';
 import { downloadJson } from '../utils/downloadJson';
 import type { User } from '../types/models';
 import type { UserFormValues } from '../components/Users/UserEditForm';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
 
-export function useUsersPage(currentUserId: string | undefined) {
+export function useUsersPage(currentUserId: string | undefined, criteria: UsersListCriteria) {
   const { notify, confirm } = useFeedback();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // Um so pedido de lista de cada vez: um pedido novo cancela o anterior.
+  const listRequest = useRef<AbortController | null>(null);
 
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,22 +43,55 @@ export function useUsersPage(currentUserId: string | undefined) {
   const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
   const [reactivatingId, setReactivatingId] = useState<string | null>(null);
 
-  const fetchUsers = async () => {
+  const { search, role, status, sortKey, direction } = criteria;
+  // Chave em texto: ordenar por nome nao muda o pedido, por isso nao o repete.
+  const queryKey = JSON.stringify(usersPageQuery({ search, role, status, sortKey, direction }));
+  const query = useMemo(() => JSON.parse(queryKey) as UsersPageQuery, [queryKey]);
+
+  const fetchUsers = useCallback(async () => {
+    listRequest.current?.abort();
+    const controller = new AbortController();
+    listRequest.current = controller;
+    setIsLoading(true);
+    setIsLoadingMore(false);
+    setError('');
     try {
-      setIsLoading(true);
-      setError('');
-      const data = await getAllUsers();
-      setUsers(data);
-    } catch {
+      const page = await getUsersPage(query, controller.signal);
+      if (controller.signal.aborted) return;
+      setUsers(page.items);
+      setNextCursor(page.nextCursor);
+      setIsLoading(false);
+    } catch (err) {
+      if (controller.signal.aborted || isRequestCanceled(err)) return;
       setError(translateNow('hook.errorLoadingUsers'));
-    } finally {
       setIsLoading(false);
     }
-  };
+  }, [query]);
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    void fetchUsers();
+    return () => listRequest.current?.abort();
+  }, [fetchUsers]);
+
+  const loadMore = async () => {
+    if (!nextCursor || isLoading || isLoadingMore) return;
+    const controller = new AbortController();
+    listRequest.current = controller;
+    setIsLoadingMore(true);
+    try {
+      const page = await getUsersPage({ ...query, cursor: nextCursor }, controller.signal);
+      if (controller.signal.aborted) return;
+      setUsers((prev) => appendById(prev, page.items));
+      setNextCursor(page.nextCursor);
+    } catch (err) {
+      if (controller.signal.aborted || isRequestCanceled(err)) return;
+      // Cursor que ja nao serve (linha apagada ou fora do filtro): recomeca.
+      if (getHttpStatus(err) === HTTP_BAD_REQUEST) void fetchUsers();
+      else notify(translateNow('hook.errorLoadingUsers'), 'error');
+    } finally {
+      if (!controller.signal.aborted) setIsLoadingMore(false);
+    }
+  };
 
   const handleEditUser = async (values: UserFormValues) => {
     if (!editingUser) return;
@@ -151,6 +196,10 @@ export function useUsersPage(currentUserId: string | undefined) {
 
   return {
     users,
+    reload: fetchUsers,
+    hasMore: nextCursor !== null,
+    isLoadingMore,
+    loadMore,
     isLoading,
     error,
     editingUser,

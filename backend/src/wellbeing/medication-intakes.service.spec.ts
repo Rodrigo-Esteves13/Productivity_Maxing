@@ -30,7 +30,23 @@ describe('MedicationIntakesService', () => {
         }),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+        update: jest.fn().mockResolvedValue({
+          id: 'i1',
+          medicationId: 'm1',
+          takenAt: new Date(),
+          dose: null,
+          note: null,
+          medication: { name: 'Ibuprofen' },
+        }),
       },
+    };
+    const tx = { ...prisma, $executeRaw: jest.fn().mockResolvedValue(0) };
+    const prismaWithTx = {
+      ...prisma,
+      $transaction: jest.fn(<T>(run: (client: typeof tx) => Promise<T>) =>
+        run(tx),
+      ),
     };
     const disclaimer = {
       assertAccepted: accepted
@@ -38,7 +54,7 @@ describe('MedicationIntakesService', () => {
         : jest.fn().mockRejectedValue(new ForbiddenException()),
     };
     const service = new MedicationIntakesService(
-      prisma as unknown as PrismaService,
+      prismaWithTx as unknown as PrismaService,
       disclaimer as unknown as MedicationDisclaimerService,
     );
     return { service, prisma };
@@ -77,11 +93,81 @@ describe('MedicationIntakesService', () => {
     });
   });
 
-  it('only "as needed" medication is logged per intake', async () => {
-    const { service } = setup({ schedule: MedicationSchedule.DAILY });
+  it("editing another user's entry is a 404 and writes nothing", async () => {
+    const { service, prisma } = setup(null);
+    prisma.medicationIntake.findFirst.mockResolvedValue(null);
+    await expect(
+      service.update('u1', 'i1', { dose: '2' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.medicationIntake.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'i1', userId: 'u1' } }),
+    );
+    expect(prisma.medicationIntake.update).not.toHaveBeenCalled();
+  });
+
+  it('editing is blocked before the notice is accepted', async () => {
+    const { service, prisma } = setup(null, false);
+    await expect(
+      service.update('u1', 'i1', { dose: '2' }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.medicationIntake.update).not.toHaveBeenCalled();
+  });
+
+  it('edits dose and note of an owned entry, blank clears', async () => {
+    const { service, prisma } = setup(null);
+    prisma.medicationIntake.findFirst.mockResolvedValue({ id: 'i1' });
+    await service.update('u1', 'i1', { dose: ' 2 tabs ', note: '  ' });
+    const [[args]] = prisma.medicationIntake.update.mock.calls as [
+      [{ where: Record<string, unknown>; data: Record<string, unknown> }],
+    ];
+    expect(args.data).toEqual({ dose: '2 tabs', note: null });
+    // A escrita tambem leva o userId, nao so a leitura de posse.
+    expect(args.where).toEqual({ id: 'i1', userId: 'u1' });
+  });
+
+  it('moving an entry to a full day is rejected, excluding itself from the count', async () => {
+    const { service, prisma } = setup(null);
+    prisma.medicationIntake.findFirst.mockResolvedValue({ id: 'i1' });
+    prisma.medicationIntake.count.mockResolvedValue(30);
+    await expect(
+      service.update('u1', 'i1', { takenAt: now() }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.medicationIntake.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          userId: 'u1',
+          id: { not: 'i1' },
+        }) as unknown,
+      }),
+    );
+    expect(prisma.medicationIntake.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects an edited time in the future', async () => {
+    const { service } = setup(null);
+    const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    await expect(
+      service.update('u1', 'i1', { takenAt: future }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('logs an extra dose of a scheduled medication, twice at the same time', async () => {
+    const { service, prisma } = setup({ schedule: MedicationSchedule.DAILY });
+    const takenAt = now();
+    await service.create('u1', { medicationId: 'm1', takenAt });
+    await service.create('u1', { medicationId: 'm1', takenAt });
+    expect(prisma.medicationIntake.create).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects the entry when the day is already full, under the lock', async () => {
+    const { service, prisma } = setup({
+      schedule: MedicationSchedule.AS_NEEDED,
+    });
+    prisma.medicationIntake.count.mockResolvedValue(30);
     await expect(
       service.create('u1', { medicationId: 'm1', takenAt: now() }),
     ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.medicationIntake.create).not.toHaveBeenCalled();
   });
 
   it('rejects times in the future or too far back', async () => {

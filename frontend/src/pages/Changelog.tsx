@@ -5,7 +5,7 @@ import { CHANGELOG } from '../lib/changelog';
 import { useI18n } from '../i18n/useI18n';
 
 export default function Changelog() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   useDocumentTitle(t('ui.whatSNew'));
   return (
     <PageLayout>
@@ -13,11 +13,11 @@ export default function Changelog() {
       <div className="max-w-3xl space-y-6">
         {CHANGELOG.map((entry) => (
           <section
-            key={entry.date}
+            key={`${entry.date}|${entry.title}`}
             className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 sm:p-6"
           >
             <p className="text-xs uppercase tracking-wide text-neutral-500">
-              {new Date(`${entry.date}T00:00:00`).toLocaleDateString()}
+              {new Date(`${entry.date}T00:00:00`).toLocaleDateString(lang)}
             </p>
             <h2 className="text-lg font-semibold text-white mt-1">{entry.title}</h2>
             <ul className="mt-3 space-y-1.5 list-disc pl-5 text-sm text-neutral-300">

@@ -1,6 +1,7 @@
 import DashboardCard, { CardHeading } from '../../UI/DashboardCard';
 import ProgressRing from '../../UI/ProgressRing';
 import { useActiveStudySession } from '../../../context/useActiveStudySession';
+import { useStudyDataKey } from '../../../hooks/useSessionEndKey';
 import { useSessionHistory } from '../../../hooks/useSessionHistory';
 import { useLoadOnce } from '../../../hooks/useLoadOnce';
 import { useNow } from '../../../hooks/useNow';
@@ -23,8 +24,11 @@ interface DayProgressCardProps {
 export default function DayProgressCard({ dailyLimitMinutes }: DayProgressCardProps) {
   const { t } = useI18n();
   const { activeSession } = useActiveStudySession();
-  const { sessions } = useSessionHistory(HISTORY_DAYS, activeSession?.id ?? null);
-  const { data: streak, reload: reloadStreak } = useLoadOnce(getStudyStreak, activeSession?.id ?? null);
+  // Muda ao parar uma sessao e quando o historico (corrigir, apagar,
+  // acrescentar) ou um dia de descanso mexe nas sessoes: anel e streak certos.
+  const studyKey = useStudyDataKey();
+  const { sessions } = useSessionHistory(HISTORY_DAYS, studyKey);
+  const { data: streak } = useLoadOnce(getStudyStreak, studyKey);
 
   // De minuto a minuto: com uma sessao a correr, o anel avanca sozinho.
   const now = useNow();
@@ -66,7 +70,7 @@ export default function DayProgressCard({ dailyLimitMinutes }: DayProgressCardPr
           )}
           {streak && (streak.currentStreak > 0 || streak.restDayToday) && (
             <div className="mt-1.5">
-              <StreakRestDayButton refreshKey={activeSession?.id ?? null} onChange={reloadStreak} />
+              <StreakRestDayButton refreshKey={studyKey} />
             </div>
           )}
         </div>

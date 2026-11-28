@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState, type SyntheticEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
-import { loginRequest, resendVerificationRequest } from '../api/userService';
+import { loginRequest, resendVerificationRequest } from '../api/authService';
 import TwoFactorCodeForm from '../components/Auth/TwoFactorCodeForm';
 import { useI18n } from '../i18n/useI18n';
 import { isSafeRedirectPath } from '../lib/safeRedirect';

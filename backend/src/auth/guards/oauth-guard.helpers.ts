@@ -1,4 +1,5 @@
-import { randomBytes, timingSafeEqual } from 'crypto';
+import { randomBytes } from 'crypto';
+import { safeEqual } from '../../common/safe-equal.util';
 import type { Request, Response } from 'express';
 import { Provider } from '@prisma/client';
 import { AuthService } from '../auth.service';
@@ -73,13 +74,5 @@ export function isValidLoginState(
 ): boolean {
   if (!cookieState || !returnedState) return false;
 
-  const bufA = Buffer.from(cookieState);
-  const bufB = Buffer.from(returnedState);
-
-  if (bufA.length !== bufB.length) {
-    timingSafeEqual(bufA, bufA);
-    return false;
-  }
-
-  return timingSafeEqual(bufA, bufB);
+  return safeEqual(cookieState, returnedState);
 }

@@ -8,7 +8,8 @@ import { useI18n } from '../../i18n/useI18n';
 import { useAuth } from '../../context/useAuth';
 import type { AccountAction } from '../../hooks/useFeedbackAdmin';
 import type { FeedbackAuthor, FeedbackItem, UserStatus } from '../../types/models';
-import { feedbackStatusKey, FEEDBACK_STATUS_CLASS } from './feedbackStatus';
+import { feedbackStatusKey, FEEDBACK_CATEGORY_KEY, FEEDBACK_STATUS_CLASS } from './feedbackStatus';
+import { formatDateTime } from '../../lib/timeFormat';
 
 type Composer = 'reply' | 'reject';
 
@@ -17,8 +18,10 @@ const ACCOUNT_STATUS_KEY: Partial<Record<UserStatus, string>> = {
   SUSPENDED: 'ui.accountSuspended',
 };
 
-const LINK_BUTTON = 'text-xs text-violet-300 hover:text-violet-200 disabled:opacity-50';
-const DANGER_LINK_BUTTON = 'text-xs text-red-400 hover:text-red-300 disabled:opacity-50';
+// Alvo de toque >=44px so em ecras de toque.
+const TOUCH_TARGET = 'pointer-coarse:min-h-11 pointer-coarse:px-2';
+const LINK_BUTTON = `text-xs text-violet-300 hover:text-violet-200 disabled:opacity-50 ${TOUCH_TARGET}`;
+const DANGER_LINK_BUTTON = `text-xs text-red-400 hover:text-red-300 disabled:opacity-50 ${TOUCH_TARGET}`;
 
 interface FeedbackAdminItemProps {
   item: FeedbackItem;
@@ -41,7 +44,7 @@ function FeedbackAdminItem({
   onAccountAction,
   onReactivate,
 }: FeedbackAdminItemProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [composer, setComposer] = useState<Composer | null>(null);
   const [text, setText] = useState('');
   const [isBusy, setIsBusy] = useState(false);
@@ -88,12 +91,16 @@ function FeedbackAdminItem({
         <span className={`rounded-full border px-2 py-0.5 ${FEEDBACK_STATUS_CLASS[feedbackStatusKey(item)]}`}>
           {t(feedbackStatusKey(item))}
         </span>
-        <span className="rounded-full border border-neutral-700 px-2 py-0.5">{item.category}</span>
+        <span className="rounded-full border border-neutral-700 px-2 py-0.5">{t(FEEDBACK_CATEGORY_KEY[item.category])}</span>
         <span className="rounded-full border border-neutral-700 px-2 py-0.5 uppercase">{item.language}</span>
         {item.rating !== null && <span>{item.rating}/5</span>}
-        {item.page && <span className="font-mono">{item.page}</span>}
+        {item.page && (
+          <span className="max-w-48 truncate font-mono" title={item.page}>
+            {item.page}
+          </span>
+        )}
         {author ? (
-          <Link to={adminUserPath(author.id)} className="text-neutral-300 hover:text-white">
+          <Link to={adminUserPath(author.id)} className={`text-neutral-300 hover:text-white pointer-coarse:inline-flex pointer-coarse:items-center ${TOUCH_TARGET}`}>
             {author.name || author.email}
           </Link>
         ) : (
@@ -107,7 +114,7 @@ function FeedbackAdminItem({
             {t('feedback.admin.muted')}
           </span>
         )}
-        <span>{new Date(item.createdAt).toLocaleString()}</span>
+        <span>{formatDateTime(item.createdAt, lang)}</span>
       </div>
 
       {/* Texto de utilizador: nunca como HTML. */}
@@ -119,7 +126,7 @@ function FeedbackAdminItem({
         <div className="mt-3 rounded-lg border-l-2 border-violet-500 bg-neutral-950/60 px-3 py-2">
           <p className="text-xs text-neutral-400">
             {t('feedback.admin.yourReply')}
-            {item.repliedAt && ` · ${new Date(item.repliedAt).toLocaleString()}`}
+            {item.repliedAt && ` · ${formatDateTime(item.repliedAt, lang)}`}
           </p>
           <p className="mt-1 whitespace-pre-wrap break-words text-sm text-neutral-200">{item.adminReply}</p>
         </div>

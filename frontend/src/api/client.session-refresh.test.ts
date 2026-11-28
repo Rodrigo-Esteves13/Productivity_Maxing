@@ -229,7 +229,7 @@ describe('api client session refresh', () => {
   // segundos de expirar morria no ecra de consentimento e o callback falhava.
   it('ensureFreshSession always mints a fresh access token before leaving the app', async () => {
     const { calls } = await setup({ refreshOk: true });
-    const { ensureFreshSession } = await import('./userService');
+    const { ensureFreshSession } = await import('./authService');
     await ensureFreshSession();
     expect(calls.refresh).toBe(1);
     expect(calls.data).toBe(0);
@@ -237,7 +237,7 @@ describe('api client session refresh', () => {
 
   it('ensureFreshSession falls back to an authenticated ping without a refresh token', async () => {
     const { calls } = await setup({ refreshOk: false });
-    const { ensureFreshSession } = await import('./userService');
+    const { ensureFreshSession } = await import('./authService');
     // /auth/me e um pedido de verificacao: o 401 nao manda para o login aqui.
     await expect(ensureFreshSession()).rejects.toBeInstanceOf(AxiosError);
     expect(calls.data).toBe(1);

@@ -58,6 +58,12 @@ const SUMMARY_PREVIEW_CHARS = 400;
 // editShared). O frontend usa-o para mostrar o aviso de conflito.
 export const NOTEBOOK_ENTRY_CONFLICT_CODE = 'NOTEBOOK_ENTRY_CONFLICT';
 
+// Maximo de resultados da pesquisa (paleta de comandos).
+export const NOTEBOOK_SEARCH_MAX_RESULTS = 50;
+// Pesquisa que so pode ser uma data parcial (ex: 03/2026).
+const DATE_QUERY_PATTERN = /^[0-9/]+$/;
+const formatEntryDate = (date: Date) => date.toLocaleDateString('pt-PT');
+
 export interface NotebookEntrySummary {
   id: string;
   areaId: string;
@@ -69,6 +75,10 @@ export interface NotebookEntrySummary {
   photoCount: number;
   attachmentCount: number;
 }
+
+export type NotebookSearchResultView = NotebookEntrySummary & {
+  area: { id: string; name: string; colorHex: string };
+};
 
 // Linha crua do select de listSummariesForArea (antes de virar resumo).
 type SummaryRow = Omit<
@@ -579,7 +589,7 @@ export class NotebookService {
       this.removeFromStorageBestEffort(ATTACHMENT_BUCKET, paths, 'attachments');
     }
 
-    await this.prisma.notebookEntry.delete({ where: { id } });
+    await this.prisma.notebookEntry.delete({ where: { id, userId } });
     return { deleted: true };
   }
 
@@ -798,6 +808,9 @@ export class NotebookService {
       );
     }
 
+    // Push so quando o estado muda (alternar APPROVED/DENIED nao reenvia).
+    const statusChanged = request.status !== decision;
+
     const updated = await this.prisma.notebookShareAccessRequest.update({
       where: { id: requestId },
       data: {
@@ -810,10 +823,12 @@ export class NotebookService {
     });
 
     // Avisa quem pediu (push) da resposta, com link direto para a lição.
-    const shareInfo = await this.prisma.notebookShare.findUnique({
-      where: { id: request.notebookShareId },
-      select: { token: true, notebookEntry: { select: { title: true } } },
-    });
+    const shareInfo = statusChanged
+      ? await this.prisma.notebookShare.findUnique({
+          where: { id: request.notebookShareId },
+          select: { token: true, notebookEntry: { select: { title: true } } },
+        })
+      : null;
     if (shareInfo) {
       void this.push.notifyUser(
         request.requestingUserId,
@@ -1141,7 +1156,13 @@ export class NotebookService {
       );
     }
 
-    await this.prisma.notebookPhoto.delete({ where: { id: photoId } });
+    await this.prisma.notebookPhoto.delete({
+      where: {
+        id: photoId,
+        notebookEntryId: entryId,
+        notebookEntry: { userId },
+      },
+    });
     return { deleted: true };
   }
 
@@ -1357,59 +1378,63 @@ export class NotebookService {
 
   /**
    * Pesquisa em texto livre por título, conteúdo, nome da cadeira e data
-   * (formatada dd/mm/aaaa) - à escala de um caderno pessoal (algumas
-   * centenas de entradas ao longo de vários anos, não milhares), filtrar
-   * em JS depois de um findMany leve (só os campos comparados) é mais simples e mais correto do
-   * que tentar exprimir "contém esta substring na data formatada" em SQL,
-   * e continua instantâneo a este volume.
+   * (dd/mm/aaaa). Filtra em SQL (contains insensitive, no maximo
+   * NOTEBOOK_SEARCH_MAX_RESULTS) e devolve so um resumo (sem desenhos,
+   * fotos nem URLs assinados): a entrada completa vem de
+   * GET /notebook/entries/:id quando e aberta (B-24/S-08).
+   *
+   * A data formatada nao se exprime em SQL, por isso uma pesquisa so com
+   * digitos e barras le so (id, data) e filtra em JS.
    */
-  async search(userId: string, query: string) {
-    const q = query.trim().toLowerCase();
+  async search(
+    userId: string,
+    query: string,
+  ): Promise<NotebookSearchResultView[]> {
+    const q = query.trim();
     if (!q) return [];
 
-    // 1.o passo: so os campos que a pesquisa compara. Os desenhos, tabelas
-    // e canvas (JSON que pode ser grande) e as fotos/anexos de TODAS as
-    // entradas ficavam fora de qualquer uso - e isto corre a cada tecla
-    // (com debounce) na paleta de comandos.
-    const candidates = await this.prisma.notebookEntry.findMany({
-      where: { userId },
+    const dateIds = DATE_QUERY_PATTERN.test(q)
+      ? (
+          await this.prisma.notebookEntry.findMany({
+            where: { userId },
+            select: { id: true, date: true },
+          })
+        )
+          .filter((entry) => formatEntryDate(entry.date).includes(q))
+          .map((entry) => entry.id)
+      : [];
+
+    const text = { contains: q, mode: 'insensitive' as const };
+    const rows = await this.prisma.notebookEntry.findMany({
+      where: {
+        userId,
+        OR: [
+          { title: text },
+          { textContent: text },
+          { area: { name: text } },
+          ...(dateIds.length > 0 ? [{ id: { in: dateIds } }] : []),
+        ],
+      },
       select: {
         id: true,
+        areaId: true,
         title: true,
-        textContent: true,
+        entryType: true,
+        classNumber: true,
         date: true,
-        area: { select: { name: true } },
-      },
-      orderBy: { date: 'desc' },
-    });
-
-    const matchIds = candidates
-      .filter((entry) => {
-        const dateLabel = entry.date.toLocaleDateString('pt-PT');
-        return (
-          entry.title.toLowerCase().includes(q) ||
-          (entry.textContent ?? '').toLowerCase().includes(q) ||
-          entry.area.name.toLowerCase().includes(q) ||
-          dateLabel.includes(q)
-        );
-      })
-      .slice(0, 50)
-      .map((entry) => entry.id);
-    if (matchIds.length === 0) return [];
-
-    // 2.o passo: a entrada completa so para os resultados (max. 50), na
-    // mesma ordem do 1.o passo.
-    const rows = await this.prisma.notebookEntry.findMany({
-      where: { id: { in: matchIds }, userId },
-      include: {
-        photos: { orderBy: { position: 'asc' } },
-        attachments: { orderBy: { createdAt: 'asc' } },
+        textContent: true,
         area: { select: { id: true, name: true, colorHex: true } },
+        _count: { select: { photos: true, attachments: true } },
       },
+      orderBy: [{ date: 'desc' }, { id: 'asc' }],
+      take: NOTEBOOK_SEARCH_MAX_RESULTS,
     });
-    const order = new Map(matchIds.map((id, index) => [id, index]));
-    rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
 
-    return this.attachSignedUrlsMany(rows);
+    return rows.map(({ textContent, _count, ...rest }) => ({
+      ...rest,
+      preview: textContent ? textContent.slice(0, SUMMARY_PREVIEW_CHARS) : null,
+      photoCount: _count.photos,
+      attachmentCount: _count.attachments,
+    }));
   }
 }

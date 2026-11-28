@@ -29,7 +29,7 @@ export default function CopyButton({ text, label, className = '' }: CopyButtonPr
     <button
       type="button"
       onClick={handleCopy}
-      className={`press inline-flex items-center gap-1.5 shrink-0 px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-semibold text-neutral-200 ${className}`}
+      className={`press inline-flex items-center gap-1.5 shrink-0 px-3 py-2 pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-semibold text-neutral-200 ${className}`}
     >
       {/* Os dois icones ficam montados e trocam com fade/scale/blur. */}
       <span className="icon-swap" aria-hidden="true">

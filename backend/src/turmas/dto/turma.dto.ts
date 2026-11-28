@@ -17,6 +17,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { NormalizeEmail } from '../../auth/email.util';
+import { EMAIL_MAX_LENGTH } from '../../auth/dto/auth-limits';
 import {
   ANNOUNCEMENT_BODY_MAX_LENGTH,
   ANNOUNCEMENT_TITLE_MAX_LENGTH,
@@ -93,6 +94,7 @@ export class InviteToTurmaDto {
   @IsOptional()
   @NormalizeEmail()
   @IsEmail()
+  @MaxLength(EMAIL_MAX_LENGTH)
   email?: string;
 }
 

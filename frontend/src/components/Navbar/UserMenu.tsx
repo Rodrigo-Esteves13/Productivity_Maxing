@@ -78,7 +78,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
         className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-neutral-800 transition-colors"
       >
         <Avatar initials={initials} avatarUrl={user.avatarUrl} alt={firstName} size="sm" />
-        <span className="hidden 2xl:inline max-w-[10rem] truncate text-sm font-medium text-neutral-200">
+        <span className="hidden 2xl:inline max-w-[10rem] truncate text-sm font-medium text-neutral-200" title={t('nav.hello', { name: firstName })}>
           {t('nav.hello', { name: firstName })}
         </span>
       </button>

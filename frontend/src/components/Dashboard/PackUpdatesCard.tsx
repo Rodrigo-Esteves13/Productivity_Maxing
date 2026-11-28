@@ -69,7 +69,7 @@ export default function PackUpdatesCard() {
           const isBusy = busyId === update.id;
           return (
             <li key={update.id} className="text-sm">
-              <p className="truncate font-medium text-neutral-200">{update.taskTitle}</p>
+              <p className="truncate font-medium text-neutral-200" title={update.taskTitle}>{update.taskTitle}</p>
               <p className="text-xs text-neutral-500">
                 {t('packs.updates.from', { pack: update.packName, name: update.ownerName })}
               </p>
@@ -94,7 +94,7 @@ export default function PackUpdatesCard() {
 
       <Link
         to="/task-packs#updates"
-        className="mt-3 block text-xs text-violet-400 underline decoration-dotted hover:text-violet-300"
+        className="pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center mt-3 block text-xs text-violet-400 underline decoration-dotted hover:text-violet-300"
       >
         {updates.length > shown.length
           ? t('packUpdatesWidget.viewAllMore', { count: updates.length })

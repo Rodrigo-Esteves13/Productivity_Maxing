@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { inviteFriendToEntry, searchNotebook } from '../../api/notebookService';
+import { inviteFriendToEntry } from '../../api/notebookShareService';
+import { searchNotebook } from '../../api/notebookService';
 import { getApiCode, getHttpStatus } from '../../lib/httpError';
 import { notebookEntryPath } from '../../lib/appLinks';
-import { notifySocialChanged } from '../../lib/socialEvents';
+import * as bus from '../../lib/bus';
 import { areaColorOf } from '../SharedWithMe/sharedWithMeLabels';
 import type { NotebookSearchResult, ShareAccessRole } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
@@ -78,7 +79,7 @@ export default function ShareNoteWithFriend({ friendId, friendName, alreadyShare
     try {
       await inviteFriendToEntry(entry.id, friendId, role);
       setMessage(t('friend.share.sent', { title: entry.title, name: friendName }));
-      notifySocialChanged();
+      bus.emit('social:changed');
       onInvited();
     } catch (caught) {
       // 409: link publico (os papeis so existem em Autorizado), nota cheia ou
@@ -101,7 +102,7 @@ export default function ShareNoteWithFriend({ friendId, friendName, alreadyShare
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500"
+        className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500 pointer-coarse:min-h-11"
       >
         {t('friend.share.open', { name: friendName })}
       </button>
@@ -114,7 +115,7 @@ export default function ShareNoteWithFriend({ friendId, friendName, alreadyShare
     <div className="space-y-3 rounded-xl border border-violet-800/60 bg-violet-950/10 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium text-white">{t('friend.share.open', { name: friendName })}</p>
-        <button type="button" onClick={() => setIsOpen(false)} className="text-xs text-neutral-400 hover:text-white">
+        <button type="button" onClick={() => setIsOpen(false)} className="text-xs text-neutral-400 hover:text-white pointer-coarse:min-h-11">
           {t('common.cancel')}
         </button>
       </div>
@@ -145,7 +146,7 @@ export default function ShareNoteWithFriend({ friendId, friendName, alreadyShare
         <p role="alert" className="text-sm text-red-400">
           {error.text}{' '}
           {error.entryId && (
-            <Link to={notebookEntryPath(error.entryId, { share: true })} className="text-violet-400 underline">
+            <Link to={notebookEntryPath(error.entryId, { share: true })} className="text-violet-400 underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center">
               {t('friend.share.openInNotebook')}
             </Link>
           )}
@@ -167,14 +168,14 @@ export default function ShareNoteWithFriend({ friendId, friendName, alreadyShare
                   className="h-2 w-2 shrink-0 rounded-full"
                   style={{ backgroundColor: areaColorOf(entry.area.colorHex) }}
                 />
-                <span className="truncate">{entry.title}</span>
+                <span className="truncate" title={entry.title}>{entry.title}</span>
                 <span className="hidden shrink-0 text-xs text-neutral-500 sm:inline">{entry.area.name}</span>
               </span>
               <button
                 type="button"
                 disabled={busyId !== null}
                 onClick={() => void invite(entry)}
-                className="shrink-0 rounded-md border border-violet-700 px-2.5 py-1 text-xs font-medium text-violet-200 hover:bg-violet-900/40 disabled:opacity-50"
+                className="shrink-0 rounded-md border border-violet-700 px-2.5 py-1 text-xs font-medium text-violet-200 hover:bg-violet-900/40 disabled:opacity-50 pointer-coarse:min-h-11"
               >
                 {busyId === entry.id ? t('friend.share.sending') : t('friend.share.invite')}
               </button>

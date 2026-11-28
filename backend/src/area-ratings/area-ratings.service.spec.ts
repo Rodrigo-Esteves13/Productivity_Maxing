@@ -35,6 +35,7 @@ function build(overrides: Record<string, unknown> = {}) {
       ),
       deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
+    $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
     ...overrides,
   };
   return {
@@ -44,6 +45,22 @@ function build(overrides: Record<string, unknown> = {}) {
 }
 
 describe('AreaRatingsService same teacher', () => {
+  it('writes the synced ratings and the cleanup in one transaction', async () => {
+    const { prisma, service } = build({
+      areaTeacherNote: {
+        findUnique: jest.fn().mockResolvedValue({ teacherName: 'Ana' }),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ areaId: 'area-2' }, { areaId: 'area-3' }]),
+      },
+    });
+    await service.set(USER, AREA, { teacherRating: 5 });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    const ops = (prisma.$transaction.mock.calls[0] as [unknown[]])[0];
+    // 2 upserts + 1 deleteMany
+    expect(ops).toHaveLength(3);
+  });
+
   it('copies the teacher rating to other areas of the same teacher', async () => {
     const { prisma, service } = build({
       areaTeacherNote: {

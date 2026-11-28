@@ -1,11 +1,15 @@
 import type { NotebookSearchResult } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import ErrorState from '../UI/ErrorState';
 import { PencilIcon, BookOpenIcon, GraduationCapIcon } from '../UI/Icons';
 
 interface NotebookSearchResultsProps {
   results: NotebookSearchResult[];
   isLoading: boolean;
   query: string;
+  // A pesquisa falhou: mostra o erro (com tentar de novo), nao "sem resultados".
+  hasError?: boolean;
+  onRetry?: () => void;
   onSelect: (result: NotebookSearchResult) => void;
 }
 
@@ -19,6 +23,8 @@ export default function NotebookSearchResults({
   results,
   isLoading,
   query,
+  hasError = false,
+  onRetry,
   onSelect,
 }: NotebookSearchResultsProps) {
   const {lang, t } = useI18n();
@@ -26,12 +32,16 @@ export default function NotebookSearchResults({
     return <p className="text-sm text-neutral-500">{t('ui.searching')}</p>;
   }
 
+  if (hasError) {
+    return <ErrorState message={t('ux4notes.notebook.searchError')} onRetry={onRetry} />;
+  }
+
   if (results.length === 0) {
     return <p className="text-sm text-neutral-500">{t('ui.noEntriesMatch', { query: query })}</p>;
   }
 
   return (
-    <ul className="max-h-[70vh] space-y-1 overflow-y-auto pr-1">
+    <ul className="max-h-[70dvh] space-y-1 overflow-y-auto pr-1">
       {results.map((result) => {
         const Icon = TYPE_ICON[result.entryType];
         return (
@@ -47,13 +57,13 @@ export default function NotebookSearchResults({
               />
               <Icon className="h-4 w-4 shrink-0 text-neutral-500" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-neutral-100">
+                <p className="truncate text-sm text-neutral-100" title={result.title || undefined}>
                   {result.entryType === 'CLASS' && result.classNumber != null && (
                     <span className="mr-1 text-violet-400">#{result.classNumber}</span>
                   )}
                   {result.title || t('notebook.untitled')}
                 </p>
-                <p className="truncate text-xs text-neutral-500">{result.area.name}</p>
+                <p className="truncate text-xs text-neutral-500" title={result.area.name}>{result.area.name}</p>
               </div>
               <span className="shrink-0 text-xs text-neutral-500">
                 {new Date(result.date).toLocaleDateString(lang, {

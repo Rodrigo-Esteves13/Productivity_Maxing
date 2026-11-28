@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { isAxiosError } from 'axios';
+import { POLL_MS } from '../lib/pollIntervals';
+import { useCallback } from 'react';
 import {
   acceptFriendLink,
   acceptFriendRequest,
@@ -13,10 +13,16 @@ import {
   unblockUser,
   type SocialOverview,
 } from '../api/socialService';
-import { useLiveRefresh } from './useLiveRefresh';
-import { notifySocialChanged } from '../lib/socialEvents';
-import { useFeedback } from '../context/useFeedback';
-import { translateNow } from '../i18n/translate';
+import { useLivePolled } from './useLivePolled';
+import * as bus from '../lib/bus';
+import {
+  HTTP_BAD_REQUEST,
+  HTTP_NOT_FOUND,
+  HTTP_TOO_MANY_REQUESTS,
+  getApiCode,
+  getApiMessage,
+  getHttpStatus,
+} from '../lib/httpError';
 import { parseFriendInput } from '../lib/friendLink';
 import type { EmailFriendOutcome } from '../components/Social/AddFriendForm';
 
@@ -28,49 +34,14 @@ const CODE_REQUEST_ERRORS: Record<string, CodeRequestOutcome> = {
   CODE_REQUEST_PENDING: 'ALREADY_PENDING',
   CODE_REQUEST_LIMIT: 'TOO_MANY',
 };
-const HTTP_BAD_REQUEST = 400;
 
 export function useSocial() {
-  const [data, setData] = useState<SocialOverview | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const { notify } = useFeedback();
-
-  const load = useCallback(async (silent = false) => {
-    if (!silent) setIsLoading(true);
-    try {
-      setData(await getSocialOverview());
-      setHasError(false);
-    } catch {
-      if (!silent) setHasError(true);
-    } finally {
-      if (!silent) setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   // Pedidos novos aparecem sem refresh (push, voltar ao separador, polling).
-  useLiveRefresh(() => void load(true), { enabled: true, intervalMs: 20000 });
-
-  const run = useCallback(
-    async (action: () => Promise<unknown>): Promise<boolean> => {
-      try {
-        await action();
-        notifySocialChanged();
-        await load(true);
-        return true;
-      } catch {
-        // Aceitar/recusar/remover/bloquear: o botao fica igual, por isso a
-        // falha tem de se ver (antes o false era ignorado em todo o lado).
-        notify(translateNow('social.actionError'), 'error');
-        return false;
-      }
-    },
-    [load, notify],
-  );
+  const { data, setData, isLoading, hasError, load, run, notifyActionError } = useLivePolled({
+    fetcher: getSocialOverview,
+    initial: null as SocialOverview | null,
+    intervalMs: POLL_MS.social,
+  });
 
   // Aceita o codigo ou um link de amizade colado (com assinatura valida o
   // link torna-vos logo amigos, como abri-lo).
@@ -83,15 +54,13 @@ export function useSocial() {
           ? await acceptFriendLink(parsed)
           : await sendFriendRequest(parsed.friendCode);
         await load(true);
-        notifySocialChanged();
+        bus.emit('social:changed');
         return res.status;
       } catch (e) {
-        if (isAxiosError(e)) {
-          if (e.response?.status === 404) return 'NOT_FOUND';
-          if (e.response?.status === 400) {
-            const msg = String((e.response.data as { message?: unknown })?.message ?? '');
-            return msg.includes('yourself') ? 'SELF' : 'LIMIT';
-          }
+        const status = getHttpStatus(e);
+        if (status === HTTP_NOT_FOUND) return 'NOT_FOUND';
+        if (status === HTTP_BAD_REQUEST) {
+          return getApiMessage(e, '').includes('yourself') ? 'SELF' : 'LIMIT';
         }
         return 'ERROR';
       }
@@ -106,7 +75,8 @@ export function useSocial() {
       return 'SENT';
     } catch (e) {
       // 400 = limites do proprio (pedidos pendentes, amigos); 429 = demasiados.
-      if (isAxiosError(e) && (e.response?.status === 400 || e.response?.status === 429)) return 'LIMIT';
+      const status = getHttpStatus(e);
+      if (status === HTTP_BAD_REQUEST || status === HTTP_TOO_MANY_REQUESTS) return 'LIMIT';
       return 'ERROR';
     }
   }, [load]);
@@ -118,10 +88,10 @@ export function useSocial() {
         await setAllowEmailFriendRequests(allow);
       } catch {
         setData((prev) => (prev ? { ...prev, allowEmailFriendRequests: !allow } : prev));
-        notify(translateNow('social.actionError'), 'error');
+        notifyActionError();
       }
     },
-    [notify],
+    [setData, notifyActionError],
   );
 
   // O cartao passa logo a "pendente" com a resposta do POST; o recarregar
@@ -134,20 +104,20 @@ export function useSocial() {
         void load(true);
         return 'SENT';
       } catch (e) {
-        if (!isAxiosError(e)) return 'ERROR';
-        const code = String((e.response?.data as { code?: unknown })?.code ?? '');
+        const code = getApiCode(e) ?? '';
         if (CODE_REQUEST_ERRORS[code]) {
           // Ja havia um pendente: mostra-o em vez de so dar erro.
           void load(true);
           return CODE_REQUEST_ERRORS[code];
         }
-        return e.response?.status === HTTP_BAD_REQUEST ? 'INVALID' : 'ERROR';
+        return getHttpStatus(e) === HTTP_BAD_REQUEST ? 'INVALID' : 'ERROR';
       }
     },
-    [load],
+    [load, setData],
   );
 
   return {
+    reload: () => void load(),
     data,
     isLoading,
     hasError,

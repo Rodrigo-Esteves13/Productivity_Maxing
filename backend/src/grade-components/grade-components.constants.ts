@@ -11,3 +11,8 @@ export const MAX_COMPONENTS_PER_AREA = 12;
 export const MAX_ENTRIES_PER_COMPONENT = 200;
 // Mesmo teto que qualquer escala de notas do programa (0-20, 0-100, GPA...).
 export const MAX_GRADE_VALUE = 100;
+
+// Limites de pedidos por minuto (throttle) das rotas de escrita.
+export const GRADE_COMPONENT_CREATE_PER_MINUTE = 30;
+export const GRADE_COMPONENT_UPDATE_PER_MINUTE = 60;
+export const GRADE_ENTRY_WRITES_PER_MINUTE = 120;

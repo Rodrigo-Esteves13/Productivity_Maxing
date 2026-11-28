@@ -26,7 +26,7 @@ export default function TurmaInvitesCard() {
         {invites.map((invite) => (
           <li key={invite.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
             <div className="min-w-0">
-              <p className="truncate font-medium text-white">{invite.turmaName}</p>
+              <p className="truncate font-medium text-white" title={invite.turmaName}>{invite.turmaName}</p>
               <p className="text-xs text-neutral-500">
                 {t('turma.invites.from', { name: invite.invitedByName ?? t('ui.unknown') })}
                 {' · '}

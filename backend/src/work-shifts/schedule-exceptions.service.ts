@@ -63,6 +63,46 @@ export class ScheduleExceptionsService {
     userId: string,
     dto: CreateScheduleExceptionDto,
   ): Promise<ScheduleExceptionView> {
+    const data = await this.buildData(userId, dto);
+    const count = await this.prisma.scheduleException.count({
+      where: { userId },
+    });
+    if (count >= MAX_EXCEPTIONS_PER_USER) {
+      throw new BadRequestException(
+        `You can have at most ${MAX_EXCEPTIONS_PER_USER} schedule changes. Remove old ones first.`,
+      );
+    }
+
+    return this.prisma.scheduleException.create({
+      data: { userId, ...data },
+      select: EXCEPTION_SELECT,
+    });
+  }
+
+  /** Substitui a alteracao inteira, com as mesmas validacoes do create. */
+  async update(
+    userId: string,
+    id: string,
+    dto: CreateScheduleExceptionDto,
+  ): Promise<ScheduleExceptionView> {
+    const data = await this.buildData(userId, dto);
+    const { count } = await this.prisma.scheduleException.updateMany({
+      where: { id, userId },
+      data,
+    });
+    const saved =
+      count > 0
+        ? await this.prisma.scheduleException.findFirst({
+            where: { id, userId },
+            select: EXCEPTION_SELECT,
+          })
+        : null;
+    if (!saved) throw new NotFoundException('Schedule change not found.');
+    return saved;
+  }
+
+  // Validacao de forma e de dono; devolve as colunas a gravar (sem userId).
+  private async buildData(userId: string, dto: CreateScheduleExceptionDto) {
     const startsOn = parseDateKey(dto.startsOn);
     const endsOn = parseDateKey(dto.endsOn);
     const span = diffUtcDays(startsOn, endsOn) + 1;
@@ -103,29 +143,16 @@ export class ScheduleExceptionsService {
     }
 
     await this.assertTargetOwned(userId, dto);
-    const count = await this.prisma.scheduleException.count({
-      where: { userId },
-    });
-    if (count >= MAX_EXCEPTIONS_PER_USER) {
-      throw new BadRequestException(
-        `You can have at most ${MAX_EXCEPTIONS_PER_USER} schedule changes. Remove old ones first.`,
-      );
-    }
-
-    return this.prisma.scheduleException.create({
-      data: {
-        userId,
-        kind: dto.kind,
-        shiftId: dto.shiftId ?? null,
-        commitmentId: dto.commitmentId ?? null,
-        startsOn,
-        endsOn,
-        startMinutes: isRetime ? dto.startMinutes : null,
-        endMinutes: isRetime ? dto.endMinutes : null,
-        note: dto.note || null,
-      },
-      select: EXCEPTION_SELECT,
-    });
+    return {
+      kind: dto.kind,
+      shiftId: dto.shiftId ?? null,
+      commitmentId: dto.commitmentId ?? null,
+      startsOn,
+      endsOn,
+      startMinutes: isRetime ? dto.startMinutes : null,
+      endMinutes: isRetime ? dto.endMinutes : null,
+      note: dto.note || null,
+    };
   }
 
   async remove(userId: string, id: string): Promise<void> {

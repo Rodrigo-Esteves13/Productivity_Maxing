@@ -1,40 +1,86 @@
 import { useEffect, useState, type SyntheticEvent } from 'react';
 import FormField from '../UI/FormField';
 import Input from '../UI/Input';
-import FormError from '../UI/FormError';
+import ErrorState from '../UI/ErrorState';
 import ActionButton from '../UI/ActionButton';
 import Button from '../UI/Button';
+import SearchField from '../UI/SearchField';
 import LinesSkeleton from '../UI/LinesSkeleton';
-import { useBannedIps } from '../../hooks/useBannedIps';
+import type { BannedIpsState } from '../../hooks/useBannedIps';
+import { useListSearch } from '../../hooks/useListSearch';
 import { useI18n } from '../../i18n/useI18n';
+import { useFeedback } from '../../context/useFeedback';
 import Card from '../UI/Card';
+import { useConfirmAction } from '../../hooks/useConfirmAction';
+import ConfirmActionDialog from '../Turma/ConfirmActionDialog';
+import type { BannedIp } from '../../types/models';
 
 interface BannedIpsCardProps {
-  // Preenchido pelo botão "Ban" numa linha da tabela de logs (ver
-  // Security.tsx) - este componente só lê o valor para inicializar o
-  // campo; depois disso o campo tem vida própria (o user pode continuar
-  // a editar antes de confirmar).
-  prefillIp: string;
+  // Estado partilhado com a tabela de logs (uma so instancia, em Security.tsx).
+  banned: BannedIpsState;
+  // Preenchido pelo botao "Ban" numa linha da tabela de logs. Cada clique e um
+  // objeto novo: o efeito corre outra vez mesmo com o mesmo IP, sem remontar o
+  // cartao (remontar apagava o motivo que o admin ja tinha escrito).
+  prefill: { ip: string };
 }
 
-export default function BannedIpsCard({ prefillIp }: BannedIpsCardProps) {
-  const { t } = useI18n();
-  const { bannedIps, isLoading, error, isSubmitting, ban, unban } = useBannedIps();
+export default function BannedIpsCard({ banned, prefill }: BannedIpsCardProps) {
+  const { t, lang } = useI18n();
+  const { notify } = useFeedback();
+  const { bannedIps, isLoading, error, isSubmitting, ban, unban, refetch } = banned;
   const [ip, setIp] = useState('');
   const [reason, setReason] = useState('');
+  const confirmAction = useConfirmAction(t('confirmGuard.error'));
+  const search = useListSearch(bannedIps, (b: BannedIp) => [
+    b.ip,
+    b.reason,
+    b.bannedBy?.name,
+    b.bannedBy?.email,
+  ]);
 
   useEffect(() => {
-    if (prefillIp) setIp(prefillIp);
-  }, [prefillIp]);
+    if (prefill.ip) setIp(prefill.ip);
+  }, [prefill]);
 
   const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const success = await ban(ip.trim(), reason.trim() || undefined);
-    if (success) {
-      setIp('');
-      setReason('');
-    }
+    const target = ip.trim();
+    if (!target) return;
+    confirmAction.request({
+      title: t('confirmGuard.banIp.title'),
+      message: t('confirmGuard.banIp.message', { ip: target }),
+      confirmLabel: t('confirmGuard.banIp.confirm'),
+      tone: 'danger',
+      run: async () => {
+        const success = await ban(target, reason.trim() || undefined);
+        if (success) {
+          setIp('');
+          setReason('');
+          notify(t('ux4admin.banned.banned', { ip: target }), 'success');
+        }
+      },
+    });
   };
+
+  const handleUnban = (entry: BannedIp) => {
+    confirmAction.request({
+      title: t('ux4admin.banned.unbanTitle'),
+      message: t('ux4admin.banned.unbanMessage', { ip: entry.ip }),
+      confirmLabel: t('ui.unban'),
+      tone: 'danger',
+      run: async () => {
+        if (await unban(entry.id)) notify(t('ux4admin.banned.unbanned', { ip: entry.ip }), 'success');
+      },
+    });
+  };
+
+  const describeEntry = (entry: BannedIp): string => {
+    const date = new Date(entry.createdAt).toLocaleDateString(lang, { dateStyle: 'medium' });
+    const by = entry.bannedBy ? entry.bannedBy.name || entry.bannedBy.email : '';
+    return by ? t('ux4admin.banned.onBy', { date, by }) : t('ux4admin.banned.on', { date });
+  };
+
+  const hasQuery = search.isFiltering;
 
   return (
     <Card className="mb-6">
@@ -69,39 +115,59 @@ export default function BannedIpsCard({ prefillIp }: BannedIpsCardProps) {
         </div>
       </form>
 
-      {error && <div className="mb-4"><FormError message={error} /></div>}
+      {error && <div className="mb-4"><ErrorState message={error} onRetry={() => void refetch()} /></div>}
 
       {isLoading ? (
         <LinesSkeleton lines={3} />
       ) : bannedIps.length === 0 ? (
-        <p className="text-sm text-neutral-500">{t('ui.noIpsBannedRightNow')}</p>
+        !error && <p className="text-sm text-neutral-500">{t('ui.noIpsBannedRightNow')}</p>
       ) : (
-        <div className="space-y-2">
-          {bannedIps.map((b) => (
-            <div
-              key={b.id}
-              className="flex items-center justify-between gap-3 bg-neutral-800/60 rounded-lg px-3 py-2"
-            >
-              <div className="min-w-0">
-                <p className="font-mono text-sm text-neutral-200">{b.ip}</p>
-                {b.reason && (
-                  <p className="text-xs text-neutral-500 truncate" title={b.reason}>
-                    {b.reason}
-                  </p>
-                )}
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => void unban(b.id)}
-                className="w-auto px-3 py-1.5 text-xs shrink-0"
-              >
-                {t('ui.unban')}
-              </Button>
+        <>
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <SearchField
+              value={search.query}
+              onChange={search.setQuery}
+              label={t('ux4admin.banned.search')}
+            />
+            {hasQuery && (
+              <span className="text-xs text-neutral-500" aria-live="polite">
+                {t('search.count', { shown: search.filtered.length, total: bannedIps.length })}
+              </span>
+            )}
+          </div>
+          {search.filtered.length === 0 ? (
+            <p className="text-sm text-neutral-500">{t('search.noResultsFor', { query: search.query.trim() })}</p>
+          ) : (
+            <div className="space-y-2">
+              {search.filtered.map((b) => (
+                <div
+                  key={b.id}
+                  className="flex items-center justify-between gap-3 bg-neutral-800/60 rounded-lg px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="font-mono text-sm text-neutral-200">{b.ip}</p>
+                    <p className="text-xs text-neutral-500">{describeEntry(b)}</p>
+                    {b.reason && (
+                      <p className="text-xs text-neutral-500 truncate" title={b.reason}>
+                        {b.reason}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => handleUnban(b)}
+                    className="w-auto px-3 py-1.5 text-xs shrink-0"
+                  >
+                    {t('ui.unban')}
+                  </Button>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
+      <ConfirmActionDialog state={confirmAction} />
     </Card>
   );
 }

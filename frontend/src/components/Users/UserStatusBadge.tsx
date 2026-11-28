@@ -14,7 +14,7 @@ const STYLES: Record<UserStatus, string> = {
 };
 
 export default function UserStatusBadge({ status, suspendedUntil }: UserStatusBadgeProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const enumLabel = useEnumLabel();
   // status vem undefined em respostas que não passam por USER_ADMIN_SELECT
   // (ex: /auth/me) - nunca deveria acontecer nesta tabela, mas por defeito
@@ -26,7 +26,7 @@ export default function UserStatusBadge({ status, suspendedUntil }: UserStatusBa
       {enumLabel(resolved)}
       {resolved === 'SUSPENDED' && suspendedUntil && (
         <span className="text-[10px] font-normal normal-case text-amber-500">
-          {t('ui.until2', { newDate: new Date(suspendedUntil).toLocaleDateString() })}</span>
+          {t('ui.until2', { newDate: new Date(suspendedUntil).toLocaleDateString(lang) })}</span>
       )}
     </span>
   );

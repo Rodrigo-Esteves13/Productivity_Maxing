@@ -53,7 +53,7 @@ export default function EventsSection({ shifts, commitments, isSaving, onAdd, on
         <button
           type="button"
           onClick={() => setIsAdding(true)}
-          className="press -mb-1.5 -ml-2 mt-auto flex items-center gap-1.5 self-start rounded-lg px-2 py-1.5 text-sm text-violet-400 hover:bg-violet-500/10 hover:text-violet-300"
+          className="press -mb-1.5 -ml-2 mt-auto flex items-center gap-1.5 self-start rounded-lg px-2 py-1.5 text-sm text-violet-400 hover:bg-violet-500/10 hover:text-violet-300 pointer-coarse:min-h-11"
         >
           <PlusIcon />
           {t('ui.addEvent')}

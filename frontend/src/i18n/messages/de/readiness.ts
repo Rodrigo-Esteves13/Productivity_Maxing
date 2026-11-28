@@ -109,4 +109,12 @@ export const readiness: Record<string, string> = {
   'bulkEffort.doneOne': "Aufwand für 1 Aufgabe gesetzt.",
   'bulkEffort.doneMany': "Aufwand für {count} Aufgaben gesetzt.",
   'bulkEffort.failed': "Aufwand konnte nicht gesetzt werden. Bitte versuche es erneut.",
+  'focus.distractions.noteTitle': "Während des Fokus",
+  'focus.distractions.thoughtLabel': "Was hat dich abgelenkt?",
+  'focus.distractions.thoughtPlaceholder': "Notiere es für später (optional)",
+  'focus.distractions.thoughtSave': "Speichern",
+  'focus.distractions.thoughtSaved': "In deinen Notizen gespeichert. Weiter geht's.",
+  'focus.distractions.thoughtError': "Der Gedanke konnte nicht gespeichert werden. Mach trotzdem weiter.",
+  'focus.distractions.thoughtTrimmed': "Gespeichert. Die ältesten Gedanken wurden entfernt, damit die Notiz passt.",
+  'focus.distractions.thoughtFull': "Deine Notizen sind voll (500). Lösche eine Notiz, um Gedanken zu speichern.",
 };

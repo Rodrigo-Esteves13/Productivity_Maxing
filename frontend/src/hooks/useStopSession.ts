@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useActiveStudySession } from '../context/useActiveStudySession';
-import { bulkUpdateTaskStatus } from '../api/userService';
+import { bulkUpdateTaskStatus } from '../api/tasksService';
 import type { StopStudySessionInput } from '../api/studySessionsService';
 import { celebrateCompletion } from '../lib/completionFeedback';
 import { useFeedback } from '../context/useFeedback';

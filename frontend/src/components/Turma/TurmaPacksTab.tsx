@@ -15,6 +15,7 @@ import { useTurmaAction, useTurmaPacks } from '../../hooks/useTurmas';
 import { useLoadOnce } from '../../hooks/useLoadOnce';
 import { useConfirmAction } from '../../hooks/useConfirmAction';
 import { useAuth } from '../../context/useAuth';
+import { useReloadOnReturn } from '../../hooks/useReloadOnReturn';
 import { useI18n } from '../../i18n/useI18n';
 import type { TurmaPack } from '../../types/models';
 
@@ -31,6 +32,7 @@ export default function TurmaPacksTab({ turmaId, isDelegado }: TurmaPacksTabProp
   const { user } = useAuth();
   const { data, isLoading, error, reload } = useTurmaPacks(turmaId);
   const confirm = useConfirmAction(t('turma.actionError'));
+  useReloadOnReturn(reload);
 
   const requestUnshare = (pack: TurmaPack) =>
     confirm.request({
@@ -61,7 +63,7 @@ export default function TurmaPacksTab({ turmaId, isDelegado }: TurmaPacksTabProp
               className="flex flex-wrap items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-900/40 p-3"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white">{pack.name}</p>
+                <p className="truncate text-sm font-medium text-white" title={pack.name}>{pack.name}</p>
                 <p className="text-xs text-neutral-500">
                   {pack.ownerName ?? t('social.anonymous')} · {t('turma.packs.itemCount', { count: pack.itemCount })}
                 </p>
@@ -95,7 +97,8 @@ interface SharePackFormProps {
 // So os pacotes que o proprio criou (o backend tambem so aceita esses).
 function SharePackForm({ turmaId, sharedPackIds, onShared }: SharePackFormProps) {
   const { t } = useI18n();
-  const { data: myPacks } = useLoadOnce(listTaskPacks);
+  const { data: myPacks, reload: reloadMyPacks } = useLoadOnce(listTaskPacks);
+  useReloadOnReturn(reloadMyPacks);
   const [packId, setPackId] = useState('');
   const share = useTurmaAction(shareTurmaPack, t('turma.actionError'));
   const available = (myPacks ?? []).filter((p) => !sharedPackIds.has(p.id));

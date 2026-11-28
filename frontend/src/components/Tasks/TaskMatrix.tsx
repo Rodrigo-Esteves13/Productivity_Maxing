@@ -40,7 +40,7 @@ export default function TaskMatrix({ tasks, onSelect }: TaskMatrixProps) {
                     onClick={() => onSelect(task)}
                     className="flex w-full items-center justify-between gap-2 rounded px-2 py-1 text-left text-sm text-neutral-200 hover:bg-neutral-800"
                   >
-                    <span className="min-w-0 truncate">{task.title}</span>
+                    <span className="min-w-0 truncate" title={task.title}>{task.title}</span>
                     <span className="shrink-0 text-xs tabular-nums text-neutral-500">{formatTaskDue(task, lang)}</span>
                   </button>
                 </li>

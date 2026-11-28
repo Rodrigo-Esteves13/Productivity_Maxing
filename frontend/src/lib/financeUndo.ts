@@ -1,4 +1,15 @@
-import { HTTP_CONFLICT, HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS, type FinanceOwedPaymentUndoResult } from '../api/financeService';
+import {
+  HTTP_CONFLICT,
+  HTTP_NOT_FOUND,
+  HTTP_TOO_MANY_REQUESTS,
+  type FinanceAccount,
+  type FinanceAccountInput,
+  type FinanceGoal,
+  type FinanceGoalInput,
+  type FinanceHolding,
+  type FinanceHoldingInput,
+  type FinanceOwedPaymentUndoResult,
+} from '../api/financeService';
 
 // Desfazer um pagamento parcial: que mensagem (chave i18n) mostrar. Puro.
 
@@ -30,4 +41,35 @@ export function undoResultKey(result: FinanceOwedPaymentUndoResult): string {
   if (!result.incomeEntryRemoved) return 'financeUndo.doneNoIncome';
   if (!result.debtRestored) return 'financeUndo.doneNoDebt';
   return 'financeUndo.done';
+}
+
+// Dados para recriar uma conta apagada.
+export function accountToInput(account: FinanceAccount): FinanceAccountInput {
+  return { name: account.name, type: account.type, balanceCents: account.balanceCents, currency: account.currency };
+}
+
+// Dados para recriar uma meta apagada.
+export function goalToInput(goal: FinanceGoal): FinanceGoalInput {
+  return {
+    kind: goal.kind,
+    name: goal.name,
+    targetCents: goal.targetCents,
+    savedCents: goal.savedCents,
+    deadline: goal.deadline ? goal.deadline.slice(0, 10) : null,
+    monthlyPlanCents: goal.monthlyPlanCents,
+  };
+}
+
+// Dados para recriar um investimento apagado, com o custo total (dele sai o
+// custo medio). Um preco sem moeda foi escrito a mao e tambem volta.
+export function holdingToInput(holding: FinanceHolding): FinanceHoldingInput {
+  const manualPrice = holding.priceCurrency === null ? holding.lastPriceCents : null;
+  return {
+    symbol: holding.symbol,
+    name: holding.name,
+    accountId: holding.accountId,
+    quantity: holding.quantity,
+    costBasisCents: holding.costBasisCents,
+    ...(manualPrice ? { priceCents: manualPrice } : {}),
+  };
 }

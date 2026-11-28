@@ -33,7 +33,7 @@ function ByTeacherList({ stats }: { stats: RatingStats }) {
     <ul className="divide-y divide-neutral-800/60">
       {stats.byTeacher.map((row) => (
         <li key={row.teacherName} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2 text-sm">
-          <span className="min-w-0 truncate text-neutral-200">{row.teacherName}</span>
+          <span className="min-w-0 truncate text-neutral-200" title={row.teacherName}>{row.teacherName}</span>
           <span className="text-xs tabular-nums text-neutral-400">
             {t('ratings.byTeacher.row', {
               courses: formatNumber(row.courses, lang, 0),

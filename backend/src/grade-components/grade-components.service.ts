@@ -16,6 +16,7 @@ import {
   MAX_COURSE_WEIGHT_PERCENT,
   assertWeightFits,
   loadUsedWeight,
+  loadUsedWeightByArea,
 } from './weight-budget';
 import {
   CreateGradeComponentDto,
@@ -25,6 +26,8 @@ import {
   CreateGradeEntryDto,
   UpdateGradeEntryDto,
 } from './dto/grade-entry.dto';
+import { isUniqueViolation } from '../common/prisma-errors';
+import { runWithUserTaskLock } from '../tasks/user-lock.util';
 
 const COMPONENT_INCLUDE = {
   entries: {
@@ -47,10 +50,6 @@ interface ComponentRow {
     grade: number;
     date: Date | null;
   }[];
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return (error as { code?: string } | null)?.code === 'P2002';
 }
 
 @Injectable()
@@ -137,35 +136,17 @@ export class GradeComponentsService {
   // Orcamento de peso de todas as cadeiras com algum peso atribuido no
   // periodo (tasks ou componentes). Mesma regra do limite de 100%.
   async weightBudgets(userId: string, periodId: string) {
-    const [taskAreas, componentAreas] = await Promise.all([
-      this.prisma.task.findMany({
-        where: { userId, periodId, weightPercentage: { not: null } },
-        select: { areaId: true },
-        distinct: ['areaId'],
-      }),
-      this.prisma.gradeComponent.findMany({
-        where: { userId, periodId },
-        select: { areaId: true },
-        distinct: ['areaId'],
-      }),
-    ]);
-    const areaIds = [
-      ...new Set([...taskAreas, ...componentAreas].map((row) => row.areaId)),
-    ];
-    const budgets = await Promise.all(
-      areaIds.map(async (areaId) => {
-        const used = await loadUsedWeight(this.prisma, {
-          userId,
-          areaId,
-          periodId,
-        });
-        return {
-          areaId,
-          used,
-          remaining: Math.max(0, MAX_COURSE_WEIGHT_PERCENT - used),
-        };
-      }),
-    );
+    // Um groupBy por tabela para o periodo todo (B-36), em vez de um
+    // loadUsedWeight por cadeira.
+    const usedByArea = await loadUsedWeightByArea(this.prisma, {
+      userId,
+      periodId,
+    });
+    const budgets = [...usedByArea.entries()].map(([areaId, used]) => ({
+      areaId,
+      used,
+      remaining: Math.max(0, MAX_COURSE_WEIGHT_PERCENT - used),
+    }));
     return { max: MAX_COURSE_WEIGHT_PERCENT, budgets };
   }
 
@@ -186,35 +167,41 @@ export class GradeComponentsService {
     const aggregation = dto.aggregation ?? 'AVERAGE';
     this.assertBestOf(aggregation, dto.bestOfCount);
 
-    const existing = await this.prisma.gradeComponent.count({
-      where: { userId, areaId: dto.areaId, periodId: dto.periodId },
-    });
-    if (existing >= MAX_COMPONENTS_PER_AREA) {
-      throw new BadRequestException(
-        `At most ${MAX_COMPONENTS_PER_AREA} grade components per course and period.`,
-      );
-    }
-
-    await assertWeightFits(
-      this.prisma,
-      { userId, areaId: dto.areaId, periodId: dto.periodId },
-      dto.weightPercentage,
-    );
-
     try {
-      const created = await this.prisma.gradeComponent.create({
-        data: {
-          userId,
-          areaId: dto.areaId,
-          periodId: dto.periodId,
-          name: dto.name,
-          weightPercentage: dto.weightPercentage,
-          aggregation,
-          bestOfCount: aggregation === 'BEST_OF' ? dto.bestOfCount : null,
-          expectedEntries: dto.expectedEntries ?? null,
+      // Contar, validar o peso e inserir com o mesmo lock por user das
+      // tasks (B-42): tasks e componentes partilham os 100% da cadeira.
+      const created = await runWithUserTaskLock(
+        this.prisma,
+        userId,
+        async (tx) => {
+          const existing = await tx.gradeComponent.count({
+            where: { userId, areaId: dto.areaId, periodId: dto.periodId },
+          });
+          if (existing >= MAX_COMPONENTS_PER_AREA) {
+            throw new BadRequestException(
+              `At most ${MAX_COMPONENTS_PER_AREA} grade components per course and period.`,
+            );
+          }
+          await assertWeightFits(
+            tx,
+            { userId, areaId: dto.areaId, periodId: dto.periodId },
+            dto.weightPercentage,
+          );
+          return tx.gradeComponent.create({
+            data: {
+              userId,
+              areaId: dto.areaId,
+              periodId: dto.periodId,
+              name: dto.name,
+              weightPercentage: dto.weightPercentage,
+              aggregation,
+              bestOfCount: aggregation === 'BEST_OF' ? dto.bestOfCount : null,
+              expectedEntries: dto.expectedEntries ?? null,
+            },
+            include: COMPONENT_INCLUDE,
+          });
         },
-        include: COMPONENT_INCLUDE,
-      });
+      );
       return this.toView(created);
     } catch (error) {
       if (isUniqueViolation(error)) {
@@ -233,36 +220,42 @@ export class GradeComponentsService {
       dto.bestOfCount !== undefined ? dto.bestOfCount : current.bestOfCount;
     this.assertBestOf(aggregation, bestOfCount);
 
-    // So valida quando o peso sobe (mexer so no nome nao pode falhar).
-    if (
+    // So valida quando o peso sobe (mexer so no nome nao pode falhar):
+    // assertWeightFits ignora um peso null.
+    const weightIncreased =
       dto.weightPercentage !== undefined &&
-      dto.weightPercentage > current.weightPercentage
-    ) {
-      await assertWeightFits(
-        this.prisma,
-        {
-          userId,
-          areaId: current.areaId,
-          periodId: current.periodId,
-          excludeComponentId: id,
-        },
-        dto.weightPercentage,
-      );
-    }
+      dto.weightPercentage > current.weightPercentage;
 
     try {
-      const updated = await this.prisma.gradeComponent.update({
-        where: { id },
-        data: {
-          name: dto.name,
-          weightPercentage: dto.weightPercentage,
-          aggregation,
-          // Fora de BEST_OF o N nao faz sentido: limpa-se.
-          bestOfCount: aggregation === 'BEST_OF' ? bestOfCount : null,
-          expectedEntries: dto.expectedEntries,
+      // Validar e gravar com o lock por user (B-42), como no create().
+      const updated = await runWithUserTaskLock(
+        this.prisma,
+        userId,
+        async (tx) => {
+          await assertWeightFits(
+            tx,
+            {
+              userId,
+              areaId: current.areaId,
+              periodId: current.periodId,
+              excludeComponentId: id,
+            },
+            weightIncreased ? dto.weightPercentage : null,
+          );
+          return tx.gradeComponent.update({
+            where: { id, userId },
+            data: {
+              name: dto.name,
+              weightPercentage: dto.weightPercentage,
+              aggregation,
+              // Fora de BEST_OF o N nao faz sentido: limpa-se.
+              bestOfCount: aggregation === 'BEST_OF' ? bestOfCount : null,
+              expectedEntries: dto.expectedEntries,
+            },
+            include: COMPONENT_INCLUDE,
+          });
         },
-        include: COMPONENT_INCLUDE,
-      });
+      );
       return this.toView(updated);
     } catch (error) {
       if (isUniqueViolation(error)) {
@@ -276,7 +269,7 @@ export class GradeComponentsService {
 
   async remove(userId: string, id: string): Promise<void> {
     await this.findOwnedOrThrow(userId, id);
-    await this.prisma.gradeComponent.delete({ where: { id } });
+    await this.prisma.gradeComponent.delete({ where: { id, userId } });
   }
 
   async addEntry(
@@ -304,9 +297,19 @@ export class GradeComponentsService {
     return this.toView(await this.findOwnedOrThrow(userId, componentId));
   }
 
-  private async assertEntryInComponent(componentId: string, entryId: string) {
+  // Entrada, componente e dono numa so query (B-44): substitui o
+  // findOwnedOrThrow do componente mais a verificacao da entrada.
+  private entryScope(userId: string, componentId: string, entryId: string) {
+    return { id: entryId, componentId, component: { userId } };
+  }
+
+  private async assertEntryOwned(
+    userId: string,
+    componentId: string,
+    entryId: string,
+  ) {
     const entry = await this.prisma.gradeEntry.findFirst({
-      where: { id: entryId, componentId },
+      where: this.entryScope(userId, componentId, entryId),
       select: { id: true },
     });
     if (!entry) throw new NotFoundException('Grade entry not found.');
@@ -318,10 +321,9 @@ export class GradeComponentsService {
     entryId: string,
     dto: UpdateGradeEntryDto,
   ) {
-    await this.findOwnedOrThrow(userId, componentId);
-    await this.assertEntryInComponent(componentId, entryId);
+    await this.assertEntryOwned(userId, componentId, entryId);
     await this.prisma.gradeEntry.update({
-      where: { id: entryId },
+      where: this.entryScope(userId, componentId, entryId),
       data: {
         grade: dto.grade,
         label: dto.label === undefined ? undefined : dto.label || null,
@@ -332,9 +334,10 @@ export class GradeComponentsService {
   }
 
   async removeEntry(userId: string, componentId: string, entryId: string) {
-    await this.findOwnedOrThrow(userId, componentId);
-    await this.assertEntryInComponent(componentId, entryId);
-    await this.prisma.gradeEntry.delete({ where: { id: entryId } });
+    await this.assertEntryOwned(userId, componentId, entryId);
+    await this.prisma.gradeEntry.delete({
+      where: this.entryScope(userId, componentId, entryId),
+    });
     return this.toView(await this.findOwnedOrThrow(userId, componentId));
   }
 }

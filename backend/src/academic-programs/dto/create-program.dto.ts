@@ -3,9 +3,11 @@ import {
   IsNotEmpty,
   IsOptional,
   IsInt,
+  Max,
   IsBoolean,
   MaxLength,
 } from 'class-validator';
+import { MAX_PROGRAM_ORDER } from '../academic-programs.constants';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateProgramDto {
@@ -34,6 +36,7 @@ export class CreateProgramDto {
   })
   @IsOptional()
   @IsInt()
+  @Max(MAX_PROGRAM_ORDER)
   order?: number;
 
   @ApiPropertyOptional({

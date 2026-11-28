@@ -27,7 +27,9 @@ function reminderState(note: PersonalNote, now: number): ReminderState | null {
   return Date.parse(note.remindAt) <= now ? 'due' : 'upcoming';
 }
 
-const LINK_BUTTON = 'text-xs text-violet-300 hover:text-violet-200';
+// Alvo de toque de 44px em ecras de toque.
+const LINK_BUTTON =
+  'inline-flex items-center text-xs text-violet-300 hover:text-violet-200 pointer-coarse:min-h-11 pointer-coarse:px-2';
 
 interface PersonalNoteItemProps {
   note: PersonalNote;
@@ -61,13 +63,16 @@ function PersonalNoteItem({ note, onUpdate, onRemove }: PersonalNoteItemProps) {
   return (
     <li className={`rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 ${isDone ? 'opacity-60' : ''}`}>
       <div className="flex items-start gap-3">
-        <input
-          type="checkbox"
-          checked={isDone}
-          onChange={() => void onUpdate(note.id, { done: !isDone })}
-          aria-label={isDone ? t('notes.markUndone') : t('notes.markDone')}
-          className="mt-1 h-4 w-4 accent-violet-500"
-        />
+        {/* Alvo de 44px em ecras tacteis sem afastar o texto. */}
+        <label className="flex shrink-0 cursor-pointer pointer-coarse:-m-2.5 pointer-coarse:p-2.5">
+          <input
+            type="checkbox"
+            checked={isDone}
+            onChange={() => void onUpdate(note.id, { done: !isDone })}
+            aria-label={isDone ? t('notes.markUndone') : t('notes.markDone')}
+            className="mt-1 h-4 w-4 accent-violet-500 pointer-coarse:h-6 pointer-coarse:w-6"
+          />
+        </label>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className={`break-words font-medium text-white ${isDone ? 'line-through' : ''}`}>{note.title}</h3>
@@ -84,7 +89,7 @@ function PersonalNoteItem({ note, onUpdate, onRemove }: PersonalNoteItemProps) {
           </div>
           {/* Texto do utilizador: nunca como HTML. */}
           {note.body && <p className="mt-1 whitespace-pre-wrap break-words text-sm text-neutral-300">{note.body}</p>}
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 pointer-coarse:gap-x-2">
             <button type="button" className={LINK_BUTTON} onClick={() => setIsEditing(true)}>
               {t('notes.edit')}
             </button>

@@ -70,7 +70,7 @@ describe('unblockDependents', () => {
     );
     expect(count).toBe(2);
     expect(prisma.task.updateMany).toHaveBeenCalledWith({
-      where: { userId: 'u1', blockedByTaskId: 't1', isBlocked: true },
+      where: { userId: 'u1', blockedByTaskId: { in: ['t1'] }, isBlocked: true },
       data: { isBlocked: false },
     });
   });

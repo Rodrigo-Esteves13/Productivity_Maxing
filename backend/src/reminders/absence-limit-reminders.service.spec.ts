@@ -18,6 +18,11 @@ interface Row {
   _count: { _all: number };
 }
 
+interface GroupByArgs {
+  by: string[];
+  where: { userId: { in: string[] }; date: { gte: Date; lte: Date } };
+}
+
 const rows = (
   subject: string,
   attended: number,
@@ -53,7 +58,18 @@ function setup(
             ],
       ),
     },
-    classOccurrence: { groupBy: jest.fn().mockResolvedValue(groups) },
+    classOccurrence: {
+      // Devolve as mesmas faltas para cada user pedido (userId in [...]).
+      groupBy: jest
+        .fn()
+        .mockImplementation((args: GroupByArgs) =>
+          Promise.resolve(
+            args.where.userId.in.flatMap((userId) =>
+              groups.map((group) => ({ ...group, userId })),
+            ),
+          ),
+        ),
+    },
   };
   const push = {
     notifyUser: jest.fn().mockResolvedValue(opts.delivered ?? 1),
@@ -343,10 +359,9 @@ describe('AbsenceLimitRemindersService paging, memo and guard', () => {
     prisma.user.findMany
       .mockReset()
       .mockResolvedValue([mkUser('u1'), mkUser('u2'), mkUser('u3')]);
-    prisma.classOccurrence.groupBy
-      .mockReset()
-      .mockRejectedValueOnce(new Error('db down for u1 secret@example.com'))
-      .mockResolvedValue(rows('Math', 5, 5));
+    push.notifyUser
+      .mockRejectedValueOnce(new Error('push down for u1 secret@example.com'))
+      .mockResolvedValue(1);
     const errorSpy = jest
       .spyOn(
         (service as unknown as { logger: { error: () => void } }).logger,
@@ -359,11 +374,73 @@ describe('AbsenceLimitRemindersService paging, memo and guard', () => {
     const notified = (push.notifyUser.mock.calls as [string][]).map(
       ([userId]) => userId,
     );
-    expect(notified).toEqual(['u2', 'u3']);
+    expect(notified).toEqual(['u1', 'u2', 'u3']);
     expect(errorSpy).toHaveBeenCalledTimes(1);
     const logged = String((errorSpy.mock.calls[0] as unknown[])[0]);
     expect(logged).toContain('u1');
     expect(logged).not.toContain('secret@example.com');
+  });
+
+  it('a failing attendance query skips only that page, not the run', async () => {
+    const { service, prisma, push } = setup(rows('Math', 5, 5));
+    const page1 = Array.from({ length: USER_BATCH_SIZE }, (_, i) =>
+      mkUser(`a${String(i).padStart(4, '0')}`),
+    );
+    prisma.user.findMany
+      .mockReset()
+      .mockResolvedValueOnce(page1)
+      .mockResolvedValueOnce([mkUser('b0001')]);
+    const original = prisma.classOccurrence.groupBy.getMockImplementation()!;
+    prisma.classOccurrence.groupBy
+      .mockReset()
+      .mockRejectedValueOnce(new Error('db down secret@example.com'))
+      .mockImplementation(original);
+    const errorSpy = jest
+      .spyOn(
+        (service as unknown as { logger: { error: () => void } }).logger,
+        'error',
+      )
+      .mockImplementation(() => undefined);
+
+    expect(await service.sendWeeklyReminders()).toBe(1);
+    expect(push.notifyUser).toHaveBeenCalledTimes(1);
+    expect(String((errorSpy.mock.calls[0] as unknown[])[0])).not.toContain(
+      'secret@example.com',
+    );
+  });
+
+  it('uses one groupBy per page for users sharing the same window', async () => {
+    const { service, prisma } = setup(rows('Math', 5, 5));
+    prisma.user.findMany
+      .mockReset()
+      .mockResolvedValue([mkUser('u1'), mkUser('u2'), mkUser('u3')]);
+    await service.sendWeeklyReminders();
+    expect(prisma.classOccurrence.groupBy).toHaveBeenCalledTimes(1);
+    const [args] = prisma.classOccurrence.groupBy.mock.calls[0] as [
+      GroupByArgs,
+    ];
+    expect(args.by).toEqual(['userId', 'subject', 'attended']);
+    expect(args.where.userId.in).toEqual(['u1', 'u2', 'u3']);
+  });
+
+  it('users with different period windows get their own groupBy', async () => {
+    const { service, prisma } = setup(rows('Math', 5, 5));
+    const period = (start: string) => ({
+      startDate: new Date(start),
+      endDate: null,
+    });
+    prisma.user.findMany.mockReset().mockResolvedValue([
+      { ...mkUser('u1'), activePeriod: period('2026-09-01T00:00:00.000Z') },
+      { ...mkUser('u2'), activePeriod: period('2026-09-01T00:00:00.000Z') },
+      { ...mkUser('u3'), activePeriod: period('2026-02-01T00:00:00.000Z') },
+    ]);
+    await service.sendWeeklyReminders();
+    const calls = prisma.classOccurrence.groupBy.mock.calls as [GroupByArgs][];
+    expect(calls).toHaveLength(2);
+    expect(calls.map(([a]) => a.where.userId.in)).toEqual([
+      ['u1', 'u2'],
+      ['u3'],
+    ]);
   });
 
   it('skips no-risk users for the rest of the day (memo)', async () => {

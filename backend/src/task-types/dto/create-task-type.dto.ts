@@ -4,8 +4,10 @@ import {
   IsOptional,
   IsInt,
   IsHexColor,
+  Max,
   MaxLength,
 } from 'class-validator';
+import { TASK_TYPE_ORDER_MAX } from '../task-types.constants';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // Sem "key" aqui de propósito: o admin só escreve o nome, a key técnica é
@@ -36,5 +38,6 @@ export class CreateTaskTypeDto {
   })
   @IsOptional()
   @IsInt()
+  @Max(TASK_TYPE_ORDER_MAX)
   order?: number;
 }

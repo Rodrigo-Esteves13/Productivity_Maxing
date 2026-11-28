@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
 import Modal from '../UI/Modal';
 import { useScheduleImport } from '../../hooks/useScheduleImport';
@@ -6,6 +6,7 @@ import { CheckIcon, AlertTriangleIcon, TrashIcon } from '../UI/Icons';
 import { deleteImportedClasses } from '../../api/scheduleService';
 import { useFeedback } from '../../context/useFeedback';
 import ImportOptionsPanel from './ImportOptionsPanel';
+import DeleteClassesRangePanel from './DeleteClassesRangePanel';
 import { useI18n } from '../../i18n/useI18n';
 
 interface ImportScheduleModalProps {
@@ -48,15 +49,14 @@ export default function ImportScheduleModal({
     await runImport(file);
   };
 
-  if (
-    stage === 'done' &&
-    outcome?.backendResult &&
-    outcome.backendResult.imported > 0 &&
-    !hasNotifiedRef.current
-  ) {
-    hasNotifiedRef.current = true;
-    onImported();
-  }
+  // setState do pai fora do render: so depois de a importacao acabar.
+  const importedCount = stage === 'done' ? (outcome?.backendResult?.imported ?? 0) : 0;
+  useEffect(() => {
+    if (importedCount > 0 && !hasNotifiedRef.current) {
+      hasNotifiedRef.current = true;
+      onImported();
+    }
+  }, [importedCount, onImported]);
 
   const isBusy = stage === 'reading' || stage === 'importing';
 
@@ -98,7 +98,7 @@ export default function ImportScheduleModal({
           {/* Sem .ics: um colega da turma pode partilhar o horario. */}
           <p>
             {t('schedule.import.noFile')}{' '}
-            <Link to="/classes" onClick={handleClose} className="text-violet-400 hover:text-violet-300">
+            <Link to="/classes" onClick={handleClose} className="text-violet-400 hover:text-violet-300 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center">
               {t('schedule.import.fromClass')}
             </Link>
           </p>
@@ -166,12 +166,13 @@ export default function ImportScheduleModal({
           </div>
         )}
 
-        <div className="pt-4 mt-2 border-t border-neutral-800">
+        <div className="pt-4 mt-2 border-t border-neutral-800 space-y-4">
+          <DeleteClassesRangePanel disabled={isBusy || isDeleting} onDeleted={onImported} />
           <button
             type="button"
             onClick={() => void handleDeleteAll()}
             disabled={isBusy || isDeleting}
-            className="inline-flex items-center gap-2 text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
+            className="inline-flex items-center gap-2 text-sm text-red-400 hover:text-red-300 disabled:opacity-50 pointer-coarse:min-h-11"
           >
             <TrashIcon width={14} height={14} />
             {isDeleting ? t('ui.deleting') : t('ui.deleteAllImportedClasses')}

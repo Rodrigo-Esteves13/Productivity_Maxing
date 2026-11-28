@@ -20,8 +20,8 @@ import {
   FREEZE_MAX_PER_WEEK,
   ISO_WEEK_MONDAY_SHIFT,
 } from './streak-freeze.constants';
+import { isUniqueViolation } from '../common/prisma-errors';
 
-const PRISMA_UNIQUE_VIOLATION = 'P2002';
 const FREEZE_SELECT = { id: true, dateKey: true, createdAt: true } as const;
 
 export interface StreakFreezeRow {
@@ -131,7 +131,7 @@ export class StreakFreezesService {
       });
     } catch (err) {
       // Pedido duplicado em paralelo para o mesmo dia: devolve o que ganhou.
-      if ((err as { code?: string } | null)?.code === PRISMA_UNIQUE_VIOLATION) {
+      if (isUniqueViolation(err)) {
         const winner = await this.prisma.streakFreeze.findUnique({
           where: { userId_dateKey: { userId, dateKey: key } },
           select: FREEZE_SELECT,

@@ -61,7 +61,7 @@ export default function NotebookSharedPanel() {
                   className="h-2 w-2 shrink-0 rounded-full"
                   style={{ backgroundColor: areaColorOf(item.areaColor) }}
                 />
-                <span className="truncate">{item.title}</span>
+                <span className="truncate" title={item.title ?? undefined}>{item.title}</span>
                 <span className="shrink-0 text-neutral-500">{t(ROLE_KEY[item.role])}</span>
               </Link>
             </li>

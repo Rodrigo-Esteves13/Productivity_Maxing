@@ -7,6 +7,107 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-11-28',
+    title: 'Saved items per account and safer exports',
+    items: [
+      'Task templates, saved filter views, schedule import options and your best streak are now kept per account in this browser. What you already had moves to the account that was last signed in here.',
+      'Phones: checkboxes have bigger touch areas.',
+      'Signing out also forgets what you copied on a notebook canvas, and exported flashcards can no longer run as spreadsheet formulas.',
+    ],
+  },
+  {
+    date: '2026-11-25',
+    title: 'Faster loading and smoother navigation',
+    items: [
+      'The app starts faster: only the text needed for the first screen loads up front, and tasks, subjects and categories are reused between pages instead of being downloaded again each time.',
+      'Changing period, returning to a tab or switching tabs in a class keeps what is already on screen while it refreshes. Long task and note lists show a part at a time, with a Show more button.',
+      'The admin user list now searches and filters on the server and loads more as you ask. Signing out, or signing in with another account, clears the recent items stored in this browser.',
+      'Phones: bigger touch targets for breadcrumbs, subject lists and text buttons in Focus, Social and Schedule.',
+    ],
+  },
+  {
+    date: '2026-11-24',
+    title: 'Search, mobile and editing improvements',
+    items: [
+      'Search and filters where lists had none: tasks (text, subject, status), money entries (text, category, account), flashcards, quizzes, personal notes, friends and their notes, task packs, task types, users, feedback, shared pads and banned IPs.',
+      'Phones: bigger touch targets across buttons, subtasks can be reordered and deleted by tap, and task types, API keys, security logs and users show as cards instead of sideways-scrolling tables.',
+      'Schedule: add, edit and delete single classes, delete classes by date range, and Undo after deleting a schedule change. Money: Undo after deleting accounts, goals and investments, a Current month button and drag and drop for CSV import.',
+      'Edit more: rename task packs and task templates, edit medication intakes and blood donations, reorder task types, delete your own feedback and undo your last flashcard grade.',
+      'Import and export: task import shows a preview and offers a CSV template; export report card, personal notes, pads, flashcards, medication history and security logs.',
+      'Also: delete one quiz attempt, edit a schedule change, rename API keys and task attachments, edit your open feedback, Undo after deleting several tasks (up to 50), delete or move several flashcards at once, sort the report card and see the last 30 days of mood.',
+      'Clearer states: retry buttons when something fails to load, warnings for past reminders, unsaved changes and invalid input, and confirmations before unbanning, declining requests or replacing a template.',
+    ],
+  },
+  {
+    date: '2026-11-22',
+    title: 'Cards stay in sync without reloading',
+    items: [
+      'Dashboard: completing, editing or deleting a task, entering a grade or changing a weight now updates the grade projection, course forecast, failing risk, plan scenario, missing weight, estimation accuracy and the Today card on their own, without a page reload and without the cards flashing.',
+      'Focus: adding, fixing or deleting a session in the history, or using a rest day, now updates the Today ring, the streak, the best times heatmap and the distraction stats right away. The study streak on the Dashboard follows too.',
+      'Areas: changing a teacher, a grade or a task refreshes the subject badges and filters. Ratings averages update when you rate a subject, and in Social accepting a request in one list refreshes the others.',
+    ],
+  },
+  {
+    date: '2026-11-22',
+    title: 'Undo after deleting',
+    items: [
+      'Deleting a task, finance entry, flashcard, personal note, work shift or grade now shows an Undo button in the toast, which recreates it with the same data (a restored task comes back as a new one without its history or files).',
+      'Hiding all official subjects, removing someone from a shared quiz, cancelling a notes request and no longer viewing a friend notebook now ask for confirmation first.',
+    ],
+  },
+  {
+    date: '2026-11-22',
+    title: 'Edit more, with clearer feedback',
+    items: [
+      'You can now rename a quiz, edit the title of a checklist step, edit the label and date of a grade (the label shows on the grade chip), clear a mood entry, and archive or restore a program from its settings (archived programs stay in the selector under Archived).',
+      'Admin appeals have a History tab with the decided ones, and in Social you can cancel a pending notes request or stop viewing a friend notebook.',
+      'Saving now shows a confirmation toast for tasks, areas, finance, schedule and shifts, task files, packs, personal notes and quiz sharing. Deleting a pack or a finance item no longer looks successful when it failed.',
+    ],
+  },
+  {
+    date: '2026-11-22',
+    title: 'Safer deletes and closing forms',
+    items: [
+      'Asks for confirmation before discarding a quiz attempt, deactivating a task type, banning an IP, revoking access to your notes, and deleting a shift or a schedule change.',
+      'Pressing Escape now closes only the top-most window, so cancelling a confirmation no longer also closes the form behind it.',
+      'Closing the new task, edit task, edit finance entry and flashcard import forms by clicking outside or pressing Escape now asks before throwing away what you typed.',
+      'Focus cards and the debts list refresh only when something changed, the medication reminder status updates right after you tick a dose, and the security log filters wait a moment while you type.',
+    ],
+  },
+  {
+    date: '2026-11-22',
+    title: 'Language fixes and faster loading',
+    items: [
+      'Page titles in the browser tab, a few placeholders and messages, and many dates and numbers (account blocked screen, task history, API keys, admin lists, grade calculators) now follow the language you picked in the app instead of staying in English or using the browser language.',
+      'The app loads a little lighter: sign-up, forgot password and the daily digest are fetched only when needed, and the main libraries are split into their own files so they stay cached between updates.',
+    ],
+  },
+  {
+    date: '2026-11-22',
+    title: 'Focus: jot down what distracted you',
+    items: [
+      'Focus: after you press Got distracted, a small box lets you write what pulled you away. It is saved as one line in a personal note called During focus, in your language (created the first time), so you can deal with it after the session. The box is optional: ignore it and the distraction is still counted.',
+    ],
+  },
+  {
+    date: '2026-11-22',
+    title: 'Report card: grade improvement simulator',
+    items: [
+      'Report card: a new Grade improvement table shows, for the period you are viewing, how much your average would go up if a passed course rose by 1 or 2 points, with the biggest gain first (weighted by credits, never above the top of the scale). It is only a simulation: whether you can improve a grade depends on your school rules, so confirm them first.',
+    ],
+  },
+  {
+    date: '2026-11-22',
+    title: 'Wellbeing: live updates, extra doses and phone feedback',
+    items: [
+      'Wellbeing: the medication history, the correlations and the burnout alert now update on their own after you tick a dose, log a dose or save your mood. No page refresh needed.',
+      'Medication: you can now log an extra dose of any medication, not only the as-needed ones, and log several at the same time or on the same day at different hours. A new Save and add another button keeps the form open.',
+      'Medication: when you are looking at a past day in the dose list (for example yesterday), logging a dose now starts on that day instead of today.',
+      'Mood: the check-in card now has arrows to go back to a day you forgot (up to 90 days) and log mood, energy and stress for it.',
+      'Feedback: on a phone you can now open Send feedback from the menu, the form fits above the keyboard, and failures say whether you were offline or sent too many messages in a minute.',
+    ],
+  },
+  {
     date: '2026-11-17',
     title: 'Flashcards: hard cards, review forecast and reverse cards',
     items: [

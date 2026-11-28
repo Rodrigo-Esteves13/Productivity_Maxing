@@ -1,6 +1,8 @@
 // src/api/securityLogsService.ts
 import api from './client';
 import type { PaginatedSecurityLogs, SecurityLogsStats } from '../types/models';
+import type { SecurityLogSortKey } from '../lib/securityLogSort';
+import type { SortDirection } from '../lib/sortDirection';
 
 export interface SecurityLogsQuery {
   skip?: number;
@@ -8,6 +10,8 @@ export interface SecurityLogsQuery {
   ip?: string;
   path?: string;
   window?: '1h' | '24h' | '7d';
+  sortBy?: SecurityLogSortKey;
+  sortDir?: SortDirection;
 }
 
 // ADMIN endpoints (todos exigem role ADMIN no backend, ver

@@ -1,5 +1,6 @@
 // src/api/areaTeachersService.ts
 import api from './client';
+import { notifyDomainChanged } from '../lib/domainEvents';
 import type { AreaTeacherNote } from '../types/models';
 
 export const getAreaTeachers = async (): Promise<AreaTeacherNote[]> => {
@@ -9,9 +10,12 @@ export const getAreaTeachers = async (): Promise<AreaTeacherNote[]> => {
 
 export const setAreaTeacher = async (areaId: string, teacherName: string): Promise<AreaTeacherNote> => {
   const response = await api.put<AreaTeacherNote>(`/area-teachers/${areaId}`, { teacherName });
+  // O cracha, a ordenacao e o filtro por docente da grelha de Areas voltam a ler.
+  notifyDomainChanged('areaTeachers');
   return response.data;
 };
 
 export const clearAreaTeacher = async (areaId: string): Promise<void> => {
   await api.delete(`/area-teachers/${areaId}`);
+  notifyDomainChanged('areaTeachers');
 };

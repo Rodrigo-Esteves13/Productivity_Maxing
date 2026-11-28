@@ -20,7 +20,10 @@ import {
 } from './course-risk-pass-chance.util';
 import { AreaTeachersService } from '../area-teachers/area-teachers.service';
 import { getLisbonNow } from '../common/date-key.util';
-import { summarizeAttendance } from '../schedule/attendance-summary.util';
+import {
+  summarizeAttendance,
+  type AttendanceGroupRow,
+} from '../schedule/attendance-summary.util';
 import {
   areaAbsenceShare,
   buildRiskComponents,
@@ -156,6 +159,18 @@ const PERIOD_SELECT = {
     program: { select: { roundInterimGrades: true } },
   },
 } as const;
+
+type DatedAttendanceRow = AttendanceGroupRow & { date: Date };
+
+/** Janela das aulas dadas: inicio do periodo ate hoje (ou fim do periodo). */
+function absenceWindow(period: PeriodWindow): { from: Date; to: Date } {
+  const { today } = getLisbonNow();
+  const last =
+    period.endDate && period.endDate < today ? period.endDate : today;
+  const endOfLast = new Date(last);
+  endOfLast.setUTCHours(23, 59, 59, 999);
+  return { from: period.startDate, to: endOfLast };
+}
 
 type GroupPeriod = PeriodWindow & { program: { roundInterimGrades: boolean } };
 
@@ -303,35 +318,39 @@ export class CourseRiskService {
       areas.map((a) => a.id),
     );
 
-    const computed = await Promise.all(
-      groups.map(async (group): Promise<GroupRisk | null> => {
-        const area = areaById.get(group.areaId);
-        const resolved = rulesByArea.get(group.areaId);
-        if (!area || !resolved) return null;
-        const absenceSharePct = await this.loadAbsenceShare(
-          userId,
-          subjectsByArea.get(group.areaId) ?? [],
-          group.period,
-        );
-        const input: CourseRiskInput = {
-          areaId: area.id,
-          areaName: area.name,
-          colorHex: area.colorHex,
-          rules: resolved.rules,
-          components: buildRiskComponents(
-            group.tasks,
-            group.components,
-            group.roundInterimGrades,
-          ),
-          ...sumStudyVsEstimate(group.tasks, now),
-          absenceSharePct,
-          absenceLimitPct,
-          postponedCount: sumPostponed(group.tasks),
-          teacher: teacherStats.get(group.areaId) ?? null,
-        };
-        return { area, risk: computeCourseRisk(input) };
-      }),
+    const attendanceRows = await this.loadAttendanceRows(
+      userId,
+      groups,
+      subjectsByArea,
     );
+
+    const computed = groups.map((group): GroupRisk | null => {
+      const area = areaById.get(group.areaId);
+      const resolved = rulesByArea.get(group.areaId);
+      if (!area || !resolved) return null;
+      const absenceSharePct = this.absenceShareFor(
+        attendanceRows,
+        subjectsByArea.get(group.areaId) ?? [],
+        group.period,
+      );
+      const input: CourseRiskInput = {
+        areaId: area.id,
+        areaName: area.name,
+        colorHex: area.colorHex,
+        rules: resolved.rules,
+        components: buildRiskComponents(
+          group.tasks,
+          group.components,
+          group.roundInterimGrades,
+        ),
+        ...sumStudyVsEstimate(group.tasks, now),
+        absenceSharePct,
+        absenceLimitPct,
+        postponedCount: sumPostponed(group.tasks),
+        teacher: teacherStats.get(group.areaId) ?? null,
+      };
+      return { area, risk: computeCourseRisk(input) };
+    });
     return computed.filter((entry): entry is GroupRisk => entry !== null);
   }
 
@@ -464,31 +483,53 @@ export class CourseRiskService {
   }
 
   /**
-   * Faltas sobre as aulas dadas entre o inicio do periodo e hoje (ou o fim
-   * do periodo, se ja passou): mesma janela do aviso semanal de faltas.
+   * Um so groupBy de presencas para todas as cadeiras: subject in todos os
+   * textos, janela do periodo mais antigo ate ao fim mais tardio. Agrupa
+   * tambem por dia para cada cadeira poder filtrar a sua propria janela
+   * em memoria (resultado igual a uma query por cadeira).
    */
-  private async loadAbsenceShare(
+  private async loadAttendanceRows(
     userId: string,
-    subjects: string[],
-    period: PeriodWindow,
-  ): Promise<number | null> {
-    if (subjects.length === 0) return null;
-    const { today } = getLisbonNow();
-    const to =
-      period.endDate && period.endDate < today ? period.endDate : today;
-    const endOfTo = new Date(to);
-    endOfTo.setUTCHours(23, 59, 59, 999);
-
+    groups: CourseGroup[],
+    subjectsByArea: Map<string, string[]>,
+  ): Promise<DatedAttendanceRow[]> {
+    const windows = groups
+      .filter((g) => (subjectsByArea.get(g.areaId) ?? []).length > 0)
+      .map((g) => absenceWindow(g.period));
+    if (windows.length === 0) return [];
+    const subjects = [
+      ...new Set(groups.flatMap((g) => subjectsByArea.get(g.areaId) ?? [])),
+    ];
+    const from = new Date(Math.min(...windows.map((w) => w.from.getTime())));
+    const to = new Date(Math.max(...windows.map((w) => w.to.getTime())));
     const rows = await this.prisma.classOccurrence.groupBy({
-      by: ['subject', 'attended'],
+      by: ['subject', 'attended', 'date'],
       where: {
         userId,
         subject: { in: subjects },
-        date: { gte: period.startDate, lte: endOfTo },
+        date: { gte: from, lte: to },
         cancelled: false,
       },
       _count: { _all: true },
     });
-    return areaAbsenceShare(summarizeAttendance(rows));
+    return rows;
+  }
+
+  /**
+   * Faltas sobre as aulas dadas entre o inicio do periodo e hoje (ou o fim
+   * do periodo, se ja passou): mesma janela do aviso semanal de faltas.
+   */
+  private absenceShareFor(
+    rows: DatedAttendanceRow[],
+    subjects: string[],
+    period: PeriodWindow,
+  ): number | null {
+    if (subjects.length === 0) return null;
+    const { from, to } = absenceWindow(period);
+    const wanted = new Set(subjects);
+    const inWindow = rows.filter(
+      (r) => wanted.has(r.subject) && r.date >= from && r.date <= to,
+    );
+    return areaAbsenceShare(summarizeAttendance(inWindow));
   }
 }

@@ -1,4 +1,9 @@
-import { NOTEBOOK_PHOTO_MAX_SIZE_BYTES } from '../common/upload-limits';
+import {
+  ATTACHMENT_MAX_SIZE_BYTES,
+  NOTEBOOK_PHOTO_MAX_SIZE_BYTES,
+  UPLOADS_PER_MINUTE,
+  singleFileUpload,
+} from '../common/upload-limits';
 import {
   Controller,
   Get,
@@ -20,7 +25,6 @@ import {
   RESULT_TRUNCATED_HEADER,
   type ListMeta,
 } from '../common/pagination.util';
-import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -28,11 +32,10 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import type { Options as MulterOptions } from 'multer';
 import 'multer';
 import { NotebookService } from './notebook.service';
 import { ListAreaEntriesQueryDto } from './dto/list-area-entries-query.dto';
-import { ATTACHMENT_MAX_SIZE_BYTES } from './attachment-validation.util';
+import { SearchNotebookQueryDto } from './dto/search-notebook-query.dto';
 import {
   CreateNotebookEntryDto,
   UpdateNotebookEntryDto,
@@ -46,15 +49,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { perMinute } from '../common/throttle.util';
-
-// Mesma mitigação e o mesmo motivo do TS2353 do @types/multer que
-// AuthController.uploadAvatar já documenta (GHSA-72gw-mp4g-v24j,
-// fieldNestingDepth ainda não está no tipo Options.limits instalado).
-type MulterLimitsWithFieldNestingDepth = NonNullable<
-  MulterOptions['limits']
-> & {
-  fieldNestingDepth?: number;
-};
+import {
+  NOTEBOOK_ACCESS_DECISIONS_PER_MINUTE,
+  NOTEBOOK_SEARCHES_PER_MINUTE,
+} from './notebook.constants';
 
 @ApiTags('Notebook')
 @ApiBearerAuth()
@@ -242,6 +240,7 @@ export class NotebookController {
   }
 
   @Patch('entries/:id/share/requests/:requestId')
+  @Throttle(perMinute(NOTEBOOK_ACCESS_DECISIONS_PER_MINUTE))
   @ApiOperation({ summary: 'Approve or deny a pending access request.' })
   decideAccessRequest(
     @CurrentUser() user: AuthenticatedUser,
@@ -294,18 +293,9 @@ export class NotebookController {
   // de ficheiro só tinha o limite global do ThrottlerModule, ao contrário
   // dos endpoints de auth - um endpoint caro em I/O de storage merece o
   // mesmo tratamento.
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(UPLOADS_PER_MINUTE))
   @Post('entries/:id/photos')
-  @UseInterceptors(
-    FileInterceptor('photo', {
-      limits: {
-        fileSize: NOTEBOOK_PHOTO_MAX_SIZE_BYTES,
-        files: 1,
-        fields: 0,
-        fieldNestingDepth: 1,
-      } as MulterLimitsWithFieldNestingDepth,
-    }),
-  )
+  @UseInterceptors(singleFileUpload('photo', NOTEBOOK_PHOTO_MAX_SIZE_BYTES))
   addPhoto(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
@@ -334,18 +324,9 @@ export class NotebookController {
   // (ou, para texto puro, pela ausência de bytes binários) antes de
   // aceitar - ver ATTACHMENT_BINARY_MIME_TO_EXT/ATTACHMENT_TEXT_EXTENSIONS
   // em attachment-validation.util.ts.
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(UPLOADS_PER_MINUTE))
   @Post('entries/:id/attachments')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      limits: {
-        fileSize: ATTACHMENT_MAX_SIZE_BYTES,
-        files: 1,
-        fields: 0,
-        fieldNestingDepth: 1,
-      } as MulterLimitsWithFieldNestingDepth,
-    }),
-  )
+  @UseInterceptors(singleFileUpload('file', ATTACHMENT_MAX_SIZE_BYTES))
   addAttachment(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
@@ -411,12 +392,16 @@ export class NotebookController {
   }
 
   @Get('search')
+  @Throttle(perMinute(NOTEBOOK_SEARCHES_PER_MINUTE))
   @ApiOperation({
     summary:
       "Free-text search across all of the caller's notebook entries - matches title, content, subject name and formatted date (dd/mm/yyyy).",
   })
   @ApiQuery({ name: 'q', required: true })
-  search(@CurrentUser() user: AuthenticatedUser, @Query('q') q: string) {
-    return this.notebookService.search(user.id, q ?? '');
+  search(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: SearchNotebookQueryDto,
+  ) {
+    return this.notebookService.search(user.id, query.q ?? '');
   }
 }

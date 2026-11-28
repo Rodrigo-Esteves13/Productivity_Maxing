@@ -56,4 +56,6 @@ export const feedback: Record<string, string> = {
   'feedback.mine.reply': "团队回复",
   'feedback.mine.link': "查看你发送的反馈和回复。",
   'feedback.muted': "此账户目前无法发送反馈。",
+  'feedback.rateLimited': "短时间内发送过多。请等待一分钟后重试。",
+  'feedback.offline': "无网络连接。请检查网络后重试，您输入的内容已保留。",
 };

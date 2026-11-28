@@ -1,81 +1,141 @@
 import ColorDot from '../UI/ColorDot';
 import ActiveBadge from './ActiveBadge';
-import { PencilIcon, TrashIcon } from '../UI/Icons';
+import { ArrowDownIcon, ArrowUpIcon, EyeIcon, EyeOffIcon, PencilIcon } from '../UI/Icons';
 import type { AdminTaskType } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
 import IconButton from '../UI/IconButton';
+import EmptyState from '../UI/EmptyState';
+import type { MoveDirection } from '../../lib/taskTypeOrder';
 
 interface TaskTypesTableProps {
   taskTypes: AdminTaskType[];
+  // Pesquisa ativa: com filtro a ordem nao se muda (as posicoes enganam).
+  isFiltering?: boolean;
+  noResultsMessage?: string;
+  canMove: (id: string, direction: MoveDirection) => boolean;
+  onMove: (taskType: AdminTaskType, direction: MoveDirection) => void;
   onEdit: (taskType: AdminTaskType) => void;
   onToggleActive: (taskType: AdminTaskType) => void;
 }
 
-export default function TaskTypesTable({ taskTypes, onEdit, onToggleActive }: TaskTypesTableProps) {
+function TypeDot({ color }: { color: string | null | undefined }) {
+  // Sem cor guardada: bolinha neutra por token (nao ha hex de interface).
+  return color ? (
+    <ColorDot color={color} />
+  ) : (
+    <span aria-hidden="true" className="inline-block h-4 w-4 flex-shrink-0 rounded-full bg-neutral-500" />
+  );
+}
+
+export default function TaskTypesTable({
+  taskTypes,
+  isFiltering = false,
+  noResultsMessage,
+  canMove,
+  onMove,
+  onEdit,
+  onToggleActive,
+}: TaskTypesTableProps) {
   const { t } = useI18n();
+
+  const actions = (type: AdminTaskType) => (
+    <div className="flex items-center justify-end gap-1">
+      <IconButton
+        label={t('ux4packs.types.moveUp', { name: type.label })}
+        disabled={isFiltering || !canMove(type.id, 'up')}
+        onClick={() => onMove(type, 'up')}
+        className="text-neutral-400 hover:text-white"
+      >
+        <ArrowUpIcon className="h-4 w-4" />
+      </IconButton>
+      <IconButton
+        label={t('ux4packs.types.moveDown', { name: type.label })}
+        disabled={isFiltering || !canMove(type.id, 'down')}
+        onClick={() => onMove(type, 'down')}
+        className="text-neutral-400 hover:text-white"
+      >
+        <ArrowDownIcon className="h-4 w-4" />
+      </IconButton>
+      <IconButton
+        label={t('ui.editTaskType')}
+        onClick={() => onEdit(type)}
+        className="text-neutral-400 hover:text-white"
+      >
+        <PencilIcon />
+      </IconButton>
+      <IconButton
+        label={type.isActive ? t('ui.deactivate') : t('ui.reactivate')}
+        onClick={() => onToggleActive(type)}
+        className={type.isActive ? 'text-neutral-400 hover:text-red-400' : 'text-violet-400 hover:text-violet-300'}
+      >
+        {type.isActive ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+      </IconButton>
+    </div>
+  );
+
+  const subcategories = (type: AdminTaskType) =>
+    type.academicTaskTypes.length === 0
+      ? '-'
+      : t('ui.nActive', { count: type.academicTaskTypes.filter((a) => a.isActive).length });
+
+  if (taskTypes.length === 0) {
+    return <EmptyState message={noResultsMessage ?? t('ui.noTaskTypesYet2')} />;
+  }
+
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
-      <div className="overflow-x-auto">
+      {/* Mobile: um cartao por tipo, com as mesmas acoes da tabela */}
+      <ul className="divide-y divide-neutral-800 md:hidden">
+        {taskTypes.map((type) => (
+          <li key={type.id} className="space-y-2 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <TypeDot color={type.colorHex} />
+                <span className="truncate font-medium text-neutral-200" title={type.label}>
+                  {type.label}
+                </span>
+              </div>
+              <ActiveBadge isActive={type.isActive} />
+            </div>
+            <p className="text-xs text-neutral-500">
+              {t('ui.subcategories')}: {subcategories(type)} · {t('ui.order')}: {type.order}
+              {type.taskCount !== undefined && ` · ${t('f7admin.types.tasks')}: ${type.taskCount}`}
+            </p>
+            {actions(type)}
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-sm text-left text-neutral-300 whitespace-nowrap">
           <thead className="text-xs text-neutral-400 uppercase bg-neutral-950/50 border-b border-neutral-800">
             <tr>
               <th className="px-4 py-3 font-medium">{t('ui.name')}</th>
               <th className="px-4 py-3 font-medium">{t('ui.subcategories')}</th>
+              <th className="px-4 py-3 font-medium text-center">{t('f7admin.types.tasks')}</th>
               <th className="px-4 py-3 font-medium text-center">{t('ui.order')}</th>
               <th className="px-4 py-3 font-medium text-center">{t('ui.status')}</th>
               <th className="px-4 py-3 font-medium text-right">{t('ui.actions')}</th>
             </tr>
           </thead>
           <tbody>
-            {taskTypes.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-neutral-500">
-                  {t('ui.noTaskTypesYet2')}
+            {taskTypes.map((type) => (
+              <tr key={type.id} className="border-b border-neutral-800 last:border-0 hover:bg-neutral-800/30 transition-colors">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <TypeDot color={type.colorHex} />
+                    <span className="font-medium text-neutral-200">{type.label}</span>
+                  </div>
                 </td>
+                <td className="px-4 py-3 text-neutral-500">{subcategories(type)}</td>
+                <td className="px-4 py-3 text-center tabular-nums text-neutral-500">{type.taskCount ?? '-'}</td>
+                <td className="px-4 py-3 text-center text-neutral-500">{type.order}</td>
+                <td className="px-4 py-3 text-center">
+                  <ActiveBadge isActive={type.isActive} />
+                </td>
+                <td className="px-4 py-3">{actions(type)}</td>
               </tr>
-            ) : (
-              taskTypes.map((type) => (
-                <tr key={type.id} className="border-b border-neutral-800 last:border-0 hover:bg-neutral-800/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <ColorDot color={type.colorHex ?? '#808080'} />
-                      <span className="font-medium text-neutral-200">{type.label}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-neutral-500">
-                    {type.academicTaskTypes.length === 0
-                      ? '-'
-                      : t('ui.nActive', { count: type.academicTaskTypes.filter((a) => a.isActive).length })}
-                  </td>
-                  <td className="px-4 py-3 text-center text-neutral-500">{type.order}</td>
-                  <td className="px-4 py-3 text-center">
-                    <ActiveBadge isActive={type.isActive} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <IconButton
-                        label={t('ui.editTaskType')}
-                        onClick={() => onEdit(type)}
-                        className="text-neutral-400 hover:text-white"
-                      >
-                        <PencilIcon />
-                      </IconButton>
-                      <button
-                        onClick={() => onToggleActive(type)}
-                        title={type.isActive ? t('ui.deactivate') : t('ui.reactivate')}
-                        className={`transition-colors p-1.5 ${
-                          type.isActive
-                            ? 'text-neutral-400 hover:text-red-500'
-                            : 'text-violet-500 hover:text-violet-400'
-                        }`}
-                      >
-                        {type.isActive ? <TrashIcon /> : <span className="text-xs font-semibold px-1">{t('ui.reactivate')}</span>}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
+            ))}
           </tbody>
         </table>
       </div>

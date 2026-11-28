@@ -14,6 +14,7 @@ import {
   RATING_MAX,
   RATING_MIN,
 } from '../wellbeing.constants';
+import { IsRealDateKey } from '../../common/validators/is-real-date-key.decorator';
 
 export class UpsertMoodDto {
   @ApiProperty({ example: 4, description: '1 (very low) to 5 (very good).' })
@@ -51,15 +52,18 @@ export class UpsertMoodDto {
 
 export class MoodRangeQueryDto {
   @ApiProperty({ example: '2026-10-01' })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: 'from must be formatted YYYY-MM-DD.' })
   from: string;
 
   @ApiProperty({ example: '2026-10-31' })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: 'to must be formatted YYYY-MM-DD.' })
   to: string;
 }
 
 export class DateKeyParamDto {
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: 'date must be formatted YYYY-MM-DD.' })
   date: string;
 }

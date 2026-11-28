@@ -108,9 +108,20 @@ export default function ProgramSelector() {
           .filter((p) => p.isActive || p.id === activeProgram?.id)
           .map((program) => (
             <option key={program.id} value={program.id}>
-              {program.name}
+              {program.isActive ? program.name : `${program.name} (${t('quickWins.programArchivedTag')})`}
             </option>
           ))}
+        {programs.some((p) => !p.isActive && p.id !== activeProgram?.id) && (
+          <optgroup label={t('quickWins.programArchivedGroup')}>
+            {programs
+              .filter((p) => !p.isActive && p.id !== activeProgram?.id)
+              .map((program) => (
+                <option key={program.id} value={program.id}>
+                  {program.name}
+                </option>
+              ))}
+          </optgroup>
+        )}
         <option value={NO_PROGRAM_VALUE}>{t('program.none')}</option>
         <option value={CREATE_NEW_VALUE}>{t('program.createNew')}</option>
       </Select>
@@ -118,7 +129,7 @@ export default function ProgramSelector() {
       {activeProgram && (
         <>
           <IconButton
-            label={t('program.rename')}
+            label={t('program.settings')}
             onClick={() => setIsRenameModalOpen(true)}
             className="text-neutral-500 hover:text-neutral-200"
           >
@@ -136,7 +147,7 @@ export default function ProgramSelector() {
           <button
             type="button"
             onClick={() => setIsPeriodsModalOpen(true)}
-            className="text-sm text-neutral-400 hover:text-neutral-200 underline decoration-dotted"
+            className="text-sm text-neutral-400 hover:text-neutral-200 underline decoration-dotted pointer-coarse:min-h-11"
           >
             {t('program.managePeriods')}
           </button>

@@ -1,27 +1,12 @@
-import { useEffect, useState } from 'react';
+import { STORAGE_KEYS } from '../lib/storageKeys';
+import { OFF_BY_DEFAULT, usePersistedState } from './usePersistedState';
 
-const STORAGE_KEY = 'pm-single-task-mode';
-
-function loadSingleTaskMode(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
+const STORAGE_KEY = STORAGE_KEYS.singleTaskMode;
 
 // Modo "uma so task" do Dashboard (ver lib/mostUrgentTask.ts). Preferencia
 // local do browser, desligada por omissao.
 export function useSingleTaskMode() {
-  const [isSingleTaskMode, setIsSingleTaskMode] = useState<boolean>(loadSingleTaskMode);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, String(isSingleTaskMode));
-    } catch {
-      // Best-effort only - same reasoning as useExamMode.
-    }
-  }, [isSingleTaskMode]);
+  const [isSingleTaskMode, setIsSingleTaskMode] = usePersistedState(STORAGE_KEY, OFF_BY_DEFAULT);
 
   return { isSingleTaskMode, setIsSingleTaskMode };
 }

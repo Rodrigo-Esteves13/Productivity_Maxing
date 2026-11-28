@@ -6,6 +6,7 @@ import { CheckIcon, XIcon } from '../UI/Icons';
 import { getSchedule } from '../../api/scheduleService';
 import { getSessionHistory } from '../../api/studySessionsService';
 import { useCalendarStatus } from '../../hooks/useCalendarStatus';
+import { useStudyDataKey } from '../../hooks/useSessionEndKey';
 import { todayKey } from '../../lib/dateKey';
 import { useI18n } from '../../i18n/useI18n';
 
@@ -46,18 +47,21 @@ export default function OnboardingChecklist({ taskCount }: OnboardingChecklistPr
   // null = ainda a carregar (nao mostra nada para nao piscar passos "por fazer").
   const [hasSchedule, setHasSchedule] = useState<boolean | null>(null);
   const [hasSession, setHasSession] = useState<boolean | null>(null);
+  // Uma sessao nova (ou apagada) volta a ler em silencio.
+  const dataKey = useStudyDataKey();
 
   useEffect(() => {
     if (dismissed) return;
     const controller = new AbortController();
     getSchedule(dateKey(-60), dateKey(180), controller.signal)
       .then((rows) => setHasSchedule(rows.length > 0))
-      .catch(() => setHasSchedule(null));
+      // Falha: fica o que ja se sabia (null na primeira vez).
+      .catch(() => undefined);
     getSessionHistory(90, controller.signal)
       .then((rows) => setHasSession(rows.length > 0))
-      .catch(() => setHasSession(null));
+      .catch(() => undefined);
     return () => controller.abort();
-  }, [dismissed]);
+  }, [dismissed, dataKey]);
 
   if (dismissed || hasSchedule === null || hasSession === null || calendarConnected === null) {
     return null;
@@ -115,7 +119,7 @@ export default function OnboardingChecklist({ taskCount }: OnboardingChecklistPr
         <button
           type="button"
           onClick={dismiss}
-          className="text-neutral-500 hover:text-neutral-200"
+          className="text-neutral-500 hover:text-neutral-200 pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center pointer-coarse:justify-center"
           aria-label={t('onboarding.dismiss')}
           title={t('onboarding.dismiss')}
         >
@@ -127,7 +131,7 @@ export default function OnboardingChecklist({ taskCount }: OnboardingChecklistPr
           <li key={step.id}>
             <Link
               to={step.to}
-              className={`flex items-start gap-2.5 rounded-lg border px-3 py-2 transition-colors ${
+              className={`flex items-start gap-2.5 pointer-coarse:min-h-11 rounded-lg border px-3 py-2 transition-colors ${
                 step.done
                   ? 'border-neutral-800 bg-neutral-900/30 text-neutral-500'
                   : 'border-neutral-800 hover:border-violet-700 text-neutral-200'

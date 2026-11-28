@@ -15,6 +15,8 @@ function setup(shift: { dayOfWeek: number | null } | null = { dayOfWeek: 1 }) {
           Promise.resolve(data),
         ),
       deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findFirst: jest.fn().mockResolvedValue({ id: 'e1' }),
     },
   };
   return {
@@ -95,6 +97,32 @@ describe('ScheduleExceptionsService.create', () => {
         endsOn: '2027-06-01',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('editing scopes by owner and never changes the owner', async () => {
+    const { service, prisma } = setup();
+    await service.update('u1', 'e1', base);
+    const [args] = prisma.scheduleException.updateMany.mock.calls[0] as [
+      { where: unknown; data: Record<string, unknown> },
+    ];
+    expect(args.where).toEqual({ id: 'e1', userId: 'u1' });
+    expect(args.data).not.toHaveProperty('userId');
+  });
+
+  it('editing a change of someone else is not found', async () => {
+    const { service, prisma } = setup();
+    prisma.scheduleException.updateMany.mockResolvedValue({ count: 0 });
+    await expect(service.update('u1', 'e1', base)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('editing refuses a shift of someone else', async () => {
+    const { service, prisma } = setup(null);
+    await expect(
+      service.update('u1', 'e1', { ...base, shiftId: 's1' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.scheduleException.updateMany).not.toHaveBeenCalled();
   });
 
   it('removing scopes by owner', async () => {

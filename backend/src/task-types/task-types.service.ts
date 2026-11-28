@@ -20,12 +20,19 @@ export class TaskTypesService {
 
   // TaskType
 
-  findAllTaskTypes(onlyActive: boolean) {
-    return this.prisma.taskType.findMany({
+  // taskCount (U-A17): tasks de todos os users com este tipo, para o aviso de
+  // impacto antes de desativar. Um COUNT por tipo pelo indice Task(taskTypeId);
+  // o catalogo tem poucas linhas.
+  async findAllTaskTypes(onlyActive: boolean) {
+    const types = await this.prisma.taskType.findMany({
       where: onlyActive ? { isActive: true } : undefined,
       orderBy: { order: 'asc' },
-      include: { academicTaskTypes: true },
+      include: { academicTaskTypes: true, _count: { select: { tasks: true } } },
     });
+    return types.map(({ _count, ...type }) => ({
+      ...type,
+      taskCount: _count.tasks,
+    }));
   }
 
   async createTaskType(dto: CreateTaskTypeDto) {
@@ -76,12 +83,17 @@ export class TaskTypesService {
 
   // AcademicTaskType
 
-  findAllAcademicTaskTypes(onlyActive: boolean) {
-    return this.prisma.academicTaskType.findMany({
+  // taskCount: como em findAllTaskTypes, pelo indice Task(academicTypeId).
+  async findAllAcademicTaskTypes(onlyActive: boolean) {
+    const types = await this.prisma.academicTaskType.findMany({
       where: onlyActive ? { isActive: true } : undefined,
       orderBy: { order: 'asc' },
-      include: { taskType: true },
+      include: { taskType: true, _count: { select: { tasks: true } } },
     });
+    return types.map(({ _count, ...type }) => ({
+      ...type,
+      taskCount: _count.tasks,
+    }));
   }
 
   async createAcademicTaskType(dto: CreateAcademicTaskTypeDto) {

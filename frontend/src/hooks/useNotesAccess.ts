@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { POLL_MS } from '../lib/pollIntervals';
 import {
   decideGrant,
   getIncomingGrants,
@@ -9,52 +9,30 @@ import {
   type IncomingGrantsView,
   type OutgoingGrant,
 } from '../api/socialNotesService';
-import { useLiveRefresh } from './useLiveRefresh';
-import { notifySocialChanged } from '../lib/socialEvents';
-import { useFeedback } from '../context/useFeedback';
-import { translateNow } from '../i18n/translate';
+import { useLivePolled } from './useLivePolled';
+
+interface NotesAccess {
+  incoming: IncomingGrantsView;
+  outgoing: OutgoingGrant[];
+}
+
+const NO_ACCESS: NotesAccess = { incoming: { areas: [], grants: [] }, outgoing: [] };
+
+async function fetchNotesAccess(): Promise<NotesAccess> {
+  const [incoming, outgoing] = await Promise.all([getIncomingGrants(), getOutgoingGrants()]);
+  return { incoming, outgoing };
+}
 
 export function useNotesAccess() {
-  const [incoming, setIncoming] = useState<IncomingGrantsView>({ areas: [], grants: [] });
-  const [outgoing, setOutgoing] = useState<OutgoingGrant[]>([]);
-  // true enquanto nunca carregou: sem isto o separador Pedidos dizia "nada
-  // por decidir" com pedidos de notas pendentes.
-  const [hasError, setHasError] = useState(false);
-  const loadedRef = useRef(false);
-  const { notify } = useFeedback();
-
-  const load = useCallback(async () => {
-    try {
-      const [inc, out] = await Promise.all([getIncomingGrants(), getOutgoingGrants()]);
-      setIncoming(inc);
-      setOutgoing(out);
-      loadedRef.current = true;
-      setHasError(false);
-    } catch {
-      // falha passageira depois de ja ter carregado: mantem o que ja tinha
-      if (!loadedRef.current) setHasError(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-  useLiveRefresh(() => void load(), { enabled: true, intervalMs: 20000 });
-
-  const run = useCallback(
-    async (action: () => Promise<unknown>): Promise<boolean> => {
-      try {
-        await action();
-        notifySocialChanged();
-        await load();
-        return true;
-      } catch {
-        notify(translateNow('social.actionError'), 'error');
-        return false;
-      }
-    },
-    [load, notify],
-  );
+  // hasError so quando nunca carregou: sem isto o separador Pedidos dizia
+  // "nada por decidir" com pedidos de notas pendentes. Uma falha passageira
+  // depois disso mantem o que ja havia.
+  const { data, hasError, run } = useLivePolled({
+    fetcher: fetchNotesAccess,
+    initial: NO_ACCESS,
+    intervalMs: POLL_MS.notesAccess,
+  });
+  const { incoming, outgoing } = data;
 
   return {
     incoming,

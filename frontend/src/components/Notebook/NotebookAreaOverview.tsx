@@ -30,7 +30,7 @@ function EntryHeading({ entry }: { entry: NotebookEntrySummary }) {
   return (
     <span className="flex min-w-0 items-center gap-1.5">
       <Icon className="h-3.5 w-3.5 shrink-0 text-neutral-500" />
-      <span className="truncate font-medium text-white">
+      <span className="truncate font-medium text-white" title={entry.title || undefined}>
         {entry.entryType === 'CLASS' && entry.classNumber != null && (
           <span className="mr-1 text-violet-400">#{entry.classNumber}</span>
         )}

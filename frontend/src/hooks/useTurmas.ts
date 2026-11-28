@@ -18,6 +18,14 @@ import { getApiMessage } from '../lib/httpError';
 import { useLoadOnce } from './useLoadOnce';
 import { useVersionedDoc, type VersionedSnapshot } from './useVersionedDoc';
 
+// Hook de um recurso de uma turma, com fetcher estavel por turmaId (F-33).
+function makeTurmaHook<T>(load: (turmaId: string) => Promise<T>) {
+  return function useTurmaResource(turmaId: string) {
+    const fetcher = useCallback(() => load(turmaId), [turmaId]);
+    return useLoadOnce(fetcher);
+  };
+}
+
 // Lista das minhas turmas.
 export const useMyTurmas = () => useLoadOnce(getMyTurmas);
 export const useTurmaInvites = () => useLoadOnce(getTurmaInvites);
@@ -50,35 +58,12 @@ export function useTurmaAction<A extends unknown[], R>(run: (...args: A) => Prom
 export const useCreateTurma = (fallbackError: string) => useTurmaAction(createTurma, fallbackError);
 export const useJoinTurma = (fallbackError: string) => useTurmaAction(joinTurma, fallbackError);
 
-export function useTurmaDetail(turmaId: string) {
-  const fetcher = useCallback(() => getTurma(turmaId), [turmaId]);
-  return useLoadOnce(fetcher);
-}
-
-export function useTurmaAnnouncements(turmaId: string) {
-  const fetcher = useCallback(() => getAnnouncements(turmaId), [turmaId]);
-  return useLoadOnce(fetcher);
-}
-
-export function useTurmaNotes(turmaId: string) {
-  const fetcher = useCallback(() => getTurmaNotes(turmaId), [turmaId]);
-  return useLoadOnce(fetcher);
-}
-
-export function useTurmaFiles(turmaId: string) {
-  const fetcher = useCallback(() => getTurmaFiles(turmaId), [turmaId]);
-  return useLoadOnce(fetcher);
-}
-
-export function useTurmaPacks(turmaId: string) {
-  const fetcher = useCallback(() => getTurmaPacks(turmaId), [turmaId]);
-  return useLoadOnce(fetcher);
-}
-
-export function useTurmaLinkedAreas(turmaId: string) {
-  const fetcher = useCallback(() => getLinkedAreas(turmaId), [turmaId]);
-  return useLoadOnce(fetcher);
-}
+export const useTurmaDetail = makeTurmaHook(getTurma);
+export const useTurmaAnnouncements = makeTurmaHook(getAnnouncements);
+export const useTurmaNotes = makeTurmaHook(getTurmaNotes);
+export const useTurmaFiles = makeTurmaHook(getTurmaFiles);
+export const useTurmaPacks = makeTurmaHook(getTurmaPacks);
+export const useTurmaLinkedAreas = makeTurmaHook(getLinkedAreas);
 
 export interface TurmaNoteDraft {
   title: string;

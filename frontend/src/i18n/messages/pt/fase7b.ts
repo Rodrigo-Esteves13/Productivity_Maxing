@@ -91,4 +91,8 @@ export const fase7b: Record<string, string> = {
   'areas.empty.createFirst': "Criar a minha primeira disciplina",
   'areas.section.count': "{count} disciplinas",
   'areas.overview.failed': "Não foi possível carregar os detalhes de tarefas e risco. As tuas disciplinas continuam a funcionar normalmente.",
+  'reportCard.improve.title': "Melhoria de nota",
+  'reportCard.improve.intro': "Quanto subiria a média deste período se uma cadeira aprovada subisse 1 ou 2 valores. Maior ganho primeiro.",
+  'reportCard.improve.raise': "Se +{delta}",
+  'reportCard.improve.caveat': "É só uma simulação. Poderes ou não melhorar a nota (normalmente uma vez por cadeira, nunca em época especial) depende do regulamento da tua escola, por isso confirma antes de planear.",
 };

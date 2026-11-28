@@ -23,10 +23,20 @@ import { CreateManualSessionDto } from './dto/create-manual-session.dto';
 import { UpdateStudySessionDto } from './dto/update-study-session.dto';
 import { HeartbeatStudySessionDto } from './dto/heartbeat-study-session.dto';
 import { DistractionStatsQueryDto } from './dto/distraction-stats-query.dto';
+import {
+  DailyTotalsQueryDto,
+  HistoryQueryDto,
+} from './dto/session-days-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { perMinute } from '../common/throttle.util';
+import {
+  STUDY_SESSION_DISTRACTIONS_PER_MINUTE,
+  STUDY_SESSION_HEARTBEATS_PER_MINUTE,
+  STUDY_SESSION_STATS_PER_MINUTE,
+  STUDY_SESSION_WRITES_PER_MINUTE,
+} from './study-sessions.constants';
 
 @ApiTags('Focus')
 @ApiBearerAuth()
@@ -44,7 +54,7 @@ export class StudySessionsController {
   }
 
   @Post('manual')
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(STUDY_SESSION_WRITES_PER_MINUTE))
   createManual(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateManualSessionDto,
@@ -55,19 +65,15 @@ export class StudySessionsController {
   @Get('history')
   getHistory(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('days') days?: string,
+    @Query() query: HistoryQueryDto,
   ) {
-    const parsed = Number(days);
-    return this.studySessionsService.history(
-      user.id,
-      Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
-    );
+    return this.studySessionsService.history(user.id, query.days);
   }
 
   @Patch(':id/stop')
   stop(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: StopStudySessionDto,
   ) {
     return this.studySessionsService.stop(user.id, id, dto);
@@ -81,10 +87,10 @@ export class StudySessionsController {
   // StudySessionProvider.tsx), so 10/min per user is already generous
   // headroom, not a tight limit.
   @Post(':id/heartbeat')
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(STUDY_SESSION_HEARTBEATS_PER_MINUTE))
   heartbeat(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: HeartbeatStudySessionDto,
   ) {
     return this.studySessionsService.heartbeat(user.id, id, dto);
@@ -94,7 +100,7 @@ export class StudySessionsController {
   // chega para uso real e trava scripts.
   @Post(':id/distraction')
   @HttpCode(HttpStatus.OK)
-  @Throttle(perMinute(60))
+  @Throttle(perMinute(STUDY_SESSION_DISTRACTIONS_PER_MINUTE))
   recordDistraction(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
@@ -124,6 +130,7 @@ export class StudySessionsController {
   }
 
   @Get('time-by-area')
+  @Throttle(perMinute(STUDY_SESSION_STATS_PER_MINUTE))
   getTimeByArea(@CurrentUser() user: AuthenticatedUser) {
     return this.studySessionsService.getTimeByArea(user.id);
   }
@@ -131,16 +138,13 @@ export class StudySessionsController {
   @Get('daily-totals')
   getDailyTotals(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('days') days?: string,
+    @Query() query: DailyTotalsQueryDto,
   ) {
-    const parsed = Number(days);
-    const safeDays =
-      Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 365) : 84;
-    return this.studySessionsService.getDailyTotals(user.id, safeDays);
+    return this.studySessionsService.getDailyTotals(user.id, query.days);
   }
 
   @Get('distraction-stats')
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(STUDY_SESSION_STATS_PER_MINUTE))
   @ApiOperation({
     summary:
       'Distractions per hour of focus, by hour of day (Lisbon), Area and task effort, over the last N days. Buckets under the minimum sample are flagged lowSample.',
@@ -158,18 +162,21 @@ export class StudySessionsController {
   }
 
   @Patch(':id')
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(STUDY_SESSION_WRITES_PER_MINUTE))
   update(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateStudySessionDto,
   ) {
     return this.studySessionsService.update(user.id, id, dto);
   }
 
   @Delete(':id')
-  @Throttle(perMinute(30))
-  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  @Throttle(perMinute(STUDY_SESSION_WRITES_PER_MINUTE))
+  remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.studySessionsService.remove(user.id, id);
   }
 }

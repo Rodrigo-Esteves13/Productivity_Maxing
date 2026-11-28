@@ -3,6 +3,7 @@ import Select from '../UI/Select';
 import { useTaskTemplates } from '../../hooks/useTaskTemplates';
 import { MAX_TASK_TEMPLATES, MAX_TEMPLATE_NAME_LENGTH, type TaskTemplate } from '../../lib/taskTemplates';
 import { useI18n } from '../../i18n/useI18n';
+import { useFeedback } from '../../context/useFeedback';
 
 interface TaskTemplatePickerProps {
   // Valores atuais do formulario, para "Guardar como modelo".
@@ -17,9 +18,13 @@ const LINK_BUTTON = 'text-xs text-violet-400 hover:text-violet-300 underline dec
 // Topo do formulario de nova task: aplicar um modelo ou guardar o atual.
 export default function TaskTemplatePicker({ buildDraft, onApply, suggestedName }: TaskTemplatePickerProps) {
   const { t } = useI18n();
-  const { templates, saveTemplate, deleteTemplate, isFull } = useTaskTemplates();
+  const { notify, confirm } = useFeedback();
+  const { templates, saveTemplate, deleteTemplate, findByName, restoreTemplate, renameTemplate, isFull } =
+    useTaskTemplates();
   const [selectedId, setSelectedId] = useState('');
   const [naming, setNaming] = useState<string | null>(null);
+  // Modo do campo de nome: guardar o formulario atual ou renomear o modelo escolhido.
+  const [isRenaming, setIsRenaming] = useState(false);
   const [message, setMessage] = useState('');
   const selected = templates.find((tpl) => tpl.id === selectedId) ?? null;
 
@@ -30,11 +35,44 @@ export default function TaskTemplatePicker({ buildDraft, onApply, suggestedName 
     if (template) onApply(template);
   };
 
-  const handleSave = () => {
+  const closeNaming = () => {
+    setNaming(null);
+    setIsRenaming(false);
+  };
+
+  const handleRename = () => {
+    if (naming === null || !selected) return;
+    const ok = renameTemplate(selected.id, naming);
+    setMessage(ok ? t('ux4tasks.templateRenamed', { name: naming.trim() }) : t('ux4tasks.templateNameTaken'));
+    if (ok) closeNaming();
+  };
+
+  const handleSave = async () => {
     if (naming === null) return;
+    // Mesmo nome: substitui em silencio so depois de confirmar.
+    const existing = findByName(naming);
+    if (existing) {
+      const replace = await confirm({
+        title: t('ux4tasks.replaceTitle'),
+        message: t('ux4tasks.replaceMessage', { name: existing.name }),
+        confirmLabel: t('ux4tasks.replaceConfirm'),
+        tone: 'danger',
+      });
+      if (!replace) return;
+    }
     const ok = saveTemplate(buildDraft(naming));
     setMessage(ok ? t('taskTemplates.saved', { name: naming.trim() }) : t('taskTemplates.full', { max: MAX_TASK_TEMPLATES }));
-    if (ok) setNaming(null);
+    if (ok) closeNaming();
+  };
+
+  const handleDelete = (template: TaskTemplate) => {
+    deleteTemplate(template.id);
+    setSelectedId('');
+    setMessage(t('taskTemplates.deleted', { name: template.name }));
+    notify(t('taskTemplates.deleted', { name: template.name }), 'success', {
+      label: t('undo.action'),
+      onAction: () => restoreTemplate(template),
+    });
   };
 
   return (
@@ -65,21 +103,31 @@ export default function TaskTemplatePicker({ buildDraft, onApply, suggestedName 
               disabled={isFull}
               onClick={() => {
                 setMessage('');
+                setIsRenaming(false);
                 setNaming(suggestedName.slice(0, MAX_TEMPLATE_NAME_LENGTH));
               }}
             >
               {t('taskTemplates.saveCurrent')}
             </button>
           ) : null}
+          {selected && naming === null && (
+            <button
+              type="button"
+              className={LINK_BUTTON}
+              onClick={() => {
+                setMessage('');
+                setIsRenaming(true);
+                setNaming(selected.name);
+              }}
+            >
+              {t('ux4tasks.renameTemplate')}
+            </button>
+          )}
           {selected && (
             <button
               type="button"
               className="text-xs text-neutral-400 hover:text-red-400"
-              onClick={() => {
-                deleteTemplate(selected.id);
-                setSelectedId('');
-                setMessage(t('taskTemplates.deleted', { name: selected.name }));
-              }}
+              onClick={() => handleDelete(selected)}
             >
               {t('taskTemplates.delete')}
             </button>
@@ -101,20 +149,21 @@ export default function TaskTemplatePicker({ buildDraft, onApply, suggestedName 
               // Enter grava o modelo, nao submete o formulario da task.
               if (e.key === 'Enter') {
                 e.preventDefault();
-                handleSave();
+                if (isRenaming) handleRename();
+                else void handleSave();
               }
             }}
             className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-white focus:border-violet-500 focus:outline-none"
           />
           <button
             type="button"
-            onClick={handleSave}
+            onClick={isRenaming ? handleRename : () => void handleSave()}
             disabled={!naming.trim()}
             className="rounded-lg bg-violet-700 px-3 py-1.5 text-sm text-white hover:bg-violet-600 disabled:opacity-50"
           >
             {t('common.save')}
           </button>
-          <button type="button" onClick={() => setNaming(null)} className="text-sm text-neutral-400 hover:text-white">
+          <button type="button" onClick={closeNaming} className="text-sm text-neutral-400 hover:text-white">
             {t('ui.cancel')}
           </button>
         </div>

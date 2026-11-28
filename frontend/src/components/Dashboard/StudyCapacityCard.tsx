@@ -55,7 +55,7 @@ export default function StudyCapacityCard() {
         {t('ui.ofScheduled', { plannedMinutes: formatDuration(summary.plannedMinutes), neededMinutes: formatDuration(summary.neededMinutes) })}</p>
       <Link
         to="/schedule"
-        className="inline-block text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted mt-2"
+        className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center inline-block text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted mt-2"
       >
         {t('ui.openStudyPlan')}
       </Link>

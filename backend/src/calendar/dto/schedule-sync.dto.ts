@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -17,4 +18,19 @@ export class ScheduleSyncDto {
   @Min(MIN_SYNC_DAYS)
   @Max(MAX_SYNC_DAYS)
   days?: number;
+}
+
+// ?days= do preview: fora do intervalo ou nao numerico nao e 400, e
+// ajustado (como no StudyPlanController).
+export class ScheduleSyncPreviewQueryDto {
+  @ApiPropertyOptional({ example: 7 })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed)
+      ? Math.min(Math.max(Math.trunc(parsed), MIN_SYNC_DAYS), MAX_SYNC_DAYS)
+      : DEFAULT_SYNC_DAYS;
+  })
+  @IsInt()
+  days: number = DEFAULT_SYNC_DAYS;
 }

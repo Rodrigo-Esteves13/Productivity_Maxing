@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useAuth } from '../../context/useAuth';
-import { getMyAccountStatus } from '../../api/userService';
+import { getMyAccountStatus } from '../../api/accountStatusService';
 import { ACCOUNT_BLOCKED_EVENT } from '../../lib/accountBlockedEvents';
 import { useVisibleInterval } from '../../hooks/useVisibleInterval';
 

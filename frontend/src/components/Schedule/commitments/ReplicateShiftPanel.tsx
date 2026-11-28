@@ -114,7 +114,7 @@ export default function ReplicateShiftPanel({
         <ActionButton type="button" disabled={isSaving || count === 0} onClick={() => void handleSubmit()}>
           {isSaving ? t('ui.copying') : count > 1 ? t('ui.copyToNDays', { count }) : t('ui.copy')}
         </ActionButton>
-        <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+        <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
           {t('ui.cancel')}
         </button>
       </div>

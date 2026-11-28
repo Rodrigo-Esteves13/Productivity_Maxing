@@ -64,7 +64,7 @@ export default function ShiftList({
             type="button"
             aria-expanded={showPast}
             onClick={() => setShowPast((open) => !open)}
-            className="mt-2 text-xs text-neutral-500 hover:text-neutral-300"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 mt-2 text-xs text-neutral-500 hover:text-neutral-300"
           >
             {showPast ? t('ui.hidePast') : t('ui.showPastCount', { count: past.length })}
           </button>

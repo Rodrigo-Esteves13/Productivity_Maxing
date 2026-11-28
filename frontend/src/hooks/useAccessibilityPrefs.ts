@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { readPersisted, usePersistedState, type PersistedCodec } from './usePersistedState';
 
 export type FontScale = 'normal' | 'large' | 'larger' | 'largest';
 
@@ -52,14 +53,20 @@ const FONT_SCALE_VALUES: Record<FontScale, string> = {
   largest: '1.5',
 };
 
-export function loadPrefs(): AccessibilityPrefs {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+const CODEC: PersistedCodec<AccessibilityPrefs> = {
+  parse: (raw) => {
     if (!raw) return DEFAULT_PREFS;
-    return { ...DEFAULT_PREFS, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_PREFS;
-  }
+    try {
+      return { ...DEFAULT_PREFS, ...JSON.parse(raw) };
+    } catch {
+      return DEFAULT_PREFS;
+    }
+  },
+  serialize: (prefs) => JSON.stringify(prefs),
+};
+
+export function loadPrefs(): AccessibilityPrefs {
+  return readPersisted(STORAGE_KEY, CODEC);
 }
 
 function resolveTheme(theme: ThemeId): Exclude<ThemeId, 'system'> {
@@ -105,16 +112,10 @@ export function applyStoredPrefs(): void {
 // never visits the Profile page in that session. Also used directly by
 // the Profile settings UI to read/change the preference.
 export function useAccessibilityPrefs() {
-  const [prefs, setPrefs] = useState<AccessibilityPrefs>(loadPrefs);
+  const [prefs, setPrefs] = usePersistedState(STORAGE_KEY, CODEC);
 
   useEffect(() => {
     applyToDocument(prefs);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
-    } catch {
-      // Best-effort only - a user with storage disabled/full just doesn't
-      // get the preference remembered across reloads, nothing breaks.
-    }
   }, [prefs]);
 
   // "system": acompanha a mudanca de claro/escuro do sistema em tempo real.

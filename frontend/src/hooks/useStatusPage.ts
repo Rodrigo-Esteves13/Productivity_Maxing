@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { rawFetch } from '../api/client';
+import { useVisibleInterval } from './useVisibleInterval';
 import { DOWN_SNAPSHOT, deriveStatus, type StatusSnapshot } from '../lib/statusDerive';
 
 const STATUS_PATH = '/health/ready';
@@ -16,14 +17,13 @@ export interface StatusPageState {
 
 // Public status page data. rawFetch on purpose: no auth cookies and no 401
 // logout interceptor (same reasoning as useHealthCheck). Polls every 30 s
-// while the tab is visible; resumes with an immediate check when it returns.
+// while the tab is visible (useVisibleInterval); resumes with an immediate check when it returns.
 export default function useStatusPage(): StatusPageState {
   const [snapshot, setSnapshot] = useState<StatusSnapshot | null>(null);
   const [responseMs, setResponseMs] = useState<number | null>(null);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [isChecking, setIsChecking] = useState(true);
   const inFlight = useRef(false);
-  const lastRun = useRef(0);
 
   const run = useCallback(async () => {
     if (inFlight.current) return;
@@ -40,7 +40,6 @@ export default function useStatusPage(): StatusPageState {
     } catch {
       next = DOWN_SNAPSHOT;
     }
-    lastRun.current = Date.now();
     setSnapshot(next);
     setResponseMs(next.overall === 'down' ? null : elapsed);
     setLastChecked(new Date());
@@ -48,22 +47,8 @@ export default function useStatusPage(): StatusPageState {
     inFlight.current = false;
   }, []);
 
-  useEffect(() => {
-    void run();
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') void run();
-    }, STATUS_POLL_INTERVAL_MS);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible' && Date.now() - lastRun.current >= STATUS_POLL_INTERVAL_MS) {
-        void run();
-      }
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [run]);
+  // So corre com o separador visivel; ao voltar, corre logo se ja passou um intervalo.
+  useVisibleInterval(() => void run(), STATUS_POLL_INTERVAL_MS, { immediate: true });
 
   const refresh = useCallback(() => {
     void run();

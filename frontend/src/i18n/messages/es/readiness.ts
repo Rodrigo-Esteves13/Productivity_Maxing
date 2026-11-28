@@ -109,4 +109,12 @@ export const readiness: Record<string, string> = {
   'bulkEffort.doneOne': "Esfuerzo definido en 1 tarea.",
   'bulkEffort.doneMany': "Esfuerzo definido en {count} tareas.",
   'bulkEffort.failed': "No se pudo definir el esfuerzo. Inténtalo de nuevo.",
+  'focus.distractions.noteTitle': "Durante el enfoque",
+  'focus.distractions.thoughtLabel': "¿Qué te distrajo?",
+  'focus.distractions.thoughtPlaceholder': "Anótalo para después (opcional)",
+  'focus.distractions.thoughtSave': "Guardar",
+  'focus.distractions.thoughtSaved': "Guardado en tus notas. De vuelta al trabajo.",
+  'focus.distractions.thoughtError': "No se pudo guardar el pensamiento. Sigue de todos modos.",
+  'focus.distractions.thoughtTrimmed': "Guardado. Se quitaron los pensamientos más antiguos para que quepa la nota.",
+  'focus.distractions.thoughtFull': "Tus notas están llenas (500). Borra una nota para guardar pensamientos.",
 };

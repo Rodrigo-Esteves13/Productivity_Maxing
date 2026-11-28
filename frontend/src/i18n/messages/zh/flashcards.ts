@@ -11,7 +11,7 @@ export const flashcards: Record<string, string> = {
   'flashcards.allAreas': "所有课程",
   'flashcards.edit': "编辑卡片",
   'flashcards.delete': "删除卡片",
-  'flashcards.deleteConfirm': "删除这张闪卡？此操作无法撤销。",
+  'flashcards.deleteConfirm': "删除这张闪卡？删除后可立即撤销。",
   'flashcards.due': "待复习",
   'flashcards.deckCount': "{count} 张卡片，{due} 张待复习",
   'flashcards.again': "重来",

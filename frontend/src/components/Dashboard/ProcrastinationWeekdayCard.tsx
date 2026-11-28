@@ -1,14 +1,10 @@
 import { useMemo } from 'react';
-import type { Task } from '../../types/models';
 import { computeProcrastinationWeekdays } from '../../lib/procrastinationWeekdays';
 import { weekdayLabel } from '../../lib/timeFormat';
 import { CalendarIcon } from '../UI/Icons';
 import DashboardCard, { CardBody, CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
-
-interface ProcrastinationWeekdayCardProps {
-  tasks: Task[];
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 // Monday-first, JS getDay() numbers.
 const DAYS = [1, 2, 3, 4, 5, 6, 0];
@@ -16,7 +12,8 @@ const DAYS = [1, 2, 3, 4, 5, 6, 0];
 // On which weekday postponed tasks currently sit. Approximation: there is no
 // per-postponement history, so it uses the current due date weighted by
 // postponedCount (stated in the help line).
-export default function ProcrastinationWeekdayCard({ tasks }: ProcrastinationWeekdayCardProps) {
+export default function ProcrastinationWeekdayCard() {
+  const { academicTasks: tasks } = useDashboardCardData();
   const { t, lang } = useI18n();
   const data = useMemo(() => computeProcrastinationWeekdays(tasks), [tasks]);
   if (!data.hasEnoughData) return null;

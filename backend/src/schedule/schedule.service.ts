@@ -20,7 +20,10 @@ import {
   type EctsWorkloadResult,
 } from './ects-workload.util';
 import { getLisbonNow, parseDateKey, toDateKey } from '../common/date-key.util';
+import { randomUUID } from 'crypto';
 import { ImportScheduleDto } from './dto/import-schedule.dto';
+import { CreateClassDto, UpdateClassDto } from './dto/class-input.dto';
+import { MANUAL_CLASS_UID_PREFIX } from './schedule.constants';
 import { EstimateCommuteDto } from './dto/estimate-commute.dto';
 import { runWithConcurrencyLimit } from '../common/concurrency.util';
 import { DistanceMatrixService } from '../maps/distance-matrix.service';
@@ -162,6 +165,8 @@ export class ScheduleService {
         userId,
         date: { gte: from, lte: to },
         externalUid: { notIn: rows.map((row) => row.externalUid) },
+        // Aulas criadas a mao nao vem no .ics: nunca sao "antigas".
+        NOT: { externalUid: { startsWith: MANUAL_CLASS_UID_PREFIX } },
       },
     });
     if (result.count > 0) {
@@ -187,7 +192,7 @@ export class ScheduleService {
     { includeCancelled = false }: { includeCancelled?: boolean } = {},
   ) {
     const endOfTo = new Date(to);
-    endOfTo.setHours(23, 59, 59, 999);
+    endOfTo.setUTCHours(23, 59, 59, 999);
 
     return this.prisma.classOccurrence.findMany({
       where: {
@@ -239,18 +244,87 @@ export class ScheduleService {
     return { id, cancelled, attended: row?.attended ?? null };
   }
 
+  /** Cria uma aula a mao (sem .ics). */
+  async createClass(userId: string, dto: CreateClassDto) {
+    if (dto.startMinutes >= dto.endMinutes) {
+      throw new BadRequestException('startMinutes must be before endMinutes.');
+    }
+    return this.prisma.classOccurrence.create({
+      data: {
+        userId,
+        date: parseDateKey(dto.date),
+        startMinutes: dto.startMinutes,
+        endMinutes: dto.endMinutes,
+        subject: dto.subject.trim(),
+        location: dto.location?.trim() || null,
+        professor: dto.professor?.trim() || null,
+        externalUid: `${MANUAL_CLASS_UID_PREFIX}${randomUUID()}`,
+      },
+    });
+  }
+
   /**
-   * Presenças por disciplina entre duas datas (inclusive). Só conta aulas
-   * até ao fim de `upTo` (hoje, no controller): aulas futuras ainda não
-   * podem ter presença e iam inflacionar o "por marcar".
+   * Edita uma aula (a mao ou importada). Reimportar o .ics repoe os campos
+   * de uma aula importada; as criadas a mao nunca sao tocadas. 404 se for de
+   * outro utilizador.
+   */
+  async updateClass(userId: string, id: string, dto: UpdateClassDto) {
+    const current = await this.prisma.classOccurrence.findFirst({
+      where: { id, userId },
+      select: { startMinutes: true, endMinutes: true },
+    });
+    if (!current) throw new NotFoundException('Class not found.');
+    const startMinutes = dto.startMinutes ?? current.startMinutes;
+    const endMinutes = dto.endMinutes ?? current.endMinutes;
+    if (startMinutes >= endMinutes) {
+      throw new BadRequestException('startMinutes must be before endMinutes.');
+    }
+    await this.prisma.classOccurrence.updateMany({
+      where: { id, userId },
+      data: {
+        startMinutes,
+        endMinutes,
+        ...(dto.date !== undefined && { date: parseDateKey(dto.date) }),
+        ...(dto.subject !== undefined && { subject: dto.subject.trim() }),
+        ...(dto.location !== undefined && {
+          location: dto.location.trim() || null,
+        }),
+        ...(dto.professor !== undefined && {
+          professor: dto.professor.trim() || null,
+        }),
+      },
+    });
+    return this.prisma.classOccurrence.findFirst({ where: { id, userId } });
+  }
+
+  /** Apaga uma aula so se for do utilizador. */
+  async deleteClass(userId: string, id: string): Promise<{ deleted: number }> {
+    const result = await this.prisma.classOccurrence.deleteMany({
+      where: { id, userId },
+    });
+    if (result.count === 0) throw new NotFoundException('Class not found.');
+    return { deleted: result.count };
+  }
+
+  // Fim do dia de `to`, nunca depois de hoje (Lisboa): so uma copia do corte.
+  private endOfDayCappedAtToday(to: Date): Date {
+    const { today } = getLisbonNow();
+    const capped = new Date(Math.min(to.getTime(), today.getTime()));
+    capped.setUTCHours(23, 59, 59, 999);
+    return capped;
+  }
+
+  /**
+   * Presenças por disciplina entre duas datas (inclusive). `to` é cortado em
+   * hoje (Lisboa): aulas futuras ainda não podem ter presença e iam
+   * inflacionar o "por marcar".
    */
   async attendanceSummary(
     userId: string,
     from: Date,
     to: Date,
   ): Promise<SubjectAttendance[]> {
-    const endOfTo = new Date(to);
-    endOfTo.setUTCHours(23, 59, 59, 999);
+    const endOfTo = this.endOfDayCappedAtToday(to);
     const rows = await this.prisma.classOccurrence.groupBy({
       by: ['subject', 'attended'],
       // Aula desmarcada nao conta nem como presenca nem como falta.
@@ -270,8 +344,7 @@ export class ScheduleService {
     from: Date,
     to: Date,
   ): Promise<StudyVsClassResult> {
-    const endOfTo = new Date(to);
-    endOfTo.setUTCHours(23, 59, 59, 999);
+    const endOfTo = this.endOfDayCappedAtToday(to);
     const [classes, sessions, links, areas] = await Promise.all([
       this.prisma.classOccurrence.findMany({
         where: { userId, date: { gte: from, lte: endOfTo }, cancelled: false },

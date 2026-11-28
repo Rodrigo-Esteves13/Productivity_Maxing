@@ -46,7 +46,7 @@ export default function StudyVsClassCard({ refreshKey }: StudyVsClassCardProps) 
                 >
                   <span className="flex min-w-0 items-center gap-2 text-neutral-200">
                     <ColorDot size="xs" color={row.colorHex} />
-                    <span className="truncate">{row.areaName}</span>
+                    <span title={row.areaName} className="truncate">{row.areaName}</span>
                   </span>
                   <span className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums text-neutral-400">
                     <span>{t('studyVsClass.classTime', { time: formatDuration(row.classMinutes) })}</span>
@@ -64,7 +64,7 @@ export default function StudyVsClassCard({ refreshKey }: StudyVsClassCardProps) 
           {unlinked.length > 0 && (
             <p className="mt-3 text-xs text-neutral-500">
               {t('studyVsClass.unlinked', { subjects: unlinked.join(', ') })}{' '}
-              <Link to="/notebook" className="text-violet-400 underline decoration-dotted hover:text-violet-300">
+              <Link to="/notebook" className="text-violet-400 underline decoration-dotted hover:text-violet-300 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center">
                 {t('studyVsClass.linkInNotebook')}
               </Link>
             </p>

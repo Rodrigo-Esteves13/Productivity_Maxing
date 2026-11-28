@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import Card from '../UI/Card';
 import Input from '../UI/Input';
 import Select from '../UI/Select';
-import ActionButton from '../UI/ActionButton';
+import EmptyState from '../UI/EmptyState';
 import IconButton from '../UI/IconButton';
 import Modal from '../UI/Modal';
 import ProgressBar from '../UI/ProgressBar';
@@ -94,7 +94,7 @@ function GoalForm({ initial, onSubmit, onDone }: GoalFormProps) {
       <div className="flex flex-wrap items-center gap-3 sm:col-span-3">
         <FinanceSubmitButton isSubmitting={isSubmitting}>{initial ? t('finance.save') : t('finance.addGoal')}</FinanceSubmitButton>
         {initial && onDone && (
-          <button type="button" onClick={onDone} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+          <button type="button" onClick={onDone} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
             {t('common.cancel')}
           </button>
         )}
@@ -128,6 +128,17 @@ function GoalRow({ goal, plan, currency, onUpdate, onEdit, onRemove }: GoalRowPr
   const planField = useInlineMoney(goal.monthlyPlanCents);
   const done = goal.savedCents >= goal.targetCents;
   const percent = (goal.savedCents / goal.targetCents) * PERCENT_FULL;
+  // Pedido em curso por campo: spinner no botao e sem duplo envio.
+  const [savingField, setSavingField] = useState<'saved' | 'plan' | null>(null);
+  const saveField = async (field: 'saved' | 'plan', changes: Partial<FinanceGoalInput>) => {
+    if (savingField) return;
+    setSavingField(field);
+    try {
+      await onUpdate(goal, changes);
+    } finally {
+      setSavingField(null);
+    }
+  };
   const parsedSaved = savedField.typed === null ? null : parseMoneyInput(savedField.typed);
   const savedChanged = parsedSaved !== null && parsedSaved >= 0 && parsedSaved !== goal.savedCents;
   const planText = planField.typed?.trim() ?? null;
@@ -139,7 +150,7 @@ function GoalRow({ goal, plan, currency, onUpdate, onEdit, onRemove }: GoalRowPr
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-neutral-100">
-            <span className="truncate">{goal.name}</span>
+            <span className="truncate" title={goal.name}>{goal.name}</span>
             {plan && <GoalStatusBadge status={plan.status} />}
           </p>
           <p className="text-xs text-neutral-500">
@@ -193,25 +204,25 @@ function GoalRow({ goal, plan, currency, onUpdate, onEdit, onRemove }: GoalRowPr
           className="flex items-end gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (savedChanged) void onUpdate(goal, { savedCents: parsedSaved });
+            if (savedChanged) void saveField('saved', { savedCents: parsedSaved });
           }}
         >
           <Input label={t('finance.goalSaved')} inputMode="decimal" placeholder={savedField.placeholder} value={savedField.shown} onChange={(e) => savedField.setTyped(e.target.value)} />
-          <ActionButton type="submit" disabled={!savedChanged}>
+          <FinanceSubmitButton isSubmitting={savingField === 'saved'} disabled={!savedChanged || savingField !== null}>
             {t('finance.updateSaved')}
-          </ActionButton>
+          </FinanceSubmitButton>
         </form>
         <form
           className="flex items-end gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (planChanged) void onUpdate(goal, { monthlyPlanCents: planText === '' ? null : parsedPlan });
+            if (planChanged) void saveField('plan', { monthlyPlanCents: planText === '' ? null : parsedPlan });
           }}
         >
           <Input label={t('finance.goalMonthlyPlan')} inputMode="decimal" placeholder={planField.placeholder} value={planField.shown} onChange={(e) => planField.setTyped(e.target.value)} />
-          <ActionButton type="submit" disabled={!planChanged}>
+          <FinanceSubmitButton isSubmitting={savingField === 'plan'} disabled={!planChanged || savingField !== null}>
             {t('finance.setPlan')}
-          </ActionButton>
+          </FinanceSubmitButton>
         </form>
       </div>
     </li>
@@ -241,7 +252,7 @@ export default function FinanceGoals({ goals, plans, planSummary, currency, onAd
       <GoalForm onSubmit={onAdd} />
 
       {goals.length === 0 ? (
-        <p className="mt-4 text-sm text-neutral-500">{t('finance.noGoals')}</p>
+        <EmptyState variant="inline" message={t('finance.noGoals')} />
       ) : (
         <>
           <FinanceGoalPlanSummary summary={planSummary} goals={goals} currency={currency} />

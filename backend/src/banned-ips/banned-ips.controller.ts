@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -43,7 +44,7 @@ export class BannedIpsController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Unbans an IP (ADMIN only)' })
-  unban(@Param('id') id: string) {
+  unban(@Param('id', ParseUUIDPipe) id: string) {
     return this.bannedIpsService.unban(id);
   }
 }

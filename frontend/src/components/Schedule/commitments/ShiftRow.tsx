@@ -7,6 +7,8 @@ import { describeShift } from './shiftText';
 import type { Commitment, CreateWorkShiftInput, UpdateWorkShiftInput, WorkShift } from '../../../types/models';
 import IconButton from '../../UI/IconButton';
 import { useI18n } from '../../../i18n/useI18n';
+import { useConfirmAction } from '../../../hooks/useConfirmAction';
+import ConfirmActionDialog from '../../Turma/ConfirmActionDialog';
 
 interface ShiftRowProps {
   shift: WorkShift;
@@ -36,6 +38,7 @@ export default function ShiftRow({
   const { t } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
   const [isReplicating, setIsReplicating] = useState(false);
+  const deleteConfirm = useConfirmAction(t('confirmGuard.error'));
   const isSkippedByDayOff = shift.dayOfWeek !== null && daysOff.includes(shift.dayOfWeek);
   // Mover para um local em que este dia e folga deixaria o turno escondido.
   const availableTargets = (moveTargets ?? []).filter(
@@ -75,7 +78,7 @@ export default function ShiftRow({
      <div className="flex items-center justify-between gap-2">
       <div className="min-w-0">
         {showTitle && shift.label && (
-          <p className="truncate text-sm font-medium text-white">{shift.label}</p>
+          <p title={shift.label} className="truncate text-sm font-medium text-white">{shift.label}</p>
         )}
         <p className={showTitle && shift.label ? 'text-xs text-neutral-400' : 'text-sm text-neutral-200'}>
           {describeShift(shift)}
@@ -89,7 +92,7 @@ export default function ShiftRow({
             <select
               value=""
               onChange={(e) => e.target.value && void onEdit(shift.id, { commitmentId: e.target.value })}
-              className="bg-neutral-900 border border-neutral-700 rounded px-1.5 py-0.5 text-neutral-300"
+              className="bg-neutral-900 border border-neutral-700 rounded px-1.5 py-0.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-neutral-300"
             >
               <option value="">{t('ui.choose')}</option>
               {availableTargets.map((c) => (
@@ -105,7 +108,7 @@ export default function ShiftRow({
             type="button"
             onClick={() => setIsReplicating((open) => !open)}
             aria-expanded={isReplicating}
-            className="px-2 py-1 text-xs text-violet-300 hover:text-violet-200 rounded"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 px-2 py-1 text-xs text-violet-300 hover:text-violet-200 rounded"
             title={t('ui.copyThisShiftToOther')}
           >
             {t('ui.replicate')}
@@ -114,11 +117,22 @@ export default function ShiftRow({
         <IconButton label={t('ui.editShift')} onClick={() => setIsEditing(true)}>
           <PencilIcon />
         </IconButton>
-        <IconButton tone="danger" label={t('ui.deleteShift')} onClick={() => void onDelete(shift.id)}>
+        <IconButton tone="danger" label={t('ui.deleteShift')} onClick={() =>
+          deleteConfirm.request({
+            title: t('confirmGuard.deleteShift.title'),
+            message: t('confirmGuard.deleteShift.message', { shift: describeShift(shift) }),
+            confirmLabel: t('confirmGuard.deleteShift.confirm'),
+            tone: 'danger',
+            run: async () => {
+              if (!(await onDelete(shift.id))) throw new Error('delete failed');
+            },
+          })
+        }>
           <TrashIcon />
         </IconButton>
       </div>
      </div>
+     <ConfirmActionDialog state={deleteConfirm} />
      {isReplicating && onReplicate && (
        <ReplicateShiftPanel
          shift={shift}

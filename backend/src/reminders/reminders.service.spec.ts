@@ -1,7 +1,11 @@
 import type { PersonalNotesService } from '../personal-notes/personal-notes.service';
 import type { PadsService } from '../pads/pads.service';
 import type { MedicationsService } from '../wellbeing/medications.service';
-import { RemindersService } from './reminders.service';
+import {
+  LOOKAHEAD_MS,
+  RemindersService,
+  TASKS_PAGE_SIZE,
+} from './reminders.service';
 import type { AbsenceLimitRemindersService } from './absence-limit-reminders.service';
 import type { AccountAnniversaryRemindersService } from './account-anniversary-reminders.service';
 import type { GradeAlmostThereRemindersService } from './grade-almost-there-reminders.service';
@@ -50,6 +54,8 @@ function setup(
 ) {
   const prisma = {
     task: { findMany: jest.fn().mockResolvedValue(tasks) },
+    // Ids pendentes vindos do SQL (B-39): por omissao, todas as tasks dadas.
+    $queryRaw: jest.fn().mockResolvedValue(tasks.map((t) => ({ id: t.id }))),
     sentReminder: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
     userSession: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
   };
@@ -140,7 +146,12 @@ describe('RemindersService.run', () => {
   });
 
   it('only asks Prisma for users with at least one reminder channel on', async () => {
-    const { service, prisma } = setup([]);
+    const { service, prisma } = setup([
+      task('a', 'u1', {
+        deadlineEmailReminders: true,
+        deadlinePushReminders: true,
+      }),
+    ]);
     await service.run(NOW);
     expect(prisma.task.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -344,5 +355,69 @@ describe('RemindersService email language', () => {
     ];
     expect(lang).toBe('en');
     expect(items[0].dueLabel).toBe('due in about 2h');
+  });
+});
+
+describe('RemindersService.run candidate query', () => {
+  const prefs = { deadlineEmailReminders: true, deadlinePushReminders: true };
+
+  it('only looks ahead as far as the earliest reminder lead plus a margin', async () => {
+    const { service, prisma } = setup([task('a', 'u1', prefs)]);
+    await service.run(NOW);
+    const [args] = prisma.task.findMany.mock.calls[0] as [
+      { where: { OR: { date?: { gt: Date; lte: Date } }[] } },
+    ];
+    const window = args.where.OR[0].date!;
+    expect(window.gt).toEqual(NOW);
+    expect(window.lte.getTime() - NOW.getTime()).toBe(LOOKAHEAD_MS);
+    // 24h de antecedencia maxima + margem pequena, nunca os 72h de antes.
+    expect(LOOKAHEAD_MS).toBeLessThan(2 * 24 * 60 * 60 * 1000);
+  });
+
+  it('B-39: already-reminded deadlines are excluded in SQL, with parameters', async () => {
+    const { service, prisma } = setup([]);
+    await service.run(NOW);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    const [sql] = prisma.$queryRaw.mock.calls[0] as [
+      { strings: readonly string[]; values: unknown[] },
+    ];
+    const text = sql.strings.join('?');
+    // Um NOT EXISTS por prazo (date e submissionDate).
+    expect(text.match(/NOT EXISTS/g)).toHaveLength(2);
+    expect(text).toContain('s."taskDate" = t."date"');
+    expect(text).toContain('s."taskDate" = t."submissionDate"');
+    // Janela e limite vao como parametros, nunca concatenados.
+    expect(sql.values).toEqual(
+      expect.arrayContaining([
+        NOW.toISOString(),
+        new Date(NOW.getTime() + LOOKAHEAD_MS).toISOString(),
+      ]),
+    );
+    expect(text).not.toContain(NOW.toISOString());
+    // Sem ids pendentes nao ha leitura nenhuma das tasks.
+    expect(prisma.task.findMany).not.toHaveBeenCalled();
+  });
+
+  it('reads the pending ids in batches and only those ids', async () => {
+    const many = Array.from({ length: TASKS_PAGE_SIZE + 1 }, (_, i) =>
+      task(`p${i}`, 'u-new', prefs),
+    );
+    const { service, prisma, mail } = setup([]);
+    prisma.$queryRaw.mockResolvedValue(many.map((t) => ({ id: t.id })));
+    prisma.task.findMany
+      .mockReset()
+      .mockResolvedValueOnce(many.slice(0, TASKS_PAGE_SIZE))
+      .mockResolvedValueOnce(many.slice(TASKS_PAGE_SIZE));
+
+    const result = await service.run(NOW);
+
+    expect(prisma.task.findMany).toHaveBeenCalledTimes(2);
+    const [first, second] = prisma.task.findMany.mock.calls as [
+      { where: { id: { in: string[] } } },
+    ][];
+    expect(first[0].where.id.in).toHaveLength(TASKS_PAGE_SIZE);
+    expect(second[0].where.id.in).toEqual([`p${TASKS_PAGE_SIZE}`]);
+    expect(mail.sendDeadlineReminderEmail).toHaveBeenCalledTimes(1);
+    expect(result.remindersSent).toBe(TASKS_PAGE_SIZE + 1);
   });
 });

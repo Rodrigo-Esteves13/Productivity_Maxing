@@ -5,19 +5,27 @@ import {
   ArrayMinSize,
   IsArray,
   IsBoolean,
+  IsDateString,
   IsIn,
+  IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { FLASHCARD_GRADES, type FlashcardGrade } from '../flashcard-schedule';
 import {
   FLASHCARD_BACK_MAX,
   FLASHCARD_BULK_MAX,
+  FLASHCARD_EASE_MAX,
+  FLASHCARD_EASE_MIN,
   FLASHCARD_FRONT_MAX,
+  FLASHCARD_STATE_COUNT_MAX,
 } from '../flashcards.constants';
 
 const trim = ({ value }: { value: unknown }) =>
@@ -82,6 +90,37 @@ export class ReviewFlashcardDto {
   @ApiProperty({ enum: FLASHCARD_GRADES })
   @IsIn(FLASHCARD_GRADES)
   grade: FlashcardGrade;
+}
+
+// Estado de agenda anterior, para desfazer a ultima classificacao.
+export class RestoreFlashcardDto {
+  @ApiProperty()
+  @IsDateString()
+  dueAt: string;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(0)
+  @Max(FLASHCARD_STATE_COUNT_MAX)
+  intervalDays: number;
+
+  @ApiProperty()
+  @IsNumber()
+  @Min(FLASHCARD_EASE_MIN)
+  @Max(FLASHCARD_EASE_MAX)
+  ease: number;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(0)
+  @Max(FLASHCARD_STATE_COUNT_MAX)
+  reps: number;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(0)
+  @Max(FLASHCARD_STATE_COUNT_MAX)
+  lapses: number;
 }
 
 export class ListFlashcardsQueryDto {

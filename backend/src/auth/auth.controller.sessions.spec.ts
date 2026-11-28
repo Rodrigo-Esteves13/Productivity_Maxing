@@ -5,6 +5,8 @@ import { AuthController } from './auth.controller';
 import type { AuthService } from './auth.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { UserSessionsService } from './services/user-sessions.service';
+import { SessionCookieService } from './services/session-cookie.service';
+import { ProfileService } from './services/profile.service';
 import type { AuthenticatedUser } from './interfaces/authenticated-user.interface';
 import {
   ACCESS_TOKEN_COOKIE,
@@ -61,10 +63,18 @@ function setup() {
     isActive: jest.fn().mockResolvedValue(true),
   };
   const prisma = { user: { findUnique: jest.fn().mockResolvedValue(USER) } };
+  // Services reais por cima dos mocks: o controller so delega, as regras de
+  // sessao e cookies testam-se aqui ponta a ponta (rota ate aos cookies).
+  const sessionCookies = new SessionCookieService(
+    authService as unknown as AuthService,
+    userSessions as unknown as UserSessionsService,
+    prisma as unknown as PrismaService,
+  );
   const controller = new AuthController(
     authService as unknown as AuthService,
-    prisma as unknown as PrismaService,
     userSessions as unknown as UserSessionsService,
+    sessionCookies,
+    new ProfileService(prisma as unknown as PrismaService),
   );
   const res = {
     cookie: jest.fn(),

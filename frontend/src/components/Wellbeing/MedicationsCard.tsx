@@ -9,6 +9,7 @@ import Button from '../UI/Button';
 import { BellIcon, ChevronLeftIcon, ChevronRightIcon, PencilIcon, PlusIcon, TrashIcon } from '../UI/Icons';
 import MedicationForm from './MedicationForm';
 import IntakeLogModal from './IntakeLogModal';
+import IntakeEditModal from './IntakeEditModal';
 import MedicationDisclaimerGate, { DisclaimerText } from './MedicationDisclaimer';
 import SupportLinesPanel from './SupportLinesPanel';
 import MedicationPushWarning from './MedicationPushWarning';
@@ -17,6 +18,7 @@ import { useMedicationReminderStatus } from '../../hooks/useMedicationReminderSt
 import { APP_TIME_ZONE } from '../../lib/dateKey';
 import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
+import { useUndoableDelete } from '../../hooks/useUndoableDelete';
 import { MAX_DOSE_PAST_DAYS, type useMedications } from '../../hooks/useMedications';
 import type { Medication, MedicationDaySlot, MedicationIntake, MedicationReminderSlotStatus } from '../../types/models';
 
@@ -24,16 +26,16 @@ interface MedicationsCardProps {
   meds: ReturnType<typeof useMedications>;
 }
 
-// null = nada aberto; 'new' = a adicionar; id = a editar esse.
-type Editing = null | 'new' | string;
-
 function DoseRow({ slot, onToggle }: { slot: MedicationDaySlot; onToggle: () => void }) {
   return (
     <li>
-      <label className="flex cursor-pointer items-center gap-3 rounded-md bg-neutral-800/50 px-3 py-2">
-        <input type="checkbox" className="h-4 w-4 accent-violet-500" checked={slot.taken} onChange={onToggle} />
+      <label className="flex cursor-pointer items-center gap-3 rounded-md bg-neutral-800/50 px-3 py-3">
+        <input type="checkbox" className="h-6 w-6 shrink-0 accent-violet-500" checked={slot.taken} onChange={onToggle} />
         <span className="font-mono text-sm tabular-nums text-neutral-400">{formatClock(slot.slotMinutes)}</span>
-        <span className={`min-w-0 flex-1 truncate text-sm ${slot.taken ? 'text-neutral-500 line-through' : 'text-neutral-100'}`}>
+        <span
+          title={slot.dosage ? `${slot.name} · ${slot.dosage}` : slot.name}
+          className={`min-w-0 flex-1 truncate text-sm ${slot.taken ? 'text-neutral-500 line-through' : 'text-neutral-100'}`}
+        >
           {slot.name}
           {slot.dosage && <span className="text-neutral-500"> · {slot.dosage}</span>}
         </span>
@@ -42,23 +44,38 @@ function DoseRow({ slot, onToggle }: { slot: MedicationDaySlot; onToggle: () => 
   );
 }
 
-function IntakeRow({ intake, onDelete }: { intake: MedicationIntake; onDelete: () => void }) {
-  const { t } = useI18n();
+function IntakeRow({
+  intake,
+  onEdit,
+  onDelete,
+}: {
+  intake: MedicationIntake;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { t, lang } = useI18n();
+  const dateTime = formatDateTime(intake.takenAt, lang);
+  const detail = intake.note ? `${dateTime} · ${intake.note}` : dateTime;
+  const title = intake.dose ? `${intake.name} · ${intake.dose}` : intake.name;
   return (
     <li className="flex items-center justify-between gap-2 rounded-md px-3 py-1.5 hover:bg-neutral-800/40">
       <div className="min-w-0">
-        <p className="truncate text-sm text-neutral-100">
+        <p className="truncate text-sm text-neutral-100" title={title}>
           {intake.name}
           {intake.dose && <span className="text-neutral-500"> · {intake.dose}</span>}
         </p>
-        <p className="truncate text-xs tabular-nums text-neutral-500">
-          {formatDateTime(intake.takenAt)}
-          {intake.note && ` · ${intake.note}`}
+        <p className="truncate text-xs tabular-nums text-neutral-500" title={detail}>
+          {detail}
         </p>
       </div>
-      <IconButton label={t('wellbeing.meds.intake.delete')} tone="danger" onClick={onDelete}>
-        <TrashIcon className="h-4 w-4" />
-      </IconButton>
+      <div className="flex shrink-0 items-center">
+        <IconButton label={t('ux4well.intake.edit')} onClick={onEdit}>
+          <PencilIcon className="h-4 w-4" />
+        </IconButton>
+        <IconButton label={t('wellbeing.meds.intake.delete')} tone="danger" onClick={onDelete}>
+          <TrashIcon className="h-4 w-4" />
+        </IconButton>
+      </div>
     </li>
   );
 }
@@ -113,8 +130,16 @@ function scheduleSummary(m: Medication, t: ReturnType<typeof useI18n>['t']): str
 export default function MedicationsCard({ meds }: MedicationsCardProps) {
   const { t, lang } = useI18n();
   const { notify, confirm } = useFeedback();
-  const [editing, setEditing] = useState<Editing>(null);
+  const offerUndoDelete = useUndoableDelete();
+  // Formularios independentes: abrir a edicao de um medicamento nao fecha
+  // o de outro, nem o de "Adicionar" (U-B14).
+  const [adding, setAdding] = useState(false);
+  const [editingIds, setEditingIds] = useState<string[]>([]);
   const [logging, setLogging] = useState<Medication | null>(null);
+  const [editingIntake, setEditingIntake] = useState<MedicationIntake | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const openEdit = (id: string) => setEditingIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  const closeEdit = (id: string) => setEditingIds((prev) => prev.filter((x) => x !== id));
 
   const reportFailure = (ok: boolean) => {
     if (!ok) notify(t('wellbeing.meds.saveError'), 'error');
@@ -137,29 +162,46 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
       confirmLabel: t('wellbeing.meds.intake.delete'),
       tone: 'danger',
     });
-    if (ok) reportFailure(await meds.removeIntake(intake.id));
+    if (!ok) return;
+    const removed = await meds.removeIntake(intake.id);
+    reportFailure(removed);
+    if (!removed) return;
+    offerUndoDelete({
+      message: t('f7money.intakeDeleted', { name: intake.name }),
+      restore: async () => {
+        if (!(await meds.restoreIntake(intake))) throw new Error('intake restore failed');
+      },
+    });
   };
 
-  const closeOnSuccess = (ok: boolean) => {
-    if (ok) setEditing(null);
-    return ok;
+  const handleToggleActive = async (medication: Medication) => {
+    setTogglingId(medication.id);
+    const ok = await meds.update(medication.id, { active: !medication.active });
+    setTogglingId(null);
+    if (!ok) {
+      notify(t('wellbeing.meds.saveError'), 'error');
+      return;
+    }
+    notify(t(medication.active ? 'ux4well.meds.pausedToast' : 'ux4well.meds.resumedToast', { name: medication.name }), 'success');
   };
 
   const hasDaily = meds.medications.some((m) => m.active && m.schedule === 'DAILY');
   const hasReminders = meds.medications.some((m) => m.active && m.schedule === 'DAILY' && m.remindersEnabled);
   const accepted = meds.disclaimer?.accepted ?? false;
-  const reminderStatus = useMedicationReminderStatus(accepted && hasReminders, meds.medications);
-  const asNeeded = meds.medications.filter((m) => m.active && m.schedule === 'AS_NEEDED');
+  const reminderStatus = useMedicationReminderStatus(accepted && hasReminders, meds.version);
+  // Qualquer medicamento ativo aceita uma toma avulso (dose extra, ou duas
+  // seguidas), nao so os "se necessario".
+  const loggable = meds.medications.filter((m) => m.active);
 
   return (
     <DashboardCard>
       <div className="mb-1 flex items-center justify-between gap-2">
         <CardHeading>{t('wellbeing.meds.title')}</CardHeading>
-        {accepted && editing === null && (
+        {accepted && !adding && (
           <button
             type="button"
-            onClick={() => setEditing('new')}
-            className="flex items-center gap-1 text-xs font-medium text-violet-400 hover:text-violet-300"
+            onClick={() => setAdding(true)}
+            className="flex min-h-8 items-center gap-1 text-xs font-medium text-violet-400 hover:text-violet-300 pointer-coarse:min-h-11"
           >
             <PlusIcon className="h-3.5 w-3.5" />
             {t('wellbeing.meds.add')}
@@ -179,13 +221,17 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
 
       {accepted && <MedicationPushWarning hasReminders={hasReminders} />}
 
-      {accepted && editing === 'new' && (
+      {accepted && adding && (
         <div className="mb-4">
           <MedicationForm
             isSaving={meds.isSaving}
             submitLabel={t('wellbeing.meds.add')}
-            onSubmit={async (input) => closeOnSuccess(await meds.add(input))}
-            onCancel={() => setEditing(null)}
+            onSubmit={async (input) => {
+              const ok = await meds.add(input);
+              if (ok) setAdding(false);
+              return ok;
+            }}
+            onCancel={() => setAdding(false)}
           />
         </div>
       )}
@@ -193,11 +239,26 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
       {meds.isLoading ? (
         <LinesSkeleton lines={3} />
       ) : meds.error ? (
-        <ErrorState message={t('wellbeing.meds.loadError')} />
+        <ErrorState message={t('wellbeing.meds.loadError')} onRetry={() => void meds.reload()} />
       ) : !accepted ? null : meds.medications.length === 0 ? (
-        editing !== 'new' && <EmptyState variant="inline" message={t('wellbeing.meds.empty')} />
+        !adding && <EmptyState variant="inline" message={t('wellbeing.meds.empty')} />
       ) : (
         <>
+          {meds.refreshFailed && (
+            <div
+              role="status"
+              className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-900/50 bg-amber-950/20 px-3 py-2 text-xs text-amber-300"
+            >
+              <span>{t('ux4well.meds.refreshFailed')}</span>
+              <button
+                type="button"
+                onClick={() => void meds.reload()}
+                className="font-medium underline hover:text-amber-200 pointer-coarse:min-h-11"
+              >
+                {t('common.tryAgain')}
+              </button>
+            </div>
+          )}
           {hasDaily && (
             <>
               {/* Setas para ir a um dia que passou e marcar a toma esquecida. */}
@@ -231,7 +292,7 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
                   <button
                     type="button"
                     onClick={() => meds.setDayOffset(0)}
-                    className="ml-auto text-xs font-medium text-violet-400 hover:text-violet-300"
+                    className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 ml-auto text-xs font-medium text-violet-400 hover:text-violet-300"
                   >
                     {t('wellbeing.meds.backToToday')}
                   </button>
@@ -259,11 +320,11 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
             </>
           )}
 
-          {(asNeeded.length > 0 || meds.intakes.length > 0) && (
+          {(loggable.length > 0 || meds.intakes.length > 0) && (
             <>
-              <h3 className="mb-2 text-sm font-medium text-neutral-200">{t('wellbeing.meds.asNeeded')}</h3>
+              <h3 className="mb-2 text-sm font-medium text-neutral-200">{t('wellbeing.meds.intake.heading')}</h3>
               <div className="mb-3 flex flex-wrap gap-2">
-                {asNeeded.map((m) => (
+                {loggable.map((m) => (
                   <Button key={m.id} variant="secondary" size="sm" onClick={() => setLogging(m)}>
                     {t('wellbeing.meds.intake.logButton', { name: m.name })}
                   </Button>
@@ -274,9 +335,24 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
               ) : (
                 <ul className="mb-5 space-y-1">
                   {meds.intakes.map((intake) => (
-                    <IntakeRow key={intake.id} intake={intake} onDelete={() => void handleDeleteIntake(intake)} />
+                    <IntakeRow
+                      key={intake.id}
+                      intake={intake}
+                      onEdit={() => setEditingIntake(intake)}
+                      onDelete={() => void handleDeleteIntake(intake)}
+                    />
                   ))}
                 </ul>
+              )}
+              {meds.canShowMoreIntakes && (
+                <button
+                  type="button"
+                  disabled={meds.isSaving}
+                  onClick={meds.showMoreIntakes}
+                  className="-mt-3 mb-5 min-h-8 text-xs font-medium text-violet-400 hover:text-violet-300 disabled:opacity-50 pointer-coarse:min-h-11"
+                >
+                  {t('ux4well.intake.showMore', { days: meds.intakeDays })}
+                </button>
               )}
             </>
           )}
@@ -284,20 +360,27 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
           <h3 className="mb-2 mt-5 text-sm font-medium text-neutral-200">{t('wellbeing.meds.manage')}</h3>
           <ul className="space-y-1.5">
             {meds.medications.map((m) =>
-              editing === m.id ? (
+              editingIds.includes(m.id) ? (
                 <li key={m.id}>
                   <MedicationForm
                     initial={m}
                     isSaving={meds.isSaving}
                     submitLabel={t('common.save')}
-                    onSubmit={async (input) => closeOnSuccess(await meds.update(m.id, input))}
-                    onCancel={() => setEditing(null)}
+                    onSubmit={async (input) => {
+                      const ok = await meds.update(m.id, input);
+                      if (ok) closeEdit(m.id);
+                      return ok;
+                    }}
+                    onCancel={() => closeEdit(m.id)}
                   />
                 </li>
               ) : (
                 <li key={m.id} className="flex items-center justify-between gap-2 rounded-md px-3 py-1.5 hover:bg-neutral-800/40">
                   <div className="min-w-0">
-                    <p className={`truncate text-sm ${m.active ? 'text-neutral-100' : 'text-neutral-500'}`}>
+                    <p
+                      className={`truncate text-sm ${m.active ? 'text-neutral-100' : 'text-neutral-500'}`}
+                      title={m.dosage ? `${m.name} · ${m.dosage}` : m.name}
+                    >
                       {m.name}
                       {m.dosage && <span className="text-neutral-500"> · {m.dosage}</span>}
                     </p>
@@ -305,7 +388,9 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
                       {m.remindersEnabled && m.schedule === 'DAILY' && (
                         <BellIcon className="h-3 w-3 shrink-0" aria-label={t('wellbeing.meds.reminders')} />
                       )}
-                      <span className="truncate">{scheduleSummary(m, t)}</span>
+                      <span className="truncate" title={scheduleSummary(m, t)}>
+                        {scheduleSummary(m, t)}
+                      </span>
                     </p>
                     {m.active && m.remindersEnabled && m.schedule === 'DAILY' && (
                       <div className="mt-0.5 space-y-0.5">
@@ -316,14 +401,20 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => void meds.update(m.id, { active: !m.active }).then(reportFailure)}
-                      className="px-1.5 text-xs text-neutral-400 hover:text-white"
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={togglingId !== null}
+                      aria-busy={togglingId === m.id}
+                      onClick={() => void handleToggleActive(m)}
                     >
-                      {m.active ? t('wellbeing.meds.pause') : t('wellbeing.meds.resume')}
-                    </button>
-                    <IconButton label={t('wellbeing.meds.edit')} onClick={() => setEditing(m.id)}>
+                      {togglingId === m.id
+                        ? t('common.saving')
+                        : m.active
+                          ? t('wellbeing.meds.pause')
+                          : t('wellbeing.meds.resume')}
+                    </Button>
+                    <IconButton label={t('wellbeing.meds.edit')} onClick={() => openEdit(m.id)}>
                       <PencilIcon className="h-4 w-4" />
                     </IconButton>
                     <IconButton label={t('wellbeing.meds.delete')} tone="danger" onClick={() => void handleDelete(m)}>
@@ -353,12 +444,27 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
         </details>
       )}
 
+      <IntakeEditModal
+        intake={editingIntake}
+        isSaving={meds.isSaving}
+        onSubmit={async (id, changes) => {
+          const ok = await meds.editIntake(id, changes);
+          if (ok) {
+            setEditingIntake(null);
+            notify(t('ux4well.intake.edited'), 'success');
+          }
+          return ok;
+        }}
+        onClose={() => setEditingIntake(null)}
+      />
+
       <IntakeLogModal
         medication={logging}
         isSaving={meds.isSaving}
-        onSubmit={async (input) => {
+        defaultDayKey={meds.dayOffset > 0 ? meds.dayKey : null}
+        onSubmit={async (input, keepOpen) => {
           const ok = await meds.logIntake(input);
-          if (ok) setLogging(null);
+          if (ok && !keepOpen) setLogging(null);
           return ok;
         }}
         onClose={() => setLogging(null)}

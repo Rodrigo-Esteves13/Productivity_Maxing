@@ -21,9 +21,14 @@ export function useIncrementalReveal(
   total: number,
   pageSize: number,
   resetKey?: string | number,
+  // Linhas que tem de estar visiveis (ex: ate a linha escolhida). O que ja
+  // foi revelado por isto mantem-se quando o minimo volta a descer.
+  minVisible = 0,
 ): UseIncrementalRevealReturn {
   const [state, setState] = useState<RevealState>({ key: resetKey, count: pageSize });
-  const visibleCount = state.key === resetKey ? state.count : pageSize;
+  const storedCount = state.key === resetKey ? state.count : pageSize;
+  const visibleCount = Math.max(storedCount, minVisible);
+  if (visibleCount > storedCount) setState({ key: resetKey, count: visibleCount });
 
   const showMore = useCallback(
     () => setState({ key: resetKey, count: visibleCount + pageSize }),
@@ -34,7 +39,7 @@ export function useIncrementalReveal(
   return {
     visibleCount,
     hasMore: visibleCount < total,
-    canCollapse: visibleCount > pageSize,
+    canCollapse: visibleCount > Math.max(pageSize, minVisible),
     showMore,
     collapse,
   };

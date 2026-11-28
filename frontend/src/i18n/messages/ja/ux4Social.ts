@@ -1,0 +1,18 @@
+export const ux4Social: Record<string, string> = {
+  'ux4social.sort.name': "名前",
+  'ux4social.sort.recent': "最近追加した順",
+  'ux4social.sort.newest': "新しい順",
+  'ux4social.sort.oldest': "古い順",
+  'ux4social.sort.title': "タイトル",
+  'ux4social.friends.search': "友だちを検索",
+  'ux4social.notes.search': "ノートを検索",
+  'ux4social.notes.areaFilter': "科目で絞り込む",
+  'ux4social.notes.allAreas': "すべての科目",
+  'ux4social.notes.sortLabel': "ノートを並べ替え",
+  'ux4social.areas.all': "すべて",
+  'ux4social.areas.none': "なし",
+  'ux4social.decline.title': "このリクエストを拒否しますか?",
+  'ux4social.decline.message': "{name}さんはあなたのノートを読めません。もう一度リクエストできます。",
+  'ux4social.block.title': "{name}さんをブロックしますか?",
+  'ux4social.remove.title': "{name}さんを削除しますか?",
+};

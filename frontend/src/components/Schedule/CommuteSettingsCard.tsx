@@ -204,7 +204,7 @@ export default function CommuteSettingsCard({ user, onUserUpdate }: CommuteSetti
             max={300}
             value={commuteMinutes}
             onChange={(e) => setCommuteMinutes(e.target.value)}
-            placeholder="e.g. 25"
+            placeholder={t('schedule.commute.minutesPlaceholder')}
             className="max-w-[10rem]"
           />
         </FormField>

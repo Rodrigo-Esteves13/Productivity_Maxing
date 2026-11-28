@@ -62,6 +62,19 @@ export const getMedicationIntakes = async (from: string, to: string): Promise<Me
 export const createMedicationIntake = async (input: MedicationIntakeInput): Promise<MedicationIntake> =>
   (await api.post<MedicationIntake>('/wellbeing/medications/intakes', input)).data;
 
+// Anular o apagar de uma toma (aceita a hora antiga, ao contrario do registo).
+export const restoreMedicationIntake = async (input: MedicationIntakeInput): Promise<MedicationIntake> =>
+  (await api.post<MedicationIntake>('/wellbeing/medications/intakes/restore', input)).data;
+
+export interface MedicationIntakeChanges {
+  takenAt?: string;
+  dose?: string;
+  note?: string;
+}
+
+export const updateMedicationIntake = async (id: string, changes: MedicationIntakeChanges): Promise<MedicationIntake> =>
+  (await api.patch<MedicationIntake>(`/wellbeing/medications/intakes/${encodeURIComponent(id)}`, changes)).data;
+
 export const deleteMedicationIntake = async (id: string): Promise<void> => {
   await api.delete(`/wellbeing/medications/intakes/${id}`);
 };
@@ -86,6 +99,16 @@ export const createBloodDonation = async (input: {
   location?: string;
   note?: string;
 }): Promise<BloodDonation> => (await api.post<BloodDonation>('/wellbeing/blood-donations', input)).data;
+
+export interface BloodDonationChanges {
+  date?: string;
+  type?: BloodDonationType;
+  location?: string;
+  note?: string;
+}
+
+export const updateBloodDonation = async (id: string, changes: BloodDonationChanges): Promise<BloodDonation> =>
+  (await api.patch<BloodDonation>(`/wellbeing/blood-donations/${encodeURIComponent(id)}`, changes)).data;
 
 export const deleteBloodDonation = async (id: string): Promise<void> => {
   await api.delete(`/wellbeing/blood-donations/${encodeURIComponent(id)}`);

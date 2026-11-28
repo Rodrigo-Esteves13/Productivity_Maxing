@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Button from './Button';
+import { useEscapeLayer } from './modalStack';
 
 interface ConfirmDialogProps {
   title: string;
@@ -32,17 +33,25 @@ export default function ConfirmDialog({
   };
   const initialFocusRef = useRef<HTMLDivElement>(null);
 
+  // Escape: so a camada do topo reage (o Modal por baixo fica aberto).
+  useEscapeLayer(true, () => {
+    if (!isBusy) onCancel();
+  });
+
+  // Devolve o foco ao que o tinha antes de o dialogo abrir.
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isBusy) onCancel();
+    const previous = document.activeElement;
+    return () => {
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
     };
-    window.addEventListener('keydown', handleKey);
+  }, []);
+
+  useEffect(() => {
     const target = initialFocusRef.current?.querySelector<HTMLButtonElement>(
       tone === 'danger' ? '[data-role="cancel"]' : '[data-role="confirm"]',
     );
     target?.focus();
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [onCancel, tone, isBusy]);
+  }, [tone, isBusy]);
 
   return (
     <div

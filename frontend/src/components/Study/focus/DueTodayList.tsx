@@ -1,4 +1,6 @@
 import { useTodayPlan } from '../../../hooks/useTodayPlan';
+import { useDomainKey } from '../../../hooks/useDomainVersion';
+import { TASK_DOMAINS } from '../../../lib/domainEvents';
 import PriorityBadge from '../../UI/PriorityBadge';
 import { useI18n } from '../../../i18n/useI18n';
 
@@ -7,7 +9,9 @@ import { useI18n } from '../../../i18n/useI18n';
 // coluna: um bloco enorme so com "No tasks due today".
 export default function DueTodayList() {
   const { t } = useI18n();
-  const { tasks, isLoading, error } = useTodayPlan();
+  // Uma task concluida ou apagada noutro sitio sai da lista sem F5.
+  const tasksKey = useDomainKey(TASK_DOMAINS);
+  const { tasks, isLoading, error } = useTodayPlan(tasksKey);
 
   if (isLoading) return null;
   if (error) return <p className="text-xs text-red-400">{error}</p>;
@@ -19,7 +23,7 @@ export default function DueTodayList() {
       <ul className="divide-y divide-neutral-800">
         {tasks.map((task) => (
           <li key={task.id} className="flex items-center justify-between gap-3 py-1.5">
-            <p className="min-w-0 truncate text-sm text-white">
+            <p className="min-w-0 truncate text-sm text-white" title={task.title}>
               {task.title}
               {task.weightPercentage != null && (
                 <span className="ml-2 text-xs text-neutral-500">

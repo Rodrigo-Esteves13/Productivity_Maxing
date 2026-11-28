@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import {
   DEFAULT_AREA_FILTER,
   DEFAULT_AREA_SORT,
@@ -7,6 +7,7 @@ import {
   type AreaFilter,
   type AreaSort,
 } from '../lib/areaList';
+import { usePersistedState, type PersistedCodec } from './usePersistedState';
 
 const STORAGE_KEY = 'pm-area-list-prefs';
 
@@ -17,38 +18,31 @@ interface AreaListPrefs {
 
 const DEFAULT_PREFS: AreaListPrefs = { filter: DEFAULT_AREA_FILTER, sort: DEFAULT_AREA_SORT };
 
-function loadPrefs(): AreaListPrefs {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+const CODEC: PersistedCodec<AreaListPrefs> = {
+  parse: (raw) => {
     if (!raw) return DEFAULT_PREFS;
-    const parsed = JSON.parse(raw) as Partial<Record<keyof AreaListPrefs, unknown>>;
-    return {
-      filter: isAreaFilter(parsed.filter) ? parsed.filter : DEFAULT_AREA_FILTER,
-      sort: isAreaSort(parsed.sort) ? parsed.sort : DEFAULT_AREA_SORT,
-    };
-  } catch {
-    return DEFAULT_PREFS;
-  }
-}
+    try {
+      const parsed = JSON.parse(raw) as Partial<Record<keyof AreaListPrefs, unknown>>;
+      return {
+        filter: isAreaFilter(parsed.filter) ? parsed.filter : DEFAULT_AREA_FILTER,
+        sort: isAreaSort(parsed.sort) ? parsed.sort : DEFAULT_AREA_SORT,
+      };
+    } catch {
+      return DEFAULT_PREFS;
+    }
+  },
+  serialize: (prefs) =>
+    prefs.filter === DEFAULT_AREA_FILTER && prefs.sort === DEFAULT_AREA_SORT ? null : JSON.stringify(prefs),
+};
 
 // Filtro e ordenacao da pagina Areas, so neste browser (mesmo padrao do
 // useAreaOrder / useDashboardWidgetPrefs). Valores invalidos voltam ao defeito.
 export function useAreaListPrefs() {
-  const [prefs, setPrefs] = useState<AreaListPrefs>(loadPrefs);
+  const [prefs, setPrefs] = usePersistedState(STORAGE_KEY, CODEC);
 
-  useEffect(() => {
-    try {
-      const isDefault = prefs.filter === DEFAULT_AREA_FILTER && prefs.sort === DEFAULT_AREA_SORT;
-      if (isDefault) localStorage.removeItem(STORAGE_KEY);
-      else localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
-    } catch {
-      // Best-effort only, same as every other localStorage pref in this app.
-    }
-  }, [prefs]);
-
-  const setFilter = useCallback((filter: AreaFilter) => setPrefs((prev) => ({ ...prev, filter })), []);
-  const setSort = useCallback((sort: AreaSort) => setPrefs((prev) => ({ ...prev, sort })), []);
-  const resetPrefs = useCallback(() => setPrefs(DEFAULT_PREFS), []);
+  const setFilter = useCallback((filter: AreaFilter) => setPrefs((prev) => ({ ...prev, filter })), [setPrefs]);
+  const setSort = useCallback((sort: AreaSort) => setPrefs((prev) => ({ ...prev, sort })), [setPrefs]);
+  const resetPrefs = useCallback(() => setPrefs(DEFAULT_PREFS), [setPrefs]);
 
   return { filter: prefs.filter, sort: prefs.sort, setFilter, setSort, resetPrefs };
 }

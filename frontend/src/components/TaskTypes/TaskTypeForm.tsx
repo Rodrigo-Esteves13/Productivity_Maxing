@@ -4,6 +4,7 @@ import Button from '../UI/Button';
 import FormField from '../UI/FormField';
 import ColorPickerField from '../Areas/ColorPickerField';
 import type { TaskTypeFormPayload } from '../../api/taskTypesAdminService';
+import { DEFAULT_TASK_TYPE_COLOR } from '../../lib/taskTypeColors';
 import { useI18n } from '../../i18n/useI18n';
 
 interface TaskTypeFormProps {
@@ -16,7 +17,7 @@ interface TaskTypeFormProps {
   submittingLabel: string;
 }
 
-const DEFAULT_VALUES: TaskTypeFormPayload = { label: '', colorHex: '#8b5cf6', order: 0 };
+const DEFAULT_VALUES: TaskTypeFormPayload = { label: '', colorHex: DEFAULT_TASK_TYPE_COLOR, order: 0 };
 
 export default function TaskTypeForm({
   idPrefix,
@@ -54,7 +55,7 @@ export default function TaskTypeForm({
 
       <ColorPickerField
         id={`${idPrefix}-color`}
-        value={formData.colorHex ?? '#8b5cf6'}
+        value={formData.colorHex ?? DEFAULT_TASK_TYPE_COLOR}
         onChange={(colorHex) => setFormData({ ...formData, colorHex })}
       />
 

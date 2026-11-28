@@ -44,14 +44,14 @@ export default function SavedFilterViews({ filters, hasActiveFilters, onApply }:
           key={view.id}
           className="inline-flex items-center gap-1.5 rounded-full border border-neutral-700 bg-neutral-800/60 pl-3 pr-1.5 py-1 text-xs text-neutral-200"
         >
-          <button type="button" onClick={() => onApply(view.filters)} className="hover:text-white">
+          <button type="button" onClick={() => onApply(view.filters)} className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:text-white">
             {view.name}
           </button>
           <button
             type="button"
             onClick={() => deleteView(view.id)}
             aria-label={t('ui.deleteSavedView', { name: view.name })}
-            className="text-neutral-500 hover:text-red-400"
+            className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center pointer-coarse:min-w-11 pointer-coarse:justify-center text-neutral-500 hover:text-red-400"
           >
             <XIcon width={12} height={12} />
           </button>
@@ -83,7 +83,7 @@ export default function SavedFilterViews({ filters, hasActiveFilters, onApply }:
           <button
             type="button"
             onClick={() => setIsNaming(true)}
-            className="text-xs text-neutral-400 hover:text-neutral-200 underline decoration-dotted"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-xs text-neutral-400 hover:text-neutral-200 underline decoration-dotted"
           >
             {t('ui.saveCurrentFiltersAsView')}
           </button>

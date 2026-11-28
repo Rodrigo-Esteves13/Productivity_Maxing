@@ -12,12 +12,19 @@ import { usePackUpdates } from '../hooks/usePackUpdates';
 import CreateTaskPackModal from '../components/TaskPacks/CreateTaskPackModal';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useTaskPacks } from '../hooks/useTaskPacks';
+import { useListSearch } from '../hooks/useListSearch';
+import SearchField from '../components/UI/SearchField';
 import { useI18n } from '../i18n/useI18n';
+
+// Abaixo disto a pesquisa so atrapalha.
+const PACK_SEARCH_MIN = 5;
 
 export default function TaskPacks() {
   const { t } = useI18n();
   useDocumentTitle(t('nav.taskPacks'));
-  const { packs, tasks, areas, isLoading, hasError, isSaving, create, remove, publish } = useTaskPacks();
+  const { packs, tasks, areas, isLoading, hasError, isSaving, create, remove, rename, publish, setItemCount, reload } =
+    useTaskPacks();
+  const search = useListSearch(packs, (p) => [p.name]);
   const packUpdates = usePackUpdates();
   const [isCreating, setIsCreating] = useState(false);
 
@@ -42,14 +49,32 @@ export default function TaskPacks() {
         </section>
       )}
       {packUpdates.hasError && <ErrorState message={t('packs.updates.loadError')} />}
-      {isLoading ? (
+      {isLoading && packs.length === 0 ? (
         <TableSkeleton rows={4} columns={3} />
       ) : hasError ? (
         <ErrorState message={t('packs.loadError')} />
       ) : packs.length === 0 ? (
         <EmptyState message={t('packs.empty')} />
       ) : (
-        <TaskPackList packs={packs} onDelete={remove} onPublish={publish} />
+        <>
+          {packs.length >= PACK_SEARCH_MIN && (
+            <SearchField className="mb-4" value={search.query} onChange={search.setQuery} label={t('ux4packs.list.search')} />
+          )}
+          {search.filtered.length === 0 ? (
+            <EmptyState message={t('search.noResultsFor', { query: search.query.trim() })} />
+          ) : (
+            <TaskPackList
+              packs={search.filtered}
+              tasks={tasks}
+              areas={areas}
+              onDelete={remove}
+              onRename={rename}
+              onPublish={publish}
+              onItemCount={setItemCount}
+              onTasksChanged={reload}
+            />
+          )}
+        </>
       )}
       <CreateTaskPackModal
         isOpen={isCreating}

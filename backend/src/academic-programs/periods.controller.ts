@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  ParseUUIDPipe,
   Patch,
   Query,
   UseGuards,
@@ -44,7 +45,7 @@ export class PeriodsController {
   })
   update(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePeriodDto,
   ) {
     return this.periodsService.update(user.id, id, dto);
@@ -57,7 +58,7 @@ export class PeriodsController {
   })
   archive(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ArchivePeriodDto,
   ) {
     return this.periodsService.archive(user.id, id, dto?.confirm);
@@ -67,7 +68,10 @@ export class PeriodsController {
   @ApiOperation({
     summary: 'Restores an archived period (undoes archive, no restrictions)',
   })
-  restore(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  restore(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.periodsService.restore(user.id, id);
   }
 
@@ -76,7 +80,10 @@ export class PeriodsController {
     summary:
       'Toggles pinning this period as the one its program auto-selects, instead of always defaulting to the most recent. Pinning one unpins any other pinned period in the same program.',
   })
-  togglePin(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  togglePin(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.periodsService.togglePin(user.id, id);
   }
 
@@ -85,7 +92,10 @@ export class PeriodsController {
     summary:
       "Sets this period (and its program) as the user's active dashboard",
   })
-  activate(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  activate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.periodsService.setActive(user.id, id);
   }
 
@@ -95,7 +105,7 @@ export class PeriodsController {
   })
   getAverage(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Query() query: GradeScenarioQueryDto,
   ) {
     return this.periodsService.getAverage(user.id, id, query.scenario);
@@ -108,7 +118,7 @@ export class PeriodsController {
   })
   getReportCard(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.periodsService.getReportCard(user.id, id);
   }

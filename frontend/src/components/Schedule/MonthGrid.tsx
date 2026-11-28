@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useMonthAgenda } from '../../hooks/useMonthAgenda';
+import type { ScheduleTasksState } from '../../hooks/useScheduleTasks';
 import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
 import { toDateKey } from '../../lib/dateKey';
@@ -33,12 +34,14 @@ interface MonthGridProps {
   // Botao Semana/Mes, desenhado no cabecalho ao lado da navegacao.
   viewToggle: ReactNode;
   onOpenWeek: (date: Date) => void;
+  // Prazos das tasks, carregados uma vez pela pagina.
+  scheduleTasks: ScheduleTasksState;
 }
 
 // Vista mensal do Schedule: prazos (exames em destaque), aulas e turnos.
 // Em ecras sm+ cada dia mostra chips com "+N"; no telemovel a grelha so
 // tem pontos por tipo e a lista do dia escolhido aparece por baixo.
-export default function MonthGrid({ refreshKey, initialDate, viewToggle, onOpenWeek }: MonthGridProps) {
+export default function MonthGrid({ refreshKey, initialDate, viewToggle, onOpenWeek, scheduleTasks }: MonthGridProps) {
   const { t, lang } = useI18n();
   const {
     monthStart,
@@ -49,7 +52,7 @@ export default function MonthGrid({ refreshKey, initialDate, viewToggle, onOpenW
     goToPreviousMonth,
     goToNextMonth,
     goToCurrentMonth,
-  } = useMonthAgenda(initialDate, refreshKey);
+  } = useMonthAgenda(initialDate, refreshKey, scheduleTasks);
   // Dia tocado no telemovel, preso ao mes em que foi tocado: ao mudar de
   // mes volta a hoje (ou ao dia 1) em vez de ficar num dia da orla.
   const [picked, setPicked] = useState<{ monthKey: string; dayKey: string } | null>(null);
@@ -97,7 +100,7 @@ export default function MonthGrid({ refreshKey, initialDate, viewToggle, onOpenW
         <>
           <div className="grid grid-cols-7 gap-1 sm:gap-1.5 mb-1" aria-hidden>
             {WEEKDAY_COLUMNS.map((dayOfWeek) => (
-              <p key={dayOfWeek} className="truncate text-center text-[11px] font-medium text-neutral-500">
+              <p key={dayOfWeek} className="truncate text-center text-[11px] font-medium text-neutral-500" title={weekdayLabel(dayOfWeek, lang)}>
                 {weekdayLabel(dayOfWeek, lang)}
               </p>
             ))}

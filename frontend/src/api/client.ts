@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { dedupeGets } from './dedupeGets';
+import { invalidateOnWrite } from './mutationInvalidation';
+import { clearQueryCache } from './queryCache';
 import { getCsrfToken, getSessionUserId, setCsrfToken } from './csrfStore';
 import { MAINTENANCE_EVENT } from '../lib/maintenanceEvents';
 import { ACCOUNT_BLOCKED_EVENT } from '../lib/accountBlockedEvents';
@@ -21,7 +23,10 @@ const api = axios.create({
 const SAFE_METHODS = new Set(['get', 'head', 'options']);
 
 // GETs iguais ao mesmo tempo partilham um so pedido de rede (ver dedupeGets.ts).
-api.defaults.adapter = dedupeGets(axios.getAdapter(api.defaults.adapter), (config) => api.getUri(config));
+// Cada escrita invalida a cache de GETs (ver mutationInvalidation.ts).
+api.defaults.adapter = invalidateOnWrite(
+  dedupeGets(axios.getAdapter(api.defaults.adapter), (config) => api.getUri(config)),
+);
 
 // Mensagem exata que o CsrfGuard do backend devolve num 403 de CSRF. Serve
 // para distinguir "token desatualizado" de um 403 por falta de permissao.
@@ -266,6 +271,8 @@ function handleSessionEnded(error: { response?: { status?: number } }, url?: str
   if (status === 401 && !isAuthCheckRequest(url) && !isLoginRequest(url)) {
     console.warn('Session expired or unauthorized. Logging out...');
     setCsrfToken(null);
+    // Nada desta conta pode ficar a vista de quem entrar a seguir.
+    clearQueryCache();
 
     // Evita reload se já lá estamos (ex: várias chamadas em paralelo a
     // falharem ao mesmo tempo).

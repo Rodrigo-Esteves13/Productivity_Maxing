@@ -2,6 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
+  ArrayUnique,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -44,7 +45,10 @@ import {
   FINANCE_NOTE_MAX_LENGTH,
   INTEREST_RATE_DECIMALS,
   MAX_AMOUNT_CENTS,
+  MAX_FINANCE_BULK_ENTRIES,
   MAX_FINANCE_IMPORT_ROWS,
+  MAX_FINANCE_RELINK_IDS,
+  MAX_RESTORE_PAYMENT_LINKS,
   MAX_INTEREST_RATE_PCT,
   MAX_LATE_RISK_PCT,
   MAX_PAID_IN_ARREARS_MONTHS,
@@ -52,11 +56,13 @@ import {
   MAX_SKIP_OCCURRENCES,
   MIN_PAY_DAY,
   QUANTITY_PATTERN,
+  FINANCE_MONTH_PATTERN,
   QUOTE_SYMBOL_MAX_LENGTH,
   QUOTE_SYMBOL_PATTERN,
   type AnalyticsGranularity,
 } from '../finance.constants';
 import { DATE_KEY_PATTERN } from '../../common/date-key.util';
+import { IsRealDateKey } from '../../common/validators/is-real-date-key.decorator';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -130,6 +136,7 @@ export class CreateFinanceEntryDto extends ClientRequestDto {
   note?: string;
 
   @ApiProperty({ example: '2026-10-28' })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: 'date must be formatted YYYY-MM-DD.' })
   date: string;
 
@@ -170,6 +177,7 @@ export class CreateFinanceEntryDto extends ClientRequestDto {
   @ApiPropertyOptional({ example: '2027-06-30', nullable: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('endDate') })
   endDate?: string | null;
 
@@ -225,6 +233,7 @@ export class CreateFinanceEntryDto extends ClientRequestDto {
   @ApiPropertyOptional({ example: '2027-01-31', nullable: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('expectedDate') })
   expectedDate?: string | null;
 
@@ -260,8 +269,54 @@ export class CreateFinanceEntryDto extends ClientRequestDto {
   @ApiPropertyOptional({ example: '2026-11-20', nullable: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('receivedAt') })
   receivedAt?: string | null;
+}
+
+export class BulkDeleteFinanceEntriesDto {
+  @ApiProperty({ type: [String], maxItems: MAX_FINANCE_BULK_ENTRIES })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_FINANCE_BULK_ENTRIES)
+  @ArrayUnique()
+  @IsUUID(undefined, { each: true })
+  ids: string[];
+}
+
+// Um movimento apagado, tal como o bulk-delete o devolve. clientRequestId e o
+// id antigo (repetir o Anular nao duplica). Os ids de pagamentos so religam
+// pagamentos da propria pessoa que ficaram sem ligacao.
+export class RestoreFinanceEntryDto extends CreateFinanceEntryDto {
+  @ApiPropertyOptional({
+    type: [String],
+    maxItems: MAX_RESTORE_PAYMENT_LINKS,
+    description: 'Owed payments that pointed to this debt.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_RESTORE_PAYMENT_LINKS)
+  @IsUUID(undefined, { each: true })
+  debtPaymentIds?: string[];
+
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  incomePaymentId?: string | null;
+}
+
+export class RestoreFinanceEntriesDto {
+  @ApiProperty({
+    type: [RestoreFinanceEntryDto],
+    maxItems: MAX_FINANCE_BULK_ENTRIES,
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_FINANCE_BULK_ENTRIES)
+  @ValidateNested({ each: true })
+  @Type(() => RestoreFinanceEntryDto)
+  entries: RestoreFinanceEntryDto[];
 }
 
 export class CreateOwedPaymentDto {
@@ -272,6 +327,7 @@ export class CreateOwedPaymentDto {
   amountCents: number;
 
   @ApiProperty({ example: '2026-03-14' })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('paidAt') })
   paidAt: string;
 }
@@ -306,6 +362,7 @@ export class ImportFinanceEntryRowDto {
   note?: string;
 
   @ApiProperty({ example: '2026-10-28' })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('date') })
   date: string;
 
@@ -368,6 +425,23 @@ export class CreateFinanceAccountDto extends ClientRequestDto {
 export class UpdateFinanceAccountDto extends PartialType(
   OmitType(CreateFinanceAccountDto, CLIENT_REQUEST_FIELD),
 ) {}
+
+// Anular o apagar de uma conta: recria-a e religa o que ficou sem conta.
+export class RestoreFinanceAccountDto extends CreateFinanceAccountDto {
+  @ApiPropertyOptional({ type: [String], maxItems: MAX_FINANCE_RELINK_IDS })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_FINANCE_RELINK_IDS)
+  @IsUUID(undefined, { each: true })
+  entryIds?: string[];
+
+  @ApiPropertyOptional({ type: [String], maxItems: MAX_FINANCE_RELINK_IDS })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_FINANCE_RELINK_IDS)
+  @IsUUID(undefined, { each: true })
+  holdingIds?: string[];
+}
 
 // Posicao: manda `quantity` OU `investedCents` (nunca os dois).
 // Com investedCents a quantidade = investedCents / preco (priceCents ou a
@@ -441,14 +515,22 @@ export class FinanceAnalyticsQueryDto {
 
   @ApiPropertyOptional({ example: '2026-05-01' })
   @IsOptional()
-  @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('from') })
+  @IsRealDateKey({ message: DATE_MESSAGE('from') })
   from?: string;
 
   // Inclusive.
   @ApiPropertyOptional({ example: '2026-10-31' })
   @IsOptional()
-  @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('to') })
+  @IsRealDateKey({ message: DATE_MESSAGE('to') })
   to?: string;
+}
+
+export class FinanceSummaryQueryDto {
+  @ApiProperty({ example: '2026-05', description: 'Month, YYYY-MM.' })
+  @Matches(FINANCE_MONTH_PATTERN, {
+    message: 'month must be formatted YYYY-MM.',
+  })
+  month!: string;
 }
 
 export class CreateFinanceGoalDto extends ClientRequestDto {
@@ -479,6 +561,7 @@ export class CreateFinanceGoalDto extends ClientRequestDto {
   @ApiPropertyOptional({ example: '2027-06-30', nullable: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, {
     message: 'deadline must be formatted YYYY-MM-DD.',
   })

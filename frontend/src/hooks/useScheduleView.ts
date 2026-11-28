@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { usePersistedState, type PersistedCodec } from './usePersistedState';
 
 export type ScheduleView = 'week' | 'month';
 
@@ -10,28 +10,15 @@ export function isScheduleView(value: string | null): value is ScheduleView {
   return SCHEDULE_VIEWS.some((view) => view === value);
 }
 
-function loadView(): ScheduleView {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return isScheduleView(stored) ? stored : DEFAULT_VIEW;
-  } catch {
-    return DEFAULT_VIEW;
-  }
-}
+const CODEC: PersistedCodec<ScheduleView> = {
+  parse: (raw) => (isScheduleView(raw) ? raw : DEFAULT_VIEW),
+};
 
 // Semana ou mes no Schedule. Mesmo formato de useTableDensity: preferencia
 // local, gravada so por conveniencia, e a semana continua a ser o default
 // para quem nunca mexeu no botao.
 export function useScheduleView() {
-  const [view, setView] = useState<ScheduleView>(loadView);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, view);
-    } catch {
-      // Best-effort only - same reasoning as useTableDensity.
-    }
-  }, [view]);
+  const [view, setView] = usePersistedState(STORAGE_KEY, CODEC);
 
   return { view, setView };
 }

@@ -1,5 +1,6 @@
 import type { SecurityLog } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
+import { SECURITY_LOG_METHOD_STYLES, SECURITY_LOG_TYPE_LABEL_KEYS } from './securityLogDisplay';
 
 interface SecurityLogRowProps {
   log: SecurityLog;
@@ -7,29 +8,13 @@ interface SecurityLogRowProps {
   isBanned: boolean;
 }
 
-// Linhas que não são bloqueios de rate limit (moderação de pads pelo
-// admin, E-08): mostradas com um rótulo em vez de parecerem um ataque.
-const TYPE_LABEL_KEYS: Partial<Record<SecurityLog['type'], string>> = {
-  ADMIN_PAD_DELETED: 'ui.securityTypeAdminPadDeleted',
-  ADMIN_PAD_SOURCE_BLOCKED: 'ui.securityTypeAdminPadSourceBlocked',
-  REFRESH_TOKEN_REUSE: 'devices.securityTypeRefreshReuse',
-};
-
-const METHOD_STYLES: Record<string, string> = {
-  GET: 'text-sky-400',
-  POST: 'text-violet-400',
-  PATCH: 'text-amber-400',
-  PUT: 'text-amber-400',
-  DELETE: 'text-red-400',
-};
-
 export default function SecurityLogRow({ log, onBanIp, isBanned }: SecurityLogRowProps) {
-  const { t } = useI18n();
-  const typeLabelKey = TYPE_LABEL_KEYS[log.type];
+  const { t, lang } = useI18n();
+  const typeLabelKey = SECURITY_LOG_TYPE_LABEL_KEYS[log.type];
   return (
     <tr className="border-b border-neutral-800 last:border-0 hover:bg-neutral-800/30 transition-colors">
       <td className="px-4 py-3 text-neutral-400">
-        {new Date(log.createdAt).toLocaleString()}
+        {new Date(log.createdAt).toLocaleString(lang)}
       </td>
       <td className="px-4 py-3 font-mono text-neutral-200">
         <div className="flex items-center gap-2">
@@ -40,14 +25,14 @@ export default function SecurityLogRow({ log, onBanIp, isBanned }: SecurityLogRo
             <button
               type="button"
               onClick={() => onBanIp(log.ip)}
-              className="text-xs text-amber-500 hover:text-amber-400 hover:underline"
+              className="text-xs text-amber-500 hover:text-amber-400 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             >
               {t('ui.ban')}
             </button>
           )}
         </div>
       </td>
-      <td className={`px-4 py-3 font-semibold ${METHOD_STYLES[log.method] ?? 'text-neutral-300'}`}>
+      <td className={`px-4 py-3 font-semibold ${SECURITY_LOG_METHOD_STYLES[log.method] ?? 'text-neutral-300'}`}>
         {log.method}
       </td>
       <td className="px-4 py-3 font-mono text-neutral-300 max-w-xs truncate" title={log.path}>

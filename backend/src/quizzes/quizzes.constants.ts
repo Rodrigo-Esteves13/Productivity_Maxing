@@ -1,4 +1,5 @@
 import { QUIZ_MAX_FILE_BYTES } from './quiz-format';
+import { MS_PER_DAY } from '../common/time.constants';
 
 export const MAX_QUIZZES_PER_USER = 50;
 export const QUIZ_WRITES_PER_MINUTE = 30;
@@ -11,7 +12,7 @@ export const QUIZ_SHARE_LISTS_PER_MINUTE = 30;
 export const QUIZ_SHARE_LIST_MAX = 100;
 // Tentativas guardadas por quiz (as mais antigas saem).
 export const QUIZ_ATTEMPTS_KEPT = 100;
-export const QUIZ_ATTEMPT_MAX_DURATION_MS = 24 * 60 * 60 * 1000;
+export const QUIZ_ATTEMPT_MAX_DURATION_MS = MS_PER_DAY;
 // Tempo maximo contado numa unica resposta (o resto e pausa esquecida).
 export const QUIZ_QUESTION_MAX_TIME_MS = 30 * 60 * 1000;
 // Id de pergunta: letras, digitos, _ e -, ate 48 caracteres.

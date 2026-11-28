@@ -91,4 +91,8 @@ export const fase7b: Record<string, string> = {
   'areas.empty.createFirst': "最初の科目を作成",
   'areas.section.count': "{count} 科目",
   'areas.overview.failed': "タスクとリスクの詳細を読み込めませんでした。科目は通常どおり使用できます。",
+  'reportCard.improve.title': "成績の改善",
+  'reportCard.improve.intro': "合格した科目が1点または2点上がった場合、この期間の平均がどれだけ上がるかを示します。上がり幅が大きい順です。",
+  'reportCard.improve.raise': "+{delta}の場合",
+  'reportCard.improve.caveat': "あくまでシミュレーションです。成績の改善ができるか（通常は科目ごとに1回、特別試験期間は不可）は学校の規則によるため、計画前に確認してください。",
 };

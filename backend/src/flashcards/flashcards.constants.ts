@@ -9,3 +9,7 @@ export const FLASHCARD_LIST_LIMIT = 2000;
 export const FLASHCARD_FORECAST_DAYS = 30;
 // Chave de byArea para cartoes sem area.
 export const FLASHCARD_FORECAST_NO_AREA = 'none';
+// Limites do estado de agenda aceite ao repor um cartao (POST /flashcards/:id/restore).
+export const FLASHCARD_EASE_MIN = 1.3;
+export const FLASHCARD_EASE_MAX = 10;
+export const FLASHCARD_STATE_COUNT_MAX = 100000;

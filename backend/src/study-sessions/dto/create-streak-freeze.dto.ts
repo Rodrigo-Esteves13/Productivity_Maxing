@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, Matches } from 'class-validator';
 import { DATE_KEY_PATTERN } from '../../common/date-key.util';
+import { IsRealDateKey } from '../../common/validators/is-real-date-key.decorator';
 
 export class CreateStreakFreezeDto {
   @ApiPropertyOptional({
@@ -10,6 +11,7 @@ export class CreateStreakFreezeDto {
   })
   @IsOptional()
   @IsString()
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN)
   dateKey?: string;
 }

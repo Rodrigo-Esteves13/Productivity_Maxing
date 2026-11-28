@@ -13,7 +13,7 @@ export default function DeleteAccountSection({ onOpen }: DeleteAccountSectionPro
       </p>
       <button
         onClick={onOpen}
-        className="px-4 py-2 rounded-lg border border-red-900/60 text-red-400 text-sm font-medium hover:bg-red-950/40 transition-colors"
+        className="pointer-coarse:min-h-11 px-4 py-2 rounded-lg border border-red-900/60 text-red-400 text-sm font-medium hover:bg-red-950/40 transition-colors"
       >
         {t('ui.deleteAccount')}
       </button>

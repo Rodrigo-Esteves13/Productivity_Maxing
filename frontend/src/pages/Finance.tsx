@@ -5,6 +5,7 @@ import PageHeader from '../components/Layout/PageHeader';
 import ErrorState from '../components/UI/ErrorState';
 import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import IconButton from '../components/UI/IconButton';
+import Button from '../components/UI/Button';
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/UI/Icons';
 import FinanceBalances from '../components/Finance/FinanceBalances';
 import FinanceOverview from '../components/Finance/FinanceOverview';
@@ -110,18 +111,30 @@ function FinanceContent() {
         confirmLabel: t('common.delete'),
         tone: 'danger',
         run: async () => {
-          await run();
+          // A falha ja deu toast no hook; aqui impede o dialogo de fechar como se tivesse corrido bem.
+          if (!(await run())) throw new Error('finance write failed');
         },
       }),
     [request, t],
   );
 
-  const { removeEntry, removeGoal, removeAccount, removeHolding } = finance;
+  const { removeEntry, removeEntries, removeGoal, removeAccount, removeHolding } = finance;
+  const requestRemoveEntries = useCallback(
+    (entries: FinanceEntry[]) =>
+      confirmDelete(
+        t('f7money.deleteSelectedTitle'),
+        t(entries.some((e) => e.frequency) ? 'f7money.deleteSelectedRulesConfirm' : 'f7money.deleteSelectedConfirm', {
+          count: entries.length,
+        }),
+        () => removeEntries(entries.map((e) => e.id)),
+      ),
+    [confirmDelete, removeEntries, t],
+  );
   const requestRemoveEntry = useCallback(
     (entry: FinanceEntry) =>
       confirmDelete(
         t('finance.deleteEntry'),
-        t(entry.frequency ? 'finance.deleteRuleConfirm' : 'finance.deleteEntryConfirm', { amount: moneyText(entry.amountCents, currency) }),
+        t(entry.frequency ? 'ux4fin.deleteRuleConfirm' : 'finance.deleteEntryConfirm', { amount: moneyText(entry.amountCents, currency) }),
         () => removeEntry(entry.id),
       ),
     [confirmDelete, removeEntry, t, currency, moneyText],
@@ -130,23 +143,23 @@ function FinanceContent() {
     (item: FinanceOwedItem) =>
       confirmDelete(
         t('finance.owed.delete'),
-        t('finance.owed.deleteConfirm', { name: item.debtorName ?? item.note ?? t('finance.owed.someone') }),
+        t('ux4fin.owedDeleteConfirm', { name: item.debtorName ?? item.note ?? t('finance.owed.someone') }),
         () => removeEntry(item.entryId),
       ),
     [confirmDelete, removeEntry, t],
   );
   const requestRemoveGoal = useCallback(
-    (goal: FinanceGoal) => confirmDelete(t('finance.deleteGoal'), t('finance.deleteGoalConfirm', { name: goal.name }), () => removeGoal(goal.id)),
+    (goal: FinanceGoal) => confirmDelete(t('finance.deleteGoal'), t('ux4fin.deleteGoalConfirm', { name: goal.name }), () => removeGoal(goal.id)),
     [confirmDelete, removeGoal, t],
   );
   const requestRemoveAccount = useCallback(
     (account: FinanceAccount) =>
-      confirmDelete(t('finance.deleteAccount'), t('finance.deleteAccountConfirm', { name: account.name }), () => removeAccount(account.id)),
+      confirmDelete(t('finance.deleteAccount'), t('ux4fin.deleteAccountConfirm', { name: account.name }), () => removeAccount(account.id)),
     [confirmDelete, removeAccount, t],
   );
   const requestRemoveHolding = useCallback(
     (holding: FinanceHolding) =>
-      confirmDelete(t('finance.deleteHolding'), t('finance.deleteHoldingConfirm', { symbol: holding.symbol }), () => removeHolding(holding.id)),
+      confirmDelete(t('finance.deleteHolding'), t('ux4fin.deleteHoldingConfirm', { symbol: holding.symbol }), () => removeHolding(holding.id)),
     [confirmDelete, removeHolding, t],
   );
 
@@ -174,13 +187,23 @@ function FinanceContent() {
         <IconButton label={t('finance.nextMonth')} onClick={() => setMonth((m) => shiftMonth(m, 1))}>
           <ChevronRightIcon className="h-5 w-5" />
         </IconButton>
+        {month !== currentMonth && (
+          <Button type="button" variant="secondary" size="sm" onClick={() => setMonth(currentMonth)}>
+            {t('ux4fin.currentMonth')}
+          </Button>
+        )}
       </div>
       {error && !data ? (
-        <ErrorState message={t('finance.loadError')} />
+        <ErrorState message={t('finance.loadError')} onRetry={() => void finance.retry()} />
       ) : !data ? (
         <CardGridSkeleton cards={3} />
       ) : (
         <>
+          {error && (
+            <div className="mb-4">
+              <ErrorState message={t('finance.loadError')} onRetry={() => void finance.retry()} />
+            </div>
+          )}
           <FinanceBalances summary={data} />
           <FinanceOverview key={data.settings.currency} summary={data} onSaveSettings={finance.saveSettings} />
           <FinanceHoldings
@@ -201,6 +224,7 @@ function FinanceContent() {
             onAdd={finance.addEntry}
             onUpdate={finance.updateEntry}
             onRemove={requestRemoveEntry}
+            onRemoveMany={requestRemoveEntries}
           />
           <FinanceOwed
             owed={data.owed}

@@ -17,7 +17,7 @@ const CHECK_COLOR: Record<CheckState, 'cyan' | 'red'> = { ok: 'cyan', fail: 'red
 const CARD = 'rounded-xl border border-neutral-800 bg-neutral-900';
 
 export default function Status() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { snapshot, responseMs, lastChecked, isChecking, refresh } = useStatusPage();
 
   useSeo({
@@ -87,7 +87,7 @@ export default function Status() {
               </div>
               <div className={`${CARD} p-4`}>
                 <dt className="text-neutral-500">{t('status.lastChecked')}</dt>
-                <dd className="mt-1 text-neutral-100">{lastChecked ? lastChecked.toLocaleTimeString() : '-'}</dd>
+                <dd className="mt-1 text-neutral-100">{lastChecked ? lastChecked.toLocaleTimeString(lang) : '-'}</dd>
               </div>
             </dl>
             <p className="text-xs text-neutral-500">{t('status.autoRefresh')}</p>

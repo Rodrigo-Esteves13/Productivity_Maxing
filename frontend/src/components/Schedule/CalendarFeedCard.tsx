@@ -13,6 +13,8 @@ import type { CalendarFeedStatus } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
 import Card from '../UI/Card';
 import ToggleRow from '../UI/ToggleRow';
+import ErrorState from '../UI/ErrorState';
+import LinesSkeleton from '../UI/LinesSkeleton';
 
 // Feed .ics subscrivivel: classes, turnos, viagens, blocos de estudo e tasks
 // no Google/Apple/Outlook Calendar sem OAuth. So leitura.
@@ -28,6 +30,7 @@ export default function CalendarFeedCard() {
   const load = useCallback(async () => {
     try {
       setStatus(await getCalendarFeed());
+      setLoadFailed(false);
     } catch {
       setLoadFailed(true);
     }
@@ -69,8 +72,24 @@ export default function CalendarFeedCard() {
     if (ok) await run(disableCalendarFeed, t('ui.couldNotTurnOffThe'));
   };
 
-  if (loadFailed) return null;
-  if (status === null) return null;
+  if (loadFailed || status === null) {
+    return (
+      <Card>
+        <h2 className="mb-3 text-lg font-semibold text-white">{t('ui.calendarFeedIcs')}</h2>
+        {loadFailed ? (
+          <ErrorState
+            message={t('ux4sched.feed.loadFailed')}
+            onRetry={() => {
+              setLoadFailed(false);
+              void load();
+            }}
+          />
+        ) : (
+          <LinesSkeleton lines={2} />
+        )}
+      </Card>
+    );
+  }
 
   const url = status.token ? feedUrl(status.token, tasksOnly) : null;
 
@@ -93,7 +112,7 @@ export default function CalendarFeedCard() {
           type="button"
           disabled={isBusy}
           onClick={() => void run(enableCalendarFeed, t('ui.couldNotCreateTheLink'))}
-          className="mt-4 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 transition-colors"
+          className="mt-4 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 transition-colors pointer-coarse:min-h-11"
         >
           {isBusy ? t('common.creating') : t('ui.createSubscriptionLink')}
         </button>
@@ -122,7 +141,7 @@ export default function CalendarFeedCard() {
           <div className="flex flex-wrap gap-3 text-sm">
             <a
               href={feedWebcalUrl(status.token as string, tasksOnly)}
-              className="underline text-violet-400 hover:text-violet-300"
+              className="underline text-violet-400 hover:text-violet-300 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
             >
               {t('ui.openInCalendarApp')}
             </a>
@@ -130,7 +149,7 @@ export default function CalendarFeedCard() {
               type="button"
               disabled={isBusy}
               onClick={() => void handleRotate()}
-              className="text-neutral-400 hover:text-white disabled:opacity-50"
+              className="text-neutral-400 hover:text-white disabled:opacity-50 pointer-coarse:min-h-11"
             >
               {t('ui.newLink')}
             </button>
@@ -138,7 +157,7 @@ export default function CalendarFeedCard() {
               type="button"
               disabled={isBusy}
               onClick={() => void handleDisable()}
-              className="text-neutral-400 hover:text-red-400 disabled:opacity-50"
+              className="text-neutral-400 hover:text-red-400 disabled:opacity-50 pointer-coarse:min-h-11"
             >
               {t('ui.turnOff')}
             </button>

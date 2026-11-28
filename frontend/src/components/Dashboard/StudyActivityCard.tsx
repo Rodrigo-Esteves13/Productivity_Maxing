@@ -14,6 +14,7 @@ import { lisbonTodayKey } from '../../lib/dateKey';
 import { useI18n } from '../../i18n/useI18n';
 import { fillNodes } from '../../i18n/fillNodes';
 import StreakRestDayButton from '../Study/StreakRestDayButton';
+import { useStudyDataKey } from '../../hooks/useSessionEndKey';
 
 const WINDOW_DAYS = 84; // ~12 weeks, GitHub-contributions-style grid
 const DEFAULT_GOAL_MINUTES = 60;
@@ -64,6 +65,9 @@ export default function StudyActivityCard() {
   const [streak, setStreak] = useState<StudyStreak | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [goalMinutes, setGoalMinutes] = useState(DEFAULT_GOAL_MINUTES);
+  // Muda ao parar uma sessao, ao mexer no historico de sessoes ou ao usar um
+  // dia de descanso (aqui ou no Focus): totais e streak voltam a ler em silencio.
+  const studyKey = useStudyDataKey();
 
   useEffect(() => {
     let cancelled = false;
@@ -86,14 +90,7 @@ export default function StudyActivityCard() {
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  // Depois de pedir/desfazer um dia de descanso: so a streak muda.
-  const reloadStreak = () => {
-    getStudyStreak()
-      .then(setStreak)
-      .catch((err) => console.error('Failed to reload study streak:', err));
-  };
+  }, [studyKey]);
 
   if (isLoading) return null;
 
@@ -156,7 +153,7 @@ export default function StudyActivityCard() {
       </div>
       {streak && (streak.currentStreak > 0 || streak.restDayToday) && (
         <div className="mb-3">
-          <StreakRestDayButton onChange={reloadStreak} />
+          <StreakRestDayButton refreshKey={studyKey} />
         </div>
       )}
 
@@ -187,7 +184,7 @@ export default function StudyActivityCard() {
               aria-label={t('ui.minGoal')}
               value={goalMinutes}
               onChange={(e) => setGoalMinutes(Math.max(1, Number(e.target.value) || 1))}
-              className="w-14 bg-transparent border-b border-neutral-700 text-neutral-300 text-center"
+              className="pointer-coarse:min-h-11 w-14 bg-transparent border-b border-neutral-700 text-neutral-300 text-center"
             />{' '}
             {t('ui.minGoal')}
           </span>

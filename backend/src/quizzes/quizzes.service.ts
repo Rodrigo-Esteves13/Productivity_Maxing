@@ -466,6 +466,29 @@ export class QuizzesService {
     });
   }
 
+  /**
+   * Apaga uma tentativa; a ultima nota passa a ser a da mais recente que
+   * sobra. As estatisticas por pergunta sao agregadas (a tentativa nao guarda
+   * as respostas), por isso ficam como estao.
+   */
+  removeAttempt(userId: string, id: string, attemptId: string) {
+    return this.lockedWrite(userId, id, async (tx) => {
+      const { count } = await tx.quizAttempt.deleteMany({
+        where: { id: attemptId, quizId: id, userId },
+      });
+      if (count === 0) throw new NotFoundException('Attempt not found.');
+      const latest = await tx.quizAttempt.findFirst({
+        where: { quizId: id, userId },
+        orderBy: { finishedAt: 'desc' },
+        select: { total: true, correct: true },
+      });
+      const lastScorePct = latest?.total
+        ? Math.round((latest.correct / latest.total) * PERCENT)
+        : null;
+      await tx.quiz.update({ where: { id }, data: { lastScorePct } });
+    });
+  }
+
   /** Poe as estatisticas por pergunta a zero. */
   clearStats(userId: string, id: string) {
     return this.lockedWrite(userId, id, async (tx) => {

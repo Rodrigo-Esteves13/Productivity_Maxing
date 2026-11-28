@@ -57,7 +57,7 @@ export default function AttendanceCard({ refreshKey }: AttendanceCardProps) {
         />
         <span>%</span>
         {!isDefault && (
-          <button type="button" onClick={resetLimit} className="text-violet-400 hover:text-violet-300 underline decoration-dotted">
+          <button type="button" onClick={resetLimit} className="text-violet-400 hover:text-violet-300 underline decoration-dotted pointer-coarse:min-h-11">
             {t('attendance.limit.reset')}
           </button>
         )}
@@ -81,7 +81,7 @@ export default function AttendanceCard({ refreshKey }: AttendanceCardProps) {
               key={row.subject}
               className="flex flex-col gap-1 py-2 text-sm @sm:flex-row @sm:items-center @sm:justify-between @sm:gap-3"
             >
-              <span className="min-w-0 truncate text-neutral-200">{row.subject}</span>
+              <span title={row.subject} className="min-w-0 truncate text-neutral-200">{row.subject}</span>
               <span className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums">
                 <span className={row.missed > 0 ? 'font-semibold text-red-400' : 'text-neutral-500'}>
                   {t('attendance.missedCount', { count: row.missed })}

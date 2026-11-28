@@ -16,6 +16,7 @@ import { useNotebookAreas } from '../../hooks/useNotebookAreas';
 import { useLoadOnce } from '../../hooks/useLoadOnce';
 import { useConfirmAction } from '../../hooks/useConfirmAction';
 import { useAuth } from '../../context/useAuth';
+import { useReloadOnReturn } from '../../hooks/useReloadOnReturn';
 import { useI18n } from '../../i18n/useI18n';
 import { formatTaskDate } from '../../lib/timeFormat';
 import { turmaLinkedEntryPath } from '../../lib/appLinks';
@@ -34,6 +35,7 @@ export default function TurmaSubjectsTab({ turmaId, isDelegado }: TurmaSubjectsT
   const { user } = useAuth();
   const { data, isLoading, error, reload } = useTurmaLinkedAreas(turmaId);
   const confirm = useConfirmAction(t('turma.actionError'));
+  useReloadOnReturn(reload);
 
   return (
     <div className="space-y-4">
@@ -173,7 +175,7 @@ function LinkedSubject({ turmaId, link, canUnlink, onUnlink }: LinkedSubjectProp
           className="flex min-w-0 flex-1 items-center gap-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
         >
           <ColorDot color={areaColorOf(link.areaColor)} size="xs" />
-          <span className="min-w-0 truncate text-sm font-medium text-white">{link.areaName}</span>
+          <span className="min-w-0 truncate text-sm font-medium text-white" title={link.areaName}>{link.areaName}</span>
           <span className="shrink-0 text-xs text-neutral-500">
             {link.ownerName ?? t('social.anonymous')} · {t('turma.subjects.entryCount', { count: link.entryCount })}
           </span>
@@ -196,7 +198,8 @@ function LinkedSubject({ turmaId, link, canUnlink, onUnlink }: LinkedSubjectProp
 function LinkedEntries({ turmaId, linkId }: { turmaId: string; linkId: string }) {
   const { t } = useI18n();
   const fetcher = useCallback(() => getLinkedEntries(turmaId, linkId), [turmaId, linkId]);
-  const { data, isLoading, error } = useLoadOnce(fetcher);
+  const { data, isLoading, error, reload } = useLoadOnce(fetcher);
+  useReloadOnReturn(reload);
 
   if (isLoading) return <LinesSkeleton lines={2} className="px-3 pb-3" />;
   if (error) return <p className="px-3 pb-3 text-xs text-red-400">{t('turma.loadError')}</p>;
@@ -209,7 +212,7 @@ function LinkedEntries({ turmaId, linkId }: { turmaId: string; linkId: string })
             to={turmaLinkedEntryPath(turmaId, linkId, entry.id)}
             className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-neutral-800"
           >
-            <span className="min-w-0 truncate text-neutral-200">{entry.title}</span>
+            <span className="min-w-0 truncate text-neutral-200" title={entry.title}>{entry.title}</span>
             <span className="shrink-0 text-xs text-neutral-500">{formatTaskDate(entry.date)}</span>
           </Link>
         </li>

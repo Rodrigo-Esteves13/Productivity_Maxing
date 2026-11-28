@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSchedule } from '../../hooks/useSchedule';
 import { useWorkShiftRange } from '../../hooks/useWorkShiftRange';
-import { useScheduleTasks } from '../../hooks/useScheduleTasks';
 import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
-import type { ClassOccurrence, WorkShiftOccurrence } from '../../types/models';
+import EmptyState from '../UI/EmptyState';
+import type { ClassOccurrence, Task, WorkShiftOccurrence } from '../../types/models';
 import { toDateKey } from '../../lib/dateKey';
 import { mergeAgenda } from '../../lib/agenda';
 import { buildDeadlineChips, type DeadlineChip } from '../../lib/monthAgenda';
 import { weekdayLabel } from '../../lib/timeFormat';
 import { todayUtcAnchored } from '../../lib/weekDates';
 import { minutesSinceMidnight } from '../../lib/todayOverview';
+import { groupByKey } from '../../lib/groupByKey';
 import { useFeedback } from '../../context/useFeedback';
 import WeekDayCell from './WeekDayCell';
 import ShiftChangeModal from './ShiftChangeModal';
@@ -40,9 +41,16 @@ interface WeekGridProps {
   viewToggle?: ReactNode;
   // Chamado depois de gravar uma presenca (o resumo de presencas refaz o fetch).
   onAttendanceChanged?: () => void;
-  // Aula desmarcada ou turno mudado: a pagina refaz o plano e pergunta se
-  // o Google Calendar deve ser atualizado.
+  // Turno mudado: a pagina refaz grelha e dependentes e pergunta se o Google
+  // Calendar deve ser atualizado.
   onScheduleChanged?: () => void;
+  // Aula desmarcada (ou desfeito): a grelha ja mostra o resultado, so os
+  // cartoes que contam horas de aulas e o Google Calendar precisam de saber.
+  onCancellationChanged?: () => void;
+  // Prazos das tasks, carregados uma vez pela pagina.
+  tasks: Task[];
+  // Abre o formulario de editar uma aula.
+  onEditClass?: (occurrence: ClassOccurrence) => void;
 }
 
 export default function WeekGrid({
@@ -51,6 +59,9 @@ export default function WeekGrid({
   viewToggle,
   onAttendanceChanged,
   onScheduleChanged,
+  onCancellationChanged,
+  tasks,
+  onEditClass,
 }: WeekGridProps) {
   const { t, lang } = useI18n();
   const { notify } = useFeedback();
@@ -87,9 +98,9 @@ export default function WeekGrid({
       }
       notify(t(cancelled ? 'classCancel.done' : 'classCancel.undone', { subject: occurrence.subject }), 'success');
       onAttendanceChanged?.();
-      onScheduleChanged?.();
+      onCancellationChanged?.();
     },
-    [setCancelled, notify, t, onAttendanceChanged, onScheduleChanged],
+    [setCancelled, notify, t, onAttendanceChanged, onCancellationChanged],
   );
 
   useEffect(() => {
@@ -105,29 +116,26 @@ export default function WeekGrid({
   );
   // Prazos sao best-effort, como os turnos: se falharem a grelha de aulas
   // continua a aparecer (a vista mensal e que mostra o erro).
-  const { tasks } = useScheduleTasks();
   const deadlinesByDay = useMemo(() => buildDeadlineChips(tasks), [tasks]);
 
-  const shiftsByDay = new Map<string, WorkShiftOccurrence[]>();
-  for (const shift of shiftOccurrences) {
-    const list = shiftsByDay.get(shift.date) ?? [];
-    list.push(shift);
-    shiftsByDay.set(shift.date, list);
-  }
+  // Memo a mao: o eslint-disable do efeito acima pode fazer o React Compiler
+  // saltar este componente.
+  const shiftsByDay = useMemo(() => groupByKey(shiftOccurrences, (shift) => shift.date), [shiftOccurrences]);
 
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(weekStart);
-    date.setUTCDate(date.getUTCDate() + i);
-    return date;
-  });
+  const days = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(weekStart);
+        date.setUTCDate(date.getUTCDate() + i);
+        return date;
+      }),
+    [weekStart],
+  );
 
-  const occurrencesByDay = new Map<string, ClassOccurrence[]>();
-  for (const occ of occurrences) {
-    const key = occ.date.slice(0, 10);
-    const list = occurrencesByDay.get(key) ?? [];
-    list.push(occ);
-    occurrencesByDay.set(key, list);
-  }
+  const occurrencesByDay = useMemo(
+    () => groupByKey(occurrences, (occ) => occ.date.slice(0, 10)),
+    [occurrences],
+  );
 
   const todayKey = toDateKey(todayUtcAnchored());
   const holidayName = (key: string): string | undefined => {
@@ -159,7 +167,7 @@ export default function WeekGrid({
       </div>
 
       {isLoading && <LinesSkeleton lines={6} />}
-      {!isLoading && error && <ErrorState message={error} />}
+      {!isLoading && error && <ErrorState message={error} onRetry={() => void refetch()} />}
 
       {!isLoading && !error && (
         // 1 coluna no telemovel, 2 em ecras medios e 7 so em ecras largos:
@@ -178,12 +186,17 @@ export default function WeekGrid({
                 markableUntilMinutes={markableUntil(key)}
                 onAttendanceChange={handleAttendance}
                 onCancelChange={handleCancelled}
+                onEditClass={onEditClass}
                 onShiftClick={setChangingShift}
                 holidayName={holidayName(key)}
               />
             );
           })}
         </div>
+      )}
+
+      {!isLoading && !error && occurrences.length === 0 && shiftOccurrences.length === 0 && (
+        <EmptyState variant="inline" message={t('ux4sched.week.empty')} />
       )}
 
       {!isLoading && !error && <AgendaLegend />}

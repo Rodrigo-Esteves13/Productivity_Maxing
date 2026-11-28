@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { getUserTasks } from '../api/userService';
+import { getUserTasks } from '../api/tasksService';
 import { getSessionHistory } from '../api/studySessionsService';
 import { buildPeriodReview, historyDaysForPeriod } from '../lib/periodReview';
 import type { PeriodReportCard, StudySession, Task } from '../types/models';

@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import type { Task } from '../../types/models';
 import { computeWeightVsGrade } from '../../utils/weightVsGrade';
 import { scaleMax } from '../../lib/gradeScale';
 import { FULL_PERCENT } from '../../lib/percent';
@@ -7,11 +6,7 @@ import { ChartPieIcon } from '../UI/Icons';
 import ProgressBar from '../UI/ProgressBar';
 import DashboardCard, { CardBody, CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
-
-interface WeightVsGradeCardProps {
-  tasks: Task[];
-  scale: string;
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 const INTERPRETATION_KEYS = {
   higherOnHeavy: 'weightVsGrade.higherOnHeavy',
@@ -20,7 +15,8 @@ const INTERPRETATION_KEYS = {
 } as const;
 
 // Peso da avaliacao vs a nota real: correlacao e medias por balde de peso.
-export default function WeightVsGradeCard({ tasks, scale }: WeightVsGradeCardProps) {
+export default function WeightVsGradeCard() {
+  const { academicTasks: tasks, gradeScale: scale } = useDashboardCardData();
   const { t } = useI18n();
   const data = useMemo(() => computeWeightVsGrade(tasks), [tasks]);
   if (data.coefficient === null || data.kind === null) return null;

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { updateTask } from '../../../api/userService';
+import { updateTask } from '../../../api/tasksService';
 import { useI18n } from '../../../i18n/useI18n';
 
 const MIN_HOURS = 0.25;
@@ -62,11 +62,11 @@ export default function EstimateEditor({ taskId, currentMinutes, onSaved, onCanc
       <button
         type="submit"
         disabled={isSaving}
-        className="px-2.5 py-1 text-xs rounded-md bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50"
+        className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 px-2.5 py-1 text-xs rounded-md bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50"
       >
         {isSaving ? t('common.saving') : t('ui.save')}
       </button>
-      <button type="button" onClick={onCancel} className="text-xs text-neutral-400 hover:text-white">
+      <button type="button" onClick={onCancel} className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-xs text-neutral-400 hover:text-white">
         {t('ui.cancel')}
       </button>
       {error && <span role="alert" className="text-xs text-red-400">{error}</span>}

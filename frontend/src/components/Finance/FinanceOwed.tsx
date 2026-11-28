@@ -67,7 +67,7 @@ function ReceivedForm({ item, onSubmit, onCancel, partial = false }: ReceivedFor
       <Input label={t(partial ? 'finance.owed.paymentAmount' : 'finance.owed.receivedAmount')} inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
       <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
         <FinanceSubmitButton isSubmitting={isSubmitting}>{t(partial ? 'finance.owed.confirmPayment' : 'finance.owed.confirmReceived')}</FinanceSubmitButton>
-        <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+        <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
           {t('common.cancel')}
         </button>
         {error && <p className="text-sm text-red-400">{error}</p>}
@@ -93,7 +93,7 @@ function OwedRow({ item, currency, onReceived, onPayment, onRemove }: OwedRowPro
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-neutral-100">
-            <span className="truncate">{item.debtorName ?? item.note ?? t('finance.owed.someone')}</span>
+            <span className="truncate" title={item.debtorName ?? item.note ?? t('finance.owed.someone')}>{item.debtorName ?? item.note ?? t('finance.owed.someone')}</span>
             {item.overdue && (
               <span className="rounded-full border border-red-800 bg-red-900/50 px-2 py-0.5 text-[11px] font-semibold text-red-400">
                 {t('finance.owed.overdueDays', { count: item.daysLate })}
@@ -159,10 +159,10 @@ function OwedRow({ item, currency, onReceived, onPayment, onRemove }: OwedRowPro
         />
       ) : (
         <div className="mt-2 flex flex-wrap gap-4">
-          <button type="button" onClick={() => setMode('payment')} className="text-sm text-violet-400 hover:text-violet-300">
+          <button type="button" onClick={() => setMode('payment')} className="text-sm text-violet-400 hover:text-violet-300 pointer-coarse:min-h-11">
             {t('finance.owed.addPayment')}
           </button>
-          <button type="button" onClick={() => setMode('received')} className="text-sm text-violet-400 hover:text-violet-300">
+          <button type="button" onClick={() => setMode('received')} className="text-sm text-violet-400 hover:text-violet-300 pointer-coarse:min-h-11">
             {t('finance.owed.markReceived')}
           </button>
         </div>

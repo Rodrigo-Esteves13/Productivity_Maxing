@@ -6,6 +6,8 @@ import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
 import { formatDuration } from '../../lib/timeFormat';
 import { useI18n } from '../../i18n/useI18n';
+import { useStudyDataKey } from '../../hooks/useSessionEndKey';
+import { CHART_COLORS } from '../../lib/chartColors';
 
 // "Where does my study time actually go" - a horizontal breakdown of all
 // finished Focus sessions by Area, all-time. Complements AreaBreakdownCard
@@ -15,6 +17,8 @@ export default function TimeByAreaCard() {
   const { t } = useI18n();
   const [rows, setRows] = useState<AreaTimeBreakdown[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Parar, corrigir ou apagar uma sessao muda o tempo por Area.
+  const studyKey = useStudyDataKey();
 
   useEffect(() => {
     let cancelled = false;
@@ -29,7 +33,7 @@ export default function TimeByAreaCard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [studyKey]);
 
   if (isLoading) return null;
   if (rows.length === 0) return null;
@@ -47,8 +51,8 @@ export default function TimeByAreaCard() {
           <li key={row.areaId ?? 'none'} className="text-sm">
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-2 min-w-0">
-                <ColorDot size="xs" color={row.areaColorHex ?? '#525252'} />
-                <span className="truncate text-neutral-200">{row.areaName}</span>
+                <ColorDot size="xs" color={row.areaColorHex ?? CHART_COLORS.fallback} />
+                <span className="truncate text-neutral-200" title={row.areaName}>{row.areaName}</span>
               </div>
               <span className="text-xs text-neutral-500 shrink-0">
                 {formatDuration(row.totalMinutes)}

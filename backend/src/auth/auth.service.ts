@@ -20,7 +20,10 @@ import {
   type RegisterOutcome,
 } from './services/password-auth.service';
 import { EmailVerificationService } from './services/email-verification.service';
-import { TwoFactorService } from './services/two-factor.service';
+import {
+  TwoFactorService,
+  type TwoFactorClientInfo,
+} from './services/two-factor.service';
 import {
   SessionTokenService,
   type AccessSessionStatus,
@@ -237,8 +240,12 @@ export class AuthService {
     return this.twoFactor.createChallengeToken(user);
   }
 
-  completeTwoFactorLogin(token: string, code: string): Promise<User> {
-    return this.twoFactor.completeLogin(token, code);
+  completeTwoFactorLogin(
+    token: string,
+    code: string,
+    client?: TwoFactorClientInfo,
+  ): Promise<User> {
+    return this.twoFactor.completeLogin(token, code, client);
   }
 
   twoFactorStatus(userId: string) {
@@ -372,6 +379,14 @@ export class AuthService {
     incomingToken: string,
   ): Promise<{ user: User; scope: ApiKeyScope } | null> {
     return this.apiKeys.validateApiKey(incomingToken);
+  }
+
+  renameApiKey(
+    userId: string,
+    keyId: string,
+    name: string,
+  ): ReturnType<ApiKeyService['renameApiKey']> {
+    return this.apiKeys.renameApiKey(userId, keyId, name);
   }
 
   revokeApiKey(

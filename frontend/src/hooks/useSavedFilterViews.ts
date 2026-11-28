@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { usePersistedState, type PersistedCodec } from './usePersistedState';
 import { EMPTY_DASHBOARD_FILTERS, type DashboardFiltersState } from '../components/Dashboard/dashboardFilters.types';
+import { ACCOUNT_SCOPED_KEYS, accountStorageKey } from '../lib/storageKeys';
 
 export interface SavedFilterView {
   id: string;
@@ -7,36 +8,29 @@ export interface SavedFilterView {
   filters: DashboardFiltersState;
 }
 
-const STORAGE_KEY = 'dashboard-saved-filter-views';
+const NO_VIEWS: SavedFilterView[] = [];
 
-function loadViews(): SavedFilterView[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    // Vistas gravadas antes de existirem campos novos (esforco, prontidao)
-    // ficam sem eles: completa com os vazios.
-    const parsed = JSON.parse(raw) as SavedFilterView[];
-    return parsed.map((view) => ({ ...view, filters: { ...EMPTY_DASHBOARD_FILTERS, ...view.filters } }));
-  } catch {
-    return [];
-  }
-}
+const CODEC: PersistedCodec<SavedFilterView[]> = {
+  parse: (raw) => {
+    if (!raw) return NO_VIEWS;
+    try {
+      // Vistas gravadas antes de existirem campos novos (esforco, prontidao)
+      // ficam sem eles: completa com os vazios.
+      const parsed = JSON.parse(raw) as SavedFilterView[];
+      return parsed.map((view) => ({ ...view, filters: { ...EMPTY_DASHBOARD_FILTERS, ...view.filters } }));
+    } catch {
+      return NO_VIEWS;
+    }
+  },
+  serialize: (views) => JSON.stringify(views),
+};
 
 // Same local-only pattern as useDashboardWidgetPrefs - a named filter
 // preset is a personal shortcut, not something that needs to sync
 // across devices or be visible to anyone else, so it doesn't need a
 // backend endpoint or a schema change.
 export function useSavedFilterViews() {
-  const [views, setViews] = useState<SavedFilterView[]>(loadViews);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(views));
-    } catch {
-      // Best-effort only - a user with storage disabled/full just doesn't
-      // get saved views remembered across reloads, nothing breaks.
-    }
-  }, [views]);
+  const [views, setViews] = usePersistedState(accountStorageKey(ACCOUNT_SCOPED_KEYS.savedFilterViews), CODEC);
 
   const saveView = (name: string, filters: DashboardFiltersState) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

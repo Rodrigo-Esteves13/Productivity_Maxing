@@ -1,13 +1,32 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { AccountStatusService } from '../account-status/account-status.service';
 import { SessionStateService } from '../account-status/session-state.service';
-import { Prisma, Provider, UserStatus } from '@prisma/client';
+import { Prisma, Provider, Role, UserStatus } from '@prisma/client';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SuspendUserDto, BanUserDto } from './dto/update-user-status.dto';
+import { ListUsersQueryDto } from './dto/list-users-query.dto';
+import {
+  listOrPage,
+  type ListMeta,
+  type Page,
+  type CursorArgs,
+} from '../common/pagination.util';
+import {
+  SELF_BAN_MESSAGE,
+  SELF_DELETE_MESSAGE,
+  SELF_REACTIVATE_MESSAGE,
+  SELF_ROLE_CHANGE_MESSAGE,
+  SELF_SUSPEND_MESSAGE,
+  type AuthProvider,
+} from './users.constants';
 
-export type AuthProvider = 'google' | 'github' | 'discord';
+export type { AuthProvider };
 
 const PROVIDER_MAP: Record<AuthProvider, Provider> = {
   google: Provider.GOOGLE,
@@ -31,6 +50,8 @@ const USER_ADMIN_SELECT = {
   friendCode: true,
 } as const;
 
+type AdminUserRow = Prisma.UserGetPayload<{ select: typeof USER_ADMIN_SELECT }>;
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -46,11 +67,78 @@ export class UsersService {
     private sessionState: SessionStateService,
   ) {}
 
-  findAll() {
-    return this.prisma.user.findMany({
-      select: USER_ADMIN_SELECT,
-      orderBy: { createdAt: 'desc' },
+  // Ordem por nome (sem nome no fim, por email). O cursor do Prisma falha em
+  // colunas com null, por isso ordenam-se so os ids e corta-se a pagina aqui.
+  private async findUsersByName(
+    where: Prisma.UserWhereInput,
+    direction: Prisma.SortOrder,
+    { take, skip = 0, cursor }: CursorArgs,
+  ): Promise<AdminUserRow[]> {
+    const ordered = await this.prisma.user.findMany({
+      where,
+      select: { id: true },
+      orderBy: [
+        { name: { sort: direction, nulls: 'last' } },
+        { email: direction },
+        { id: 'asc' },
+      ],
     });
+    const start = cursor
+      ? ordered.findIndex((row) => row.id === cursor.id) + skip
+      : skip;
+    const ids = ordered.slice(start, start + take).map((row) => row.id);
+    const rows = await this.prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: USER_ADMIN_SELECT,
+    });
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    return ids.flatMap((id) => byId.get(id) ?? []);
+  }
+
+  /**
+   * Lista de admin com pesquisa no servidor (q) e paginacao opcional.
+   * Sem cursor/paginated/limit devolve o array de sempre (teto em
+   * listOrPage); com cursor ou paginated=true devolve { items, nextCursor }.
+   */
+  findAll(
+    query: ListUsersQueryDto = {},
+    meta?: ListMeta,
+  ): Promise<AdminUserRow[] | Page<AdminUserRow>> {
+    const term = query.q?.trim();
+    const where: Prisma.UserWhereInput = {
+      ...(term
+        ? {
+            OR: [
+              { name: { contains: term, mode: 'insensitive' } },
+              { email: { contains: term, mode: 'insensitive' } },
+              { friendCode: { contains: term, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+      ...(query.role ? { role: query.role } : {}),
+      ...(query.status ? { status: query.status } : {}),
+    };
+    return listOrPage(
+      (args) =>
+        query.sort === 'name'
+          ? this.findUsersByName(where, query.order ?? 'asc', args)
+          : this.prisma.user.findMany({
+              where,
+              select: USER_ADMIN_SELECT,
+              // id no fim: desempate estavel exigido pelo cursor.
+              orderBy: [{ createdAt: query.order ?? 'desc' }, { id: 'asc' }],
+              ...args,
+            }),
+      query,
+      {
+        cursorExists: async (id) =>
+          (await this.prisma.user.findFirst({
+            where: { ...where, id },
+            select: { id: true },
+          })) !== null,
+        meta,
+      },
+    );
   }
 
   findOne(id: string) {
@@ -85,7 +173,12 @@ export class UsersService {
    * proteção contra auto-lockout). De propósito só aceita name/role - ver
    * o comentário no UpdateUserDto sobre o email ficar de fora.
    */
-  async update(id: string, dto: UpdateUserDto) {
+  async update(adminId: string, id: string, dto: UpdateUserDto) {
+    // Um admin nao se despromove a si proprio: podia deixar a plataforma
+    // sem nenhum admin ativo.
+    if (adminId === id && dto.role !== undefined && dto.role !== Role.ADMIN) {
+      throw new ForbiddenException(SELF_ROLE_CHANGE_MESSAGE);
+    }
     const updated = await this.prisma.user.update({
       where: { id },
       data: {
@@ -107,6 +200,9 @@ export class UsersService {
    * atualiza a data/motivo, não empilha suspensões.
    */
   async suspendUser(adminId: string, userId: string, dto: SuspendUserDto) {
+    if (adminId === userId) {
+      throw new ForbiddenException(SELF_SUSPEND_MESSAGE);
+    }
     const until = new Date(dto.until);
     if (Number.isNaN(until.getTime()) || until.getTime() <= Date.now()) {
       throw new ConflictException(
@@ -131,6 +227,9 @@ export class UsersService {
 
   /** Banimento permanente - mesmas regras de acesso que suspendUser. */
   async banUser(adminId: string, userId: string, dto: BanUserDto) {
+    if (adminId === userId) {
+      throw new ForbiddenException(SELF_BAN_MESSAGE);
+    }
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -161,6 +260,9 @@ export class UsersService {
   }
 
   async reactivateUser(adminId: string, userId: string) {
+    if (adminId === userId) {
+      throw new ForbiddenException(SELF_REACTIVATE_MESSAGE);
+    }
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: this.buildReactivationData(adminId),
@@ -176,8 +278,10 @@ export class UsersService {
    * avatar no Storage, cascade de Task/Identity/ApiKey), só que a apagar a
    * conta de outra pessoa em vez da própria.
    */
-  remove(id: string): Promise<void> {
-    return this.authService.deleteAccount(id);
+  async remove(adminId: string, id: string): Promise<void> {
+    // Para apagar a propria conta existe DELETE /auth/me, que limpa a sessao.
+    if (adminId === id) throw new ForbiddenException(SELF_DELETE_MESSAGE);
+    await this.authService.deleteAccount(id);
   }
 
   /**

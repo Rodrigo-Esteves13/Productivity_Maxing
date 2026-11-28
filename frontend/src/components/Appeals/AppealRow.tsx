@@ -8,6 +8,8 @@ import { useI18n } from '../../i18n/useI18n';
 interface AppealRowProps {
   appeal: AppealAdmin;
   onResolve: (id: string, resolution: AppealResolution, resolutionNote?: string) => Promise<void>;
+  // Linha do historico: mostra a decisao em vez dos botoes.
+  readOnly?: boolean;
 }
 
 // Faixa lateral colorida por severidade - mesma cor que UserStatusBadge já
@@ -21,16 +23,24 @@ const ACCENT: Record<UserStatus, string> = {
   ACTIVE: 'border-l-neutral-700',
 };
 
-export default function AppealRow({ appeal, onResolve }: AppealRowProps) {
-  const { t } = useI18n();
+export default function AppealRow({ appeal, onResolve, readOnly = false }: AppealRowProps) {
+  const { t, lang } = useI18n();
   const [note, setNote] = useState('');
   const [showNoteFor, setShowNoteFor] = useState<AppealResolution | null>(null);
+  // Enquanto o pedido segue os botoes ficam desativados (sem duplo envio).
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Dispara a resolução e mais nada: a linha sai da lista no mesmo render
-  // (remoção otimista em useAppealsPage), por isso não há nada para
-  // "reiniciar" aqui, nem estado de "a guardar" para mostrar.
-  const confirm = (resolution: AppealResolution) => {
-    void onResolve(appeal.id, resolution, note.trim() || undefined);
+  // A linha sai da lista no mesmo render (remocao otimista em
+  // useAppealsPage); o estado so cobre o instante ate sair, e o caso em que
+  // falha e a linha volta (volta montada de novo, com os botoes livres).
+  const confirm = async (resolution: AppealResolution) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onResolve(appeal.id, resolution, note.trim() || undefined);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -56,9 +66,26 @@ export default function AppealRow({ appeal, onResolve }: AppealRowProps) {
         {appeal.message}
       </p>
       <p className="mt-2 text-xs text-neutral-500">
-        {t('ui.submitted', { newDate: new Date(appeal.createdAt).toLocaleString() })}</p>
+        {t('ui.submitted', { newDate: new Date(appeal.createdAt).toLocaleString(lang) })}</p>
 
-      {showNoteFor ? (
+      {readOnly ? (
+        <div className="mt-4 space-y-1 border-t border-neutral-800 pt-3 text-xs text-neutral-400">
+          <p className="font-medium text-neutral-200">
+            {appeal.resolution === null
+              ? t('quickWins.appealStillPending')
+              : t(appeal.resolution === 'APPROVED' ? 'quickWins.appealResolvedApproved' : 'quickWins.appealResolvedDenied')}
+          </p>
+          {appeal.resolvedAt && (
+            <p>
+              {t('quickWins.appealResolvedOn', {
+                date: new Date(appeal.resolvedAt).toLocaleString(lang),
+                name: appeal.resolvedBy ? (appeal.resolvedBy.name ?? appeal.resolvedBy.email) : '-',
+              })}
+            </p>
+          )}
+          {appeal.resolutionNote && <p className="whitespace-pre-wrap break-words">{appeal.resolutionNote}</p>}
+        </div>
+      ) : showNoteFor ? (
         <div className="mt-4">
           <Textarea
             label={t(showNoteFor === 'APPROVED' ? 'ui.appealNoteApproving' : 'ui.appealNoteDenying')}
@@ -70,23 +97,25 @@ export default function AppealRow({ appeal, onResolve }: AppealRowProps) {
             <Button
               variant={showNoteFor === 'APPROVED' ? 'primary' : 'secondary'}
               className={showNoteFor === 'DENIED' ? 'border-red-800 text-red-400' : ''}
-              onClick={() => confirm(showNoteFor)}
+              disabled={isSubmitting}
+              onClick={() => void confirm(showNoteFor)}
             >
               {t(showNoteFor === 'APPROVED' ? 'ui.confirmApprove' : 'ui.confirmDeny')}
             </Button>
-            <Button variant="secondary" onClick={() => setShowNoteFor(null)}>
+            <Button variant="secondary" disabled={isSubmitting} onClick={() => setShowNoteFor(null)}>
               {t('ui.cancel')}
             </Button>
           </div>
         </div>
       ) : (
         <div className="mt-4 flex gap-2">
-          <Button onClick={() => setShowNoteFor('APPROVED')}>
+          <Button disabled={isSubmitting} onClick={() => setShowNoteFor('APPROVED')}>
             {t('ui.approve')}
           </Button>
           <Button
             variant="secondary"
             className="border-red-800 text-red-400"
+            disabled={isSubmitting}
             onClick={() => setShowNoteFor('DENIED')}
           >
             {t('ui.deny')}

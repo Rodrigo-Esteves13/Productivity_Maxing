@@ -114,10 +114,10 @@ export default function FocusEffectCard() {
       </div>
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-        <Link to="/focus" className="text-violet-400 hover:text-violet-300 underline decoration-dotted">
+        <Link to="/focus" className="text-violet-400 hover:text-violet-300 underline decoration-dotted pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center">
           {t('focusEffect.action')}
         </Link>
-        <Link to="/areas" className="text-violet-400 hover:text-violet-300 underline decoration-dotted">
+        <Link to="/areas" className="text-violet-400 hover:text-violet-300 underline decoration-dotted pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center">
           {t('interest.label')}
         </Link>
       </div>

@@ -1,16 +1,11 @@
 import { Link } from 'react-router-dom';
-import type { Task, Area } from '../../types/models';
 import { AlertTriangleIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
 import { useAreaLookup } from '../../hooks/useAreaLookup';
 import { MS_PER_DAY } from '../../lib/timeConstants';
 import { useI18n } from '../../i18n/useI18n';
-
-interface StaleTasksCardProps {
-  tasks: Task[];
-  areas: Area[];
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 const STALE_DAYS = 14;
 const MAX_SHOWN = 6;
@@ -24,7 +19,8 @@ function daysSince(dateStr: string): number {
 // (which at least surfaces itself once its date passes). "Touched" is
 // Task.updatedAt (Prisma @updatedAt, bumped by ANY update - editing the
 // title, moving the date, changing status, etc.), not just completion.
-export default function StaleTasksCard({ tasks, areas }: StaleTasksCardProps) {
+export default function StaleTasksCard() {
+  const { academicTasks: tasks, academicAreas: areas } = useDashboardCardData();
   const { t } = useI18n();
   const areaById = useAreaLookup(areas);
 
@@ -51,7 +47,7 @@ export default function StaleTasksCard({ tasks, areas }: StaleTasksCardProps) {
                 {area && (
                   <ColorDot size="xs" color={area.colorHex} />
                 )}
-                <span className="truncate text-neutral-200">{task.title}</span>
+                <span className="truncate text-neutral-200" title={task.title}>{task.title}</span>
               </div>
               <span className="text-xs text-amber-500/80 shrink-0">
                 {t('ui.dAgo', { updatedAt: daysSince(task.updatedAt) })}</span>
@@ -61,7 +57,7 @@ export default function StaleTasksCard({ tasks, areas }: StaleTasksCardProps) {
       </ul>
       <Link
         to="/tasks"
-        className="block mt-3 text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
+        className="block mt-3 pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
       >
         {t('ui.viewAllTasks')}
       </Link>

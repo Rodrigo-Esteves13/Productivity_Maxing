@@ -8,7 +8,7 @@ import ErrorState from '../components/UI/ErrorState';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { getFriendNoteEntry } from '../api/socialNotesService';
 import type { SharedEntryContext, SharedNotebookEntry as SharedNotebookEntryData } from '../types/models';
-import { SharedNotebookEntryView } from './SharedNotebookEntry';
+import SharedNotebookEntryView from '../components/Notebook/shared/SharedNotebookEntryView';
 import { useI18n } from '../i18n/useI18n';
 
 /** Leitura (so leitura) de uma nota de um amigo; reutiliza a vista das partilhas. */

@@ -17,14 +17,14 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: 'px-3 py-1.5 text-sm',
-  lg: 'px-6 py-3 text-base',
+  sm: 'px-3 py-1.5 text-sm pointer-coarse:min-h-11',
+  lg: 'px-6 py-3 text-base pointer-coarse:min-h-11',
 };
 
 export default function Button({ variant = 'primary', size, className = '', ...rest }: ButtonProps) {
   return (
     <button
-      className={`press rounded-lg p-2 font-medium disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${size ? sizeClasses[size] : ''} ${variantClasses[variant]} ${className}`}
+      className={`press rounded-lg p-2 font-medium pointer-coarse:min-h-11 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${size ? sizeClasses[size] : ''} ${variantClasses[variant]} ${className}`}
       {...rest}
     />
   );

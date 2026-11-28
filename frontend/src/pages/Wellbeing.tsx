@@ -32,8 +32,10 @@ export default function Wellbeing() {
   useDocumentTitle(t('nav.wellbeing'));
   const mood = useMoodToday();
   const meds = useMedications();
-  // Recalcula as correlacoes depois de gravar o humor de hoje.
-  const { insights, isLoading, error } = useWellbeingInsights(mood.log ? JSON.stringify(mood.log) : null);
+  // Recalcula as correlacoes depois de gravar ou apagar o humor de um dia. O
+  // backend so cruza humor e sessoes de estudo: a medicacao e as dadivas nao
+  // entram nos insights.
+  const { insights, isLoading, error, reload: reloadInsights } = useWellbeingInsights(String(mood.version));
 
   return (
     <PageLayout>
@@ -43,9 +45,9 @@ export default function Wellbeing() {
       <MasonryGrid stretchLast={false}>
         <SectionAnchor id="mood"><MoodCheckInCard mood={mood} /></SectionAnchor>
         <SectionAnchor id="medication"><MedicationsCard meds={meds} /></SectionAnchor>
-        <SectionAnchor id="medication-history"><MedicationHistoryCard /></SectionAnchor>
+        <SectionAnchor id="medication-history"><MedicationHistoryCard refreshKey={meds.version} /></SectionAnchor>
         <SectionAnchor id="blood"><BloodDonationsCard /></SectionAnchor>
-        <SectionAnchor id="insights"><WellbeingInsightsCard insights={insights} isLoading={isLoading} error={error} /></SectionAnchor>
+        <SectionAnchor id="insights"><WellbeingInsightsCard insights={insights} isLoading={isLoading} error={error} onRetry={reloadInsights} /></SectionAnchor>
         <SectionAnchor id="focus-grades"><FocusEffectCard /></SectionAnchor>
       </MasonryGrid>
     </PageLayout>

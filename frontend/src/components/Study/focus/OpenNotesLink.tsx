@@ -8,7 +8,7 @@ export default function OpenNotesLink({ areaId }: { areaId: string | null | unde
   return (
     <Link
       to={`/notebook?area=${encodeURIComponent(areaId)}`}
-      className="text-xs text-violet-400 underline decoration-dotted hover:text-violet-300"
+      className="text-xs text-violet-400 underline decoration-dotted hover:text-violet-300 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
     >
       {t('ui.openNotesForThisSubject')}
     </Link>

@@ -49,11 +49,12 @@ export class OAuthConflictRedirectFilter implements ExceptionFilter {
     const response = host.switchToHttp().getResponse<Response>();
 
     if (exception instanceof OAuthAccountConflictException) {
-      const params = new URLSearchParams({
-        error: 'account_conflict',
-        email: exception.conflictEmail,
-      });
-      response.redirect(`${FRONTEND_URL}/auth/callback?${params.toString()}`);
+      // O email vai no fragmento (#): nao fica no historico, nos logs de
+      // acesso nem no Referer (S-35).
+      const fragment = new URLSearchParams({ email: exception.conflictEmail });
+      response.redirect(
+        `${FRONTEND_URL}/auth/callback?error=account_conflict#${fragment.toString()}`,
+      );
       return;
     }
 

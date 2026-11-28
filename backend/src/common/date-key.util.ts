@@ -21,6 +21,14 @@ export function parseDateKey(key: string): Date {
   return new Date(`${key}T00:00:00.000Z`);
 }
 
+// "YYYY-MM-DD" que e mesmo um dia de calendario (rejeita 2026-13-01 e
+// 2026-02-31, que a regex sozinha deixa passar).
+export function isRealDateKey(value: unknown): value is string {
+  if (typeof value !== 'string' || !DATE_KEY_PATTERN.test(value)) return false;
+  const parsed = parseDateKey(value);
+  return !Number.isNaN(parsed.getTime()) && toDateKey(parsed) === value;
+}
+
 export function addUtcDays(date: Date, days: number): Date {
   const result = new Date(date);
   result.setUTCDate(result.getUTCDate() + days);

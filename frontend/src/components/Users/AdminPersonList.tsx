@@ -43,8 +43,8 @@ export default function AdminPersonList<P extends AdminPerson>({ title, people, 
                 >
                   <PersonAvatar name={name} avatarUrl={person.avatarUrl} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-white group-hover:text-violet-300">{name}</p>
-                    <p className="truncate text-xs text-neutral-500">{person.email}</p>
+                    <p className="truncate text-sm font-medium text-white group-hover:text-violet-300" title={name}>{name}</p>
+                    <p className="truncate text-xs text-neutral-500" title={person.email}>{person.email}</p>
                     {detail && <div className="mt-0.5 text-xs text-neutral-400">{detail(person)}</div>}
                   </div>
                   {person.status !== 'ACTIVE' && <UserStatusBadge status={person.status} />}

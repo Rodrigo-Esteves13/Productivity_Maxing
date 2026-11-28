@@ -5,6 +5,7 @@ import {
   ProgressStatus,
 } from '@prisma/client';
 import { hasFirmDate } from '../common/task-readiness.util';
+import { MS_PER_DAY } from '../common/time.constants';
 
 // Chaves do catalogo Priority (ver prisma/scripts/seed-priorities.ts). A
 // sugestao nunca e aplicada sozinha: o user decide a prioridade.
@@ -15,8 +16,6 @@ export const SUGGESTED_PRIORITY = {
 } as const;
 export type SuggestedPriorityKey =
   (typeof SUGGESTED_PRIORITY)[keyof typeof SUGGESTED_PRIORITY];
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 // Pontos por sinal; a soma decide o nivel (ver LEVEL_MIN_SCORE).
 export const SUGGESTION_RULES = {

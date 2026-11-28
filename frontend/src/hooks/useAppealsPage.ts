@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getAppeals, resolveAppeal } from '../api/userService';
+import { getAppeals, resolveAppeal } from '../api/accountStatusService';
 import type { Feedback } from '../components/UI/FeedbackBanner';
 import type { AppealAdmin, AppealResolution, PaginatedAppeals } from '../types/models';
 import { getHttpStatus, HTTP_CONFLICT } from '../lib/httpError';
 import { translateNow } from '../i18n/translate';
+
+export type AppealsView = 'pending' | 'history';
 
 const PAGE_SIZE = 10;
 const FEEDBACK_MS = 4000;
@@ -27,6 +29,9 @@ export function useAppealsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  // 'history' pede status=all: pendentes e ja decididos, so para consulta.
+  const [view, setView] = useState<AppealsView>('pending');
+  const viewRef = useRef<AppealsView>('pending');
 
   // Espelhos do estado para ler o valor atual dentro de callbacks async
   // sem os recriar (e sem usar valores antigos de um render anterior).
@@ -46,7 +51,8 @@ export function useAppealsPage() {
   const requestSeqRef = useRef(0);
 
   const applyPage = useCallback((data: PaginatedAppeals) => {
-    const hidden = hiddenIdsRef.current;
+    // O historico mostra tudo, tambem o que acabaste de resolver.
+    const hidden = viewRef.current === 'history' ? new Set<string>() : hiddenIdsRef.current;
     const visible = data.appeals.filter((appeal) => !hidden.has(appeal.id));
     setAppeals(visible);
     // O servidor ainda conta os que estao em curso; ja nao os mostramos.
@@ -62,7 +68,7 @@ export function useAppealsPage() {
           setIsLoading(true);
           setError('');
         }
-        const data = await getAppeals({ status: 'pending', skip: skipTo, take: PAGE_SIZE });
+        const data = await getAppeals({ status: viewRef.current === 'history' ? 'all' : 'pending', skip: skipTo, take: PAGE_SIZE });
         if (seq === requestSeqRef.current) applyPage(data);
       } catch {
         // Um refetch silencioso que falha deixa o que ja esta no ecra.
@@ -84,6 +90,18 @@ export function useAppealsPage() {
     const timeout = setTimeout(() => setFeedback(null), FEEDBACK_MS);
     return () => clearTimeout(timeout);
   }, [feedback]);
+
+  const changeView = (next: AppealsView) => {
+    if (next === viewRef.current) return;
+    viewRef.current = next;
+    setView(next);
+    setAppeals([]);
+    setTotal(0);
+    setSkip(0);
+    void load(0, false);
+  };
+
+  const retry = () => void load(skipRef.current, false);
 
   const goToNextPage = () => {
     if (skip + PAGE_SIZE >= total) return;
@@ -151,6 +169,9 @@ export function useAppealsPage() {
     isLoading,
     error,
     feedback,
+    view,
+    changeView,
+    retry,
     goToNextPage,
     goToPrevPage,
     handleResolve,

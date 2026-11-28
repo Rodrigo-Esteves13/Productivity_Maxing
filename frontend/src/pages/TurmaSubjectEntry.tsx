@@ -4,7 +4,7 @@ import PageLayout from '../components/Layout/PageLayout';
 import Breadcrumbs from '../components/UI/Breadcrumbs';
 import DocumentSkeleton from '../components/UI/DocumentSkeleton';
 import ErrorState from '../components/UI/ErrorState';
-import { SharedNotebookEntryView } from './SharedNotebookEntry';
+import SharedNotebookEntryView from '../components/Notebook/shared/SharedNotebookEntryView';
 import { getLinkedEntry } from '../api/turmasService';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useLoadOnce } from '../hooks/useLoadOnce';

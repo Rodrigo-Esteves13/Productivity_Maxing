@@ -56,7 +56,7 @@ export default function SectionMenu({ section }: { section: SiteSection }) {
         aria-expanded={isOpen}
         aria-controls={menuId}
         aria-label={t('map.sectionMenu', { section: label })}
-        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 -mx-1.5 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 -mx-1.5 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11"
       >
         {label}
         <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -76,7 +76,7 @@ export default function SectionMenu({ section }: { section: SiteSection }) {
                     to={page.path}
                     onClick={() => setIsOpen(false)}
                     aria-current={isCurrent ? 'page' : undefined}
-                    className={`flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-neutral-800 hover:text-white ${
+                    className={`flex items-center gap-2 px-3 py-2 text-sm pointer-coarse:min-h-11 transition-colors hover:bg-neutral-800 hover:text-white ${
                       isCurrent ? 'font-medium text-white' : 'text-neutral-300'
                     }`}
                   >
@@ -96,7 +96,7 @@ export default function SectionMenu({ section }: { section: SiteSection }) {
               setIsOpen(false);
               window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT));
             }}
-            className="mt-1 flex w-full items-center gap-2 border-t border-neutral-800 px-3 py-2 text-left text-sm text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+            className="mt-1 flex w-full items-center gap-2 border-t border-neutral-800 px-3 py-2 text-left text-sm text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white pointer-coarse:min-h-11"
           >
             <SearchIcon className="h-3.5 w-3.5 shrink-0" />
             {t('map.allPages')}

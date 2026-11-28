@@ -1,4 +1,8 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { FeedbackService, MY_FEEDBACK_PATH } from './feedback.service';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -23,6 +27,9 @@ function setup(opts: { mutedAt?: Date | null; updated?: unknown } = {}) {
       create: jest.fn().mockResolvedValue({ id: 'f1' }),
       findMany: jest.fn().mockResolvedValue([]),
       update: jest.fn().mockResolvedValue(updated),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      count: jest.fn().mockResolvedValue(1),
     },
   };
   const push = { notifyUser: jest.fn().mockResolvedValue(1) };
@@ -51,6 +58,53 @@ describe('FeedbackService', () => {
     expect(args.where).toEqual({ userId: AUTHOR_ID });
     // Nunca expor dados do autor/moderador ao proprio.
     expect(args.select.user).toBeUndefined();
+  });
+
+  it('deleteMine only deletes feedback owned by the caller', async () => {
+    const { service, prisma } = setup();
+    await service.deleteMine(AUTHOR_ID, 'f1');
+    expect(prisma.feedback.deleteMany).toHaveBeenCalledWith({
+      where: { id: 'f1', userId: AUTHOR_ID },
+    });
+  });
+
+  it('deleteMine on someone else feedback is a 404', async () => {
+    const { service, prisma } = setup();
+    prisma.feedback.deleteMany.mockResolvedValue({ count: 0 });
+    await expect(service.deleteMine(AUTHOR_ID, 'other')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('updateMine only edits own, open and unanswered feedback', async () => {
+    const { service, prisma } = setup();
+    await service.updateMine(AUTHOR_ID, 'f1', { message: '  New text  ' });
+    expect(prisma.feedback.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'f1',
+        userId: AUTHOR_ID,
+        isResolved: false,
+        resolution: null,
+        adminReply: null,
+      },
+      data: { message: 'New text' },
+    });
+  });
+
+  it('updateMine is 404 for others and 409 once answered', async () => {
+    const { service, prisma } = setup();
+    prisma.feedback.updateMany.mockResolvedValue({ count: 0 });
+    prisma.feedback.count.mockResolvedValueOnce(0);
+    await expect(
+      service.updateMine(AUTHOR_ID, 'other', { message: 'hello' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.feedback.count).toHaveBeenCalledWith({
+      where: { id: 'other', userId: AUTHOR_ID },
+    });
+    prisma.feedback.count.mockResolvedValueOnce(1);
+    await expect(
+      service.updateMine(AUTHOR_ID, 'f1', { message: 'hello' }),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('reply stores the text, resolves when asked and notifies the author', async () => {
@@ -109,8 +163,62 @@ describe('FeedbackService', () => {
   it('mute on an unknown user is a 404', async () => {
     const { service, prisma } = setup();
     prisma.user.updateMany.mockResolvedValue({ count: 0 });
-    await expect(service.setMuted('ghost', true)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.setMuted('admin-1', 'ghost', true),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('an admin cannot mute themselves', async () => {
+    const { service, prisma } = setup();
+    await expect(
+      service.setMuted('admin-1', 'admin-1', true),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('an admin can mute another user', async () => {
+    const { service, prisma } = setup();
+    await expect(service.setMuted('admin-1', 'u2', true)).resolves.toEqual({
+      userId: 'u2',
+      muted: true,
+    });
+    expect(prisma.user.updateMany).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('FeedbackService.listPage', () => {
+  it('applies status, category, language and search on the server', async () => {
+    const { service, prisma } = setup();
+    prisma.feedback.count.mockResolvedValueOnce(3).mockResolvedValueOnce(2);
+    prisma.feedback.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ language: 'en' }, { language: 'pt' }]);
+
+    const page = await service.listPage({
+      status: 'closed',
+      category: 'BUG',
+      language: 'pt',
+      q: ' crash ',
+      skip: 25,
+    });
+
+    const [args] = prisma.feedback.findMany.mock.calls[0] as [
+      { where: { OR: unknown[] }; skip: number },
+    ];
+    expect(args.where).toMatchObject({
+      isResolved: true,
+      category: 'BUG',
+      language: 'pt',
+    });
+    expect(args.where.OR).toContainEqual({
+      message: { contains: 'crash', mode: 'insensitive' },
+    });
+    expect(args.skip).toBe(25);
+    expect(page).toEqual({
+      total: 2,
+      items: [],
+      counts: { open: 3, closed: 2, all: 5 },
+      languages: ['en', 'pt'],
+    });
   });
 });

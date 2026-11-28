@@ -5,6 +5,7 @@ import FormField from '../UI/FormField';
 import ColorPickerField from '../Areas/ColorPickerField';
 import type { PriorityFormPayload } from '../../api/prioritiesAdminService';
 import { useI18n } from '../../i18n/useI18n';
+import { DEFAULT_PRIORITY_COLOR } from '../../lib/taskTypeColors';
 
 interface PriorityFormProps {
   idPrefix: string;
@@ -16,7 +17,7 @@ interface PriorityFormProps {
   submittingLabel: string;
 }
 
-const DEFAULT_VALUES: PriorityFormPayload = { label: '', colorHex: '#a3a3a3', order: 0 };
+const DEFAULT_VALUES: PriorityFormPayload = { label: '', colorHex: DEFAULT_PRIORITY_COLOR, order: 0 };
 
 export default function PriorityForm({
   idPrefix,
@@ -54,7 +55,7 @@ export default function PriorityForm({
 
       <ColorPickerField
         id={`${idPrefix}-color`}
-        value={formData.colorHex ?? '#a3a3a3'}
+        value={formData.colorHex ?? DEFAULT_PRIORITY_COLOR}
         onChange={(colorHex) => setFormData({ ...formData, colorHex })}
       />
 

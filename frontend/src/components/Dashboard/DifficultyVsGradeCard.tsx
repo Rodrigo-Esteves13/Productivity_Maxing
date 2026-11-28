@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import type { Task } from '../../types/models';
 import { computeDifficultyVsGrade } from '../../utils/difficultyVsGrade';
 import { scaleMax } from '../../lib/gradeScale';
 import { FULL_PERCENT } from '../../lib/percent';
@@ -8,11 +7,7 @@ import { ChartPieIcon } from '../UI/Icons';
 import ProgressBar from '../UI/ProgressBar';
 import DashboardCard, { CardBody, CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
-
-interface DifficultyVsGradeCardProps {
-  tasks: Task[];
-  scale: string;
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 const MIN_GRADED_TO_SHOW = 3;
 // Diferenca (na escala da nota) abaixo da qual se diz "quase igual".
@@ -21,7 +16,8 @@ const SIMILAR_GAP = 1;
 const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 
 // Dificuldade que marcaste ao criar a task vs a nota que tiveste.
-export default function DifficultyVsGradeCard({ tasks, scale }: DifficultyVsGradeCardProps) {
+export default function DifficultyVsGradeCard() {
+  const { academicTasks: tasks, gradeScale: scale } = useDashboardCardData();
   const { t } = useI18n();
   const enumLabel = useEnumLabel();
   const data = useMemo(() => computeDifficultyVsGrade(tasks), [tasks]);

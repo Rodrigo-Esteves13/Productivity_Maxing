@@ -11,7 +11,7 @@ export const flashcards: Record<string, string> = {
   'flashcards.allAreas': "Todas as cadeiras",
   'flashcards.edit': "Editar cartão",
   'flashcards.delete': "Apagar cartão",
-  'flashcards.deleteConfirm': "Apagar este flashcard? Não pode ser anulado.",
+  'flashcards.deleteConfirm': "Apagar este flashcard? Podes anular logo a seguir.",
   'flashcards.due': "Para rever",
   'flashcards.deckCount': "{count} cartões, {due} para rever",
   'flashcards.again': "Outra vez",

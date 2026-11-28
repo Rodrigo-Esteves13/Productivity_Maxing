@@ -4,22 +4,60 @@ import PageHeader from '../components/Layout/PageHeader';
 import Modal from '../components/UI/Modal';
 import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
+import Button from '../components/UI/Button';
+import Select from '../components/UI/Select';
+import SearchField from '../components/UI/SearchField';
+import SortDirectionButton from '../components/UI/SortDirectionButton';
 import TableSkeleton from '../components/UI/TableSkeleton';
 import UsersTable from '../components/Users/UsersTable';
 import UserEditForm from '../components/Users/UserEditForm';
 import UserStatusModal from '../components/Users/UserStatusModal';
 import { useAuth } from '../context/useAuth';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { useEnumLabel } from '../hooks/useEnumLabel';
 import { useUsersPage } from '../hooks/useUsersPage';
 import { useI18n } from '../i18n/useI18n';
-import { SearchIcon } from '../components/UI/Icons';
+import {
+  ALL_FILTER,
+  USER_ROLES,
+  USER_SEARCH_DEBOUNCE_MS,
+  USER_SEARCH_MAX_LENGTH,
+  USER_SORT_KEYS,
+  USER_STATUSES,
+  filterUsers,
+  type AllOr,
+  type UserSortKey,
+} from '../lib/adminLists';
+import { flipDirection, type SortDirection } from '../lib/sortDirection';
+import type { Role, UserStatus } from '../types/models';
+
+const SORT_LABEL_KEY: Record<UserSortKey, string> = {
+  name: 'ux4adm2.users.sortName',
+  joined: 'ui.joined',
+};
+// Cada chave comeca no sentido mais util: nomes de A a Z, adesoes mais recentes primeiro.
+const SORT_DEFAULT_DIRECTION: Record<UserSortKey, SortDirection> = { name: 'asc', joined: 'desc' };
 
 export default function Users() {
   const { t } = useI18n();
+  const enumLabel = useEnumLabel();
   useDocumentTitle(t('ui.userManagementTitle'));
   const { user: currentUser } = useAuth();
+  const [query, setQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<AllOr<Role>>(ALL_FILTER);
+  const [statusFilter, setStatusFilter] = useState<AllOr<UserStatus>>(ALL_FILTER);
+  const [sortKey, setSortKey] = useState<UserSortKey>('name');
+  const [direction, setDirection] = useState<SortDirection>(SORT_DEFAULT_DIRECTION.name);
+  // Nome, email ou codigo de amigo (ex.: alguem denuncia um codigo).
+  const search = useDebouncedValue(query, USER_SEARCH_DEBOUNCE_MS);
+
   const {
     users,
+    reload,
+    hasMore,
+    isLoadingMore,
+    loadMore,
     isLoading,
     error,
     editingUser,
@@ -37,17 +75,33 @@ export default function Users() {
     closeStatusModal,
     handleSubmitStatusAction,
     handleReactivateUser,
-  } = useUsersPage(currentUser?.id);
-  const [query, setQuery] = useState('');
+  } = useUsersPage(currentUser?.id, {
+    search,
+    role: roleFilter,
+    status: statusFilter,
+    sortKey,
+    direction,
+  });
 
-  // Nome, email ou codigo de amigo (ex.: alguem denuncia um codigo).
-  const visibleUsers = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase();
-    if (!q) return users;
-    return users.filter((u) =>
-      [u.name ?? '', u.email, u.friendCode ?? ''].some((field) => field.toLocaleLowerCase().includes(q)),
-    );
-  }, [users, query]);
+  const isSearching = search.trim().length > 0;
+  const isNarrowed = isSearching || roleFilter !== ALL_FILTER || statusFilter !== ALL_FILTER;
+
+  // O filtro repete-se aqui para uma linha editada (ex.: banida) sair logo da
+  // lista; a ordem vem do servidor.
+  const matching = useMemo(
+    () => filterUsers(users, { role: roleFilter, status: statusFilter }),
+    [users, roleFilter, statusFilter],
+  );
+
+  const changeSortKey = (key: UserSortKey) => {
+    setSortKey(key);
+    setDirection(SORT_DEFAULT_DIRECTION[key]);
+  };
+  const clearFilters = () => {
+    setQuery('');
+    setRoleFilter(ALL_FILTER);
+    setStatusFilter(ALL_FILTER);
+  };
 
   return (
     <PageLayout>
@@ -56,44 +110,98 @@ export default function Users() {
         description={t('ui.areaExclusiveToAdministratorsTo')}
       />
 
+      <div className="mb-3 flex flex-wrap items-end gap-3">
+        <SearchField
+          value={query}
+          onChange={(value) => setQuery(value.slice(0, USER_SEARCH_MAX_LENGTH))}
+          label={t('adminSocial.search')}
+          className="sm:max-w-sm"
+        />
+        <Select
+          label={t('ui.role')}
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value as AllOr<Role>)}
+        >
+          <option value={ALL_FILTER}>{t('ux4adm2.users.allRoles')}</option>
+          {USER_ROLES.map((role) => (
+            <option key={role} value={role}>
+              {enumLabel(role)}
+            </option>
+          ))}
+        </Select>
+        <Select
+          label={t('ui.status')}
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as AllOr<UserStatus>)}
+        >
+          <option value={ALL_FILTER}>{t('ux4adm2.users.allStatuses')}</option>
+          {USER_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {enumLabel(status)}
+            </option>
+          ))}
+        </Select>
+        <Select
+          label={t('ux4adm2.users.sortBy')}
+          value={sortKey}
+          onChange={(e) => changeSortKey(e.target.value as UserSortKey)}
+        >
+          {USER_SORT_KEYS.map((key) => (
+            <option key={key} value={key}>
+              {t(SORT_LABEL_KEY[key])}
+            </option>
+          ))}
+        </Select>
+        <SortDirectionButton
+          direction={direction}
+          onToggle={() => setDirection(flipDirection)}
+          ascLabel={t('ux4adm2.sort.asc')}
+          descLabel={t('ux4adm2.sort.desc')}
+        />
+        {!isLoading && !error && matching.length > 0 && (
+          <span className="text-xs text-neutral-500" aria-live="polite">
+            {t('fase5users.loaded', { count: matching.length })}
+          </span>
+        )}
+      </div>
+
       {isLoading ? (
         <TableSkeleton rows={6} columns={6} />
       ) : error ? (
-        <ErrorState message={error} />
-      ) : users.length === 0 ? (
-        <EmptyState message={t('ui.noUsersRegisteredInThe')} />
+        <ErrorState message={error} onRetry={() => void reload()} />
       ) : (
         <>
-          <div className="mb-3 flex flex-wrap items-center gap-3">
-            <label className="relative w-full sm:max-w-sm">
-              <span className="sr-only">{t('adminSocial.search')}</span>
-              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t('adminSocial.search')}
-                aria-label={t('adminSocial.search')}
-                className="w-full rounded-lg border border-neutral-800 bg-neutral-900 py-2 pl-9 pr-3 text-sm text-white placeholder:text-neutral-500 focus:border-violet-600 focus:outline-none"
-              />
-            </label>
-            {query.trim() && (
-              <span className="text-xs text-neutral-500" aria-live="polite">
-                {t('adminSocial.searchCount', { shown: visibleUsers.length, total: users.length })}
-              </span>
-            )}
-          </div>
-          <UsersTable
-          users={visibleUsers}
-          currentUserId={currentUser?.id}
-          onEdit={setEditingUser}
-          onDelete={handleDeleteUser}
-          onExport={handleExportUser}
-          onSuspend={(user) => openStatusModal(user, 'suspend')}
-          onBan={(user) => openStatusModal(user, 'ban')}
-          onReactivate={handleReactivateUser}
-          reactivatingId={reactivatingId}
-        />
+          {matching.length > 0 ? (
+            <UsersTable
+              users={matching}
+              currentUserId={currentUser?.id}
+              onEdit={setEditingUser}
+              onDelete={handleDeleteUser}
+              onExport={handleExportUser}
+              onSuspend={(user) => openStatusModal(user, 'suspend')}
+              onBan={(user) => openStatusModal(user, 'ban')}
+              onReactivate={handleReactivateUser}
+              reactivatingId={reactivatingId}
+            />
+          ) : isNarrowed ? (
+            <EmptyState
+              message={isSearching ? t('search.noResultsFor', { query: search.trim() }) : t('ux4adm2.users.noMatch')}
+              action={
+                <Button variant="secondary" size="sm" onClick={clearFilters}>
+                  {t('ux4adm2.users.clearFilters')}
+                </Button>
+              }
+            />
+          ) : (
+            !hasMore && <EmptyState message={t('ui.noUsersRegisteredInThe')} />
+          )}
+          {hasMore && (
+            <div className="mt-3 flex justify-center">
+              <Button variant="secondary" onClick={() => void loadMore()} disabled={isLoadingMore}>
+                {isLoadingMore ? t('fase5users.loading') : t('fase5users.loadMore')}
+              </Button>
+            </div>
+          )}
         </>
       )}
 

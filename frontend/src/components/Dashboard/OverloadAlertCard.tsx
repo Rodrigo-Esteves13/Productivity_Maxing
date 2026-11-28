@@ -57,7 +57,7 @@ export default function OverloadAlertCard({ tasks, areas }: OverloadAlertCardPro
       )}
       <Link
         to="/tasks"
-        className="text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
+        className="text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
       >
         {t('ui.viewAllTasks')}
       </Link>

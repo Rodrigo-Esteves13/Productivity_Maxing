@@ -24,5 +24,7 @@ export const SENT_NOTIFICATION_RETENTION_DAYS = 62;
 
 // Codigos do Prisma tratados no claim: P2002 = ja existe o marcador (outro
 // envio ganhou); P2003 = o user foi apagado entretanto (nada a enviar).
-export const PRISMA_UNIQUE_VIOLATION = 'P2002';
-export const PRISMA_FOREIGN_KEY_VIOLATION = 'P2003';
+export {
+  PRISMA_FOREIGN_KEY_VIOLATION,
+  PRISMA_UNIQUE_VIOLATION,
+} from '../common/prisma-errors';

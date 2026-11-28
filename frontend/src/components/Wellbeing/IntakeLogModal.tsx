@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import Modal from '../UI/Modal';
 import Input from '../UI/Input';
 import Button from '../UI/Button';
@@ -12,11 +12,17 @@ const MAX_DOSE_LENGTH = 60;
 const MAX_NOTE_LENGTH = 200;
 const MS_PER_MINUTE = 60_000;
 const MS_PER_DAY = 24 * 60 * MS_PER_MINUTE;
+// Tamanho de AAAA-MM-DD no valor do datetime-local.
+const DATE_LENGTH = 10;
 
 interface IntakeLogModalProps {
   medication: Medication | null;
   isSaving: boolean;
-  onSubmit: (input: MedicationIntakeInput) => Promise<boolean>;
+  // Dia (AAAA-MM-DD) que a lista de tomas ja esta a mostrar: a data por
+  // defeito segue-o (ex: ontem), em vez de voltar sempre a hoje.
+  defaultDayKey?: string | null;
+  // keepOpen: grava e deixa o formulario aberto para registar outra toma.
+  onSubmit: (input: MedicationIntakeInput, keepOpen: boolean) => Promise<boolean>;
   onClose: () => void;
 }
 
@@ -25,9 +31,24 @@ function localInputValue(date: Date): string {
   return new Date(date.getTime() - date.getTimezoneOffset() * MS_PER_MINUTE).toISOString().slice(0, 16);
 }
 
-function IntakeForm({ medication, isSaving, onSubmit, onClose }: IntakeLogModalProps & { medication: Medication }) {
+// Hora local atual no dia escolhido; sem dia (ou hoje) e simplesmente agora.
+function initialTakenAt(dayKey: string | null | undefined): string {
+  const nowValue = localInputValue(new Date());
+  return dayKey && dayKey < nowValue.slice(0, DATE_LENGTH) ? `${dayKey}${nowValue.slice(DATE_LENGTH)}` : nowValue;
+}
+
+function IntakeForm({
+  medication,
+  isSaving,
+  defaultDayKey,
+  onSubmit,
+  onClose,
+}: IntakeLogModalProps & { medication: Medication }) {
   const { t } = useI18n();
-  const [takenAt, setTakenAt] = useState(() => localInputValue(new Date()));
+  const [takenAt, setTakenAt] = useState(() => initialTakenAt(defaultDayKey));
+  const [loggedCount, setLoggedCount] = useState(0);
+  // Impede dois toques seguidos de gravarem a mesma toma duas vezes.
+  const busy = useRef(false);
   // Atalhos: o seletor de data e hora e chato no telemovel, e o caso comum
   // e "agora" ou "esqueci-me ontem".
   const now = localInputValue(new Date());
@@ -36,25 +57,41 @@ function IntakeForm({ medication, isSaving, onSubmit, onClose }: IntakeLogModalP
   const [note, setNote] = useState('');
   const [formError, setFormError] = useState('');
 
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
+  const submit = async (keepOpen: boolean) => {
+    if (busy.current) return;
     const at = new Date(takenAt);
     if (Number.isNaN(at.getTime())) {
       setFormError(t('wellbeing.meds.intake.timeInvalid'));
       return;
     }
     setFormError('');
-    const ok = await onSubmit({
-      medicationId: medication.id,
-      takenAt: at.toISOString(),
-      dose: dose.trim() || undefined,
-      note: note.trim() || undefined,
+    busy.current = true;
+    const ok = await onSubmit(
+      {
+        medicationId: medication.id,
+        takenAt: at.toISOString(),
+        dose: dose.trim() || undefined,
+        note: note.trim() || undefined,
+      },
+      keepOpen,
+    ).finally(() => {
+      busy.current = false;
     });
-    if (!ok) setFormError(t('wellbeing.meds.intake.saveError'));
+    if (!ok) {
+      setFormError(t('wellbeing.meds.intake.saveError'));
+    } else if (keepOpen) {
+      setLoggedCount((n) => n + 1);
+      setNote('');
+    }
+  };
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    void submit(false);
   };
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3">
+    <form onSubmit={handleSubmit} className="space-y-3">
       <p className="rounded-md border border-amber-900/50 bg-amber-950/20 px-3 py-2 text-xs text-amber-300">
         {t('wellbeing.meds.generalCaution')}
       </p>
@@ -90,9 +127,17 @@ function IntakeForm({ medication, isSaving, onSubmit, onClose }: IntakeLogModalP
       <p className="text-xs text-neutral-400">{t('wellbeing.meds.intake.onlyRecord')}</p>
       <p className="text-xs text-neutral-500">{t('wellbeing.meds.legal')}</p>
       {formError && <ErrorState message={formError} />}
+      {loggedCount > 0 && (
+        <p role="status" className="text-xs text-violet-300">
+          {t('wellbeing.meds.intake.loggedCount', { count: loggedCount })}
+        </p>
+      )}
       <div className="flex flex-wrap justify-end gap-2">
         <Button type="button" variant="secondary" size="sm" onClick={onClose}>
           {t('common.cancel')}
+        </Button>
+        <Button type="button" variant="secondary" size="sm" disabled={isSaving} onClick={() => void submit(true)}>
+          {t('wellbeing.meds.intake.logAnother')}
         </Button>
         <Button type="submit" size="sm" disabled={isSaving}>
           {isSaving ? t('common.saving') : t('wellbeing.meds.intake.log')}

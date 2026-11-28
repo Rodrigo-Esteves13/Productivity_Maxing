@@ -55,4 +55,10 @@ export const meds: Record<string, string> = {
   'wellbeing.meds.push.unconfigured': "Erinnerungen können gerade nicht gesendet werden: Benachrichtigungen sind auf diesem Server nicht verfügbar.",
   'wellbeing.meds.timesZone': "Die Zeiten sind Lissabonner Zeit (Festland Portugal).",
   'wellbeing.meds.timesZoneDiffers': "Dein Gerät ist in einer anderen Zeitzone: Erinnerungen kommen zur eingestellten Lissabonner Zeit, nicht zu deiner Ortszeit.",
+  'wellbeing.meds.intake.heading': "Zusätzliche und bei Bedarf genommene Dosen",
+  'wellbeing.meds.intake.logAnother': "Speichern und weitere hinzufügen",
+  'wellbeing.meds.intake.loggedCount': "In diesem Fenster erfasst: {count}",
+  'wellbeing.mood.promptPast': "Wie ging es dir an diesem Tag? Nur die Stimmung ist Pflicht.",
+  'wellbeing.mood.loggedPast': "Für diesen Tag bereits erfasst. Du kannst es noch ändern.",
+  'wellbeing.mood.titlePast': "Check-in für diesen Tag",
 };

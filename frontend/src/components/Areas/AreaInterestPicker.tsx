@@ -38,7 +38,7 @@ export default function AreaInterestPicker({ area }: AreaInterestPickerProps) {
           <button
             type="button"
             onClick={() => void change(null)}
-            className="text-xs text-neutral-500 underline decoration-dotted hover:text-neutral-300"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-xs text-neutral-500 underline decoration-dotted hover:text-neutral-300"
           >
             {t('interest.clear')}
           </button>

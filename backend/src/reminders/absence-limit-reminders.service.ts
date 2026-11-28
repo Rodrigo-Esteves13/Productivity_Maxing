@@ -19,6 +19,19 @@ import { SENT_NOTIFICATION_KIND } from './sent-notification.constants';
 
 const KIND = SENT_NOTIFICATION_KIND.ABSENCE_LIMIT;
 
+interface PageUser {
+  id: string;
+  quietHoursStart: number | null;
+  quietHoursEnd: number | null;
+  activePeriod: { startDate: Date; endDate: Date | null } | null;
+}
+
+interface AttendanceRow {
+  subject: string;
+  attended: boolean | null;
+  _count: { _all: number };
+}
+
 const SCHEDULE_PATH = '/schedule';
 // Nao acorda ninguem de madrugada mesmo sem horas de silencio configuradas.
 const EARLIEST_SEND_MINUTES = 9 * MINUTES_PER_HOUR;
@@ -128,14 +141,32 @@ export class AbsenceLimitRemindersService {
         KIND,
         week,
       );
-      for (const user of users) {
-        if (notified.has(user.id)) continue;
+      const candidates = users.filter(
+        (user) =>
+          !notified.has(user.id) &&
+          this.evaluatedNoRisk.get(user.id) !== dayKey &&
+          !this.isQuietHour(user, nowMinutes),
+      );
+      // Falha da query da pagina: log so com o nome do erro e segue para a
+      // proxima pagina (nao aborta a corrida).
+      let attendance: Map<string, AttendanceRow[]>;
+      try {
+        attendance = await this.loadAttendance(candidates, today);
+      } catch (err) {
+        this.logger.error(
+          `Limite de faltas: falhou a leitura de uma pagina (${
+            err instanceof Error ? err.name : 'erro'
+          })`,
+        );
+        attendance = new Map();
+      }
+      for (const user of candidates) {
+        const userRows = attendance.get(user.id);
+        if (!userRows) continue;
         // Um user que falha nao pode abortar a corrida dos seguintes (a ordem
         // e deterministica, os mesmos ficariam sempre sem aviso). Log so com o id.
         try {
-          if (
-            await this.processUser(user, { today, nowMinutes, week, dayKey })
-          ) {
+          if (await this.processUser(user.id, userRows, { week, dayKey })) {
             sent += 1;
           }
         } catch (err) {
@@ -155,41 +186,65 @@ export class AbsenceLimitRemindersService {
     return sent;
   }
 
+  /**
+   * Faltas dos users da pagina. Cada user tem a sua janela (inicio do periodo
+   * ate hoje ou ao fim do periodo): os users com a mesma janela partilham um
+   * unico groupBy (userId in [...]), por isso o custo e uma query por janela
+   * distinta e nao uma por user. Users sem aulas ficam com lista vazia.
+   */
+  private async loadAttendance(
+    users: PageUser[],
+    today: Date,
+  ): Promise<Map<string, AttendanceRow[]>> {
+    const byWindow = new Map<
+      string,
+      { from: Date; endOfTo: Date; ids: string[] }
+    >();
+    for (const user of users) {
+      const from =
+        user.activePeriod?.startDate ??
+        addUtcDays(today, -FALLBACK_WINDOW_DAYS);
+      const periodEnd = user.activePeriod?.endDate;
+      const to = periodEnd && periodEnd < today ? periodEnd : today;
+      // O fim do periodo inclui o dia todo (mesma regra do /attendance).
+      const endOfTo = new Date(to);
+      endOfTo.setUTCHours(23, 59, 59, 999);
+      const key = `${from.getTime()}|${endOfTo.getTime()}`;
+      const bucket = byWindow.get(key) ?? { from, endOfTo, ids: [] };
+      bucket.ids.push(user.id);
+      byWindow.set(key, bucket);
+    }
+
+    const result = new Map<string, AttendanceRow[]>();
+    for (const { from, endOfTo, ids } of byWindow.values()) {
+      for (const id of ids) result.set(id, []);
+      const grouped = await this.prisma.classOccurrence.groupBy({
+        by: ['userId', 'subject', 'attended'],
+        where: {
+          userId: { in: ids },
+          date: { gte: from, lte: endOfTo },
+          cancelled: false,
+        },
+        _count: { _all: true },
+      });
+      for (const { userId, ...row } of grouped) {
+        result.get(userId)?.push(row);
+      }
+    }
+    return result;
+  }
+
   private async processUser(
-    user: {
-      id: string;
-      quietHoursStart: number | null;
-      quietHoursEnd: number | null;
-      activePeriod: { startDate: Date; endDate: Date | null } | null;
-    },
-    ctx: { today: Date; nowMinutes: number; week: string; dayKey: string },
+    userId: string,
+    rows: AttendanceRow[],
+    ctx: { week: string; dayKey: string },
   ): Promise<boolean> {
-    const { today, nowMinutes, week, dayKey } = ctx;
-    if (this.evaluatedNoRisk.get(user.id) === dayKey) return false;
-    if (this.isQuietHour(user, nowMinutes)) return false;
-
-    const from =
-      user.activePeriod?.startDate ?? addUtcDays(today, -FALLBACK_WINDOW_DAYS);
-    const periodEnd = user.activePeriod?.endDate;
-    const to = periodEnd && periodEnd < today ? periodEnd : today;
-    // O fim do periodo inclui o dia todo (mesma regra do /attendance).
-    const endOfTo = new Date(to);
-    endOfTo.setUTCHours(23, 59, 59, 999);
-
-    const rows = await this.prisma.classOccurrence.groupBy({
-      by: ['subject', 'attended'],
-      where: {
-        userId: user.id,
-        date: { gte: from, lte: endOfTo },
-        cancelled: false,
-      },
-      _count: { _all: true },
-    });
+    const { week, dayKey } = ctx;
     const risky = summarizeAttendance(rows).filter(
       (row) => absenceRisk(row, DEFAULT_ABSENCE_LIMIT_PCT) !== 'none',
     );
     if (risky.length === 0) {
-      this.evaluatedNoRisk.set(user.id, dayKey);
+      this.evaluatedNoRisk.set(userId, dayKey);
       return false;
     }
 
@@ -199,13 +254,13 @@ export class AbsenceLimitRemindersService {
       .join(SUBJECT_SEPARATOR);
     const extra = risky.length - MAX_SUBJECTS_IN_PUSH;
     // Marcado ANTES do envio: uma execucao sobreposta ja o salta.
-    if (!(await this.sentNotifications.claim(user.id, KIND, week))) {
+    if (!(await this.sentNotifications.claim(userId, KIND, week))) {
       return false;
     }
     let delivered = 0;
     try {
       delivered = await this.pushService.notifyUser(
-        user.id,
+        userId,
         'absenceLimitNear',
         {
           title: extra > 0 ? `${shown} +${extra}` : shown,
@@ -215,7 +270,7 @@ export class AbsenceLimitRemindersService {
     } finally {
       // Sem dispositivo que tenha recebido: desmarca, tenta na proxima.
       if (delivered === 0) {
-        await this.sentNotifications.release(user.id, KIND, week);
+        await this.sentNotifications.release(userId, KIND, week);
       }
     }
     return delivered > 0;

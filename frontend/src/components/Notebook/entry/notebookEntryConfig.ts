@@ -1,6 +1,7 @@
 import type { NotebookTable } from '../../../types/models';
 import { translateNow } from '../../../i18n/translate';
 import { toLocalDateKey } from '../../../lib/dateKey';
+import { detectLanguage } from '../../../i18n/storage';
 
 // Tem de bater certo com @MaxLength(50000) em textContent no DTO do
 // backend (upsert-notebook-entry.dto.ts) - usado aqui só para mostrar o
@@ -103,7 +104,8 @@ export function toLinkUrl(raw: string): string | null {
 // isSaving voltava a false e parecia ter gravado, sem gravar nada.
 export function describeSaveError(status: number | undefined, textLength: number): string {
   if (status === 400 && textLength > MAX_TEXT_CONTENT_LENGTH) {
-    return translateNow('notebook.err.tooLong', { length: textLength.toLocaleString(), max: MAX_TEXT_CONTENT_LENGTH.toLocaleString() });
+    const lang = detectLanguage();
+    return translateNow('notebook.err.tooLong', { length: textLength.toLocaleString(lang), max: MAX_TEXT_CONTENT_LENGTH.toLocaleString(lang) });
   }
   if (status === 403) return translateNow('notebook.err.csrf');
   return translateNow('notebook.err.save');

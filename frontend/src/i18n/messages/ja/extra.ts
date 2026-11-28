@@ -69,7 +69,7 @@ export const extra: Record<string, string> = {
   "hook.couldNotLoadTheData": "データを読み込めませんでした。",
   "hook.taskCreatedButTheChecklistCould": "タスクは作成されましたが、チェックリストを保存できませんでした。",
   "hook.deleteTask": "タスクを削除",
-  "hook.areYouSureYouWantTo": "このタスクを削除してもよろしいですか？この操作は元に戻せません。",
+  "hook.areYouSureYouWantTo": "このタスクを削除してもよろしいですか？直後なら取り消せます。",
   "hook.googleCalendar": "Google カレンダー",
   "hook.alsoRemoveTheLinkedEventFrom": "Google カレンダーのリンクされた予定も削除しますか？",
   "hook.removeEvent": "予定を削除",

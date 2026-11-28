@@ -1,5 +1,6 @@
 import { IsEmail, IsNotEmpty, IsString, MaxLength } from 'class-validator';
 import { NormalizeEmail } from '../email.util';
+import { EMAIL_MAX_LENGTH } from './auth-limits';
 
 // POST /auth/verify-email - o token vem do link enviado por email.
 export class VerifyEmailDto {
@@ -14,5 +15,6 @@ export class VerifyEmailDto {
 export class ResendVerificationDto {
   @NormalizeEmail()
   @IsEmail()
+  @MaxLength(EMAIL_MAX_LENGTH)
   email: string;
 }

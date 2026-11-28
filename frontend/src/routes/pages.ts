@@ -4,6 +4,11 @@ import { lazyWithPreload } from '../lib/lazyWithPreload';
 // links (PrefetchLink) e o RoutePrefetcher descarregar o chunk antes do
 // clique, por isso mudar de pagina nao passa pelo esqueleto de carregamento.
 
+export const Register = lazyWithPreload(() => import('../pages/Register'));
+export const ForgotPassword = lazyWithPreload(() => import('../pages/ForgotPassword'));
+// Casos pontuais (resumo diario, revisao do Google Calendar): fora do chunk de entrada.
+export const DailyDigestHost = lazyWithPreload(() => import('../components/Digest/DailyDigestHost'));
+export const CalendarSyncReviewModal = lazyWithPreload(() => import('../components/Schedule/CalendarSyncReviewModal'));
 export const Dashboard = lazyWithPreload(() => import('../pages/Dashboard'));
 export const Tasks = lazyWithPreload(() => import('../pages/Tasks'));
 export const Focus = lazyWithPreload(() => import('../pages/Focus'));
@@ -103,6 +108,14 @@ export function preloadRoute(path: string): void {
   const section = path.split(/[?#]/)[0].split('/')[1] ?? '';
   // Falhar aqui nao interessa: o clique volta a pedir o chunk.
   BY_SECTION[section]?.preload().catch(() => undefined);
+}
+
+// Abrir a app num link direto (/dashboard, /tasks...): pede o chunk da pagina
+// (e o resto do dicionario, via lazyWithPreload) ja no arranque, em paralelo
+// com o nucleo do dicionario e a verificacao da sessao, em vez de so depois de
+// ambos. So caminhos de um segmento: em /social/friends/x a pagina e outra.
+export function preloadInitialRoute(pathname: string): void {
+  if (pathname.split('/').filter(Boolean).length === 1) preloadRoute(pathname);
 }
 
 // As paginas mais usadas: pre-carregadas no tempo livre logo apos entrar.

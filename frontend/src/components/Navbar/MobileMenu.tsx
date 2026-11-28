@@ -10,6 +10,8 @@ interface MobileMenuProps {
   isAdmin: boolean;
   socialPending: number;
   onNavigate: () => void;
+  // Abre o formulario de feedback (so o rodape o abria no telemovel).
+  onOpenFeedback: () => void;
   // Vem do usePresence da Navbar: "closed" anima a saida antes de desmontar.
   state?: PresenceState;
 }
@@ -33,7 +35,7 @@ const GROUPS = navGroups();
 // rodape (Estudo, Em conjunto, Vida...), em duas colunas para caber sem
 // scroll. Se mesmo assim nao couber (telemoveis baixos), o painel rola
 // sozinho: a navbar e sticky, e o fim da lista ficava inalcancavel.
-export default function MobileMenu({ currentPath, isAdmin, socialPending, onNavigate, state = 'open' }: MobileMenuProps) {
+export default function MobileMenu({ currentPath, isAdmin, socialPending, onNavigate, onOpenFeedback, state = 'open' }: MobileMenuProps) {
   const { t } = useI18n();
   const linkClass = (path: string) => (isNavActive(currentPath, path) ? LINK_ACTIVE : LINK_IDLE);
   const adminClass = (path: string) => (isNavActive(currentPath, path) ? ADMIN_ACTIVE : ADMIN_IDLE);
@@ -67,6 +69,19 @@ export default function MobileMenu({ currentPath, isAdmin, socialPending, onNavi
           </section>
         );
       })}
+
+      <section aria-labelledby="mobile-nav-feedback">
+        <p id="mobile-nav-feedback" className={HEADING}>
+          {t('feedback.title')}
+        </p>
+        <ul className="grid grid-cols-2 gap-1">
+          <li>
+            <button type="button" onClick={onOpenFeedback} className={`${LINK_IDLE} w-full text-left`}>
+              {t('feedback.open')}
+            </button>
+          </li>
+        </ul>
+      </section>
 
       {isAdmin && (
         <section aria-labelledby="mobile-nav-admin">

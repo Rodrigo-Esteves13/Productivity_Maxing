@@ -18,10 +18,10 @@ export default function PersonRow({ person, subtitle, to, children }: Props) {
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-800 bg-neutral-900/40 p-3">
       {to ? (
-        <Link to={to} className="group flex min-w-0 items-center gap-3">
+        <Link to={to} className="group flex min-w-0 pointer-coarse:min-h-11 items-center gap-3">
           <PersonAvatar name={name} avatarUrl={person.avatarUrl} />
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-white group-hover:text-violet-300">{name}</p>
+            <p title={name} className="truncate text-sm font-medium text-white group-hover:text-violet-300">{name}</p>
             {subtitle && <div className="text-xs text-neutral-500">{subtitle}</div>}
           </div>
         </Link>
@@ -29,7 +29,7 @@ export default function PersonRow({ person, subtitle, to, children }: Props) {
         <div className="flex min-w-0 items-center gap-3">
           <PersonAvatar name={name} avatarUrl={person.avatarUrl} />
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-white">{name}</p>
+            <p title={name} className="truncate text-sm font-medium text-white">{name}</p>
             {subtitle && <div className="text-xs text-neutral-500">{subtitle}</div>}
           </div>
         </div>

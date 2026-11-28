@@ -1,17 +1,14 @@
 import { useMemo } from 'react';
-import type { Task } from '../../types/models';
 import { computeXpLevel } from '../../lib/xpLevel';
 import { StarIcon } from '../UI/Icons';
 import ProgressBar from '../UI/ProgressBar';
 import DashboardCard, { CardBody, CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
-
-interface XpLevelCardProps {
-  tasks: Task[];
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 // Indicador divertido de XP a partir das tarefas concluidas; nao bloqueia nada.
-export default function XpLevelCard({ tasks }: XpLevelCardProps) {
+export default function XpLevelCard() {
+  const { academicTasks: tasks } = useDashboardCardData();
   const { t } = useI18n();
   const result = useMemo(() => computeXpLevel(tasks), [tasks]);
 

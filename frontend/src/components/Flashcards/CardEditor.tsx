@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import Modal from '../UI/Modal';
 import Button from '../UI/Button';
 import Input from '../UI/Input';
@@ -28,23 +28,37 @@ export default function CardEditor({ card, defaultAreaId = null, areas, onSubmit
   const [areaId, setAreaId] = useState(card ? card.areaId : defaultAreaId);
   const [isSaving, setIsSaving] = useState(false);
   const [reverse, setReverse] = useState(false);
+  const frontId = useId();
   // O inverso usa o verso como frente, que tem limite menor.
   const reverseTooLong = !card && reverse && back.trim().length > FLASHCARD_FRONT_MAX;
   const canSave = front.trim() !== '' && back.trim() !== '' && !isSaving;
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  // `keepOpen` ("Guardar e novo"): limpa frente e verso, mantem cadeira e inverso.
+  const save = async (keepOpen: boolean) => {
     if (!canSave) return;
     setIsSaving(true);
     const ok = await onSubmit({ front: front.trim(), back: back.trim(), areaId }, !card && reverse);
     setIsSaving(false);
-    if (ok) onClose();
+    if (!ok) return;
+    if (!keepOpen) {
+      onClose();
+      return;
+    }
+    setFront('');
+    setBack('');
+    document.getElementById(frontId)?.focus();
+  };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    void save(false);
   };
 
   return (
     <Modal isOpen onClose={onClose} title={card ? t('flashcards.editCard') : t('flashcards.newCard')}>
-      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-3">
         <Input
+          id={frontId}
           autoFocus
           label={t('flashcards.front')}
           value={front}
@@ -86,6 +100,11 @@ export default function CardEditor({ card, defaultAreaId = null, areas, onSubmit
           <Button type="button" variant="secondary" size="sm" onClick={onClose}>
             {t('ui.cancel')}
           </Button>
+          {!card && (
+            <Button type="button" variant="secondary" size="sm" disabled={!canSave} onClick={() => void save(true)}>
+              {t('ux4study.saveAndNew')}
+            </Button>
+          )}
           <Button type="submit" size="sm" disabled={!canSave}>
             {t('common.save')}
           </Button>

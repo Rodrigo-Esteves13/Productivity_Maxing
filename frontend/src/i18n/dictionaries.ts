@@ -1,26 +1,43 @@
-import type { LanguageCode } from './languages';
+import { DEFAULT_LANGUAGE, type LanguageCode } from './languages';
+import { detectLanguage } from './storage';
 
 export type Dictionary = Record<string, string>;
 export type TranslateVars = Record<string, string | number>;
+type Loader = () => Promise<Dictionary>;
+export type DictionaryPart = 'core' | 'rest';
+export type SplitLoaders = Record<DictionaryPart, Record<LanguageCode, Loader>>;
 
-// Todas as linguas (incluindo o ingles) sao chunks separados: o browser so
-// descarrega a que o utilizador usa. O ingles deixou de ir no bundle principal
-// (eram ~110 KB que um utilizador em PT nunca usava); a paridade de chaves e
-// garantida por scripts/check-i18n.mjs, por isso nao e preciso como fallback
-// sempre carregado. Se estiver carregado (ex: depois de uma falha de rede na
-// lingua escolhida), continua a servir de fallback.
-const LOADERS: Record<LanguageCode, () => Promise<Dictionary>> = {
-  en: () => import('./messages/en').then((m) => m.en),
-  pt: () => import('./messages/pt').then((m) => m.pt),
-  es: () => import('./messages/es').then((m) => m.es),
-  zh: () => import('./messages/zh').then((m) => m.zh),
-  ja: () => import('./messages/ja').then((m) => m.ja),
-  ko: () => import('./messages/ko').then((m) => m.ko),
-  fr: () => import('./messages/fr').then((m) => m.fr),
-  de: () => import('./messages/de').then((m) => m.de),
+// Cada lingua vem em dois chunks (F-43), ambos so da lingua em uso:
+// - core: as chaves do codigo de arranque (login, hosts globais, toasts,
+//   utils com translateNow). O I18nProvider so espera por este antes do
+//   primeiro render.
+// - rest: o resto. Comeca a descarregar logo a seguir ao nucleo, e tudo o que
+//   carrega por lazyWithPreload (paginas, paleta, modais pontuais) espera por
+//   ele antes de montar.
+// A divisao e calculada no build por scripts/i18n-split.ts. Sem o plugin (dev,
+// testes) o core traz o dicionario inteiro e o rest vem vazio.
+const LOADERS: SplitLoaders = {
+  core: {
+    en: () => import('./split/en.core').then((m) => m.dict),
+    pt: () => import('./split/pt.core').then((m) => m.dict),
+    es: () => import('./split/es.core').then((m) => m.dict),
+    zh: () => import('./split/zh.core').then((m) => m.dict),
+    ja: () => import('./split/ja.core').then((m) => m.dict),
+    ko: () => import('./split/ko.core').then((m) => m.dict),
+    fr: () => import('./split/fr.core').then((m) => m.dict),
+    de: () => import('./split/de.core').then((m) => m.dict),
+  },
+  rest: {
+    en: () => import('./split/en.rest').then((m) => m.dict),
+    pt: () => import('./split/pt.rest').then((m) => m.dict),
+    es: () => import('./split/es.rest').then((m) => m.dict),
+    zh: () => import('./split/zh.rest').then((m) => m.dict),
+    ja: () => import('./split/ja.rest').then((m) => m.dict),
+    ko: () => import('./split/ko.rest').then((m) => m.dict),
+    fr: () => import('./split/fr.rest').then((m) => m.dict),
+    de: () => import('./split/de.rest').then((m) => m.dict),
+  },
 };
-
-const loaded = new Map<LanguageCode, Dictionary>();
 
 // So para o ecra de erro/manutencao, que pode aparecer antes de qualquer
 // dicionario chegar: nunca mostra a chave crua.
@@ -32,42 +49,83 @@ const CORE_FALLBACK: Dictionary = {
   'common.maintenance.title': 'Down for maintenance',
   'common.maintenance.body': "We're doing some quick upkeep. This shouldn't take long - check back in a few minutes.",
 };
-const loading = new Map<LanguageCode, Promise<Dictionary>>();
 
-export function isLoaded(lang: LanguageCode): boolean {
-  return loaded.has(lang);
-}
+export function createDictionaryStore(loaders: SplitLoaders) {
+  const parts: Record<DictionaryPart, Map<LanguageCode, Dictionary>> = { core: new Map(), rest: new Map() };
+  const pending: Record<DictionaryPart, Map<LanguageCode, Promise<void>>> = { core: new Map(), rest: new Map() };
+  // Nucleo + resto de cada lingua, ja juntos (o que o translateIn le).
+  const merged = new Map<LanguageCode, Dictionary>();
+  const listeners = new Set<() => void>();
+  let version = 0;
 
-// Carrega (uma unica vez) o dicionario de uma lingua. Rejeita se o chunk falhar
-// (ex: sem rede): quem chama decide o que fazer.
-export function loadDictionary(lang: LanguageCode): Promise<Dictionary> {
-  const done = loaded.get(lang);
-  if (done) return Promise.resolve(done);
-  let pending = loading.get(lang);
-  if (!pending) {
-    pending = LOADERS[lang]()
-      .then((dict) => {
-        loaded.set(lang, dict);
-        return dict;
-      })
-      .finally(() => loading.delete(lang));
-    loading.set(lang, pending);
+  // Carrega (uma unica vez) uma parte. Rejeita se o chunk falhar (ex: sem
+  // rede) e a proxima chamada volta a pedi-lo.
+  function loadPart(part: DictionaryPart, lang: LanguageCode): Promise<void> {
+    if (parts[part].has(lang)) return Promise.resolve();
+    let request = pending[part].get(lang);
+    if (!request) {
+      request = loaders[part][lang]()
+        .then((dict) => {
+          parts[part].set(lang, dict);
+          merged.set(lang, { ...parts.core.get(lang), ...parts.rest.get(lang) });
+          version += 1;
+          listeners.forEach((listener) => listener());
+        })
+        .finally(() => pending[part].delete(lang));
+      pending[part].set(lang, request);
+    }
+    return request;
   }
-  return pending;
+
+  return {
+    loadCore: (lang: LanguageCode) => loadPart('core', lang),
+    // Nucleo e resto em paralelo.
+    loadFull: (lang: LanguageCode) =>
+      Promise.all([loadPart('core', lang), loadPart('rest', lang)]).then(() => undefined),
+    isCoreLoaded: (lang: LanguageCode) => parts.core.has(lang),
+    isFullLoaded: (lang: LanguageCode) => parts.core.has(lang) && parts.rest.has(lang),
+    // Muda sempre que chega uma parte: o I18nProvider volta a renderizar.
+    getVersion: () => version,
+    subscribe(listener: () => void): () => void {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    // Falta de chave na lingua (ou parte ainda nao carregada) -> ingles, se
+    // ja estiver carregado -> textos minimos do ecra de erro -> a propria
+    // chave (nunca um texto vazio).
+    translateIn(lang: LanguageCode, key: string, vars?: TranslateVars): string {
+      const template = merged.get(lang)?.[key] ?? merged.get(DEFAULT_LANGUAGE)?.[key] ?? CORE_FALLBACK[key] ?? key;
+      if (!vars) return template;
+      return template.replace(/\{(\w+)\}/g, (_, name: string) =>
+        vars[name] !== undefined ? String(vars[name]) : `{${name}}`,
+      );
+    },
+  };
 }
 
-// Falta de chave na lingua (ou chunk ainda nao carregado) -> ingles, se ja
-// estiver carregado -> textos minimos do ecra de erro -> a propria chave
-// (nunca um texto vazio).
-export function translateIn(
-  lang: LanguageCode,
-  key: string,
-  vars?: TranslateVars,
-): string {
-  const template =
-    loaded.get(lang)?.[key] ?? loaded.get('en')?.[key] ?? CORE_FALLBACK[key] ?? key;
-  if (!vars) return template;
-  return template.replace(/\{(\w+)\}/g, (_, name: string) =>
-    vars[name] !== undefined ? String(vars[name]) : `{${name}}`,
-  );
+const store = createDictionaryStore(LOADERS);
+
+export const {
+  loadCore: loadCoreDictionary,
+  loadFull: loadFullDictionary,
+  isCoreLoaded,
+  isFullLoaded,
+  getVersion: getDictionaryVersion,
+  subscribe: subscribeDictionaries,
+  translateIn,
+} = store;
+
+// Para quem monta codigo fora do nucleo (lazyWithPreload): dicionario inteiro
+// da lingua guardada. Se falhar, tenta o ingles, como o primeiro render do
+// I18nProvider; se nem esse chegar, rejeita (o componente trata como um chunk
+// que falhou: ErrorBoundary, e o proximo pedido volta a tentar).
+export function loadFullForActiveLanguage(): Promise<void> {
+  return loadFullDictionary(detectLanguage()).catch(() => loadFullDictionary(DEFAULT_LANGUAGE));
+}
+
+// t() com uma identidade nova por lingua e por versao dos dicionarios: quando
+// o resto chega, os componentes memoizados voltam a traduzir. A versao so
+// entra como argumento para o memo (e o React Compiler) a contarem.
+export function createTranslator(lang: LanguageCode, _dictionaryVersion: number) {
+  return (key: string, vars?: TranslateVars) => translateIn(lang, key, vars);
 }

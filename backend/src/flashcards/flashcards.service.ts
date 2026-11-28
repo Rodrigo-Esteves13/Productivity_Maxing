@@ -10,6 +10,7 @@ import {
   BulkFlashcardsDto,
   CreateFlashcardDto,
   ListFlashcardsQueryDto,
+  RestoreFlashcardDto,
   UpdateFlashcardDto,
 } from './dto/flashcard.dto';
 import { scheduleReview, type FlashcardGrade } from './flashcard-schedule';
@@ -160,6 +161,25 @@ export class FlashcardsService {
       where: { id, userId },
     });
     if (count === 0) throw new NotFoundException('Flashcard not found.');
+  }
+
+  /** Repoe a agenda de um cartao (desfazer a ultima classificacao). */
+  async restore(userId: string, id: string, dto: RestoreFlashcardDto) {
+    const { count } = await this.prisma.flashcard.updateMany({
+      where: { id, userId },
+      data: {
+        dueAt: new Date(dto.dueAt),
+        intervalDays: dto.intervalDays,
+        ease: dto.ease,
+        reps: dto.reps,
+        lapses: dto.lapses,
+      },
+    });
+    if (count === 0) throw new NotFoundException('Flashcard not found.');
+    return this.prisma.flashcard.findFirstOrThrow({
+      where: { id, userId },
+      select: SELECT,
+    });
   }
 
   async review(userId: string, id: string, grade: FlashcardGrade) {

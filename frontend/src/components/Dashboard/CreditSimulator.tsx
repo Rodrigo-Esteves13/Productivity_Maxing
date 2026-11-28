@@ -51,7 +51,7 @@ export default function CreditSimulator({ programAverage, scale }: CreditSimulat
           placeholder={t('ui.credits')}
           aria-label={t('ui.credits')}
           min={1}
-          className="w-24 border border-neutral-700 bg-neutral-900 text-white rounded-lg px-3 py-1.5 text-sm placeholder:text-neutral-500"
+          className="pointer-coarse:min-h-11 w-24 border border-neutral-700 bg-neutral-900 text-white rounded-lg px-3 py-1.5 text-sm placeholder:text-neutral-500"
         />
         <input
           type="number"
@@ -62,7 +62,7 @@ export default function CreditSimulator({ programAverage, scale }: CreditSimulat
           min={0}
           max={max}
           step="0.1"
-          className="flex-1 min-w-[120px] border border-neutral-700 bg-neutral-900 text-white rounded-lg px-3 py-1.5 text-sm placeholder:text-neutral-500"
+          className="pointer-coarse:min-h-11 flex-1 min-w-[120px] border border-neutral-700 bg-neutral-900 text-white rounded-lg px-3 py-1.5 text-sm placeholder:text-neutral-500"
         />
       </div>
 

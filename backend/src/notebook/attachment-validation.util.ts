@@ -26,7 +26,10 @@ const ATTACHMENT_BINARY_MIME_TO_EXT: Record<string, string> = {
 // servidor, só guardados e devolvidos como download.
 const ATTACHMENT_TEXT_EXTENSIONS = new Set(['py', 'txt', 'md', 'json', 'csv']);
 
-export const ATTACHMENT_MAX_SIZE_BYTES = 20 * 1024 * 1024;
+// Reexport: a constante vive agora em common/upload-limits.ts.
+export { ATTACHMENT_MAX_SIZE_BYTES } from '../common/upload-limits';
+
+export const ATTACHMENT_NAME_MAX_LENGTH = 200;
 
 // Só para o nome mostrado/descarregado depois - tira barras e
 // caracteres de controlo/aspas (evita confundir o cabeçalho
@@ -54,6 +57,22 @@ export function withDownloadName(signedUrl: string, fileName: string): string {
   return `${signedUrl}${encodeURI(`&${query}`)}`;
 }
 
+/**
+ * Novo nome visivel de um anexo: mesma higiene do upload e a extensao real
+ * sempre no fim (o download usa este nome). Vazio depois de limpo = null.
+ */
+export function renamedFileName(name: string, ext: string): string | null {
+  const suffix = `.${ext}`;
+  const clean = sanitizeFileName(name);
+  const base = clean.toLowerCase().endsWith(suffix)
+    ? clean.slice(0, -suffix.length)
+    : clean;
+  const trimmed = base
+    .slice(0, ATTACHMENT_NAME_MAX_LENGTH - suffix.length)
+    .trim();
+  return trimmed ? `${trimmed}${suffix}` : null;
+}
+
 export interface ValidatedAttachment {
   originalFileName: string;
   ext: string;
@@ -69,7 +88,10 @@ export async function validateAttachmentUpload(
   // `path` abaixo). Cortado a 200 chars para nunca deixar um
   // Content-Disposition com um nome descontrolado.
   const originalFileName =
-    sanitizeFileName(file.originalname || 'file').slice(0, 200) || 'file';
+    sanitizeFileName(file.originalname || 'file').slice(
+      0,
+      ATTACHMENT_NAME_MAX_LENGTH,
+    ) || 'file';
   const claimedExt = originalFileName.includes('.')
     ? originalFileName.split('.').pop()!.toLowerCase()
     : '';
@@ -106,7 +128,9 @@ export async function validateAttachmentUpload(
     originalFileName,
     ext,
     content,
-    contentType:
-      binaryExt && detected ? detected.mime : 'application/octet-stream',
+    // Texto vai sempre como text/plain: esta na lista de MIME do bucket
+    // (application/octet-stream nao esta) e o browser nunca o interpreta
+    // como HTML, seja qual for o conteudo.
+    contentType: binaryExt && detected ? detected.mime : 'text/plain',
   };
 }

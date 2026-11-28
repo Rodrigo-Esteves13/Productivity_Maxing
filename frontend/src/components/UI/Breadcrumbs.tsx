@@ -50,11 +50,11 @@ export default function Breadcrumbs({
           <li key={`${item.label}-${index}`} className="flex min-w-0 items-center gap-1.5">
             {(index > 0 || resolvedSection) && <Separator />}
             {item.to ? (
-              <Link to={item.to} className="truncate text-violet-400 hover:text-violet-300 hover:underline">
+              <Link to={item.to} className="truncate text-violet-400 hover:text-violet-300 hover:underline pointer-coarse:min-w-11 pointer-coarse:leading-11" title={item.label}>
                 {item.label}
               </Link>
             ) : (
-              <span aria-current="page" className="truncate text-neutral-300">
+              <span aria-current="page" className="truncate text-neutral-300 pointer-coarse:leading-11" title={item.label}>
                 {item.label}
               </span>
             )}

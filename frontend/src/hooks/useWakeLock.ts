@@ -1,44 +1,19 @@
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useEffect } from 'react';
+import { ON_BY_DEFAULT, usePersistedState } from './usePersistedState';
 
 // Ecra sempre ligado durante o Focus (Screen Wake Lock API). O browser larga
 // o lock sozinho quando a tab fica escondida, por isso volta a pedi-lo ao
 // regressar. Sem suporte (browsers antigos) nao faz nada.
 
 const STORAGE_KEY = 'pm-focus-keep-screen-on';
-const listeners = new Set<() => void>();
 
 export function isWakeLockSupported(): boolean {
   return typeof navigator !== 'undefined' && 'wakeLock' in navigator;
 }
 
 // Por omissao ligado: quem estuda com o telemovel pousado nao quer o ecra a apagar.
-function read(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) !== 'false';
-  } catch {
-    return true;
-  }
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  window.addEventListener('storage', listener);
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener('storage', listener);
-  };
-}
-
 export function useKeepScreenOnPref() {
-  const keepScreenOn = useSyncExternalStore(subscribe, read, () => true);
-  const setKeepScreenOn = useCallback((value: boolean) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, String(value));
-    } catch {
-      // Best-effort, como os outros prefs hooks.
-    }
-    listeners.forEach((listener) => listener());
-  }, []);
+  const [keepScreenOn, setKeepScreenOn] = usePersistedState(STORAGE_KEY, ON_BY_DEFAULT);
   return { keepScreenOn, setKeepScreenOn };
 }
 

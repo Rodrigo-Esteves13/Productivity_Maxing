@@ -36,7 +36,7 @@ export default function ExamModePanel({ tasks, areas, onTurnOff }: ExamModePanel
         <button
           type="button"
           onClick={onTurnOff}
-          className="shrink-0 rounded-lg px-2 py-1 text-sm text-violet-300 hover:bg-neutral-800 hover:text-violet-200"
+          className="pointer-coarse:min-h-11 shrink-0 rounded-lg px-2 py-1 text-sm text-violet-300 hover:bg-neutral-800 hover:text-violet-200"
         >
           {t('examMode.turnOff')}
         </button>

@@ -95,7 +95,10 @@ export class SubtasksService {
       data.completedAt = dto.isDone ? new Date() : null;
     }
 
-    return this.prisma.subtask.update({ where: { id: subtaskId }, data });
+    return this.prisma.subtask.update({
+      where: { id: subtaskId, taskId, task: { userId } },
+      data,
+    });
   }
 
   async remove(userId: string, taskId: string, subtaskId: string) {
@@ -104,7 +107,7 @@ export class SubtasksService {
     // assertTaskOwned acima, e um id de outra task simplesmente não apaga
     // nada.
     const result = await this.prisma.subtask.deleteMany({
-      where: { id: subtaskId, taskId },
+      where: { id: subtaskId, taskId, task: { userId } },
     });
     if (result.count === 0) throw new NotFoundException('Subtask not found.');
   }
@@ -121,8 +124,9 @@ export class SubtasksService {
 
     await this.prisma.$transaction(
       ordered.map((id, index) =>
+        // Posse na propria escrita (B-43), nao so no assertTaskOwned.
         this.prisma.subtask.update({
-          where: { id },
+          where: { id, taskId, task: { userId } },
           data: { sortOrder: index },
         }),
       ),

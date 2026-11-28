@@ -1,4 +1,5 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
+import { loadFullForActiveLanguage } from '../i18n/dictionaries';
 
 export type PreloadableComponent<P extends object> = LazyExoticComponent<ComponentType<P>> & {
   // Descarrega (e avalia) o chunk antes de ser preciso: hover num link,
@@ -9,15 +10,22 @@ export type PreloadableComponent<P extends object> = LazyExoticComponent<Compone
 // React.lazy com preload(): a pagina ou o componente pesado ja esta pronto
 // quando a pessoa clica, em vez de mostrar o esqueleto enquanto o JS chega.
 // Se o import falhar (rede), a proxima tentativa volta a pedir o chunk.
+//
+// Tambem espera pelo dicionario INTEIRO da lingua (F-43): o I18nProvider so
+// garante o nucleo, e as chaves do codigo carregado por aqui ficam no resto
+// (scripts/i18n-split.ts conta com esta espera). Chunk e dicionario descarregam
+// em paralelo.
 export function lazyWithPreload<P extends object>(
   factory: () => Promise<{ default: ComponentType<P> }>,
 ): PreloadableComponent<P> {
   let pending: Promise<{ default: ComponentType<P> }> | null = null;
   const load = () => {
-    pending ??= factory().catch((error: unknown) => {
-      pending = null;
-      throw error;
-    });
+    pending ??= Promise.all([factory(), loadFullForActiveLanguage()])
+      .then(([module]) => module)
+      .catch((error: unknown) => {
+        pending = null;
+        throw error;
+      });
     return pending;
   };
   return Object.assign(lazy(load), { preload: load });
