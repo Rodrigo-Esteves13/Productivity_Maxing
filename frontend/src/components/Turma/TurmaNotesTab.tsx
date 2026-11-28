@@ -7,6 +7,7 @@ import LinesSkeleton from '../UI/LinesSkeleton';
 import { PlusIcon } from '../UI/Icons';
 import { createTurmaNote } from '../../api/turmasService';
 import { useTurmaAction, useTurmaNotes } from '../../hooks/useTurmas';
+import { useReloadOnReturn } from '../../hooks/useReloadOnReturn';
 import { useI18n } from '../../i18n/useI18n';
 import { formatDateTime } from '../../lib/timeFormat';
 import { turmaNotePath } from '../../lib/appLinks';
@@ -21,7 +22,8 @@ interface TurmaNotesTabProps {
 export default function TurmaNotesTab({ turmaId, canEdit }: TurmaNotesTabProps) {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const { data, isLoading, error } = useTurmaNotes(turmaId);
+  const { data, isLoading, error, reload } = useTurmaNotes(turmaId);
+  useReloadOnReturn(reload);
   const create = useTurmaAction(createTurmaNote, t('turma.actionError'));
 
   const handleCreate = async () => {
@@ -54,7 +56,7 @@ export default function TurmaNotesTab({ turmaId, canEdit }: TurmaNotesTabProps) 
                 to={turmaNotePath(turmaId, note.id)}
                 className="flex items-center justify-between gap-3 rounded-lg border border-neutral-800 bg-neutral-900/40 p-3 hover:border-neutral-700"
               >
-                <span className="min-w-0 truncate text-sm font-medium text-white">{note.title}</span>
+                <span className="min-w-0 truncate text-sm font-medium text-white" title={note.title}>{note.title}</span>
                 <span className="shrink-0 text-xs text-neutral-500">
                   {note.updatedByName ?? t('social.anonymous')} · {formatDateTime(note.updatedAt)}
                 </span>

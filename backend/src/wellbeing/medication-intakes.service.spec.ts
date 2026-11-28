@@ -118,9 +118,11 @@ describe('MedicationIntakesService', () => {
     prisma.medicationIntake.findFirst.mockResolvedValue({ id: 'i1' });
     await service.update('u1', 'i1', { dose: ' 2 tabs ', note: '  ' });
     const [[args]] = prisma.medicationIntake.update.mock.calls as [
-      [{ data: Record<string, unknown> }],
+      [{ where: Record<string, unknown>; data: Record<string, unknown> }],
     ];
     expect(args.data).toEqual({ dose: '2 tabs', note: null });
+    // A escrita tambem leva o userId, nao so a leitura de posse.
+    expect(args.where).toEqual({ id: 'i1', userId: 'u1' });
   });
 
   it('moving an entry to a full day is rejected, excluding itself from the count', async () => {

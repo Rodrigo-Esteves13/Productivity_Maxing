@@ -29,7 +29,7 @@ export default function MonthDayDetail({ day, chips, onOpenWeek }: MonthDayDetai
         <button
           type="button"
           onClick={() => onOpenWeek(day.date)}
-          className="shrink-0 rounded-lg px-2 py-1 text-xs text-violet-300 hover:bg-neutral-800 hover:text-violet-200"
+          className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 shrink-0 rounded-lg px-2 py-1 text-xs text-violet-300 hover:bg-neutral-800 hover:text-violet-200"
         >
           {t('schedule.month.openWeek')}
         </button>

@@ -70,7 +70,14 @@ describe('PushService circuit breaker', () => {
 
     // Mozilla tem o seu proprio circuito, ainda fechado.
     prisma.pushSubscription.findMany.mockResolvedValueOnce([
-      { id: 'm', endpoint: MOZILLA, p256dh: 'p', auth: 'a', lang: 'en', user: { mutedPushKinds: [] } },
+      {
+        id: 'm',
+        endpoint: MOZILLA,
+        p256dh: 'p',
+        auth: 'a',
+        lang: 'en',
+        user: { mutedPushKinds: [] },
+      },
     ]);
     send.mockResolvedValueOnce({});
     await expect(notify(service)).resolves.toBe(1);

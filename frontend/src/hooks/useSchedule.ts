@@ -91,7 +91,7 @@ export function useSchedule(initialWeekStart: Date = todayUtcAnchored()) {
   );
 
   // Professor faltou / aula desmarcada (ou desfazer). Otimista como a
-  // presenca; cancelar limpa a presenca no servidor, aqui tambem.
+  // presenca; a presenca fica guardada no servidor (so deixa de contar).
   const setCancelled = useCallback(
     async (occurrence: ClassOccurrence, cancelled: boolean): Promise<boolean> => {
       const apply = (value: boolean) =>

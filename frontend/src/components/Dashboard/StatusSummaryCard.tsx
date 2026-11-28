@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import type { Area, Task } from '../../types/models';
 import {
   computeStatusSummaryFacts,
   pickStatusSummaryClauses,
@@ -9,18 +8,15 @@ import {
 import { CalendarIcon } from '../UI/Icons';
 import DashboardCard, { CardBody, CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
-
-interface StatusSummaryCardProps {
-  tasks: Task[];
-  areas: Area[];
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 const DAYS_TODAY = 0;
 const DAYS_TOMORROW = 1;
 const SINGULAR_COUNT = 1;
 
 // Resumo em linguagem natural do estado atual, so com dados ja carregados.
-export default function StatusSummaryCard({ tasks, areas }: StatusSummaryCardProps) {
+export default function StatusSummaryCard() {
+  const { academicTasks: tasks, academicAreas: areas } = useDashboardCardData();
   const { t } = useI18n();
   const facts = useMemo(() => computeStatusSummaryFacts(tasks, areas, new Date()), [tasks, areas]);
   const clauses = useMemo(() => pickStatusSummaryClauses(facts), [facts]);

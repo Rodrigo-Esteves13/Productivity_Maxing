@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import type { SharedWithMeItem, SharedWithMeStatus } from '../../api/notebookService';
+import type { SharedWithMeItem, SharedWithMeStatus } from '../../api/notebookShareService';
 import type { InvitationAnswer } from '../../hooks/useSharedWithMe';
 import { useI18n } from '../../i18n/useI18n';
 import InvitationCard from './InvitationCard';

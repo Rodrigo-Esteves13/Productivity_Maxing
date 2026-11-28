@@ -1,5 +1,5 @@
 import { useState, type SyntheticEvent } from 'react';
-import { forgotPasswordRequest } from '../api/userService';
+import { forgotPasswordRequest } from '../api/authService';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';

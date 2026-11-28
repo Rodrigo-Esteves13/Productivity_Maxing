@@ -14,7 +14,7 @@ import { useI18n } from '../i18n/useI18n';
 import { quizPath } from '../lib/appLinks';
 import { getApiMessage, getHttpStatus } from '../lib/httpError';
 import { stripQuizMarkdown } from '../lib/quizMarkdown';
-import { notifySocialChanged } from '../lib/socialEvents';
+import * as bus from '../lib/bus';
 
 const HTTP_NOT_FOUND = 404;
 const MAX_TOPICS_SHOWN = 12;
@@ -45,7 +45,7 @@ export default function SharedQuiz() {
     try {
       const { id } = await addSharedQuiz(token);
       if (!preview?.isOwner) {
-        notifySocialChanged();
+        bus.emit('social:changed');
         notify(t('quizzes.shared.addedToast'), 'success');
       }
       navigate(quizPath(id));

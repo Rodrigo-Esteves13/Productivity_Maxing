@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 import { ScheduleExceptionsService } from './schedule-exceptions.service';
 import { CreateScheduleExceptionDto } from './dto/schedule-exception.dto';
 import { perMinute } from '../common/throttle.util';
+import { SCHEDULE_EXCEPTION_WRITES_PER_MINUTE } from './work-shifts.constants';
 
 @ApiTags('Schedule')
 @ApiBearerAuth()
@@ -35,7 +37,7 @@ export class ScheduleExceptionsController {
   }
 
   @Post()
-  @Throttle(perMinute(30))
+  @Throttle(perMinute(SCHEDULE_EXCEPTION_WRITES_PER_MINUTE))
   @ApiOperation({
     summary:
       'Skips weekly shifts or moves one to another time between two days (day off, a different week, holidays).',
@@ -45,6 +47,19 @@ export class ScheduleExceptionsController {
     @Body() dto: CreateScheduleExceptionDto,
   ) {
     return this.service.create(user.id, dto);
+  }
+
+  @Patch(':id')
+  @Throttle(perMinute(SCHEDULE_EXCEPTION_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary: 'Edits a schedule change (takes the whole change, like create).',
+  })
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateScheduleExceptionDto,
+  ) {
+    return this.service.update(user.id, id, dto);
   }
 
   @Delete(':id')

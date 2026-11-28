@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import type { Task } from '../../types/models';
 import {
   WEEKLY_CHALLENGE_LINE_VARIANTS,
   computeWeeklyChallenge,
@@ -9,13 +8,11 @@ import { TargetIcon } from '../UI/Icons';
 import ProgressBar from '../UI/ProgressBar';
 import DashboardCard, { CardBody, CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
-
-interface WeeklyChallengeCardProps {
-  tasks: Task[];
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 // Meta semanal gerada a partir do ritmo das ultimas semanas.
-export default function WeeklyChallengeCard({ tasks }: WeeklyChallengeCardProps) {
+export default function WeeklyChallengeCard() {
+  const { academicTasks: tasks } = useDashboardCardData();
   const { t } = useI18n();
   const challenge = useMemo(() => computeWeeklyChallenge(tasks, new Date()), [tasks]);
   const variant = pickVariantIndex(

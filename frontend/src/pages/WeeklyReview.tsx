@@ -6,7 +6,7 @@ import ErrorState from '../components/UI/ErrorState';
 import DashboardCard, { CardHeading } from '../components/UI/DashboardCard';
 import MasonryGrid from '../components/UI/MasonryGrid';
 import useDocumentTitle from '../hooks/useDocumentTitle';
-import { getWeeklyReview } from '../api/userService';
+import { getWeeklyReview } from '../api/tasksService';
 import type { WeeklyReview as WeeklyReviewData } from '../types/models';
 import { useI18n } from '../i18n/useI18n';
 
@@ -37,7 +37,7 @@ function TaskLink({ id, title, areaName }: { id: string; title: string; areaName
 
 // Revisao dos ultimos 7 dias + o que vem nos proximos 7. So leitura.
 export default function WeeklyReview() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   useDocumentTitle(t('review.title'));
   const [data, setData] = useState<WeeklyReviewData | null>(null);
   const [error, setError] = useState(false);
@@ -139,7 +139,7 @@ export default function WeeklyReview() {
                     <li key={t.id} className="flex items-baseline justify-between gap-3">
                       <TaskLink id={t.id} title={t.title} areaName={t.areaName} />
                       <span className="text-xs text-neutral-500 shrink-0">
-                        {new Date(t.date).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+                        {new Date(t.date).toLocaleDateString(lang, { weekday: 'short', day: 'numeric', month: 'short' })}
                       </span>
                     </li>
                   ))}

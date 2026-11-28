@@ -112,7 +112,7 @@ export default function CalendarFeedCard() {
           type="button"
           disabled={isBusy}
           onClick={() => void run(enableCalendarFeed, t('ui.couldNotCreateTheLink'))}
-          className="mt-4 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 transition-colors"
+          className="mt-4 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 transition-colors pointer-coarse:min-h-11"
         >
           {isBusy ? t('common.creating') : t('ui.createSubscriptionLink')}
         </button>
@@ -141,7 +141,7 @@ export default function CalendarFeedCard() {
           <div className="flex flex-wrap gap-3 text-sm">
             <a
               href={feedWebcalUrl(status.token as string, tasksOnly)}
-              className="underline text-violet-400 hover:text-violet-300"
+              className="underline text-violet-400 hover:text-violet-300 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
             >
               {t('ui.openInCalendarApp')}
             </a>
@@ -149,7 +149,7 @@ export default function CalendarFeedCard() {
               type="button"
               disabled={isBusy}
               onClick={() => void handleRotate()}
-              className="text-neutral-400 hover:text-white disabled:opacity-50"
+              className="text-neutral-400 hover:text-white disabled:opacity-50 pointer-coarse:min-h-11"
             >
               {t('ui.newLink')}
             </button>
@@ -157,7 +157,7 @@ export default function CalendarFeedCard() {
               type="button"
               disabled={isBusy}
               onClick={() => void handleDisable()}
-              className="text-neutral-400 hover:text-red-400 disabled:opacity-50"
+              className="text-neutral-400 hover:text-red-400 disabled:opacity-50 pointer-coarse:min-h-11"
             >
               {t('ui.turnOff')}
             </button>

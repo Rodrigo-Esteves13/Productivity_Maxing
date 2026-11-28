@@ -3,6 +3,7 @@ import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { i18nSplitPlugin } from './scripts/i18n-split.ts';
 
 // Zonas frias (admin, auth, legal, landing, definições, rodapé): visitadas
 // pouco e quase só formulários/texto. Ficam fora do React Compiler porque
@@ -68,7 +69,8 @@ function pushSwConfig(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), babel({ presets: [reactCompiler] }), tailwindcss(), pushSwConfig(), VitePWA({
+  // i18nSplitPlugin: cada lingua em nucleo + resto (F-43, so no build).
+  plugins: [i18nSplitPlugin(), react(), babel({ presets: [reactCompiler] }), tailwindcss(), pushSwConfig(), VitePWA({
     // 'autoUpdate' -> o SW troca de versão sozinho no próximo load,
     // sem precisar de o user aceitar um prompt de "nova versão disponível".
     // Combinado com o registerSW.ts (que força skipWaiting), garante que
@@ -219,7 +221,7 @@ export default defineConfig({
     // browser sobrevive aos deploys que so mexem no codigo da app.
     rolldownOptions: {
       output: {
-        advancedChunks: {
+        codeSplitting: {
           groups: [
             { name: 'vendor-react', test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
             { name: 'vendor-router', test: /[\\/]node_modules[\\/](react-router|react-router-dom|@remix-run)[\\/]/ },

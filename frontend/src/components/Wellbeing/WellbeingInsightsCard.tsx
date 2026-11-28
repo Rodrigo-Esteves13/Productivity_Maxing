@@ -8,6 +8,7 @@ interface WellbeingInsightsCardProps {
   insights: WellbeingInsights | null;
   isLoading: boolean;
   error: boolean;
+  onRetry: () => void;
 }
 
 type InsightKey = 'moodVsFocus' | 'moodVsStudyMinutes' | 'energyVsFocus' | 'stressVsFocus';
@@ -28,7 +29,7 @@ function describe(result: CorrelationResult, t: (key: string, vars?: Record<stri
 }
 
 // Correlacoes humor/energia/stress com o foco e o tempo de estudo.
-export default function WellbeingInsightsCard({ insights, isLoading, error }: WellbeingInsightsCardProps) {
+export default function WellbeingInsightsCard({ insights, isLoading, error, onRetry }: WellbeingInsightsCardProps) {
   const { t } = useI18n();
 
   return (
@@ -38,7 +39,7 @@ export default function WellbeingInsightsCard({ insights, isLoading, error }: We
       {isLoading ? (
         <LinesSkeleton lines={4} />
       ) : error || !insights ? (
-        <ErrorState message={t('wellbeing.insights.loadError')} />
+        <ErrorState message={t('wellbeing.insights.loadError')} onRetry={onRetry} />
       ) : (
         <>
           <p className="mb-3 text-sm text-neutral-300">

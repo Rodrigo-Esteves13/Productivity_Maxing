@@ -61,4 +61,39 @@ describe('dedupeGets', () => {
     await expect(kept).resolves.toMatchObject({ status: 200 });
     expect(network).toHaveBeenCalledTimes(1);
   });
+  it('cancels the network request only when every caller with a signal gave up', async () => {
+    const signals: (AbortSignal | undefined)[] = [];
+    const network = vi.fn((config: InternalAxiosRequestConfig) => {
+      signals.push(config.signal as AbortSignal | undefined);
+      return new Promise<AxiosResponse>(() => undefined);
+    });
+    const adapter = dedupeGets(network, (config) => config.url ?? '');
+    const one = new AbortController();
+    const two = new AbortController();
+    const a = adapter(request('/tasks', { signal: one.signal }));
+    const b = adapter(request('/tasks', { signal: two.signal }));
+    one.abort();
+    expect(signals[0]?.aborted).toBe(false);
+    two.abort();
+    expect(signals[0]?.aborted).toBe(true);
+    await expect(a).rejects.toSatisfy(isCancel);
+    await expect(b).rejects.toSatisfy(isCancel);
+    // O pedido seguinte ja nao se junta ao cancelado.
+    void adapter(request('/tasks'));
+    expect(network).toHaveBeenCalledTimes(2);
+  });
+
+  it('never cancels the network request while a caller without a signal waits', () => {
+    const signals: (AbortSignal | undefined)[] = [];
+    const network = vi.fn((config: InternalAxiosRequestConfig) => {
+      signals.push(config.signal as AbortSignal | undefined);
+      return new Promise<AxiosResponse>(() => undefined);
+    });
+    const adapter = dedupeGets(network, (config) => config.url ?? '');
+    const controller = new AbortController();
+    void adapter(request('/tasks')).catch(() => undefined);
+    void adapter(request('/tasks', { signal: controller.signal })).catch(() => undefined);
+    controller.abort();
+    expect(signals[0]?.aborted).toBe(false);
+  });
 });

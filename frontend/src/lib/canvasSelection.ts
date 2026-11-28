@@ -1,3 +1,4 @@
+import { onSessionReset } from './sessionReset';
 import type { CanvasLink, CanvasShape, CanvasTextItem, Stroke } from '../types/models';
 
 // Selecao por caixa no quadro: o que fica todo dentro do retangulo arrastado
@@ -159,6 +160,10 @@ export function offsetClipboard(
 // Area de transferencia do quadro, partilhada por todas as entradas abertas
 // nesta tab (copiar numa nota e colar noutra). So em memoria.
 let clipboardStore: CanvasClipboard | null = null;
+// Outra conta nesta tab nao pode colar o que a anterior copiou.
+onSessionReset(() => {
+  clipboardStore = null;
+});
 
 export function setCanvasClipboard(clipboard: CanvasClipboard): void {
   clipboardStore = clipboard;

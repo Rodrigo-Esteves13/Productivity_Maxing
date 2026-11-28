@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { blockedSources, filterByCategory, filterUsers, pageSlice, sortUsers } from './adminLists';
+import {
+  USERS_PAGE_SIZE,
+  USER_SEARCH_MAX_LENGTH,
+  appendById,
+  filterUsers,
+  usersPageQuery,
+} from './adminLists';
 import type { User } from '../types/models';
 
 const mk = (id: string, over: Partial<User>): User =>
@@ -17,29 +23,17 @@ describe('adminLists', () => {
     expect(filterUsers(users, { role: 'all', status: 'ACTIVE' }).map((u) => u.id)).toEqual(['a', 'c']);
     expect(filterUsers(users, { role: 'all', status: 'all' })).toHaveLength(3);
   });
-  it('sorts by name ignoring case and by joined date', () => {
-    expect(sortUsers(users, 'name', 'asc').map((u) => u.id)).toEqual(['a', 'b', 'c']);
-    expect(sortUsers(users, 'joined', 'desc').map((u) => u.id)).toEqual(['a', 'b', 'c']);
-  });
-  it('pageSlice clamps skip', () => {
-    const items = [1, 2, 3, 4, 5];
-    expect(pageSlice(items, 2, 2)).toEqual({ rows: [3, 4], skip: 2 });
-    expect(pageSlice(items, 99, 2)).toEqual({ rows: [5], skip: 4 });
-    expect(pageSlice([], 5, 2)).toEqual({ rows: [], skip: 0 });
-  });
-  it('filters by category', () => {
-    const items = [{ category: 'BUG' }, { category: 'IDEA' }];
-    expect(filterByCategory(items, 'BUG')).toHaveLength(1);
-    expect(filterByCategory(items, 'all')).toHaveLength(2);
-  });
-  it('blockedSources dedupes', () => {
+  it('builds the server query without empty or unknown params', () => {
+    const base = { search: '  ', role: 'all', status: 'all', sortKey: 'name', direction: 'asc' } as const;
+    expect(usersPageQuery(base)).toEqual({ sort: 'name', order: 'asc', limit: USERS_PAGE_SIZE });
     expect(
-      blockedSources([
-        { sourceBlocked: true, updatedByIpHash: 'h1' },
-        { sourceBlocked: true, updatedByIpHash: 'h1' },
-        { sourceBlocked: false, updatedByIpHash: 'h2' },
-        { sourceBlocked: true, updatedByIpHash: null },
-      ]),
-    ).toEqual(['h1']);
+      usersPageQuery({ search: ' ana ', role: 'ADMIN', status: 'BANNED', sortKey: 'joined', direction: 'asc' }),
+    ).toEqual({ q: 'ana', role: 'ADMIN', status: 'BANNED', sort: 'joined', order: 'asc', limit: USERS_PAGE_SIZE });
+    expect(usersPageQuery({ ...base, search: 'a'.repeat(USER_SEARCH_MAX_LENGTH + 5) }).q).toHaveLength(
+      USER_SEARCH_MAX_LENGTH,
+    );
+  });
+  it('appends the next page without repeating ids', () => {
+    expect(appendById([{ id: 'a' }], [{ id: 'a' }, { id: 'b' }])).toEqual([{ id: 'a' }, { id: 'b' }]);
   });
 });

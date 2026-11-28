@@ -99,7 +99,7 @@ export default function EventForm({ isSaving, onSubmit, onCancel }: EventFormPro
         <ActionButton type="submit" disabled={isSaving}>
           {isSaving ? t('common.saving') : t('ui.addEvent')}
         </ActionButton>
-        <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+        <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
           {t('ui.cancel')}
         </button>
       </div>

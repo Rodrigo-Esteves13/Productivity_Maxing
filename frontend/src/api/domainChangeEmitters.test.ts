@@ -19,11 +19,11 @@ import {
   bulkUpdateTaskStatus,
   confirmOverdueTask,
   createTask,
-  deleteArea,
   deleteTask,
   getUserTasks,
   updateTask,
-} from './userService';
+} from './tasksService';
+import { deleteArea } from './areasService';
 import {
   createManualSession,
   deleteStudySession,

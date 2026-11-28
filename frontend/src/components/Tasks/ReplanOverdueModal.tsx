@@ -14,7 +14,7 @@ interface ReplanOverdueModalProps {
 
 // Mostra para que dia cada atrasada vai e so mexe depois de confirmar.
 export default function ReplanOverdueModal({ tasks, onApply, onClose }: ReplanOverdueModalProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [isSaving, setIsSaving] = useState(false);
   const plan = useMemo(() => planReplan(tasks), [tasks]);
 
@@ -35,9 +35,9 @@ export default function ReplanOverdueModal({ tasks, onApply, onClose }: ReplanOv
           <ul className="max-h-72 space-y-1 overflow-y-auto text-sm">
             {plan.map((move) => (
               <li key={move.task.id} className="flex items-center justify-between gap-3 border-b border-neutral-800 py-1.5">
-                <span className="min-w-0 truncate text-neutral-200">{move.task.title}</span>
+                <span className="min-w-0 truncate text-neutral-200" title={move.task.title}>{move.task.title}</span>
                 <span className="shrink-0 text-xs tabular-nums text-neutral-400">
-                  {new Date(`${move.date}T00:00:00`).toLocaleDateString()}
+                  {new Date(`${move.date}T00:00:00`).toLocaleDateString(lang)}
                 </span>
               </li>
             ))}

@@ -100,9 +100,12 @@ describe('TaskPackSyncService (queries em lote)', () => {
   function build() {
     const prisma = {
       taskPack: { findFirst: jest.fn() },
-      taskPackItem: { findMany: jest.fn(), update: jest.fn((a) => a) },
-      task: { findMany: jest.fn(), updateMany: jest.fn((a) => a) },
-      taskPackUpdate: { create: jest.fn((a) => a), deleteMany: jest.fn() },
+      taskPackItem: { findMany: jest.fn(), update: jest.fn((a: unknown) => a) },
+      task: { findMany: jest.fn(), updateMany: jest.fn((a: unknown) => a) },
+      taskPackUpdate: {
+        create: jest.fn((a: unknown) => a),
+        deleteMany: jest.fn(),
+      },
       $transaction: jest.fn(() => Promise.resolve([])),
     };
     const service = new TaskPackSyncService(

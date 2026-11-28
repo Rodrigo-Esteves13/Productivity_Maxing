@@ -4,7 +4,7 @@ import AreaStatusBadge from './AreaStatusBadge';
 import AreaOverviewBadges from './AreaOverviewBadges';
 import ProgressBar from '../UI/ProgressBar';
 import type { Area } from '../../types/models';
-import type { AreaOverviewItem } from '../../lib/areaOverview';
+import { useAreaOverviewContext } from './areaOverviewContext';
 import { formatNumber } from '../../lib/ratings';
 import { useI18n } from '../../i18n/useI18n';
 import IconButton from '../UI/IconButton';
@@ -21,12 +21,6 @@ interface AreaCardProps {
   selectMode?: boolean;
   selected?: boolean;
   onToggleSelect?: (area: Area) => void;
-  // Resumo opcional (tarefas, risco, docente). Sem ele o cartao fica so com o basico.
-  overview?: AreaOverviewItem;
-  overviewLoading?: boolean;
-  overviewFailed?: boolean;
-  // Maximo da escala de notas do programa ativo; null = sem escala unica (vista de todos).
-  gradeMax?: number | null;
 }
 
 const CREDITS_FRACTION_DIGITS = 1;
@@ -46,12 +40,11 @@ export default function AreaCard({
   selectMode = false,
   selected = false,
   onToggleSelect,
-  overview,
-  overviewLoading = false,
-  overviewFailed = false,
-  gradeMax = null,
 }: AreaCardProps) {
   const { t, lang } = useI18n();
+  // Resumo opcional (tarefas, risco, docente). Sem ele o cartao fica so com o basico.
+  const { byAreaId, isLoading: overviewLoading, failed: overviewFailed, gradeMax } = useAreaOverviewContext();
+  const overview = byAreaId.get(area.id);
   const canSelect = selectMode && Boolean(onToggleSelect);
   const teacherName = overview?.teacherName ?? null;
   const average = overview?.currentAverage ?? null;
@@ -84,8 +77,8 @@ export default function AreaCard({
       <div className="flex h-full flex-col gap-3 py-4 pl-5 pr-3">
         <div className="flex items-start gap-2">
           {canSelect && (
-            // Alvo de toque de 40px (-m-3 p-3) para funcionar bem no telemovel.
-            <label onClick={stop} className="-my-3 -ml-3 -mr-1 flex shrink-0 cursor-pointer items-center p-3">
+            // Alvo de toque de 40px (-m-3 p-3), 44px em ecras tacteis.
+            <label onClick={stop} className="-my-3 -ml-3 -mr-1 flex shrink-0 cursor-pointer items-center p-3 pointer-coarse:p-3.5">
               <input
                 type="checkbox"
                 checked={selected}
@@ -106,7 +99,7 @@ export default function AreaCard({
                   onSelect(area);
                 }}
                 title={t('ui.viewDetails')}
-                className="rounded text-left transition-colors duration-[var(--duration-quick)] hover:text-violet-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
+                className="rounded text-left pointer-coarse:min-h-11 pointer-coarse:min-w-11 transition-colors duration-[var(--duration-quick)] hover:text-violet-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
               >
                 {area.name}
               </button>
@@ -115,7 +108,7 @@ export default function AreaCard({
               <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-neutral-500">
                 <UserIcon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
                 <span className="sr-only">{t('teacher.label')}: </span>
-                <span className="truncate">{teacherName}</span>
+                <span className="truncate" title={teacherName}>{teacherName}</span>
               </p>
             )}
           </div>
@@ -131,8 +124,8 @@ export default function AreaCard({
                 stop(e);
                 onToggleHidden(area);
               }}
-              // before: alarga o alvo para 40px de altura sem mudar o desenho.
-              className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-[var(--duration-fast)] ease-smooth-out before:absolute before:-inset-x-1.5 before:-inset-y-2.5 before:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
+              // before: alarga o alvo para 40px de altura (44px em ecras tacteis) sem mudar o desenho.
+              className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-[var(--duration-fast)] ease-smooth-out before:absolute before:-inset-x-1.5 before:-inset-y-2.5 pointer-coarse:before:-inset-y-3 before:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
                 area.isHidden ? 'bg-neutral-600 ring-1 ring-inset ring-neutral-500' : 'bg-violet-600'
               }`}
             >
@@ -176,10 +169,10 @@ export default function AreaCard({
               onClick={stop}
               className="-my-1.5 -mr-1 flex shrink-0 items-center transition-opacity duration-[var(--duration-quick)] ease-smooth-out pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100"
             >
-              <IconButton label={t('ui.editArea')} onClick={() => onEdit(area)} className="h-10 w-10">
+              <IconButton label={t('ui.editArea')} onClick={() => onEdit(area)} className="h-10 w-10 pointer-coarse:h-11 pointer-coarse:w-11">
                 <PencilIcon />
               </IconButton>
-              <IconButton label={t('ui.deleteArea')} tone="danger" onClick={() => onDelete(area.id)} className="h-10 w-10">
+              <IconButton label={t('ui.deleteArea')} tone="danger" onClick={() => onDelete(area.id)} className="h-10 w-10 pointer-coarse:h-11 pointer-coarse:w-11">
                 <TrashIcon />
               </IconButton>
             </div>

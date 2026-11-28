@@ -62,13 +62,16 @@ export default function TasksTableHeader({
       <tr>
         {onToggleAll && (
           <th className="px-4 py-3 font-medium print-hide">
-            <input
-              type="checkbox"
-              checked={!!allSelected}
-              onChange={onToggleAll}
-              className="accent-violet-500"
-              aria-label={t('ui.selectAllTasks')}
-            />
+            {/* Mesmo alvo e tamanho das caixas das linhas. */}
+            <label className="-m-3 flex w-fit cursor-pointer p-3 pointer-coarse:-m-3.5 pointer-coarse:p-3.5">
+              <input
+                type="checkbox"
+                checked={!!allSelected}
+                onChange={onToggleAll}
+                className="h-4 w-4 cursor-pointer accent-violet-500"
+                aria-label={t('ui.selectAllTasks')}
+              />
+            </label>
           </th>
         )}
         {columnOrder.map((id) => {
@@ -96,7 +99,7 @@ export default function TasksTableHeader({
                 <button
                   type="button"
                   onClick={() => onSortColumn(id)}
-                  className={`inline-flex items-center gap-1 uppercase hover:text-white ${
+                  className={`pointer-coarse:min-h-11 inline-flex items-center gap-1 uppercase hover:text-white ${
                     isSorted ? 'text-violet-300' : ''
                   }`}
                 >

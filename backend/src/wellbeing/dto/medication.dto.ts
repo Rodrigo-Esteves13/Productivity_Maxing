@@ -27,6 +27,7 @@ import {
   MAX_TIMES_PER_MEDICATION,
   MINUTES_PER_DAY,
 } from '../wellbeing.constants';
+import { IsRealDateKey } from '../../common/validators/is-real-date-key.decorator';
 
 // header.payload.signature, cada parte em base64url.
 const JWT_SHAPE_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
@@ -109,6 +110,7 @@ export class UpdateMedicationDto {
 
 export class MedicationDoseDto {
   @ApiProperty({ example: '2026-10-21' })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: 'date must be formatted YYYY-MM-DD.' })
   date: string;
 
@@ -142,6 +144,7 @@ export class MedicationDoseActionDto {
 export class MedicationDayQueryDto {
   @ApiPropertyOptional({ example: '2026-10-21' })
   @IsOptional()
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: 'date must be formatted YYYY-MM-DD.' })
   date?: string;
 }
@@ -217,20 +220,24 @@ export class AcceptMedicationDisclaimerDto {
 
 export class MedicationIntakeRangeQueryDto {
   @ApiProperty({ example: '2026-10-18' })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: 'from must be formatted YYYY-MM-DD.' })
   from: string;
 
   @ApiProperty({ example: '2026-10-24' })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: 'to must be formatted YYYY-MM-DD.' })
   to: string;
 }
 
 export class MedicationHistoryQueryDto {
   @ApiProperty({ example: '2026-10-01' })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: 'from must be formatted YYYY-MM-DD.' })
   from: string;
 
   @ApiProperty({ example: '2026-10-31' })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: 'to must be formatted YYYY-MM-DD.' })
   to: string;
 }

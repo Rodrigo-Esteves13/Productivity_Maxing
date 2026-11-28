@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
+import { getHttpStatus, HTTP_NOT_FOUND } from '../lib/httpError';
 import PageLayout from '../components/Layout/PageLayout';
 import Breadcrumbs from '../components/UI/Breadcrumbs';
 import ErrorState from '../components/UI/ErrorState';
@@ -53,7 +53,7 @@ export default function AdminUserProfile() {
       setProfile(await getAdminSocialProfile(userId));
       setState('ready');
     } catch (error) {
-      setState(axios.isAxiosError(error) && error.response?.status === 404 ? 'not_found' : 'error');
+      setState(getHttpStatus(error) === HTTP_NOT_FOUND ? 'not_found' : 'error');
     }
   }, [userId]);
 

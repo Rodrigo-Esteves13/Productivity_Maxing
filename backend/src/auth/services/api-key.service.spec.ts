@@ -163,6 +163,48 @@ describe('ApiKeyService.validateApiKey cache (S-09)', () => {
     expect(prisma.apiKey.updateMany).not.toHaveBeenCalled();
   });
 
+  it('never keeps the raw key in memory (cache keyed by a derived value)', async () => {
+    const { service } = wire(setup());
+    await service.validateApiKey(VALID_TOKEN);
+    const cache = (service as unknown as { cache: Map<string, unknown> }).cache;
+    expect(cache.size).toBe(1);
+    const [cacheKey] = [...cache.keys()];
+    expect(cacheKey).not.toContain(VALID_TOKEN);
+    expect(JSON.stringify([...cache.values()])).not.toContain(VALID_TOKEN);
+  });
+
+  it('two instances derive different cache keys for the same raw key', async () => {
+    const a = wire(setup());
+    const b = wire(setup());
+    await a.service.validateApiKey(VALID_TOKEN);
+    await b.service.validateApiKey(VALID_TOKEN);
+    const keyOf = (s: ApiKeyService) => [
+      ...(s as unknown as { cache: Map<string, unknown> }).cache.keys(),
+    ];
+    expect(keyOf(a.service)).not.toEqual(keyOf(b.service));
+  });
+
+  it('a write prunes expired entries of other keys', async () => {
+    const { service, prisma } = setup();
+    prisma.apiKey.findUnique.mockImplementation(
+      ({ where }: { where: { keyHash: string } }) =>
+        Promise.resolve({
+          id: `key-${where.keyHash.slice(0, 8)}`,
+          scope: 'TASKS',
+          lastUsed: new Date(START),
+          user: USER,
+        }),
+    );
+    await service.validateApiKey('token-a');
+    await service.validateApiKey('token-b');
+    expect(service.cachedKeys).toBe(2);
+
+    now.mockReturnValue(START + API_KEY_CACHE_TTL_MS);
+    await service.validateApiKey('token-c');
+    // token-a e token-b expiraram e sairam sem ninguem os voltar a ler.
+    expect(service.cachedKeys).toBe(1);
+  });
+
   it('keeps the cache bounded, evicting the least recently used key', async () => {
     const { service, prisma } = setup();
     prisma.apiKey.findUnique.mockImplementation(
@@ -195,6 +237,45 @@ describe('ApiKeyService.validateApiKey cache (S-09)', () => {
     } finally {
       const actual = jest.requireActual<typeof import('crypto')>('crypto');
       scryptMock.mockImplementation(actual.scrypt);
+    }
+  });
+});
+
+describe('ApiKeyService cache sweep', () => {
+  beforeAll(() => {
+    process.env.API_KEY_SECRET = 'test-api-key-secret';
+  });
+
+  afterEach(() => jest.useRealTimers());
+
+  it('the periodic sweep removes expired entries without any further request', async () => {
+    const { service, prisma, record } = setup(new Date());
+    prisma.apiKey.findUnique.mockResolvedValue(record);
+    await service.validateApiKey(VALID_TOKEN);
+    expect(service.cachedKeys).toBe(1);
+
+    jest.useFakeTimers();
+    service.onModuleInit();
+    jest.advanceTimersByTime(API_KEY_CACHE_TTL_MS);
+    expect(service.cachedKeys).toBe(0);
+    service.onModuleDestroy();
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('the sweep timer does not keep the process alive and stops on destroy', () => {
+    const { service } = setup();
+    const unref = jest.fn();
+    const handle = { unref } as unknown as NodeJS.Timeout;
+    const setSpy = jest.spyOn(global, 'setInterval').mockReturnValue(handle);
+    const clearSpy = jest.spyOn(global, 'clearInterval').mockImplementation();
+    try {
+      service.onModuleInit();
+      expect(unref).toHaveBeenCalledTimes(1);
+      service.onModuleDestroy();
+      expect(clearSpy).toHaveBeenCalledWith(handle);
+    } finally {
+      setSpy.mockRestore();
+      clearSpy.mockRestore();
     }
   });
 });

@@ -1,28 +1,12 @@
 import { STORAGE_KEYS } from '../lib/storageKeys';
-import { useEffect, useState } from 'react';
+import { OFF_BY_DEFAULT, usePersistedState } from './usePersistedState';
 
 const STORAGE_KEY = STORAGE_KEYS.examMode;
-
-function loadExamMode(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
 
 // Modo exame do Dashboard (ver lib/examMode.ts). Mesmo formato de
 // useShowArchivedTasks: preferencia local, desligada por omissao.
 export function useExamMode() {
-  const [isExamMode, setIsExamMode] = useState<boolean>(loadExamMode);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, String(isExamMode));
-    } catch {
-      // Best-effort only - same reasoning as useTableDensity.
-    }
-  }, [isExamMode]);
+  const [isExamMode, setIsExamMode] = usePersistedState(STORAGE_KEY, OFF_BY_DEFAULT);
 
   return { isExamMode, setIsExamMode };
 }

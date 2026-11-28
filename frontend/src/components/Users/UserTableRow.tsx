@@ -21,7 +21,7 @@ export default function UserTableRow({ user, isSelf, isReactivating, ...handlers
     <tr className="border-b border-neutral-800 hover:bg-neutral-800/30 transition-colors">
       <td className="px-4 py-3">
         {/* Nome abre o perfil (codigo de amigo e ligacoes). */}
-        <Link to={adminUserPath(user.id)} className="group flex items-center gap-3">
+        <Link to={adminUserPath(user.id)} className="group flex pointer-coarse:min-h-11 items-center gap-3">
           <Avatar initials={initials} avatarUrl={user.avatarUrl} size="sm" />
           <div>
             <div className="font-medium text-neutral-200 group-hover:text-violet-300">

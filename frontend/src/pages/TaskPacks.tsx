@@ -22,7 +22,8 @@ const PACK_SEARCH_MIN = 5;
 export default function TaskPacks() {
   const { t } = useI18n();
   useDocumentTitle(t('nav.taskPacks'));
-  const { packs, tasks, areas, isLoading, hasError, isSaving, create, remove, rename, publish } = useTaskPacks();
+  const { packs, tasks, areas, isLoading, hasError, isSaving, create, remove, rename, publish, setItemCount, reload } =
+    useTaskPacks();
   const search = useListSearch(packs, (p) => [p.name]);
   const packUpdates = usePackUpdates();
   const [isCreating, setIsCreating] = useState(false);
@@ -48,7 +49,7 @@ export default function TaskPacks() {
         </section>
       )}
       {packUpdates.hasError && <ErrorState message={t('packs.updates.loadError')} />}
-      {isLoading ? (
+      {isLoading && packs.length === 0 ? (
         <TableSkeleton rows={4} columns={3} />
       ) : hasError ? (
         <ErrorState message={t('packs.loadError')} />
@@ -62,7 +63,16 @@ export default function TaskPacks() {
           {search.filtered.length === 0 ? (
             <EmptyState message={t('search.noResultsFor', { query: search.query.trim() })} />
           ) : (
-            <TaskPackList packs={search.filtered} onDelete={remove} onRename={rename} onPublish={publish} />
+            <TaskPackList
+              packs={search.filtered}
+              tasks={tasks}
+              areas={areas}
+              onDelete={remove}
+              onRename={rename}
+              onPublish={publish}
+              onItemCount={setItemCount}
+              onTasksChanged={reload}
+            />
           )}
         </>
       )}

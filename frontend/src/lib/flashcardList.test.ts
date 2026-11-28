@@ -68,6 +68,16 @@ describe('cardsToTsv', () => {
     ]);
   });
 
+  it('neutralizes spreadsheet formulas and the import restores the text', () => {
+    const cards = [card('x', { front: '=HYPERLINK("http://x","y")', back: '\n@cmd' }), card('y', { front: '-ing', back: '+1' })];
+    const tsv = cardsToTsv(cards);
+    for (const cell of tsv.split(/[\t\n]/)) expect(cell.startsWith("'")).toBe(true);
+    expect(parseFlashcardText(tsv).cards).toEqual([
+      { front: '=HYPERLINK("http://x","y")', back: '@cmd' },
+      { front: '-ing', back: '+1' },
+    ]);
+  });
+
   it('returns an empty text for no cards', () => {
     expect(cardsToTsv([])).toBe('');
   });

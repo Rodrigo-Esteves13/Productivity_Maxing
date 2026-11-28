@@ -1,21 +1,18 @@
 import { useMemo } from 'react';
-import type { Task } from '../../types/models';
 import { computeWeekdayDistribution } from '../../utils/weekdayDistribution';
 import { CalendarIcon } from '../UI/Icons';
 import DashboardCard, { CardBody, CardHeading } from '../UI/DashboardCard';
 import LegendItem from '../UI/LegendItem';
 import { useI18n } from '../../i18n/useI18n';
 import { fillNodes } from '../../i18n/fillNodes';
-
-interface WeekdayLoadCardProps {
-  tasks: Task[];
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 const MIN_TASKS_TO_SHOW = 5;
 
 // Which weekdays deadlines tend to pile up on. Pending and completed are
 // stacked so a busy-but-already-done day doesn't look like a problem.
-export default function WeekdayLoadCard({ tasks }: WeekdayLoadCardProps) {
+export default function WeekdayLoadCard() {
+  const { academicTasks: tasks } = useDashboardCardData();
   const { t, lang } = useI18n();
   const buckets = useMemo(() => computeWeekdayDistribution(tasks, lang), [tasks, lang]);
   const total = buckets.reduce((s, b) => s + b.total, 0);

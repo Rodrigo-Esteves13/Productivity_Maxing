@@ -166,7 +166,7 @@ export default function CommitmentForm({ initial, submitLabel, isSaving, onSubmi
         <ActionButton type="submit" disabled={isSaving}>
           {isSaving ? t('common.saving') : submitLabel}
         </ActionButton>
-        <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+        <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
           {t('common.cancel')}
         </button>
       </div>

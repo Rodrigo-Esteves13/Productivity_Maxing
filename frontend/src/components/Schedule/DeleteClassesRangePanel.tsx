@@ -5,6 +5,7 @@ import { TrashIcon } from '../UI/Icons';
 import { deleteImportedClasses } from '../../api/scheduleService';
 import { addUtcDays, startOfWeek, todayUtcAnchored } from '../../lib/weekDates';
 import { toDateKey } from '../../lib/dateKey';
+import { formatTaskDate } from '../../lib/timeFormat';
 import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
 
@@ -24,7 +25,7 @@ function thisWeekRange(): { from: string; to: string } {
 // Apagar so as aulas de um intervalo (esta semana, ou datas escolhidas),
 // sem tocar nas restantes nem em turnos ou apontamentos do caderno.
 export default function DeleteClassesRangePanel({ disabled = false, onDeleted }: DeleteClassesRangePanelProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { confirm, notify } = useFeedback();
   const initial = thisWeekRange();
   const [from, setFrom] = useState(initial.from);
@@ -43,7 +44,7 @@ export default function DeleteClassesRangePanel({ disabled = false, onDeleted }:
   const handleDelete = async () => {
     const ok = await confirm({
       title: t('ux4sched.range.confirmTitle'),
-      message: t('ux4sched.range.confirmMessage', { from, to }),
+      message: t('ux4sched.range.confirmMessage', { from: formatTaskDate(from, lang), to: formatTaskDate(to, lang) }),
       confirmLabel: t('ux4sched.range.confirmAction'),
       tone: 'danger',
     });

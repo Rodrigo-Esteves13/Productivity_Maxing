@@ -64,7 +64,7 @@ export default function StudyVsClassCard({ refreshKey }: StudyVsClassCardProps) 
           {unlinked.length > 0 && (
             <p className="mt-3 text-xs text-neutral-500">
               {t('studyVsClass.unlinked', { subjects: unlinked.join(', ') })}{' '}
-              <Link to="/notebook" className="text-violet-400 underline decoration-dotted hover:text-violet-300">
+              <Link to="/notebook" className="text-violet-400 underline decoration-dotted hover:text-violet-300 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center">
                 {t('studyVsClass.linkInNotebook')}
               </Link>
             </p>

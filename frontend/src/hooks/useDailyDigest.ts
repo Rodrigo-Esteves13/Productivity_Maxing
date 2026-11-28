@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getUserTasks } from '../api/userService';
+import { getUserTasks } from '../api/tasksService';
+import { useAcademic } from '../context/useAcademic';
 import { buildDigest, countOverdue, nearestExam, type DigestLine } from '../lib/dailyDigest';
 import { useTodayOverview } from './useTodayOverview';
 import type { Task } from '../types/models';
@@ -15,6 +16,11 @@ const COMPLETED: Task['progressStatus'] = 'COMPLETED';
 export function useDailyDigest(now: Date): DigestLine[] | null | undefined {
   const overview = useTodayOverview();
   const [tasks, setTasks] = useState<Task[] | null | undefined>(undefined);
+  // O mesmo periodo que o Dashboard (onde o resumo aparece) pede: as duas
+  // leituras partilham o pedido e a cache de tasks (F-09). Sem periodo
+  // escolhido (ex: "todos os programas"), o periodo ativo do servidor.
+  const { activePeriod, isLoading: isAcademicLoading } = useAcademic();
+  const periodId = activePeriod?.id;
 
   const [overviewGaveUp, setOverviewGaveUp] = useState(false);
 
@@ -24,8 +30,9 @@ export function useDailyDigest(now: Date): DigestLine[] | null | undefined {
   }, []);
 
   useEffect(() => {
+    if (isAcademicLoading) return undefined;
     const controller = new AbortController();
-    getUserTasks(undefined, controller.signal)
+    getUserTasks(periodId, controller.signal)
       .then((result) => {
         if (!controller.signal.aborted) setTasks(result);
       })
@@ -33,7 +40,7 @@ export function useDailyDigest(now: Date): DigestLine[] | null | undefined {
         if (!controller.signal.aborted) setTasks(null);
       });
     return () => controller.abort();
-  }, []);
+  }, [isAcademicLoading, periodId]);
 
   return useMemo(() => {
     if (tasks === undefined || (!overview && !overviewGaveUp)) return undefined;

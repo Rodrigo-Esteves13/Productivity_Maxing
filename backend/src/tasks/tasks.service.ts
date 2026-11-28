@@ -31,6 +31,8 @@ import { runWithConcurrencyLimit } from '../common/concurrency.util';
 import { TaskMetaCacheService } from '../common/task-meta-cache.service';
 import { nextOccurrence } from './recurrence.util';
 import { bulkRescheduleTasks } from './bulk-reschedule.util';
+import { restoreTasks } from './restore-tasks.util';
+import type { RestoreTaskDto } from './dto/restore-tasks.dto';
 import {
   getLisbonNow,
   lisbonDayBounds,
@@ -48,6 +50,7 @@ import { listOrPage, type ListMeta } from '../common/pagination.util';
 import { TaskAttachmentsService } from './task-attachments.service';
 import { assertBlockerValid, unblockDependents } from './task-blocker';
 import { assertTaskOwned } from './task-access';
+import { safePrismaSummary } from '../common/prisma-errors';
 import { diffTaskFields, type TaskSnapshot } from './task-change-diff';
 import {
   ACTIONABLE_DEADLINE_WHERE,
@@ -149,6 +152,8 @@ export interface CreateTaskExtra {
    * nela em vez de abrir uma transacao nova (nunca transacao aninhada).
    */
   tx?: Prisma.TransactionClient;
+  /** Momento original de conclusao (reposicao de uma task apagada). */
+  completedAt?: Date;
 }
 
 @Injectable()
@@ -203,7 +208,10 @@ export class TasksService {
     // Se a task já nasce como COMPLETED (ex: registo retroativo), o streak
     // precisa de um completedAt real  não podemos depender só da "date"
     // (que é o prazo/alvo, não o dia em que foi de facto concluída).
-    const completedAt = rest.progressStatus === 'COMPLETED' ? new Date() : null;
+    const completedAt =
+      rest.progressStatus === 'COMPLETED'
+        ? (extra.completedAt ?? new Date())
+        : null;
 
     const data = {
       ...rest,
@@ -260,7 +268,7 @@ export class TasksService {
           // Fica só no terminal/log do backend, nunca no corpo da resposta -
           // um erro do Prisma pode conter detalhes internos (nomes de coluna,
           // constraints) que não devem ir para o cliente.
-          this.logger.error('Erro ao criar task', error as Error);
+          this.logger.error(`Erro ao criar task: ${safePrismaSummary(error)}`);
           throw new InternalServerErrorException(
             'Failed to create task. Please try again.',
           );
@@ -807,7 +815,9 @@ export class TasksService {
       if (next) spawned.push(next);
       spawned.push(...(await this.spawnSpacedReviews(userId, task)));
     } catch (error) {
-      this.logger.error('Erro ao criar tasks automáticas', error as Error);
+      this.logger.error(
+        `Erro ao criar tasks automáticas: ${safePrismaSummary(error)}`,
+      );
     }
     return spawned;
   }
@@ -1271,6 +1281,46 @@ export class TasksService {
     return { count: result.count };
   }
 
+  /** "Anular" do apagar em massa - ver restoreTasks. */
+  bulkRestore(userId: string, items: RestoreTaskDto[]) {
+    return restoreTasks(
+      {
+        prisma: this.prisma,
+        create: (...args) => this.create(...args),
+        logger: this.logger,
+      },
+      userId,
+      items,
+    );
+  }
+
+  /**
+   * Bulk delete dentro da transacao do chamador (import de pacote em modo
+   * substituir, B-27). Devolve os caminhos dos anexos: o chamador apaga-os
+   * do storage com removeAttachmentFiles so depois do commit.
+   */
+  async bulkRemoveInTx(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    ids: string[],
+  ): Promise<{ count: number; storagePaths: string[] }> {
+    const files = await tx.taskAttachment.findMany({
+      where: { userId, taskId: { in: ids } },
+      select: { storagePath: true },
+    });
+    const result = await tx.task.deleteMany({
+      where: { id: { in: ids }, userId },
+    });
+    return {
+      count: result.count,
+      storagePaths: files.map((f) => f.storagePath),
+    };
+  }
+
+  removeAttachmentFiles(storagePaths: string[]): Promise<void> {
+    return this.taskAttachments.removeStoragePaths(storagePaths);
+  }
+
   /**
    * Excel/CSV import (see ImportTasksDto): creates one task per row.
    * Each row is validated and inserted independently - a single bad row
@@ -1518,7 +1568,7 @@ export class TasksService {
       // A transacao foi anulada pelo erro, por isso o caminho linha a linha
       // corre fora dela (caso raro: FK ou BD).
       this.logger.warn(
-        `Task import bulk insert failed, retrying row by row: ${(error as Error).message}`,
+        `Task import bulk insert failed, retrying row by row: ${safePrismaSummary(error)}`,
       );
       createOutcomes = await runWithConcurrencyLimit(
         ordered,
@@ -1531,7 +1581,7 @@ export class TasksService {
             // Same "never leak internals" rule as create() above - a raw
             // Prisma/DB error could contain column/constraint names.
             this.logger.warn(
-              `Task import row ${item.rowNumber} failed at insert: ${(rowError as Error).message}`,
+              `Task import row ${item.rowNumber} failed at insert: ${safePrismaSummary(rowError)}`,
             );
             return {
               row: item.rowNumber,

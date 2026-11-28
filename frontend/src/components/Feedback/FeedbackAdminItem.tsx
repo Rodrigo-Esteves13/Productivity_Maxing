@@ -100,7 +100,7 @@ function FeedbackAdminItem({
           </span>
         )}
         {author ? (
-          <Link to={adminUserPath(author.id)} className="text-neutral-300 hover:text-white">
+          <Link to={adminUserPath(author.id)} className={`text-neutral-300 hover:text-white pointer-coarse:inline-flex pointer-coarse:items-center ${TOUCH_TARGET}`}>
             {author.name || author.email}
           </Link>
         ) : (

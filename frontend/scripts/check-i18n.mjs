@@ -4,6 +4,7 @@
 // Sai com codigo 1 se houver problemas (podes pô-lo no CI).
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { computeCoreKeys, scanCoreZone, staleReviewedCalls, unreviewedIndirectCalls } from './i18n-split.ts';
 
 const root = join(import.meta.dirname, '..', 'src', 'i18n', 'messages');
 const langs = readdirSync(root).filter((d) => !d.includes('.'));
@@ -70,5 +71,15 @@ for (const lang of langs.filter((l) => l !== 'en')) {
     if (!(key in en)) { console.log(`${lang}: chave a mais ${key}`); problems++; }
   }
 }
+// Divisao nucleo/resto (F-43): t(variavel) novo no codigo de arranque tem de
+// ser revisto (ver REVIEWED_INDIRECT_CALLS em scripts/i18n-split.ts).
+const scan = scanCoreZone();
+const coreKeys = computeCoreKeys(Object.keys(en), scan);
+for (const call of unreviewedIndirectCalls(scan)) {
+  console.log(`nucleo: t(variavel) por rever em ${call}`);
+  problems++;
+}
+for (const call of staleReviewedCalls(scan)) console.log(`nucleo (aviso): revisao sem uso, apagar: ${call}`);
+console.log(`nucleo: ${coreKeys.size} chaves de ${scan.files.length} ficheiros de arranque`);
 console.log(`${Object.keys(en).length} chaves, ${langs.length} linguas, ${problems} problemas`);
 process.exit(problems ? 1 : 0);

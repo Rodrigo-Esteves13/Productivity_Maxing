@@ -2,7 +2,7 @@ import { useState, type SyntheticEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { isSafeRedirectPath } from '../lib/safeRedirect';
 import { useAuth } from '../context/useAuth';
-import { registerRequest, resendVerificationRequest } from '../api/userService';
+import { registerRequest, resendVerificationRequest } from '../api/authService';
 import { useI18n } from '../i18n/useI18n';
 import PageLayout from '../components/Layout/PageLayout';
 import Button from '../components/UI/Button';

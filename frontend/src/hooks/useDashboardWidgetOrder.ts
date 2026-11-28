@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { DashboardWidgetKey } from './useDashboardWidgetPrefs';
 import { isDefaultOrder, moveItem, normalizeOrder, resetOrder } from '../lib/widgetOrder';
+import { usePersistedState, type PersistedCodec } from './usePersistedState';
 
 const STORAGE_KEY = 'dashboard-widget-order';
 
@@ -43,35 +44,29 @@ export const GRID_WIDGET_DEFAULT_ORDER: readonly DashboardWidgetKey[] = [
   'ectsWorkload',
 ];
 
-function loadOrder(): DashboardWidgetKey[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return normalizeOrder(raw ? JSON.parse(raw) : null, GRID_WIDGET_DEFAULT_ORDER);
-  } catch {
-    return resetOrder(GRID_WIDGET_DEFAULT_ORDER);
-  }
-}
+const CODEC: PersistedCodec<DashboardWidgetKey[]> = {
+  parse: (raw) => {
+    try {
+      return normalizeOrder(raw ? JSON.parse(raw) : null, GRID_WIDGET_DEFAULT_ORDER);
+    } catch {
+      return resetOrder(GRID_WIDGET_DEFAULT_ORDER);
+    }
+  },
+  serialize: (order) => JSON.stringify(order),
+};
 
 export function useDashboardWidgetOrder() {
-  const [order, setOrder] = useState<DashboardWidgetKey[]>(loadOrder);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
-    } catch {
-      // Best-effort: sem storage a ordem so nao fica lembrada.
-    }
-  }, [order]);
+  const [order, setOrder] = usePersistedState(STORAGE_KEY, CODEC);
 
   const moveUp = useCallback((key: DashboardWidgetKey) => {
     setOrder((prev) => moveItem(prev, key, -1));
-  }, []);
+  }, [setOrder]);
   const moveDown = useCallback((key: DashboardWidgetKey) => {
     setOrder((prev) => moveItem(prev, key, 1));
-  }, []);
+  }, [setOrder]);
   const reset = useCallback(() => {
     setOrder(resetOrder(GRID_WIDGET_DEFAULT_ORDER));
-  }, []);
+  }, [setOrder]);
   const isDefault = useMemo(() => isDefaultOrder(order, GRID_WIDGET_DEFAULT_ORDER), [order]);
 
   return { order, moveUp, moveDown, reset, isDefault };

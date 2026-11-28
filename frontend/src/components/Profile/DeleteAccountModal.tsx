@@ -35,13 +35,13 @@ export default function DeleteAccountModal({
           onChange={(e) => onConfirmTextChange(e.target.value)}
           placeholder="DELETE"
           aria-label={t('ui.deleteYourAccount')}
-          className="w-full bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-white mb-3 focus:outline-none focus:border-red-700"
+          className="w-full pointer-coarse:min-h-11 bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-2 text-white mb-3 focus:outline-none focus:border-red-700"
         />
         {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
         <div className="flex justify-end gap-3">
           <button
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg text-neutral-300 hover:bg-neutral-800 text-sm"
+            className="px-4 py-2 pointer-coarse:min-h-11 rounded-lg text-neutral-300 hover:bg-neutral-800 text-sm"
             disabled={isDeleting}
           >
             {t('ui.cancel')}
@@ -49,7 +49,7 @@ export default function DeleteAccountModal({
           <button
             onClick={onConfirm}
             disabled={!isConfirmEnabled || isDeleting}
-            className="px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-red-600 transition-colors"
+            className="px-4 py-2 pointer-coarse:min-h-11 rounded-lg bg-red-700 text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-red-600 transition-colors"
           >
             {isDeleting ? t('ui.deleting') : t('ui.deletePermanently')}
           </button>

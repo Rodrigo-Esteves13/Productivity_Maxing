@@ -56,7 +56,7 @@ export default function ProfileHeaderCard({ user, initials, stats, isLoadingStat
             <button
               type="button"
               onClick={resetMode}
-              className="press min-h-10 px-2 text-xs text-neutral-400 hover:text-neutral-200"
+              className="press min-h-10 pointer-coarse:min-h-11 px-2 text-xs text-neutral-400 hover:text-neutral-200"
             >
               {t('ui.resetToDefaults')}
             </button>

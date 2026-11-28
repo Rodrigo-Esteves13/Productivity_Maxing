@@ -23,6 +23,7 @@ describe('TaskAttachmentsService ownership', () => {
         count: jest.fn().mockResolvedValue(count),
         create: jest.fn(),
         delete: jest.fn(),
+        updateMany: jest.fn(),
       },
     };
     const service = new TaskAttachmentsService(
@@ -55,6 +56,27 @@ describe('TaskAttachmentsService ownership', () => {
     const { service } = setup({ id: 't1' }, MAX_ATTACHMENTS_PER_TASK);
     await expect(
       service.upload('u1', 't1', file as Express.Multer.File),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('only renames a file scoped to the user and task', async () => {
+    const { prisma, service } = setup({ id: 't1' });
+    await expect(
+      service.rename('u1', 't1', 'a1', 'new'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.taskAttachment.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('keeps the real extension when renaming', async () => {
+    const { prisma, service } = setup({ id: 't1' });
+    prisma.taskAttachment.findFirst.mockResolvedValue({ extension: 'pdf' });
+    await service.rename('u1', 't1', 'a1', ' ../brief.exe ');
+    expect(prisma.taskAttachment.updateMany).toHaveBeenCalledWith({
+      where: { id: 'a1', taskId: 't1', userId: 'u1' },
+      data: { originalFileName: '.._brief.exe.pdf' },
+    });
+    await expect(
+      service.rename('u1', 't1', 'a1', '.pdf'),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 

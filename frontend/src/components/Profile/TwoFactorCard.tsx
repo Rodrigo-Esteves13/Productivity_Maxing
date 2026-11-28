@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { User } from '../../types/models';
-import { beginTwoFactorSetup, confirmTwoFactorSetup, disableTwoFactor } from '../../api/userService';
+import { beginTwoFactorSetup, confirmTwoFactorSetup, disableTwoFactor } from '../../api/authService';
 import { getApiMessage } from '../../lib/httpError';
 import { useFeedback } from '../../context/useFeedback';
 import CopyButton from '../UI/CopyButton';
@@ -70,7 +70,7 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
     }, t('ui.invalidCode'));
 
   const inputClass =
-    'w-full max-w-xs rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:border-violet-600';
+    'w-full max-w-xs rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:border-violet-600 pointer-coarse:min-h-11';
 
   return (
     <Card>
@@ -85,7 +85,7 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
           type="button"
           disabled={isBusy}
           onClick={() => void startSetup()}
-          className="rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2"
+          className="pointer-coarse:min-h-11 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2"
         >
           {t('ui.setUp')}
         </button>
@@ -101,7 +101,7 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
               setError('');
               setStep({ kind: 'disable' });
             }}
-            className="text-sm text-neutral-400 hover:text-red-400"
+            className="text-sm text-neutral-400 hover:text-red-400 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
           >
             {t('ui.turnOff')}
           </button>
@@ -140,11 +140,11 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
               type="button"
               disabled={isBusy || code.length !== 6}
               onClick={() => void confirm()}
-              className="rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2"
+              className="pointer-coarse:min-h-11 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2"
             >
               {t('ui.turnOn')}
             </button>
-            <button type="button" onClick={() => setStep({ kind: 'idle' })} className="text-sm text-neutral-400 hover:text-white">
+            <button type="button" onClick={() => setStep({ kind: 'idle' })} className="text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
               {t('ui.cancel')}
             </button>
           </div>
@@ -165,7 +165,7 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
           </div>
           <CopyButton text={step.recoveryCodes.join('\n')} label={t('ui.copyAll')} />
           <div>
-            <button type="button" onClick={() => setStep({ kind: 'idle' })} className="text-sm text-violet-400 hover:text-violet-300 underline">
+            <button type="button" onClick={() => setStep({ kind: 'idle' })} className="text-sm text-violet-400 hover:text-violet-300 underline pointer-coarse:min-h-11">
               {t('ui.iSavedThem')}
             </button>
           </div>
@@ -189,11 +189,11 @@ export default function TwoFactorCard({ user, onUserUpdate }: TwoFactorCardProps
               type="button"
               disabled={isBusy || code.trim().length < 6}
               onClick={() => void disable()}
-              className="rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2"
+              className="pointer-coarse:min-h-11 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2"
             >
               {t('ui.turnOff')}
             </button>
-            <button type="button" onClick={() => setStep({ kind: 'idle' })} className="text-sm text-neutral-400 hover:text-white">
+            <button type="button" onClick={() => setStep({ kind: 'idle' })} className="text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
               {t('ui.cancel')}
             </button>
           </div>

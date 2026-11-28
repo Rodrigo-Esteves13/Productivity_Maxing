@@ -95,7 +95,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                 type="button"
                 aria-pressed={category === c.value}
                 onClick={() => setCategory(c.value)}
-                className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                className={`pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border px-3 py-1 text-xs transition-colors ${
                   category === c.value
                     ? 'border-violet-500 bg-violet-500/20 text-violet-200'
                     : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'

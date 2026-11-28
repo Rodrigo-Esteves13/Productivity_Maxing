@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { isAxiosError } from 'axios';
 import { getAgentConfig, updateAgentConfig } from '../api/agentService';
 import type { AgentConfig } from '../types/models';
 import { translateNow } from '../i18n/translate';
+import { getApiMessage } from '../lib/httpError';
 
 interface UseAgentConfigReturn {
   config: AgentConfig | null;
@@ -33,12 +33,7 @@ interface UseAgentConfigReturn {
 // existir - é o que diz exatamente qual campo falhou e porquê (ex:
 // "pollIntervalSeconds must not be greater than 3600").
 function extractErrorMessage(error: unknown): string {
-  if (isAxiosError(error)) {
-    const data = error.response?.data as { message?: string | string[] } | undefined;
-    if (Array.isArray(data?.message)) return data.message.join(' ');
-    if (typeof data?.message === 'string') return data.message;
-  }
-  return translateNow('hook.couldNotSaveTheConfigurationTry');
+  return getApiMessage(error, translateNow('hook.couldNotSaveTheConfigurationTry'));
 }
 
 // Rede de segurança: mesmo que o input do formulário deixe passar algo

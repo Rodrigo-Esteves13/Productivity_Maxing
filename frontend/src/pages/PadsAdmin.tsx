@@ -5,39 +5,47 @@ import Button from "../components/UI/Button";
 import ErrorState from "../components/UI/ErrorState";
 import EmptyState from "../components/UI/EmptyState";
 import SearchField from "../components/UI/SearchField";
+import Pagination from "../components/UI/Pagination";
+import BlockedPadSources from "../components/PadsAdmin/BlockedPadSources";
 import TableSkeleton from "../components/UI/TableSkeleton";
 import ConfirmActionDialog from "../components/Turma/ConfirmActionDialog";
 import {
   blockPadSource,
   deletePadAsAdmin,
-  getRecentPadsForAdmin,
   unblockPadSource,
 } from "../api/padsService";
 import useDocumentTitle from "../hooks/useDocumentTitle";
-import { useLoadOnce } from "../hooks/useLoadOnce";
+import { usePadsAdmin } from "../hooks/usePadsAdmin";
 import { useConfirmAction } from "../hooks/useConfirmAction";
-import { useListSearch } from "../hooks/useListSearch";
-import { blockedSources } from "../lib/adminLists";
 import { useI18n } from "../i18n/useI18n";
 import { formatDateTime } from "../lib/timeFormat";
 import { adminUserPath, padPath } from "../lib/appLinks";
+import { PAD_SLUG_MAX_LENGTH } from "../lib/padSlug";
 
 // Primeiros caracteres do hash do IP: chegam para ver a mesma origem em
 // varios pads (o hash inteiro fica no title).
 const ANON_HASH_SHOWN = 8;
 
-// Moderacao de pads (admin): os alterados mais recentemente, quem gravou por
-// ultimo e apagar. Cada apagar fica no security log.
+// Moderacao de pads (admin): todos os pads (mais recentes primeiro), quem
+// gravou por ultimo, origens bloqueadas e apagar. Cada apagar fica no
+// security log.
 export default function PadsAdmin() {
   const { t, lang } = useI18n();
   useDocumentTitle(t("nav.admin.pads"));
-  const { data, isLoading, error, reload } = useLoadOnce(getRecentPadsForAdmin);
+  const {
+    pads,
+    blocked,
+    query,
+    setQuery,
+    search,
+    skip,
+    setSkip,
+    blockedSkip,
+    setBlockedSkip,
+    pageSize,
+    reload,
+  } = usePadsAdmin();
   const confirm = useConfirmAction(t("turma.actionError"));
-  const pads = data ?? [];
-  const { query, setQuery, filtered, isFiltering } = useListSearch(pads, (pad) => [pad.slug]);
-  // So os que aparecem nesta lista (os pads mais recentes): nao ha endpoint
-  // proprio para listar todas as origens bloqueadas.
-  const blocked = blockedSources(pads);
 
   const requestUnblock = (ipHash: string) =>
     confirm.request({
@@ -57,45 +65,33 @@ export default function PadsAdmin() {
         title={t("nav.admin.pads")}
         description={t("pad.admin.description")}
       />
-      {isLoading ? (
+      <BlockedPadSources
+        sources={blocked}
+        skip={blockedSkip}
+        pageSize={pageSize}
+        onSkipChange={setBlockedSkip}
+        onUnblock={requestUnblock}
+      />
+      {pads.isLoading ? (
         <TableSkeleton />
-      ) : error ? (
+      ) : pads.hasError || !pads.data ? (
         <ErrorState message={t("pad.loadError")} onRetry={reload} />
-      ) : !data || data.length === 0 ? (
+      ) : !search && pads.data.total === 0 ? (
         <EmptyState message={t("pad.admin.none")} />
       ) : (
         <>
-          <div className="mb-3 flex flex-wrap items-center gap-3">
-            <SearchField value={query} onChange={setQuery} label={t("ux4adm2.pads.search")} />
-            {isFiltering && (
-              <span className="text-xs text-neutral-500" aria-live="polite">
-                {t("search.count", { shown: filtered.length, total: pads.length })}
-              </span>
-            )}
+          <div className="mb-3">
+            <SearchField
+              value={query}
+              onChange={(value) => setQuery(value.slice(0, PAD_SLUG_MAX_LENGTH))}
+              label={t("ux4adm2.pads.search")}
+            />
           </div>
-          {blocked.length > 0 && (
-            <section className="mb-4 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
-              <h2 className="mb-1 text-sm font-semibold text-white">{t("ux4adm2.pads.blockedTitle")}</h2>
-              <p className="mb-2 text-xs text-neutral-500">{t("ux4adm2.pads.blockedHint")}</p>
-              <ul className="space-y-2">
-                {blocked.map((ipHash) => (
-                  <li key={ipHash} className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-mono text-xs text-neutral-300" title={ipHash}>
-                      {t("pad.admin.anonymous", { hash: ipHash.slice(0, ANON_HASH_SHOWN) })}
-                    </span>
-                    <Button variant="secondary" size="sm" onClick={() => requestUnblock(ipHash)}>
-                      {t("pad.admin.unblock")}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-          {filtered.length === 0 ? (
-            <EmptyState message={t("search.noResultsFor", { query: query.trim() })} />
+          {pads.data.items.length === 0 ? (
+            <EmptyState message={t("search.noResultsFor", { query: search })} />
           ) : (
         <ul className="space-y-2">
-          {filtered.map((pad) => (
+          {pads.data.items.map((pad) => (
             <li
               key={pad.slug}
               className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4"
@@ -103,7 +99,7 @@ export default function PadsAdmin() {
               <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
                 <Link
                   to={padPath(pad.slug)}
-                  className="font-mono text-sm font-semibold text-violet-400 hover:underline"
+                  className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center font-mono text-sm font-semibold text-violet-400 hover:underline"
                 >
                   /pad/{pad.slug}
                 </Link>
@@ -111,7 +107,7 @@ export default function PadsAdmin() {
                   {pad.updatedByIpHash && !pad.updatedBy && (
                     <Button
                       variant="secondary"
-                      className="px-2.5 py-1 text-xs"
+                      size="sm"
                       onClick={() => {
                         const ipHash = pad.updatedByIpHash as string;
                         confirm.request({
@@ -149,7 +145,7 @@ export default function PadsAdmin() {
                   )}
                   <Button
                     variant="danger"
-                    className="px-2.5 py-1 text-xs"
+                    size="sm"
                     onClick={() =>
                       confirm.request({
                         title: t("pad.admin.delete"),
@@ -205,6 +201,13 @@ export default function PadsAdmin() {
           ))}
         </ul>
           )}
+          <Pagination
+            total={pads.data.total}
+            skip={skip}
+            pageSize={pageSize}
+            onNextPage={() => setSkip(skip + pageSize)}
+            onPrevPage={() => setSkip(Math.max(0, skip - pageSize))}
+          />
         </>
       )}
       <ConfirmActionDialog state={confirm} />

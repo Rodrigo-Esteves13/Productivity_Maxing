@@ -9,6 +9,7 @@ import IconButton from '../UI/IconButton';
 import { ChevronLeftIcon, ChevronRightIcon } from '../UI/Icons';
 import { MOOD_MAX_PAST_DAYS, type useMoodToday } from '../../hooks/useMoodToday';
 import { useFeedback } from '../../context/useFeedback';
+import MoodMiniCalendar from './MoodMiniCalendar';
 import { useI18n } from '../../i18n/useI18n';
 
 const MAX_NOTE_LENGTH = 500;
@@ -111,7 +112,7 @@ export default function MoodCheckInCard({ mood }: MoodCheckInCardProps) {
           <button
             type="button"
             onClick={() => mood.setDayOffset(0)}
-            className="ml-auto text-xs font-medium text-violet-400 hover:text-violet-300"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 ml-auto text-xs font-medium text-violet-400 hover:text-violet-300"
           >
             {t('wellbeing.meds.backToToday')}
           </button>
@@ -174,6 +175,7 @@ export default function MoodCheckInCard({ mood }: MoodCheckInCardProps) {
           </div>
         </div>
       )}
+      <MoodMiniCalendar mood={mood} />
     </DashboardCard>
   );
 }

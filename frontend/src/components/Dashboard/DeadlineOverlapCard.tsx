@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import type { Task, Area } from '../../types/models';
 import { detectDeadlineOverlaps } from '../../utils/detectDeadlineOverlaps';
 import { CalendarIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
@@ -7,11 +6,7 @@ import ColorDot from '../UI/ColorDot';
 import { useAreaLookup } from '../../hooks/useAreaLookup';
 import { useI18n } from '../../i18n/useI18n';
 import { detectLanguage } from '../../i18n/storage';
-
-interface DeadlineOverlapCardProps {
-  tasks: Task[];
-  areas: Area[];
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 const GROUP_DATE_FORMAT: Intl.DateTimeFormatOptions = {
   weekday: 'short',
@@ -28,7 +23,8 @@ function formatGroupDate(dateKey: string): string {
   return new Date(`${dateKey}T00:00:00Z`).toLocaleDateString(detectLanguage(), GROUP_DATE_FORMAT);
 }
 
-export default function DeadlineOverlapCard({ tasks, areas }: DeadlineOverlapCardProps) {
+export default function DeadlineOverlapCard() {
+  const { academicTasks: tasks, academicAreas: areas } = useDashboardCardData();
   const { t } = useI18n();
   const areaById = useAreaLookup(areas);
   const overlaps = detectDeadlineOverlaps(tasks);
@@ -53,7 +49,7 @@ export default function DeadlineOverlapCard({ tasks, areas }: DeadlineOverlapCar
                     {area && (
                       <ColorDot size="xs" color={area.colorHex} />
                     )}
-                    <span className="truncate text-neutral-200">{task.title}</span>
+                    <span className="truncate text-neutral-200" title={task.title}>{task.title}</span>
                     {task.weightPercentage !== null && (
                       <span className="text-neutral-500 shrink-0">({task.weightPercentage}%)</span>
                     )}
@@ -66,7 +62,7 @@ export default function DeadlineOverlapCard({ tasks, areas }: DeadlineOverlapCar
       </ul>
       <Link
         to="/tasks"
-        className="block mt-3 text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
+        className="block mt-3 pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
       >
         {t('ui.viewAllTasks')}
       </Link>

@@ -13,6 +13,11 @@ export const uploadTaskAttachment = async (taskId: string, file: File): Promise<
   await api.post(base(taskId), formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 };
 
+// So o nome visivel; o backend mantem a extensao real.
+export const renameTaskAttachment = async (taskId: string, attachmentId: string, name: string): Promise<void> => {
+  await api.patch(`${base(taskId)}/${encodeURIComponent(attachmentId)}`, { name });
+};
+
 export const deleteTaskAttachment = async (taskId: string, attachmentId: string): Promise<void> => {
   await api.delete(`${base(taskId)}/${encodeURIComponent(attachmentId)}`);
 };

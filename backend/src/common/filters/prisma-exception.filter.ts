@@ -11,6 +11,7 @@ import {
   PRISMA_FOREIGN_KEY_VIOLATION,
   PRISMA_RECORD_NOT_FOUND,
   PRISMA_UNIQUE_VIOLATION,
+  safePrismaSummary,
 } from '../prisma-errors';
 
 interface MappedError {
@@ -67,11 +68,11 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     const response = host.switchToHttp().getResponse<Response>();
     const mapped = mapPrismaError(exception);
 
-    const detail = exception instanceof Error ? exception.message : '';
+    const detail = safePrismaSummary(exception);
     if (mapped.status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
-        'Unhandled Prisma error',
-        exception instanceof Error ? exception.stack : undefined,
+        `Unhandled Prisma error: ${detail}`,
+        stackFramesOnly(exception),
       );
     } else {
       this.logger.warn(`${mapped.status} from Prisma error: ${detail}`);
@@ -83,6 +84,18 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       error: mapped.error,
     });
   }
+}
+
+// Linha do stack que e um frame ("    at ..."), nao parte da mensagem.
+const STACK_FRAME = /^\s+at /;
+
+// So os frames do stack: a primeira parte do stack repete a mensagem.
+function stackFramesOnly(exception: unknown): string | undefined {
+  if (!(exception instanceof Error) || !exception.stack) return undefined;
+  return exception.stack
+    .split('\n')
+    .filter((line) => STACK_FRAME.test(line))
+    .join('\n');
 }
 
 export function mapPrismaError(exception: unknown): MappedError {

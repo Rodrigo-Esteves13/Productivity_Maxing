@@ -141,7 +141,7 @@ export default function CreateTaskPackModal({ isOpen, tasks, areas, isSaving, on
                       onChange={() => toggle(task.id)}
                     />
                     <span className="min-w-0">
-                      <span className="block truncate text-neutral-100">{task.title}</span>
+                      <span className="block truncate text-neutral-100" title={task.title}>{task.title}</span>
                       <span className="block text-xs text-neutral-500">
                         {areaName.get(task.areaId) ?? '-'} · {formatTaskDue(task, lang)}
                         {task.weightPercentage != null && ` · ${task.weightPercentage}%`}

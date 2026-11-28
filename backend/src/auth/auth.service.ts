@@ -381,6 +381,14 @@ export class AuthService {
     return this.apiKeys.validateApiKey(incomingToken);
   }
 
+  renameApiKey(
+    userId: string,
+    keyId: string,
+    name: string,
+  ): ReturnType<ApiKeyService['renameApiKey']> {
+    return this.apiKeys.renameApiKey(userId, keyId, name);
+  }
+
   revokeApiKey(
     userId: string,
     keyId: string,

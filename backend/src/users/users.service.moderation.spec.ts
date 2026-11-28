@@ -4,7 +4,11 @@
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
 import { UsersService } from './users.service';
-import { SELF_BAN_MESSAGE, SELF_SUSPEND_MESSAGE } from './users.constants';
+import {
+  SELF_BAN_MESSAGE,
+  SELF_REACTIVATE_MESSAGE,
+  SELF_SUSPEND_MESSAGE,
+} from './users.constants';
 import { MS_PER_DAY } from '../common/time.constants';
 import type { PrismaService } from '../prisma/prisma.service';
 
@@ -199,10 +203,13 @@ describe('UsersService.reactivateUser', () => {
     expect(accountStatus.clearBlocked).toHaveBeenCalledTimes(2);
   });
 
-  it('an admin may reactivate their own row (no self guard on lifting)', async () => {
-    const { service, prisma } = setup();
-    await expect(service.reactivateUser('a1', 'a1')).resolves.toBeDefined();
-    expect(prisma.user.update).toHaveBeenCalledTimes(1);
+  it('refuses self reactivation before touching the database', async () => {
+    const { service, prisma, accountStatus } = setup();
+    const call = service.reactivateUser('a1', 'a1');
+    await expect(call).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(call).rejects.toThrow(SELF_REACTIVATE_MESSAGE);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(accountStatus.clearBlocked).not.toHaveBeenCalled();
   });
 
   it('a missing target propagates P2025 and does not clear the cache', async () => {

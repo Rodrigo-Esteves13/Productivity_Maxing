@@ -29,7 +29,7 @@ export default function ImportOptionsPanel({ options, onChange, disabled }: Impo
 
   return (
     <details className="rounded-lg border border-neutral-800 p-3">
-      <summary className="cursor-pointer text-sm text-neutral-300">{t('ui.importOptionsOtherSchoolsFormats')}</summary>
+      <summary className="cursor-pointer text-sm text-neutral-300 pointer-coarse:py-3">{t('ui.importOptionsOtherSchoolsFormats')}</summary>
       <div className="mt-3 space-y-3">
         <label className="block text-xs text-neutral-400">
           {t('ui.subjectNameComesFrom')}
@@ -103,7 +103,7 @@ export default function ImportOptionsPanel({ options, onChange, disabled }: Impo
           type="button"
           disabled={disabled}
           onClick={() => onChange(DEFAULT_ICS_IMPORT_OPTIONS)}
-          className="text-xs text-neutral-500 hover:text-neutral-300"
+          className="text-xs text-neutral-500 hover:text-neutral-300 pointer-coarse:min-h-11"
         >
           {t('ui.resetToDefaults')}
         </button>

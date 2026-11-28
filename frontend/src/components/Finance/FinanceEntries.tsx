@@ -9,7 +9,15 @@ import EmptyState from '../UI/EmptyState';
 import Button from '../UI/Button';
 import { PencilIcon, TrashIcon } from '../UI/Icons';
 import FinanceEntryForm from './FinanceEntryForm';
-import type { FinanceEntry, FinanceEntryInput, FinanceEntryKind, FinanceSummary } from '../../api/financeService';
+import FinanceEntriesBulkBar from './FinanceEntriesBulkBar';
+import {
+  FINANCE_BULK_MAX_ENTRIES,
+  type FinanceEntry,
+  type FinanceEntryInput,
+  type FinanceEntryKind,
+  type FinanceSummary,
+} from '../../api/financeService';
+import { DEFAULT_FINANCE_SORT, sortOccurrences } from '../../lib/financeEntrySort';
 import Money from './Money';
 import type { SubmitOutcome } from '../../lib/idempotency';
 import {
@@ -30,11 +38,12 @@ interface FinanceEntriesProps {
   onAdd: (input: FinanceEntryInput, key: string) => Promise<SubmitOutcome>;
   onUpdate: (id: string, changes: Partial<FinanceEntryInput>) => Promise<boolean>;
   onRemove: (entry: FinanceEntry) => void;
+  onRemoveMany: (entries: FinanceEntry[]) => void;
 }
 
 // Formulario + lista das ocorrencias do mes (as futuras marcadas como
 // previstas) + gastos por categoria.
-export default function FinanceEntries({ summary, defaultDate, initialKind, onAdd, onUpdate, onRemove }: FinanceEntriesProps) {
+export default function FinanceEntries({ summary, defaultDate, initialKind, onAdd, onUpdate, onRemove, onRemoveMany }: FinanceEntriesProps) {
   const { t, lang } = useI18n();
   const { currency } = summary.settings;
   const [editing, setEditing] = useState<FinanceEntry | null>(null);
@@ -57,6 +66,23 @@ export default function FinanceEntries({ summary, defaultDate, initialKind, onAd
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [summary.occurrences, summary.accounts, filter.category, filter.accountId, deferredQuery, t],
   );
+  const [sort, setSort] = useState(DEFAULT_FINANCE_SORT);
+  const sorted = useMemo(
+    () => sortOccurrences(visible, sort, (category) => t(`finance.cat.${category}`), lang),
+    [visible, sort, t, lang],
+  );
+  // A selecao e por movimento (uma regra repetida tem varias linhas) e so
+  // conta o que esta a vista: o que o filtro esconde nunca e apagado.
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const visibleIds = [...new Set(sorted.map((o) => o.entryId))].filter((id) => entriesById.has(id));
+  const selectedIds = visibleIds.filter((id) => selected.has(id));
+  const atLimit = selectedIds.length >= FINANCE_BULK_MAX_ENTRIES;
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
   const byCategory = Object.entries(summary.totals.expensesByCategory).sort((a, b) => b[1] - a[1]);
 
   return (
@@ -109,19 +135,50 @@ export default function FinanceEntries({ summary, defaultDate, initialKind, onAd
           )}
         </div>
       )}
+      {visibleIds.length > 0 && (
+        <FinanceEntriesBulkBar
+          sort={sort}
+          onSortChange={setSort}
+          selectedIds={selectedIds}
+          selectableCount={Math.min(visibleIds.length, FINANCE_BULK_MAX_ENTRIES)}
+          listCount={visibleIds.length}
+          onSelectAll={() => setSelected(new Set(visibleIds.slice(0, FINANCE_BULK_MAX_ENTRIES)))}
+          onSelectNone={() => setSelected(new Set())}
+          onDelete={() => onRemoveMany(selectedIds.flatMap((id) => entriesById.get(id) ?? []))}
+        />
+      )}
       {summary.occurrences.length === 0 ? (
         <EmptyState variant="inline" message={t('finance.noEntries')} />
       ) : visible.length === 0 ? (
         <EmptyState variant="inline" message={filter.query.trim() ? t('search.noResultsFor', { query: filter.query.trim() }) : t('search.noResults')} />
       ) : (
         <ul className="divide-y divide-neutral-800">
-          {visible.map((occ) => {
+          {sorted.map((occ) => {
             const entry = entriesById.get(occ.entryId);
             const account = occ.accountId ? accountNames.get(occ.accountId) : undefined;
             return (
               <li key={`${occ.entryId}-${occ.date}`} className={`flex items-center gap-3 py-2 ${occ.projected ? 'border-l-2 border-dashed border-neutral-600 pl-3' : ''}`}>
+                {entry && (
+                  <label className="flex shrink-0 cursor-pointer items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-violet-600"
+                      checked={selected.has(entry.id)}
+                      disabled={atLimit && !selected.has(entry.id)}
+                      onChange={() => toggle(entry.id)}
+                      aria-label={t('f7money.selectEntry', {
+                        name: [t(`finance.cat.${occ.category}`), occ.note, new Date(`${occ.date}T00:00:00`).toLocaleDateString(lang)]
+                          .filter(Boolean)
+                          .join(' · '),
+                      })}
+                    />
+                  </label>
+                )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-neutral-200">
+                  <p
+                  className="truncate text-sm text-neutral-200"
+                  title={[t(`finance.cat.${occ.category}`), occ.note].filter(Boolean).join(' · ')}
+                >
                     {t(`finance.cat.${occ.category}`)}
                     {occ.note && <span className="text-neutral-500"> · {occ.note}</span>}
                   </p>

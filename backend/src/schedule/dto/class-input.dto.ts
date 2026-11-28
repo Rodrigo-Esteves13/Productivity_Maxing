@@ -8,6 +8,7 @@ import {
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { IsRealDateKey } from '../../common/validators/is-real-date-key.decorator';
 import {
   CLASS_LOCATION_MAX,
@@ -16,6 +17,10 @@ import {
   CLASS_PROFESSOR_MAX,
   CLASS_SUBJECT_MAX,
 } from '../schedule.constants';
+
+// Corta espacos antes de validar: "   " nao passa no @IsNotEmpty.
+const trim = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim() : value;
 
 // POST /schedule/class: uma aula criada a mao (sem .ics).
 export class CreateClassDto {
@@ -36,6 +41,7 @@ export class CreateClassDto {
   endMinutes!: number;
 
   @ApiProperty({ example: 'Computação Móvel' })
+  @Transform(trim)
   @IsString()
   @IsNotEmpty()
   @MaxLength(CLASS_SUBJECT_MAX)
@@ -78,6 +84,7 @@ export class UpdateClassDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(trim)
   @IsString()
   @IsNotEmpty()
   @MaxLength(CLASS_SUBJECT_MAX)

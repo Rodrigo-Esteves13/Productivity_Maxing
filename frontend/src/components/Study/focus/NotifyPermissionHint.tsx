@@ -26,7 +26,7 @@ export default function NotifyPermissionHint() {
       <button
         type="button"
         onClick={() => void requestNotifyPermission().then(setPermission)}
-        className="font-medium text-violet-400 hover:text-violet-300 hover:underline"
+        className="font-medium text-violet-400 hover:text-violet-300 hover:underline pointer-coarse:min-h-11"
       >
         {t('focus.notify.allow')}
       </button>

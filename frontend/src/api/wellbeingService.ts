@@ -62,6 +62,10 @@ export const getMedicationIntakes = async (from: string, to: string): Promise<Me
 export const createMedicationIntake = async (input: MedicationIntakeInput): Promise<MedicationIntake> =>
   (await api.post<MedicationIntake>('/wellbeing/medications/intakes', input)).data;
 
+// Anular o apagar de uma toma (aceita a hora antiga, ao contrario do registo).
+export const restoreMedicationIntake = async (input: MedicationIntakeInput): Promise<MedicationIntake> =>
+  (await api.post<MedicationIntake>('/wellbeing/medications/intakes/restore', input)).data;
+
 export interface MedicationIntakeChanges {
   takenAt?: string;
   dose?: string;

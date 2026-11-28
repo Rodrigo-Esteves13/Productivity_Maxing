@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { getUserTasks } from '../../../api/userService';
+import { getUserTasks } from '../../../api/tasksService';
 import { useLoadOnce } from '../../../hooks/useLoadOnce';
 import { buildSessionWindow, toLocalParts } from '../../../lib/sessionWindow';
 import { todayKey } from '../../../lib/dateKey';
@@ -103,7 +103,7 @@ export default function SessionForm({ session, isSaving, serverError, onSubmit, 
         <ActionButton type="submit" disabled={isSaving}>
           {isSaving ? t('common.saving') : session ? t('sharedEdit.save') : t('ui.addSession')}
         </ActionButton>
-        <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+        <button type="button" onClick={onCancel} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
           {t('ui.cancel')}
         </button>
       </div>

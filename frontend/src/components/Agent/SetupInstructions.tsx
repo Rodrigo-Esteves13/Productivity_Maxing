@@ -48,7 +48,7 @@ export default function SetupInstructions() {
           <a
             href={DOWNLOAD_URL}
             download
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-semibold text-white transition-colors"
+            className="inline-flex pointer-coarse:min-h-11 items-center gap-2 px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-xs font-semibold text-white transition-colors"
           >
             <DownloadIcon className="w-3.5 h-3.5" />
             {t('ui.downloadPmaxingAgentExePlain')}

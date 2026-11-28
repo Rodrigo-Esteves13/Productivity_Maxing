@@ -15,6 +15,7 @@ import { chunkCards, withReverseCards } from '../lib/flashcardImport';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
 import { useUndoableDelete } from './useUndoableDelete';
+import { settleInBatches } from '../lib/batch';
 
 // Cartoes de revisao espacada. As acoes devolvem true quando correram bem;
 // erros viram um toast.
@@ -105,11 +106,39 @@ export function useFlashcards() {
     });
   };
 
+  // Em massa: um pedido por cartao, poucos de cada vez (ver lib/batch.ts).
+  const removeMany = async (selected: Flashcard[]) => {
+    const { done, failed } = await settleInBatches(selected, (c) => deleteFlashcard(c.id));
+    if (failed.length > 0) notify(translateNow('flashcards.saveError'), 'error');
+    if (done.length === 0) return;
+    const gone = new Set(done.map((d) => d.item.id));
+    setCards((prev) => prev.filter((c) => !gone.has(c.id)));
+    offerUndoDelete({
+      message: translateNow('ux4global.cards.deleted', { count: done.length }),
+      restore: async () => {
+        const inputs = done.map(({ item }) => ({ front: item.front, back: item.back, areaId: item.areaId }));
+        try {
+          for (const batch of chunkCards(inputs)) await createFlashcards(batch);
+        } finally {
+          load();
+        }
+      },
+    });
+  };
+
+  const moveMany = async (selected: Flashcard[], areaId: string | null) => {
+    const moving = selected.filter((c) => c.areaId !== areaId);
+    const { done, failed } = await settleInBatches(moving, (c) => updateFlashcard(c.id, { areaId }));
+    done.forEach(({ value }) => replace(value));
+    if (failed.length > 0) notify(translateNow('flashcards.saveError'), 'error');
+    else notify(translateNow('ux4global.cards.moved', { count: moving.length }), 'success');
+  };
+
   const review = (id: string, grade: FlashcardGrade) => run(async () => replace(await reviewFlashcard(id, grade)));
 
   // Desfazer a ultima classificacao: repoe a agenda que o cartao tinha antes.
   const restore = (id: string, schedule: FlashcardSchedule) =>
     run(async () => replace(await restoreFlashcard(id, schedule)));
 
-  return { cards, isLoading, error, reload: load, create, importMany, update, remove, review, restore };
+  return { cards, isLoading, error, reload: load, create, importMany, update, remove, removeMany, moveMany, review, restore };
 }

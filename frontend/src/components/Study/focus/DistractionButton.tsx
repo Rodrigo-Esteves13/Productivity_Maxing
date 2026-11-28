@@ -79,7 +79,7 @@ export default function DistractionButton({ sessionId, initialCount }: Props) {
         ref={buttonRef}
         type="button"
         onClick={() => void note()}
-        className="rounded-full border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:border-neutral-500 hover:text-neutral-100"
+        className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:border-neutral-500 hover:text-neutral-100"
       >
         {t('focus.distractions.button')}
         {count > 0 && <span className="ml-1.5 font-semibold tabular-nums text-neutral-100">{count}</span>}
@@ -106,7 +106,7 @@ export default function DistractionButton({ sessionId, initialCount }: Props) {
           <button
             type="submit"
             disabled={!thought.trim()}
-            className="rounded-md px-2 py-1 text-xs text-violet-300 hover:text-violet-200 disabled:opacity-50"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-md px-2 py-1 text-xs text-violet-300 hover:text-violet-200 disabled:opacity-50"
           >
             {t('focus.distractions.thoughtSave')}
           </button>

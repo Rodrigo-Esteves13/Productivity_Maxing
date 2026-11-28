@@ -34,6 +34,12 @@ export const createScheduleException = async (
 ): Promise<ScheduleException> =>
   (await api.post<ScheduleException>('/schedule-exceptions', input)).data;
 
+export const updateScheduleException = async (
+  id: string,
+  input: CreateScheduleExceptionInput,
+): Promise<ScheduleException> =>
+  (await api.patch<ScheduleException>(`/schedule-exceptions/${encodeURIComponent(id)}`, input)).data;
+
 export const deleteScheduleException = async (id: string): Promise<void> => {
   await api.delete(`/schedule-exceptions/${encodeURIComponent(id)}`);
 };

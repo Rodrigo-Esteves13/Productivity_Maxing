@@ -175,6 +175,8 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
   // increment), so it doesn't drift if the tab sits in the background and
   // the browser throttles setInterval. Same approach the Focus page's own
   // hook used before this state moved here.
+  // setInterval direto de proposito (nao useVisibleInterval): o fim do bloco
+  // (TimerEndPrompt) tem de ser detetado com o separador escondido.
   useEffect(() => {
     if (tickRef.current) {
       clearInterval(tickRef.current);
@@ -203,6 +205,8 @@ export function StudySessionProvider({ children }: { children: ReactNode }) {
   // left running with the laptop closed or the browser killed outright
   // would sit "active" until Rodrigo happens to look again, which was the
   // whole original complaint.
+  // Tambem sem useVisibleInterval: o heartbeat com o separador escondido e o
+  // que impede o servidor de fechar uma sessao que continua a decorrer.
   useEffect(() => {
     if (heartbeatRef.current) {
       clearInterval(heartbeatRef.current);

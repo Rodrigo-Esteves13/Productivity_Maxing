@@ -22,7 +22,7 @@ export default function SortDirectionButton({ direction, onToggle, ascLabel, des
       onClick={onToggle}
       title={t('sort.reverseHint', { label })}
       aria-label={t('sort.ariaLabel', { label })}
-      className="flex items-center gap-1.5 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-neutral-300 hover:text-white transition-colors"
+      className="pointer-coarse:min-h-11 flex items-center gap-1.5 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-neutral-300 hover:text-white transition-colors"
     >
       <Icon className="h-3.5 w-3.5" />
       {label}

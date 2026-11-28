@@ -93,7 +93,7 @@ function OwedRow({ item, currency, onReceived, onPayment, onRemove }: OwedRowPro
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-neutral-100">
-            <span className="truncate">{item.debtorName ?? item.note ?? t('finance.owed.someone')}</span>
+            <span className="truncate" title={item.debtorName ?? item.note ?? t('finance.owed.someone')}>{item.debtorName ?? item.note ?? t('finance.owed.someone')}</span>
             {item.overdue && (
               <span className="rounded-full border border-red-800 bg-red-900/50 px-2 py-0.5 text-[11px] font-semibold text-red-400">
                 {t('finance.owed.overdueDays', { count: item.daysLate })}

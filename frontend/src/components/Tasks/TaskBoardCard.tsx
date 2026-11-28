@@ -7,10 +7,9 @@ import TagChips from '../UI/TagChips';
 import TaskReadinessBadges from '../UI/TaskReadinessBadges';
 import AttachmentCount from '../UI/AttachmentCount';
 import SubtaskProgress from '../UI/SubtaskProgress';
-import { getDateStatus } from '../../utils/taskDateStatus';
 import { useEnumLabel } from '../../hooks/useEnumLabel';
 import { useI18n } from '../../i18n/useI18n';
-import { formatTaskDue } from '../../lib/taskReadiness';
+import { getTaskPresentation } from '../../lib/taskPresentation';
 
 interface TaskBoardCardProps {
   task: Task;
@@ -37,7 +36,7 @@ function TaskBoardCard({
 }: TaskBoardCardProps) {
   const { t, lang } = useI18n();
   const enumLabel = useEnumLabel();
-  const isOverdue = getDateStatus(task) === 'overdue';
+  const { isOverdue, due } = getTaskPresentation(task, lang);
 
   return (
     <li
@@ -55,25 +54,25 @@ function TaskBoardCard({
           task.isPinned ? 'border-violet-500/40' : 'border-neutral-800 hover:border-neutral-700'
         }`}
       >
-        <p className="break-words text-sm font-medium text-neutral-100 line-clamp-3">
+        <p className="break-words text-sm font-medium text-neutral-100 line-clamp-3 pointer-coarse:line-clamp-none">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               onSelect(task);
             }}
-            className="inline text-left hover:text-violet-200"
+            className="inline text-left hover:text-violet-200 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
           >
-            {task.title}
+            <span className="pointer-coarse:line-clamp-3">{task.title}</span>
           </button>
           <SubtaskProgress subtasks={task.subtasks} className="ml-2 align-middle" />
           <AttachmentCount count={task.attachmentCount} className="ml-2 align-middle" />
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-neutral-400">
           {task.area?.colorHex && <ColorDot color={task.area.colorHex} />}
-          <span className="max-w-[9rem] truncate">{task.area?.name || t('ui.noArea2')}</span>
+          <span className="max-w-[9rem] truncate" title={task.area?.name || t('ui.noArea2')}>{task.area?.name || t('ui.noArea2')}</span>
           <span className={isOverdue ? 'whitespace-nowrap font-medium text-red-400' : 'whitespace-nowrap'}>
-            {formatTaskDue(task, lang)}
+            {due}
           </span>
           {task.priority && (
             <PriorityBadge priorityKey={task.priority} label={task.priorityLabel} colorHex={task.priorityColorHex} />
@@ -87,7 +86,7 @@ function TaskBoardCard({
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
           onChange={(e) => onChangeStatus(task, e.target.value)}
-          className="mt-2 w-full cursor-pointer rounded-md border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-300 focus:border-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
+          className="mt-2 w-full cursor-pointer rounded-md border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-300 focus:border-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 pointer-coarse:min-h-11"
         >
           {statuses.map((status) => (
             <option key={status} value={status}>

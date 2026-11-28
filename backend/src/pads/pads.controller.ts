@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -24,6 +25,10 @@ import { ACCESS_TOKEN_COOKIE } from '../auth/cookie.config';
 import { THROTTLE_WINDOW_MS, perMinute } from '../common/throttle.util';
 import { PadsService, type PadViewer } from './pads.service';
 import { BlockPadSourceDto, PadSlugParamDto, SavePadDto } from './dto/pad.dto';
+import {
+  QueryAdminPadsDto,
+  QueryBlockedSourcesDto,
+} from './dto/query-admin-pads.dto';
 import { hashPadIp } from './pad-ip-hash.util';
 import {
   ADMIN_PAD_DELETES_PER_MINUTE,
@@ -67,8 +72,21 @@ export class PadsController {
     summary:
       'Moderation: most recently changed pads with who saved them last (account or IP hash) (admin).',
   })
-  listRecentForAdmin() {
-    return this.pads.listRecentForAdmin();
+  listRecentForAdmin(@Query() query: QueryAdminPadsDto) {
+    const paged = Object.values(query).some((value) => value !== undefined);
+    return paged
+      ? this.pads.searchForAdmin(query)
+      : this.pads.listRecentForAdmin();
+  }
+
+  @Get('admin/blocked-sources')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Moderation: lists every blocked anonymous source (admin).',
+  })
+  listBlockedSources(@Query() query: QueryBlockedSourcesDto) {
+    return this.pads.listBlockedSourcesForAdmin(query);
   }
 
   @Post('admin/blocked-sources')

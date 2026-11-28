@@ -29,12 +29,26 @@ describe('TaskTypesService task types', () => {
     expect(prisma.taskType.findMany).toHaveBeenLastCalledWith({
       where: { isActive: true },
       orderBy: { order: 'asc' },
-      include: { academicTaskTypes: true },
+      include: { academicTaskTypes: true, _count: { select: { tasks: true } } },
     });
     await service.findAllTaskTypes(false);
     expect(prisma.taskType.findMany).toHaveBeenLastCalledWith(
       expect.objectContaining({ where: undefined }),
     );
+  });
+
+  it('findAll returns taskCount (U-A17) and hides the raw _count', async () => {
+    const { service, prisma } = setup();
+    prisma.taskType.findMany.mockResolvedValue([
+      { id: 't1', key: 'K', academicTaskTypes: [], _count: { tasks: 7 } },
+    ]);
+    const [row] = await service.findAllTaskTypes(false);
+    expect(row).toEqual({
+      id: 't1',
+      key: 'K',
+      academicTaskTypes: [],
+      taskCount: 7,
+    });
   });
 
   it('create suffixes key on collision and invalidates after write', async () => {
@@ -103,8 +117,17 @@ describe('TaskTypesService academic task types', () => {
     expect(prisma.academicTaskType.findMany).toHaveBeenCalledWith({
       where: { isActive: true },
       orderBy: { order: 'asc' },
-      include: { taskType: true },
+      include: { taskType: true, _count: { select: { tasks: true } } },
     });
+  });
+
+  it('findAll returns taskCount per academic type', async () => {
+    const { service, prisma } = setup();
+    prisma.academicTaskType.findMany.mockResolvedValue([
+      { id: 'a1', taskType: { id: 't1' }, _count: { tasks: 3 } },
+    ]);
+    const [row] = await service.findAllAcademicTaskTypes(false);
+    expect(row).toEqual({ id: 'a1', taskType: { id: 't1' }, taskCount: 3 });
   });
 
   it('create with unknown parent gives BadRequest and no write', async () => {

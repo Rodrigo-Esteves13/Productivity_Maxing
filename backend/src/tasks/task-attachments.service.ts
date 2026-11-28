@@ -9,6 +9,7 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { getNotebookAttachmentsBucket } from '../config/app.config';
 import {
+  renamedFileName,
   validateAttachmentUpload,
   withDownloadName,
 } from '../notebook/attachment-validation.util';
@@ -134,6 +135,30 @@ export class TaskAttachmentsService {
     });
   }
 
+  /** So o nome visivel; o ficheiro no storage nao muda. */
+  async rename(
+    userId: string,
+    taskId: string,
+    attachmentId: string,
+    name: string,
+  ) {
+    const where = { id: attachmentId, taskId, userId };
+    const file = await this.prisma.taskAttachment.findFirst({
+      where,
+      select: { extension: true },
+    });
+    if (!file) throw new NotFoundException('File not found.');
+    const originalFileName = renamedFileName(name, file.extension);
+    if (!originalFileName) {
+      throw new BadRequestException('Enter a file name.');
+    }
+    await this.prisma.taskAttachment.updateMany({
+      where,
+      data: { originalFileName },
+    });
+    return { id: attachmentId, originalFileName };
+  }
+
   async remove(userId: string, taskId: string, attachmentId: string) {
     const file = await this.prisma.taskAttachment.findFirst({
       where: { id: attachmentId, taskId, userId },
@@ -164,6 +189,24 @@ export class TaskAttachmentsService {
         userId,
         taskIds,
       );
+    } catch (err) {
+      this.logger.warn(
+        `Could not delete task attachments from storage: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  // Para quem apaga as linhas numa transacao: os caminhos leem-se antes, o
+  // ficheiro so sai do bucket depois do commit (um rollback nao deixa linhas
+  // a apontar para ficheiros que ja nao existem). Falha so regista: no pior
+  // caso fica um ficheiro orfao no bucket, nunca um anexo partido.
+  async removeStoragePaths(paths: string[]): Promise<void> {
+    if (paths.length === 0) return;
+    try {
+      const { error } = await this.storage.storage
+        .from(FILES_BUCKET)
+        .remove(paths);
+      if (error) throw error;
     } catch (err) {
       this.logger.warn(
         `Could not delete task attachments from storage: ${(err as Error).message}`,

@@ -1,4 +1,5 @@
-import { lazy, Suspense, useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import Button from '../components/UI/Button';
@@ -6,9 +7,15 @@ import ErrorState from '../components/UI/ErrorState';
 import EmptyState from '../components/UI/EmptyState';
 import IconButton from '../components/UI/IconButton';
 import CardGridSkeleton from '../components/UI/CardGridSkeleton';
-import { RefreshIcon, TrashIcon } from '../components/UI/Icons';
+import { PencilIcon, RefreshIcon, TrashIcon } from '../components/UI/Icons';
+import FeedbackEditForm from '../components/Feedback/FeedbackEditForm';
 import ConfirmActionDialog from '../components/Turma/ConfirmActionDialog';
-import { feedbackStatusKey, FEEDBACK_CATEGORY_KEY, FEEDBACK_STATUS_CLASS } from '../components/Feedback/feedbackStatus';
+import {
+  canEditFeedback,
+  feedbackStatusKey,
+  FEEDBACK_CATEGORY_KEY,
+  FEEDBACK_STATUS_CLASS,
+} from '../components/Feedback/feedbackStatus';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useConfirmAction } from '../hooks/useConfirmAction';
 import { useLoadOnce } from '../hooks/useLoadOnce';
@@ -19,6 +26,9 @@ import { useI18n } from '../i18n/useI18n';
 
 const FeedbackModal = lazy(() => import('../components/Feedback/FeedbackModal'));
 
+// ?send=1 (paleta Ctrl+K) abre logo o formulario.
+const SEND_PARAM = 'send';
+
 // O feedback que o proprio enviou, com o estado e a resposta da equipa.
 // O aviso push de uma resposta abre aqui.
 export default function MyFeedback() {
@@ -28,7 +38,21 @@ export default function MyFeedback() {
   const { data, isLoading, error, reload } = useLoadOnce(getMyFeedback);
   const items = data ?? [];
   const [isComposing, setIsComposing] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sendRequested = searchParams.has(SEND_PARAM);
+  useEffect(() => {
+    if (!sendRequested) return;
+    setIsComposing(true);
+    setSearchParams(
+      (params) => {
+        params.delete(SEND_PARAM);
+        return params;
+      },
+      { replace: true },
+    );
+  }, [sendRequested, setSearchParams]);
   const confirm = useConfirmAction(t('feedback.mine.error'));
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Depois de enviar, a lista volta a pedir-se para o novo feedback aparecer.
   const closeComposer = useCallback(() => {
@@ -81,16 +105,31 @@ export default function MyFeedback() {
                       {t(FEEDBACK_CATEGORY_KEY[item.category])}
                     </span>
                     <span>{formatDateTime(item.createdAt, lang)}</span>
-                    <IconButton
-                      label={t('ux4adm2.myFeedback.delete')}
-                      tone="danger"
-                      onClick={() => requestDelete(item.id)}
-                      className="ml-auto"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </IconButton>
+                    <div className="ml-auto flex items-center">
+                      {canEditFeedback(item) && editingId !== item.id && (
+                        <IconButton label={t('ux4global.feedback.edit')} onClick={() => setEditingId(item.id)}>
+                          <PencilIcon className="h-4 w-4" />
+                        </IconButton>
+                      )}
+                      <IconButton
+                        label={t('ux4adm2.myFeedback.delete')}
+                        tone="danger"
+                        onClick={() => requestDelete(item.id)}
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </IconButton>
+                    </div>
                   </div>
-                  <p className="mt-2 whitespace-pre-wrap break-words text-sm text-neutral-100">{item.message}</p>
+                  {editingId === item.id ? (
+                    <FeedbackEditForm
+                      id={item.id}
+                      initial={item.message}
+                      onClose={() => setEditingId(null)}
+                      onChanged={reload}
+                    />
+                  ) : (
+                    <p className="mt-2 whitespace-pre-wrap break-words text-sm text-neutral-100">{item.message}</p>
+                  )}
                   {item.adminReply && (
                     <div className="mt-3 rounded-lg border-l-2 border-violet-500 bg-neutral-950/60 px-3 py-2">
                       <p className="text-xs text-neutral-400">

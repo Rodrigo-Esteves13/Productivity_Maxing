@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getProgramCredits } from '../../api/academicService';
 import type { CreditsSummary } from '../../types/models';
 import { useAcademic } from '../../context/useAcademic';
@@ -6,6 +6,8 @@ import { GraduationCapIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
 import { usePlanMode } from '../../hooks/usePlanMode';
+import { useDomainVersion } from '../../hooks/useDomainVersion';
+import { GRADE_DOMAINS } from '../../lib/domainEvents';
 
 // Cumulative across ALL periods of the active program (archived included) -
 // same scope as the cumulative average in GpaSummary, since "credits
@@ -19,6 +21,10 @@ export default function CreditsAccumulatedCard() {
   const { scenario } = usePlanMode();
   const [summary, setSummary] = useState<CreditsSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Tasks ou notas gravadas noutro sitio refazem as medias em silencio; "a
+  // carregar" so quando muda o que se esta a ver.
+  const version = useDomainVersion(GRADE_DOMAINS);
+  const loadedForRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!activeProgram) {
@@ -27,11 +33,15 @@ export default function CreditsAccumulatedCard() {
     }
 
     let cancelled = false;
+    const loadKey = `${activeProgram.id}|${scenario}`;
     (async () => {
-      setIsLoading(true);
+      if (loadedForRef.current !== loadKey) setIsLoading(true);
       try {
         const data = await getProgramCredits(activeProgram.id, scenario);
-        if (!cancelled) setSummary(data);
+        if (!cancelled) {
+          loadedForRef.current = loadKey;
+          setSummary(data);
+        }
       } catch (err) {
         console.error('Failed to load credits summary:', err);
       } finally {
@@ -42,7 +52,7 @@ export default function CreditsAccumulatedCard() {
     return () => {
       cancelled = true;
     };
-  }, [activeProgram, scenario]);
+  }, [activeProgram, scenario, version]);
 
   if (!activeProgram || isLoading || !summary) return null;
 

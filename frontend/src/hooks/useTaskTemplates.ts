@@ -1,20 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import {
   MAX_TASK_TEMPLATES,
   MAX_TEMPLATE_NAME_LENGTH,
   parseStoredTemplates,
   type TaskTemplate,
 } from '../lib/taskTemplates';
+import { usePersistedState, type PersistedCodec } from './usePersistedState';
+import { ACCOUNT_SCOPED_KEYS, accountStorageKey } from '../lib/storageKeys';
 
-const STORAGE_KEY = 'pm-task-templates';
-
-function loadTemplates(): TaskTemplate[] {
-  try {
-    return parseStoredTemplates(localStorage.getItem(STORAGE_KEY));
-  } catch {
-    return [];
-  }
-}
+const CODEC: PersistedCodec<TaskTemplate[]> = {
+  parse: parseStoredTemplates,
+  serialize: (templates) => JSON.stringify(templates),
+};
 
 function newId(): string {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -22,18 +19,10 @@ function newId(): string {
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-// Modelos de task, so neste browser (mesmo padrao dos outros prefs em
-// localStorage). Guardar com um nome que ja existe substitui esse modelo.
+// Modelos de task, so neste browser e separados por conta (mesmo padrao dos
+// outros prefs em localStorage). Guardar com um nome que ja existe substitui esse modelo.
 export function useTaskTemplates() {
-  const [templates, setTemplates] = useState<TaskTemplate[]>(loadTemplates);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
-    } catch {
-      // Best-effort only, same as every other localStorage pref in this app.
-    }
-  }, [templates]);
+  const [templates, setTemplates] = usePersistedState(accountStorageKey(ACCOUNT_SCOPED_KEYS.taskTemplates), CODEC);
 
   // Devolve false quando nao gravou (nome vazio ou ja ha MAX_TASK_TEMPLATES).
   const saveTemplate = useCallback(
@@ -49,12 +38,12 @@ export function useTaskTemplates() {
       setTemplates([...templates, { ...draft, name, id: newId() }].sort((a, b) => a.name.localeCompare(b.name)));
       return true;
     },
-    [templates],
+    [templates, setTemplates],
   );
 
   const deleteTemplate = useCallback((id: string) => {
     setTemplates((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+  }, [setTemplates]);
 
   // Modelo com este nome (sem maiusculas), para pedir confirmacao antes de o substituir.
   const findByName = useCallback(
@@ -72,7 +61,7 @@ export function useTaskTemplates() {
         ? prev
         : [...prev, template].sort((a, b) => a.name.localeCompare(b.name)),
     );
-  }, []);
+  }, [setTemplates]);
 
   // Devolve false se o nome ficar vazio ou ja for de outro modelo.
   const renameTemplate = useCallback(
@@ -84,7 +73,7 @@ export function useTaskTemplates() {
       setTemplates(templates.map((t) => (t.id === id ? { ...t, name } : t)).sort((a, b) => a.name.localeCompare(b.name)));
       return true;
     },
-    [templates],
+    [templates, setTemplates],
   );
 
   return {

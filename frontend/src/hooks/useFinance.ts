@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { isAxiosError } from 'axios';
+import { getHttpStatus } from '../lib/httpError';
 import {
   HTTP_CONFLICT,
   HTTP_TOO_MANY_REQUESTS,
@@ -8,8 +8,10 @@ import {
   createFinanceEntry,
   createFinanceGoal,
   createFinanceHolding,
+  bulkDeleteFinanceEntries,
   deleteFinanceAccount,
-  deleteFinanceEntry,
+  restoreFinanceAccount,
+  restoreFinanceEntries,
   deleteFinanceGoal,
   deleteFinanceHolding,
   getFinance,
@@ -33,7 +35,7 @@ import {
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
 import { KEY_CONFLICT, type SubmitOutcome } from '../lib/idempotency';
-import { accountToInput, entryToInput, goalToInput, holdingToInput, isUndoGone, undoResultKey } from '../lib/financeUndo';
+import { accountToInput, goalToInput, holdingToInput, isUndoGone, undoResultKey } from '../lib/financeUndo';
 import { newRequestId } from '../lib/idempotency';
 import { useUndoableDelete } from './useUndoableDelete';
 
@@ -121,7 +123,7 @@ export function useFinance(month: string) {
         notify(translateNow('quickWins.financeSaved'), 'success');
         return true;
       } catch (err) {
-        if (isAxiosError(err) && err.response?.status === HTTP_CONFLICT) return KEY_CONFLICT;
+        if (getHttpStatus(err) === HTTP_CONFLICT) return KEY_CONFLICT;
         notify(translateNow('finance.saveError'), 'error');
         return false;
       }
@@ -141,7 +143,7 @@ export function useFinance(month: string) {
         notify(translateNow('quickWins.financeSaved'), 'success');
         return true;
       } catch (err) {
-        const changed = isAxiosError(err) && err.response?.status === HTTP_CONFLICT;
+        const changed = getHttpStatus(err) === HTTP_CONFLICT;
         if (changed) {
           await reload();
           setVersion((v) => v + 1);
@@ -186,7 +188,7 @@ export function useFinance(month: string) {
       setVersion((v) => v + 1);
       if (result.failed.length > 0) notify(translateNow('finance.refreshPartial', { symbols: result.failed.join(', ') }), 'error');
     } catch (err) {
-      const limited = isAxiosError(err) && err.response?.status === HTTP_TOO_MANY_REQUESTS;
+      const limited = getHttpStatus(err) === HTTP_TOO_MANY_REQUESTS;
       notify(translateNow(limited ? 'finance.refreshRateLimited' : 'finance.refreshError'), 'error');
     } finally {
       setIsRefreshing(false);
@@ -201,13 +203,45 @@ export function useFinance(month: string) {
 
   // Apaga e oferece Anular (recria o registo com os mesmos dados).
   const removeWithUndo = useCallback(
-    async (action: () => Promise<unknown>, message: string, restore: () => Promise<unknown>, touchesDebts = false) => {
-      const done = await run(action, touchesDebts, true);
-      if (done) offerUndoDelete({ message, restore, onRestored: () => void refresh() });
+    async <T,>(
+      action: () => Promise<T>,
+      message: (removed: T) => string,
+      restore: (removed: T) => Promise<unknown>,
+      touchesDebts = false,
+    ) => {
+      let result: { removed: T } | null = null;
+      const done = await run(
+        async () => {
+          result = { removed: await action() };
+        },
+        touchesDebts,
+        true,
+      );
+      const outcome = result as { removed: T } | null;
+      if (done && outcome) {
+        offerUndoDelete({
+          message: message(outcome.removed),
+          restore: () => restore(outcome.removed),
+          onRestored: () => void refresh(),
+        });
+      }
       return done;
     },
     [run, offerUndoDelete, refresh],
   );
+
+  // Um ou varios movimentos; o backend devolve o necessario para anular
+  // (incluindo as ligacoes a pagamentos de dividas).
+  const removeEntries = (ids: string[]) =>
+    removeWithUndo(
+      () => bulkDeleteFinanceEntries(ids),
+      (removed) => {
+        if (removed.length > 1) return translateNow('f7money.entriesDeleted', { count: removed.length });
+        return translateNow(removed[0]?.frequency ? 'ux4fin.undo.rule' : 'undoDelete.finance');
+      },
+      restoreFinanceEntries,
+      true,
+    );
 
   return {
     data,
@@ -227,23 +261,17 @@ export function useFinance(month: string) {
     addOwedPayment: (id: string, payment: { amountCents: number; paidAt: string }, key?: string) =>
       runPayment(() => addFinanceOwedPayment(id, payment, key)),
     undoOwedPayment,
-    removeEntry: async (id: string) => {
-      const entry = data?.entries.find((e) => e.id === id);
-      if (!entry) return run(() => deleteFinanceEntry(id), true);
-      return removeWithUndo(
-        () => deleteFinanceEntry(id),
-        translateNow(entry.frequency ? 'ux4fin.undo.rule' : 'undoDelete.finance'),
-        () => createFinanceEntry(entryToInput(entry), newRequestId()),
-        true,
-      );
-    },
+    removeEntry: (id: string) => removeEntries([id]),
+    removeEntries,
     addAccount: (input: FinanceAccountInput, key: string) => runCreate(() => createFinanceAccount(input, key)),
     updateAccount: (id: string, changes: Partial<FinanceAccountInput>) => run(() => updateFinanceAccount(id, changes)),
     removeAccount: async (id: string) => {
       const account = data?.accounts.find((a) => a.id === id);
       if (!account) return run(() => deleteFinanceAccount(id));
-      return removeWithUndo(() => deleteFinanceAccount(id), translateNow('ux4fin.undo.account'), () =>
-        createFinanceAccount(accountToInput(account), newRequestId()),
+      return removeWithUndo(
+        () => deleteFinanceAccount(id),
+        () => translateNow('f7money.accountDeleted'),
+        (links) => restoreFinanceAccount(id, accountToInput(account), links),
       );
     },
     addHolding: (input: FinanceHoldingInput, key: string) => runCreate(() => createFinanceHolding(input, key)),
@@ -251,8 +279,10 @@ export function useFinance(month: string) {
     removeHolding: async (id: string) => {
       const holding = data?.holdings.find((h) => h.id === id);
       if (!holding) return run(() => deleteFinanceHolding(id));
-      return removeWithUndo(() => deleteFinanceHolding(id), translateNow('ux4fin.undo.holding'), () =>
-        createFinanceHolding(holdingToInput(holding), newRequestId()),
+      return removeWithUndo(
+        () => deleteFinanceHolding(id),
+        () => translateNow('f7money.holdingDeleted'),
+        () => createFinanceHolding(holdingToInput(holding), newRequestId()),
       );
     },
     addGoal: (input: FinanceGoalInput, key: string) => runCreate(() => createFinanceGoal(input, key)),
@@ -260,8 +290,10 @@ export function useFinance(month: string) {
     removeGoal: async (id: string) => {
       const goal = data?.goals.find((g) => g.id === id);
       if (!goal) return run(() => deleteFinanceGoal(id));
-      return removeWithUndo(() => deleteFinanceGoal(id), translateNow('ux4fin.undo.goal'), () =>
-        createFinanceGoal(goalToInput(goal), newRequestId()),
+      return removeWithUndo(
+        () => deleteFinanceGoal(id),
+        () => translateNow('ux4fin.undo.goal'),
+        () => createFinanceGoal(goalToInput(goal), newRequestId()),
       );
     },
   };

@@ -90,7 +90,7 @@ export class ProgramsService {
    * User.activeProgramId/activePeriodId are cleared automatically
    * (onDelete: SetNull) - the next call to
    * PeriodsService.resolveActivePeriodId() self-heals by creating a new
-   * default program+period.
+   * default program+period (or reusing one at the program cap).
    */
   async remove(userId: string, id: string) {
     await this.findOwnedOrThrow(userId, id);

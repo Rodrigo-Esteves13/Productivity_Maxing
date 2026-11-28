@@ -67,7 +67,7 @@ export default function FocusModeOverlay({ onClose }: FocusModeOverlayProps) {
       aria-label={t('ui.focusMode')}
       className="fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-y-auto overscroll-contain bg-neutral-950 px-6 text-center"
     >
-      <p className="mb-2 max-w-xl truncate text-lg text-neutral-400">{label}</p>
+      <p className="mb-2 max-w-xl truncate text-lg text-neutral-400" title={label}>{label}</p>
       <p className="font-mono text-6xl font-bold tabular-nums text-violet-400 sm:text-8xl">
         <SessionClock />
       </p>

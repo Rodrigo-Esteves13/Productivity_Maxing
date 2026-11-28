@@ -1,5 +1,5 @@
 import type { MouseEvent } from 'react';
-import { ensureFreshSession } from '../api/userService';
+import { ensureFreshSession } from '../api/authService';
 import { rememberCurrentPage } from './postAuthRedirect';
 
 /**

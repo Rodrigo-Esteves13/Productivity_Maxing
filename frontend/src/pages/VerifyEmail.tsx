@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import PageLayout from '../components/Layout/PageLayout';
 import AuthCard from '../components/Auth/AuthCard';
 import FormError from '../components/UI/FormError';
-import { verifyEmailRequest } from '../api/userService';
+import { verifyEmailRequest } from '../api/authService';
 import { getApiMessage } from '../lib/httpError';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useI18n } from '../i18n/useI18n';

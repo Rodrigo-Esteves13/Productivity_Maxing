@@ -31,6 +31,10 @@ export default function Security() {
     goToPrevPage,
     handlePurge,
     refresh,
+    sort,
+    toggleSort,
+    exportCsv,
+    isExporting,
   } = useSecurityLogsPage();
 
   // Uma so instancia, partilhada: o cartao de IPs banidos escreve nela e a
@@ -63,7 +67,9 @@ export default function Security() {
         onPurge={handlePurge}
         isPurging={isPurging}
         onRefresh={refresh}
-        logs={logs}
+        onExport={() => void exportCsv()}
+        isExporting={isExporting}
+        total={total}
       />
 
       {isLoading ? (
@@ -73,6 +79,8 @@ export default function Security() {
       ) : (
         <SecurityLogsTable
           logs={logs}
+          sort={sort}
+          onSort={toggleSort}
           total={total}
           skip={skip}
           pageSize={pageSize}

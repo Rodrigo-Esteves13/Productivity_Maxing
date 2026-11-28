@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getUserAreas } from '../api/userService';
+import { getUserAreas } from '../api/areasService';
 import type { Area } from '../types/models';
 import { translateNow } from '../i18n/translate';
 

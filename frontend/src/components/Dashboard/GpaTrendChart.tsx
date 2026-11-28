@@ -13,6 +13,7 @@ import {
 import type { PeriodComparisonEntry } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
 import ExportChartButton from '../UI/ExportChartButton';
+import { CHART_COLORS } from '../../lib/chartColors';
 
 interface GpaTrendChartProps {
   entries: PeriodComparisonEntry[];
@@ -100,11 +101,11 @@ function TrendDot(props: TrendDotRenderProps & { isLast?: boolean }) {
           cx={cx}
           cy={cy}
           r={7}
-          fill="#a78bfa"
+          fill={CHART_COLORS.accent}
           opacity={0.3}
           className="origin-center [transform-box:fill-box] animate-ping [animation-duration:2.2s] motion-reduce:animate-none"
         />
-        <circle cx={cx} cy={cy} r={5} fill="#c4b5fd" stroke="#171717" strokeWidth={2} />
+        <circle cx={cx} cy={cy} r={5} fill={CHART_COLORS.accentLight} stroke={CHART_COLORS.surface} strokeWidth={2} />
       </g>
     );
   }
@@ -114,8 +115,8 @@ function TrendDot(props: TrendDotRenderProps & { isLast?: boolean }) {
       cx={cx}
       cy={cy}
       r={4}
-      fill={archived ? '#171717' : '#a78bfa'}
-      stroke="#a78bfa"
+      fill={archived ? CHART_COLORS.surface : CHART_COLORS.accent}
+      stroke={CHART_COLORS.accent}
       strokeWidth={2}
     />
   );
@@ -174,28 +175,28 @@ export default function GpaTrendChart({ entries, scale, cumulativeAverage }: Gpa
         <AreaChart data={data} margin={{ top: 20, right: 12, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id="gpaTrendFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#c4b5fd" stopOpacity={0.5} />
-              <stop offset="35%" stopColor="#a78bfa" stopOpacity={0.28} />
-              <stop offset="100%" stopColor="#a78bfa" stopOpacity={0} />
+              <stop offset="0%" stopColor={CHART_COLORS.accentLight} stopOpacity={0.5} />
+              <stop offset="35%" stopColor={CHART_COLORS.accent} stopOpacity={0.28} />
+              <stop offset="100%" stopColor={CHART_COLORS.accent} stopOpacity={0} />
             </linearGradient>
             <linearGradient id="gpaTrendStroke" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#8b5cf6" />
-              <stop offset="100%" stopColor="#c4b5fd" />
+              <stop offset="0%" stopColor={CHART_COLORS.accentStrong} />
+              <stop offset="100%" stopColor={CHART_COLORS.accentLight} />
             </linearGradient>
           </defs>
 
-          <CartesianGrid stroke="#262626" strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="3 3" vertical={false} />
 
           <XAxis
             dataKey="periodName"
-            tick={{ fill: '#737373', fontSize: 11 }}
-            axisLine={{ stroke: '#404040' }}
+            tick={{ fill: CHART_COLORS.muted, fontSize: 11 }}
+            axisLine={{ stroke: CHART_COLORS.axis }}
             tickLine={false}
             interval="preserveStartEnd"
           />
           <YAxis
             domain={[domainMin, domainMax]}
-            tick={{ fill: '#737373', fontSize: 11 }}
+            tick={{ fill: CHART_COLORS.muted, fontSize: 11 }}
             axisLine={false}
             tickLine={false}
             width={36}
@@ -207,13 +208,13 @@ export default function GpaTrendChart({ entries, scale, cumulativeAverage }: Gpa
             cumulativeAverage <= domainMax && (
               <ReferenceLine
                 y={cumulativeAverage}
-                stroke="#737373"
+                stroke={CHART_COLORS.muted}
                 strokeDasharray="4 4"
                 strokeOpacity={0.7}
                 label={{
                   value: `cumulative ${cumulativeAverage.toFixed(2)}`,
                   position: 'insideBottomRight',
-                  fill: '#a3a3a3',
+                  fill: CHART_COLORS.label,
                   fontSize: 10,
                 }}
               />
@@ -221,7 +222,7 @@ export default function GpaTrendChart({ entries, scale, cumulativeAverage }: Gpa
 
           <Tooltip
             content={<CustomTooltip scale={scale} />}
-            cursor={{ stroke: '#a78bfa', strokeWidth: 1, strokeOpacity: 0.4 }}
+            cursor={{ stroke: CHART_COLORS.accent, strokeWidth: 1, strokeOpacity: 0.4 }}
           />
 
           {/* Halo: a mesma curva com tracos largos e translucidos por baixo
@@ -232,7 +233,7 @@ export default function GpaTrendChart({ entries, scale, cumulativeAverage }: Gpa
               key={width}
               type="monotone"
               dataKey="average"
-              stroke="#a78bfa"
+              stroke={CHART_COLORS.accent}
               strokeOpacity={opacity}
               strokeWidth={width}
               strokeLinecap="round"
@@ -255,7 +256,7 @@ export default function GpaTrendChart({ entries, scale, cumulativeAverage }: Gpa
             dot={(props: TrendDotRenderProps) => (
               <TrendDot key={props.payload?.periodId} {...props} isLast={props.index === lastIndex} />
             )}
-            activeDot={{ r: 6, fill: '#c4b5fd', stroke: '#171717', strokeWidth: 2 }}
+            activeDot={{ r: 6, fill: CHART_COLORS.accentLight, stroke: CHART_COLORS.surface, strokeWidth: 2 }}
             animationDuration={900}
             animationEasing="ease-out"
             isAnimationActive

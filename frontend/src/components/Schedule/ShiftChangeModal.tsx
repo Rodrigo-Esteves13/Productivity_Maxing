@@ -136,7 +136,7 @@ export default function ShiftChangeModal({ occurrence, onClose, onChanged }: Shi
                 {t('shiftChange.undo')}
               </ActionButton>
             )}
-            <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+            <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
               {t('common.cancel')}
             </button>
           </div>
@@ -212,7 +212,7 @@ export default function ShiftChangeModal({ occurrence, onClose, onChanged }: Shi
           <ActionButton type="submit" disabled={isSaving}>
             {isSaving ? t('common.saving') : t('shiftChange.save')}
           </ActionButton>
-          <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+          <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
             {t('common.cancel')}
           </button>
         </div>

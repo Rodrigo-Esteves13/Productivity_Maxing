@@ -18,15 +18,19 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { TaskPacksService } from './task-packs.service';
 import { TaskPackSyncService } from './task-pack-sync.service';
+import { TaskPackItemsService } from './task-pack-items.service';
 import {
+  AddPackItemsDto,
   CreateTaskPackDto,
   ImportTaskPackDto,
   RenameTaskPackDto,
+  UpdatePackItemDto,
 } from './dto/task-pack.dto';
 import { perMinute } from '../common/throttle.util';
 import {
   PACK_CODE_IMPORT_PER_MINUTE,
   PACK_CODE_PREVIEW_PER_MINUTE,
+  PACK_ITEM_WRITES_PER_MINUTE,
   PACK_PUBLISH_PER_MINUTE,
   PACK_UPDATE_DECISIONS_PER_MINUTE,
   PACK_WRITES_PER_MINUTE,
@@ -40,6 +44,7 @@ export class TaskPacksController {
   constructor(
     private readonly packs: TaskPacksService,
     private readonly sync: TaskPackSyncService,
+    private readonly items: TaskPackItemsService,
   ) {}
 
   @Get()
@@ -126,6 +131,55 @@ export class TaskPacksController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.sync.publish(user.id, id);
+  }
+
+  @Get(':id/items')
+  @ApiOperation({ summary: 'Tasks inside one of your packs.' })
+  listItems(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.items.list(user.id, id);
+  }
+
+  @Post(':id/items')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(perMinute(PACK_ITEM_WRITES_PER_MINUTE))
+  @ApiOperation({ summary: 'Adds some of YOUR tasks to a pack (same link).' })
+  addItems(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AddPackItemsDto,
+  ) {
+    return this.items.add(user.id, id, dto);
+  }
+
+  @Patch(':id/items/:itemId')
+  @Throttle(perMinute(PACK_ITEM_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary:
+      'Edits one task of a pack (and your source task). Importers must approve the change.',
+  })
+  updateItem(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+    @Body() dto: UpdatePackItemDto,
+  ) {
+    return this.items.update(user.id, id, itemId, dto);
+  }
+
+  @Delete(':id/items/:itemId')
+  @Throttle(perMinute(PACK_ITEM_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary: 'Removes one task from a pack. Imported tasks are not deleted.',
+  })
+  removeItem(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+  ) {
+    return this.items.remove(user.id, id, itemId);
   }
 
   @Patch(':id')

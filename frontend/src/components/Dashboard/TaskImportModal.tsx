@@ -93,7 +93,7 @@ export default function TaskImportModal({ isOpen, onClose, onImported }: TaskImp
           accept={ACCEPTED_EXTENSIONS}
           onChange={handleFileChange}
           disabled={isBusy}
-          className="block w-full text-sm text-neutral-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-violet-600 file:text-white file:text-sm file:font-medium hover:file:bg-violet-500 disabled:opacity-50"
+          className="block w-full pointer-coarse:min-h-11 text-sm text-neutral-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-violet-600 file:text-white file:text-sm file:font-medium hover:file:bg-violet-500 disabled:opacity-50"
         />
 
         {isBusy && (

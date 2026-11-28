@@ -26,7 +26,11 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { perMinute } from '../common/throttle.util';
 import { FinanceService } from './finance.service';
+import { FinanceRestoreService } from './finance-restore.service';
 import {
+  BulkDeleteFinanceEntriesDto,
+  RestoreFinanceAccountDto,
+  RestoreFinanceEntriesDto,
   CreateFinanceAccountDto,
   CreateFinanceEntryDto,
   CreateFinanceGoalDto,
@@ -64,7 +68,10 @@ const IdempotencyHeader = () =>
 @UseGuards(JwtAuthGuard)
 @Controller('finance')
 export class FinanceController {
-  constructor(private readonly finance: FinanceService) {}
+  constructor(
+    private readonly finance: FinanceService,
+    private readonly restore: FinanceRestoreService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -151,6 +158,32 @@ export class FinanceController {
     return this.finance.importEntries(user.id, dto, key);
   }
 
+  // Literais antes de qualquer rota entries/:id.
+  @Post('entries/bulk-delete')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(perMinute(FINANCE_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary:
+      'Deletes several entries of yours and returns what is needed to restore them.',
+  })
+  bulkDeleteEntries(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: BulkDeleteFinanceEntriesDto,
+  ) {
+    return this.restore.deleteEntries(user.id, dto.ids);
+  }
+
+  @Post('entries/restore')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(perMinute(FINANCE_WRITES_PER_MINUTE))
+  @ApiOperation({ summary: 'Restores deleted entries and relinks payments.' })
+  restoreEntries(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RestoreFinanceEntriesDto,
+  ) {
+    return this.restore.restoreEntries(user.id, dto.entries);
+  }
+
   @Post('entries')
   @IdempotencyHeader()
   @Throttle(perMinute(FINANCE_WRITES_PER_MINUTE))
@@ -214,6 +247,20 @@ export class FinanceController {
     return this.finance.createAccount(user.id, dto, key);
   }
 
+  // Literal antes de qualquer rota accounts/:id.
+  @Post('accounts/restore')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(perMinute(FINANCE_WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary: 'Restores a deleted account and relinks entries and holdings.',
+  })
+  restoreAccount(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RestoreFinanceAccountDto,
+  ) {
+    return this.restore.restoreAccount(user.id, dto);
+  }
+
   @Patch('accounts/:id')
   @Throttle(perMinute(FINANCE_WRITES_PER_MINUTE))
   @ApiOperation({ summary: 'Edits an account or its balance.' })
@@ -226,7 +273,6 @@ export class FinanceController {
   }
 
   @Delete('accounts/:id')
-  @HttpCode(HttpStatus.NO_CONTENT)
   @Throttle(perMinute(FINANCE_WRITES_PER_MINUTE))
   @ApiOperation({ summary: 'Deletes an account (entries and holdings stay).' })
   removeAccount(

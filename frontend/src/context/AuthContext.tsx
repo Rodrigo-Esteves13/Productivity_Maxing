@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
-import { getUserProfile, fetchCsrfToken, logoutRequest } from '../api/userService';
+import { getUserProfile } from '../api/userService';
+import { fetchCsrfToken, logoutRequest } from '../api/authService';
 import { setCsrfToken, setSessionUserId } from '../api/csrfStore';
+import { clearQueryCache, setQueryCacheOwner } from '../api/queryCache';
 import { unsubscribeThisDevice } from '../hooks/usePushNotifications';
 import { clearPushPromptAnswered } from '../pwa/pushPromptStorage';
 import { resetCalendarStatus } from '../hooks/useCalendarStatus';
 import { clearRecents } from '../lib/paletteRecents';
+import { claimUserStorage, clearUserStorage } from '../lib/storageKeys';
+import { runSessionResets } from '../lib/sessionReset';
 import type { User } from '../types/models';
 import { AuthContext } from './auth-context';
 
@@ -49,6 +53,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     userIdRef.current = user?.id ?? null;
     // O cliente HTTP usa-o para nao repetir pedidos noutra conta (F-05).
     setSessionUserId(user?.id ?? null);
+    // Outro utilizador (ou nenhum): a cache de GETs do anterior vai fora.
+    setQueryCacheOwner(user?.id ?? null);
+    // Outra conta neste browser: nao herda recentes nem rascunhos (F-52).
+    if (user?.id) claimUserStorage(user.id);
   }, [user]);
 
   const isAuthenticatedRef = useRef(false);
@@ -68,7 +76,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoadingUser(true);
     try {
       const data = await withTransientRetry(getUserProfile, isCurrent);
-      if (isCurrent()) setUser(data);
+      if (!isCurrent()) return;
+      // Antes de o user chegar aos filhos: os efeitos deles correm antes do
+      // efeito do provider, e ja nao podem apanhar dados de outra conta.
+      setQueryCacheOwner(data.id);
+      claimUserStorage(data.id);
+      setUser(data);
     } catch (err) {
       if (!isCurrent()) return;
       console.error('Failed to load user profile:', err);
@@ -159,6 +172,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback((csrfToken: string) => {
     // Caches de modulo sao de um utilizador: nova sessao, cache limpa (F-07).
     resetCalendarStatus();
+    clearQueryCache();
+    runSessionResets();
     // Uma verificacao antiga (ainda a repetir) ja nao pode desfazer este login.
     invalidateChecks();
     setCsrfToken(csrfToken);
@@ -185,7 +200,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       invalidateChecks();
       setCsrfToken(null);
       resetCalendarStatus();
+      clearQueryCache();
       clearRecents(userIdRef.current);
+      clearUserStorage();
+      runSessionResets();
       isAuthenticatedRef.current = false;
       setIsAuthenticated(false);
       setUser(null);

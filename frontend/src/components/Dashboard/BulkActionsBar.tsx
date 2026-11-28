@@ -10,6 +10,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { fillNodes } from '../../i18n/fillNodes';
 import { todayKey, toDateKey } from '../../lib/dateKey';
 import { addUtcDays, todayUtcAnchored } from '../../lib/weekDates';
+import { TASK_UNDO_MAX } from '../../lib/batch';
 
 interface BulkActionsBarProps {
   selectedCount: number;
@@ -36,8 +37,14 @@ interface BulkActionsBarProps {
 // Valor da opcao que limpa o esforco (o select so trabalha com strings).
 const CLEAR_EFFORT = 'CLEAR';
 
+// Ate TASK_UNDO_MAX ha "Anular"; acima disso avisa que nao ha volta.
+function deleteMessageKey(count: number): string {
+  if (count > TASK_UNDO_MAX) return 'ui.deleteSelectedTasksMany';
+  return count === 1 ? 'ux4global.tasks.confirmOne' : 'ux4global.tasks.confirmMany';
+}
+
 const MOVE_BUTTON_CLASS =
-  'rounded-md border border-violet-800/60 px-2.5 py-1 text-sm text-violet-200 hover:bg-violet-900/40 transition-colors disabled:opacity-50';
+  'pointer-coarse:min-h-11 rounded-md border border-violet-800/60 px-2.5 py-1 text-sm text-violet-200 hover:bg-violet-900/40 transition-colors disabled:opacity-50';
 
 export default function BulkActionsBar({
   selectedCount,
@@ -98,7 +105,7 @@ export default function BulkActionsBar({
   const handleDelete = async () => {
     const confirmed = await confirm({
       title: t('ui.deleteTasks'),
-      message: t(selectedCount === 1 ? 'ui.deleteSelectedTasksOne' : 'ui.deleteSelectedTasksMany', { count: selectedCount }),
+      message: t(deleteMessageKey(selectedCount), { count: selectedCount }),
       confirmLabel: t('common.delete'),
       tone: 'danger',
     });
@@ -162,7 +169,7 @@ export default function BulkActionsBar({
           onChange={(e) => {
             if (e.target.value) void handleReschedule(e.target.value);
           }}
-          className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-200 focus:outline-none focus:ring-2 focus:ring-violet-600/50 disabled:opacity-50"
+          className="pointer-coarse:min-h-11 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-200 focus:outline-none focus:ring-2 focus:ring-violet-600/50 disabled:opacity-50"
         />
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -208,7 +215,7 @@ export default function BulkActionsBar({
           type="button"
           onClick={onClear}
           disabled={isBusy}
-          className="px-3 py-1.5 text-sm text-neutral-400 hover:text-neutral-200 disabled:opacity-50"
+          className="pointer-coarse:min-h-11 px-3 py-1.5 text-sm text-neutral-400 hover:text-neutral-200 disabled:opacity-50"
         >
           {t('ui.clear')}
         </button>

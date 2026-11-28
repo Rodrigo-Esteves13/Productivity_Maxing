@@ -91,7 +91,7 @@ export default function AddressTravelFields({
           type="button"
           onClick={() => void handleCalculate()}
           disabled={isCalculating}
-          className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+          className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800 disabled:opacity-50 pointer-coarse:min-h-11"
         >
           {isCalculating ? t('commitment.form.calculating') : t('commitment.form.calculate')}
         </button>

@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from './storageKeys';
+import { ACCOUNT_SCOPED_KEYS, accountStorageKey } from './storageKeys';
 
 // Alvo de media da calculadora "o que preciso", guardado por Area (ou pelo
 // periodo todo) so neste browser. Mapa { chave: texto do campo }.
@@ -26,7 +26,7 @@ export function withGradeTarget(targets: GradeTargets, key: string, value: strin
 
 export function loadGradeTargets(): GradeTargets {
   try {
-    return parseGradeTargets(localStorage.getItem(STORAGE_KEYS.gradeTargets));
+    return parseGradeTargets(localStorage.getItem(accountStorageKey(ACCOUNT_SCOPED_KEYS.gradeTargets)));
   } catch {
     return {};
   }
@@ -34,7 +34,7 @@ export function loadGradeTargets(): GradeTargets {
 
 export function saveGradeTargets(targets: GradeTargets): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.gradeTargets, JSON.stringify(targets));
+    localStorage.setItem(accountStorageKey(ACCOUNT_SCOPED_KEYS.gradeTargets), JSON.stringify(targets));
   } catch {
     // Sem armazenamento (modo privado): o alvo so dura nesta visita.
   }

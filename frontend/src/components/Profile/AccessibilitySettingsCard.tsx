@@ -59,7 +59,7 @@ export default function AccessibilitySettingsCard() {
                 type="button"
                 onClick={() => setTheme(choice.id)}
                 aria-pressed={selected}
-                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                className={`flex pointer-coarse:min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                   selected
                     ? 'border-violet-500 text-white bg-violet-500/10'
                     : 'border-neutral-800 text-neutral-300 hover:bg-neutral-800'
@@ -95,7 +95,7 @@ export default function AccessibilitySettingsCard() {
             id="language-select"
             value={lang}
             onChange={(e) => setLang(e.target.value as LanguageCode)}
-            className="rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm text-neutral-200 focus:outline-none focus:border-violet-600"
+            className="pointer-coarse:min-h-11 rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm text-neutral-200 focus:outline-none focus:border-violet-600"
           >
             {LANGUAGES.map((l) => (
               <option key={l.code} value={l.code}>
@@ -115,7 +115,7 @@ export default function AccessibilitySettingsCard() {
               type="button"
               onClick={() => setFontScale(scale)}
               aria-pressed={fontScale === scale}
-              className={`px-4 py-2 text-sm transition-colors ${
+              className={`pointer-coarse:min-h-11 px-4 py-2 text-sm transition-colors ${
                 fontScale === scale
                   ? 'bg-violet-600 text-white'
                   : 'bg-transparent text-neutral-300 hover:bg-neutral-800'

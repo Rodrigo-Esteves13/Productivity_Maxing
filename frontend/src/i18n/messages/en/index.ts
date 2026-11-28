@@ -99,8 +99,15 @@ import { ux4Wellbeing } from './ux4Wellbeing';
 import { ux4Schedule } from './ux4Schedule';
 import { ux4Admin } from './ux4Admin';
 import { ux4Admin2 } from './ux4Admin2';
+import { fase5Users } from './fase5Users';
 import { ux4Social } from './ux4Social';
 import { ux4Global } from './ux4Global';
+import { fase5Notebook } from './fase5Notebook';
+import { f7Admin } from './f7Admin';
+import { f7Tasks } from './f7Tasks';
+import { f7Money } from './f7Money';
+import { f7Study } from './f7Study';
+import { f7Social } from './f7Social';
 
 export const en: Record<string, string> = {
   ...packs,
@@ -204,6 +211,13 @@ export const en: Record<string, string> = {
   ...ux4Schedule,
   ...ux4Admin,
   ...ux4Admin2,
+  ...fase5Users,
   ...ux4Social,
   ...ux4Global,
+  ...fase5Notebook,
+  ...f7Social,
+  ...f7Study,
+  ...f7Money,
+  ...f7Tasks,
+  ...f7Admin,
 };

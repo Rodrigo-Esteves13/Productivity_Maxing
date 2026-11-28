@@ -46,8 +46,8 @@ function HoldingRow({ holding, currency, onEdit, onRemove }: HoldingRowProps) {
   return (
     <li className="grid grid-cols-2 gap-x-4 gap-y-2 py-3 md:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))_auto] md:items-center">
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-neutral-100">{holding.symbol}</p>
-        {holding.name !== holding.symbol && <p className="truncate text-xs text-neutral-500">{holding.name}</p>}
+        <p className="truncate text-sm font-medium text-neutral-100" title={holding.symbol}>{holding.symbol}</p>
+        {holding.name !== holding.symbol && <p className="truncate text-xs text-neutral-500" title={holding.name}>{holding.name}</p>}
       </div>
       <div>
         <p className="text-xs text-neutral-500 md:hidden">{t('finance.quantity')}</p>

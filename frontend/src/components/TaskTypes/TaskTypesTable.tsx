@@ -99,6 +99,7 @@ export default function TaskTypesTable({
             </div>
             <p className="text-xs text-neutral-500">
               {t('ui.subcategories')}: {subcategories(type)} · {t('ui.order')}: {type.order}
+              {type.taskCount !== undefined && ` · ${t('f7admin.types.tasks')}: ${type.taskCount}`}
             </p>
             {actions(type)}
           </li>
@@ -111,6 +112,7 @@ export default function TaskTypesTable({
             <tr>
               <th className="px-4 py-3 font-medium">{t('ui.name')}</th>
               <th className="px-4 py-3 font-medium">{t('ui.subcategories')}</th>
+              <th className="px-4 py-3 font-medium text-center">{t('f7admin.types.tasks')}</th>
               <th className="px-4 py-3 font-medium text-center">{t('ui.order')}</th>
               <th className="px-4 py-3 font-medium text-center">{t('ui.status')}</th>
               <th className="px-4 py-3 font-medium text-right">{t('ui.actions')}</th>
@@ -126,6 +128,7 @@ export default function TaskTypesTable({
                   </div>
                 </td>
                 <td className="px-4 py-3 text-neutral-500">{subcategories(type)}</td>
+                <td className="px-4 py-3 text-center tabular-nums text-neutral-500">{type.taskCount ?? '-'}</td>
                 <td className="px-4 py-3 text-center text-neutral-500">{type.order}</td>
                 <td className="px-4 py-3 text-center">
                   <ActiveBadge isActive={type.isActive} />

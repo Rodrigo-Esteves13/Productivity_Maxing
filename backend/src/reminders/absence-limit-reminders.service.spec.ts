@@ -60,13 +60,15 @@ function setup(
     },
     classOccurrence: {
       // Devolve as mesmas faltas para cada user pedido (userId in [...]).
-      groupBy: jest.fn().mockImplementation((args: GroupByArgs) =>
-        Promise.resolve(
-          args.where.userId.in.flatMap((userId) =>
-            groups.map((group) => ({ ...group, userId })),
+      groupBy: jest
+        .fn()
+        .mockImplementation((args: GroupByArgs) =>
+          Promise.resolve(
+            args.where.userId.in.flatMap((userId) =>
+              groups.map((group) => ({ ...group, userId })),
+            ),
           ),
         ),
-      ),
     },
   };
   const push = {

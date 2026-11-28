@@ -1,7 +1,7 @@
 import { POLL_MS } from '../lib/pollIntervals';
 import { useCallback, useEffect, useState } from 'react';
 import { getSocialPending, type SocialPendingCounts } from '../api/socialService';
-import { onSocialChanged } from '../lib/socialEvents';
+import * as bus from '../lib/bus';
 import { useLiveRefresh } from './useLiveRefresh';
 
 // Polling de seguranca: o push e o regresso ao separador ja refrescam antes.
@@ -24,7 +24,7 @@ export function useSocialPending(enabled: boolean): SocialPendingCounts | null {
   useEffect(() => {
     if (!enabled) return undefined;
     load();
-    return onSocialChanged(load);
+    return bus.on('social:changed', load);
   }, [enabled, load]);
 
   useLiveRefresh(load, { enabled, intervalMs: SOCIAL_PENDING_POLL_MS });

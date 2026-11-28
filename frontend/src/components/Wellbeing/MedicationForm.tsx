@@ -120,7 +120,7 @@ export default function MedicationForm({ initial, isSaving, submitLabel, onSubmi
             <button
               type="button"
               onClick={() => setTimes((prev) => [...prev, DEFAULT_TIME])}
-              className="mt-2 flex items-center gap-1 text-xs font-medium text-violet-400 hover:text-violet-300"
+              className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 mt-2 flex items-center gap-1 text-xs font-medium text-violet-400 hover:text-violet-300"
             >
               <PlusIcon className="h-3.5 w-3.5" />
               {t('wellbeing.meds.addTime')}

@@ -1,3 +1,4 @@
+import { onSessionReset } from '../lib/sessionReset';
 import api from './client';
 import type { PersonalNote } from '../types/models';
 import { appendThought, FOCUS_NOTE_TITLES } from '../lib/focusThoughts';
@@ -33,6 +34,9 @@ export const deletePersonalNote = async (id: string): Promise<void> => {
 // perderem nem criarem duas notas.
 let focusNoteId: string | null = null;
 let focusQueue: Promise<unknown> = Promise.resolve();
+onSessionReset(() => {
+  focusNoteId = null;
+});
 
 async function findFocusNote(): Promise<PersonalNote | undefined> {
   return (await getPersonalNotes()).find((n) => FOCUS_NOTE_TITLES.includes(n.title));

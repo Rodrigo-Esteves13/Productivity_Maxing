@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -22,13 +23,17 @@ import { RequireApiKeyScope } from '../auth/decorators/require-api-key-scope.dec
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { FeedbackService } from './feedback.service';
-import { CreateFeedbackDto } from './dto/create-feedback.dto';
+import {
+  CreateFeedbackDto,
+  UpdateOwnFeedbackDto,
+} from './dto/create-feedback.dto';
 import {
   MuteFeedbackDto,
   RejectFeedbackDto,
   ReplyFeedbackDto,
   ResolveFeedbackDto,
 } from './dto/moderate-feedback.dto';
+import { QueryFeedbackDto } from './dto/query-feedback.dto';
 import { perMinute } from '../common/throttle.util';
 import {
   FEEDBACK_CREATE_PER_MINUTE,
@@ -71,12 +76,31 @@ export class FeedbackController {
     return this.feedback.deleteMine(user.id, id);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Throttle(perMinute(FEEDBACK_CREATE_PER_MINUTE))
+  @Patch('mine/:id')
+  @ApiOperation({
+    summary: 'Edits an own feedback while it is open and without a reply',
+  })
+  updateMine(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateOwnFeedbackDto,
+  ) {
+    return this.feedback.updateMine(user.id, id, dto);
+  }
+
   @UseGuards(JwtOrApiKeyAuthGuard, RolesGuard, ApiKeyScopeGuard)
   @Roles(Role.ADMIN)
   @RequireApiKeyScope(ApiKeyScope.ADMIN)
   @Get()
-  list() {
-    return this.feedback.list();
+  @ApiOperation({
+    summary:
+      'All feedback (Admin). Without query params returns a capped array; with any, a filtered page',
+  })
+  list(@Query() query: QueryFeedbackDto = {}) {
+    const paged = Object.values(query).some((value) => value !== undefined);
+    return paged ? this.feedback.listPage(query) : this.feedback.list();
   }
 
   @UseGuards(JwtOrApiKeyAuthGuard, RolesGuard, ApiKeyScopeGuard)

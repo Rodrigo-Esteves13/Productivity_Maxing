@@ -20,6 +20,7 @@ import { useLoadOnce } from '../../hooks/useLoadOnce';
 import { useConfirmAction } from '../../hooks/useConfirmAction';
 import { useFeedback } from '../../context/useFeedback';
 import { useAuth } from '../../context/useAuth';
+import { useReloadOnReturn } from '../../hooks/useReloadOnReturn';
 import { useI18n } from '../../i18n/useI18n';
 
 interface TurmaProgramsTabProps {
@@ -35,7 +36,8 @@ export default function TurmaProgramsTab({ turmaId, isDelegado }: TurmaProgramsT
   const { notify } = useFeedback();
   const fetcher = useCallback(() => getTurmaPrograms(turmaId), [turmaId]);
   const { data, isLoading, error, reload } = useLoadOnce(fetcher);
-  const { data: myPrograms } = useLoadOnce(getPrograms);
+  const { data: myPrograms, reload: reloadMyPrograms } = useLoadOnce(getPrograms);
+  useReloadOnReturn(reload, reloadMyPrograms);
   const [programId, setProgramId] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const confirm = useConfirmAction(t('turma.actionError'));
@@ -114,7 +116,7 @@ export default function TurmaProgramsTab({ turmaId, isDelegado }: TurmaProgramsT
               <li key={program.id} className="rounded-lg border border-neutral-800 bg-neutral-900/40 p-4">
                 <div className="flex flex-wrap items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-white">{program.name}</p>
+                    <p className="truncate font-medium text-white" title={program.name}>{program.name}</p>
                     <p className="text-xs text-neutral-500">
                       {t('turma.programs.summary', {
                         periods: program.snapshot.periods.length,

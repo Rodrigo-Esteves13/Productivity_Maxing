@@ -28,6 +28,10 @@ import {
   resolveMailLanguage,
 } from '../mail/mail-messages';
 import { MS_PER_HOUR } from '../common/time.constants';
+import {
+  pendingReminderTaskIdsSql,
+  type ReminderWindow,
+} from './reminders.sql';
 
 // Task com hora: avisa 24h antes. Task só com dia: avisa na manhã do dia
 // anterior (09:00, hora de Lisboa) - "24h antes de meia-noite" seria às 00h.
@@ -38,10 +42,9 @@ const DATE_ONLY_REMINDER_MINUTES = 9 * 60;
 // A margem cobre o atraso do cron.
 const LOOKAHEAD_MARGIN_MS = MS_PER_HOUR;
 export const LOOKAHEAD_MS = TIMED_LEAD_MS + LOOKAHEAD_MARGIN_MS;
-// Tasks lidas por pagina e maximo de paginas por execucao. As ja avisadas
-// continuam a vir na query (o marcador SentReminder e por [task, data] e o
-// Prisma nao compara colunas), por isso pagina-se em vez de truncar: sem isto
-// as primeiras 1000 ja avisadas escondiam as seguintes.
+// Tasks lidas por lote e maximo de lotes por execucao. As ja avisadas saem
+// no SQL (B-39, ver reminders.sql.ts), por isso o teto so conta tasks que
+// ainda precisam de lembrete.
 export const TASKS_PAGE_SIZE = 1000;
 const MAX_TASK_PAGES = 10;
 
@@ -366,35 +369,41 @@ export class RemindersService {
     return result;
   }
 
-  /** Tasks com prazo na janela, em paginas por cursor (ordem estavel). */
-  private async loadCandidateTasks(window: {
-    gt: Date;
-    lte: Date;
-  }): Promise<ReminderTask[]> {
-    const where: Prisma.TaskWhereInput = {
-      progressStatus: { not: 'COMPLETED' },
-      // A entrega de um trabalho em duas fases tambem tem lembrete.
-      OR: [{ date: window }, { submissionDate: window }],
-      // Data por marcar/surpresa e so um palpite: "falta 1 dia" mentia.
-      ...FIRM_DATE_WHERE,
-      user: {
-        OR: [{ deadlineEmailReminders: true }, { deadlinePushReminders: true }],
-        status: { not: UserStatus.BANNED },
-      },
-    };
+  /**
+   * Tasks com prazo na janela e ainda sem lembrete (B-39). Primeiro o
+   * Postgres devolve so os ids pendentes (o NOT EXISTS no SentReminder, ver
+   * reminders.sql.ts); depois o Prisma le os dados em lotes, com os mesmos
+   * filtros de sempre. As ja avisadas nunca chegam a sair da BD.
+   */
+  private async loadCandidateTasks(
+    window: ReminderWindow,
+  ): Promise<ReminderTask[]> {
+    const pending = await this.prisma.$queryRaw<{ id: string }[]>(
+      pendingReminderTaskIdsSql(window, TASKS_PAGE_SIZE * MAX_TASK_PAGES),
+    );
+    const ids = pending.map((row) => row.id);
     const tasks: ReminderTask[] = [];
-    let cursor: string | undefined;
-    for (let page = 0; page < MAX_TASK_PAGES; page += 1) {
+    for (let start = 0; start < ids.length; start += TASKS_PAGE_SIZE) {
       const rows = await this.prisma.task.findMany({
-        where,
+        where: {
+          id: { in: ids.slice(start, start + TASKS_PAGE_SIZE) },
+          progressStatus: { not: 'COMPLETED' },
+          // A entrega de um trabalho em duas fases tambem tem lembrete.
+          OR: [{ date: window }, { submissionDate: window }],
+          // Data por marcar/surpresa e so um palpite: "falta 1 dia" mentia.
+          ...FIRM_DATE_WHERE,
+          user: {
+            OR: [
+              { deadlineEmailReminders: true },
+              { deadlinePushReminders: true },
+            ],
+            status: { not: UserStatus.BANNED },
+          },
+        },
         select: REMINDER_TASK_SELECT,
         orderBy: [{ date: 'asc' }, { id: 'asc' }],
-        take: TASKS_PAGE_SIZE,
-        ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
       });
       tasks.push(...rows);
-      if (rows.length < TASKS_PAGE_SIZE) break;
-      cursor = rows[rows.length - 1].id;
     }
     return tasks;
   }

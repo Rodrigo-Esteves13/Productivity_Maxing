@@ -5,7 +5,7 @@ import {
   type ImportTaskPackResult,
   type TaskPackPreview,
 } from '../api/taskPackService';
-import { getUserAreas } from '../api/userService';
+import { getUserAreas } from '../api/areasService';
 import { getHttpStatus } from '../lib/httpError';
 import type { Area } from '../types/models';
 

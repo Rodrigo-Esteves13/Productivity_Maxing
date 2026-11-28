@@ -1,9 +1,11 @@
 import ColorDot from '../UI/ColorDot';
 import ActiveBadge from '../TaskTypes/ActiveBadge';
-import { PencilIcon, TrashIcon } from '../UI/Icons';
+import { EyeIcon, EyeOffIcon, PencilIcon } from '../UI/Icons';
 import type { AdminPriority } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
 import IconButton from '../UI/IconButton';
+import EmptyState from '../UI/EmptyState';
+import { DEFAULT_PRIORITY_COLOR } from '../../lib/taskTypeColors';
 
 interface PrioritiesTableProps {
   priorities: AdminPriority[];
@@ -13,9 +15,54 @@ interface PrioritiesTableProps {
 
 export default function PrioritiesTable({ priorities, onEdit, onToggleActive }: PrioritiesTableProps) {
   const { t } = useI18n();
+
+  const name = (p: AdminPriority) => (
+    <div className="flex min-w-0 items-center gap-2">
+      <ColorDot color={p.colorHex ?? DEFAULT_PRIORITY_COLOR} />
+      <span className="truncate font-medium text-neutral-200" title={p.label}>
+        {p.label}
+      </span>
+    </div>
+  );
+
+  const actions = (p: AdminPriority) => (
+    <div className="flex items-center justify-end gap-1">
+      <IconButton label={t('ui.editPriority')} onClick={() => onEdit(p)} className="text-neutral-400 hover:text-white">
+        <PencilIcon />
+      </IconButton>
+      <IconButton
+        label={p.isActive ? t('ui.deactivate') : t('ui.reactivate')}
+        onClick={() => onToggleActive(p)}
+        className={p.isActive ? 'text-neutral-400 hover:text-red-400' : 'text-violet-400 hover:text-violet-300'}
+      >
+        {p.isActive ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+      </IconButton>
+    </div>
+  );
+
+  if (priorities.length === 0) {
+    return <EmptyState message={t('ui.noPrioritiesYet')} />;
+  }
+
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
-      <div className="overflow-x-auto">
+      {/* Mobile: um cartao por prioridade, com as mesmas acoes da tabela */}
+      <ul className="divide-y divide-neutral-800 md:hidden">
+        {priorities.map((p) => (
+          <li key={p.id} className="space-y-2 p-4">
+            <div className="flex items-center justify-between gap-2">
+              {name(p)}
+              <ActiveBadge isActive={p.isActive} />
+            </div>
+            <p className="text-xs text-neutral-500">
+              {t('ui.order')}: {p.order}
+            </p>
+            {actions(p)}
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-sm text-left text-neutral-300 whitespace-nowrap">
           <thead className="text-xs text-neutral-400 uppercase bg-neutral-950/50 border-b border-neutral-800">
             <tr>
@@ -26,50 +73,16 @@ export default function PrioritiesTable({ priorities, onEdit, onToggleActive }: 
             </tr>
           </thead>
           <tbody>
-            {priorities.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
-                  {t('ui.noPrioritiesYet')}
+            {priorities.map((p) => (
+              <tr key={p.id} className="border-b border-neutral-800 last:border-0 hover:bg-neutral-800/30 transition-colors">
+                <td className="px-4 py-3">{name(p)}</td>
+                <td className="px-4 py-3 text-center text-neutral-500">{p.order}</td>
+                <td className="px-4 py-3 text-center">
+                  <ActiveBadge isActive={p.isActive} />
                 </td>
+                <td className="px-4 py-3">{actions(p)}</td>
               </tr>
-            ) : (
-              priorities.map((p) => (
-                <tr key={p.id} className="border-b border-neutral-800 last:border-0 hover:bg-neutral-800/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <ColorDot color={p.colorHex ?? '#808080'} />
-                      <span className="font-medium text-neutral-200">{p.label}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center text-neutral-500">{p.order}</td>
-                  <td className="px-4 py-3 text-center">
-                    <ActiveBadge isActive={p.isActive} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <IconButton
-                        label={t('ui.editPriority')}
-                        onClick={() => onEdit(p)}
-                        className="text-neutral-400 hover:text-white"
-                      >
-                        <PencilIcon />
-                      </IconButton>
-                      <button
-                        onClick={() => onToggleActive(p)}
-                        title={p.isActive ? t('ui.deactivate') : t('ui.reactivate')}
-                        className={`transition-colors p-1.5 ${
-                          p.isActive
-                            ? 'text-neutral-400 hover:text-red-500'
-                            : 'text-violet-500 hover:text-violet-400'
-                        }`}
-                      >
-                        {p.isActive ? <TrashIcon /> : <span className="text-xs font-semibold px-1">{t('ui.reactivate')}</span>}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
+            ))}
           </tbody>
         </table>
       </div>

@@ -87,7 +87,7 @@ export default function CopyWeekPanel({ isSaving, result, onCopy, onClose }: Cop
         >
           {isSaving ? t('ui.copying') : isFixed ? t('ui.makeFixed') : t('ui.copyWeek')}
         </ActionButton>
-        <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+        <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
           {t('ui.close')}
         </button>
       </div>

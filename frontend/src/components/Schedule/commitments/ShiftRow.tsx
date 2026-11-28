@@ -92,7 +92,7 @@ export default function ShiftRow({
             <select
               value=""
               onChange={(e) => e.target.value && void onEdit(shift.id, { commitmentId: e.target.value })}
-              className="bg-neutral-900 border border-neutral-700 rounded px-1.5 py-0.5 pointer-coarse:min-h-11 text-neutral-300"
+              className="bg-neutral-900 border border-neutral-700 rounded px-1.5 py-0.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-neutral-300"
             >
               <option value="">{t('ui.choose')}</option>
               {availableTargets.map((c) => (
@@ -108,7 +108,7 @@ export default function ShiftRow({
             type="button"
             onClick={() => setIsReplicating((open) => !open)}
             aria-expanded={isReplicating}
-            className="px-2 py-1 text-xs text-violet-300 hover:text-violet-200 rounded"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 px-2 py-1 text-xs text-violet-300 hover:text-violet-200 rounded"
             title={t('ui.copyThisShiftToOther')}
           >
             {t('ui.replicate')}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useActiveStudySession } from '../context/useActiveStudySession';
 import { isIdle, readLastActivity, touchActivity } from '../lib/idleClock';
+import { useVisibleInterval } from './useVisibleInterval';
 
 const CHECK_INTERVAL_MS = 30_000;
 
@@ -17,21 +18,19 @@ export function useIdleSession() {
     setIdleSince(last !== null && isIdle(last, Date.now()) ? last : null);
   }, []);
 
+  useVisibleInterval(check, CHECK_INTERVAL_MS, { enabled: Boolean(activeSession) });
+
   useEffect(() => {
     if (!activeSession) {
       setIdleSince(null);
       return;
     }
-    const interval = setInterval(check, CHECK_INTERVAL_MS);
     // Ao voltar a esta tab verifica logo, em vez de esperar pelo proximo ciclo.
     const onVisible = () => {
       if (document.visibilityState === 'visible') check();
     };
     document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [activeSession, check]);
 
   const stillHere = useCallback(() => {

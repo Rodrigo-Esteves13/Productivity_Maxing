@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import Select from '../UI/Select';
-import { getUserAreas, getUserTasks } from '../../api/userService';
+import { getUserAreas } from '../../api/areasService';
+import { getUserTasks } from '../../api/tasksService';
 import { useLoadOnce } from '../../hooks/useLoadOnce';
 import { useI18n } from '../../i18n/useI18n';
 import { formatTaskDue } from '../../lib/taskReadiness';

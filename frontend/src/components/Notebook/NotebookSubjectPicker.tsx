@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Area } from '../../types/models';
 import { SearchIcon, ChevronDownIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
+import { DEFAULT_AREA_COLOR_HEX } from '../../lib/areaDefaults';
 
 interface NotebookSubjectPickerProps {
   areas: Area[];
@@ -17,10 +18,8 @@ interface NotebookSubjectPickerProps {
 // em chip; o resto vai para o menu "outras", com pesquisa.
 const MAX_CHIPS_UNGROUPED = 8;
 
-const FALLBACK_COLOR = '#8b5cf6';
-
 function areaColor(area: Area): string {
-  return area.colorHex && /^#[0-9a-f]{6}$/i.test(area.colorHex) ? area.colorHex : FALLBACK_COLOR;
+  return area.colorHex && /^#[0-9a-f]{6}$/i.test(area.colorHex) ? area.colorHex : DEFAULT_AREA_COLOR_HEX;
 }
 
 // Chip de cadeira: ponto na cor da cadeira + nome. O ativo fica com o fundo
@@ -43,7 +42,7 @@ function SubjectChip({
       title={area.name}
       onClick={() => onSelect(area)}
       style={isSelected ? { borderColor: color, backgroundColor: `${color}26` } : undefined}
-      className={`inline-flex max-w-[16rem] shrink-0 sm:max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
+      className={`inline-flex max-w-[16rem] shrink-0 sm:max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-sm pointer-coarse:min-h-11 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
         isSelected
           ? 'font-medium text-white'
           : 'border-neutral-800 bg-neutral-900/60 text-neutral-300 hover:border-neutral-600 hover:text-white'
@@ -163,7 +162,7 @@ export default function NotebookSubjectPicker({
             aria-expanded={isMenuOpen}
             aria-haspopup="true"
             aria-label={otherLabel}
-            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-dashed border-neutral-700 px-3 py-1.5 text-sm text-neutral-400 transition-colors hover:border-neutral-500 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-dashed border-neutral-700 px-3 py-1.5 text-sm text-neutral-400 pointer-coarse:min-h-11 pointer-coarse:min-w-11 transition-colors hover:border-neutral-500 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
           >
             {/* No telemovel so "+32": o texto inteiro tirava metade da linha aos chips. */}
             <span className="sm:hidden" aria-hidden="true">
@@ -186,7 +185,7 @@ export default function NotebookSubjectPicker({
                   }}
                   placeholder={t('notebook.subjects.filter')}
                   aria-label={t('notebook.subjects.filter')}
-                  className="w-full rounded-md border border-neutral-800 bg-neutral-950 py-1.5 pl-8 pr-2 text-sm text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none"
+                  className="w-full rounded-md border border-neutral-800 bg-neutral-950 py-1.5 pl-8 pr-2 text-sm text-neutral-100 placeholder-neutral-600 focus:border-violet-500 focus:outline-none pointer-coarse:min-h-11"
                 />
               </div>
               {filteredMenu.length === 0 ? (
@@ -200,7 +199,7 @@ export default function NotebookSubjectPicker({
                       <button
                         type="button"
                         onClick={() => pick(area)}
-                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white focus-visible:bg-neutral-800 focus-visible:outline-none"
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white focus-visible:bg-neutral-800 focus-visible:outline-none pointer-coarse:min-h-11"
                       >
                         <span
                           className="h-2 w-2 shrink-0 rounded-full"

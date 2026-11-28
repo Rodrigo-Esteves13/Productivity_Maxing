@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getApiKeys, createApiKey, revokeApiKey } from '../api/userService';
+import { getApiKeys, createApiKey, renameApiKey, revokeApiKey } from '../api/apiKeysService';
 import type { ApiKeySummary, ApiKeyScope } from '../types/models';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
@@ -19,6 +19,8 @@ interface UseApiKeysReturn {
   newlyCreatedKey: string | null;
   createKey: (name: string, scope?: ApiKeyScope) => Promise<boolean>;
   removeKey: (id: string) => Promise<void>;
+  // Rejeita se falhar (o formulario fica aberto).
+  renameKey: (id: string, name: string) => Promise<void>;
   reload: () => Promise<void>;
   clearNewKey: () => void;
 }
@@ -86,6 +88,21 @@ export function useApiKeys(): UseApiKeysReturn {
     }
   }, [refresh, notify]);
 
+  const renameKey = useCallback(
+    async (id: string, name: string) => {
+      try {
+        await renameApiKey(id, name);
+      } catch (error: unknown) {
+        console.error('Failed to rename API key:', error);
+        notify(translateNow('ux4global.key.renameFailed'), 'error');
+        throw error;
+      }
+      setKeys((prev) => prev.map((k) => (k.id === id ? { ...k, name } : k)));
+      notify(translateNow('ux4global.key.renamed'), 'success');
+    },
+    [notify],
+  );
+
   const clearNewKey = useCallback(() => setNewlyCreatedKey(null), []);
 
   return {
@@ -97,6 +114,7 @@ export function useApiKeys(): UseApiKeysReturn {
     newlyCreatedKey,
     createKey,
     removeKey,
+    renameKey,
     reload: refresh,
     clearNewKey,
   };

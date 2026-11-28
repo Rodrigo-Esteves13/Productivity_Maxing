@@ -22,4 +22,8 @@ export const PAD_EXPIRY_MS = PAD_EXPIRY_DAYS * MS_PER_DAY;
 // Moderacao (admin): pads mais recentes e quanto do texto mostrar na lista.
 export const ADMIN_PADS_PAGE_SIZE = 100;
 export const ADMIN_PAD_PREVIEW_LENGTH = 200;
+// Listagens admin paginadas (pads e origens bloqueadas).
+export const ADMIN_PADS_LIST_PAGE_SIZE = 20;
+export const ADMIN_BLOCKED_SOURCES_PAGE_SIZE = 20;
+export const ADMIN_PADS_PAGE_MAX = 100;
 export const ADMIN_PAD_DELETES_PER_MINUTE = 30;

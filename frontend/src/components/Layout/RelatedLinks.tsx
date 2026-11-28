@@ -21,7 +21,7 @@ export default function RelatedLinks({ links, className = 'mb-6' }: { links: Rel
         <PrefetchLink
           key={link.to + link.labelKey}
           to={link.to}
-          className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1 text-neutral-300 transition-colors hover:border-violet-500/60 hover:text-white"
+          className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1 pointer-coarse:min-h-11 text-neutral-300 transition-colors hover:border-violet-500/60 hover:text-white"
         >
           {t(link.labelKey)}
           <ArrowRightIcon className="h-3.5 w-3.5 text-neutral-500" />

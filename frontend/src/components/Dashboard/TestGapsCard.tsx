@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { Area, Task } from '../../types/models';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ToggleChip from '../UI/ToggleChip';
 import { AlertTriangleIcon, HourglassIcon } from '../UI/Icons';
@@ -8,11 +7,7 @@ import { useAreaLookup } from '../../hooks/useAreaLookup';
 import { useI18n } from '../../i18n/useI18n';
 import { lisbonTodayKey } from '../../lib/dateKey';
 import { buildDeadlineGaps, type GapMode, type GapTone, type StopKind } from '../../lib/testGaps';
-
-interface TestGapsCardProps {
-  tasks: Task[];
-  areas: Area[];
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 const TONE: Record<GapTone, { bar: string; text: string }> = {
   tight: { bar: 'bg-red-400', text: 'text-red-300' },
@@ -54,7 +49,8 @@ function readStoredMode(): GapMode {
 // linha do lado mostra a folga de cada uma (comprimento = dias, cor = quao
 // apertado), e o dia ao lado e a contagem a partir de hoje. Por omissao
 // junta testes e trabalhos; da para ver so uns ou so outros.
-export default function TestGapsCard({ tasks, areas }: TestGapsCardProps) {
+export default function TestGapsCard() {
+  const { academicTasks: tasks, academicAreas: areas } = useDashboardCardData();
   const { t, lang } = useI18n();
   const areaById = useAreaLookup(areas);
   const [mode, setMode] = useState<GapMode>(readStoredMode);
@@ -154,13 +150,16 @@ export default function TestGapsCard({ tasks, areas }: TestGapsCardProps) {
                     />
                     <Link
                       to={`/tasks?open=${encodeURIComponent(stop.task.id)}`}
-                      className="group flex min-w-0 items-start justify-between gap-3 rounded-md -mx-1 px-1 py-0.5 transition-colors hover:bg-neutral-800/60"
+                      className="pointer-coarse:min-h-11 group flex min-w-0 items-start justify-between gap-3 rounded-md -mx-1 px-1 py-0.5 transition-colors hover:bg-neutral-800/60"
                     >
                       <span className="min-w-0">
-                        <span className="block truncate font-medium text-neutral-100 group-hover:text-white">
+                        <span className="block truncate font-medium text-neutral-100 group-hover:text-white" title={stop.task.title}>
                           {stop.task.title}
                         </span>
-                        <span className="block truncate text-xs text-neutral-400">
+                        <span
+                      className="block truncate text-xs text-neutral-400"
+                      title={[showKind ? t(KIND_LABEL[stop.kind]) : null, area?.name].filter(Boolean).join(' · ')}
+                    >
                           {showKind && <span className="text-neutral-300">{t(KIND_LABEL[stop.kind])}</span>}
                           {showKind && area && ' · '}
                           {area?.name}
@@ -182,7 +181,7 @@ export default function TestGapsCard({ tasks, areas }: TestGapsCardProps) {
               type="button"
               aria-expanded={expanded}
               onClick={() => setExpanded((open) => !open)}
-              className="mt-3 text-xs font-medium text-violet-400 hover:text-violet-300"
+              className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 mt-3 text-xs font-medium text-violet-400 hover:text-violet-300"
             >
               {expanded ? t('testGaps.showLess') : t('testGaps.showAll', { count: hiddenCount })}
             </button>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getAreaTeachers } from '../api/areaTeachersService';
 import { getCourseRiskOverview } from '../api/courseRiskService';
-import { getUserTasks } from '../api/userService';
+import { getUserTasks } from '../api/tasksService';
 import { useAcademic } from '../context/useAcademic';
 import { isRequestCanceled } from '../lib/abortable';
 import { buildAreaOverview, type AreaOverviewItem } from '../lib/areaOverview';

@@ -9,6 +9,8 @@ import GradeImprovementCard from '../components/Grades/GradeImprovementCard';
 import { DownloadIcon, PrinterIcon } from '../components/UI/Icons';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { usePeriodReportCard } from '../hooks/usePeriodReportCard';
+import { useTableSort } from '../hooks/useTableSort';
+import { sortReportCardRows, type ReportCardSortKey } from '../lib/reportCardSort';
 import { useAcademic } from '../context/useAcademic';
 import { formatTaskDate } from '../lib/timeFormat';
 import { formatNumber } from '../lib/ratings';
@@ -22,8 +24,20 @@ const GRADE_FRACTION_DIGITS = 2;
 const CREDITS_FRACTION_DIGITS = 1;
 const CSV_MIME_TYPE = 'text/csv;charset=utf-8';
 
+// Colunas ordenaveis; `end` alinha a direita (numeros).
+const COLUMNS: { key: ReportCardSortKey; label: string; end: boolean }[] = [
+  { key: 'course', label: 'reportCard.course', end: false },
+  { key: 'credits', label: 'reportCard.credits', end: true },
+  { key: 'grade', label: 'reportCard.grade', end: true },
+  { key: 'result', label: 'reportCard.result', end: true },
+];
+const ARIA_SORT = { asc: 'ascending', desc: 'descending' } as const;
+const SORT_MARK = { asc: '▲', desc: '▼' } as const;
+
 function ReportCardTable({ card }: { card: PeriodReportCard }) {
   const { t, lang } = useI18n();
+  const { sort, toggleKey } = useTableSort<ReportCardSortKey>();
+  const rows = sortReportCardRows(card.areas, sort, lang);
   const grade = (value: number | null) => (value === null ? '-' : formatNumber(value, lang, GRADE_FRACTION_DIGITS));
   const dates = card.endDate
     ? `${formatTaskDate(card.startDate)} - ${formatTaskDate(card.endDate)}`
@@ -43,14 +57,34 @@ function ReportCardTable({ card }: { card: PeriodReportCard }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-800 text-left text-neutral-400">
-                <th className="py-2 pr-3 font-medium">{t('reportCard.course')}</th>
-                <th className="py-2 pr-3 text-right font-medium">{t('reportCard.credits')}</th>
-                <th className="py-2 pr-3 text-right font-medium">{t('reportCard.grade')}</th>
-                <th className="py-2 text-right font-medium">{t('reportCard.result')}</th>
+                {COLUMNS.map(({ key, label, end }) => {
+                  const active = sort?.key === key;
+                  return (
+                    <th
+                      key={key}
+                      scope="col"
+                      aria-sort={active ? ARIA_SORT[sort.direction] : undefined}
+                      className={`py-2 pr-3 font-medium last:pr-0 ${end ? 'text-right' : ''}`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleKey(key)}
+                        title={t('ux4global.report.sortBy', { column: t(label) })}
+                        className="inline-flex items-center gap-1 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 pointer-coarse:min-h-11"
+                      >
+                        {t(label)}
+                        {/* Sempre ocupa espaco, para a coluna nao saltar. */}
+                        <span aria-hidden="true" className={`print-hide text-xs ${active ? 'text-violet-400' : 'text-neutral-700'}`}>
+                          {SORT_MARK[active ? sort.direction : 'asc']}
+                        </span>
+                      </button>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
-              {card.areas.map((row) => (
+              {rows.map((row) => (
                 <tr key={row.areaId} className="border-b border-neutral-800/60">
                   <td className="py-2 pr-3 text-neutral-200">{row.areaName}</td>
                   <td className="py-2 pr-3 text-right text-neutral-300">{row.credits === null ? '-' : formatNumber(row.credits, lang, CREDITS_FRACTION_DIGITS)}</td>
@@ -122,7 +156,7 @@ export default function ReportCard() {
         type="button"
         onClick={handleDownloadCsv}
         disabled={!card}
-        className="flex items-center gap-1.5 py-2.5 text-sm text-neutral-400 hover:text-neutral-200 disabled:opacity-50 pointer-coarse:min-h-11"
+        className="flex items-center gap-1.5 py-2.5 pointer-coarse:min-h-11 text-sm text-neutral-400 hover:text-neutral-200 disabled:opacity-50 pointer-coarse:min-h-11"
       >
         <DownloadIcon />
         {t('ux4areas.downloadCsv')}
@@ -131,7 +165,7 @@ export default function ReportCard() {
         type="button"
         onClick={() => window.print()}
         disabled={!card}
-        className="flex items-center gap-1.5 py-2.5 text-sm text-neutral-400 hover:text-neutral-200 disabled:opacity-50"
+        className="flex items-center gap-1.5 py-2.5 pointer-coarse:min-h-11 text-sm text-neutral-400 hover:text-neutral-200 disabled:opacity-50"
       >
         <PrinterIcon />
         {t('ui.print')}

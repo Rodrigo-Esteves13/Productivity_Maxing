@@ -12,12 +12,12 @@ import InvitationCard from '../components/SharedWithMe/InvitationCard';
 import { ROLE_KEY, areaColorOf } from '../components/SharedWithMe/sharedWithMeLabels';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useFriendHub } from '../hooks/useFriendHub';
-import { respondToInvitation } from '../api/notebookService';
+import { respondToInvitation } from '../api/notebookShareService';
 import { removeGrant, requestNotesAccess } from '../api/socialNotesService';
 import { blockUser, removeFriendship } from '../api/socialService';
 import type { FriendHub } from '../api/socialHubService';
 import { friendNotesPath, notebookEntryPath, sharedNotePath, socialTabPath, turmaPath, TURMAS_PATH } from '../lib/appLinks';
-import { notifySocialChanged } from '../lib/socialEvents';
+import * as bus from '../lib/bus';
 import { useI18n } from '../i18n/useI18n';
 import { useFeedback } from '../context/useFeedback';
 
@@ -101,7 +101,7 @@ export default function FriendProfile() {
   const respond = async (requestId: string, accept: boolean) => {
     try {
       const { token } = await respondToInvitation(requestId, accept);
-      notifySocialChanged();
+      bus.emit('social:changed');
       void reload();
       return { ok: true, token };
     } catch {
@@ -134,7 +134,7 @@ export default function FriendProfile() {
     if (!ok) return;
     try {
       await removeGrant(grantId);
-      notifySocialChanged();
+      bus.emit('social:changed');
       notify(t(approved ? 'safeActions.stopViewing.done' : 'safeActions.cancelRequest.done'), 'success');
       void reload();
     } catch {
@@ -150,7 +150,7 @@ export default function FriendProfile() {
       notify(t('social.actionError'), 'error');
       return;
     }
-    notifySocialChanged();
+    bus.emit('social:changed');
     navigate(socialTabPath('friends'));
   };
 
@@ -221,7 +221,7 @@ export default function FriendProfile() {
         {hub.commonTurmas.length === 0 ? (
           <p className="text-sm text-neutral-400">
             {t('friend.classes.none', { name })}{' '}
-            <Link to={TURMAS_PATH} className="font-medium text-violet-400 hover:text-violet-300">
+            <Link to={TURMAS_PATH} className="font-medium text-violet-400 hover:text-violet-300 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center">
               {t('friend.classes.open')}
             </Link>
           </p>
@@ -305,7 +305,7 @@ export default function FriendProfile() {
 }
 
 const DROP_BUTTON_CLASS =
-  'min-h-9 rounded-md border border-neutral-700 px-2.5 py-1 text-neutral-200 hover:bg-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400';
+  'min-h-9 rounded-md border border-neutral-700 px-2.5 py-1 text-neutral-200 hover:bg-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 pointer-coarse:min-h-11';
 
 // O caderno inteiro do amigo (leitura por cadeiras): ler, pedido enviado ou pedir.
 function NotebookAccessRow({
@@ -334,7 +334,7 @@ function NotebookAccessRow({
       </span>
       {status === 'APPROVED' ? (
         <span className="flex items-center gap-3">
-          <Link to={friendNotesPath(hub.friend.userId)} className="font-medium text-violet-400 hover:text-violet-300">
+          <Link to={friendNotesPath(hub.friend.userId)} className="font-medium text-violet-400 hover:text-violet-300 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center">
             {t('social.notes.read')}
           </Link>
           {grantId && (
@@ -354,7 +354,7 @@ function NotebookAccessRow({
           type="button"
           disabled={isAsking}
           onClick={onAsk}
-          className="rounded-md border border-neutral-700 px-2.5 py-1 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+          className="rounded-md border border-neutral-700 px-2.5 py-1 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50 pointer-coarse:min-h-11"
         >
           {t('social.notes.ask')}
         </button>
@@ -383,7 +383,7 @@ function MyNotebookRow({ hub, name }: { hub: FriendHub; name: string }) {
       </span>
       <Link
         to={socialTabPath(status === 'APPROVED' ? 'mine' : 'requests')}
-        className="font-medium text-violet-400 hover:text-violet-300"
+        className="font-medium text-violet-400 hover:text-violet-300 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
       >
         {status === 'APPROVED' ? t('social.notes.changeAreas') : t('friend.mine.decide')}
       </Link>

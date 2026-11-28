@@ -32,7 +32,7 @@ function RatingsSummaryContent() {
         <button
           type="button"
           onClick={retry}
-          className="rounded text-violet-400 underline transition-colors hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
+          className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center rounded text-violet-400 underline transition-colors hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
         >
           {t('ratings.card.retry')}
         </button>
@@ -70,7 +70,7 @@ function RatingsSummaryContent() {
       <p className="mt-3 text-xs text-neutral-400">{insight}</p>
       <PrefetchLink
         to="/ratings"
-        className="mt-3 inline-block text-xs text-violet-400 underline transition-colors hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
+        className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center mt-3 inline-block text-xs text-violet-400 underline transition-colors hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
       >
         {t('ratings.card.seeDetails')}
       </PrefetchLink>

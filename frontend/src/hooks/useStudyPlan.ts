@@ -6,7 +6,9 @@ import { translateNow } from '../i18n/translate';
 import { PLAN_DOMAINS } from '../lib/domainEvents';
 import { useStudyDataKey } from './useSessionEndKey';
 
-export function useStudyPlan(days = 7) {
+// `externalKey` (opcional): quando muda, refaz o plano em silencio (ex:
+// horario importado ou aula desmarcada na pagina Schedule).
+export function useStudyPlan(days = 7, externalKey = 0) {
   const [plan, setPlan] = useState<StudyPlanResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -37,7 +39,7 @@ export function useStudyPlan(days = 7) {
     const controller = new AbortController();
     void fetchPlan(controller.signal);
     return () => controller.abort();
-  }, [fetchPlan, refreshKey]);
+  }, [fetchPlan, refreshKey, externalKey]);
 
   const setDailyLimit = useCallback(
     async (minutes: number) => {

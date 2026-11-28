@@ -83,6 +83,102 @@ describe('PeriodsService.create limit', () => {
   });
 });
 
+describe('PeriodsService.resolveActivePeriodId at the program cap', () => {
+  function build(options: {
+    programs: number;
+    latest?: Array<{ id: string; programId: string } | null>;
+    periodCounts?: number[];
+  }) {
+    const findFirst = jest.fn();
+    for (const row of options.latest ?? []) {
+      findFirst.mockResolvedValueOnce(row);
+    }
+    const prisma = {
+      user: {
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValue({ activePeriodId: null }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      academicProgram: {
+        count: jest.fn().mockResolvedValue(options.programs),
+        create: jest.fn().mockResolvedValue({ id: 'new-program' }),
+        findMany: jest.fn().mockResolvedValue(
+          (options.periodCounts ?? []).map((periods, i) => ({
+            id: `program-${i}`,
+            _count: { periods },
+          })),
+        ),
+      },
+      academicPeriod: {
+        findFirst,
+        create: jest
+          .fn()
+          .mockResolvedValue({ id: 'new-period', programId: 'program-1' }),
+      },
+    };
+    return {
+      prisma,
+      service: new PeriodsService(prisma as never, {} as never),
+    };
+  }
+
+  it('creates "General" below the cap', async () => {
+    const { service, prisma } = build({
+      programs: MAX_PROGRAMS_PER_USER - 1,
+    });
+    await expect(service.resolveActivePeriodId(USER)).resolves.toBe(
+      'new-period',
+    );
+    expect(prisma.academicProgram.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('reuses the latest active period, scoped to the user', async () => {
+    const { service, prisma } = build({
+      programs: MAX_PROGRAMS_PER_USER,
+      latest: [{ id: 'old', programId: PROGRAM }],
+    });
+    await expect(service.resolveActivePeriodId(USER)).resolves.toBe('old');
+    expect(prisma.academicPeriod.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { program: { userId: USER }, isArchived: false },
+      }),
+    );
+    expect(prisma.academicProgram.create).not.toHaveBeenCalled();
+    expect(prisma.academicPeriod.create).not.toHaveBeenCalled();
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: USER },
+      data: { activeProgramId: PROGRAM, activePeriodId: 'old' },
+    });
+  });
+
+  it('adds a period to a program with room when none is active', async () => {
+    const { service, prisma } = build({
+      programs: MAX_PROGRAMS_PER_USER,
+      latest: [null],
+      periodCounts: [MAX_PERIODS_PER_PROGRAM, 0],
+    });
+    await expect(service.resolveActivePeriodId(USER)).resolves.toBe(
+      'new-period',
+    );
+    const [args] = prisma.academicPeriod.create.mock.calls[0] as [
+      { data: { programId: string } },
+    ];
+    expect(args.data.programId).toBe('program-1');
+    expect(prisma.academicProgram.create).not.toHaveBeenCalled();
+  });
+
+  it('falls back to an archived period when every program is full', async () => {
+    const { service, prisma } = build({
+      programs: MAX_PROGRAMS_PER_USER,
+      latest: [null, { id: 'archived', programId: PROGRAM }],
+      periodCounts: [MAX_PERIODS_PER_PROGRAM],
+    });
+    await expect(service.resolveActivePeriodId(USER)).resolves.toBe('archived');
+    expect(prisma.academicPeriod.create).not.toHaveBeenCalled();
+  });
+});
+
 describe('CreateProgramDto order cap', () => {
   const check = (order: number) =>
     validate(plainToInstance(CreateProgramDto, { name: 'X', order }));

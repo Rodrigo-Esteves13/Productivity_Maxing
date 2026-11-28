@@ -23,7 +23,7 @@ export default function DueTodayList() {
       <ul className="divide-y divide-neutral-800">
         {tasks.map((task) => (
           <li key={task.id} className="flex items-center justify-between gap-3 py-1.5">
-            <p className="min-w-0 truncate text-sm text-white">
+            <p className="min-w-0 truncate text-sm text-white" title={task.title}>
               {task.title}
               {task.weightPercentage != null && (
                 <span className="ml-2 text-xs text-neutral-500">

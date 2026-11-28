@@ -74,6 +74,10 @@ export default function TaskTypes() {
     handleToggleActive: handleTogglePriorityActive,
   } = usePrioritiesPage();
 
+  // Junta ao aviso quantas tasks usam o tipo (quando o servidor o disse).
+  const withTaskCount = (message: string, count: number | undefined) =>
+    count === undefined ? message : `${message} ${t('f7admin.types.taskImpact', { count })}`;
+
   return (
     <PageLayout>
       <PageHeader
@@ -115,7 +119,10 @@ export default function TaskTypes() {
                 }
                 deactivateConfirm.request({
                   title: t('confirmGuard.deactivateType.title'),
-                  message: t('confirmGuard.deactivateType.message', { name: type.label }),
+                  message: withTaskCount(
+                    t('confirmGuard.deactivateType.message', { name: type.label }),
+                    type.taskCount,
+                  ),
                   confirmLabel: t('confirmGuard.deactivateType.confirm'),
                   tone: 'danger',
                   run: () => handleToggleTaskTypeActive(type),
@@ -134,7 +141,22 @@ export default function TaskTypes() {
             <AcademicTaskTypesTable
               academicTaskTypes={academicTaskTypes}
               onEdit={setEditingAcademic}
-              onToggleActive={handleToggleAcademicActive}
+              onToggleActive={(item) => {
+                if (!item.isActive) {
+                  void handleToggleAcademicActive(item);
+                  return;
+                }
+                deactivateConfirm.request({
+                  title: t('f7admin.types.deactivateSubTitle'),
+                  message: withTaskCount(
+                    t('f7admin.types.deactivateSubMessage', { name: item.label }),
+                    item.taskCount,
+                  ),
+                  confirmLabel: t('confirmGuard.deactivateType.confirm'),
+                  tone: 'danger',
+                  run: () => handleToggleAcademicActive(item),
+                });
+              }}
             />
           </section>
 

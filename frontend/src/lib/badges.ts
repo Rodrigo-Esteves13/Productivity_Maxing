@@ -1,3 +1,4 @@
+import { ACCOUNT_SCOPED_KEYS, accountStorageKey } from './storageKeys';
 // Conquistas por marcos. Puro e sem BD: tudo calculado dos numeros do perfil.
 export const BADGE_METRICS = ['completed', 'streak', 'projects'] as const;
 export type BadgeMetric = (typeof BADGE_METRICS)[number];
@@ -70,11 +71,9 @@ export function newlyEarned(previous: readonly string[] | null, badges: readonly
   return badges.filter((b) => b.earned && !previous.includes(badgeId(b)));
 }
 
-export const BEST_STREAK_STORAGE_KEY = 'pmaxing.bestStreak';
-
 export function readBestStreak(): number {
   try {
-    const raw = Number(localStorage.getItem(BEST_STREAK_STORAGE_KEY));
+    const raw = Number(localStorage.getItem(accountStorageKey(ACCOUNT_SCOPED_KEYS.bestStreak)));
     return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
   } catch {
     return 0;
@@ -85,7 +84,7 @@ export function readBestStreak(): number {
 export function rememberBestStreak(current: number): number {
   const best = Math.max(readBestStreak(), current);
   try {
-    localStorage.setItem(BEST_STREAK_STORAGE_KEY, String(best));
+    localStorage.setItem(accountStorageKey(ACCOUNT_SCOPED_KEYS.bestStreak), String(best));
   } catch {
     // sem armazenamento: o valor atual continua a valer nesta sessao
   }

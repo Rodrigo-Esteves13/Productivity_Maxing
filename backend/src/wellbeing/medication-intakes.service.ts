@@ -21,6 +21,7 @@ import {
   MAX_INTAKE_FUTURE_MINUTES,
   MAX_INTAKE_PAST_DAYS,
   MAX_INTAKE_RANGE_DAYS,
+  MAX_INTAKE_RESTORE_PAST_DAYS,
   MAX_INTAKES_PER_DAY,
 } from './wellbeing.constants';
 
@@ -96,12 +97,29 @@ export class MedicationIntakesService {
     return rows.map(toView);
   }
 
-  async create(
+  create(
     userId: string,
     dto: CreateMedicationIntakeDto,
   ): Promise<MedicationIntakeView> {
+    return this.insert(userId, dto, MAX_INTAKE_PAST_DAYS);
+  }
+
+  // Anular o apagar: as mesmas regras do registo (aviso, dono do medicamento,
+  // limite diario), mas aceita a hora antiga que a toma ja tinha.
+  restore(
+    userId: string,
+    dto: CreateMedicationIntakeDto,
+  ): Promise<MedicationIntakeView> {
+    return this.insert(userId, dto, MAX_INTAKE_RESTORE_PAST_DAYS);
+  }
+
+  private async insert(
+    userId: string,
+    dto: CreateMedicationIntakeDto,
+    maxPastDays: number,
+  ): Promise<MedicationIntakeView> {
     await this.disclaimer.assertAccepted(userId);
-    const takenAt = this.parseTakenAt(dto.takenAt);
+    const takenAt = this.parseTakenAt(dto.takenAt, maxPastDays);
 
     const medication = await this.prisma.medication.findFirst({
       where: { id: dto.medicationId, userId },
@@ -178,7 +196,7 @@ export class MedicationIntakesService {
         }
       }
       return tx.medicationIntake.update({
-        where: { id },
+        where: { id, userId },
         data: {
           ...(takenAt ? { takenAt } : {}),
           ...(dto.dose !== undefined ? { dose: dto.dose.trim() || null } : {}),
@@ -199,15 +217,18 @@ export class MedicationIntakesService {
     }
   }
 
-  private parseTakenAt(value: string): Date {
+  private parseTakenAt(
+    value: string,
+    maxPastDays = MAX_INTAKE_PAST_DAYS,
+  ): Date {
     const takenAt = new Date(value);
     const now = Date.now();
     const tooNew =
       takenAt.getTime() > now + MAX_INTAKE_FUTURE_MINUTES * MS_PER_MINUTE;
-    const tooOld = takenAt.getTime() < now - MAX_INTAKE_PAST_DAYS * MS_PER_DAY;
+    const tooOld = takenAt.getTime() < now - maxPastDays * MS_PER_DAY;
     if (Number.isNaN(takenAt.getTime()) || tooNew || tooOld) {
       throw new BadRequestException(
-        `The time must be in the last ${MAX_INTAKE_PAST_DAYS} days and not in the future.`,
+        `The time must be in the last ${maxPastDays} days and not in the future.`,
       );
     }
     return takenAt;

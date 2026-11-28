@@ -65,7 +65,7 @@ function toRow(
 const FORMULA_TRIGGER_AT_LINE_START = /(?<=^|[\r\n])[=+\-@\t\r]/g;
 const NEEDS_QUOTES = /[",\r\n]/;
 
-function neutralizeFormulaPrefix(value: string): string {
+export function neutralizeFormulaPrefix(value: string): string {
   return value.replace(FORMULA_TRIGGER_AT_LINE_START, "'$&");
 }
 

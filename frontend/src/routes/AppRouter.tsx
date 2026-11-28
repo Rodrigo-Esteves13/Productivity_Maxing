@@ -73,7 +73,10 @@ import {
   VerifyEmail,
   SetPassword,
   LoginTwoFactor,
+  preloadInitialRoute,
 } from './pages';
+
+preloadInitialRoute(window.location.pathname);
 
 // Route-level code splitting: everything below only downloads its JS chunk
 // when the user actually navigates there, instead of all of it (including

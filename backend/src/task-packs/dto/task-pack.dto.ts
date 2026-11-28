@@ -4,16 +4,25 @@ import {
   ArrayUnique,
   IsArray,
   IsBoolean,
+  IsDateString,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
+  Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { MAX_PACK_ITEMS, MAX_PACK_NAME_LENGTH } from '../task-packs.constants';
+import {
+  MAX_PACK_ITEMS,
+  MAX_PACK_ITEM_TITLE_LENGTH,
+  MAX_PACK_NAME_LENGTH,
+} from '../task-packs.constants';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -45,6 +54,41 @@ export class RenameTaskPackDto {
   @IsNotEmpty()
   @MaxLength(MAX_PACK_NAME_LENGTH)
   name: string;
+}
+
+export class AddPackItemsDto {
+  @ApiProperty({
+    type: [String],
+    description: 'Ids of YOUR OWN tasks to add to the pack.',
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_PACK_ITEMS)
+  @ArrayUnique()
+  @IsUUID('all', { each: true })
+  taskIds: string[];
+}
+
+export class UpdatePackItemDto {
+  @ApiPropertyOptional()
+  @ValidateIf((_, value) => value !== undefined)
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(MAX_PACK_ITEM_TITLE_LENGTH)
+  title?: string;
+
+  @ApiPropertyOptional({ example: '2026-11-20T00:00:00.000Z' })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsDateString()
+  date?: string;
+
+  @ApiPropertyOptional({ nullable: true, description: 'null clears it.' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  weightPercentage?: number | null;
 }
 
 export class ImportPackItemDto {

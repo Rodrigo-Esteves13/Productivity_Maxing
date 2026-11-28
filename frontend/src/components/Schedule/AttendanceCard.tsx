@@ -57,7 +57,7 @@ export default function AttendanceCard({ refreshKey }: AttendanceCardProps) {
         />
         <span>%</span>
         {!isDefault && (
-          <button type="button" onClick={resetLimit} className="text-violet-400 hover:text-violet-300 underline decoration-dotted">
+          <button type="button" onClick={resetLimit} className="text-violet-400 hover:text-violet-300 underline decoration-dotted pointer-coarse:min-h-11">
             {t('attendance.limit.reset')}
           </button>
         )}

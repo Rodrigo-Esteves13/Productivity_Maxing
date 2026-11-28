@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { usePersistedState, type PersistedCodec } from './usePersistedState';
 
 export type TasksView = 'grid' | 'board' | 'timeline' | 'matrix';
 
@@ -10,28 +10,15 @@ export function isTasksView(value: string | null): value is TasksView {
   return TASKS_VIEWS.some((view) => view === value);
 }
 
-function loadView(): TasksView {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return isTasksView(stored) ? stored : DEFAULT_VIEW;
-  } catch {
-    return DEFAULT_VIEW;
-  }
-}
+const CODEC: PersistedCodec<TasksView> = {
+  parse: (raw) => (isTasksView(raw) ? raw : DEFAULT_VIEW),
+};
 
 // Grelha de cartoes ou quadro Kanban (colunas por estado) na pagina Tasks.
 // Mesmo formato de useScheduleView: preferencia local, a grelha continua a
 // ser o default para quem nunca mexeu no botao.
 export function useTasksView() {
-  const [view, setView] = useState<TasksView>(loadView);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, view);
-    } catch {
-      // Best-effort only - same reasoning as useTableDensity.
-    }
-  }, [view]);
+  const [view, setView] = usePersistedState(STORAGE_KEY, CODEC);
 
   return { view, setView };
 }

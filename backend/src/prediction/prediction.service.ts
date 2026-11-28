@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PredictDurationDto } from './dto/predict-duration.dto';
+import { PREDICTION_MODEL_CACHE_MAX_USERS } from './prediction.constants';
 import { DIFFICULTY_WEIGHT } from '../common/difficulty-weight.util';
 import {
   fitScaler,
@@ -137,6 +138,25 @@ export class PredictionService {
   private readonly modelCache = new Map<string, CachedModel>();
 
   constructor(private readonly prisma: PrismaService) {}
+
+  // LRU: o Map guarda a ordem de insercao; reinserir no hit poe o user no
+  // fim, por isso o primeiro e sempre o menos usado.
+  private readCachedModel(userId: string): CachedModel | undefined {
+    const model = this.modelCache.get(userId);
+    if (!model) return undefined;
+    this.modelCache.delete(userId);
+    this.modelCache.set(userId, model);
+    return model;
+  }
+
+  private writeCachedModel(userId: string, model: CachedModel): void {
+    this.modelCache.delete(userId);
+    this.modelCache.set(userId, model);
+    for (const oldest of this.modelCache.keys()) {
+      if (this.modelCache.size <= PREDICTION_MODEL_CACHE_MAX_USERS) return;
+      this.modelCache.delete(oldest);
+    }
+  }
 
   async predictDuration(
     userId: string,
@@ -328,7 +348,7 @@ export class PredictionService {
       };
     }
 
-    const cached = this.modelCache.get(userId);
+    const cached = this.readCachedModel(userId);
     const isFresh =
       !!cached &&
       cached.method === method &&
@@ -353,7 +373,7 @@ export class PredictionService {
       sampleSize,
       trimmedSamples,
     );
-    this.modelCache.set(userId, trained);
+    this.writeCachedModel(userId, trained);
 
     return {
       method: trained.method,

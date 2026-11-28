@@ -53,6 +53,7 @@ import {
   VERIFY_EMAIL_REQUESTS_PER_MINUTE,
 } from './auth.constants';
 import { RegisterDto } from './dto/register.dto';
+import { RenameApiKeyDto } from './dto/rename-api-key.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -609,6 +610,17 @@ export class AuthController {
       dto.scope ?? 'TASKS',
       user.role as Role,
     );
+  }
+
+  @Patch('api-keys/:id')
+  @UseGuards(JwtAuthGuard)
+  @Throttle(perMinute(API_KEY_CREATE_REQUESTS_PER_MINUTE))
+  async renameApiKey(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) keyId: string,
+    @Body() dto: RenameApiKeyDto,
+  ) {
+    return this.authService.renameApiKey(user.id, keyId, dto.name);
   }
 
   @Delete('api-keys/:id')

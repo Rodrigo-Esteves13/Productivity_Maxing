@@ -13,6 +13,7 @@ import {
   MAX_BLOOD_DONATION_LOCATION_LENGTH,
   MAX_BLOOD_DONATION_NOTE_LENGTH,
 } from '../wellbeing.constants';
+import { IsRealDateKey } from '../../common/validators/is-real-date-key.decorator';
 
 const trimOrUndefined = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() || undefined : value;
@@ -20,6 +21,7 @@ const trimOrUndefined = ({ value }: { value: unknown }) =>
 export class UpdateBloodDonationDto {
   @ApiPropertyOptional({ example: '2026-10-20' })
   @IsOptional()
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: 'date must be formatted YYYY-MM-DD.' })
   date?: string;
 
@@ -44,6 +46,7 @@ export class UpdateBloodDonationDto {
 
 export class CreateBloodDonationDto {
   @ApiProperty({ example: '2026-10-20' })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: 'date must be formatted YYYY-MM-DD.' })
   date: string;
 

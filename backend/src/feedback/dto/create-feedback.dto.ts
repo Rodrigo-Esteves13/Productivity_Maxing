@@ -9,6 +9,22 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
+
+const FEEDBACK_MESSAGE_MIN_LENGTH = 3;
+// O minimo conta sem espacos nas pontas: "   " nunca passa.
+const trim = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim() : value;
+const FEEDBACK_MESSAGE_MAX_LENGTH = 2000;
+
+// O autor so pode mudar o texto.
+export class UpdateOwnFeedbackDto {
+  @Transform(trim)
+  @IsString()
+  @MinLength(FEEDBACK_MESSAGE_MIN_LENGTH)
+  @MaxLength(FEEDBACK_MESSAGE_MAX_LENGTH)
+  message: string;
+}
 
 export class CreateFeedbackDto {
   @IsEnum(FeedbackCategory)
@@ -21,9 +37,10 @@ export class CreateFeedbackDto {
   rating?: number;
 
   // Qualquer língua (inclui CJK): só se limita o tamanho, nunca o alfabeto.
+  @Transform(trim)
   @IsString()
-  @MinLength(3)
-  @MaxLength(2000)
+  @MinLength(FEEDBACK_MESSAGE_MIN_LENGTH)
+  @MaxLength(FEEDBACK_MESSAGE_MAX_LENGTH)
   message: string;
 
   // Língua da app (código curto: en, pt, zh...).

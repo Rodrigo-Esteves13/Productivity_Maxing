@@ -1,5 +1,5 @@
 import { useStudyPlan } from '../../hooks/useStudyPlan';
-import { requestCalendarSyncReview } from '../../lib/calendarSyncEvents';
+import * as bus from '../../lib/bus';
 import LinesSkeleton from '../UI/LinesSkeleton';
 import ErrorState from '../UI/ErrorState';
 import EmptyState from '../UI/EmptyState';
@@ -12,19 +12,24 @@ import Card from '../UI/Card';
 
 const PLAN_WINDOW_DAYS = 7;
 
-export default function StudyPlanCard() {
+interface StudyPlanCardProps {
+  /** Muda quando o horario muda: o plano refaz-se sem voltar ao esqueleto. */
+  refreshKey?: number;
+}
+
+export default function StudyPlanCard({ refreshKey }: StudyPlanCardProps) {
   const { t } = useI18n();
-  const { plan, isLoading, error, refetch, setDailyLimit } = useStudyPlan(PLAN_WINDOW_DAYS);
+  const { plan, isLoading, error, refetch, setDailyLimit } = useStudyPlan(PLAN_WINDOW_DAYS, refreshKey);
 
   // Mudar uma estimativa ou o limite diário muda os blocos de estudo, e
   // por isso o que o Google Calendar devia mostrar.
   const handleEstimateSaved = () => {
     void refetch();
-    requestCalendarSyncReview();
+    bus.emit('calendar:syncReview', { force: false });
   };
   const handleLimitChange = async (minutes: number) => {
     await setDailyLimit(minutes);
-    requestCalendarSyncReview();
+    bus.emit('calendar:syncReview', { force: false });
   };
 
   return (
@@ -34,7 +39,7 @@ export default function StudyPlanCard() {
         {t('ui.nextDaysFittedAroundClasses', { planWindowDays: PLAN_WINDOW_DAYS })}</p>
 
       {isLoading && <LinesSkeleton lines={4} />}
-      {!isLoading && error && <ErrorState message={error} />}
+      {!isLoading && error && <ErrorState message={error} onRetry={() => void refetch()} />}
 
       {!isLoading && !error && plan && (
         <>

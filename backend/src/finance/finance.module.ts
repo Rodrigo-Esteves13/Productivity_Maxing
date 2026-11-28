@@ -3,6 +3,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { FinanceController } from './finance.controller';
 import { FinanceService } from './finance.service';
+import { FinanceRestoreService } from './finance-restore.service';
 import { FinancePricesService } from './finance-prices.service';
 import { QUOTE_PROVIDER, YahooQuoteProvider } from './finance-quote.provider';
 
@@ -11,6 +12,7 @@ import { QUOTE_PROVIDER, YahooQuoteProvider } from './finance-quote.provider';
   controllers: [FinanceController],
   providers: [
     FinanceService,
+    FinanceRestoreService,
     FinancePricesService,
     { provide: QUOTE_PROVIDER, useClass: YahooQuoteProvider },
   ],

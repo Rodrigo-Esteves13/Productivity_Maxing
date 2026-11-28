@@ -37,7 +37,17 @@ export const DAYS_PER_WEEK = 7;
 // uma so pode cobrir (umas ferias longas cabem; um "para sempre" nao, para
 // isso muda-se o turno).
 export const MAX_EXCEPTIONS_PER_USER = 300;
+// Criar e editar alteracoes de horario (por minuto).
+export const SCHEDULE_EXCEPTION_WRITES_PER_MINUTE = 30;
 export const MAX_EXCEPTION_DAYS = 366;
 export const MAX_EXCEPTION_NOTE_LENGTH = 120;
 // A lista mostra as que ainda nao acabaram e as dos ultimos dias.
 export const EXCEPTION_LIST_PAST_DAYS = 30;
+
+// Limites de throttle (pedidos por minuto).
+export const COMMITMENT_CREATES_PER_MINUTE = 20;
+export const COMMITMENT_UPDATES_PER_MINUTE = 30;
+export const COMMUTE_ESTIMATES_PER_MINUTE = 10;
+export const WORK_SHIFT_CREATES_PER_MINUTE = 20;
+export const WORK_SHIFT_COPIES_PER_MINUTE = 10;
+export const WORK_SHIFT_UPDATES_PER_MINUTE = 30;

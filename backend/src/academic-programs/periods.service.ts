@@ -9,7 +9,10 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { loadComponentGradedItems } from '../grade-components/grade-component-items';
 import { ProgramsService } from './programs.service';
-import { MAX_PERIODS_PER_PROGRAM } from './academic-programs.constants';
+import {
+  MAX_PERIODS_PER_PROGRAM,
+  MAX_PROGRAMS_PER_USER,
+} from './academic-programs.constants';
 import { CreatePeriodDto } from './dto/create-period.dto';
 import { UpdatePeriodDto } from './dto/update-period.dto';
 import {
@@ -365,7 +368,8 @@ export class PeriodsService {
    * Self-healing: if the user doesn't have an activePeriodId yet (e.g.
    * an account created before this migration, without having gone
    * through the bulk backfill), this creates a "General" program+period
-   * on the spot, in the same shape the migration creates.
+   * on the spot, in the same shape the migration creates. At the program
+   * cap nothing new is created beyond the cap: see reuseExistingPeriod.
    */
   async resolveActivePeriodId(userId: string): Promise<string> {
     const user = await this.prisma.user.findUniqueOrThrow({
@@ -373,6 +377,13 @@ export class PeriodsService {
       select: { activePeriodId: true },
     });
     if (user.activePeriodId) return user.activePeriodId;
+
+    const programCount = await this.prisma.academicProgram.count({
+      where: { userId },
+    });
+    if (programCount >= MAX_PROGRAMS_PER_USER) {
+      return this.reuseExistingPeriod(userId);
+    }
 
     const program = await this.prisma.academicProgram.create({
       data: { userId, name: 'General' },
@@ -386,5 +397,50 @@ export class PeriodsService {
     });
 
     return period.id;
+  }
+
+  /**
+   * Utilizador no teto de programas sem periodo ativo: reaproveita o que
+   * existe. Por ordem: o periodo nao arquivado mais recente; um periodo
+   * novo num programa ainda abaixo do teto de periodos; o periodo mais
+   * recente, mesmo arquivado (todos os programas cheios).
+   */
+  private async reuseExistingPeriod(userId: string): Promise<string> {
+    const latest = (where: { isArchived?: boolean }) =>
+      this.prisma.academicPeriod.findFirst({
+        where: { program: { userId }, ...where },
+        orderBy: { startDate: 'desc' },
+        select: { id: true, programId: true },
+      });
+
+    let target = await latest({ isArchived: false });
+    if (!target) {
+      const programs = await this.prisma.academicProgram.findMany({
+        where: { userId },
+        orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+        select: { id: true, _count: { select: { periods: true } } },
+      });
+      const withRoom = programs.find(
+        (p) => p._count.periods < MAX_PERIODS_PER_PROGRAM,
+      );
+      target = withRoom
+        ? await this.prisma.academicPeriod.create({
+            data: {
+              programId: withRoom.id,
+              name: 'General',
+              startDate: new Date(),
+            },
+            select: { id: true, programId: true },
+          })
+        : await latest({});
+    }
+    // Inalcancavel na pratica: programas cheios implicam ter periodos.
+    if (!target) throw new NotFoundException('Period not found or no access.');
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { activeProgramId: target.programId, activePeriodId: target.id },
+    });
+    return target.id;
   }
 }

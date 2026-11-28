@@ -82,7 +82,7 @@ export default function GradeComponentCard({
     <li className="space-y-3 rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-white">{component.name}</p>
+          <p className="truncate text-sm font-medium text-white" title={component.name}>{component.name}</p>
           <p className="text-xs text-neutral-500">
             {t('grades.weightValue', { weight: component.weightPercentage })} · {ruleLabel}
           </p>

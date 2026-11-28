@@ -88,7 +88,7 @@ export default function TodayCard() {
           {studyBlock ? (
             <Link
               to="/focus"
-              className="block rounded-md border border-violet-800/50 bg-violet-950/40 px-2 py-1 text-xs text-violet-200 hover:border-violet-600"
+              className="block pointer-coarse:min-h-11 rounded-md border border-violet-800/50 bg-violet-950/40 px-2 py-1 text-xs text-violet-200 hover:border-violet-600"
             >
               <span className="block font-medium break-words">{studyBlock.taskTitle}</span>
               <span className="block opacity-70">
@@ -109,12 +109,12 @@ export default function TodayCard() {
                 <li key={task.id}>
                   <Link
                     to={`/tasks?open=${encodeURIComponent(task.id)}`}
-                    className="flex min-w-0 items-center gap-1.5 text-sm text-neutral-200 hover:text-violet-300"
+                    className="flex min-w-0 pointer-coarse:min-h-11 items-center gap-1.5 text-sm text-neutral-200 hover:text-violet-300"
                   >
                     {task.academicTypeIsEvent && (
                       <GraduationCapIcon aria-hidden className="h-3.5 w-3.5 shrink-0 text-violet-300" />
                     )}
-                    <span className="truncate">{task.title}</span>
+                    <span className="truncate" title={task.title}>{task.title}</span>
                   </Link>
                 </li>
               ))}
@@ -128,7 +128,7 @@ export default function TodayCard() {
 
       <Link
         to="/schedule"
-        className="mt-3 inline-block text-xs text-violet-400 underline decoration-dotted hover:text-violet-300"
+        className="mt-3 inline-block pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center text-xs text-violet-400 underline decoration-dotted hover:text-violet-300"
       >
         {t('today.openSchedule')}
       </Link>

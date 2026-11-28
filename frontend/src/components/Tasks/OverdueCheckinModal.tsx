@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Task } from '../../types/models';
-import type { OverdueAnswer } from '../../api/userService';
+import type { OverdueAnswer } from '../../api/tasksService';
 import { getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import { useI18n } from '../../i18n/useI18n';
 

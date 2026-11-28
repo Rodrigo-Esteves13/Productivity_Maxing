@@ -230,6 +230,18 @@ export class WellbeingController {
     return this.intakes.create(user.id, dto);
   }
 
+  @Post('medications/intakes/restore')
+  @Throttle(perMinute(WRITES_PER_MINUTE))
+  @ApiOperation({
+    summary: 'Restores a deleted intake (undo), keeping its original time.',
+  })
+  restoreIntake(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateMedicationIntakeDto,
+  ) {
+    return this.intakes.restore(user.id, dto);
+  }
+
   @Patch('medications/intakes/:id')
   @Throttle(perMinute(WRITES_PER_MINUTE))
   @ApiOperation({

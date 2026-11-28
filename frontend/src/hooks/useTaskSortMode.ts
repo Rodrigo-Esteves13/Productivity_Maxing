@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
 import {
   DEFAULT_SORT_DIRECTION,
   flipDirection,
   isSortDirection,
   type SortDirection,
 } from '../lib/sortDirection';
+import { usePersistedState, type PersistedCodec } from './usePersistedState';
 
 export type TaskSortMode = 'manual' | 'date' | 'priority';
 
@@ -12,41 +12,20 @@ const STORAGE_KEY = 'pm-tasks-sort-mode';
 const DIRECTION_STORAGE_KEY = 'pm-tasks-sort-direction';
 const VALID_MODES: TaskSortMode[] = ['manual', 'date', 'priority'];
 
-function loadPref(): TaskSortMode {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return (VALID_MODES as string[]).includes(stored ?? '')
-      ? (stored as TaskSortMode)
-      : 'manual';
-  } catch {
-    return 'manual';
-  }
-}
+const MODE_CODEC: PersistedCodec<TaskSortMode> = {
+  parse: (raw) => ((VALID_MODES as string[]).includes(raw ?? '') ? (raw as TaskSortMode) : 'manual'),
+};
 
-function loadDirection(): SortDirection {
-  try {
-    const stored = localStorage.getItem(DIRECTION_STORAGE_KEY);
-    return isSortDirection(stored) ? stored : DEFAULT_SORT_DIRECTION;
-  } catch {
-    return DEFAULT_SORT_DIRECTION;
-  }
-}
+const DIRECTION_CODEC: PersistedCodec<SortDirection> = {
+  parse: (raw) => (isSortDirection(raw) ? raw : DEFAULT_SORT_DIRECTION),
+};
 
 // Mesmo padrão de preferência local do useShowArchivedTasks.ts - só decide
 // COMO ordenar, nunca vai à API (drag-and-drop continua a persistir a
 // ordem manual via /tasks/reorder só quando o modo é 'manual').
 export function useTaskSortMode() {
-  const [sortMode, setSortMode] = useState<TaskSortMode>(loadPref);
-  const [direction, setDirection] = useState<SortDirection>(loadDirection);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, sortMode);
-      localStorage.setItem(DIRECTION_STORAGE_KEY, direction);
-    } catch {
-      // Best-effort only - mesmo raciocínio do useTableDensity.
-    }
-  }, [sortMode, direction]);
+  const [sortMode, setSortMode] = usePersistedState(STORAGE_KEY, MODE_CODEC);
+  const [direction, setDirection] = usePersistedState(DIRECTION_STORAGE_KEY, DIRECTION_CODEC);
 
   const toggleDirection = () => setDirection((current) => flipDirection(current));
 

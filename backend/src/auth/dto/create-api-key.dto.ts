@@ -1,12 +1,13 @@
 import { IsString, IsOptional, MaxLength, IsEnum } from 'class-validator';
 import { ApiKeyScope } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { API_KEY_NAME_MAX_LENGTH } from './auth-limits';
 
 export class CreateApiKeyDto {
   @ApiProperty({ example: 'League bot script' })
   @IsOptional()
   @IsString()
-  @MaxLength(100)
+  @MaxLength(API_KEY_NAME_MAX_LENGTH)
   name?: string;
 
   @ApiPropertyOptional({

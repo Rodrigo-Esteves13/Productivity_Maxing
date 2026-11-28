@@ -225,7 +225,7 @@ export default function TaskForm({
           <button
             type="button"
             onClick={() => setChecklistText((current) => mergeStepsIntoChecklist(current, topicSteps))}
-            className="mt-1 text-xs font-semibold text-violet-300 hover:text-violet-200"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 mt-1 text-xs font-semibold text-violet-300 hover:text-violet-200"
           >
             {t('checklistFromTopics.apply')}
           </button>

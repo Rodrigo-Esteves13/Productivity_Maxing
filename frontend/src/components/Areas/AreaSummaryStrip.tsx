@@ -12,9 +12,9 @@ interface AreaSummaryStripProps {
 function Tile({ label, value, sub, valueClassName = 'text-white' }: { label: string; value: string; sub?: string; valueClassName?: string }) {
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/40 px-4 py-3 in-data-[theme=light]:shadow-sm">
-      <p className="truncate text-xs uppercase tracking-wide text-neutral-500">{label}</p>
+      <p className="truncate text-xs uppercase tracking-wide text-neutral-500" title={label}>{label}</p>
       <p className={`mt-1 text-2xl font-semibold tabular-nums ${valueClassName}`}>{value}</p>
-      {sub && <p className="truncate text-xs text-neutral-500">{sub}</p>}
+      {sub && <p className="truncate text-xs text-neutral-500" title={sub}>{sub}</p>}
     </div>
   );
 }

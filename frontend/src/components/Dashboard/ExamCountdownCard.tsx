@@ -1,16 +1,11 @@
 import { Link } from 'react-router-dom';
-import type { Task, Area } from '../../types/models';
 import { getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import { GraduationCapIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { useAreaLookup } from '../../hooks/useAreaLookup';
 import { useI18n } from '../../i18n/useI18n';
 import { hasFirmDate } from '../../lib/taskReadiness';
-
-interface ExamCountdownCardProps {
-  tasks: Task[];
-  areas: Area[];
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 const MAX_SHOWN = 4;
 
@@ -20,7 +15,8 @@ const MAX_SHOWN = 4;
 // weightPercentage set - the app has no separate "this is an exam" flag,
 // and weight-toward-grade is the closest existing signal for "this one
 // actually counts".
-export default function ExamCountdownCard({ tasks, areas }: ExamCountdownCardProps) {
+export default function ExamCountdownCard() {
+  const { academicTasks: tasks, academicAreas: areas } = useDashboardCardData();
   const { t } = useI18n();
   const areaById = useAreaLookup(areas);
 
@@ -47,7 +43,7 @@ export default function ExamCountdownCard({ tasks, areas }: ExamCountdownCardPro
         <p className="text-2xl font-semibold tabular-nums text-violet-400">
           {getRemainingTimeLabel(next)}
         </p>
-        <p className="text-sm text-neutral-300 truncate">
+        <p className="text-sm text-neutral-300 truncate" title={nextArea ? `${next.title} - ${nextArea.name}` : next.title}>
           {next.title}
           {nextArea && <span className="text-neutral-500"> - {nextArea.name}</span>}
         </p>
@@ -66,7 +62,7 @@ export default function ExamCountdownCard({ tasks, areas }: ExamCountdownCardPro
                       style={{ backgroundColor: area.colorHex }}
                     />
                   )}
-                  <span className="truncate text-neutral-400">{task.title}</span>
+                  <span className="truncate text-neutral-400" title={task.title}>{task.title}</span>
                 </div>
                 <span className="text-neutral-500 shrink-0">{getRemainingTimeLabel(task)}</span>
               </li>
@@ -77,7 +73,7 @@ export default function ExamCountdownCard({ tasks, areas }: ExamCountdownCardPro
 
       <Link
         to="/tasks"
-        className="block mt-3 text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
+        className="block mt-3 pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
       >
         {t('ui.viewAllTasks')}
       </Link>

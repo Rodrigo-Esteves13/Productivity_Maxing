@@ -18,6 +18,7 @@ import { useTurmaFiles } from '../../hooks/useTurmas';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useConfirmAction } from '../../hooks/useConfirmAction';
 import { useAuth } from '../../context/useAuth';
+import { useReloadOnReturn } from '../../hooks/useReloadOnReturn';
 import { useI18n } from '../../i18n/useI18n';
 
 interface TurmaFilesTabProps {
@@ -31,6 +32,7 @@ export default function TurmaFilesTab({ turmaId, isDelegado }: TurmaFilesTabProp
   const { t } = useI18n();
   const { user } = useAuth();
   const { data, isLoading, error, reload } = useTurmaFiles(turmaId);
+  useReloadOnReturn(reload);
   const [previewing, setPreviewing] = useState<PreviewableFile | null>(null);
   const confirm = useConfirmAction(t('turma.actionError'));
   const upload = useFileUpload({

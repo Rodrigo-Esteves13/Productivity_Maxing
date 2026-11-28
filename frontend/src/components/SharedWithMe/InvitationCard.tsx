@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { SharedWithMeItem, SharedWithMeRole } from '../../api/notebookService';
+import type { SharedWithMeItem, SharedWithMeRole } from '../../api/notebookShareService';
 import type { InvitationAnswer } from '../../hooks/useSharedWithMe';
 import { useI18n } from '../../i18n/useI18n';
 import { ROLE_KEY, areaColorOf } from './sharedWithMeLabels';
@@ -69,7 +69,7 @@ export default function InvitationCard({ item, onRespond }: InvitationCardProps)
           type="button"
           disabled={isBusy}
           onClick={() => void answer(true)}
-          className="rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+          className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
         >
           {t('sharedWithMe.invite.accept')}
         </button>
@@ -77,7 +77,7 @@ export default function InvitationCard({ item, onRespond }: InvitationCardProps)
           type="button"
           disabled={isBusy}
           onClick={() => void answer(false)}
-          className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+          className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
         >
           {t('sharedWithMe.invite.decline')}
         </button>

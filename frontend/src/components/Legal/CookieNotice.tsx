@@ -44,7 +44,7 @@ export default function CookieNotice() {
         </p>
         <button
           onClick={dismiss}
-          className="shrink-0 rounded-md bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 transition-colors"
+          className="shrink-0 rounded-md bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 pointer-coarse:min-h-11 transition-colors"
         >
           {t('ui.gotIt')}
         </button>

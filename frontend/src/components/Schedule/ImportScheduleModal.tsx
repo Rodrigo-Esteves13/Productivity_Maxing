@@ -98,7 +98,7 @@ export default function ImportScheduleModal({
           {/* Sem .ics: um colega da turma pode partilhar o horario. */}
           <p>
             {t('schedule.import.noFile')}{' '}
-            <Link to="/classes" onClick={handleClose} className="text-violet-400 hover:text-violet-300">
+            <Link to="/classes" onClick={handleClose} className="text-violet-400 hover:text-violet-300 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center">
               {t('schedule.import.fromClass')}
             </Link>
           </p>

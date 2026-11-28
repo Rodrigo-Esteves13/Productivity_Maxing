@@ -14,6 +14,13 @@ export const MAX_FINANCE_GOALS_PER_USER = 100;
 export const MAX_FINANCE_ACCOUNTS_PER_USER = 50;
 export const MAX_FINANCE_HOLDINGS_PER_USER = 100;
 export const FINANCE_WRITES_PER_MINUTE = 60;
+// Apagar varios movimentos de uma vez (e o Anular). O corpo do Anular tem de
+// caber no limite de JSON do Express (100 kB).
+export const MAX_FINANCE_BULK_ENTRIES = 100;
+export const MAX_RESTORE_PAYMENT_LINKS = 200;
+// Ids religados por pedido ao anular o apagar de uma conta; o frontend parte
+// listas maiores e repete o pedido com a mesma chave.
+export const MAX_FINANCE_RELINK_IDS = 1000;
 export const FINANCE_EXPORT_PER_MINUTE = 10;
 // Importacao CSV (POST /finance/import). O body JSON tem o teto de 100kb do
 // Express, por isso o frontend parte o ficheiro em lotes (por linhas e por

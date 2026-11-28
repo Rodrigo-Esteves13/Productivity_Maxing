@@ -26,7 +26,7 @@ const PAD_EXPORT_MIME = 'text/plain;charset=utf-8';
 // Um pad aberto: textarea que grava sozinha, como o dontpad. Sem conta da
 // para ler e escrever (com menos espaco); com conta da para trancar.
 export default function PadEditor({ slug, onRetry }: { slug: string; onRetry?: () => void }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const pad = usePad(slug);
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -68,7 +68,7 @@ export default function PadEditor({ slug, onRetry }: { slug: string; onRetry?: (
         )}
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs text-neutral-500">
-            {text.length.toLocaleString()} / {maxLength.toLocaleString()}
+            {text.length.toLocaleString(lang)} / {maxLength.toLocaleString(lang)}
           </span>
           <CopyButton text={link} label={t('pad.copyLink')} />
           <CopyButton text={text} label={t('ux4notes.pad.copyText')} />
@@ -132,7 +132,7 @@ export default function PadEditor({ slug, onRetry }: { slug: string; onRetry?: (
       />
       {pasteTrimmed && (
         <p role="alert" className="mt-2 text-xs text-amber-400">
-          {t('ux4notes.pad.pasteTrimmed', { max: maxLength.toLocaleString() })}
+          {t('ux4notes.pad.pasteTrimmed', { max: maxLength.toLocaleString(lang) })}
         </p>
       )}
       <p className="mt-2 text-xs text-neutral-500">

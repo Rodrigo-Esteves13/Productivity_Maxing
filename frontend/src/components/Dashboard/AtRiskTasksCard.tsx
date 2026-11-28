@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import type { Task, Area } from '../../types/models';
 import { getDateStatus } from '../../utils/taskDateStatus';
 import StatusBadge from '../UI/StatusBadge';
 import { AlertTriangleIcon } from '../UI/Icons';
@@ -7,16 +6,13 @@ import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
 import { useAreaLookup } from '../../hooks/useAreaLookup';
 import { useI18n } from '../../i18n/useI18n';
-
-interface AtRiskTasksCardProps {
-  tasks: Task[];
-  areas: Area[];
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 // "At risk" = overdue and not done, OR explicitly flagged BEHIND/VERY_BEHIND
 // by the user regardless of date - the two signals don't always overlap
 // (a task can be behind schedule without technically being overdue yet).
-export default function AtRiskTasksCard({ tasks, areas }: AtRiskTasksCardProps) {
+export default function AtRiskTasksCard() {
+  const { academicTasks: tasks, academicAreas: areas } = useDashboardCardData();
   const { t } = useI18n();
   const areaById = useAreaLookup(areas);
 
@@ -48,7 +44,7 @@ export default function AtRiskTasksCard({ tasks, areas }: AtRiskTasksCardProps) 
                 {area && (
                   <ColorDot size="xs" color={area.colorHex} />
                 )}
-                <span className="truncate text-neutral-200">{task.title}</span>
+                <span className="truncate text-neutral-200" title={task.title}>{task.title}</span>
               </div>
               <StatusBadge status={task.progressStatus} />
             </li>
@@ -57,7 +53,7 @@ export default function AtRiskTasksCard({ tasks, areas }: AtRiskTasksCardProps) 
       </ul>
       <Link
         to="/tasks"
-        className="block mt-3 text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
+        className="block mt-3 pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
       >
         {t('ui.viewAllTasks')}
       </Link>

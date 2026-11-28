@@ -7,6 +7,38 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-11-28',
+    title: 'Saved items per account and safer exports',
+    items: [
+      'Task templates, saved filter views, schedule import options and your best streak are now kept per account in this browser. What you already had moves to the account that was last signed in here.',
+      'Phones: checkboxes have bigger touch areas.',
+      'Signing out also forgets what you copied on a notebook canvas, and exported flashcards can no longer run as spreadsheet formulas.',
+    ],
+  },
+  {
+    date: '2026-11-25',
+    title: 'Faster loading and smoother navigation',
+    items: [
+      'The app starts faster: only the text needed for the first screen loads up front, and tasks, subjects and categories are reused between pages instead of being downloaded again each time.',
+      'Changing period, returning to a tab or switching tabs in a class keeps what is already on screen while it refreshes. Long task and note lists show a part at a time, with a Show more button.',
+      'The admin user list now searches and filters on the server and loads more as you ask. Signing out, or signing in with another account, clears the recent items stored in this browser.',
+      'Phones: bigger touch targets for breadcrumbs, subject lists and text buttons in Focus, Social and Schedule.',
+    ],
+  },
+  {
+    date: '2026-11-24',
+    title: 'Search, mobile and editing improvements',
+    items: [
+      'Search and filters where lists had none: tasks (text, subject, status), money entries (text, category, account), flashcards, quizzes, personal notes, friends and their notes, task packs, task types, users, feedback, shared pads and banned IPs.',
+      'Phones: bigger touch targets across buttons, subtasks can be reordered and deleted by tap, and task types, API keys, security logs and users show as cards instead of sideways-scrolling tables.',
+      'Schedule: add, edit and delete single classes, delete classes by date range, and Undo after deleting a schedule change. Money: Undo after deleting accounts, goals and investments, a Current month button and drag and drop for CSV import.',
+      'Edit more: rename task packs and task templates, edit medication intakes and blood donations, reorder task types, delete your own feedback and undo your last flashcard grade.',
+      'Import and export: task import shows a preview and offers a CSV template; export report card, personal notes, pads, flashcards, medication history and security logs.',
+      'Also: delete one quiz attempt, edit a schedule change, rename API keys and task attachments, edit your open feedback, Undo after deleting several tasks (up to 50), delete or move several flashcards at once, sort the report card and see the last 30 days of mood.',
+      'Clearer states: retry buttons when something fails to load, warnings for past reminders, unsaved changes and invalid input, and confirmations before unbanning, declining requests or replacing a template.',
+    ],
+  },
+  {
     date: '2026-11-22',
     title: 'Cards stay in sync without reloading',
     items: [

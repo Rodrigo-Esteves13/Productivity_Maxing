@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getProgramAverage } from '../../api/academicService';
 import { useAcademic } from '../../context/useAcademic';
 import type { ProgramAverage } from '../../types/models';
@@ -6,6 +6,8 @@ import { BookOpenIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
 import { usePlanMode } from '../../hooks/usePlanMode';
+import { useDomainVersion } from '../../hooks/useDomainVersion';
+import { GRADE_DOMAINS } from '../../lib/domainEvents';
 
 // Only makes sense with more than one program (e.g. "High School" +
 // "Bachelor's") - each program keeps its own grade scale, this never
@@ -16,6 +18,10 @@ export default function ProgramsOverviewCard() {
   const { t } = useI18n();
   const [averages, setAverages] = useState<Record<string, ProgramAverage>>({});
   const [isLoading, setIsLoading] = useState(true);
+  // Tasks ou notas gravadas noutro sitio refazem as medias em silencio; "a
+  // carregar" so quando muda o que se esta a ver.
+  const version = useDomainVersion(GRADE_DOMAINS);
+  const loadedForRef = useRef<string | null>(null);
 
   const visiblePrograms = programs.filter((p) => p.isActive || p.id === activeProgram?.id);
 
@@ -25,13 +31,17 @@ export default function ProgramsOverviewCard() {
       return;
     }
     let cancelled = false;
+    const loadKey = `${visiblePrograms.map((p) => p.id).join(',')}|${scenario}`;
     (async () => {
-      setIsLoading(true);
+      if (loadedForRef.current !== loadKey) setIsLoading(true);
       try {
         const entries = await Promise.all(
           visiblePrograms.map(async (p) => [p.id, await getProgramAverage(p.id, scenario)] as const),
         );
-        if (!cancelled) setAverages(Object.fromEntries(entries));
+        if (!cancelled) {
+          loadedForRef.current = loadKey;
+          setAverages(Object.fromEntries(entries));
+        }
       } catch (err) {
         console.error('Failed to load programs overview:', err);
       } finally {
@@ -42,7 +52,7 @@ export default function ProgramsOverviewCard() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [programs.map((p) => p.id).join(','), scenario]);
+  }, [programs.map((p) => p.id).join(','), scenario, version]);
 
   if (visiblePrograms.length < 2 || isLoading) return null;
 
@@ -61,13 +71,13 @@ export default function ProgramsOverviewCard() {
               key={program.id}
               type="button"
               onClick={() => switchProgram(program.id)}
-              className={`text-left rounded-lg border p-3 transition-colors ${
+              className={`pointer-coarse:min-h-11 text-left rounded-lg border p-3 transition-colors ${
                 isActive
                   ? 'border-violet-600 bg-violet-950/30'
                   : 'border-neutral-800 hover:border-neutral-700'
               }`}
             >
-              <p className="text-sm text-neutral-200 truncate">{program.name}</p>
+              <p className="text-sm text-neutral-200 truncate" title={program.name}>{program.name}</p>
               <p className="text-xl font-bold tabular-nums text-white">
                 {avg?.average !== null && avg?.average !== undefined
                   ? avg.average.toFixed(2)

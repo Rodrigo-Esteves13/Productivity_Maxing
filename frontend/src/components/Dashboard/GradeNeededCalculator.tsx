@@ -101,7 +101,7 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
           aria-label={t('ui.whatDoINeedOn')}
           value={scope}
           onChange={(e) => setScope(e.target.value)}
-          className="border border-neutral-700 bg-neutral-900 text-white rounded-lg px-2 py-1.5 text-sm"
+          className="pointer-coarse:min-h-11 border border-neutral-700 bg-neutral-900 text-white rounded-lg px-2 py-1.5 text-sm"
         >
           <option value={WHOLE_PERIOD_VALUE}>{t('ui.wholePeriod')}</option>
           {areasWithTasks.map((area) => (
@@ -120,7 +120,7 @@ export default function GradeNeededCalculator({ tasks, areas, scale }: GradeNeed
           min={0}
           max={max}
           step="0.1"
-          className="flex-1 min-w-[140px] border border-neutral-700 bg-neutral-900 text-white rounded-lg px-3 py-1.5 text-sm placeholder:text-neutral-500"
+          className="pointer-coarse:min-h-11 flex-1 min-w-[140px] border border-neutral-700 bg-neutral-900 text-white rounded-lg px-3 py-1.5 text-sm placeholder:text-neutral-500"
         />
       </div>
 

@@ -125,7 +125,7 @@ export default function OnThisPage({
             href={`#${item.id}`}
             onClick={(event) => jumpTo(event, item.id)}
             aria-current={isActive ? 'location' : undefined}
-            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 transition-colors hover:border-violet-500/60 hover:text-white ${
+            className={`shrink-0 whitespace-nowrap pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center rounded-full border px-3 py-1 transition-colors hover:border-violet-500/60 hover:text-white ${
               isActive ? 'border-violet-500/60 bg-violet-500/10 text-white' : 'border-neutral-800 bg-neutral-900 text-neutral-300'
             }`}
           >

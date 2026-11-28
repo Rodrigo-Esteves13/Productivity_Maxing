@@ -997,6 +997,8 @@ model Task {
   @@index([date])
   // Cron de lembretes: OR [date, submissionDate] precisa de indice nos dois (BitmapOr).
   @@index([submissionDate])
+  // Revisao semanal e agregados filtram userId + completedAt.
+  @@index([userId, completedAt])
 }
 
 enum RecurrenceFrequency {
@@ -1210,6 +1212,8 @@ model StudySession {
   // [userId, startedAt]: o heatmap e o histórico ordenam/filtram sempre
   // por período dentro do próprio utilizador.
   @@index([userId, startedAt])
+  // Tempo de estudo somado por task do proprio user (previsao e plano de estudo).
+  @@index([userId, taskId])
   @@index([taskId])
   @@index([areaId])
 }

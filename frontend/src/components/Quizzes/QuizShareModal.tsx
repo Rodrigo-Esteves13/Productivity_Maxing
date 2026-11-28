@@ -20,7 +20,7 @@ import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
 import { sharedQuizPath, socialTabPath } from '../../lib/appLinks';
 import { getApiMessage } from '../../lib/httpError';
-import { notifySocialChanged } from '../../lib/socialEvents';
+import * as bus from '../../lib/bus';
 
 interface QuizShareModalProps {
   quizId: string;
@@ -67,7 +67,7 @@ export default function QuizShareModal({ quizId, isOpen, onClose, onChanged }: Q
       const next = await action();
       setStatus(next ?? { token: null, copyCount: 0, createdAt: null, recipients: [] });
       onChanged(Boolean(next?.token));
-      notifySocialChanged();
+      bus.emit('social:changed');
       notify(t(successKey), 'success');
     } catch (err) {
       setError(getApiMessage(err, t('quizzes.share.error')));

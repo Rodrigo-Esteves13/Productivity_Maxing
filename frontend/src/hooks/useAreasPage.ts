@@ -5,7 +5,6 @@ import {
   createOfficialArea,
   deleteArea,
   updateArea,
-  getTaskMetadata,
   proposeArea,
   withdrawAreaProposal,
   getAreaProposals,
@@ -13,7 +12,8 @@ import {
   setAllOfficialAreasHidden,
   approveAreaProposal,
   rejectAreaProposal,
-} from '../api/userService';
+} from '../api/areasService';
+import { getTaskMetadata } from '../api/metadataService';
 import type { Area, AreaProposal, TaskTypeOption } from '../types/models';
 import type { AreaFormValues } from '../components/Areas/AreaForm';
 import { useFeedback } from '../context/useFeedback';

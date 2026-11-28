@@ -19,7 +19,10 @@ function idParamPipes(method: keyof AuthController): unknown[] {
 
 // S-22: ids de rota validados antes de chegarem a BD (400 em vez de 500).
 describe('AuthController :id params use ParseUUIDPipe', () => {
-  it.each(['revokeApiKey', 'revokeSession'] as const)('%s', (method) => {
-    expect(idParamPipes(method)).toContain(ParseUUIDPipe);
-  });
+  it.each(['renameApiKey', 'revokeApiKey', 'revokeSession'] as const)(
+    '%s',
+    (method) => {
+      expect(idParamPipes(method)).toContain(ParseUUIDPipe);
+    },
+  );
 });

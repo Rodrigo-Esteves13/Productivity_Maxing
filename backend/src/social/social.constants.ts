@@ -1,2 +1,14 @@
 export const MAX_FRIENDS = 200;
 export const MAX_PENDING_OUTGOING = 30;
+
+// Limites de throttle (pedidos por minuto).
+export const ADMIN_FRIEND_CODE_RESETS_PER_MINUTE = 30;
+export const FRIEND_CODE_DECISIONS_PER_MINUTE = 30;
+export const FRIEND_LINK_CREATES_PER_MINUTE = 10;
+export const FRIEND_LINK_PREVIEWS_PER_MINUTE = 20;
+export const FRIEND_LINK_ACCEPTS_PER_MINUTE = 10;
+export const FRIEND_CODE_CHANGE_REQUESTS_PER_MINUTE = 5;
+export const FRIEND_REQUESTS_PER_MINUTE = 10;
+export const FRIEND_EMAIL_REQUESTS_PER_MINUTE = 5;
+export const CLASSMATE_REQUESTS_PER_MINUTE = 10;
+export const USER_BLOCKS_PER_MINUTE = 20;

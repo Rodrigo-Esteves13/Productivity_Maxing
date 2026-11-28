@@ -668,8 +668,8 @@ Estado: S-04, S-18 e S-36 feitos. Só ficheiros `*.spec.ts` novos (Prisma em moc
 
 - **B-27:** não é uma transação única. Se só alguns creates falharem, as tarefas antigas são apagadas na mesma, como antes.
 - **U-B36:** o separador devolve também as pendentes (marcadas como "Pendente").
-- **U-B33:** só o banir pede confirmação. Desbanir não.
-- **Anular ao apagar:** tarefas voltam com checklist mas sem histórico nem anexos e com id novo. Contas, metas e investimentos de finanças ficaram sem Anular.
+- **U-B33:** resolvido na fase 4 (desbanir pede confirmação, ver 11.8).
+- **Anular ao apagar:** tarefas voltam com checklist mas sem histórico nem anexos e com id novo. Contas, metas e investimentos de finanças ganharam Anular na fase 4 (11.8).
 - **U-A19:** sem Anular em "desligar todas", só confirmação.
 - **B-43:** `areas.service` `remove` e `update` ficam sem `userId` no `where` porque o admin gere Áreas oficiais (`ownerId` nulo). Subtask, `turma-*` e alguns outros mantêm a verificação de posse prévia.
 
@@ -681,10 +681,10 @@ Estado: S-04, S-18 e S-36 feitos. Só ficheiros `*.spec.ts` novos (Prisma em moc
   CREATE UNIQUE INDEX "area_official_name_unique" ON "Area"(lower("name")) WHERE "ownerId" IS NULL;
   ```
 - **Opcional (B-24):** `pg_trgm` com índices GIN em `title` e `textContent`.
-- **Secção 2.2 itens 5 a 8:** testes de auth (S-04, S-18, S-36), pesquisa e filtros em páginas sem eles, mobile (alvos de toque, `dvh`), refatorações.
-- **Restantes de 2.2 itens 1 a 4:** F-16 (cache de catálogo, L), EctsWorkloadCard, unificar os 4 barramentos antigos. Os achados de backend B-28, B-33, B-34, B-36 a B-38, B-42, S-05, S-09 a S-11, S-15, S-17 foram tratados na fase 2 (11.1b).
+- **Secção 2.2 itens 5 a 8:** testes de auth (S-04, S-18, S-36), pesquisa, filtros e mobile feitos na fase 4 (11.8); refatorações do frontend feitas na fase 5 (11.9).
+- **Restantes de 2.2 itens 1 a 4:** F-16, EctsWorkloadCard e a unificação dos 4 barramentos antigos feitos na fase 5 (11.9). Os achados de backend B-28, B-33, B-34, B-36 a B-38, B-42, S-05, S-09 a S-11, S-15, S-17 foram tratados na fase 2 (11.1b).
 - **Fase 3 (testes):** feita (ver 11.1c). Limitações de cobertura em 11.1c.
-- **Não testado em execução na fase 2:** 2FA (`TWO_FACTOR_ENABLED` desligado), recorrência de API key com o agente Go, cron de lembretes e "quase lá", import de programa da turma e publicação de pacotes, B-42 em `update` e `reorder` em corrida (só `create` foi testado), e o SQL de `study-plan/courses` e da previsão contra dados antigos com janela. Teste de carga de `GET /users` paginado com a UI de admin (a página `Users.tsx` continua a usar o array).
+- **Não testado em execução na fase 2:** 2FA (`TWO_FACTOR_ENABLED` desligado), recorrência de API key com o agente Go, cron de lembretes e "quase lá", import de programa da turma e publicação de pacotes, B-42 em `update` e `reorder` em corrida (só `create` foi testado), e o SQL de `study-plan/courses` e da previsão contra dados antigos com janela. Teste de carga de `GET /users` paginado (a página `Users.tsx` usa a paginação desde a fase 5).
 - **Não testado em execução (ver 11.4):** o `grantId` do `FriendProfile` ligado ao backend, revogar acesso a notas e a partilha de quiz (a conta não tem concessões), arrastar com o rato (a API de reorder foi testada, o gesto não), tabelas de TaskTypes em mobile, "descartar quiz" dentro de um exame em curso.
 - **Aviso:** `eslint --fix` e `prettier` normalizaram fins de linha, o git vai avisar de LF/CRLF.
 
@@ -767,10 +767,212 @@ Nada de código falhou nos testes. Nota: `GET /users/me` devolve 400 porque `me`
    ```
    e um modelo `TwoFactorChallenge { jti String @id; userId String; attempts Int @default(0); expiresAt DateTime; @@index([expiresAt]) }` (`--name two_factor_attempts`). Alternativa: Redis (`SET key 1 NX PX 60000`) e pub/sub para invalidar a cache de API keys.
 
-### 11.7 Notas para o frontend (nada foi alterado)
+### 11.7 Notas para o frontend (tratadas na fase 5, ver 11.9)
 
 - `forbidNonWhitelisted` faz parâmetros de query desconhecidos devolverem 400 em `/schedule*`, `/finance`, `/calendar/schedule/preview` e `/feed/:file`. Os clientes do frontend (`scheduleService`, `financeService`) só enviam `from`/`to` e `month`. Um assinante do feed `.ics` que acrescente um parâmetro como `?_=ts` passa a receber 400.
 - `days` fora do intervalo ou não inteiro dá 400 (antes era cortado): history 1 a 90, daily-totals 1 a 365, study-plan 1 a 30.
 - `frontend/src/api/userService.ts:406` tem `200` fixo (`BULK_TASK_BATCH_SIZE`), a juntar a `TASK_BULK_MAX` do backend.
 - `Users.tsx` pode passar a usar `q` e `paginated` quando a lista admin crescer.
 - Há 400 novo no `POST /programs` com 20 programas, `POST /periods` com 30 períodos e no import de programa da turma acima dos tetos: convém mostrar a mensagem do erro.
+
+### 11.8 Fase 4: fricções de UX (secção 6), 2026-11-24
+
+Tratados todos os U-A01 a U-A36, U-B01 a U-B46 e T-02 a T-04 que não estavam feitos. Os que ficaram só em parte estão na tabela "Parcial". Nada foi commitado, sem alterações de schema nem migrações.
+
+Verificação: `tsc --noEmit` limpo no frontend e no backend; vitest 158 ficheiros e 1056 testes; jest 244 suites e 2371 testes; `check-i18n` 5052 chaves, 8 línguas, 0 problemas. O ESLint do frontend não corre (não existe `eslint.config.*`).
+
+#### Corrigido
+
+| Área | Achados | O que foi feito |
+|---|---|---|
+| Partilhado | U-B03 | `SearchField`, `useListSearch` e `lib/listFilter`; alvos de 44 px em ecrãs de toque em `Button`, `IconButton`, `ToolbarButton`, `ToggleChip`, `ActionButton`, `CopyButton` e aviso de cookies. |
+| Tarefas | U-A04, U-A05, U-A07, U-A08, U-A11, U-A12, U-A13 | Subtarefas com botões e subir/descer; Anular ao concluir pelo modal ou `c` e ao apagar em massa; aviso quando o Calendar falha; pesquisa e filtros em `/tasks`; pré-visualização do import e CSV modelo; renomear e confirmar modelos; renomear anexos. |
+| Packs e tipos | U-A14 a U-A17, U-B40, T-02 | Renomear pack, pesquisa e filtro por Área, ocultar em vez de lixo em tipos e prioridades, reordenar tipos, cartões em mobile. |
+| Áreas, períodos, notas | U-A18, U-A19, U-A21 a U-A25 | Validação do nome, Anular em "desligar todas", rótulos e validação de datas, CSV e ordenação do boletim, erro com repetir na previsão, alvo guardado por Área. U-A20 e U-A36 já estavam feitos. |
+| Notas, pad, caderno | U-A26 a U-A29, T-03 | Pesquisa, filtros, contador e exportação; lembrete passado bloqueado; copiar e descarregar pads, aviso de colagem cortada, pads recentes, `dvh`; erros da pesquisa e das listas visíveis. |
+| Flashcards e quizzes | U-A31 a U-A35 | Pesquisa, ordenação, seleção múltipla, "Guardar e novo", exportar TSV, anular última classificação, pesquisa de quizzes, apagar uma tentativa, mensagens de erro do backend. |
+| Finanças | U-B04 a U-B11, U-B46 | Sem valores velhos ao mudar de mês, Anular em contas, metas e investimentos, pesquisa e filtros, "Mês atual", estados de gravação, arrastar CSV. |
+| Bem-estar | U-B12 a U-B20 | Mini-calendário de humor, rascunho por dia, edição por medicamento, edição de tomas e dádivas, exportar histórico, recarga falhada mantém os dados. |
+| Horário | U-B21 a U-B25, U-B27, U-B28 | Criar, editar e apagar aulas, apagar por intervalo, editar exceções e Anular ao apagar, erros com repetir. |
+| Agente, developer, segurança | U-B29 a U-B34 | Indicador por gravar, colar listas, renomear chaves, cartões em mobile, confirmar desbanir, pesquisa de IPs, atualizar e exportar logs. |
+| Admin e feedback | U-B35 a U-B39 | Filtros, ordenação e paginação de utilizadores, botões desativados nos appeals, pesquisa no feedback, editar e apagar o próprio feedback, pesquisa de pads. |
+| Social | U-B41 a U-B45 | Pesquisa e ordenação de amigos e notas, confirmações, "Todas" e "Nenhuma". |
+| Transversal | U-B46, T-02, T-03, T-04 | Datas e números na língua da app, cores dos gráficos por tokens, `title` nos textos truncados, `useVisibleInterval`. |
+
+Paleta de comandos: ações "Adicionar aula" (`/schedule?add=class`) e "Enviar feedback" (`/my-feedback?send=1`) e novas palavras-chave. Sem páginas novas, por isso a navegação não mudou. Uma entrada no changelog.
+
+Endpoints novos (todos com `userId`): `PATCH /task-packs/:id`, `POST /schedule/class`, `PATCH /schedule/:id`, `DELETE /schedule/:id`, `PATCH /schedule-exceptions/:id`, `POST /flashcards/:id/restore`, `DELETE /quizzes/:id/attempts/:attemptId`, `PATCH /wellbeing/medications/intakes/:id`, `PATCH /wellbeing/blood-donations/:id`, `PATCH /auth/api-keys/:id`, `PATCH /tasks/:taskId/attachments/:attachmentId`, `DELETE /feedback/mine/:id`, `PATCH /feedback/mine/:id`.
+
+#### Parcial ou por fazer
+
+| Achado | Limitação |
+|---|---|
+| U-A05 | Anular em massa só até 50 tarefas; anexos, histórico e evento do Calendar não voltam. |
+| U-A08, U-B08 | `/tasks` sem seleção múltipla nem exportação; movimentos sem ordenação nem seleção múltipla. |
+| U-A12 | Modelos continuam só em localStorage (servidor precisa de schema). |
+| U-A15 | Só se edita o nome do pack, não os itens. |
+| U-A17 | Aviso de impacto sem contagem de tarefas (o backend não a devolve). |
+| U-A22 | Boletim e Revisão ordenam e marcam arquivados, mas mantêm seletor próprio. |
+| U-A30 | Sem Anular ao apagar entrada do caderno (precisa de soft-delete) e sem mover entre cadeiras. |
+| U-A33 | Mostra a data de criação, não o último uso. |
+| U-A35 | Apagar uma tentativa não recalcula as estatísticas por pergunta (`Quiz.stats` não guarda respostas por tentativa). |
+| U-B06 | Anular conta não religa movimentos; o investimento perde o custo médio. |
+| U-B17 | Ver tomas até 61 dias; apagar toma sem Anular. |
+| U-B22 | "Mover para" tem 44 px de altura, não de largura. |
+| U-B33 | Bans sem expiração (precisa de schema). |
+| U-B34 | Ordenar e exportar só a página carregada; opções de purga iguais. |
+| U-B35, U-B44 | Paginação de utilizadores no cliente; notas de amigos sem paginação. |
+| U-B37 | Sem filtro por língua nem paginação. |
+| U-B38 | Sem responder à resposta da equipa. |
+| U-B39 | Fontes bloqueadas derivadas só dos pads recentes (falta endpoint de listagem). |
+| U-B03, U-B25 | Alvos de toque tratados nos componentes partilhados e nos casos visíveis, não numa varredura exaustiva. |
+| T-04 | `BreakBanner`, `StudySessionProvider`, `useHealthCheck`, `useNotebookEntries` e `tabPresence` mantêm `setInterval` (têm de correr com o separador escondido ou vivem fora de componentes). |
+
+#### Teste no browser (2026-11-24)
+
+Método: `preview_start` do backend e do frontend, browser embutido com a sessão da conta real (iniciada pelo utilizador; nenhuma credencial escrita por mim). Dados de teste com prefixo "ZZ-teste". No fim, uma verificação por API a tarefas, flashcards, notas, finanças, packs, aulas, exceções, feedback, quizzes, dádivas, humor e pads deu zero ocorrências de "ZZ-teste". Preferências de tema repostas. Servidores parados.
+
+**Incidente:** um erro no meu script de teste editou e apagou um registo real de dádiva de sangue (2026-09-01, sangue total, "Hospital S. João", sem nota). O registo foi recriado de imediato com os mesmos dados, a partir da resposta original da API. Tem um id novo e uma data de criação nova.
+
+| Superfície | Resultado |
+|---|---|
+| Páginas com sessão em desktop (cerca de 35 rotas e vistas) | Abrem, sem chaves de i18n por traduzir, sem erros de carregamento, sem scroll horizontal. Backend sem erros. |
+| Pesquisa e estado sem resultados | Tarefas, flashcards, quizzes, notas, amigos, utilizadores, feedback, pads, áreas e finanças: passou. |
+| Horário | Criar (com validação de início e fim), editar, apagar com Anular, apagar por intervalo, editar e apagar exceção com Anular: passou. |
+| Finanças | Criar conta e meta, apagar com Anular: passou. |
+| Flashcards | Guardar e novo, mudar de cadeira em massa, apagar em massa com Anular: passou. |
+| Notas | Aviso de lembrete passado, pesquisa, filtro, apagar com Anular: passou. |
+| Tarefas | Pesquisa, concluir com `c` e Anular, carregar e renomear anexo, apagar em massa com Anular: passou. |
+| Bem-estar, packs, feedback | Criar, editar e apagar dádiva; rascunho de humor por dia; renomear e apagar pack; editar e apagar o próprio feedback: passou. |
+| Paleta de comandos | "Adicionar aula" e "Enviar feedback" abrem o formulário. Entrada no changelog visível. |
+| Mobile (375 px) | Sem scroll horizontal nas páginas percorridas; tabelas em cartões. Alvos pequenos nos componentes partilhados corrigidos (`SegmentedControl`, `TabBar`, ligações do seletor de período, entre outros). |
+| Tema claro | Segurança, notas e Dashboard (gráficos): legíveis. |
+| Erro (backend parado) | 13 páginas mostram erro. Faltava "Tentar de novo" no Social, no plano de estudo, nos compromissos e na análise do bem-estar: corrigido e verificado. Developer e Agente têm botão. |
+
+Corrigido nesta ronda: alvos de toque acima, botão de repetir em quatro cartões, datas da confirmação de apagar aulas por intervalo na língua da app. Depois das correções: `tsc` do frontend limpo, `check-i18n` 5052 chaves e 0 problemas, vitest 1056 testes.
+
+**Não verificado:** apagar uma tentativa de quiz (o quiz de teste não passou a validação do import; coberto por spec), renomear chave API (criar uma chave pede autorização), editar tomas (exige um medicamento), Anular de investimento (precisa de cotação real), arrastar um CSV para finanças, cancelar pedido de notas, reimportar `.ics` com aula manual, mobile e tema claro em todas as páginas (só amostra visual), navegação por teclado além de Escape, paleta e atalho `c`.
+
+**Alvos de toque ainda abaixo de 44 px (no fim da fase 4):** migalhas de navegação, lista de cadeiras em Áreas e no caderno, e alguns botões de texto em Focus, Social e Horário. Tratados na fase 5 (11.9).
+
+**Achado anterior a esta fase:** o carregamento de anexos `.txt` numa tarefa falha ("mime type application/octet-stream is not supported"), apesar de a mensagem de erro listar `.txt` como permitido.
+
+### 11.9 Fase 5: arquitetura do frontend (secção 5), 2026-11-25
+
+Tratados os achados F que faltavam, as notas 11.7 e os alvos de toque. Nada foi commitado, sem alterações de schema nem migrações. No backend esta fase só mudou `GET /users` (parâmetros novos de filtro e ordem) e comentários.
+
+Verificação final: `tsc` limpo (frontend app e node, backend); vitest 191 ficheiros e 1355 testes (antes 1056); jest 245 suites e 2384 testes; `check-i18n` 5057 chaves, 8 línguas, 0 problemas; `vite build` sem erros (um aviso: `advancedChunks` está obsoleto, o substituto é `codeSplitting`).
+
+#### Corrigido
+
+| Achados | O que foi feito |
+|---|---|
+| F-16, F-47, F-32, F-51 | Cache própria com stale-while-revalidate (`api/queryCache.ts`, `catalogCache.ts`, `mutationInvalidation.ts`), sem TanStack Query. Tarefas, Áreas e metadados reutilizados entre páginas; qualquer escrita relevante invalida; limpa no login, logout, 401 e troca de conta; sincroniza entre separadores. |
+| F-09, F-18 | Digest e cartão Hoje partilham os pedidos. As conquistas usam a última lista conhecida e só descarregam quando falta. |
+| F-43 | Dicionário dividido no build em núcleo (bloqueia o primeiro render) e resto. `pt`: de 316 KB (95,6 gzip) bloqueantes para 29,7 KB (10,0 gzip). As rotas lazy esperam pelo resto; o `check-i18n` verifica a divisão. |
+| Barramentos, F-12, EctsWorkload | `lib/bus.ts` substitui os 4 barramentos. `EctsWorkloadCard` e mais 7 cartões ligados a `lib/domainEvents`. |
+| F-52 | Chaves de armazenamento classificadas; o logout e a entrada de outra conta limpam as caches. Texto por gravar do caderno e quiz a meio ficam no logout da mesma conta. |
+| F-02, F-13, F-20, F-40, F-42 | Medicação recarrega só o necessário; insights seguem o humor; Horário sem remontagens nem pedidos repetidos. |
+| F-14, F-23, F-29, F-54 | Um coordenador de atualização ao refocar (pedidos escalonados 150 ms) e um hook comum nos 4 hooks sociais. |
+| F-15, F-21, F-22, F-50, F-55 | Separadores da turma ficam montados; polling pela visibilidade; notas do caderno 30 de cada vez; contexto nas Áreas. |
+| F-19, F-27, F-28, F-30, F-33 | `useFetch`, `useActivePeriodResource`, `usePersistedState` (mesmas chaves e formatos), `useLoadAbortable`, factory nos hooks de turma. |
+| F-24, F-25, F-26, F-31, F-37, F-41, F-49, F-56 | Catálogo e tarefas por período partilhados; a lista antiga fica visível (bloqueada) ao mudar de período; replanear aplica localmente; `useTasksPage` dividido; listas mostram 50 de cada vez; contexto de dados do Dashboard. |
+| F-34, F-35, F-36, F-38, F-39 | Paleta, bibliotecas de quiz, Caderno, serviços da API (`tasksService`, `areasService`, `authService`, entre outros) e páginas grandes divididos sem mudar comportamento. |
+| F-58, F-59 | Histórico de tarefa num serviço; `getHttpStatus` em vez de `axios.isAxiosError`. |
+| 11.7 | `Users.tsx` pesquisa, filtra e pagina no servidor; o limite de programas mostra a mensagem do servidor; limite do lote testado contra o backend; parâmetros enviados confirmados. |
+| Alvos de toque | Migalhas, listas de cadeiras, "Funciona com", botões de texto e ligações em Dashboard, Focus, Social, Horário, Perfil, Tarefas, Caderno, Bem-estar e admin. |
+
+Uma revisão independente encontrou defeitos nas alterações desta fase; 6 foram corrigidos com testes: lista de tarefas que não recebia a revalidação em segundo plano; leitura posterior a uma escrita (ou a um logout) a juntar-se a um GET anterior; logout a apagar texto por gravar; cache de outra conta visível por um instante; "selecionar tudo" a apanhar linhas por mostrar; modal de replanear a reabrir ao mudar de período.
+
+Defeitos anteriores encontrados no browser e corrigidos: Escape na paleta fechava também o formulário por baixo; `/tasks?new=1` e `/tasks?open=<id>` não faziam nada quando já se estava em `/tasks`.
+
+#### Mudanças de comportamento
+
+- O digest diário usa o período ativo escolhido na app.
+- A pesquisa de utilizadores passa a distinguir acentos e a procurar a frase num só campo; a ordem por nome só abrange os utilizadores carregados (há aviso).
+- Alterações feitas fora do browser (agente, representante de turma, admin) podem demorar até 1 minuto nas tarefas e 10 nas Áreas.
+- As preferências já não gravam o valor por omissão ao montar.
+- Ao voltar ao separador, o polling do caderno só corre logo se já passou um intervalo.
+
+#### Parcial ou por fazer
+
+| Achado | Limitação |
+|---|---|
+| F-48 | O cursor continua em série; um endpoint de contagens precisa de backend. |
+| F-19 | Sem chave de cache opcional em `useLoadOnce`. |
+| F-38 | `financeService` não foi separado (um só domínio). |
+| F-40 | Resolvido com `useMemo`; atuação do React Compiler não medida. |
+| F-52 | Modelos de tarefa, filtros guardados e opções de importação do horário ficam no logout e não estão separados por conta. |
+| F-03, F-46, F-57, F-60, F-61 | Sem ação (não se aplica ou é intencional). |
+| F-43 | Quando chega o resto do dicionário, efeitos que dependem de `t` correm mais uma vez. |
+| Alvos de toque | Caixas de seleção das tarefas e ligações no meio de texto continuam pequenas. |
+| Cache | Caso raro: uma escrita com mais de 10 s e uma revalidação iniciada e terminada durante ela pode repor o estado anterior. |
+
+#### Teste no browser (2026-11-25)
+
+Método: backend local e build de produção do frontend servido por `vite preview` na porta 5173 (para testar a divisão do dicionário), com a sessão da conta real iniciada pelo utilizador; nenhuma credencial escrita por mim. No fim: service worker e caches do browser removidos, servidores parados, configuração temporária retirada de `.claude/launch.json`.
+
+Único registo criado: uma tarefa "ZZ-teste fase5 cache", criada, concluída, anulada e apagada pelo seu id. A língua foi mudada para pt e reposta em en; o período ativo foi mudado e reposto.
+
+| Superfície | Resultado |
+|---|---|
+| Rotas em desktop e a 375 px (cerca de 40) | Abrem sem erros de consola, sem chaves por traduzir e sem scroll horizontal. Backend sem erros. |
+| Cache | A paleta aberta duas vezes não repete tarefas nem Áreas; criar e apagar atualiza Tarefas, Dashboard e Focus. |
+| Mudança de período | Lista antiga bloqueada com "Loading" até chegar a nova. |
+| Horário, Social, Turma | Alternar Semana/Mês não pede tarefas; refocar o Social escalona os pedidos; voltar a um separador da turma não mostra esqueleto. |
+| Utilizadores | Pesquisa com espera, estado sem resultados e limpeza: passou. |
+| Língua | Mudança para pt e de volta a en: títulos traduzidos. |
+| Alvos de toque | Zero abaixo de 44 px nas 7 páginas remedidas depois da última correção. |
+
+**Não verificado:** logout e troca de conta; `?exam`, `?plan` e `?single`; listas com mais de 50 tarefas; replanear atrasadas; gravar no caderno; link partilhado, quiz em curso e conta bloqueada; "carregar mais" nos utilizadores (há menos de 20); tema claro; carregamento do dicionário sem rede; PWA instalada; as 6 correções da revisão só têm testes automáticos.
+
+### 11.10 Fase 6: parciais, auditoria de segurança e CI (2026-11-28)
+
+Sem commits, sem alterações de schema nem migrações novas.
+
+#### Corrigido
+
+| Achados | O que foi feito |
+|---|---|
+| B-27 | Import de pacote em modo substituir é tudo ou nada, numa transação com lock por utilizador. Anexos só saem do storage depois do commit. |
+| B-39 | Lembretes: o SQL devolve só ids pendentes (`NOT EXISTS` em `SentReminder`). |
+| U-A17 | As listagens admin de tipos de tarefa devolvem `taskCount` (o frontend ainda não o mostra). |
+| Cache de previsão | LRU com teto de 500 utilizadores. |
+| F-52 | Modelos, filtros guardados, opções de importação e melhor streak guardados por conta. |
+| Vite | `advancedChunks` passou a `codeSplitting`, com o mesmo resultado de chunks. |
+| Alvos de toque | Caixas de seleção de tarefas, rótulos com checkbox e radio, "Mover para". |
+| Segurança, média | Cache de API keys indexada por HKDF com salt por processo (a raw key não fica em memória); entradas expiradas removidas em cada escrita e por temporizador. |
+| Segurança, média | O log de erros do Prisma deixou de copiar argumentos da query. |
+| Segurança, baixa | Datas impossíveis dão 400 (21 campos), `userId` no update de tomas, texto só com espaços rejeitado, throttle nas escritas de aulas. |
+| Segurança, frontend | Área de transferência do quadro e nota do Focus limpas na troca de conta; TSV de flashcards neutraliza fórmulas. |
+
+#### Verificações (CI reproduzido localmente)
+
+| Check | Backend | Frontend |
+|---|---|---|
+| ESLint | limpo | sem erros (avisos em dois ficheiros de teste) |
+| `tsc` | limpo | limpo |
+| Testes | jest 247 suites, 2407 | vitest 192 ficheiros, 1362 |
+| Build | ok | ok |
+| `npm audit --audit-level=critical` | 0 críticas (4 altas, 25 moderadas) | 0 críticas (6 moderadas) |
+| i18n | n/a | 5057 chaves, 0 problemas |
+| Prettier (`continue-on-error` no CI) | falha só por CRLF local | falha: sem configuração no frontend, já falhava antes |
+
+Os checks `Backend: Quality & Checks` e `CodeQL` do PR 233 mostram FAILURE porque correm sobre o último push. Só mudam depois de commit e push.
+
+#### Parcial, por fazer ou não verificado
+
+- F-19, F-38 e F-48 sem ação: sem consumidor real, um só domínio, e os consumidores precisam da lista inteira.
+- Chaves `pm-quiz-*`, `pm-grade-targets` e `pm-area-order` continuam sem separação por conta.
+- Literais `perMinute(N)` em alguns controllers fora do diff.
+- Não verificado: SQL do B-39 contra a base de dados real (o único disparo envia notificações reais); alerta do CodeQL; validação de uma API key no browser (não se criaram chaves).
+- Índices únicos parciais e restantes migrações: ver 11.3 e 11.6.
+
+#### E2e no browser (com sessão)
+
+- Rotas com sessão em desktop e 23 delas em mobile: sem scroll horizontal e sem erros de consola depois das correções. Tema claro visto por amostra (tarefas e novidades, em mobile). As rotas de administração não foram abertas (os caminhos testados deram "Page not found").
+- B-27 na base de dados real, com área, tarefas e pacote `ZZ-teste`: import em substituição com um item inválido não alterou nada; o válido substituiu 2 tarefas. Dados de teste apagados.
+- Datas impossíveis: `/schedule` e `/finance/analytics` devolvem 400.
+- F-52: o melhor streak está guardado por conta.
+- Corrigido durante o e2e: keys duplicadas em `/changelog` (havia datas repetidas) e o select de área das tarefas, que tinha 32px em ecrã tátil (agora 44px, também na vista Board).
+- Depois destas correções: `tsc`, lint e vitest (1362) do frontend passam.

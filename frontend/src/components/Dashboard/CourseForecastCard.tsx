@@ -39,7 +39,7 @@ export default function CourseForecastCard() {
             <div className="flex items-baseline justify-between gap-3">
               <p className="text-sm text-neutral-200 flex items-center gap-2 min-w-0">
                 <ColorDot size="xs" color={course.areaColorHex} />
-                <span className="truncate">{course.areaName}</span>
+                <span className="truncate" title={course.areaName}>{course.areaName}</span>
               </p>
               <p className="text-xs text-neutral-500 shrink-0">
                 {t('ui.studied', { studiedMinutes: formatDuration(course.studiedMinutes) })}</p>
@@ -62,7 +62,7 @@ export default function CourseForecastCard() {
       </ul>
       <Link
         to="/schedule"
-        className="inline-block text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted mt-3"
+        className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center inline-block text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted mt-3"
       >
         {t('ui.openStudyPlan')}
       </Link>

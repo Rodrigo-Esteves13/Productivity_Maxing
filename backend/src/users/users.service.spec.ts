@@ -57,6 +57,14 @@ describe('UsersService.findAll', () => {
     ]);
   });
 
+  it('filters by role and status and flips the join order', async () => {
+    const { service, prisma } = setup();
+    await service.findAll({ role: 'ADMIN', status: 'BANNED', order: 'asc' });
+    const [args] = prisma.user.findMany.mock.calls[0] as [FindManyArgs];
+    expect(args.where).toEqual({ role: 'ADMIN', status: 'BANNED' });
+    expect(args.orderBy).toEqual([{ createdAt: 'asc' }, { id: 'asc' }]);
+  });
+
   it('a blank q does not filter', async () => {
     const { service, prisma } = setup();
     await service.findAll({ q: '   ' });
@@ -149,5 +157,28 @@ describe('UsersService self-action rules', () => {
       null,
     );
     expect(authService.deleteAccount).toHaveBeenCalledWith('u2');
+  });
+});
+
+describe('UsersService.findAll sorted by name', () => {
+  it('pages over the ordered ids and keeps that order', async () => {
+    const { service, prisma } = setup();
+    prisma.user.findMany
+      .mockResolvedValueOnce([{ id: 'a' }, { id: 'b' }, { id: 'c' }])
+      .mockResolvedValueOnce([{ id: 'c' }, { id: 'b' }]);
+    prisma.user.findFirst.mockResolvedValue({ id: 'a' });
+
+    const page = await service.findAll({ sort: 'name', cursor: 'a', limit: 5 });
+
+    expect(page).toEqual({
+      items: [{ id: 'b' }, { id: 'c' }],
+      nextCursor: null,
+    });
+    const [ordered] = prisma.user.findMany.mock.calls[0] as [FindManyArgs];
+    expect(ordered.orderBy).toEqual([
+      { name: { sort: 'asc', nulls: 'last' } },
+      { email: 'asc' },
+      { id: 'asc' },
+    ]);
   });
 });

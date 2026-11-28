@@ -24,6 +24,7 @@ export const SECURITY_ACTIVITY_EXPORT_REQUESTS_PER_MINUTE = 5;
 // Cache curta de key valida para user+scope: o agente faz poll e cada pedido
 // pagava um scrypt e uma leitura na BD. Revogar invalida logo nesta
 // instancia; o TTL curto cobre o resto (user apagado, mudanca de role).
+export const API_KEY_NAME_MAX_LENGTH = 100;
 export const API_KEY_CACHE_TTL_MS = 60 * MS_PER_SECOND;
 export const API_KEY_CACHE_MAX_ENTRIES = 1_000;
 // lastUsed so e gravado se a ultima escrita tiver mais do que isto.

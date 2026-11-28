@@ -1,40 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { getSessionHistory } from '../api/studySessionsService';
-import { isRequestCanceled } from '../lib/abortable';
 import type { StudySession } from '../types/models';
+import { useFetch } from './useFetch';
+
+const NO_SESSIONS: StudySession[] = [];
 
 // Sessoes terminadas dos ultimos `days` dias. `refreshKey` volta a buscar
 // quando muda (ex: o id da sessao ativa, para a lista atualizar ao parar).
-// Mudar `days` ou `refreshKey` cancela o pedido anterior.
+// Mudar `days` ou `refreshKey` cancela o pedido anterior. `reload`: para
+// recarregar depois de editar/apagar.
 export function useSessionHistory(days: number, refreshKey?: string | null) {
-  const [sessions, setSessions] = useState<StudySession[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const fetcher = useCallback((signal: AbortSignal) => getSessionHistory(days, signal), [days]);
+  const { data, isLoading, hasError, reload } = useFetch(fetcher, { refreshKey });
 
-  const load = useCallback(
-    async (signal?: AbortSignal) => {
-      try {
-        const result = await getSessionHistory(days, signal);
-        setSessions(result);
-        setError(false);
-        setIsLoading(false);
-      } catch (caught) {
-        if (isRequestCanceled(caught)) return;
-        setError(true);
-        setIsLoading(false);
-      }
-    },
-    [days],
-  );
-
-  // Para recarregar depois de editar/apagar (sem sinal: nao se cancela).
-  const reload = useCallback(() => load(), [load]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void load(controller.signal);
-    return () => controller.abort();
-  }, [load, refreshKey]);
-
-  return { sessions, isLoading, error, reload };
+  return { sessions: data ?? NO_SESSIONS, isLoading, error: hasError, reload };
 }

@@ -103,6 +103,10 @@ export function useCommitments(onChanged: () => void) {
     copyResult,
     clearCopyResult: () => setCopyResult(null),
     clearError: () => setError(''),
+    reload: () => {
+      setError('');
+      return refetch();
+    },
     addCommitment: (input: CommitmentInput) =>
       mutate(() => createCommitment(input), translateNow('hook.couldNotCreateIt')),
     editCommitment: (id: string, changes: Partial<CommitmentInput>) =>

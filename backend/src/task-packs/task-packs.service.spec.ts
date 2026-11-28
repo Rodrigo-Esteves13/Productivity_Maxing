@@ -55,7 +55,15 @@ function setup() {
       findMany: jest.fn().mockResolvedValue([]),
       findFirst: jest.fn().mockResolvedValue({ id: 'ok' }),
     },
+    // Lock por utilizador do modo substituir (runWithUserTaskLock).
+    $executeRaw: jest.fn().mockResolvedValue(0),
+    $transaction: jest.fn(),
   };
+  // A transacao corre o callback com o proprio mock como tx; um throw la
+  // dentro rejeita a transacao, como no Prisma (rollback).
+  prisma.$transaction.mockImplementation(
+    (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma),
+  );
   const tasks = {
     create: jest.fn().mockResolvedValue({ id: 'new-task' }),
     resolvePeriodId: jest.fn().mockResolvedValue('per-1'),
@@ -64,6 +72,12 @@ function setup() {
       .mockImplementation((_u: string, ids: string[]) =>
         Promise.resolve({ count: ids.length }),
       ),
+    bulkRemoveInTx: jest
+      .fn()
+      .mockImplementation((_tx: unknown, _u: string, ids: string[]) =>
+        Promise.resolve({ count: ids.length, storagePaths: ['tasks/a.pdf'] }),
+      ),
+    removeAttachmentFiles: jest.fn().mockResolvedValue(undefined),
   };
   const service = new TaskPacksService(
     prisma as unknown as PrismaService,
@@ -215,7 +229,10 @@ describe('TaskPacksService', () => {
         periodId: 'per-1',
         areaId: { in: ['official'] },
       });
-      expect(tasks.bulkRemove).toHaveBeenCalledWith('u2', ['velha']);
+      expect(tasks.bulkRemoveInTx).toHaveBeenCalledWith(prisma, 'u2', [
+        'velha',
+      ]);
+      expect(tasks.bulkRemove).not.toHaveBeenCalled();
       expect(tasks.create).not.toHaveBeenCalled();
       expect(prisma.task.update).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: 'feita', userId: 'u2' } }),
@@ -226,6 +243,83 @@ describe('TaskPacksService', () => {
         replaced: 1,
         failed: 0,
       });
+    });
+
+    it('substituir (B-27): tudo numa transacao com o lock do user; anexos so saem depois do commit', async () => {
+      const { service, prisma, tasks } = setup();
+      prisma.taskPack.findUnique.mockResolvedValue(pack);
+      prisma.task.findMany.mockResolvedValue([
+        {
+          id: 'velha',
+          title: 'Outro',
+          areaId: 'official',
+          realGrade: null,
+          progressStatus: 'ON_TRACK',
+        },
+      ]);
+      await service.import('u2', 'code', {
+        replaceExisting: true,
+        items: [{ itemId: 'i1' }, { itemId: 'i2', areaId: 'mine' }],
+      });
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
+      // Os dois creates correm dentro da mesma transacao.
+      for (const call of tasks.create.mock.calls as unknown[][]) {
+        expect(call[2]).toMatchObject({ tx: prisma });
+      }
+      expect(tasks.removeAttachmentFiles).toHaveBeenCalledWith(['tasks/a.pdf']);
+      expect(tasks.bulkRemoveInTx.mock.invocationCallOrder[0]).toBeLessThan(
+        tasks.removeAttachmentFiles.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('substituir (B-27): uma falha parcial volta tudo atras e nada e apagado', async () => {
+      const { service, prisma, tasks } = setup();
+      prisma.taskPack.findUnique.mockResolvedValue(pack);
+      prisma.task.findMany.mockResolvedValue([
+        {
+          id: 'velha',
+          title: 'Outro',
+          areaId: 'official',
+          realGrade: null,
+          progressStatus: 'ON_TRACK',
+        },
+      ]);
+      tasks.create
+        .mockResolvedValueOnce({ id: 'nova' })
+        .mockRejectedValueOnce(new BadRequestException('Weight over 100%'));
+      const res = await service.import('u2', 'code', {
+        replaceExisting: true,
+        items: [{ itemId: 'i1' }, { itemId: 'i2', areaId: 'mine' }],
+      });
+      expect(tasks.bulkRemoveInTx).not.toHaveBeenCalled();
+      expect(tasks.removeAttachmentFiles).not.toHaveBeenCalled();
+      expect(prisma.taskPack.update).not.toHaveBeenCalled();
+      expect(res).toMatchObject({
+        created: 0,
+        failed: 2,
+        replaced: 0,
+        kept: 0,
+      });
+      expect(res.results[0]).toMatchObject({ itemId: 'i1', ok: false });
+      expect(res.results[0].error).toMatch(/nothing was replaced/);
+      expect(res.results[1]).toEqual({
+        itemId: 'i2',
+        ok: false,
+        error: 'Weight over 100%',
+      });
+    });
+
+    it('substituir: um erro interno no create vira mensagem generica', async () => {
+      const { service, prisma, tasks } = setup();
+      prisma.taskPack.findUnique.mockResolvedValue(pack);
+      prisma.task.findMany.mockResolvedValue([]);
+      tasks.create.mockRejectedValue(new Error('relation "Task" column x'));
+      const res = await service.import('u2', 'code', {
+        replaceExisting: true,
+        items: [{ itemId: 'i1' }],
+      });
+      expect(res.results[0].error).toBe('Could not create this task.');
     });
 
     it('substituir: se todos os creates falham, as tasks antigas nao sao apagadas', async () => {
@@ -245,7 +339,7 @@ describe('TaskPacksService', () => {
         replaceExisting: true,
         items: [{ itemId: 'i1' }],
       });
-      expect(tasks.bulkRemove).not.toHaveBeenCalled();
+      expect(tasks.bulkRemoveInTx).not.toHaveBeenCalled();
       expect(res).toMatchObject({ created: 0, failed: 1, replaced: 0 });
     });
 
@@ -270,9 +364,11 @@ describe('TaskPacksService', () => {
         expect.anything(),
         expect.objectContaining({ weightExcludeTaskIds: ['velha'] }),
       );
-      expect(tasks.bulkRemove).toHaveBeenCalledWith('u2', ['velha']);
+      expect(tasks.bulkRemoveInTx).toHaveBeenCalledWith(prisma, 'u2', [
+        'velha',
+      ]);
       expect(tasks.create.mock.invocationCallOrder[0]).toBeLessThan(
-        tasks.bulkRemove.mock.invocationCallOrder[0],
+        tasks.bulkRemoveInTx.mock.invocationCallOrder[0],
       );
     });
 
@@ -285,7 +381,7 @@ describe('TaskPacksService', () => {
         items: [{ itemId: 'i2', areaId: 'alheia' }],
       });
       expect(prisma.task.findMany).not.toHaveBeenCalled();
-      expect(tasks.bulkRemove).not.toHaveBeenCalled();
+      expect(tasks.bulkRemoveInTx).not.toHaveBeenCalled();
     });
 
     it('sem substituir nunca apaga', async () => {
@@ -293,6 +389,8 @@ describe('TaskPacksService', () => {
       prisma.taskPack.findUnique.mockResolvedValue(pack);
       await service.import('u2', 'code', { items: [{ itemId: 'i1' }] });
       expect(tasks.bulkRemove).not.toHaveBeenCalled();
+      expect(tasks.bulkRemoveInTx).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
     it('codigo inexistente => 404', async () => {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getDeviceSessions, revokeDeviceSession, revokeOtherDeviceSessions } from '../api/userService';
+import { getDeviceSessions, revokeDeviceSession, revokeOtherDeviceSessions } from '../api/authService';
 import type { DeviceSession } from '../types/models';
 
 interface UseDeviceSessionsReturn {

@@ -70,7 +70,7 @@ export default function GoogleCalendarCard() {
             <a
               href={`${apiUrl}/auth/google/link-calendar`}
               onClick={openAuthenticatedBackendFlow}
-              className="w-full sm:w-auto text-center rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 transition-colors"
+              className="w-full sm:w-auto text-center pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center pointer-coarse:justify-center rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 transition-colors"
             >
               {t('ui.connect')}
             </a>
@@ -79,7 +79,7 @@ export default function GoogleCalendarCard() {
           {connected === true && (
             <button
               onClick={() => setIsConfirmOpen(true)}
-              className="rounded-lg border border-neutral-700 text-neutral-400 hover:border-red-800 hover:text-red-400 text-sm font-medium px-4 py-2 transition-colors"
+              className="pointer-coarse:min-h-11 rounded-lg border border-neutral-700 text-neutral-400 hover:border-red-800 hover:text-red-400 text-sm font-medium px-4 py-2 transition-colors"
             >
               {t('ui.disconnect')}
             </button>

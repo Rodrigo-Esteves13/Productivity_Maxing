@@ -7,6 +7,12 @@ import { ENTRY_TYPE_ICON, useEntryTypeOptions } from '../../hooks/useEntryTypeOp
 import SegmentedControl, { type SegmentedOption } from '../UI/SegmentedControl';
 import EmptyState from '../UI/EmptyState';
 import { matchesQuery } from '../../lib/listFilter';
+import { useIncrementalReveal } from '../../hooks/useIncrementalReveal';
+import { minVisibleForIndex } from '../../lib/incrementalReveal';
+
+// Notas visiveis antes do "Mostrar mais": uma cadeira com muitas aulas nao
+// desenha a lista toda de uma vez.
+const ENTRIES_PER_PAGE = 30;
 
 /** Estado de partilha de uma nota (de "As minhas partilhas"). */
 export interface EntryShareBadge {
@@ -36,14 +42,27 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
     ...typeOptions,
   ];
 
+  // Procura no titulo e no preview (como a pesquisa global procura no conteudo).
+  const matching = useMemo(
+    () =>
+      entries.filter(
+        (e) => (typeFilter === 'ALL' || e.entryType === typeFilter) && matchesQuery(query, [e.title, e.preview]),
+      ),
+    [entries, typeFilter, query],
+  );
+  // A nota aberta (link, pesquisa, anterior/seguinte) fica sempre na lista.
+  const selectedPosition = matching.findIndex((e) => e.id === selectedId);
+  const { visibleCount, hasMore, showMore } = useIncrementalReveal(
+    matching.length,
+    ENTRIES_PER_PAGE,
+    `${typeFilter}|${query}`,
+    minVisibleForIndex(selectedPosition, ENTRIES_PER_PAGE),
+  );
+
   // Mantém a ordem vinda da API e agrupa por mês (secções contíguas).
   const groups = useMemo(() => {
-    // Procura no titulo e no preview (como a pesquisa global procura no conteudo).
-    const visible = entries.filter(
-      (e) => (typeFilter === 'ALL' || e.entryType === typeFilter) && matchesQuery(query, [e.title, e.preview]),
-    );
     const result: { key: string; label: string; items: NotebookEntrySummary[] }[] = [];
-    for (const entry of visible) {
+    for (const entry of matching.slice(0, visibleCount)) {
       const key = entry.date.slice(0, 7);
       const last = result[result.length - 1];
       if (last && last.key === key) {
@@ -54,7 +73,7 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
       }
     }
     return result;
-  }, [entries, typeFilter, query, lang]);
+  }, [matching, visibleCount, lang]);
 
   // Setas cima/baixo (e Home/End) andam pela lista visivel e abrem a nota,
   // como num explorador de ficheiros.
@@ -65,6 +84,11 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
     const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
     if (current === -1 || buttons.length === 0) return;
     event.preventDefault();
+    // Descer a partir da ultima visivel revela o bloco seguinte.
+    if (event.key === 'ArrowDown' && current === buttons.length - 1 && hasMore) {
+      showMore();
+      return;
+    }
     const next =
       event.key === 'Home'
         ? 0
@@ -123,7 +147,7 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
                       onPointerEnter={isSelected ? undefined : () => onPrefetch?.(entry.id)}
                       aria-current={isSelected ? 'true' : undefined}
                       aria-describedby="notebook-list-keys"
-                      className={`w-full rounded-md border-l-2 px-3 py-2 text-left text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 ${
+                      className={`w-full pointer-coarse:min-h-11 rounded-md border-l-2 px-3 py-2 text-left text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 ${
                         isSelected
                           ? 'border-violet-500 bg-violet-600/15 text-white'
                           : 'border-transparent text-neutral-300 hover:bg-neutral-800'
@@ -184,6 +208,15 @@ export default function NotebookEntryList({ entries, selectedId, onSelect, onPre
           </section>
         ))}
         </div>
+      )}
+      {hasMore && (
+        <button
+          type="button"
+          onClick={showMore}
+          className="w-full rounded-md px-3 py-1.5 text-sm text-violet-400 hover:bg-neutral-800 hover:text-violet-300 pointer-coarse:min-h-11"
+        >
+          {t('notebook.list.showMore', { remaining: matching.length - visibleCount })}
+        </button>
       )}
     </div>
   );

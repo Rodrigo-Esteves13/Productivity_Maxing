@@ -8,15 +8,17 @@ import {
   SESSION_MAX_ITEMS,
   type QuizSession,
 } from '../lib/quizSession';
+import { ACCOUNT_SCOPED_KEYS, accountStorageKey } from '../lib/storageKeys';
 
-// Tentativa a meio, guardada neste dispositivo para um refresh nao a perder
-// (o quiz em si fica na conta). So uma de cada vez.
-export const QUIZ_SESSION_STORAGE_KEY = 'pm-quiz-session';
+// Tudo aqui fica neste browser, separado por conta (accountStorageKey).
+// Tentativa a meio, guardada para um refresh nao a perder (o quiz em si fica
+// na conta). So uma de cada vez.
+const sessionKey = (): string => accountStorageKey(ACCOUNT_SCOPED_KEYS.quizSession);
 
 // Remove a sessao guardada (tambem usado quando uma sessao estragada rebenta a pagina).
 export function clearStoredQuizSession(): void {
   try {
-    localStorage.removeItem(QUIZ_SESSION_STORAGE_KEY);
+    localStorage.removeItem(sessionKey());
   } catch {
     // Sem storage: nada a limpar.
   }
@@ -26,12 +28,12 @@ export function clearStoredQuizSession(): void {
 // O quiz so e conhecido depois de carregar, a QuizDetail confere os ids e indices.
 function read(quizId: string): QuizSession | null {
   try {
-    const raw = localStorage.getItem(QUIZ_SESSION_STORAGE_KEY);
+    const raw = localStorage.getItem(sessionKey());
     if (!raw) return null;
     const stored: unknown = JSON.parse(raw);
     const session = typeof stored === 'object' && stored !== null ? parseStoredSession((stored as { session?: unknown }).session, null) : null;
     if (!session) {
-      localStorage.removeItem(QUIZ_SESSION_STORAGE_KEY);
+      localStorage.removeItem(sessionKey());
       return null;
     }
     return (stored as { quizId?: unknown }).quizId === quizId ? session : null;
@@ -46,8 +48,8 @@ export function useQuizSession(quizId: string) {
 
   useEffect(() => {
     try {
-      if (session) localStorage.setItem(QUIZ_SESSION_STORAGE_KEY, JSON.stringify({ quizId, session }));
-      else if (read(quizId)) localStorage.removeItem(QUIZ_SESSION_STORAGE_KEY);
+      if (session) localStorage.setItem(sessionKey(), JSON.stringify({ quizId, session }));
+      else if (read(quizId)) localStorage.removeItem(sessionKey());
     } catch {
       // Sem storage (modo privado): a tentativa fica so em memoria.
     }
@@ -59,11 +61,11 @@ export function useQuizSession(quizId: string) {
 
 // Erradas ja enviadas para as flashcards: quizId -> ids das perguntas. So neste
 // dispositivo, com limite de tamanho (ver quizSession.ts).
-const SENT_KEY = 'pm-quiz-cards-sent';
+const sentKey = (): string => accountStorageKey(ACCOUNT_SCOPED_KEYS.quizCardsSent);
 
 function readSentMap(): Record<string, string[]> {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(SENT_KEY) ?? '{}');
+    const parsed: unknown = JSON.parse(localStorage.getItem(sentKey()) ?? '{}');
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, string[]>) : {};
   } catch {
     return {};
@@ -84,7 +86,7 @@ export function useQuizCardsSent(quizId: string) {
         const all = readSentMap();
         delete all[quizId];
         const kept = Object.entries({ ...all, [quizId]: next }).slice(-QUIZ_CARDS_SENT_MAX_QUIZZES);
-        localStorage.setItem(SENT_KEY, JSON.stringify(Object.fromEntries(kept)));
+        localStorage.setItem(sentKey(), JSON.stringify(Object.fromEntries(kept)));
       } catch {
         // Sem storage: so vale nesta sessao.
       }
@@ -97,33 +99,32 @@ export function useQuizCardsSent(quizId: string) {
 
 // Mapas por quiz neste dispositivo (quizId -> valor), com limite de quizzes.
 // O que vem do storage nunca e confiado: quem le valida cada valor.
-function readQuizMap(key: string): Map<string, unknown> {
+function readQuizMap(base: string): Map<string, unknown> {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? '{}');
+    const parsed: unknown = JSON.parse(localStorage.getItem(accountStorageKey(base)) ?? '{}');
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? new Map(Object.entries(parsed)) : new Map();
   } catch {
     return new Map();
   }
 }
 
-function writeQuizMap(key: string, quizId: string, value: unknown): void {
+function writeQuizMap(base: string, quizId: string, value: unknown): void {
   try {
-    const all = readQuizMap(key);
+    const all = readQuizMap(base);
     all.delete(quizId);
     if (value !== null) all.set(quizId, value);
     const kept = [...all.entries()].slice(-QUIZ_CARDS_SENT_MAX_QUIZZES);
-    localStorage.setItem(key, JSON.stringify(Object.fromEntries(kept)));
+    localStorage.setItem(accountStorageKey(base), JSON.stringify(Object.fromEntries(kept)));
   } catch {
     // Sem storage: so vale nesta sessao.
   }
 }
 
 // Ultima resposta errada de cada pergunta (area de erradas), so neste dispositivo.
-const LAST_WRONG_KEY = 'pm-quiz-last-wrong';
 export type LastWrongAnswers = ReadonlyMap<string, QuizResponse>;
 
 function readLastWrong(quizId: string): Map<string, QuizResponse> {
-  const raw = readQuizMap(LAST_WRONG_KEY).get(quizId);
+  const raw = readQuizMap(ACCOUNT_SCOPED_KEYS.quizLastWrong).get(quizId);
   const out = new Map<string, QuizResponse>();
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   Object.entries(raw).slice(0, SESSION_MAX_ITEMS).forEach(([id, value]) => {
@@ -139,7 +140,7 @@ export function useQuizLastWrong(quizId: string) {
   const save = useCallback(
     (next: Map<string, QuizResponse>) => {
       setAnswers(next);
-      writeQuizMap(LAST_WRONG_KEY, quizId, next.size ? Object.fromEntries([...next].slice(-SESSION_MAX_ITEMS)) : null);
+      writeQuizMap(ACCOUNT_SCOPED_KEYS.quizLastWrong, quizId, next.size ? Object.fromEntries([...next].slice(-SESSION_MAX_ITEMS)) : null);
     },
     [quizId],
   );
@@ -171,10 +172,8 @@ export function useQuizLastWrong(quizId: string) {
 }
 
 // Perguntas do ultimo exame (o proximo evita repeti-las), so neste dispositivo.
-const LAST_EXAM_KEY = 'pm-quiz-last-exam';
-
 function readLastExam(quizId: string): string[] {
-  const raw = readQuizMap(LAST_EXAM_KEY).get(quizId);
+  const raw = readQuizMap(ACCOUNT_SCOPED_KEYS.quizLastExam).get(quizId);
   return Array.isArray(raw) ? raw.filter((id): id is string => typeof id === 'string').slice(0, SESSION_MAX_ITEMS) : [];
 }
 
@@ -184,7 +183,7 @@ export function useQuizLastExam(quizId: string) {
     (next: string[]) => {
       const kept = next.slice(0, SESSION_MAX_ITEMS);
       setIds(kept);
-      writeQuizMap(LAST_EXAM_KEY, quizId, kept);
+      writeQuizMap(ACCOUNT_SCOPED_KEYS.quizLastExam, quizId, kept);
     },
     [quizId],
   );
@@ -193,27 +192,24 @@ export function useQuizLastExam(quizId: string) {
 
 // Foco ligado ao quiz, so neste dispositivo: "nao perguntar mais" por quiz e a
 // sessao de foco que a tentativa abriu (para a fechar no fim).
-const FOCUS_OPTOUT_KEY = 'pm-quiz-focus-optout';
-const FOCUS_SESSION_KEY = 'pm-quiz-focus-session';
-
 export function useQuizFocusPrefs(quizId: string) {
-  const [optedOut, setOptedOutState] = useState<boolean>(() => readQuizMap(FOCUS_OPTOUT_KEY).get(quizId) === true);
+  const [optedOut, setOptedOutState] = useState<boolean>(() => readQuizMap(ACCOUNT_SCOPED_KEYS.quizFocusOptOut).get(quizId) === true);
   const [sessionId, setSessionIdState] = useState<string | null>(() => {
-    const raw = readQuizMap(FOCUS_SESSION_KEY).get(quizId);
+    const raw = readQuizMap(ACCOUNT_SCOPED_KEYS.quizFocusSession).get(quizId);
     return typeof raw === 'string' ? raw : null;
   });
 
   const setOptedOut = useCallback(
     (value: boolean) => {
       setOptedOutState(value);
-      writeQuizMap(FOCUS_OPTOUT_KEY, quizId, value ? true : null);
+      writeQuizMap(ACCOUNT_SCOPED_KEYS.quizFocusOptOut, quizId, value ? true : null);
     },
     [quizId],
   );
   const setSessionId = useCallback(
     (id: string | null) => {
       setSessionIdState(id);
-      writeQuizMap(FOCUS_SESSION_KEY, quizId, id);
+      writeQuizMap(ACCOUNT_SCOPED_KEYS.quizFocusSession, quizId, id);
     },
     [quizId],
   );

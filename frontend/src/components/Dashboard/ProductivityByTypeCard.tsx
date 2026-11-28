@@ -1,24 +1,17 @@
 import { useMemo } from 'react';
-import type { Task, AcademicTaskTypeOption } from '../../types/models';
 import { computeProductivityByType, NO_ACADEMIC_TYPE_KEY } from '../../utils/productivityByType';
 import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 import { ChartPieIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
-
-interface ProductivityByTypeCardProps {
-  tasks: Task[];
-  academicTaskTypes: AcademicTaskTypeOption[];
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 const MIN_TASKS_TO_SHOW = 5;
 
 // Which kinds of work get finished, and on time, versus which ones slip.
 // Same "on time" definition as DeadlineComplianceCard (shared helper).
-export default function ProductivityByTypeCard({
-  tasks,
-  academicTaskTypes,
-}: ProductivityByTypeCardProps) {
+export default function ProductivityByTypeCard() {
+  const { academicTasks: tasks, academicTaskTypes } = useDashboardCardData();
   const { t } = useI18n();
   const { catalogLabel } = useCatalogLabel();
   const rows = useMemo(
@@ -46,7 +39,9 @@ export default function ProductivityByTypeCard({
           <tbody>
             {rows.slice(0, 8).map((row) => (
               <tr key={row.key} className="border-t border-neutral-800">
-                <td className="py-1.5 pr-2 text-neutral-200 truncate max-w-[9rem]">
+                <td className="py-1.5 pr-2 text-neutral-200 truncate max-w-[9rem]" title={row.key === NO_ACADEMIC_TYPE_KEY
+                    ? t('taskType.OTHER')
+                    : catalogLabel('academicType', row.key, row.label)}>
                   {row.key === NO_ACADEMIC_TYPE_KEY
                     ? t('taskType.OTHER')
                     : catalogLabel('academicType', row.key, row.label)}

@@ -40,6 +40,16 @@ import {
   SocialSettingsDto,
 } from './dto/social.dto';
 import { perMinute } from '../common/throttle.util';
+import {
+  FRIEND_LINK_CREATES_PER_MINUTE,
+  FRIEND_LINK_PREVIEWS_PER_MINUTE,
+  FRIEND_LINK_ACCEPTS_PER_MINUTE,
+  FRIEND_CODE_CHANGE_REQUESTS_PER_MINUTE,
+  FRIEND_REQUESTS_PER_MINUTE,
+  FRIEND_EMAIL_REQUESTS_PER_MINUTE,
+  CLASSMATE_REQUESTS_PER_MINUTE,
+  USER_BLOCKS_PER_MINUTE,
+} from './social.constants';
 
 @ApiTags('Social')
 @ApiBearerAuth()
@@ -87,7 +97,7 @@ export class SocialController {
   }
 
   @Get('friend-link')
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(FRIEND_LINK_CREATES_PER_MINUTE))
   @ApiOperation({
     summary:
       'A signed link with your friend code, valid 7 days: whoever opens it and accepts becomes your friend straight away.',
@@ -98,7 +108,7 @@ export class SocialController {
 
   // Throttle apertado: sem ele dava para testar codigos as cegas.
   @Get('friend-link/preview')
-  @Throttle(perMinute(20))
+  @Throttle(perMinute(FRIEND_LINK_PREVIEWS_PER_MINUTE))
   @ApiOperation({
     summary: 'Who a friend link belongs to and whether accepting is instant.',
   })
@@ -111,7 +121,7 @@ export class SocialController {
 
   @Post('friend-link/accept')
   @HttpCode(HttpStatus.OK)
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(FRIEND_LINK_ACCEPTS_PER_MINUTE))
   @ApiOperation({
     summary:
       'Accepts a friend link: friends at once while the link is signed and valid, otherwise a normal request.',
@@ -125,7 +135,7 @@ export class SocialController {
 
   @Post('friend-code/change-request')
   @HttpCode(HttpStatus.OK)
-  @Throttle(perMinute(5))
+  @Throttle(perMinute(FRIEND_CODE_CHANGE_REQUESTS_PER_MINUTE))
   @ApiOperation({
     summary: 'Ask an admin to change your friend code (a reason is required).',
   })
@@ -138,7 +148,7 @@ export class SocialController {
 
   @Post('requests')
   @HttpCode(HttpStatus.OK)
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(FRIEND_REQUESTS_PER_MINUTE))
   @ApiOperation({
     summary: "Send a friend request using the other person's friend code.",
   })
@@ -153,7 +163,7 @@ export class SocialController {
   // resposta e sempre a mesma, exista a conta ou nao.
   @Post('requests/email')
   @HttpCode(HttpStatus.OK)
-  @Throttle(perMinute(5))
+  @Throttle(perMinute(FRIEND_EMAIL_REQUESTS_PER_MINUTE))
   @ApiOperation({
     summary:
       'Send a friend request to whoever has this email. Always answers the same, so it never reveals who has an account.',
@@ -168,7 +178,7 @@ export class SocialController {
   // Antes de requests/:id/accept: caminho literal no mesmo verbo.
   @Post('requests/classmate')
   @HttpCode(HttpStatus.OK)
-  @Throttle(perMinute(10))
+  @Throttle(perMinute(CLASSMATE_REQUESTS_PER_MINUTE))
   @ApiOperation({
     summary: 'Send a friend request to someone in a class you are both in.',
   })
@@ -200,7 +210,7 @@ export class SocialController {
 
   @Post('blocks')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Throttle(perMinute(20))
+  @Throttle(perMinute(USER_BLOCKS_PER_MINUTE))
   block(@CurrentUser() user: AuthenticatedUser, @Body() dto: BlockUserDto) {
     return this.social.block(user.id, dto.userId);
   }

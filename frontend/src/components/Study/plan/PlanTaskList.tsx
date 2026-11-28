@@ -49,10 +49,10 @@ export default function PlanTaskList({ tasks, calibrationFactor, onEstimateSaved
             <li key={task.taskId} className="rounded-lg bg-neutral-800/40 p-2.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm text-neutral-200 truncate">{task.title}</p>
+                  <p className="text-sm text-neutral-200 truncate" title={task.title}>{task.title}</p>
                   <p className="text-xs text-neutral-500 flex items-center gap-1.5">
                     <ColorDot size="xs" color={task.areaColorHex} />
-                    <span className="truncate">{task.areaName}</span>
+                    <span className="truncate" title={task.areaName}>{task.areaName}</span>
                     <span>{t('ui.due', { deadline: formatDayLabel(task.deadline) })}</span>
                   </p>
                 </div>
@@ -106,12 +106,12 @@ export default function PlanTaskList({ tasks, calibrationFactor, onEstimateSaved
       {(hasMore || canCollapse) && (
         <div className="mt-2 flex items-center justify-center gap-4 text-sm">
           {hasMore && (
-            <button type="button" onClick={showMore} className="text-violet-400 hover:text-violet-300">
+            <button type="button" onClick={showMore} className="text-violet-400 hover:text-violet-300 pointer-coarse:min-h-11">
               {t('ui.showMoreTasksLeft', { remaining: tasks.length - visibleCount })}
             </button>
           )}
           {canCollapse && (
-            <button type="button" onClick={collapse} className="text-neutral-400 hover:text-neutral-200">
+            <button type="button" onClick={collapse} className="text-neutral-400 hover:text-neutral-200 pointer-coarse:min-h-11">
               {t('ui.showLess')}
             </button>
           )}

@@ -88,7 +88,7 @@ export default function DistractionStatsCard({ stats, isLoading, error }: Props)
                   <div className="flex items-center justify-between gap-2 text-sm">
                     <span className="flex min-w-0 items-center gap-2 text-neutral-200">
                       {colorHex && <ColorDot color={colorHex} size="xs" />}
-                      <span className="truncate">{label}</span>
+                      <span className="truncate" title={label}>{label}</span>
                       {bucket.lowSample && (
                         <span
                           title={t('distractionStats.earlySignalHint', { min: stats.minSessions })}

@@ -3,4 +3,6 @@ export const uxSearch: Record<string, string> = {
   "search.noResults": "没有符合此搜索的结果。",
   "search.noResultsFor": "没有符合\"{query}\"的结果。",
   "search.count": "共 {total} 项，显示 {shown} 项",
+  "palette.addClass": "添加课程",
+  "palette.sendFeedback": "发送反馈",
 };

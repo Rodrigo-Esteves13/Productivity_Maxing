@@ -5,7 +5,7 @@ import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
 import FormError from '../components/UI/FormError';
 import AuthCard from '../components/Auth/AuthCard';
-import { completePasswordLinkRequest } from '../api/userService';
+import { completePasswordLinkRequest } from '../api/authService';
 import { getApiCode } from '../lib/httpError';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useI18n } from '../i18n/useI18n';

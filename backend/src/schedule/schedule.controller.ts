@@ -34,6 +34,7 @@ import { perMinute } from '../common/throttle.util';
 import { DateRangeQueryDto } from '../common/dto/date-range-query.dto';
 import { isRealDateKey, parseDateKey } from '../common/date-key.util';
 import {
+  SCHEDULE_CLASS_WRITES_PER_MINUTE,
   SCHEDULE_COMMUTE_PER_MINUTE,
   SCHEDULE_IMPORT_PER_MINUTE,
 } from './schedule.constants';
@@ -169,6 +170,7 @@ export class ScheduleController {
 
   // Literal antes das rotas com :id.
   @Post('class')
+  @Throttle(perMinute(SCHEDULE_CLASS_WRITES_PER_MINUTE))
   @ApiOperation({ summary: 'Creates one class by hand (no .ics needed).' })
   createClass(
     @CurrentUser() user: AuthenticatedUser,
@@ -178,6 +180,7 @@ export class ScheduleController {
   }
 
   @Patch(':id')
+  @Throttle(perMinute(SCHEDULE_CLASS_WRITES_PER_MINUTE))
   @ApiOperation({ summary: 'Edits one class (subject, day, time, room).' })
   updateClass(
     @CurrentUser() user: AuthenticatedUser,
@@ -188,6 +191,7 @@ export class ScheduleController {
   }
 
   @Delete(':id')
+  @Throttle(perMinute(SCHEDULE_CLASS_WRITES_PER_MINUTE))
   @ApiOperation({ summary: 'Deletes one class.' })
   deleteClass(
     @CurrentUser() user: AuthenticatedUser,

@@ -25,7 +25,7 @@ export default function GreetingPrefsSection() {
           maxLength={GREETING_CUSTOM_MAX_LENGTH}
           onChange={(e) => setCustomGreeting(e.target.value)}
           placeholder={t('greeting.pref.customPlaceholder')}
-          className="mt-2 w-full rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm text-neutral-200 focus:outline-none focus:border-violet-600"
+          className="mt-2 w-full pointer-coarse:min-h-11 rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm text-neutral-200 focus:outline-none focus:border-violet-600"
         />
         <p className="mt-1 text-xs text-neutral-500">
           {t('greeting.pref.customHelp', { max: GREETING_CUSTOM_MAX_LENGTH })}

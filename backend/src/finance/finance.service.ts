@@ -41,6 +41,7 @@ import {
   UpdateFinanceSettingsDto,
 } from './dto/finance.dto';
 import type {
+  FinanceAccountLinks,
   FinanceImportResult,
   FinanceOwedPaymentUndoResult,
 } from './finance.contract';
@@ -1489,11 +1490,30 @@ export class FinanceService {
   }
 
   // Entradas e posicoes ligadas ficam sem conta (onDelete: SetNull).
-  async removeAccount(userId: string, id: string): Promise<void> {
-    const { count } = await this.prisma.financeAccount.deleteMany({
-      where: { id, userId },
+  // Devolve o que estava ligado, para o Anular poder religar.
+  async removeAccount(
+    userId: string,
+    id: string,
+  ): Promise<FinanceAccountLinks> {
+    return this.prisma.$transaction(async (tx) => {
+      const where = { userId, accountId: id };
+      const entries = await tx.financeEntry.findMany({
+        where,
+        select: { id: true },
+      });
+      const holdings = await tx.financeHolding.findMany({
+        where,
+        select: { id: true },
+      });
+      const { count } = await tx.financeAccount.deleteMany({
+        where: { id, userId },
+      });
+      if (count === 0) throw new NotFoundException('Account not found.');
+      return {
+        entryIds: entries.map((e) => e.id),
+        holdingIds: holdings.map((h) => h.id),
+      };
     });
-    if (count === 0) throw new NotFoundException('Account not found.');
   }
 
   private async findHolding(userId: string, id: string) {

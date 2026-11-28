@@ -84,7 +84,7 @@ export default function Agent() {
         >
           <Link
             to="/developer"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-semibold text-white transition-colors"
+            className="inline-flex pointer-coarse:min-h-11 items-center gap-2 px-4 py-2.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-sm font-semibold text-white transition-colors"
           >
             {t('ui.manageApiKeys2')}
           </Link>

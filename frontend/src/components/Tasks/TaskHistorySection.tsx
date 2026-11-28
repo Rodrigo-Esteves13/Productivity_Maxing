@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react';
-import api from '../../api/client';
+import { getTaskChanges } from '../../api/taskHistoryService';
 import LinesSkeleton from '../UI/LinesSkeleton';
-import { useLoadOnce } from '../../hooks/useLoadOnce';
+import { useLoadAbortable } from '../../hooks/useLoadOnce';
 import { useEnumLabel } from '../../hooks/useEnumLabel';
 import { useI18n } from '../../i18n/useI18n';
-import { formatChangeValue, isOpaqueField, type TaskChange } from '../../lib/taskHistory';
+import { formatChangeValue, isOpaqueField } from '../../lib/taskHistory';
 
 interface TaskHistorySectionProps {
   taskId: string;
@@ -13,11 +13,8 @@ interface TaskHistorySectionProps {
 function HistoryList({ taskId }: TaskHistorySectionProps) {
   const { t, lang } = useI18n();
   const enumLabel = useEnumLabel();
-  const fetcher = useCallback(
-    async () => (await api.get<TaskChange[]>(`/tasks/${encodeURIComponent(taskId)}/changes`)).data,
-    [taskId],
-  );
-  const { data, isLoading, error } = useLoadOnce(fetcher);
+  const fetcher = useCallback((signal: AbortSignal) => getTaskChanges(taskId, signal), [taskId]);
+  const { data, isLoading, error } = useLoadAbortable(fetcher);
 
   if (isLoading) return <LinesSkeleton lines={3} />;
   if (error) return <p className="text-sm text-neutral-400">{t('taskHistory.error')}</p>;

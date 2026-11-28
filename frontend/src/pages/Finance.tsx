@@ -118,7 +118,18 @@ function FinanceContent() {
     [request, t],
   );
 
-  const { removeEntry, removeGoal, removeAccount, removeHolding } = finance;
+  const { removeEntry, removeEntries, removeGoal, removeAccount, removeHolding } = finance;
+  const requestRemoveEntries = useCallback(
+    (entries: FinanceEntry[]) =>
+      confirmDelete(
+        t('f7money.deleteSelectedTitle'),
+        t(entries.some((e) => e.frequency) ? 'f7money.deleteSelectedRulesConfirm' : 'f7money.deleteSelectedConfirm', {
+          count: entries.length,
+        }),
+        () => removeEntries(entries.map((e) => e.id)),
+      ),
+    [confirmDelete, removeEntries, t],
+  );
   const requestRemoveEntry = useCallback(
     (entry: FinanceEntry) =>
       confirmDelete(
@@ -213,6 +224,7 @@ function FinanceContent() {
             onAdd={finance.addEntry}
             onUpdate={finance.updateEntry}
             onRemove={requestRemoveEntry}
+            onRemoveMany={requestRemoveEntries}
           />
           <FinanceOwed
             owed={data.owed}

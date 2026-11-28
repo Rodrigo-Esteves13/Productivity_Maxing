@@ -1,4 +1,4 @@
-import type { SharedWithMeRole } from '../../api/notebookService';
+import type { SharedWithMeRole } from '../../api/notebookShareService';
 
 export const ROLE_KEY: Record<SharedWithMeRole, string> = {
   VIEWER: 'sharedWithMe.role.viewer',

@@ -11,12 +11,7 @@ import ProgressBar from '../UI/ProgressBar';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
 import ColorDot from '../UI/ColorDot';
 import { useI18n } from '../../i18n/useI18n';
-
-interface AreaBreakdownCardProps {
-  tasks: Task[];
-  areas: Area[];
-  scale: string;
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 interface AreaRow {
   area: Area;
@@ -76,7 +71,8 @@ function computeGradeHistory(tasks: Task[]): number[] {
     .map((t) => t.realGrade!);
 }
 
-export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdownCardProps) {
+export default function AreaBreakdownCard() {
+  const { academicTasks: tasks, academicAreas: areas, gradeScale: scale } = useDashboardCardData();
   const { t } = useI18n();
   const max = scaleMax(scale);
   const components = usePeriodGradeComponents();
@@ -116,7 +112,7 @@ export default function AreaBreakdownCard({ tasks, areas, scale }: AreaBreakdown
               <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
                 <span className="flex min-w-0 items-center gap-2">
                   <ColorDot size="xs" color={area.colorHex} />
-                  <span className="truncate text-neutral-200">{area.name}</span>
+                  <span className="truncate text-neutral-200" title={area.name}>{area.name}</span>
                 </span>
                 <span className="text-xs text-neutral-500 shrink-0">
                   {area.credits ? t('ui.nCredits', { count: area.credits }) : t('ui.noCreditsSet')}

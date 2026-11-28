@@ -42,7 +42,7 @@ const STATUS_CLASS: Record<WorkloadStatus, string> = {
 
 // Slider com area de toque grande: largura total no telemovel, thumb de 20px.
 const SLIDER_CLASS = [
-  'h-8 w-full sm:w-28 cursor-pointer appearance-none bg-transparent',
+  'h-8 pointer-coarse:h-11 w-full sm:w-28 cursor-pointer appearance-none bg-transparent',
   'focus-visible:outline-2 focus-visible:outline-violet-500',
   '[&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-neutral-700',
   '[&::-webkit-slider-thumb]:-mt-[7px] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-violet-500',
@@ -103,7 +103,7 @@ function LineBody({
   return (
     <>
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-        <span className={`min-w-0 max-w-full truncate text-sm ${strong ? 'font-semibold text-neutral-100' : 'text-neutral-200'}`}>
+        <span className={`min-w-0 max-w-full truncate text-sm ${strong ? 'font-semibold text-neutral-100' : 'text-neutral-200'}`} title={name}>
           {name}
         </span>
         {line.status && (
@@ -199,7 +199,7 @@ function EctsWorkloadBody() {
         <p className="text-sm text-neutral-400">{t('ectsWorkload.empty')}</p>
         <PrefetchLink
           to="/areas"
-          className="mt-2 inline-block text-xs text-violet-400 underline transition-colors hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
+          className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center mt-2 inline-block text-xs text-violet-400 underline transition-colors hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
         >
           {t('ectsWorkload.emptyLink')}
         </PrefetchLink>
@@ -227,7 +227,7 @@ function EctsWorkloadBody() {
           <button
             type="button"
             onClick={resetHours}
-            className="text-violet-400 underline decoration-dotted hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
+            className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center text-violet-400 underline decoration-dotted hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
           >
             {t('ectsWorkload.reset')}
           </button>
@@ -265,7 +265,7 @@ function EctsWorkloadBody() {
           {t('ectsWorkload.unlinked', { count: unlinked })}{' '}
           <PrefetchLink
             to="/notebook"
-            className="text-violet-400 underline decoration-dotted transition-colors hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
+            className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center text-violet-400 underline decoration-dotted transition-colors hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
           >
             {t('ectsWorkload.linkHint')}
           </PrefetchLink>

@@ -12,6 +12,7 @@ export default function TagChips({ tags }: { tags?: string[] }) {
       {tags.slice(0, VISIBLE).map((tag) => (
         <span
           key={tag}
+          title={`#${tag}`}
           className="max-w-[7rem] truncate rounded-full bg-neutral-800 px-2 py-0.5 text-[11px] text-neutral-300"
         >
           #{tag}

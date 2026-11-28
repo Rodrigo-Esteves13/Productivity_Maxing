@@ -29,6 +29,7 @@ export default function Developer() {
     newlyCreatedKey,
     createKey,
     removeKey,
+    renameKey,
     reload,
     clearNewKey,
   } = useApiKeys();
@@ -107,7 +108,7 @@ export default function Developer() {
       ) : keys.length === 0 ? (
         <EmptyState message={t('ui.youDonTHaveAny')} />
       ) : (
-        <ApiKeysTable keys={keys} onRevoke={handleRevoke} />
+        <ApiKeysTable keys={keys} onRevoke={handleRevoke} onRename={renameKey} />
       )}
 
       {newlyCreatedKey && (

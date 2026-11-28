@@ -5,9 +5,15 @@ import Button from '../UI/Button';
 import FormError from '../UI/FormError';
 import { packShareUrl, type PackSyncResult, type TaskPackSummary } from '../../api/taskPackService';
 import { useI18n } from '../../i18n/useI18n';
+import EditPackItemsModal from './EditPackItemsModal';
+import type { Area, Task } from '../../types/models';
 
 interface Props {
   packs: TaskPackSummary[];
+  tasks: Task[];
+  areas: Area[];
+  onItemCount: (id: string, count: number) => void;
+  onTasksChanged: () => Promise<void>;
   onDelete: (id: string) => Promise<boolean>;
   onRename: (id: string, name: string) => Promise<boolean>;
   onPublish: (id: string) => Promise<PackSyncResult | null>;
@@ -15,10 +21,20 @@ interface Props {
 
 const MAX_NAME_LENGTH = 80;
 
-export default function TaskPackList({ packs, onDelete, onRename, onPublish }: Props) {
+export default function TaskPackList({
+  packs,
+  tasks,
+  areas,
+  onDelete,
+  onRename,
+  onPublish,
+  onItemCount,
+  onTasksChanged,
+}: Props) {
   const { t, lang } = useI18n();
   const [renaming, setRenaming] = useState<TaskPackSummary | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [editing, setEditing] = useState<TaskPackSummary | null>(null);
   const [renameError, setRenameError] = useState('');
   const [isRenaming, setIsRenaming] = useState(false);
   // Links por pacote: para os selecionar quando o clipboard nao deixa copiar.
@@ -103,7 +119,7 @@ export default function TaskPackList({ packs, onDelete, onRename, onPublish }: P
         <li key={pack.id} className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="truncate font-medium text-white">{pack.name}</p>
+              <p className="truncate font-medium text-white" title={pack.name}>{pack.name}</p>
               <p className="mt-1 text-xs text-neutral-500">
                 {t('packs.list.meta', {
                   items: t(pack.itemCount === 1 ? 'packs.list.itemsOne' : 'packs.list.itemsMany', { count: pack.itemCount }),
@@ -128,6 +144,13 @@ export default function TaskPackList({ packs, onDelete, onRename, onPublish }: P
                 className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-500 pointer-coarse:min-h-11"
               >
                 {t('ux4packs.rename.button')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditing(pack)}
+                className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-500 pointer-coarse:min-h-11"
+              >
+                {t('f7Study.packs.editTasks')}
               </button>
               <button
                 type="button"
@@ -207,6 +230,17 @@ export default function TaskPackList({ packs, onDelete, onRename, onPublish }: P
         </div>
       </form>
     </Modal>
+    {editing && (
+      <EditPackItemsModal
+        key={editing.id}
+        pack={editing}
+        tasks={tasks}
+        areas={areas}
+        onClose={() => setEditing(null)}
+        onItemCount={onItemCount}
+        onTasksChanged={onTasksChanged}
+      />
+    )}
     </>
   );
 }

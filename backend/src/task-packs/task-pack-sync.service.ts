@@ -31,6 +31,12 @@ export interface PackSyncResult {
   proposalsCreated: number;
 }
 
+export interface ChangedPackItem {
+  item: { id: string; version: number };
+  next: PackSharedFields;
+  itemChanges: PackChanges;
+}
+
 export interface PackUpdateView {
   id: string;
   taskId: string;
@@ -76,7 +82,7 @@ const fromTask = (t: SharedRow & { date: Date }): PackSharedFields => ({
   submissionDate: iso(t.submissionDate),
 });
 
-const fromItem = (i: SharedRow & { dueDate: Date }): PackSharedFields =>
+export const fromItem = (i: SharedRow & { dueDate: Date }): PackSharedFields =>
   fromTask({ ...i, date: i.dueDate });
 
 /** Campos de `next` diferentes de `prev` (com o valor de `next`). */
@@ -144,6 +150,18 @@ export class TaskPackSyncService {
    */
   async publish(ownerId: string, packId: string): Promise<PackSyncResult> {
     await this.linkLegacyItems(ownerId, packId);
+    return this.publishItems(ownerId, packId);
+  }
+
+  /**
+   * Publica as diferencas entre os itens e as tasks de origem (todos, ou so
+   * `itemIds`). Nao liga pacotes antigos: quem chama faz isso antes.
+   */
+  async publishItems(
+    ownerId: string,
+    packId: string,
+    itemIds?: string[],
+  ): Promise<PackSyncResult> {
     const pack = await this.prisma.taskPack.findFirst({
       where: { id: packId, ownerId },
       select: {
@@ -153,7 +171,10 @@ export class TaskPackSyncService {
         items: {
           // Só tasks de origem do próprio dono (IDOR em profundidade: o
           // item foi criado assim, mas o filtro não custa nada).
-          where: { sourceTask: { userId: ownerId } },
+          where: {
+            sourceTask: { userId: ownerId },
+            ...(itemIds ? { id: { in: itemIds } } : {}),
+          },
           select: {
             id: true,
             version: true,
@@ -172,16 +193,26 @@ export class TaskPackSyncService {
     });
     if (!pack) throw new NotFoundException('Task pack not found.');
 
-    let updatedItems = 0;
-    let proposalsCreated = 0;
-    const notifyUserIds = new Set<string>();
-
     const changedItems = pack.items.flatMap((item) => {
       if (!item.sourceTask) return [];
       const itemChanges = diffShared(fromItem(item), fromTask(item.sourceTask));
       if (Object.keys(itemChanges).length === 0) return [];
       return [{ item, next: fromTask(item.sourceTask), itemChanges }];
     });
+    return this.propagate(pack, changedItems);
+  }
+
+  /**
+   * Grava os novos valores nos itens (versao +1) e cria um pedido para cada
+   * colega que os importou. Quem chama ja validou a posse do pacote.
+   */
+  async propagate(
+    pack: { id: string; name: string; owner: { name: string | null } },
+    changedItems: ChangedPackItem[],
+  ): Promise<PackSyncResult> {
+    let updatedItems = 0;
+    let proposalsCreated = 0;
+    const notifyUserIds = new Set<string>();
     // Um so pedido para as tasks importadas de todos os itens alterados.
     const importedByItem = await this.loadImportedTasks(
       changedItems.map((c) => c.item.id),
@@ -292,7 +323,7 @@ export class TaskPackSyncService {
    *   item (o import copia-a ao milissegundo), ainda sem ligacao, e na mesma
    *   Area oficial quando a ha. Cada uma so recebe um pedido para aprovar.
    */
-  private async linkLegacyItems(ownerId: string, packId: string) {
+  async linkLegacyItems(ownerId: string, packId: string) {
     const items = await this.prisma.taskPackItem.findMany({
       where: { packId, pack: { ownerId }, sourceTaskId: null },
       select: {

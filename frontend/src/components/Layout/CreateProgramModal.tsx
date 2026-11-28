@@ -5,6 +5,7 @@ import Input from '../UI/Input';
 import Button from '../UI/Button';
 import FormError from '../UI/FormError';
 import { useI18n } from '../../i18n/useI18n';
+import { getApiMessage } from '../../lib/httpError';
 
 interface CreateProgramModalProps {
   isOpen: boolean;
@@ -35,8 +36,8 @@ export default function CreateProgramModal({ isOpen, onClose, onCreate }: Create
     try {
       await onCreate(name.trim(), roundFinalGrade);
       handleClose();
-    } catch {
-      setError(t('program.create.error'));
+    } catch (err) {
+      setError(getApiMessage(err, t('program.create.error')));
     } finally {
       setIsSubmitting(false);
     }

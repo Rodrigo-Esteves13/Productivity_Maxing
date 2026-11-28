@@ -7,17 +7,17 @@ import { todayUtcAnchored } from '../lib/weekDates';
 import { translateNow } from '../i18n/translate';
 import type { ClassOccurrence } from '../types/models';
 import { useWorkShiftRange } from './useWorkShiftRange';
-import { useScheduleTasks } from './useScheduleTasks';
+import type { ScheduleTasksState } from './useScheduleTasks';
 
 // Dados da vista mensal: as mesmas aulas (/schedule) e turnos
 // (/work-shifts/range) da grelha semanal, so que para as 4 a 6 semanas da
-// grelha do mes, mais os prazos das tasks (useScheduleTasks).
-export function useMonthAgenda(initialDate: Date, refreshKey: number) {
+// grelha do mes, mais os prazos das tasks (useScheduleTasks, na pagina).
+export function useMonthAgenda(initialDate: Date, refreshKey: number, scheduleTasks: ScheduleTasksState) {
   const [monthStart, setMonthStart] = useState(() => startOfMonth(initialDate));
   const [classes, setClasses] = useState<ClassOccurrence[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(true);
   const [classesError, setClassesError] = useState('');
-  const { tasks, isLoading: isLoadingTasks, error: tasksError } = useScheduleTasks();
+  const { tasks, isLoading: isLoadingTasks, error: tasksError } = scheduleTasks;
 
   const days = useMemo(() => monthGridDays(monthStart), [monthStart]);
   const fromKey = days[0].key;

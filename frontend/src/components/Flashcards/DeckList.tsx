@@ -13,9 +13,11 @@ interface DeckListProps {
   onEdit: (card: Flashcard) => void;
   onRemove: (card: Flashcard) => void;
   sort?: CardSort;
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string) => void;
 }
 
-export default function DeckList({ cards, areaById, onEdit, onRemove, sort = DEFAULT_CARD_SORT }: DeckListProps) {
+export default function DeckList({ cards, areaById, onEdit, onRemove, sort = DEFAULT_CARD_SORT, selectedIds, onToggleSelect }: DeckListProps) {
   const { t } = useI18n();
   const now = Date.now();
 
@@ -38,6 +40,15 @@ export default function DeckList({ cards, areaById, onEdit, onRemove, sort = DEF
                   key={card.id}
                   className="flex items-start gap-3 rounded-xl border border-neutral-800 bg-neutral-900/50 p-3"
                 >
+                  <label className="-m-2 flex shrink-0 cursor-pointer items-center justify-center p-2 pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(card.id)}
+                      onChange={() => onToggleSelect(card.id)}
+                      aria-label={t('ux4global.cards.select', { front: card.front })}
+                      className="h-4 w-4 accent-violet-600"
+                    />
+                  </label>
                   <div className="min-w-0 flex-1">
                     <p className="break-words font-medium text-white">{card.front}</p>
                     <p className="mt-1 line-clamp-2 whitespace-pre-wrap break-words text-sm text-neutral-400">

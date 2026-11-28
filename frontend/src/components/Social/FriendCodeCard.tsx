@@ -99,7 +99,7 @@ export default function FriendCodeCard({ code, request, onRequestChange }: Props
         <button
           type="button"
           onClick={() => void copy()}
-          className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500"
+          className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500 pointer-coarse:min-h-11"
         >
           {copied ? t('packs.list.copied') : t('social.code.copy')}
         </button>
@@ -107,13 +107,13 @@ export default function FriendCodeCard({ code, request, onRequestChange }: Props
           type="button"
           disabled={isSharing}
           onClick={() => void shareLink()}
-          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-3 py-1.5 text-sm font-medium text-neutral-200 hover:border-violet-500/60 hover:text-white disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-3 py-1.5 text-sm font-medium text-neutral-200 hover:border-violet-500/60 hover:text-white disabled:opacity-50 pointer-coarse:min-h-11"
         >
           <LinkIcon className="h-4 w-4" aria-hidden="true" />
           {t('social.link.share')}
         </button>
         {!pending && !isAsking && (
-          <button type="button" onClick={() => setIsAsking(true)} className="text-sm text-neutral-400 hover:text-white">
+          <button type="button" onClick={() => setIsAsking(true)} className="text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
             {t('social.code.request')}
           </button>
         )}
@@ -152,11 +152,11 @@ export default function FriendCodeCard({ code, request, onRequestChange }: Props
               type="button"
               disabled={!canSend}
               onClick={() => void send()}
-              className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+              className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50 pointer-coarse:min-h-11"
             >
               {t('social.code.send')}
             </button>
-            <button type="button" onClick={() => setIsAsking(false)} className="text-sm text-neutral-400 hover:text-white">
+            <button type="button" onClick={() => setIsAsking(false)} className="text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
               {t('common.cancel')}
             </button>
           </div>

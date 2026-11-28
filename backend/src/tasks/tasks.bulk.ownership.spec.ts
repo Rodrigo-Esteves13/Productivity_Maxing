@@ -180,6 +180,33 @@ describe('TasksService.bulkRemove / bulkReschedule ownership', () => {
     expect(await service.bulkRemove('u1', ['foreign'])).toEqual({ count: 0 });
   });
 
+  it('bulkRemoveInTx scopes both reads and the delete by userId and leaves storage alone', async () => {
+    const { service, removeFilesForTasks } = setup();
+    const tx = {
+      taskAttachment: {
+        findMany: jest.fn().mockResolvedValue([{ storagePath: 'tasks/x' }]),
+      },
+      task: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    };
+
+    const result = await service.bulkRemoveInTx(tx as never, 'u1', [
+      'mine',
+      'foreign',
+    ]);
+
+    expect(result).toEqual({ count: 1, storagePaths: ['tasks/x'] });
+    expect(whereOf(tx.taskAttachment.findMany)).toEqual({
+      userId: 'u1',
+      taskId: { in: ['mine', 'foreign'] },
+    });
+    expect(whereOf(tx.task.deleteMany)).toEqual({
+      id: { in: ['mine', 'foreign'] },
+      userId: 'u1',
+    });
+    // O storage so e limpo pelo chamador depois do commit.
+    expect(removeFilesForTasks).not.toHaveBeenCalled();
+  });
+
   it('bulkReschedule: every updateMany carries userId and skips COMPLETED', async () => {
     const { prisma, service } = setup();
     const result = await service.bulkReschedule(

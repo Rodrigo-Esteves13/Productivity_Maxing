@@ -1,8 +1,8 @@
 import type { Role, User, UserStatus } from '../types/models';
 import type { SortDirection } from './sortDirection';
 
-// Logica pura das listas de admin (utilizadores, feedback): filtrar, ordenar
-// e paginar no cliente. Sem React para ser testavel.
+// Logica pura das listas de admin (utilizadores, feedback): filtros e pedido
+// da pagina. Sem React para ser testavel.
 
 export const ALL_FILTER = 'all';
 export type AllOr<T extends string> = T | typeof ALL_FILTER;
@@ -10,6 +10,9 @@ export type AllOr<T extends string> = T | typeof ALL_FILTER;
 export type UserSortKey = 'name' | 'joined';
 export const USER_SORT_KEYS: UserSortKey[] = ['name', 'joined'];
 export const USERS_PAGE_SIZE = 20;
+// Tem de acompanhar USER_SEARCH_MAX_LENGTH do backend (400 acima disto).
+export const USER_SEARCH_MAX_LENGTH = 100;
+export const USER_SEARCH_DEBOUNCE_MS = 300;
 
 export const USER_ROLES: Role[] = ['ADMIN', 'USER'];
 export const USER_STATUSES: UserStatus[] = ['ACTIVE', 'SUSPENDED', 'BANNED'];
@@ -19,41 +22,46 @@ export interface UserFilters {
   status: AllOr<UserStatus>;
 }
 
+/** Parametros de GET /users (o backend recusa quaisquer outros). */
+export interface UsersPageQuery {
+  q?: string;
+  role?: Role;
+  status?: UserStatus;
+  sort: UserSortKey;
+  order: SortDirection;
+  limit: number;
+  cursor?: string;
+}
+
+export interface UsersListCriteria extends UserFilters {
+  search: string;
+  sortKey: UserSortKey;
+  direction: SortDirection;
+}
+
+/** Pedido da 1a pagina. */
+export function usersPageQuery({ search, role, status, sortKey, direction }: UsersListCriteria): UsersPageQuery {
+  const q = search.trim().slice(0, USER_SEARCH_MAX_LENGTH).trim();
+  return {
+    ...(q ? { q } : {}),
+    ...(role !== ALL_FILTER ? { role } : {}),
+    ...(status !== ALL_FILTER ? { status } : {}),
+    sort: sortKey,
+    order: direction,
+    limit: USERS_PAGE_SIZE,
+  };
+}
+
+/** Junta a pagina seguinte sem repetir ids. */
+export function appendById<T extends { id: string }>(current: readonly T[], next: readonly T[]): T[] {
+  const seen = new Set(current.map((item) => item.id));
+  return [...current, ...next.filter((item) => !seen.has(item.id))];
+}
+
 export function filterUsers(users: readonly User[], filters: UserFilters): User[] {
   return users.filter(
     (u) =>
       (filters.role === ALL_FILTER || u.role === filters.role) &&
       (filters.status === ALL_FILTER || (u.status ?? 'ACTIVE') === filters.status),
   );
-}
-
-const USER_COMPARE: Record<UserSortKey, (a: User, b: User) => number> = {
-  name: (a, b) => (a.name || a.email).localeCompare(b.name || b.email, undefined, { sensitivity: 'base' }),
-  joined: (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-};
-
-export function sortUsers(users: readonly User[], key: UserSortKey, direction: SortDirection): User[] {
-  const sign = direction === 'asc' ? 1 : -1;
-  return [...users].sort((a, b) => sign * USER_COMPARE[key](a, b));
-}
-
-/** Fatia `skip..skip+size`; skip fora do intervalo recua para a ultima pagina. */
-export function pageSlice<T>(items: readonly T[], skip: number, size: number): { rows: T[]; skip: number } {
-  const lastSkip = Math.max(0, Math.floor((items.length - 1) / size) * size);
-  const safeSkip = Math.min(Math.max(0, skip), lastSkip);
-  return { rows: items.slice(safeSkip, safeSkip + size), skip: safeSkip };
-}
-
-/** Filtro por categoria de feedback (ou todas). */
-export function filterByCategory<T extends { category: string }>(items: readonly T[], category: string): T[] {
-  return category === ALL_FILTER ? items.slice() : items.filter((i) => i.category === category);
-}
-
-/** Hashes de origem bloqueada, sem repetidos, pela ordem em que aparecem. */
-export function blockedSources(pads: ReadonlyArray<{ sourceBlocked: boolean; updatedByIpHash: string | null }>): string[] {
-  const seen = new Set<string>();
-  for (const pad of pads) {
-    if (pad.sourceBlocked && pad.updatedByIpHash) seen.add(pad.updatedByIpHash);
-  }
-  return [...seen];
 }

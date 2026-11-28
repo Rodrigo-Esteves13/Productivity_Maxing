@@ -1,7 +1,7 @@
 import { useState, type SyntheticEvent } from 'react';
 import Button from '../UI/Button';
 import FormError from '../UI/FormError';
-import { twoFactorLoginRequest } from '../../api/userService';
+import { twoFactorLoginRequest } from '../../api/authService';
 import { getApiMessage } from '../../lib/httpError';
 import { useI18n } from '../../i18n/useI18n';
 

@@ -13,13 +13,13 @@ import ViewTaskButton from '../UI/ViewTaskButton';
 import AttachmentCount from '../UI/AttachmentCount';
 import SubtaskProgress from '../UI/SubtaskProgress';
 import CalendarSyncButton from './CalendarSyncButton';
-import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus';
+import { getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
 import type { TableDensity } from '../../hooks/useTableDensity';
 import type { TasksTableColumnId } from '../../lib/tasksTableColumns';
 import { useI18n } from '../../i18n/useI18n';
-import { formatHandIn, formatTaskDue } from '../../lib/taskReadiness';
+import { getTaskPresentation } from '../../lib/taskPresentation';
 
 interface TaskTableRowProps {
   task: Task;
@@ -47,7 +47,7 @@ function TaskTableRow({
   const { t, lang } = useI18n();
   const { optionLabel } = useCatalogLabel();
   const academicTypeLabel = optionLabel('academicType', task.academicType, academicTaskTypes);
-  const status = getDateStatus(task);
+  const { status, isOverdue, due, handIn, weight } = getTaskPresentation(task, lang);
   const isCompact = density === 'compact';
   // Compact drops the secondary line under each cell (remaining-time
   // label, topics, academic type/weight) - the primary value (date, area,
@@ -61,8 +61,8 @@ function TaskTableRow({
   const cellContent: Record<TasksTableColumnId, ReactNode> = {
     date: (
       <>
-        <div>{formatTaskDue(task, lang)}</div>
-        {formatHandIn(task, lang) && <div className="text-xs text-neutral-400">{formatHandIn(task, lang)}</div>}
+        <div>{due}</div>
+        {handIn && <div className="text-xs text-neutral-400">{handIn}</div>}
         {!isCompact && (
           <div className="mt-1 flex flex-col items-start gap-1">
             <span className="-ml-0.5">
@@ -78,7 +78,7 @@ function TaskTableRow({
     area: (
       <div className="flex items-center gap-2">
         {task.area?.colorHex && <ColorDot color={task.area.colorHex} />}
-        <span className="truncate max-w-[10rem]">{task.area?.name || 'N/A'}</span>
+        <span className="truncate max-w-[10rem]" title={task.area?.name || 'N/A'}>{task.area?.name || 'N/A'}</span>
       </div>
     ),
     title: (
@@ -100,7 +100,7 @@ function TaskTableRow({
       <>
         <div>{academicTypeLabel || 'N/A'}</div>
         {!isCompact && (
-          <div className="mt-0.5 tabular-nums">{task.weightPercentage ? `${task.weightPercentage}%` : 'N/A'}</div>
+          <div className="mt-0.5 tabular-nums">{weight}</div>
         )}
       </>
     ),
@@ -131,7 +131,7 @@ function TaskTableRow({
       <div className="flex flex-col items-center gap-1">
         <ViewTaskButton taskId={task.id} title={task.title} />
         <CalendarSyncButton task={task} />
-        {status === 'overdue' && onReschedule && (
+        {isOverdue && onReschedule && (
           <RescheduleButton isLoading={isRescheduling} onClick={(e) => onReschedule(e, task)} />
         )}
       </div>
@@ -146,8 +146,8 @@ function TaskTableRow({
     >
       {onToggleSelect && (
         <td className={`${cellPadding} align-middle print-hide`} onClick={(e) => e.stopPropagation()}>
-          {/* Alvo de 40px (-m-3 p-3) sem aumentar a linha. */}
-          <label className="-m-3 flex w-fit cursor-pointer p-3">
+          {/* Alvo de 40px (-m-3 p-3), 44px em ecras tacteis, sem aumentar a linha. */}
+          <label className="-m-3 flex w-fit cursor-pointer p-3 pointer-coarse:-m-3.5 pointer-coarse:p-3.5">
             <input
               type="checkbox"
               checked={!!isSelected}

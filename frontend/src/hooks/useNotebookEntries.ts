@@ -12,6 +12,7 @@ import type { NotebookEntry, NotebookEntrySummary } from '../types/models';
 import { translateNow } from '../i18n/translate';
 import { toEntrySummary } from '../lib/notebookOverview';
 import { EntryConflictError, parseEntryConflict } from '../lib/notebookEntryConflict';
+import { useVisibleInterval } from './useVisibleInterval';
 
 function byDateDesc(a: { date: string }, b: { date: string }): number {
   return new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -246,25 +247,20 @@ export function useNotebookEntries(areaId: string | null): UseNotebookEntriesRes
     [patchEntry],
   );
 
-  useEffect(() => {
-    if (!selectedId) return undefined;
-    const check = () => {
-      if (document.visibilityState !== 'visible') return;
+  // Os dois so correm com o separador visivel (F-22).
+  useVisibleInterval(
+    () => {
+      if (!selectedId) return;
       const signedAt = signedAtRef.current.get(selectedId);
       if (signedAt !== undefined && Date.now() - signedAt > SIGNED_URL_REFRESH_MS) refreshSignedUrls(selectedId);
-    };
-    const interval = window.setInterval(check, SIGNED_URL_CHECK_MS);
-    document.addEventListener('visibilitychange', check);
-    return () => {
-      window.clearInterval(interval);
-      document.removeEventListener('visibilitychange', check);
-    };
-  }, [selectedId, refreshSignedUrls]);
+    },
+    SIGNED_URL_CHECK_MS,
+    { enabled: selectedId !== null },
+  );
 
-  useEffect(() => {
-    if (!selectedId) return undefined;
-    const sync = () => {
-      if (document.visibilityState !== 'visible') return;
+  useVisibleInterval(
+    () => {
+      if (!selectedId) return;
       getNotebookEntryMediaIds(selectedId)
         .then(({ photoIds, attachmentIds }) => {
           const latest = cacheRef.current.get(selectedId)?.entry;
@@ -276,14 +272,10 @@ export function useNotebookEntries(areaId: string | null): UseNotebookEntriesRes
         })
         // Sem rede: tenta outra vez no proximo intervalo.
         .catch(() => undefined);
-    };
-    const interval = window.setInterval(sync, MEDIA_SYNC_MS);
-    document.addEventListener('visibilitychange', sync);
-    return () => {
-      window.clearInterval(interval);
-      document.removeEventListener('visibilitychange', sync);
-    };
-  }, [selectedId, refreshSignedUrls]);
+    },
+    MEDIA_SYNC_MS,
+    { enabled: selectedId !== null },
+  );
 
   const createEntry = useCallback(
     async (payload: CreateNotebookEntryPayload) => {

@@ -86,6 +86,7 @@ function setup(
     area: { findFirst: jest.fn().mockResolvedValue(opts.area ?? null) },
     quizAttempt: {
       findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue({ id: 'a1' }),
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
@@ -811,6 +812,35 @@ describe('QuizzesService clear and dismiss endpoints', () => {
         prisma.quiz.findFirst.mock.invocationCallOrder[0],
       );
     }
+  });
+
+  it('removeAttempt deletes only an own attempt of this quiz', async () => {
+    const { service, prisma } = setup({ quiz: { stats } });
+    prisma.quizAttempt.deleteMany.mockResolvedValue({ count: 0 });
+    await expect(
+      service.removeAttempt('u1', 'quiz', 'a1'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(firstArg(prisma.quizAttempt.deleteMany).where).toEqual({
+      id: 'a1',
+      quizId: 'quiz',
+      userId: 'u1',
+    });
+    expect(prisma.quiz.update).not.toHaveBeenCalled();
+  });
+
+  it('removeAttempt takes lastScorePct from the latest remaining one', async () => {
+    const { service, prisma } = setup({ quiz: { stats } });
+    prisma.quizAttempt.deleteMany.mockResolvedValue({ count: 1 });
+    prisma.quizAttempt.findFirst.mockResolvedValueOnce({
+      total: 4,
+      correct: 3,
+    });
+    await service.removeAttempt('u1', 'quiz', 'a1');
+    expect(firstArg(prisma.quiz.update).data).toEqual({ lastScorePct: 75 });
+    prisma.quiz.update.mockClear();
+    prisma.quizAttempt.findFirst.mockResolvedValueOnce(null);
+    await service.removeAttempt('u1', 'quiz', 'a2');
+    expect(firstArg(prisma.quiz.update).data).toEqual({ lastScorePct: null });
   });
 
   it('clearAttempts deletes this quiz attempts and nulls lastScorePct', async () => {

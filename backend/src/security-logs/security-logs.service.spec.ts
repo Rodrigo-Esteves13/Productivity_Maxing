@@ -33,3 +33,39 @@ describe('SecurityLogsService.getStats', () => {
     }
   });
 });
+
+describe('SecurityLogsService.findAll', () => {
+  async function orderFor(
+    query: Parameters<SecurityLogsService['findAll']>[0],
+  ) {
+    const findMany = jest.fn().mockReturnValue([]);
+    const service = new SecurityLogsService({
+      securityLog: { count: jest.fn().mockReturnValue(0), findMany },
+      $transaction: (ops: unknown[]) => Promise.all(ops),
+    } as unknown as PrismaService);
+    await service.findAll(query);
+    const [args] = findMany.mock.calls[0] as [{ orderBy: unknown }];
+    return args.orderBy;
+  }
+
+  it('defaults to newest first with a stable tiebreak', async () => {
+    expect(await orderFor({})).toEqual([{ createdAt: 'desc' }, { id: 'asc' }]);
+  });
+
+  it('sorts by a whitelisted column on the server', async () => {
+    expect(await orderFor({ sortBy: 'ip', sortDir: 'asc' })).toEqual([
+      { ip: 'asc' },
+      { createdAt: 'desc' },
+      { id: 'asc' },
+    ]);
+  });
+
+  it('sorts by user through the relation', async () => {
+    expect(await orderFor({ sortBy: 'user', sortDir: 'asc' })).toEqual([
+      { user: { name: { sort: 'asc', nulls: 'last' } } },
+      { user: { email: 'asc' } },
+      { createdAt: 'desc' },
+      { id: 'asc' },
+    ]);
+  });
+});

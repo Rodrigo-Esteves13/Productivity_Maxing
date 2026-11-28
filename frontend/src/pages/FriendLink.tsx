@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { isAxiosError } from 'axios';
+import { getHttpStatus, HTTP_NOT_FOUND } from '../lib/httpError';
 import PageLayout from '../components/Layout/PageLayout';
 import PageHeader from '../components/Layout/PageHeader';
 import Breadcrumbs from '../components/UI/Breadcrumbs';
@@ -15,7 +15,7 @@ import {
   type FriendLinkParams,
   type FriendLinkPreview,
 } from '../api/socialService';
-import { notifySocialChanged } from '../lib/socialEvents';
+import * as bus from '../lib/bus';
 import { friendPath, socialTabPath } from '../lib/appLinks';
 import { useFeedback } from '../context/useFeedback';
 import { useI18n } from '../i18n/useI18n';
@@ -56,7 +56,7 @@ export default function FriendLink() {
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setState(isAxiosError(error) && error.response?.status === 404 ? 'not_found' : 'error');
+        setState(getHttpStatus(error) === HTTP_NOT_FOUND ? 'not_found' : 'error');
       });
     return () => {
       cancelled = true;
@@ -70,7 +70,7 @@ export default function FriendLink() {
     setIsSending(true);
     try {
       const result = await acceptFriendLink(params);
-      notifySocialChanged();
+      bus.emit('social:changed');
       if (result.status === 'ACCEPTED') {
         notify(t('friendLink.nowFriends', { name }), 'success');
         navigate(friendPath(preview.person.id));
@@ -123,7 +123,7 @@ export default function FriendLink() {
             {status === 'FRIEND' && (
               <Link
                 to={friendPath(preview.person.id)}
-                className="text-sm font-medium text-violet-400 hover:text-violet-300"
+                className="text-sm font-medium text-violet-400 hover:text-violet-300 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
               >
                 {t('social.friend.open')}
               </Link>
@@ -133,7 +133,7 @@ export default function FriendLink() {
                 {preview.instant || status === 'INCOMING' ? t('friendLink.accept') : t('friendLink.sendRequest')}
               </ActionButton>
             )}
-            <Link to={socialTabPath('friends')} className="text-sm text-neutral-400 hover:text-white">
+            <Link to={socialTabPath('friends')} className="text-sm text-neutral-400 hover:text-white pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center">
               {t('friendLink.goToSocial')}
             </Link>
           </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { createApiKey } from '../../api/userService';
+import { createApiKey } from '../../api/apiKeysService';
 import { DownloadIcon } from '../UI/Icons';
 import {
   AGENT_EMBED_MARKER_END,

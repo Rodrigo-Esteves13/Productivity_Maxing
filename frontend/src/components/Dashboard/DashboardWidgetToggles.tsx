@@ -46,14 +46,14 @@ export function DashboardWidgetToggles({ visibility, toggle, orderControls }: Da
   }, [isOpen]);
 
   const renderToggle = (key: DashboardWidgetKey) => (
-    <label className="flex flex-1 min-w-0 items-center gap-2 text-sm text-neutral-200 cursor-pointer select-none">
+    <label className="flex pointer-coarse:min-h-11 flex-1 min-w-0 items-center gap-2 text-sm text-neutral-200 cursor-pointer select-none">
       <input
         type="checkbox"
         checked={visibility[key]}
         onChange={() => toggle(key)}
         className="accent-violet-500"
       />
-      <span className="truncate">{t(WIDGET_LABELS[key])}</span>
+      <span className="truncate" title={t(WIDGET_LABELS[key])}>{t(WIDGET_LABELS[key])}</span>
     </label>
   );
 
@@ -112,7 +112,7 @@ export function DashboardWidgetToggles({ visibility, toggle, orderControls }: Da
             type="button"
             onClick={reset}
             disabled={isDefault}
-            className="press mt-3 inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white disabled:opacity-50 disabled:hover:text-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 rounded"
+            className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 press mt-3 inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white disabled:opacity-50 disabled:hover:text-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 rounded"
           >
             <UndoIcon size={14} />
             {t('widgetOrder.reset')}

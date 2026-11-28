@@ -147,7 +147,7 @@ export default function ProgramSelector() {
           <button
             type="button"
             onClick={() => setIsPeriodsModalOpen(true)}
-            className="text-sm text-neutral-400 hover:text-neutral-200 underline decoration-dotted"
+            className="text-sm text-neutral-400 hover:text-neutral-200 underline decoration-dotted pointer-coarse:min-h-11"
           >
             {t('program.managePeriods')}
           </button>

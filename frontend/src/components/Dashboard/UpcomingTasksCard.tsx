@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import type { Task, Area } from '../../types/models';
 import { getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import { CalendarIcon } from '../UI/Icons';
 import DashboardCard, { CardHeading } from '../UI/DashboardCard';
@@ -8,18 +7,15 @@ import { useAreaLookup } from '../../hooks/useAreaLookup';
 import { MS_PER_DAY } from '../../lib/timeConstants';
 import { useI18n } from '../../i18n/useI18n';
 import { hasFirmDate } from '../../lib/taskReadiness';
-
-interface UpcomingTasksCardProps {
-  tasks: Task[];
-  areas: Area[];
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 const WINDOW_DAYS = 7;
 
 // Small glance card for "what's due soon", separate from the full
 // TasksTable below it - the table has every task and every filter, this
 // is just the next week at a glance, no scrolling needed.
-export default function UpcomingTasksCard({ tasks, areas }: UpcomingTasksCardProps) {
+export default function UpcomingTasksCard() {
+  const { academicTasks: tasks, academicAreas: areas } = useDashboardCardData();
   const { t } = useI18n();
   const areaById = useAreaLookup(areas);
 
@@ -52,7 +48,7 @@ export default function UpcomingTasksCard({ tasks, areas }: UpcomingTasksCardPro
                 {area && (
                   <ColorDot size="xs" color={area.colorHex} />
                 )}
-                <span className="truncate text-neutral-200">{task.title}</span>
+                <span className="truncate text-neutral-200" title={task.title}>{task.title}</span>
               </div>
               <span className="text-xs text-neutral-500 shrink-0">
                 {getRemainingTimeLabel(task)}
@@ -63,7 +59,7 @@ export default function UpcomingTasksCard({ tasks, areas }: UpcomingTasksCardPro
       </ul>
       <Link
         to="/tasks"
-        className="block mt-3 text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
+        className="block mt-3 pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center text-xs text-violet-400 hover:text-violet-300 underline decoration-dotted"
       >
         {t('ui.viewAllTasks')}
       </Link>

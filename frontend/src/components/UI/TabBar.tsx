@@ -41,7 +41,7 @@ export default function TabBar<T extends string>({ items, value, onChange, label
             aria-selected={active}
             data-active={active}
             onClick={() => onChange(item.value)}
-            className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+            className={`-mb-px flex shrink-0 items-center gap-1.5 pointer-coarse:min-h-11 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
               active
                 ? `text-white ${rect ? 'border-transparent' : 'border-violet-500'}`
                 : 'border-transparent text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'

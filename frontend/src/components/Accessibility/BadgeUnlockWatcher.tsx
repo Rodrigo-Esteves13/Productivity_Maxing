@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
-import { getTaskMetadata, getUserTasks } from '../../api/userService';
+import { getTaskMetadata } from '../../api/metadataService';
+import { getUserTasks } from '../../api/tasksService';
+import { peekKnownTasks } from '../../api/catalogCache';
 import { useAuth } from '../../context/useAuth';
 import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
@@ -14,6 +16,9 @@ const REFRESH_DELAY_MS = 1500;
 // Sem UI: quando uma task e concluida, volta a calcular as conquistas e avisa
 // das novas. A base de comparacao fica em localStorage (semeada na pagina
 // Profile ou na primeira conclusao, sem avisar de conquistas antigas).
+// As tasks vem do "ultimo conhecido" da cache, ja corrigido pela propria
+// conclusao (F-18); so se nao houver (ou outra escrita o tornou incerto) e
+// que se descarregam outra vez.
 export default function BadgeUnlockWatcher() {
   const { user } = useAuth();
   const { notify } = useFeedback();
@@ -27,7 +32,8 @@ export default function BadgeUnlockWatcher() {
 
     const refresh = async () => {
       try {
-        const [tasks, meta] = await Promise.all([getUserTasks(), getTaskMetadata()]);
+        const known = peekKnownTasks();
+        const [tasks, meta] = await Promise.all([known ? Promise.resolve(known) : getUserTasks(), getTaskMetadata()]);
         if (cancelled) return;
         const stats = computeProfileStats(tasks, extractProjectTypeKeys(meta.taskTypes), readStreakRestMode());
         const badges = computeBadges({

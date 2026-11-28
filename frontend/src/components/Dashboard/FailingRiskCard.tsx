@@ -39,7 +39,7 @@ function CourseRow({ row, summary, t, lang }: { row: CourseRiskOverviewRow; summ
   const nameCell = (
     <span className="flex min-w-0 items-center gap-2">
       <ColorDot size="xs" color={row.colorHex} />
-      <span className="truncate">{row.areaName}</span>
+      <span className="truncate" title={row.areaName}>{row.areaName}</span>
     </span>
   );
   if (!isAssessedRow(row)) {
@@ -100,7 +100,7 @@ export default function FailingRiskCard() {
         <button
           type="button"
           onClick={retry}
-          className="rounded text-violet-400 underline transition-colors hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
+          className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center rounded text-violet-400 underline transition-colors hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
         >
           {t('courseRisk.retry')}
         </button>
@@ -158,7 +158,7 @@ export default function FailingRiskCard() {
       <p className="mt-3 text-xs text-neutral-500">{t('courseRisk.estimateNote')}</p>
       <PrefetchLink
         to="/risk"
-        className="mt-2 inline-block text-xs text-violet-400 underline transition-colors hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
+        className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center mt-2 inline-block text-xs text-violet-400 underline transition-colors hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-500"
       >
         {hiddenCount > 0 ? t('courseRisk.moreCourses', { count: hiddenCount }) : t('courseRisk.seeAll')}
       </PrefetchLink>

@@ -1,14 +1,11 @@
+import { useState } from 'react';
 import FormField from '../UI/FormField';
 import Input from '../UI/Input';
 import Select from '../UI/Select';
 import Button from '../UI/Button';
 import { RefreshIcon, DownloadIcon } from '../UI/Icons';
-import { useFeedback } from '../../context/useFeedback';
-import { securityLogsToCsv, SECURITY_LOGS_CSV_COLUMNS } from '../../utils/securityLogsCsv';
-import { downloadTextFile } from '../../utils/downloadTextFile';
-import { todayKey } from '../../lib/dateKey';
-import type { SecurityLog } from '../../types/models';
 import type { SecurityLogsFiltersState } from '../../hooks/useSecurityLogsPage';
+import { SECURITY_LOGS_EXPORT_MAX_ROWS } from '../../utils/securityLogsExport';
 import { useI18n } from '../../i18n/useI18n';
 
 interface SecurityLogsFiltersProps {
@@ -18,12 +15,16 @@ interface SecurityLogsFiltersProps {
   onPurge: (olderThanDays?: number) => void;
   isPurging: boolean;
   onRefresh: () => void;
-  // Linhas da pagina atual (o que o botao de exportar grava).
-  logs: readonly SecurityLog[];
+  onExport: () => void;
+  isExporting: boolean;
+  // Resultados com os filtros atuais (sem nenhum nao ha o que exportar).
+  total: number;
 }
 
-const CSV_MIME_TYPE = 'text/csv;charset=utf-8';
-const CSV_FILE_PREFIX = 'pmaxing_security_logs_';
+// Idades (em dias) que o admin pode purgar; ALL apaga tudo.
+const PURGE_DAY_OPTIONS = [7, 30, 90, 180, 365];
+const DEFAULT_PURGE_DAYS = '30';
+const PURGE_ALL = 'all';
 
 export default function SecurityLogsFilters({
   filters,
@@ -32,18 +33,14 @@ export default function SecurityLogsFilters({
   onPurge,
   isPurging,
   onRefresh,
-  logs,
+  onExport,
+  isExporting,
+  total,
 }: SecurityLogsFiltersProps) {
   const { t } = useI18n();
-  const { notify } = useFeedback();
+  const [purgeAge, setPurgeAge] = useState(DEFAULT_PURGE_DAYS);
   const update = (patch: Partial<SecurityLogsFiltersState>) => onChange({ ...filters, ...patch });
   const hasActiveFilters = filters.ip !== '' || filters.path !== '' || filters.window !== '';
-
-  const handleExport = () => {
-    const headers = SECURITY_LOGS_CSV_COLUMNS.map((column) => t(`ux4admin.logs.col.${column}`));
-    downloadTextFile(securityLogsToCsv(logs, headers), `${CSV_FILE_PREFIX}${todayKey()}.csv`, CSV_MIME_TYPE);
-    notify(t('ux4admin.logs.exported', { count: logs.length }), 'success');
-  };
 
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 mb-6">
@@ -96,13 +93,13 @@ export default function SecurityLogsFilters({
         <Button
           type="button"
           variant="secondary"
-          onClick={handleExport}
-          disabled={logs.length === 0}
-          title={t('ux4admin.logs.exportHint')}
+          onClick={onExport}
+          disabled={total === 0 || isExporting}
+          title={t('f7admin.logs.exportHint', { max: SECURITY_LOGS_EXPORT_MAX_ROWS })}
           className="inline-flex items-center gap-2"
         >
           <DownloadIcon className="h-4 w-4" aria-hidden="true" />
-          {t('ux4admin.logs.export')}
+          {isExporting ? t('f7admin.logs.exporting') : t('ux4admin.logs.export')}
         </Button>
       </div>
 
@@ -110,22 +107,27 @@ export default function SecurityLogsFilters({
         <span className="text-xs text-neutral-500 mr-auto">
           {t('ui.housekeepingPermanentlyDeleteStoredLogs')}
         </span>
-        <Button
-          type="button"
-          variant="secondary"
+        <Select
+          aria-label={t('f7admin.logs.purgeLabel')}
+          value={purgeAge}
           disabled={isPurging}
-          onClick={() => onPurge(30)}
+          onChange={(e) => setPurgeAge(e.target.value)}
         >
-          {t('ui.clearLogsOlderThan30')}
-        </Button>
+          {PURGE_DAY_OPTIONS.map((days) => (
+            <option key={days} value={String(days)}>
+              {t('f7admin.logs.purgeOlder', { days })}
+            </option>
+          ))}
+          <option value={PURGE_ALL}>{t('f7admin.logs.purgeAll')}</option>
+        </Select>
         <Button
           type="button"
           variant="secondary"
           disabled={isPurging}
           className="border-red-900 text-red-400 hover:border-red-600"
-          onClick={() => onPurge(undefined)}
+          onClick={() => onPurge(purgeAge === PURGE_ALL ? undefined : Number(purgeAge))}
         >
-          {t('ui.clearAllLogs')}
+          {t('f7admin.logs.purgeButton')}
         </Button>
       </div>
     </div>

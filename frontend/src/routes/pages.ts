@@ -110,5 +110,13 @@ export function preloadRoute(path: string): void {
   BY_SECTION[section]?.preload().catch(() => undefined);
 }
 
+// Abrir a app num link direto (/dashboard, /tasks...): pede o chunk da pagina
+// (e o resto do dicionario, via lazyWithPreload) ja no arranque, em paralelo
+// com o nucleo do dicionario e a verificacao da sessao, em vez de so depois de
+// ambos. So caminhos de um segmento: em /social/friends/x a pagina e outra.
+export function preloadInitialRoute(pathname: string): void {
+  if (pathname.split('/').filter(Boolean).length === 1) preloadRoute(pathname);
+}
+
 // As paginas mais usadas: pre-carregadas no tempo livre logo apos entrar.
 export const PRIMARY_PAGES = [Dashboard, Tasks, Focus, Schedule];

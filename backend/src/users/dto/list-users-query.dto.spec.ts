@@ -20,7 +20,27 @@ describe('ListUsersQueryDto', () => {
     expect(errors.map((e) => e.property)).toEqual(['q']);
   });
 
+  it('accepts role, status and join order', async () => {
+    expect(
+      await check({ role: 'ADMIN', status: 'BANNED', order: 'asc' }),
+    ).toHaveLength(0);
+  });
+
+  it('rejects values outside the enums', async () => {
+    const errors = await check({ role: 'ROOT', status: 'GONE', order: 'up' });
+    expect(errors.map((e) => e.property).sort()).toEqual([
+      'order',
+      'role',
+      'status',
+    ]);
+  });
+
+  it('accepts only whitelisted sort columns', async () => {
+    expect(await check({ sort: 'name' })).toHaveLength(0);
+    expect(await check({ sort: 'email' })).not.toHaveLength(0);
+  });
+
   it('rejects unknown params', async () => {
-    expect(await check({ role: 'ADMIN' })).not.toHaveLength(0);
+    expect(await check({ page: '2' })).not.toHaveLength(0);
   });
 });

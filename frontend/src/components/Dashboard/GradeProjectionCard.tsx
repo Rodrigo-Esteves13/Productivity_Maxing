@@ -57,7 +57,7 @@ function TaskLine({ task }: { task: GradeProjectionTask }) {
       <div className="flex items-baseline justify-between gap-3">
         <p className="flex min-w-0 items-center gap-2 text-sm text-neutral-200">
           <ColorDot size="xs" color={task.areaColorHex} />
-          <span className="truncate">{task.title}</span>
+          <span className="truncate" title={task.title}>{task.title}</span>
         </p>
         <p className="shrink-0 text-xs text-neutral-500">{formatDayLabel(task.deadline)}</p>
       </div>
@@ -153,7 +153,7 @@ export default function GradeProjectionCard() {
 
       {shouldAskForHistory && (
         <details className="mt-3 rounded-lg border border-neutral-800 p-3" open={!isReady}>
-          <summary className="cursor-pointer text-xs font-medium text-violet-300">
+          <summary className="pointer-coarse:py-3.5 cursor-pointer text-xs font-medium text-violet-300">
             {isReady
               ? t('ui.makeItMoreAccurateAdd')
               : t('ui.unlockThisNowHowLong')}
@@ -166,7 +166,7 @@ export default function GradeProjectionCard() {
 
       <Link
         to="/schedule"
-        className="mt-3 inline-block text-xs text-violet-400 underline decoration-dotted hover:text-violet-300"
+        className="pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center mt-3 inline-block text-xs text-violet-400 underline decoration-dotted hover:text-violet-300"
       >
         {t('ui.openStudyPlan')}
       </Link>

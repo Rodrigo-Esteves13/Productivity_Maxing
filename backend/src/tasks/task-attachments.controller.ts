@@ -1,10 +1,12 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   UploadedFile,
   UseGuards,
@@ -22,6 +24,7 @@ import {
   singleFileUpload,
 } from '../common/upload-limits';
 import { TaskAttachmentsService } from './task-attachments.service';
+import { RenameAttachmentDto } from './dto/rename-attachment.dto';
 
 @ApiTags('Task')
 @ApiBearerAuth()
@@ -59,6 +62,18 @@ export class TaskAttachmentsController {
       );
     }
     return this.attachments.upload(user.id, taskId, file);
+  }
+
+  @Patch(':attachmentId')
+  @Throttle(perMinute(UPLOADS_PER_MINUTE))
+  @ApiOperation({ summary: 'Renames a file of a task.' })
+  rename(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Param('attachmentId', ParseUUIDPipe) attachmentId: string,
+    @Body() dto: RenameAttachmentDto,
+  ) {
+    return this.attachments.rename(user.id, taskId, attachmentId, dto.name);
   }
 
   @Delete(':attachmentId')

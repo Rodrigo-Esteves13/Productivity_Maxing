@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { getSecurityActivityExport } from '../../api/userService';
+import { getSecurityActivityExport } from '../../api/authService';
 import { DownloadIcon } from '../UI/Icons';
 import { securityActivityToCsv } from '../../utils/securityActivityCsv';
 import { downloadTextFile } from '../../utils/downloadTextFile';
@@ -37,7 +37,7 @@ export default function SecurityActivityExportButton() {
       onClick={() => void run()}
       disabled={busy}
       title={t('securityExport.hint')}
-      className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 disabled:opacity-50"
+      className="pointer-coarse:min-h-11 inline-flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400 disabled:opacity-50"
     >
       <DownloadIcon className="h-4 w-4" aria-hidden="true" />
       {busy ? t('securityExport.busy') : t('securityExport.button')}

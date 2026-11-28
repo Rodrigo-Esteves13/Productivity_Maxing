@@ -150,7 +150,7 @@ function GoalRow({ goal, plan, currency, onUpdate, onEdit, onRemove }: GoalRowPr
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-neutral-100">
-            <span className="truncate">{goal.name}</span>
+            <span className="truncate" title={goal.name}>{goal.name}</span>
             {plan && <GoalStatusBadge status={plan.status} />}
           </p>
           <p className="text-xs text-neutral-500">

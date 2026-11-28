@@ -1,5 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { createHmac, randomBytes, scrypt as scryptCallback } from 'crypto';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+import { hkdfSync, randomBytes, scrypt as scryptCallback } from 'crypto';
 import { ApiKeyScope, Role, User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -12,6 +18,11 @@ import {
 const KEY_HASH_BYTES = 64;
 // Entropia da raw key gerada, em bytes.
 const RAW_KEY_BYTES = 32;
+// Chave da cache: HKDF-SHA256 da raw key com um salt aleatorio por processo.
+const CACHE_KEY_DIGEST = 'sha256';
+const CACHE_KEY_BYTES = 32;
+const CACHE_KEY_SALT_BYTES = 32;
+const CACHE_KEY_INFO = 'pmaxing-api-key-cache-v1';
 
 interface CachedApiKey {
   keyId: string;
@@ -50,21 +61,47 @@ const scrypt = (
 //
 // Cache (S-09): o agente faz poll e cada pedido pagava um scrypt e uma
 // leitura na BD. Uma key valida fica em memoria API_KEY_CACHE_TTL_MS,
-// indexada por um HMAC-SHA256 da raw key (rapido, sem scrypt). So entram
-// keys validas: uma key invalida nunca fica em cache positiva. Ban/suspensao
-// continua imediato porque a ApiKeyStrategy consulta o AccountStatusService
-// em cada pedido, com ou sem cache. Revogar invalida logo nesta instancia;
-// o TTL curto cobre o resto (conta apagada, mudanca de role, outra instancia,
-// ver S-34). As falhas por IP vivem em api-key-failure.tracker.ts.
+// indexada por HKDF-SHA256(raw key, salt aleatorio deste processo). A raw key
+// nunca fica guardada: tem 256 bits de entropia (nao e uma password), por isso
+// um KDF para material de chave de alta entropia (RFC 5869) e o adequado, e o
+// salt por processo faz com que a chave da cache nao sirva fora desta
+// instancia. So entram keys validas: uma key invalida nunca fica em cache
+// positiva. Ban/suspensao continua imediato porque a ApiKeyStrategy consulta
+// o AccountStatusService em cada pedido, com ou sem cache. Revogar invalida
+// logo nesta instancia; o TTL curto cobre o resto (conta apagada, mudanca de
+// role, outra instancia, ver S-34). As entradas expiradas saem em cada
+// escrita e num varrimento periodico (sem depender de uma leitura da mesma
+// key). As falhas por IP vivem em api-key-failure.tracker.ts.
 @Injectable()
-export class ApiKeyService {
+export class ApiKeyService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ApiKeyService.name);
   private readonly cache = new Map<string, CachedApiKey>();
+  private readonly cacheKeySalt = randomBytes(CACHE_KEY_SALT_BYTES);
+  private sweepTimer: NodeJS.Timeout | null = null;
   // Sobe a cada revoke: uma validacao que leu a BD antes do revoke nao pode
   // voltar a meter a key revogada na cache depois de ele a limpar.
   private cacheEpoch = 0;
 
   constructor(private prisma: PrismaService) {}
+
+  onModuleInit(): void {
+    this.sweepTimer = setInterval(
+      () => this.pruneExpired(Date.now()),
+      API_KEY_CACHE_TTL_MS,
+    );
+    // Nao segura o processo vivo (testes, shutdown).
+    this.sweepTimer.unref();
+  }
+
+  onModuleDestroy(): void {
+    if (this.sweepTimer) clearInterval(this.sweepTimer);
+    this.sweepTimer = null;
+    this.cache.clear();
+  }
+
+  get cachedKeys(): number {
+    return this.cache.size;
+  }
 
   // Nunca devolve keyHash - a raw key só existe uma vez, no momento da
   // criação (ver generateApiKey), exatamente como o GitHub faz com os
@@ -127,10 +164,8 @@ export class ApiKeyService {
     incomingToken: string,
   ): Promise<{ user: User; scope: ApiKeyScope } | null> {
     const secret = this.requireApiKeySecret();
-    const cacheKey = createHmac('sha256', secret)
-      .update(incomingToken)
-      .digest('hex');
 
+    const cacheKey = this.cacheKeyOf(incomingToken);
     const cached = this.readCache(cacheKey);
     if (cached) {
       this.touchLastUsed(cached);
@@ -190,6 +225,18 @@ export class ApiKeyService {
       );
   }
 
+  private cacheKeyOf(rawKey: string): string {
+    return Buffer.from(
+      hkdfSync(
+        CACHE_KEY_DIGEST,
+        rawKey,
+        this.cacheKeySalt,
+        CACHE_KEY_INFO,
+        CACHE_KEY_BYTES,
+      ),
+    ).toString('hex');
+  }
+
   // LRU simples: o Map guarda a ordem de insercao, por isso reinserir no
   // hit poe a entrada no fim e a primeira e sempre a menos usada.
   private readCache(cacheKey: string): CachedApiKey | null {
@@ -202,11 +249,19 @@ export class ApiKeyService {
   }
 
   private writeCache(cacheKey: string, entry: CachedApiKey): void {
+    this.pruneExpired(Date.now());
     this.cache.delete(cacheKey);
     this.cache.set(cacheKey, entry);
     for (const oldest of this.cache.keys()) {
       if (this.cache.size <= API_KEY_CACHE_MAX_ENTRIES) return;
       this.cache.delete(oldest);
+    }
+  }
+
+  // No maximo API_KEY_CACHE_MAX_ENTRIES entradas: um varrimento linear chega.
+  private pruneExpired(now: number): void {
+    for (const [cacheKey, entry] of this.cache) {
+      if (entry.expiresAt <= now) this.cache.delete(cacheKey);
     }
   }
 
@@ -228,6 +283,16 @@ export class ApiKeyService {
       );
     }
     return secret;
+  }
+
+  // So o nome: o hash e o scope nunca mudam (a cache nao guarda o nome).
+  async renameApiKey(userId: string, keyId: string, name: string) {
+    const { count } = await this.prisma.apiKey.updateMany({
+      where: { id: keyId, userId },
+      data: { name },
+    });
+    if (count === 0) throw new NotFoundException('API Key not found.');
+    return { id: keyId, name };
   }
 
   async revokeApiKey(userId: string, keyId: string) {

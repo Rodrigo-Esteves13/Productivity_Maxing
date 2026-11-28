@@ -1,6 +1,8 @@
 import TasksTableHeader from './TasksTableHeader';
 import TaskTableRow from './TaskTableRow';
 import TaskCard from './TaskCard';
+import ShowMoreTasksButton from '../UI/ShowMoreTasksButton';
+import { useRevealedTasks } from '../../hooks/useRevealedTasks';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
 import type { TableDensity } from '../../hooks/useTableDensity';
 import { useTasksTableColumnOrder } from '../../hooks/useTasksTableColumnOrder';
@@ -9,7 +11,10 @@ import type { TasksTableColumnId } from '../../lib/tasksTableColumns';
 import { useI18n } from '../../i18n/useI18n';
 
 interface TasksTableProps {
+  // A lista filtrada completa: "selecionar tudo" vale para todas.
   tasks: Task[];
+  // Muda com periodo, filtros e ordem: volta as primeiras linhas.
+  resetKey?: string;
   academicTaskTypes: AcademicTaskTypeOption[];
   onReschedule?: (e: React.MouseEvent | null, task: Task) => void;
   // Swipe para a direita nos cartoes mobile (ver SwipeableRow).
@@ -25,6 +30,7 @@ interface TasksTableProps {
 
 export default function TasksTable({ 
   tasks, 
+  resetKey,
   academicTaskTypes,
   onReschedule,
   onComplete,
@@ -38,6 +44,10 @@ export default function TasksTable({
 }: TasksTableProps) {
   const { t } = useI18n();
   const { columnOrder, reorderColumns } = useTasksTableColumnOrder();
+  // Nenhuma linha selecionada fica por revelar ("selecionar tudo" apanha a
+  // lista inteira, e as acoes em massa nao mexem em linhas escondidas).
+  const lastSelected = selectedIds?.size ? tasks.findLastIndex((task) => selectedIds.has(task.id)) : -1;
+  const { visible, remaining, showMore } = useRevealedTasks(tasks, resetKey, lastSelected);
 
   if (tasks.length === 0) {
     return (
@@ -52,7 +62,7 @@ export default function TasksTable({
   return (
     <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden shadow-xl">
       <div className="sm:hidden">
-        {tasks.map((task) => (
+        {visible.map((task) => (
           <TaskCard 
             key={task.id} 
             task={task} 
@@ -77,7 +87,7 @@ export default function TasksTable({
             onSortColumn={onSortColumn}
           />
           <tbody>
-            {tasks.map((task) => (
+            {visible.map((task) => (
               <TaskTableRow 
                 key={task.id} 
                 task={task} 
@@ -93,6 +103,7 @@ export default function TasksTable({
           </tbody>
         </table>
       </div>
+      <ShowMoreTasksButton remaining={remaining} onClick={showMore} />
     </div>
   );
 }

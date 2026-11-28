@@ -19,12 +19,16 @@ import type { ClassOccurrence } from '../types/models';
 import { PlusIcon, UploadIcon } from '../components/UI/Icons';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { SCHEDULE_VIEWS, isScheduleView, useScheduleView, type ScheduleView } from '../hooks/useScheduleView';
+import { useScheduleTasks } from '../hooks/useScheduleTasks';
 import { todayUtcAnchored } from '../lib/weekDates';
-import { requestCalendarSyncReview } from '../lib/calendarSyncEvents';
+import * as bus from '../lib/bus';
 import { useI18n } from '../i18n/useI18n';
 
 // ?view=month (ou week) vem da paleta Ctrl+K.
 const VIEW_PARAM = 'view';
+// ?add=class (paleta Ctrl+K) abre o formulario de aula nova.
+const ADD_PARAM = 'add';
+const ADD_CLASS_VALUE = 'class';
 const VIEW_LABEL_KEY: Record<ScheduleView, string> = {
   week: 'schedule.view.week',
   month: 'schedule.view.month',
@@ -56,6 +60,19 @@ export default function Schedule() {
     );
   }, [viewParam, setView, setSearchParams]);
 
+  const addClassRequested = searchParams.get(ADD_PARAM) === ADD_CLASS_VALUE;
+  useEffect(() => {
+    if (!addClassRequested) return;
+    setClassForm(null);
+    setSearchParams(
+      (params) => {
+        params.delete(ADD_PARAM);
+        return params;
+      },
+      { replace: true },
+    );
+  }, [addClassRequested, setSearchParams]);
+
   const openWeek = useCallback(
     (date: Date) => {
       setAnchorDate(date);
@@ -64,17 +81,26 @@ export default function Schedule() {
     [setView],
   );
 
+  // Prazos das tasks para as duas vistas: alternar Semana/Mes nao repete o
+  // pedido. So volta a tentar na troca de vista se tinha falhado.
+  const scheduleTasks = useScheduleTasks();
+  const changeView = (next: ScheduleView) => {
+    if (scheduleTasks.error) scheduleTasks.reload();
+    setView(next);
+  };
+
   const viewOptions: SegmentedOption<ScheduleView>[] = SCHEDULE_VIEWS.map((value) => ({
     value,
     label: t(VIEW_LABEL_KEY[value]),
   }));
-  const viewToggle = <SegmentedControl size="sm" options={viewOptions} value={view} onChange={setView} />;
-  // Incrementado a cada import bem-sucedido - passado ao WeekGrid como
-  // sinal para refazer o fetch da semana atual (ver comentário em
-  // WeekGrid.tsx). O StudyPlanCard também depende de dados que podem ter
-  // mudado (aulas novas), mas tem o seu próprio hook - mais simples
-  // remontá-lo com uma key do que ligar outro canal de refresh.
+  const viewToggle = <SegmentedControl size="sm" options={viewOptions} value={view} onChange={changeView} />;
+  // Incrementado a cada import ou mudanca de horario: a grelha e os cartoes
+  // que dependem dele refazem o fetch (ver comentario em WeekGrid.tsx).
   const [scheduleVersion, setScheduleVersion] = useState(0);
+  // Sobe a cada aula desmarcada (ou desfeita): a grelha ja mostra o
+  // resultado, so os cartoes que contam horas de aulas refazem o fetch.
+  const [cancellationVersion, setCancellationVersion] = useState(0);
+  const classHoursVersion = scheduleVersion + cancellationVersion;
   // Sobe a cada presenca marcada na grelha (o resumo refaz o fetch).
   const [attendanceVersion, setAttendanceVersion] = useState(0);
   const handleAttendanceChanged = useCallback(() => setAttendanceVersion((v) => v + 1), []);
@@ -84,7 +110,12 @@ export default function Schedule() {
   // estiver ligado e houver diferenças).
   const handleScheduleChanged = useCallback(() => {
     setScheduleVersion((v) => v + 1);
-    requestCalendarSyncReview();
+    bus.emit('calendar:syncReview', { force: false });
+  }, []);
+
+  const handleCancellationChanged = useCallback(() => {
+    setCancellationVersion((v) => v + 1);
+    bus.emit('calendar:syncReview', { force: false });
   }, []);
 
   return (
@@ -116,6 +147,8 @@ export default function Schedule() {
             viewToggle={viewToggle}
             onAttendanceChanged={handleAttendanceChanged}
             onScheduleChanged={handleScheduleChanged}
+            onCancellationChanged={handleCancellationChanged}
+            tasks={scheduleTasks.tasks}
             onEditClass={setClassForm}
           />
         ) : (
@@ -124,6 +157,7 @@ export default function Schedule() {
             initialDate={anchorDate}
             viewToggle={viewToggle}
             onOpenWeek={openWeek}
+            scheduleTasks={scheduleTasks}
           />
         )}
         {/* Duas colunas com pesos parecidos, para nenhuma acabar muito antes
@@ -133,15 +167,13 @@ export default function Schedule() {
             configuracao (mexe-se uma vez). */}
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
-            <div key={scheduleVersion}>
-              <StudyPlanCard />
-            </div>
+            <StudyPlanCard refreshKey={classHoursVersion} />
             <CommitmentsCard onChanged={handleScheduleChanged} />
             <ScheduleChangesCard refreshKey={scheduleVersion} onChanged={handleScheduleChanged} />
           </div>
           <div className="space-y-6">
             <AttendanceCard refreshKey={scheduleVersion + attendanceVersion} />
-            <StudyVsClassCard refreshKey={scheduleVersion} />
+            <StudyVsClassCard refreshKey={classHoursVersion} />
             <ScheduleSyncCard />
             <CalendarFeedCard />
           </div>

@@ -25,6 +25,13 @@ const RESOLUTION_KEY: Record<NonNullable<FeedbackItem['resolution']>, StatusKey>
   REJECTED: 'feedback.status.rejected',
 };
 
+// O autor so edita enquanto ninguem fechou nem respondeu (o backend repete a regra).
+export function canEditFeedback(
+  item: Pick<FeedbackItem, 'isResolved' | 'resolution' | 'adminReply'>,
+): boolean {
+  return !item.isResolved && !item.resolution && !item.adminReply;
+}
+
 export function feedbackStatusKey(
   item: Pick<FeedbackItem, 'isResolved' | 'resolution' | 'adminReply'>,
 ): StatusKey {

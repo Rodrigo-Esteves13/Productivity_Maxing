@@ -2,6 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
+  ArrayUnique,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -44,7 +45,10 @@ import {
   FINANCE_NOTE_MAX_LENGTH,
   INTEREST_RATE_DECIMALS,
   MAX_AMOUNT_CENTS,
+  MAX_FINANCE_BULK_ENTRIES,
   MAX_FINANCE_IMPORT_ROWS,
+  MAX_FINANCE_RELINK_IDS,
+  MAX_RESTORE_PAYMENT_LINKS,
   MAX_INTEREST_RATE_PCT,
   MAX_LATE_RISK_PCT,
   MAX_PAID_IN_ARREARS_MONTHS,
@@ -132,6 +136,7 @@ export class CreateFinanceEntryDto extends ClientRequestDto {
   note?: string;
 
   @ApiProperty({ example: '2026-10-28' })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: 'date must be formatted YYYY-MM-DD.' })
   date: string;
 
@@ -172,6 +177,7 @@ export class CreateFinanceEntryDto extends ClientRequestDto {
   @ApiPropertyOptional({ example: '2027-06-30', nullable: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('endDate') })
   endDate?: string | null;
 
@@ -227,6 +233,7 @@ export class CreateFinanceEntryDto extends ClientRequestDto {
   @ApiPropertyOptional({ example: '2027-01-31', nullable: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('expectedDate') })
   expectedDate?: string | null;
 
@@ -262,8 +269,54 @@ export class CreateFinanceEntryDto extends ClientRequestDto {
   @ApiPropertyOptional({ example: '2026-11-20', nullable: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('receivedAt') })
   receivedAt?: string | null;
+}
+
+export class BulkDeleteFinanceEntriesDto {
+  @ApiProperty({ type: [String], maxItems: MAX_FINANCE_BULK_ENTRIES })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_FINANCE_BULK_ENTRIES)
+  @ArrayUnique()
+  @IsUUID(undefined, { each: true })
+  ids: string[];
+}
+
+// Um movimento apagado, tal como o bulk-delete o devolve. clientRequestId e o
+// id antigo (repetir o Anular nao duplica). Os ids de pagamentos so religam
+// pagamentos da propria pessoa que ficaram sem ligacao.
+export class RestoreFinanceEntryDto extends CreateFinanceEntryDto {
+  @ApiPropertyOptional({
+    type: [String],
+    maxItems: MAX_RESTORE_PAYMENT_LINKS,
+    description: 'Owed payments that pointed to this debt.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_RESTORE_PAYMENT_LINKS)
+  @IsUUID(undefined, { each: true })
+  debtPaymentIds?: string[];
+
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  incomePaymentId?: string | null;
+}
+
+export class RestoreFinanceEntriesDto {
+  @ApiProperty({
+    type: [RestoreFinanceEntryDto],
+    maxItems: MAX_FINANCE_BULK_ENTRIES,
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_FINANCE_BULK_ENTRIES)
+  @ValidateNested({ each: true })
+  @Type(() => RestoreFinanceEntryDto)
+  entries: RestoreFinanceEntryDto[];
 }
 
 export class CreateOwedPaymentDto {
@@ -274,6 +327,7 @@ export class CreateOwedPaymentDto {
   amountCents: number;
 
   @ApiProperty({ example: '2026-03-14' })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('paidAt') })
   paidAt: string;
 }
@@ -308,6 +362,7 @@ export class ImportFinanceEntryRowDto {
   note?: string;
 
   @ApiProperty({ example: '2026-10-28' })
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, { message: DATE_MESSAGE('date') })
   date: string;
 
@@ -370,6 +425,23 @@ export class CreateFinanceAccountDto extends ClientRequestDto {
 export class UpdateFinanceAccountDto extends PartialType(
   OmitType(CreateFinanceAccountDto, CLIENT_REQUEST_FIELD),
 ) {}
+
+// Anular o apagar de uma conta: recria-a e religa o que ficou sem conta.
+export class RestoreFinanceAccountDto extends CreateFinanceAccountDto {
+  @ApiPropertyOptional({ type: [String], maxItems: MAX_FINANCE_RELINK_IDS })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_FINANCE_RELINK_IDS)
+  @IsUUID(undefined, { each: true })
+  entryIds?: string[];
+
+  @ApiPropertyOptional({ type: [String], maxItems: MAX_FINANCE_RELINK_IDS })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_FINANCE_RELINK_IDS)
+  @IsUUID(undefined, { each: true })
+  holdingIds?: string[];
+}
 
 // Posicao: manda `quantity` OU `investedCents` (nunca os dois).
 // Com investedCents a quantidade = investedCents / preco (priceCents ou a
@@ -489,6 +561,7 @@ export class CreateFinanceGoalDto extends ClientRequestDto {
   @ApiPropertyOptional({ example: '2027-06-30', nullable: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
+  @IsRealDateKey()
   @Matches(DATE_KEY_PATTERN, {
     message: 'deadline must be formatted YYYY-MM-DD.',
   })

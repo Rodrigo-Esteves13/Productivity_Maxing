@@ -19,7 +19,7 @@ interface CommitmentsCardProps {
 export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
   const { t } = useI18n();
   const {
-    overview, isLoading, isSaving, error, clearError,
+    overview, isLoading, isSaving, error, clearError, reload,
     addCommitment, editCommitment, removeCommitment, addShifts, editShift, removeShift,
     copyWeek, copyResult, clearCopyResult,
   } = useCommitments(onChanged);
@@ -43,7 +43,7 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
               type="button"
               onClick={() => { clearError(); clearCopyResult(); setIsCopying((open) => !open); }}
               aria-expanded={isCopying}
-              className="press px-3 py-2 text-sm text-neutral-300 hover:text-white hover:border-neutral-500 hover:bg-neutral-800/60 border border-neutral-700 rounded-lg"
+              className="press px-3 py-2 text-sm text-neutral-300 hover:text-white hover:border-neutral-500 hover:bg-neutral-800/60 border border-neutral-700 rounded-lg pointer-coarse:min-h-11"
             >
               {t('ui.copyAWeek')}
             </button>
@@ -79,7 +79,7 @@ export default function CommitmentsCard({ onChanged }: CommitmentsCardProps) {
         </div>
       )}
 
-      {error && <ErrorState message={error} />}
+      {error && <ErrorState message={error} onRetry={() => void reload()} />}
       {isLoading && <LinesSkeleton lines={3} />}
 
       {!isLoading && commitments.length === 0 && ungroupedShifts.length === 0 && !isCreating && (

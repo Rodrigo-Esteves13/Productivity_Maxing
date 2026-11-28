@@ -1,4 +1,5 @@
 import type { Flashcard } from '../types/models';
+import { neutralizeFormulaPrefix } from '../utils/taskExportFormats';
 
 // Ordenacao e exportacao da lista de cartoes. Puro e sem rede.
 
@@ -28,7 +29,12 @@ export function sortCards(cards: readonly Flashcard[], sort: CardSort): Flashcar
 // so linha e sem TAB dentro dos campos para o import ler de volta.
 const flattenField = (text: string) => text.replace(/\s*[\r\n]+\s*/g, ' ').replace(/\t/g, ' ').trim();
 
+// Um campo que comece por = + - @ seria uma formula ao abrir o ficheiro numa
+// folha de calculo (os cartoes podem vir de quizzes de outra pessoa). Mesmo
+// apostrofo do CSV; o import tira-o.
+const exportField = (text: string) => neutralizeFormulaPrefix(flattenField(text));
+
 /** Inverso do import (lib/flashcardImport): "frente<TAB>verso" por linha. */
 export function cardsToTsv(cards: readonly Pick<Flashcard, 'front' | 'back'>[]): string {
-  return cards.map((card) => `${flattenField(card.front)}\t${flattenField(card.back)}`).join('\n');
+  return cards.map((card) => `${exportField(card.front)}\t${exportField(card.back)}`).join('\n');
 }

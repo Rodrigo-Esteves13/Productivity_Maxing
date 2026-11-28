@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import Modal from '../UI/Modal';
 import ActionButton from '../UI/ActionButton';
 import ToggleChip from '../UI/ToggleChip';
-import { updateTask } from '../../api/userService';
-import { announceOnTimeSaved, onAskOnTime, onTimeQuestions, type OnTimePhase } from '../../lib/onTimeQuestion';
+import { updateTask } from '../../api/tasksService';
+import { onTimeQuestions, type OnTimePhase } from '../../lib/onTimeQuestion';
+import * as bus from '../../lib/bus';
 import { formatTaskDate } from '../../lib/timeFormat';
 import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
@@ -28,7 +29,7 @@ export default function OnTimePrompt() {
 
   useEffect(
     () =>
-      onAskOnTime((tasks) =>
+      bus.on('tasks:askOnTime', (tasks) =>
         setQueue((prev) => [...prev, ...tasks.filter((task) => !prev.some((p) => p.id === task.id))]),
       ),
     [],
@@ -59,7 +60,7 @@ export default function OnTimePrompt() {
         ...(main !== undefined && { onTime: main }),
         ...(submission !== undefined && { submissionOnTime: submission }),
       });
-      announceOnTimeSaved(updated);
+      bus.emit('tasks:onTimeSaved', updated);
       notify(t('onTime.saved'), 'success');
     } catch {
       notify(t('onTime.failed'), 'error');

@@ -26,7 +26,7 @@ export default function CalendarSyncButton({ task }: CalendarSyncButtonProps) {
         to="/profile"
         title={t('ui.connectGoogleCalendarInYour')}
         onClick={(e) => e.stopPropagation()}
-        className="flex items-center text-neutral-500 hover:text-neutral-400 transition-colors"
+        className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center flex items-center text-neutral-500 hover:text-neutral-400 transition-colors"
       >
         <CalendarIcon width={14} height={14} />
       </Link>
@@ -58,7 +58,7 @@ export default function CalendarSyncButton({ task }: CalendarSyncButtonProps) {
       onClick={handleClick}
       disabled={isLoading}
       title={eventId ? t('ui.removeFromGoogleCalendar') : t('ui.addToGoogleCalendar')}
-      className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors disabled:opacity-50 ${
+      className={`pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors disabled:opacity-50 ${
         eventId
           ? 'border-cyan-800 text-cyan-400 bg-cyan-900/30'
           : 'border-neutral-700 text-neutral-400 hover:border-violet-700 hover:text-violet-300'

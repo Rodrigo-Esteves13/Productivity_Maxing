@@ -61,4 +61,43 @@ describe('PrismaExceptionFilter (S-14)', () => {
     expect(body.message).not.toContain('email');
     expect(body.message).not.toContain('constraint');
   });
+
+  it('never logs the query arguments of a validation error', () => {
+    const err = new Prisma.PrismaClientValidationError(
+      '\nInvalid `prisma.user.update()` invocation:\n\n{ data: { email: "victim@example.test", note: "segredo" } }\n\nInvalid value',
+      { clientVersion: 'test' },
+    );
+    const { logged } = runLogged(err);
+    expect(logged).toContain('Invalid `prisma.user.update()` invocation');
+    expect(logged).not.toContain('victim@example.test');
+    expect(logged).not.toContain('segredo');
+  });
+
+  it('a 500 logs the code and stack frames, not the message', () => {
+    const err = new Prisma.PrismaClientKnownRequestError(
+      'Raw query failed. Detail: Key (email)=(victim@example.test)',
+      { code: 'P2010', clientVersion: 'test', meta: { modelName: 'User' } },
+    );
+    const { logged } = runLogged(err);
+    expect(logged).toContain('P2010 User');
+    expect(logged).not.toContain('victim@example.test');
+  });
 });
+
+function runLogged(exception: unknown) {
+  const status = jest.fn().mockReturnValue({ json: jest.fn() });
+  const host = {
+    switchToHttp: () => ({ getResponse: () => ({ status }) }),
+  } as unknown as ArgumentsHost;
+  const filter = new PrismaExceptionFilter();
+  const logger = (
+    filter as unknown as {
+      logger: { warn: (m: string) => void; error: (...m: unknown[]) => void };
+    }
+  ).logger;
+  const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+  const error = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
+  filter.catch(exception, host);
+  const logged = JSON.stringify([...warn.mock.calls, ...error.mock.calls]);
+  return { logged };
+}

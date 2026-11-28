@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getAppeals, resolveAppeal } from '../api/userService';
+import { getAppeals, resolveAppeal } from '../api/accountStatusService';
 import type { Feedback } from '../components/UI/FeedbackBanner';
 import type { AppealAdmin, AppealResolution, PaginatedAppeals } from '../types/models';
 import { getHttpStatus, HTTP_CONFLICT } from '../lib/httpError';

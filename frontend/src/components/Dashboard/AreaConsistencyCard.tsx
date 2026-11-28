@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import type { Area, Task } from '../../types/models';
 import {
   MIN_QUALIFYING_AREAS,
   computeAreaConsistency,
@@ -10,12 +9,7 @@ import { ChartPieIcon } from '../UI/Icons';
 import ProgressBar from '../UI/ProgressBar';
 import DashboardCard, { CardBody, CardHeading } from '../UI/DashboardCard';
 import { useI18n } from '../../i18n/useI18n';
-
-interface AreaConsistencyCardProps {
-  tasks: Task[];
-  areas: Area[];
-  scale: string;
-}
+import { useDashboardCardData } from '../../context/useDashboardCardData';
 
 // How many areas to list at each end of the ranking.
 const LIST_SIZE = 2;
@@ -25,7 +19,7 @@ function Row({ item }: { item: AreaConsistency }) {
   return (
     <li className="text-sm">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-x-2">
-        <span className="min-w-0 truncate text-neutral-300">{item.name}</span>
+        <span className="min-w-0 truncate text-neutral-300" title={item.name}>{item.name}</span>
         <span className="flex gap-2 text-xs text-neutral-400">
           <span className="font-semibold text-white">{t('areaConsistency.score', { score: item.score })}</span>
           <span>{t(`areaConsistency.bucket.${item.bucket}`)}</span>
@@ -38,7 +32,8 @@ function Row({ item }: { item: AreaConsistency }) {
 }
 
 // Courses ranked by how steady the grades and deadlines are.
-export default function AreaConsistencyCard({ tasks, areas, scale }: AreaConsistencyCardProps) {
+export default function AreaConsistencyCard() {
+  const { academicTasks: tasks, academicAreas: areas, gradeScale: scale } = useDashboardCardData();
   const { t } = useI18n();
   const ranked = useMemo(
     () => computeAreaConsistency(tasks, areas, scaleMax(scale)),

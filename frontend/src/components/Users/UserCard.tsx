@@ -20,7 +20,7 @@ export default function UserCard({ user, isSelf, isReactivating, ...handlers }: 
 
   return (
     <li className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-3">
-      <Link to={adminUserPath(user.id)} className="group flex items-center gap-3">
+      <Link to={adminUserPath(user.id)} className="group flex pointer-coarse:min-h-11 items-center gap-3">
         <Avatar initials={initials} avatarUrl={user.avatarUrl} size="sm" />
         <div className="min-w-0">
           <div className="truncate font-medium text-neutral-200 group-hover:text-violet-300" title={user.name ?? undefined}>

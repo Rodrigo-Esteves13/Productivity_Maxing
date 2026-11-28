@@ -1,28 +1,14 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext } from 'react';
 import { PlanModeContext } from '../context/plan-mode-context';
 import type { GradeScenario } from '../api/academicService';
+import { OFF_BY_DEFAULT, usePersistedState } from './usePersistedState';
 
 const STORAGE_KEY = 'pm-plan-mode';
-
-function loadPlanMode(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
 
 // Preferencia local do modo plano (mesmo formato de useExamMode): desligado
 // por omissao, lembrado neste dispositivo.
 export function usePlanModePref() {
-  const [isPlanMode, setIsPlanMode] = useState<boolean>(loadPlanMode);
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, String(isPlanMode));
-    } catch {
-      // Best-effort, como os outros prefs hooks.
-    }
-  }, [isPlanMode]);
+  const [isPlanMode, setIsPlanMode] = usePersistedState(STORAGE_KEY, OFF_BY_DEFAULT);
   return { isPlanMode, setIsPlanMode };
 }
 

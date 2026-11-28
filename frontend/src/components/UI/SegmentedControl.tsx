@@ -64,7 +64,7 @@ export default function SegmentedControl<T extends string>({
             aria-pressed={active}
             data-active={active}
             onClick={() => onChange(optionValue)}
-            className={`press relative flex items-center gap-1.5 rounded before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] ${SIZE_CLASS[size]} text-xs font-medium ${
+            className={`press relative flex items-center gap-1.5 rounded pointer-coarse:min-h-9 before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] ${SIZE_CLASS[size]} text-xs font-medium ${
               active ? `text-on-accent ${rect ? '' : 'bg-violet-600'}` : 'text-neutral-400 hover:text-neutral-200'
             }`}
           >

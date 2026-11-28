@@ -12,6 +12,7 @@ import { useDirtyForm } from '../hooks/useDirtyForm';
 import TaskForm from '../components/Tasks/TaskForm';
 import ActionButton from '../components/UI/ActionButton';
 import ErrorState from '../components/UI/ErrorState';
+import StaleRegion from '../components/UI/StaleRegion';
 import EmptyState from '../components/UI/EmptyState';
 import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import ModalHeaderActions from '../components/UI/ModalHeaderActions';
@@ -72,6 +73,8 @@ export default function Tasks() {
     priorities,
     progressStatuses,
     isLoading,
+    isStale,
+    dataPeriod,
     error,
     reload,
     isCreateModalOpen,
@@ -119,6 +122,8 @@ export default function Tasks() {
   }, [viewParam, setView, setSearchParams]);
 
   const [isReplanOpen, setIsReplanOpen] = useState(false);
+  // O periodo mudou: o modal fecha e nao volta a abrir quando o novo chega.
+  if (isReplanOpen && isStale) setIsReplanOpen(false);
   const overdueCount = useMemo(() => overdueTasks(tasks).length, [tasks]);
 
   const viewOptions: SegmentedOption<TasksView>[] = TASKS_VIEWS.map((value) => ({
@@ -166,6 +171,9 @@ export default function Tasks() {
     return [...sortTasks(pinned, sortMode, direction), ...sortTasks(rest, sortMode, direction)];
   }, [filteredTasks, sortMode, direction]);
 
+  // Periodo, filtros e ordem: quando mudam, as listas voltam ao primeiro bloco.
+  const listResetKey = [dataPeriod, areaFilter, stateFilter, search.query, sortMode, direction, showArchived].join('|');
+
   // 'n' anywhere on the page (unless a detail view is already open, to
   // avoid stacking a second modal on top of it); 'c'/'e'/Delete only while
   // viewing a task's details and not already editing it - see
@@ -193,12 +201,12 @@ export default function Tasks() {
         description={t('ui.manageFilterAndTrackThe')}
         action={
           <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-            <Link to="/task-packs" className="whitespace-nowrap text-sm text-violet-400 hover:text-violet-300">
+            <Link to="/task-packs" className="whitespace-nowrap text-sm text-violet-400 hover:text-violet-300 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center">
               {t('packs.openLink')}
             </Link>
             <SegmentedControl options={viewOptions} value={view} onChange={setView} />
             {overdueCount > 0 && (
-              <ActionButton onClick={() => setIsReplanOpen(true)}>{t('replan.button', { count: overdueCount })}</ActionButton>
+              <ActionButton disabled={isStale} onClick={() => setIsReplanOpen(true)}>{t('replan.button', { count: overdueCount })}</ActionButton>
             )}
             <TaskSortControl
               sortMode={sortMode}
@@ -231,6 +239,7 @@ export default function Tasks() {
 
       <PackUpdatesBanner />
 
+      <StaleRegion isStale={isStale}>
       {!isLoading && !error && tasks.length > 0 && (
         <div className="mb-4 flex flex-wrap items-end gap-3">
           <SearchField value={search.query} onChange={search.setQuery} label={t('ux4tasks.searchLabel')} />
@@ -297,6 +306,7 @@ export default function Tasks() {
           ) : view === 'board' ? (
             <TaskBoard
               tasks={sortedTasks}
+              resetKey={listResetKey}
               statuses={progressStatuses}
               onSelect={handleSelectTask}
               onChangeStatus={changeTaskStatus}
@@ -304,10 +314,11 @@ export default function Tasks() {
           ) : view === 'matrix' ? (
             <TaskMatrix tasks={sortedTasks} onSelect={handleSelectTask} />
           ) : view === 'timeline' ? (
-            <TaskTimeline tasks={sortedTasks} onSelect={handleSelectTask} />
+            <TaskTimeline tasks={sortedTasks} resetKey={listResetKey} onSelect={handleSelectTask} />
           ) : (
             <TaskGrid
               tasks={sortedTasks}
+              resetKey={listResetKey}
               onSelect={handleSelectTask}
               onReschedule={rescheduleToTomorrow}
               onComplete={completeTask}
@@ -320,8 +331,9 @@ export default function Tasks() {
           )}
         </div>
       )}
+      </StaleRegion>
 
-      {isReplanOpen && <ReplanOverdueModal tasks={tasks} onApply={replanTasks} onClose={() => setIsReplanOpen(false)} />}
+      {isReplanOpen && !isStale && <ReplanOverdueModal tasks={tasks} onApply={replanTasks} onClose={() => setIsReplanOpen(false)} />}
 
       {/* Modal de criação */}
       <Modal isOpen={isCreateModalOpen} onClose={closeCreateModal} title={t('ui.createNewTask')} isDirty={createDirty.isDirty}>

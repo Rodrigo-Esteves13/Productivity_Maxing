@@ -15,14 +15,41 @@ import TurmaPacksTab from '../components/Turma/TurmaPacksTab';
 import TurmaScheduleTab from '../components/Turma/TurmaScheduleTab';
 import TurmaProgramsTab from '../components/Turma/TurmaProgramsTab';
 import TurmaDeadlinesTab from '../components/Turma/TurmaDeadlinesTab';
+import KeepAlivePanels from '../components/UI/KeepAlivePanels';
 import { TURMA_TABS, TURMA_TAB_LABEL_KEY, isTurmaTab, type TurmaTab } from '../components/Turma/turmaConfig';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { useTurmaDetail } from '../hooks/useTurmas';
 import { useI18n } from '../i18n/useI18n';
 import { TURMAS_PATH, turmaPath } from '../lib/appLinks';
+import type { TurmaDetail } from '../types/models';
 
 const TAB_PARAM = 'tab';
 const DEFAULT_TAB: TurmaTab = 'announcements';
+
+function renderTab(tab: TurmaTab, turma: TurmaDetail, reload: () => void) {
+  const isDelegado = turma.myRole === 'DELEGADO';
+  switch (tab) {
+    case 'announcements':
+      return <TurmaAnnouncementsTab turmaId={turma.id} isDelegado={isDelegado} />;
+    case 'deadlines':
+      return <TurmaDeadlinesTab turmaId={turma.id} isDelegado={isDelegado} />;
+    case 'programs':
+      return <TurmaProgramsTab turmaId={turma.id} isDelegado={isDelegado} />;
+    case 'schedule':
+      return <TurmaScheduleTab turmaId={turma.id} />;
+    case 'packs':
+      return <TurmaPacksTab turmaId={turma.id} isDelegado={isDelegado} />;
+    case 'notes':
+      return <TurmaNotesTab turmaId={turma.id} canEdit={turma.canEditNotes} />;
+    case 'files':
+      return <TurmaFilesTab turmaId={turma.id} isDelegado={isDelegado} />;
+    case 'subjects':
+      return <TurmaSubjectsTab turmaId={turma.id} isDelegado={isDelegado} />;
+    case 'members':
+      // Sem pedidos proprios; a key volta a preencher o formulario das definicoes.
+      return <TurmaMembersTab key={turma.name} turma={turma} onChanged={reload} />;
+  }
+}
 
 // Uma turma: avisos, notas, ficheiros, cadeiras partilhadas e membros.
 // O separador vive no URL (?tab=) para os links e o botao Voltar.
@@ -64,15 +91,9 @@ export default function TurmaPage() {
             label={t('turma.tabsLabel')}
             className="mb-4"
           />
-          {tab === 'announcements' && <TurmaAnnouncementsTab turmaId={turma.id} isDelegado={turma.myRole === 'DELEGADO'} />}
-          {tab === 'deadlines' && <TurmaDeadlinesTab turmaId={turma.id} isDelegado={turma.myRole === 'DELEGADO'} />}
-          {tab === 'programs' && <TurmaProgramsTab turmaId={turma.id} isDelegado={turma.myRole === 'DELEGADO'} />}
-          {tab === 'schedule' && <TurmaScheduleTab turmaId={turma.id} />}
-          {tab === 'packs' && <TurmaPacksTab turmaId={turma.id} isDelegado={turma.myRole === 'DELEGADO'} />}
-          {tab === 'notes' && <TurmaNotesTab turmaId={turma.id} canEdit={turma.canEditNotes} />}
-          {tab === 'files' && <TurmaFilesTab turmaId={turma.id} isDelegado={turma.myRole === 'DELEGADO'} />}
-          {tab === 'subjects' && <TurmaSubjectsTab turmaId={turma.id} isDelegado={turma.myRole === 'DELEGADO'} />}
-          {tab === 'members' && <TurmaMembersTab key={turma.name} turma={turma} onChanged={reload} />}
+          {/* Separadores ja abertos ficam montados (F-15): voltar a um nao
+              mostra o esqueleto outra vez. */}
+          <KeepAlivePanels key={turma.id} active={tab} render={(value) => renderTab(value, turma, reload)} />
         </>
       )}
     </PageLayout>

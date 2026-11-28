@@ -17,6 +17,8 @@ const REQUEST_TIMEOUT_MS = 5000;
 // navegacao, cada um com um SELECT 1 na BD). Agora ha um so poll para a app
 // toda, um resultado com menos de 30s serve quem montar a seguir, e com o
 // separador escondido nao corre.
+// Nao usa useVisibleInterval: o temporizador vive no modulo (um so para todos
+// os subscritores), fora do ciclo de vida de um componente.
 let status: HealthStatus = 'checking';
 let lastCheckAt = 0;
 let inFlight: Promise<void> | null = null;

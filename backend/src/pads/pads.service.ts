@@ -10,6 +10,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SecurityLogsService } from '../security-logs/security-logs.service';
 import { SavePadDto } from './dto/pad.dto';
 import {
+  QueryAdminPadsDto,
+  QueryBlockedSourcesDto,
+} from './dto/query-admin-pads.dto';
+import {
+  ADMIN_BLOCKED_SOURCES_PAGE_SIZE,
+  ADMIN_PADS_LIST_PAGE_SIZE,
   ADMIN_PADS_PAGE_SIZE,
   ADMIN_PAD_PREVIEW_LENGTH,
   PAD_ANON_MAX_CONTENT_LENGTH,
@@ -231,10 +237,70 @@ export class PadsService {
   // Moderacao: pads alterados mais recentemente, com quem gravou por ultimo
   // (conta ou hash do IP). So admins (o controller aplica o RolesGuard); os
   // utilizadores nunca veem quem editou um pad.
-  async listRecentForAdmin() {
+  listRecentForAdmin() {
+    return this.findPadsForAdmin({ take: ADMIN_PADS_PAGE_SIZE });
+  }
+
+  // Moderacao: todos os pads, com pesquisa por nome e paginacao.
+  async searchForAdmin(query: QueryAdminPadsDto) {
+    const where: Prisma.PadWhereInput = query.q
+      ? { slug: { contains: query.q } }
+      : {};
+    const [total, items] = await Promise.all([
+      this.prisma.pad.count({ where }),
+      this.findPadsForAdmin({
+        where,
+        skip: query.skip ?? 0,
+        take: query.take ?? ADMIN_PADS_LIST_PAGE_SIZE,
+      }),
+    ]);
+    return { total, items };
+  }
+
+  // Moderacao: todas as origens bloqueadas, mais recentes primeiro, com o
+  // numero de pads cuja ultima gravacao veio de cada uma.
+  async listBlockedSourcesForAdmin(query: QueryBlockedSourcesDto) {
+    const [total, rows] = await Promise.all([
+      this.prisma.padBlockedSource.count(),
+      this.prisma.padBlockedSource.findMany({
+        orderBy: [{ createdAt: 'desc' }, { ipHash: 'asc' }],
+        skip: query.skip ?? 0,
+        take: query.take ?? ADMIN_BLOCKED_SOURCES_PAGE_SIZE,
+        select: {
+          ipHash: true,
+          createdAt: true,
+          blockedBy: { select: { id: true, name: true, email: true } },
+        },
+      }),
+    ]);
+    const grouped = rows.length
+      ? await this.prisma.pad.groupBy({
+          by: ['updatedByIpHash'],
+          where: { updatedByIpHash: { in: rows.map((row) => row.ipHash) } },
+          _count: { _all: true },
+        })
+      : [];
+    const padCounts = new Map(
+      grouped.map((row) => [row.updatedByIpHash, row._count._all]),
+    );
+    return {
+      total,
+      items: rows.map(({ createdAt, ...row }) => ({
+        ...row,
+        createdAt: createdAt.toISOString(),
+        padCount: padCounts.get(row.ipHash) ?? 0,
+      })),
+    };
+  }
+
+  private async findPadsForAdmin(args: {
+    where?: Prisma.PadWhereInput;
+    skip?: number;
+    take: number;
+  }) {
     const pads = await this.prisma.pad.findMany({
-      orderBy: { updatedAt: 'desc' },
-      take: ADMIN_PADS_PAGE_SIZE,
+      ...args,
+      orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
       select: {
         slug: true,
         content: true,

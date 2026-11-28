@@ -14,11 +14,11 @@ import SubtaskProgress from '../UI/SubtaskProgress';
 import CalendarSyncButton from './CalendarSyncButton';
 import SwipeableRow from '../UI/SwipeableRow';
 import { CheckIcon, ClockIcon } from '../UI/Icons';
-import { getDateStatus, getRemainingTimeLabel } from '../../utils/taskDateStatus';
+import { getRemainingTimeLabel } from '../../utils/taskDateStatus';
 import { useCatalogLabel } from '../../hooks/useCatalogLabel';
 import type { Task, AcademicTaskTypeOption } from '../../types/models';
 import { useI18n } from '../../i18n/useI18n';
-import { formatHandIn, formatTaskDue } from '../../lib/taskReadiness';
+import { getSwipeActions, getTaskPresentation } from '../../lib/taskPresentation';
 
 interface TaskCardProps {
   task: Task;
@@ -44,15 +44,12 @@ function TaskCard({
   const { t, lang } = useI18n();
   const { optionLabel } = useCatalogLabel();
   const academicTypeLabel = optionLabel('academicType', task.academicType, academicTaskTypes);
-  const status = getDateStatus(task);
-  const canComplete = Boolean(onComplete) && task.progressStatus !== 'COMPLETED';
-  const canPostpone = Boolean(onReschedule) && status === 'overdue';
+  const { status, isOverdue, due, handIn, weight } = getTaskPresentation(task, lang);
 
   return (
     <SwipeableRow
       className="border-b border-neutral-800 last:border-b-0"
-      onSwipeRight={canComplete ? () => onComplete?.(task) : undefined}
-      onSwipeLeft={canPostpone ? () => onReschedule?.(null, task) : undefined}
+      {...getSwipeActions(task, isOverdue, { onComplete, onReschedule })}
       rightHint={<><CheckIcon aria-hidden="true" />{t('swipe.done')}</>}
       leftHint={<>{t('swipe.tomorrow')}<ClockIcon aria-hidden="true" /></>}
     >
@@ -64,8 +61,8 @@ function TaskCard({
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0 flex items-start gap-2">
           {onToggleSelect && (
-            // Alvo de 40px (-m-3 p-3); -mt-2 mantem o checkbox onde estava (mt-1).
-            <label className="print-hide -m-3 -mt-2 flex shrink-0 cursor-pointer p-3">
+            // Alvo de 40px (-m-3 p-3), 44px em ecras tacteis; -mt-2 mantem o checkbox onde estava (mt-1).
+            <label className="print-hide -m-3 -mt-2 flex shrink-0 cursor-pointer p-3 pointer-coarse:-m-3.5 pointer-coarse:-mt-2.5 pointer-coarse:p-3.5">
               <input
                 type="checkbox"
                 checked={!!isSelected}
@@ -78,7 +75,7 @@ function TaskCard({
           <div className="min-w-0">
           <div className="flex items-center gap-2 text-xs font-medium text-white">
             {task.area?.colorHex && <ColorDot color={task.area.colorHex} />}
-            <span className="truncate">{task.area?.name || 'N/A'}</span>
+            <span className="truncate" title={task.area?.name || 'N/A'}>{task.area?.name || 'N/A'}</span>
           </div>
           <div className="font-medium text-neutral-100 mt-1 break-words">
             {task.title}
@@ -115,7 +112,7 @@ function TaskCard({
       <div className="flex items-center gap-2 mt-2">
         <ViewTaskButton taskId={task.id} title={task.title} />
         <CalendarSyncButton task={task} />
-        {status === 'overdue' && onReschedule && (
+        {isOverdue && onReschedule && (
           <RescheduleButton
             isLoading={isRescheduling}
             onClick={(e) => onReschedule(e, task)}
@@ -127,15 +124,13 @@ function TaskCard({
       <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-neutral-800/70 text-center">
         <div>
           <div className="text-[10px] uppercase text-neutral-500">{t('ui.date')}</div>
-          <div className="text-xs text-neutral-300 mt-0.5">{formatTaskDue(task, lang)}</div>
-          {formatHandIn(task, lang) && (
-            <div className="text-xs text-neutral-400">{formatHandIn(task, lang)}</div>
-          )}
+          <div className="text-xs text-neutral-300 mt-0.5">{due}</div>
+          {handIn && <div className="text-xs text-neutral-400">{handIn}</div>}
         </div>
         <div>
           <div className="text-[10px] uppercase text-neutral-500">{t('ui.weight')}</div>
           <div className="text-xs tabular-nums text-neutral-300 mt-0.5">
-            {task.weightPercentage ? `${task.weightPercentage}%` : 'N/A'}
+            {weight}
           </div>
         </div>
         <div>

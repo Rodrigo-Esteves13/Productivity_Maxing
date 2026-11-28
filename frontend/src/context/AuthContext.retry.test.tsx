@@ -9,10 +9,13 @@ const api = vi.hoisted(() => ({
   logoutRequest: vi.fn(),
 }));
 vi.mock('../api/userService', () => api);
+vi.mock('../api/authService', () => api);
 vi.mock('../api/csrfStore', () => ({ setCsrfToken: vi.fn(), setSessionUserId: vi.fn() }));
 vi.mock('../hooks/usePushNotifications', () => ({ unsubscribeThisDevice: vi.fn() }));
 vi.mock('../pwa/pushPromptStorage', () => ({ clearPushPromptAnswered: vi.fn() }));
 vi.mock('../hooks/useCalendarStatus', () => ({ resetCalendarStatus: vi.fn() }));
+const cache = vi.hoisted(() => ({ clearQueryCache: vi.fn(), setQueryCacheOwner: vi.fn() }));
+vi.mock('../api/queryCache', () => cache);
 
 interface Harness {
   slots: unknown[];
@@ -80,6 +83,8 @@ interface AuthValue {
   login: (csrfToken: string) => void;
 }
 let current: AuthValue;
+// Corre a cada render, antes dos efeitos (como os efeitos dos filhos).
+let onRender: (value: AuthValue) => void = () => {};
 
 function mount() {
   h.slots = [];
@@ -89,6 +94,7 @@ function mount() {
     h.idx = 0;
     const el = AuthProvider({ children: null }) as unknown as { props: { value: AuthValue } };
     current = el.props.value;
+    onRender(current);
     h.rendering = false;
     const run = h.effects.splice(0);
     run.forEach((fn) => fn());
@@ -169,6 +175,26 @@ describe('AuthProvider startup session retry', () => {
     expect(current.isAuthenticated).toBe(true);
     expect(current.user).toEqual({ id: 'u1' });
     expect(current.isAuthLoading).toBe(false);
+  });
+
+  // Os efeitos dos filhos correm antes do efeito do provider: o dono da cache
+  // tem de estar posto quando o user aparece.
+  it('sets the query cache owner before the user reaches the children', async () => {
+    api.fetchCsrfToken.mockResolvedValue('csrf-token');
+    cache.setQueryCacheOwner.mockClear();
+    let ownerAtFirstUser: unknown = 'no user yet';
+    let seen = false;
+    onRender = (value) => {
+      if (!value.user || seen) return;
+      seen = true;
+      ownerAtFirstUser = cache.setQueryCacheOwner.mock.calls.at(-1)?.[0];
+    };
+    mount();
+    await vi.advanceTimersByTimeAsync(0);
+    onRender = () => {};
+
+    expect(current.user).toEqual({ id: 'u1' });
+    expect(ownerAtFirstUser).toBe('u1');
   });
 
   it('retries a transient profile error (503) and then loads the user', async () => {

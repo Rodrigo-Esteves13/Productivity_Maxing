@@ -64,6 +64,9 @@ export const MAX_INTAKE_PAST_DAYS = 30;
 export const MAX_INTAKE_FUTURE_MINUTES = 5;
 // Janela maxima de GET /wellbeing/medications/intakes.
 export const MAX_INTAKE_RANGE_DAYS = 62;
+// Anular o apagar aceita tomas antigas (ate onde o cartao deixa ver, com uma
+// folga de um dia pelo fuso).
+export const MAX_INTAKE_RESTORE_PAST_DAYS = 366;
 
 // Versao do aviso legal da medicacao. Mudar o texto do aviso (frontend,
 // wellbeing.meds.disclaimer.*) obriga a subir este numero: todos voltam a

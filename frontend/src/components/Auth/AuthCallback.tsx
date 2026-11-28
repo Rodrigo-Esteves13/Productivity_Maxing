@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
-import { fetchCsrfToken } from '../../api/userService';
+import { fetchCsrfToken } from '../../api/authService';
 import { takePostAuthRedirect } from '../../lib/postAuthRedirect';
 import { refreshCalendarStatus } from '../../hooks/useCalendarStatus';
 import { useI18n } from '../../i18n/useI18n';

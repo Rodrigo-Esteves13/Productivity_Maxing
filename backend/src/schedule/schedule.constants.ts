@@ -3,6 +3,8 @@
 export const SCHEDULE_IMPORT_PER_MINUTE = 5;
 // Estimativa de trajeto: cada pedido bate na Google Distance Matrix (paga).
 export const SCHEDULE_COMMUTE_PER_MINUTE = 5;
+// Criar, editar e apagar uma aula a mao.
+export const SCHEDULE_CLASS_WRITES_PER_MINUTE = 30;
 
 // Aulas criadas a mao: o externalUid leva este prefixo para o import de .ics
 // nunca as tratar como "antigas" e apagar.

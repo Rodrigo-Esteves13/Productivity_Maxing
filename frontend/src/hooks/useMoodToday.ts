@@ -24,6 +24,8 @@ export function useMoodToday() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // Sobe a cada gravacao ou apagar: os insights recalculam-se so nessa altura.
+  const [version, setVersion] = useState(0);
   // Sobe para voltar a carregar o dia atual (botao "Tentar de novo").
   const [reloadCount, setReloadCount] = useState(0);
 
@@ -53,6 +55,7 @@ export function useMoodToday() {
       try {
         const saved = await saveMoodLog(day, input);
         setEntry({ day, log: saved });
+        setVersion((n) => n + 1);
         return true;
       } catch {
         return false;
@@ -69,6 +72,7 @@ export function useMoodToday() {
     try {
       await deleteMoodLog(day);
       setEntry({ day, log: null });
+      setVersion((n) => n + 1);
       return true;
     } catch {
       return false;
@@ -78,6 +82,7 @@ export function useMoodToday() {
   }, [day]);
 
   return {
+    version,
     today,
     day,
     dayOffset,

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { getUserAreas, getTaskMetadata, importTasks } from '../api/userService';
+import { getUserAreas } from '../api/areasService';
+import { getTaskMetadata } from '../api/metadataService';
+import { importTasks } from '../api/tasksService';
 import { getPrograms, getProgramPeriods } from '../api/academicService';
 import { parseSpreadsheetFile, mapImportRows, toSheetRowNumbers } from '../utils/parseTaskImportFile';
 import type { AcademicPeriod, ImportTaskRow, ImportTasksResult } from '../types/models';

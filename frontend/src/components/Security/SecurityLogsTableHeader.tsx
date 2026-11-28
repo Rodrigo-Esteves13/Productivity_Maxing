@@ -6,7 +6,7 @@ interface SecurityLogsTableHeaderProps {
   onSort: (key: SecurityLogSortKey) => void;
 }
 
-// Colunas ordenaveis (a pagina carregada) e colunas so de leitura.
+// Colunas ordenaveis (no servidor) e colunas so de leitura.
 const COLUMNS: { key: SecurityLogSortKey | null; label: string }[] = [
   { key: 'createdAt', label: 'ui.when' },
   { key: 'ip', label: 'ui.ip' },

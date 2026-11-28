@@ -11,6 +11,8 @@ import ToggleChip from '../components/UI/ToggleChip';
 import CardGridSkeleton from '../components/UI/CardGridSkeleton';
 import CardEditor from '../components/Flashcards/CardEditor';
 import DeckList from '../components/Flashcards/DeckList';
+import CardBulkBar from '../components/Flashcards/CardBulkBar';
+import { BULK_ACTION_MAX } from '../lib/batch';
 import ImportCardsModal from '../components/Flashcards/ImportCardsModal';
 import FlashcardForecast from '../components/Flashcards/FlashcardForecast';
 import ReviewSession from '../components/Flashcards/ReviewSession';
@@ -40,7 +42,8 @@ type EditorState = null | 'new' | Flashcard;
 export default function Flashcards() {
   const { t } = useI18n();
   useDocumentTitle(t('flashcards.title'));
-  const { cards, isLoading, error, reload, create, importMany, update, remove, review, restore } = useFlashcards();
+  const { cards, isLoading, error, reload, create, importMany, update, remove, removeMany, moveMany, review, restore } =
+    useFlashcards();
   const { areas } = useNotebookAreas();
   const areaById = useAreaLookup(areas);
   const [filter, setFilter] = useState(ALL);
@@ -69,6 +72,26 @@ export default function Flashcards() {
   // Pesquisa so mexe na lista; estudar e testar seguem a cadeira escolhida.
   const search = useListSearch(hardFiltered, (c) => [c.front, c.back]);
   const visible = search.filtered;
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  // So conta o que esta a vista: mudar o filtro nunca apaga cartoes escondidos.
+  const selected = visible.filter((c) => picked.has(c.id));
+  const selectedIds = new Set(selected.map((c) => c.id));
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (!next.delete(id) && next.size < BULK_ACTION_MAX) next.add(id);
+    setPicked(next);
+  };
+  const requestRemoveSelected = async () =>
+    confirm.request({
+      title: t('flashcards.delete'),
+      message: t('ux4global.cards.confirmDelete', { count: selected.length }),
+      confirmLabel: t('common.delete'),
+      tone: 'danger',
+      run: async () => {
+        await removeMany(selected);
+        setPicked(new Set());
+      },
+    });
   // So abre o teste quando ha cartas suficientes no filtro.
   const showTest = isTesting && inArea.length >= TEST_MIN_CARDS;
   // Estudar e testar seguem o filtro de area; "Hard cards" so muda a lista.
@@ -182,7 +205,27 @@ export default function Flashcards() {
                   {t('search.count', { shown: visible.length, total: hardFiltered.length })}
                 </p>
               )}
-              <DeckList cards={visible} areaById={areaById} onEdit={setEditor} onRemove={requestRemove} sort={sort} />
+              <CardBulkBar
+                selectedCount={selected.length}
+                listCount={visible.length}
+                areas={areas}
+                onSelectAll={() => setPicked(new Set(visible.slice(0, BULK_ACTION_MAX).map((c) => c.id)))}
+                onSelectNone={() => setPicked(new Set())}
+                onMove={async (areaId) => {
+                  await moveMany(selected, areaId);
+                  setPicked(new Set());
+                }}
+                onDelete={requestRemoveSelected}
+              />
+              <DeckList
+                cards={visible}
+                areaById={areaById}
+                onEdit={setEditor}
+                onRemove={requestRemove}
+                sort={sort}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
+              />
             </>
           )}
         </>

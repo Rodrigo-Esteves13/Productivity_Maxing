@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { previewScheduleSync, syncSchedule } from '../api/calendarService';
 import type { SchedulePreview, ScheduleSyncResult } from '../api/calendarService';
-import { subscribeToCalendarSyncReview } from '../lib/calendarSyncEvents';
+import * as bus from '../lib/bus';
 import { useCalendarStatus } from './useCalendarStatus';
 
 type ReviewPhase = 'closed' | 'review' | 'syncing' | 'done' | 'error';
@@ -44,7 +44,7 @@ export function useCalendarSyncReview() {
     // Sem Google Calendar ligado não há nada a rever.
     if (!connected) return;
 
-    const unsubscribe = subscribeToCalendarSyncReview(({ force }) => {
+    const unsubscribe = bus.on('calendar:syncReview', ({ force }) => {
       clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => void openReview(force), DEBOUNCE_MS);
     });

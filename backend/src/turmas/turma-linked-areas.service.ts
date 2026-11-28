@@ -76,6 +76,14 @@ export class TurmaLinkedAreasService {
   async link(userId: string, turmaId: string, areaId: string) {
     await this.access.requireMember(userId, turmaId);
     await assertAreaAccessible(this.prisma, userId, areaId);
+    const where = { turmaId_userId_areaId: { turmaId, userId, areaId } };
+    // Religar uma cadeira ja partilhada nao ocupa lugar: o teto so conta
+    // para ligacoes novas.
+    const existing = await this.prisma.turmaLinkedArea.findUnique({
+      where,
+      select: { id: true },
+    });
+    if (existing) return existing;
     const count = await this.prisma.turmaLinkedArea.count({
       where: { turmaId, userId },
     });
@@ -85,7 +93,7 @@ export class TurmaLinkedAreasService {
       );
     }
     return this.prisma.turmaLinkedArea.upsert({
-      where: { turmaId_userId_areaId: { turmaId, userId, areaId } },
+      where,
       create: { turmaId, userId, areaId },
       update: {},
       select: { id: true },

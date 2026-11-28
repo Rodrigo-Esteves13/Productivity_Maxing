@@ -2,29 +2,26 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getAreaRatings, setAreaRating } from '../api/areaRatingsService';
 import { createLatestWinsQueue } from '../lib/latestWinsQueue';
 import { RATING_DOMAINS } from '../lib/domainEvents';
+import * as bus from '../lib/bus';
 import { useDomainKey } from './useDomainVersion';
 import type { AreaRatingField } from '../types/models';
 
 type Values = Record<AreaRatingField, number | null>;
 const EMPTY: Values = { teacherRating: null, courseLiking: null };
 
-// O servidor copia a nota do docente para as outras cadeiras com o mesmo
-// docente. Este evento faz os outros cartoes visiveis voltarem a ler.
-const RATINGS_CHANGED_EVENT = 'pm-area-ratings-changed';
-
 // Escritas em fila por areaId+campo: so o ultimo valor chega ao servidor.
 const enqueueWrite = createLatestWinsQueue();
 
 type RatingRows = Awaited<ReturnType<typeof getAreaRatings>>;
 
-// Um evento de mudanca chega a todos os cartoes montados ao mesmo tempo: um
-// so GET partilhado por evento em vez de um por cartao. Um evento novo pede
+// Um aviso de mudanca chega a todos os cartoes montados ao mesmo tempo: um
+// so GET partilhado por aviso em vez de um por cartao. Um aviso novo pede
 // sempre um GET novo (o anterior pode ja nao ter a ultima copia).
-let changedRefetch: { event: Event; rows: Promise<RatingRows> } | null = null;
-function refetchAfterChange(event: Event): Promise<RatingRows> {
-  if (changedRefetch?.event === event) return changedRefetch.rows;
+let changedRefetch: { change: object; rows: Promise<RatingRows> } | null = null;
+function refetchAfterChange(change: object): Promise<RatingRows> {
+  if (changedRefetch?.change === change) return changedRefetch.rows;
   const rows = getAreaRatings();
-  const entry = { event, rows };
+  const entry = { change, rows };
   changedRefetch = entry;
   const clear = () => {
     if (changedRefetch === entry) changedRefetch = null;
@@ -71,15 +68,16 @@ export function useAreaRatings(areaId: string) {
     };
   }, [areaId]);
 
-  // Outra cadeira mudou a nota do docente: pode ter sido copiada para esta.
+  // Outra cadeira mudou a nota do docente: o servidor pode te-la copiado para
+  // esta, por isso volta a ler.
   useEffect(() => {
     let active = true;
-    const onChanged = (event: Event) => {
-      if ((event as CustomEvent<{ areaId: string }>).detail?.areaId === areaId) return;
+    const unsubscribe = bus.on('areaRatings:teacherChanged', (change) => {
+      if (change.areaId === areaId) return;
       // Escrita deste cartao ainda a caminho: a leitura podia trazer o valor
       // antigo e pisar o que a pessoa acabou de escolher.
       if (pendingWritesRef.current > 0) return;
-      refetchAfterChange(event)
+      refetchAfterChange(change)
         .then((rows) => {
           if (!active || pendingWritesRef.current > 0) return;
           const row = rows.find((r) => r.areaId === areaId);
@@ -89,11 +87,10 @@ export function useAreaRatings(areaId: string) {
           setValues(valuesRef.current);
         })
         .catch(() => undefined);
-    };
-    window.addEventListener(RATINGS_CHANGED_EVENT, onChanged);
+    });
     return () => {
       active = false;
-      window.removeEventListener(RATINGS_CHANGED_EVENT, onChanged);
+      unsubscribe();
     };
   }, [areaId]);
 
@@ -108,7 +105,7 @@ export function useAreaRatings(areaId: string) {
           await setAreaRating(areaId, field, next);
           confirmedRef.current = { ...confirmedRef.current, [field]: next };
           if (field === 'teacherRating') {
-            window.dispatchEvent(new CustomEvent(RATINGS_CHANGED_EVENT, { detail: { areaId } }));
+            bus.emit('areaRatings:teacherChanged', { areaId });
           }
         });
       } catch {

@@ -1,146 +1,156 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
-  getFeedbackList,
+  FEEDBACK_PAGE_SIZE,
+  getFeedbackPage,
   rejectFeedback,
   replyToFeedback,
   setFeedbackMuted,
   setFeedbackResolved,
+  type FeedbackFilter,
 } from '../api/feedbackService';
 import { banUser, reactivateUser, suspendUser } from '../api/userService';
-import type { FeedbackAuthor, FeedbackItem, UserStatus } from '../types/models';
+import type { FeedbackAuthor, FeedbackCategory } from '../types/models';
+import { ALL_FILTER, type AllOr } from '../lib/adminLists';
 import { translateNow } from '../i18n/translate';
 import { useFeedback } from '../context/useFeedback';
-
-export type FeedbackFilter = 'open' | 'closed' | 'all';
-
-const FILTER_MATCH: Record<FeedbackFilter, (item: FeedbackItem) => boolean> = {
-  open: (item) => !item.isResolved,
-  closed: (item) => item.isResolved,
-  all: () => true,
-};
+import { useDebouncedValue } from './useDebouncedValue';
+import { useFetch } from './useFetch';
 
 export type AccountAction = 'ban' | 'suspend';
 
-// Dados e acoes da pagina de feedback (admin). As acoes devolvem true quando
-// correram bem, para o item fechar o formulario.
+const SEARCH_DEBOUNCE_MS = 300;
+
+export interface FeedbackAdminFilters {
+  status: FeedbackFilter;
+  query: string;
+  category: AllOr<FeedbackCategory>;
+  language: string;
+}
+
+const INITIAL_FILTERS: FeedbackAdminFilters = {
+  status: 'open',
+  query: '',
+  category: ALL_FILTER,
+  language: ALL_FILTER,
+};
+
+// Dados e acoes da pagina de feedback (admin). Filtros, pesquisa e paginas sao
+// do servidor. As acoes devolvem true quando correram bem, para o item fechar o
+// formulario; a seguir a pagina volta a ser pedida.
 export function useFeedbackAdmin() {
   const { notify } = useFeedback();
-  const [items, setItems] = useState<FeedbackItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [filter, setFilter] = useState<FeedbackFilter>('open');
+  const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [skip, setSkip] = useState(0);
+  const search = useDebouncedValue(filters.query.trim(), SEARCH_DEBOUNCE_MS);
+  const { status, category, language } = filters;
 
-  const load = useCallback(() => {
-    setIsLoading(true);
-    setError('');
-    getFeedbackList()
-      .then(setItems)
-      .catch(() => setError(translateNow('ui.errorLoadingFeedback')))
-      .finally(() => setIsLoading(false));
+  const fetcher = useCallback(
+    (signal: AbortSignal) =>
+      getFeedbackPage(
+        {
+          status,
+          skip,
+          take: FEEDBACK_PAGE_SIZE,
+          ...(search ? { q: search } : {}),
+          ...(category !== ALL_FILTER ? { category } : {}),
+          ...(language !== ALL_FILTER ? { language } : {}),
+        },
+        signal,
+      ),
+    [status, category, language, search, skip],
+  );
+  const { data, isLoading, hasError, reload } = useFetch(fetcher);
+
+  // Mudar um filtro volta sempre a primeira pagina.
+  const updateFilters = useCallback((patch: Partial<FeedbackAdminFilters>) => {
+    setFilters((prev) => ({ ...prev, ...patch }));
+    setSkip(0);
   }, []);
 
+  // A ultima pagina ficou vazia (o unico item mudou de estado): recua.
   useEffect(() => {
-    load();
-  }, [load]);
-
-  const replaceItem = useCallback((updated: FeedbackItem) => {
-    setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
-  }, []);
-
-  // O mesmo autor pode ter varios feedbacks: muda-os todos.
-  const patchAuthor = useCallback((userId: string, patch: Partial<FeedbackAuthor>) => {
-    setItems((prev) =>
-      prev.map((i) => (i.user?.id === userId ? { ...i, user: { ...i.user, ...patch } } : i)),
-    );
-  }, []);
+    if (data && data.items.length === 0 && data.total > 0 && skip >= data.total) {
+      setSkip(Math.max(0, skip - FEEDBACK_PAGE_SIZE));
+    }
+  }, [data, skip]);
 
   const run = useCallback(
-    async (action: () => Promise<void>, successKey: string): Promise<boolean> => {
+    async (action: () => Promise<unknown>, successKey: string): Promise<boolean> => {
       try {
         await action();
         notify(translateNow(successKey), 'success');
+        await reload();
         return true;
       } catch {
         notify(translateNow('feedback.admin.actionError'), 'error');
         return false;
       }
     },
-    [notify],
+    [notify, reload],
   );
 
   const toggleResolved = useCallback(
-    (item: FeedbackItem) =>
+    (item: { id: string; isResolved: boolean }) =>
       run(
-        async () => replaceItem(await setFeedbackResolved(item.id, !item.isResolved)),
+        () => setFeedbackResolved(item.id, !item.isResolved),
         item.isResolved ? 'feedback.admin.reopened' : 'feedback.admin.resolved',
       ),
-    [run, replaceItem],
+    [run],
   );
 
   const reply = useCallback(
     (id: string, message: string, resolve: boolean) =>
-      run(async () => replaceItem(await replyToFeedback(id, { message, resolve })), 'feedback.admin.replySent'),
-    [run, replaceItem],
+      run(() => replyToFeedback(id, { message, resolve }), 'feedback.admin.replySent'),
+    [run],
   );
 
   const reject = useCallback(
     (id: string, reason: string) =>
-      run(async () => replaceItem(await rejectFeedback(id, reason || undefined)), 'feedback.admin.declined'),
-    [run, replaceItem],
+      run(() => rejectFeedback(id, reason || undefined), 'feedback.admin.declined'),
+    [run],
   );
 
   const toggleMuted = useCallback(
     (author: FeedbackAuthor) => {
       const muted = !author.feedbackMutedAt;
-      return run(async () => {
-        await setFeedbackMuted(author.id, muted);
-        patchAuthor(author.id, { feedbackMutedAt: muted ? new Date().toISOString() : null });
-      }, muted ? 'feedback.admin.mutedDone' : 'feedback.admin.unmutedDone');
+      return run(
+        () => setFeedbackMuted(author.id, muted),
+        muted ? 'feedback.admin.mutedDone' : 'feedback.admin.unmutedDone',
+      );
     },
-    [run, patchAuthor],
+    [run],
   );
 
   const applyAccountAction = useCallback(
     (author: FeedbackAuthor, action: AccountAction, payload: { reason: string; until?: string }) =>
-      run(async () => {
-        const updated =
+      run(
+        () =>
           action === 'ban'
-            ? await banUser(author.id, payload.reason)
-            : await suspendUser(author.id, { reason: payload.reason, until: payload.until ?? '' });
-        patchAuthor(author.id, { status: updated.status ?? (action === 'ban' ? 'BANNED' : 'SUSPENDED') });
-      }, action === 'ban' ? 'feedback.admin.bannedDone' : 'feedback.admin.suspendedDone'),
-    [run, patchAuthor],
+            ? banUser(author.id, payload.reason)
+            : suspendUser(author.id, { reason: payload.reason, until: payload.until ?? '' }),
+        action === 'ban' ? 'feedback.admin.bannedDone' : 'feedback.admin.suspendedDone',
+      ),
+    [run],
   );
 
   const reactivate = useCallback(
-    (author: FeedbackAuthor) =>
-      run(async () => {
-        const updated = await reactivateUser(author.id);
-        patchAuthor(author.id, { status: updated.status ?? ('ACTIVE' as UserStatus) });
-      }, 'feedback.admin.reactivatedDone'),
-    [run, patchAuthor],
+    (author: FeedbackAuthor) => run(() => reactivateUser(author.id), 'feedback.admin.reactivatedDone'),
+    [run],
   );
-
-  const counts = useMemo(
-    () => ({
-      open: items.filter(FILTER_MATCH.open).length,
-      closed: items.filter(FILTER_MATCH.closed).length,
-      all: items.length,
-    }),
-    [items],
-  );
-
-  const visible = useMemo(() => items.filter(FILTER_MATCH[filter]), [items, filter]);
 
   return {
-    items,
-    visible,
-    counts,
-    filter,
-    setFilter,
+    page: data,
+    filters,
+    updateFilters,
+    // A pesquisa que ja foi ao servidor (para a mensagem de "sem resultados").
+    search,
+    skip,
+    pageSize: FEEDBACK_PAGE_SIZE,
+    goToNextPage: () => setSkip((prev) => prev + FEEDBACK_PAGE_SIZE),
+    goToPrevPage: () => setSkip((prev) => Math.max(0, prev - FEEDBACK_PAGE_SIZE)),
     isLoading,
-    error,
-    reload: load,
+    hasError,
+    reload,
     toggleResolved,
     reply,
     reject,

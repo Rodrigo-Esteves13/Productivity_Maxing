@@ -92,7 +92,7 @@ export default function AddFriendForm({ onAdd, onAddByEmail }: Props) {
         <button
           type="submit"
           disabled={busy || value.trim() === ''}
-          className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+          className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50 pointer-coarse:min-h-11"
         >
           {t('social.add.submit')}
         </button>

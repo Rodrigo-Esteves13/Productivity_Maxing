@@ -1,4 +1,5 @@
-// Copia da verificacao do frontend (frontend/src/lib/quizImport.ts). O
+// Copia da verificacao do frontend
+// (frontend/src/lib/quizImport{Types,Shared,Json,Meta,Question,Check}.ts). O
 // servidor nunca confia no que o browser ja limpou: volta a correr tudo
 // antes de gravar e so aceita o quiz se ja vier na forma canonica
 // (recheckCanonicalQuiz). Manter as duas em sincronia.

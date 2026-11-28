@@ -30,12 +30,16 @@ import { Throttle } from '@nestjs/throttler';
 import { ImportTasksDto } from './dto/import-tasks.dto';
 import { ReorderTasksDto } from './dto/reorder-tasks.dto';
 import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
+import { RestoreTasksDto } from './dto/restore-tasks.dto';
 
 import { JwtOrApiKeyAuthGuard } from '../auth/guards/jwt-or-api-key-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { perMinute } from '../common/throttle.util';
-import { TASK_IMPORT_PER_MINUTE } from './tasks.constants';
+import {
+  TASK_IMPORT_PER_MINUTE,
+  TASK_RESTORE_PER_MINUTE,
+} from './tasks.constants';
 
 @ApiTags('Task')
 @ApiBearerAuth()
@@ -155,6 +159,16 @@ export class TasksController {
     @Body() dto: BulkTaskIdsDto,
   ) {
     return this.tasksService.bulkRemove(user.id, dto.ids);
+  }
+
+  // "Anular" do apagar em massa: recria as tasks apagadas (id novo).
+  @Post('bulk-restore')
+  @Throttle(perMinute(TASK_RESTORE_PER_MINUTE))
+  bulkRestore(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RestoreTasksDto,
+  ) {
+    return this.tasksService.bulkRestore(user.id, dto.tasks);
   }
 
   // Excel/CSV import (SheetJS parses the file client-side, see

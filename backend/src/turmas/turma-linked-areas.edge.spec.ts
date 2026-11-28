@@ -17,6 +17,7 @@ function setup() {
     area: { findFirst: jest.fn().mockResolvedValue({ id: AREA }) },
     turmaLinkedArea: {
       count: jest.fn().mockResolvedValue(0),
+      findUnique: jest.fn().mockResolvedValue(null),
       upsert: jest.fn().mockResolvedValue({ id: 'l1' }),
       findFirst: jest.fn(),
       delete: jest.fn().mockResolvedValue({}),
@@ -75,6 +76,22 @@ describe('TurmaLinkedAreasService.link edge cases', () => {
     );
     expect(prisma.turmaLinkedArea.count).toHaveBeenCalledWith({
       where: { turmaId: TURMA, userId: OWNER },
+    });
+    expect(prisma.turmaLinkedArea.upsert).not.toHaveBeenCalled();
+  });
+
+  it('relinking an already linked subject at the cap succeeds without writing', async () => {
+    const { service, prisma } = setup();
+    prisma.turmaLinkedArea.findUnique.mockResolvedValue({ id: 'l1' });
+    prisma.turmaLinkedArea.count.mockResolvedValue(20);
+    await expect(service.link(OWNER, TURMA, AREA)).resolves.toEqual({
+      id: 'l1',
+    });
+    expect(prisma.turmaLinkedArea.findUnique).toHaveBeenCalledWith({
+      where: {
+        turmaId_userId_areaId: { turmaId: TURMA, userId: OWNER, areaId: AREA },
+      },
+      select: { id: true },
     });
     expect(prisma.turmaLinkedArea.upsert).not.toHaveBeenCalled();
   });

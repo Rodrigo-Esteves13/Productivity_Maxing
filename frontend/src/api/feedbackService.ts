@@ -18,14 +18,35 @@ export async function getMyFeedback(): Promise<MyFeedbackItem[]> {
 }
 
 // Admin
-// Igual ao take de FeedbackService.list no backend: com este numero de
-// itens a lista pode estar cortada e a pagina avisa (E-14).
-export const FEEDBACK_LIST_LIMIT = 300;
 // Igual a FEEDBACK_REPLY_MAX_LENGTH no backend (moderate-feedback.dto.ts).
 export const FEEDBACK_REPLY_MAX_LENGTH = 2000;
+// Itens por pagina e tamanho maximo da pesquisa (feedback.constants.ts).
+export const FEEDBACK_PAGE_SIZE = 25;
+export const FEEDBACK_SEARCH_MAX_LENGTH = 100;
 
-export async function getFeedbackList(): Promise<FeedbackItem[]> {
-  const response = await api.get<FeedbackItem[]>('/feedback');
+export type FeedbackFilter = 'open' | 'closed' | 'all';
+
+export interface FeedbackPageQuery {
+  status: FeedbackFilter;
+  skip: number;
+  take: number;
+  q?: string;
+  category?: FeedbackCategory;
+  language?: string;
+}
+
+export interface FeedbackPage {
+  total: number;
+  items: FeedbackItem[];
+  // Por estado, ja com a pesquisa, categoria e lingua aplicadas.
+  counts: Record<FeedbackFilter, number>;
+  // Todas as linguas com feedback.
+  languages: string[];
+}
+
+// Filtros e paginacao no servidor.
+export async function getFeedbackPage(query: FeedbackPageQuery, signal?: AbortSignal): Promise<FeedbackPage> {
+  const response = await api.get<FeedbackPage>('/feedback', { params: query, signal });
   return response.data;
 }
 
@@ -52,6 +73,15 @@ export async function rejectFeedback(id: string, reason?: string): Promise<Feedb
 // Bloqueia (ou volta a permitir) um user de enviar feedback, sem banir a conta.
 export async function setFeedbackMuted(userId: string, muted: boolean): Promise<void> {
   await api.patch(`/feedback/users/${userId}/muted`, { muted });
+}
+
+// Limites do texto, iguais aos do backend (create-feedback.dto.ts).
+export const FEEDBACK_MESSAGE_MIN_LENGTH = 3;
+export const FEEDBACK_MESSAGE_MAX_LENGTH = 2000;
+
+// O autor corrige o texto enquanto esta aberto e sem resposta.
+export async function updateMyFeedback(id: string, message: string): Promise<void> {
+  await api.patch(`/feedback/mine/${encodeURIComponent(id)}`, { message });
 }
 
 // Apaga um feedback do proprio autor (o backend recusa os de outros).

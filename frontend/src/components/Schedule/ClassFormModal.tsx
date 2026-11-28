@@ -140,7 +140,7 @@ export default function ClassFormModal({ occurrence, onClose, onChanged }: Class
           <ActionButton type="submit" disabled={isSaving}>
             {isSaving ? t('common.saving') : t('common.save')}
           </ActionButton>
-          <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white">
+          <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-neutral-400 hover:text-white pointer-coarse:min-h-11">
             {t('common.cancel')}
           </button>
           {occurrence && (
@@ -148,7 +148,7 @@ export default function ClassFormModal({ occurrence, onClose, onChanged }: Class
               type="button"
               disabled={isSaving}
               onClick={() => void handleDelete()}
-              className="ml-auto inline-flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
+              className="ml-auto inline-flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:text-red-300 disabled:opacity-50 pointer-coarse:min-h-11"
             >
               <TrashIcon width={14} height={14} />
               {t('common.delete')}

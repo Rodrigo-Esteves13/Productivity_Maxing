@@ -40,11 +40,11 @@ export default function SupportLinesPanel() {
           <li key={`${line.kind}:${line.number}`} className="flex items-center justify-between gap-3 text-sm">
             <span className="min-w-0">
               <span className="block text-xs text-neutral-500">{t(`wellbeing.meds.support.kind.${line.kind}`)}</span>
-              <span className="block truncate text-neutral-100">{line.name}</span>
+              <span className="block truncate text-neutral-100" title={line.name}>{line.name}</span>
             </span>
             <a
               href={telHref(line.number)}
-              className="shrink-0 font-mono font-semibold tabular-nums text-violet-300 hover:text-violet-200"
+              className="shrink-0 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center pointer-coarse:min-w-11 pointer-coarse:justify-end font-mono font-semibold tabular-nums text-violet-300 hover:text-violet-200"
             >
               {line.number}
             </a>

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import {
   getPeriodAverage,
   getProgramAverage,
@@ -12,6 +12,8 @@ import CreditSimulator from './CreditSimulator';
 import { ClockIcon, GraduationCapIcon, TrendingUpIcon } from '../UI/Icons';
 import { useI18n } from '../../i18n/useI18n';
 import { usePlanMode } from '../../hooks/usePlanMode';
+import { useDomainVersion } from '../../hooks/useDomainVersion';
+import { GRADE_DOMAINS } from '../../lib/domainEvents';
 
 function formatAverage(average: number | null, scale: string): string {
   if (average === null) return '-';
@@ -107,6 +109,11 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
+  // Tasks ou notas gravadas noutro sitio refazem as medias em silencio; "a
+  // carregar" so quando muda o que se esta a ver.
+  const version = useDomainVersion(GRADE_DOMAINS);
+  const loadedForRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!activeProgram) {
       setIsLoading(false);
@@ -114,8 +121,9 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
     }
 
     let cancelled = false;
+    const loadKey = `${activeProgram.id}|${activePeriod?.id ?? ''}|${isViewingAllPeriods}|${scenario}`;
     (async () => {
-      setIsLoading(true);
+      if (loadedForRef.current !== loadKey) setIsLoading(true);
       try {
         const [programAvg, comparisonData, periodAvg] = await Promise.all([
           getProgramAverage(activeProgram.id, scenario),
@@ -128,6 +136,7 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
             : Promise.resolve(null),
         ]);
         if (cancelled) return;
+        loadedForRef.current = loadKey;
         setProgramAverage(programAvg);
         setComparison(comparisonData);
         setPeriodAverage(periodAvg);
@@ -141,7 +150,7 @@ export default function GpaSummary({ showCreditSimulator = true }: GpaSummaryPro
     return () => {
       cancelled = true;
     };
-  }, [activeProgram, activePeriod, isViewingAllPeriods, scenario]);
+  }, [activeProgram, activePeriod, isViewingAllPeriods, scenario, version]);
 
   // Triggers the cards' fade/slide-in on next paint, after data is ready.
   useEffect(() => {

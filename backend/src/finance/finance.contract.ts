@@ -24,7 +24,10 @@
  * DELETE /finance/entries/:id            -> 204
  * POST   /finance/accounts               body CreateFinanceAccountBody -> FinanceAccountRow (NEW)
  * PATCH  /finance/accounts/:id           body Partial<CreateFinanceAccountBody> -> FinanceAccountRow (NEW)
- * DELETE /finance/accounts/:id           -> 204 (entradas/posicoes ligadas ficam sem conta) (NEW)
+ * DELETE /finance/accounts/:id           -> FinanceAccountLinks (entradas/posicoes ligadas ficam sem conta)
+ * POST   /finance/accounts/restore       body CreateFinanceAccountBody & Partial<FinanceAccountLinks> -> FinanceAccountRow
+ * POST   /finance/entries/bulk-delete    body { ids } -> { entries } (formato do restore)
+ * POST   /finance/entries/restore        body { entries } -> { restored: number }
  * POST   /finance/holdings/refresh       -> PriceRefreshResponse    (NEW; cada simbolo vai ao fornecedor
  *                                            no maximo de 5 em 5 minutos; senao usa a cache)
  * POST   /finance/holdings               body CreateFinanceHoldingBody -> FinanceHoldingView (NEW)
@@ -667,4 +670,10 @@ export interface PriceRefreshResponse {
   updated: string[];
   failed: string[];
   holdings: FinanceHoldingView[];
+}
+
+/** Ligacoes de uma conta apagada (para o Anular). */
+export interface FinanceAccountLinks {
+  entryIds: string[];
+  holdingIds: string[];
 }

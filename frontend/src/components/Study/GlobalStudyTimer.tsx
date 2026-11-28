@@ -56,7 +56,7 @@ export default function GlobalStudyTimer() {
           <ClockIcon className="h-4 w-4 shrink-0 text-violet-400" />
           <div className="flex flex-col leading-tight">
             <SessionClock className="font-mono text-sm font-semibold text-violet-400 tabular-nums" />
-            <span className="max-w-[10rem] truncate text-xs text-neutral-400">
+            <span className="max-w-[10rem] truncate text-xs text-neutral-400" title={timerPlan === null ? label : t('ui.labelLeft', { label })}>
               {timerPlan === null ? label : t('ui.labelLeft', { label })}
             </span>
           </div>

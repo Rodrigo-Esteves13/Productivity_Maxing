@@ -18,6 +18,7 @@ import { useMedicationReminderStatus } from '../../hooks/useMedicationReminderSt
 import { APP_TIME_ZONE } from '../../lib/dateKey';
 import { useFeedback } from '../../context/useFeedback';
 import { useI18n } from '../../i18n/useI18n';
+import { useUndoableDelete } from '../../hooks/useUndoableDelete';
 import { MAX_DOSE_PAST_DAYS, type useMedications } from '../../hooks/useMedications';
 import type { Medication, MedicationDaySlot, MedicationIntake, MedicationReminderSlotStatus } from '../../types/models';
 
@@ -129,6 +130,7 @@ function scheduleSummary(m: Medication, t: ReturnType<typeof useI18n>['t']): str
 export default function MedicationsCard({ meds }: MedicationsCardProps) {
   const { t, lang } = useI18n();
   const { notify, confirm } = useFeedback();
+  const offerUndoDelete = useUndoableDelete();
   // Formularios independentes: abrir a edicao de um medicamento nao fecha
   // o de outro, nem o de "Adicionar" (U-B14).
   const [adding, setAdding] = useState(false);
@@ -160,7 +162,16 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
       confirmLabel: t('wellbeing.meds.intake.delete'),
       tone: 'danger',
     });
-    if (ok) reportFailure(await meds.removeIntake(intake.id));
+    if (!ok) return;
+    const removed = await meds.removeIntake(intake.id);
+    reportFailure(removed);
+    if (!removed) return;
+    offerUndoDelete({
+      message: t('f7money.intakeDeleted', { name: intake.name }),
+      restore: async () => {
+        if (!(await meds.restoreIntake(intake))) throw new Error('intake restore failed');
+      },
+    });
   };
 
   const handleToggleActive = async (medication: Medication) => {
@@ -281,7 +292,7 @@ export default function MedicationsCard({ meds }: MedicationsCardProps) {
                   <button
                     type="button"
                     onClick={() => meds.setDayOffset(0)}
-                    className="ml-auto text-xs font-medium text-violet-400 hover:text-violet-300"
+                    className="pointer-coarse:min-h-11 pointer-coarse:min-w-11 ml-auto text-xs font-medium text-violet-400 hover:text-violet-300"
                   >
                     {t('wellbeing.meds.backToToday')}
                   </button>

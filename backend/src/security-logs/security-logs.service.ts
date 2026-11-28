@@ -3,6 +3,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma, SecurityEventType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { QuerySecurityLogsDto } from './dto/query-security-logs.dto';
+import type {
+  SecurityLogSortDirection,
+  SecurityLogSortField,
+} from './security-logs.constants';
 
 export interface RecordSecurityEventInput {
   type?: SecurityEventType;
@@ -16,6 +20,23 @@ export interface RecordSecurityEventInput {
   // periódico com a contagem real, para não esgotar o pool de ligações
   // numa rajada).
   count?: number;
+}
+
+// Desempate estavel (data e id): sem ele as paginas por skip/take podiam
+// repetir ou saltar linhas com o mesmo valor na coluna ordenada.
+function logOrderBy(
+  sortBy: SecurityLogSortField = 'createdAt',
+  direction: SecurityLogSortDirection = 'desc',
+): Prisma.SecurityLogOrderByWithRelationInput[] {
+  if (sortBy === 'createdAt') return [{ createdAt: direction }, { id: 'asc' }];
+  const primary: Prisma.SecurityLogOrderByWithRelationInput[] =
+    sortBy === 'user'
+      ? [
+          { user: { name: { sort: direction, nulls: 'last' } } },
+          { user: { email: direction } },
+        ]
+      : [{ [sortBy]: direction }];
+  return [...primary, { createdAt: 'desc' }, { id: 'asc' }];
 }
 
 const WINDOW_TO_MS: Record<
@@ -80,7 +101,7 @@ export class SecurityLogsService {
       this.prisma.securityLog.count({ where }),
       this.prisma.securityLog.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: logOrderBy(query.sortBy, query.sortDir),
         skip: query.skip ?? 0,
         take: query.take ?? DEFAULT_LOG_PAGE_SIZE,
         include: {

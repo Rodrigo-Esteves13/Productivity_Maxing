@@ -8,7 +8,8 @@ import {
   type PackSyncResult,
   type TaskPackSummary,
 } from '../api/taskPackService';
-import { getUserAreas, getUserTasks } from '../api/userService';
+import { getUserAreas } from '../api/areasService';
+import { getUserTasks } from '../api/tasksService';
 import type { Area, Task } from '../types/models';
 import { useFeedback } from '../context/useFeedback';
 import { translateNow } from '../i18n/translate';
@@ -86,6 +87,10 @@ export function useTaskPacks() {
     }
   }, [notify]);
 
+  const setItemCount = useCallback((id: string, itemCount: number) => {
+    setPacks((prev) => prev.map((p) => (p.id === id ? { ...p, itemCount } : p)));
+  }, []);
+
   // null = falhou (o componente mostra o erro).
   const publish = useCallback(async (id: string): Promise<PackSyncResult | null> => {
     try {
@@ -95,5 +100,18 @@ export function useTaskPacks() {
     }
   }, []);
 
-  return { packs, tasks, areas, isLoading, hasError, isSaving, create, remove, rename, publish };
+  return {
+    packs,
+    tasks,
+    areas,
+    isLoading,
+    hasError,
+    isSaving,
+    create,
+    remove,
+    rename,
+    publish,
+    setItemCount,
+    reload: load,
+  };
 }

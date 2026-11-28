@@ -1,9 +1,13 @@
 import { useState, type DragEvent } from 'react';
 import TaskCard from './TaskCard';
+import ShowMoreTasksButton from '../UI/ShowMoreTasksButton';
+import { useRevealedTasks } from '../../hooks/useRevealedTasks';
 import type { Task, Area } from '../../types/models';
 
 interface TaskGridProps {
   tasks: Task[];
+  // Muda com periodo, filtros e ordem: volta aos primeiros cartoes.
+  resetKey?: string;
   onSelect: (task: Task) => void;
   onReschedule?: (e: React.MouseEvent | null, task: Task) => void;
   onComplete?: (task: Task) => void;
@@ -26,6 +30,7 @@ interface TaskGridProps {
 
 export default function TaskGrid({
   tasks,
+  resetKey,
   onSelect,
   onReschedule,
   onComplete,
@@ -37,6 +42,7 @@ export default function TaskGrid({
 }: TaskGridProps) {
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const { visible, remaining, showMore } = useRevealedTasks(tasks, resetKey);
 
   // Mesmo algoritmo (remover + inserir antes do alvo) do reorderColumns
   // em useTasksTableColumnOrder.ts, só que aqui a lista reordenada é
@@ -69,8 +75,9 @@ export default function TaskGrid({
   };
 
   return (
+    <>
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-      {tasks.map((task) => (
+      {visible.map((task) => (
         <div
           key={task.id}
           draggable={!!onReorder}
@@ -100,5 +107,7 @@ export default function TaskGrid({
         </div>
       ))}
     </div>
+    <ShowMoreTasksButton remaining={remaining} onClick={showMore} />
+    </>
   );
 }

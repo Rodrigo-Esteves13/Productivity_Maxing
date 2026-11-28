@@ -6,7 +6,7 @@ import { GoogleIcon } from '../UI/Icons';
 import { useCalendarStatus } from '../../hooks/useCalendarStatus';
 import { removeSyncedSchedule } from '../../api/calendarService';
 import type { RemoveAllResult } from '../../api/calendarService';
-import { requestCalendarSyncReview } from '../../lib/calendarSyncEvents';
+import * as bus from '../../lib/bus';
 import { useI18n } from '../../i18n/useI18n';
 import { API_BASE_URL } from '../../api/apiBaseUrl';
 import Card from '../UI/Card';
@@ -48,7 +48,7 @@ export default function ScheduleSyncCard() {
           <a
             href={`${apiUrl}/auth/google/link-calendar`}
             onClick={openAuthenticatedBackendFlow}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-500 text-white"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-500 text-white pointer-coarse:min-h-11 pointer-coarse:items-center"
           >
             <GoogleIcon />
             {t('ui.connectGoogleCalendar')}
@@ -69,7 +69,7 @@ export default function ScheduleSyncCard() {
           {error && <ErrorState message={error} />}
 
           <div className="flex flex-wrap items-center gap-2">
-            <ActionButton onClick={() => requestCalendarSyncReview({ force: true })}>
+            <ActionButton onClick={() => bus.emit('calendar:syncReview', { force: true })}>
               {t('ui.reviewAndSyncNow')}
             </ActionButton>
 
@@ -77,7 +77,7 @@ export default function ScheduleSyncCard() {
               <button
                 type="button"
                 onClick={() => setConfirmRemove(true)}
-                className="px-3 py-2 text-sm rounded-lg border border-neutral-700 text-neutral-400 hover:text-white"
+                className="px-3 py-2 text-sm rounded-lg border border-neutral-700 text-neutral-400 hover:text-white pointer-coarse:min-h-11"
               >
                 {t('ui.removeSyncedEvents')}
               </button>
@@ -91,11 +91,11 @@ export default function ScheduleSyncCard() {
                     setConfirmRemove(false);
                     void handleRemoveAll();
                   }}
-                  className="px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white"
+                  className="px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white pointer-coarse:min-h-11"
                 >
                   {isRemoving ? t('ui.removing') : t('ui.yesRemove')}
                 </button>
-                <button type="button" onClick={() => setConfirmRemove(false)} className="text-neutral-400 hover:text-white">
+                <button type="button" onClick={() => setConfirmRemove(false)} className="text-neutral-400 hover:text-white pointer-coarse:min-h-11">
                   {t('ui.cancel')}
                 </button>
               </span>
